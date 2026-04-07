@@ -41,10 +41,23 @@ export default function RegisterPage() {
         password: form.password,
         options: { data: { full_name: form.name } },
       })
-      if (error) throw error
+      if (error) {
+        // Translate internal Supabase errors into plain English
+        const msg = error.message || ''
+        if (msg.includes('Database error') || msg.includes('unexpected_failure')) {
+          throw new Error('Our database is still being set up. Please try again shortly or contact support.')
+        }
+        if (msg.includes('already registered') || msg.includes('User already registered')) {
+          throw new Error('An account with this email already exists. Try signing in instead.')
+        }
+        if (msg.includes('rate limit') || msg.includes('over_email_send_rate_limit')) {
+          throw new Error('Too many attempts. Please wait a minute and try again.')
+        }
+        throw new Error(msg || 'Something went wrong. Please try again.')
+      }
       setSuccess(true)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.')
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
