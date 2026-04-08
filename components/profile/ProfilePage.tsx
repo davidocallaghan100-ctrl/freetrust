@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 
@@ -46,6 +46,9 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [trustData, setTrustData] = useState<TrustData | null>(null);
   const [form, setForm] = useState({ full_name: '', bio: '', location: '', website: '' });
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarHover, setAvatarHover] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -91,6 +94,31 @@ export default function ProfilePage() {
     setProfile((prev) => ({ ...prev!, ...form }));
     setEditing(false);
     setSaving(false);
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setAvatarUploading(true);
+    try {
+      const supabase = createClient();
+      const ext = file.name.split('.').pop() ?? 'jpg';
+      const path = `${user.id}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path);
+      const avatar_url = urlData.publicUrl;
+      await supabase.from('profiles').upsert({ id: user.id, avatar_url });
+      setProfile((prev) => ({ ...prev!, avatar_url }));
+    } catch (err) {
+      console.error('Avatar upload failed:', err);
+    } finally {
+      setAvatarUploading(false);
+      // Reset file input so the same file can be selected again
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const trustBalance = trustData?.balance ?? 0;
@@ -152,8 +180,40 @@ export default function ProfilePage() {
       <div className="profile-inner">
         {/* Avatar + name */}
         <div className="profile-header">
-          <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', flexShrink: 0, border: '3px solid rgba(56,189,248,0.3)' }}>
-            {initials}
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleAvatarUpload}
+          />
+          {/* Avatar circle with hover upload overlay */}
+          <div
+            style={{ position: 'relative', width: 72, height: 72, flexShrink: 0, cursor: 'pointer' }}
+            onMouseEnter={() => setAvatarHover(true)}
+            onMouseLeave={() => setAvatarHover(false)}
+            onClick={() => !avatarUploading && fileInputRef.current?.click()}
+            title="Click to change photo"
+          >
+            {/* Avatar image or initials */}
+            <div style={{ width: 72, height: 72, borderRadius: '50%', background: profile?.avatar_url ? 'transparent' : 'linear-gradient(135deg,#38bdf8,#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', border: '3px solid rgba(56,189,248,0.3)', overflow: 'hidden' }}>
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : initials}
+            </div>
+            {/* Upload spinner overlay */}
+            {avatarUploading && (
+              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(15,23,42,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 20, height: 20, border: '2px solid rgba(56,189,248,0.3)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+              </div>
+            )}
+            {/* Camera hover overlay */}
+            {avatarHover && !avatarUploading && (
+              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(15,23,42,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>
+                📷
+              </div>
+            )}
           </div>
           <div style={{ flex: 1 }}>
             <h1 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: '0.25rem' }}>

@@ -111,14 +111,14 @@ export async function POST(
     }
 
     // Increment applicant_count on job
-    await supabase.rpc('increment_job_applicant_count', { p_job_id: jobId }).catch(() => {
-      // Fallback if RPC not available
-      supabase
+    try {
+      await supabase
         .from('jobs')
-        .update({ applicant_count: (job as { applicant_count?: number }).applicant_count ?? 0 + 1 })
+        .update({ applicant_count: ((job as { applicant_count?: number }).applicant_count ?? 0) + 1 })
         .eq('id', jobId)
-        .then(() => {})
-    })
+    } catch {
+      // non-critical, ignore
+    }
 
     // Also try issuing trust directly as a backup (DB trigger is primary)
     try {

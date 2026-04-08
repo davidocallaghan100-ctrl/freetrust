@@ -1,5 +1,6 @@
 'use client'
 import React, { useState } from 'react'
+import Link from 'next/link'
 
 const types = ['All', 'Social Enterprise', 'NGO / Charity', 'B Corp', 'Cooperative', 'Community Interest', 'Impact Startup']
 
@@ -117,8 +118,15 @@ export default function OrganisationsPage() {
     <div style={S.page}>
       <div style={S.hero}>
         <div style={S.inner}>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.5rem' }}>Organisation Directory</h1>
-          <p style={{ color: '#64748b' }}>Discover and connect with {organisations.length * 40}+ values-aligned organisations on FreeTrust</p>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.5rem' }}>Organisation Directory</h1>
+              <p style={{ color: '#64748b' }}>Discover and connect with {organisations.length * 40}+ values-aligned organisations on FreeTrust</p>
+            </div>
+            <Link href="/organisations/new" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: '#38bdf8', color: '#0f172a', fontWeight: 700, fontSize: '0.88rem', padding: '0.6rem 1.25rem', borderRadius: 9, textDecoration: 'none', whiteSpace: 'nowrap', marginTop: '0.25rem' }}>
+              + Create Organisation
+            </Link>
+          </div>
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem', maxWidth: 500 }}>
             <input placeholder="Search organisations…" style={{ flex: 1, background: '#1e293b', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.65rem 1rem', fontSize: '0.9rem', color: '#f1f5f9', outline: 'none' }} />
             <select style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, padding: '0.65rem 0.75rem', fontSize: '0.82rem', color: '#94a3b8', outline: 'none' }}>
@@ -175,7 +183,7 @@ export default function OrganisationsPage() {
             </div>
             <div style={S.footer}>
               <span style={S.membersText}>👥 {org.members} members</span>
-              <button style={S.viewBtn}>View Profile →</button>
+              <Link href={`/organisation/${org.id}`} style={{ ...S.viewBtn, textDecoration: 'none', display: 'inline-block' }}>View Profile →</Link>
             </div>
           </div>
         ))}

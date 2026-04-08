@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { createClient } from "@/lib/supabase/server";
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-04-10" })
@@ -66,24 +67,135 @@ export async function POST(req: NextRequest) {
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  console.log("[Escrow] Checkout completed:", {
+  console.log("[Stripe Webhook] Checkout completed:", {
     sessionId: session.id,
     type: session.metadata?.type,
-    sellerId: session.metadata?.sellerId,
-    escrow: session.metadata?.escrow,
     amountTotal: session.amount_total,
-    paymentIntent: session.payment_intent,
   });
 
-  // TODO: Persist escrow record to your database here.
-  // Example fields to store:
-  //   - session.id
-  //   - session.payment_intent (PaymentIntent ID)
-  //   - session.metadata.sellerId
-  //   - session.metadata.type ("service" | "product")
-  //   - session.amount_total
-  //   - status: "escrowed"
-  //   - createdAt: new Date()
+  const type = session.metadata?.type;
+
+  // ── Community membership payment confirmed ────────────────────────────────
+  if (type === 'community_membership') {
+    const community_id = session.metadata?.community_id;
+    const user_id = session.metadata?.user_id;
+
+    if (!community_id || !user_id) {
+      console.error('[Webhook] community_membership missing metadata', session.metadata);
+      return;
+    }
+
+    try {
+      const supabase = await createClient();
+
+      // 1. Upsert community_members row (idempotent — safe on retry)
+      const { error: memberError } = await supabase
+        .from('community_members')
+        .upsert(
+          { community_id, user_id, role: 'member', tier: 'paid' },
+          { onConflict: 'community_id,user_id', ignoreDuplicates: false }
+        );
+
+      if (memberError) {
+        console.error('[Webhook] Failed to insert community member:', memberError);
+      } else {
+        console.log(`[Webhook] Community member inserted: user=${user_id} community=${community_id}`);
+      }
+
+      // 2. Get community owner for fee recording
+      const { data: community, error: commErr } = await supabase
+        .from('communities')
+        .select('owner_id, name')
+        .eq('id', community_id)
+        .single();
+
+      if (commErr || !community) {
+        console.error('[Webhook] Could not find community for fee:', community_id);
+        return;
+      }
+
+      // 3. Record 5% platform fee in trust_ledger (against owner)
+      //    amount_total is in pence; fee = 5%
+      const amountTotal = session.amount_total ?? 0;
+      const platformFee = Math.floor(amountTotal * 0.05);
+
+      if (platformFee > 0) {
+        const { error: feeError } = await supabase.rpc('issue_trust', {
+          p_user_id: community.owner_id,
+          p_amount: -platformFee,
+          p_type: 'platform_fee',
+          p_ref: community_id,
+          p_desc: `FreeTrust 5% platform fee — ${community.name} paid membership`,
+        });
+
+        if (feeError) {
+          console.warn('[Webhook] Trust ledger fee record failed:', feeError);
+        } else {
+          console.log(`[Webhook] Platform fee recorded: ${platformFee}p against owner=${community.owner_id}`);
+        }
+      }
+    } catch (err) {
+      console.error('[Webhook] community_membership handler error:', err);
+    }
+    return;
+  }
+
+  // ── Standard escrow checkout (services / products) ────────────────────────
+  const orderId = session.metadata?.order_id;
+  if (!orderId) {
+    console.log('[Stripe Webhook] No order_id in session metadata, skipping DB update');
+    return;
+  }
+
+  try {
+    const supabase = await createClient();
+
+    // Update order status to in_progress and store payment intent
+    const { error: updateError } = await supabase
+      .from('orders')
+      .update({
+        status: 'in_progress',
+        stripe_payment_intent: typeof session.payment_intent === 'string'
+          ? session.payment_intent
+          : String(session.payment_intent ?? ''),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', orderId);
+
+    if (updateError) {
+      console.error('[Stripe Webhook] Failed to update order status:', updateError);
+      return;
+    }
+
+    // Fetch order to issue trust reward to buyer
+    const { data: order } = await supabase
+      .from('orders')
+      .select('buyer_id, item_title')
+      .eq('id', orderId)
+      .single();
+
+    if (order?.buyer_id) {
+      // Issue ₮5 trust to buyer for making a purchase
+      await supabase.rpc('issue_trust', {
+        p_user_id: order.buyer_id,
+        p_amount: 5,
+        p_type: 'purchase_reward',
+        p_ref: orderId,
+        p_desc: `₮5 trust reward for purchasing: ${order.item_title}`,
+      });
+
+      // Notify buyer
+      await supabase.from('notifications').insert({
+        user_id: order.buyer_id,
+        type: 'order',
+        title: 'Order confirmed!',
+        body: `Your order for "${order.item_title}" is confirmed. You earned ₮5 trust!`,
+        link: `/orders/${orderId}`,
+      });
+    }
+  } catch (err) {
+    console.error('[Stripe Webhook] service/product checkout handler error:', err);
+  }
 }
 
 async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
@@ -103,12 +215,38 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
   console.log("[Escrow] PaymentIntent failed:", {
     id: paymentIntent.id,
-    sellerId: paymentIntent.metadata?.sellerId,
+    orderId: paymentIntent.metadata?.order_id,
     lastPaymentError: paymentIntent.last_payment_error?.message,
   });
 
-  // TODO: Update escrow status in your DB to "failed".
-  // Notify buyer of failure.
+  const orderId = paymentIntent.metadata?.order_id;
+  if (!orderId) return;
+
+  try {
+    const supabase = await createClient();
+    await supabase
+      .from('orders')
+      .update({ status: 'refunded', updated_at: new Date().toISOString() })
+      .eq('id', orderId);
+
+    const { data: order } = await supabase
+      .from('orders')
+      .select('buyer_id, item_title')
+      .eq('id', orderId)
+      .single();
+
+    if (order?.buyer_id) {
+      await supabase.from('notifications').insert({
+        user_id: order.buyer_id,
+        type: 'order',
+        title: 'Payment failed',
+        body: `Payment for "${order.item_title}" failed. Please try again.`,
+        link: `/orders/${orderId}`,
+      });
+    }
+  } catch (err) {
+    console.error('[Stripe Webhook] handlePaymentIntentFailed error:', err);
+  }
 }
 
 async function handleTransferCreated(transfer: Stripe.Transfer) {

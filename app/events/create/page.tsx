@@ -76,6 +76,8 @@ export default function CreateEventPage() {
   const [step, setStep] = useState<FormStep>(1);
   const [submitted, setSubmitted] = useState(false);
   const [trustEarned] = useState(15);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [form, setForm] = useState<EventForm>({
     title: "",
@@ -150,9 +152,27 @@ export default function CreateEventPage() {
     if (step > 1) setStep(s => (s - 1) as FormStep);
   };
 
-  const handleSubmit = () => {
-    if (!canNext) return;
-    setSubmitted(true);
+  const handleSubmit = async () => {
+    if (!canNext || submitting) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const res = await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setSubmitError(json.error ?? 'Something went wrong. Please try again.');
+      } else {
+        setSubmitted(true);
+      }
+    } catch {
+      setSubmitError('Network error. Please check your connection and try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleShare = () => {
@@ -701,6 +721,11 @@ export default function CreateEventPage() {
         )}
 
         {/* Navigation */}
+        {submitError && (
+          <div className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl px-4 py-3 text-sm">
+            ⚠️ {submitError}
+          </div>
+        )}
         <div className="flex items-center justify-between pt-4 pb-8">
           <button
             onClick={handleBack}
@@ -723,11 +748,18 @@ export default function CreateEventPage() {
           ) : (
             <button
               onClick={handleSubmit}
-              disabled={!canNext}
+              disabled={!canNext || submitting}
               className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium text-sm transition
-                ${canNext ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/20" : "bg-gray-800 text-gray-600 cursor-not-allowed"}`}
+                ${canNext && !submitting ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/20" : "bg-gray-800 text-gray-600 cursor-not-allowed"}`}
             >
-              <CheckCircleIcon className="w-4 h-4" /> Publish Event
+              {submitting ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-gray-500 border-t-white rounded-full animate-spin" />
+                  Publishing…
+                </>
+              ) : (
+                <><CheckCircleIcon className="w-4 h-4" /> Publish Event</>
+              )}
             </button>
           )}
         </div>

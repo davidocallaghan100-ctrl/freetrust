@@ -51,21 +51,22 @@ export default function EventsPage() {
   const [events, setEvents] = useState<EventItem[]>(MOCK_EVENTS)
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase
-      .from('events')
-      .select('*')
-      .gte('starts_at', new Date().toISOString())
-      .order('starts_at', { ascending: true })
-      .limit(24)
-      .then(({ data }) => {
+    const supabase = createClient();
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('events')
+          .select('*')
+          .gte('starts_at', new Date().toISOString())
+          .order('starts_at', { ascending: true })
+          .limit(24)
         if (data && data.length > 0) {
           const mapped: EventItem[] = data.map((e: Record<string, unknown>) => ({
             id: e.id as string,
             title: e.title as string,
             date: new Date(e.starts_at as string),
-            location: e.location as string ?? (e.is_online ? 'Online' : 'TBD'),
-            mode: e.is_online ? 'online' : 'in-person',
+            location: (e.location as string) ?? (e.is_online ? 'Online' : 'TBD'),
+            mode: (e.is_online ? 'online' : 'in-person') as EventMode,
             price: e.price ? Number(e.price) : null,
             rsvpCount: (e.attendee_count as number) ?? 0,
             description: (e.description as string) ?? '',
@@ -73,8 +74,10 @@ export default function EventsPage() {
           }))
           setEvents(mapped)
         }
-      })
-      .catch(() => { /* keep mock */ })
+      } catch {
+        // keep mock data
+      }
+    })()
   }, [])
 
   const filtered = applyFilter(events, activeFilter)

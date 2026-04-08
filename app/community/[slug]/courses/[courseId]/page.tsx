@@ -34,7 +34,7 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string;
   const total = MOCK_LESSONS.length
 
   const markComplete = () => {
-    setCompleted(prev => new Set([...prev, currentLesson]))
+    setCompleted(prev => new Set(Array.from(prev).concat(currentLesson)))
     if (currentLesson < MOCK_LESSONS.length - 1) {
       setCurrentLesson(p => p + 1)
     }

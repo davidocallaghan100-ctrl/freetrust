@@ -110,14 +110,8 @@ export async function POST(
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/community/${slug}`,
     })
 
-    // Record platform fee in trust_ledger (pending until payment confirmed)
-    await supabase.rpc('issue_trust', {
-      p_user_id: community.owner_id,
-      p_amount: -platformFee,
-      p_type: 'platform_fee',
-      p_ref: community.id,
-      p_desc: `FreeTrust 5% platform fee — ${community.name} membership`,
-    }).catch(e => console.warn('[join] trust ledger fee record failed:', e))
+    // Platform fee is recorded by the Stripe webhook (checkout.session.completed)
+    // after payment is confirmed — not here to avoid recording before payment succeeds.
 
     return NextResponse.json({ checkoutUrl: session.url })
   } catch (err) {

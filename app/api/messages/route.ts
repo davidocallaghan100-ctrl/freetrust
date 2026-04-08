@@ -71,7 +71,7 @@ export async function GET() {
       }
 
       // Get other participant
-      const otherParticipant = (conv.participants as Array<{ user_id: string; profile: { id: string; full_name: string | null; avatar_url: string | null } }>)
+      const otherParticipant = (conv.participants as unknown as Array<{ user_id: string; profile: { id: string; full_name: string | null; avatar_url: string | null } }>)
         .find(p => p.user_id !== user.id)
 
       return {

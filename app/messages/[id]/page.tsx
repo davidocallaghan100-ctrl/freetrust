@@ -71,7 +71,9 @@ export default function ConversationPage() {
         .neq('user_id', user.id)
         .limit(1)
       if (participants && participants[0]) {
-        setOtherUser((participants[0] as { profile: Profile }).profile)
+        const p0 = participants[0] as unknown as { profile: Profile | Profile[] }
+        const rawProfile = Array.isArray(p0.profile) ? p0.profile[0] : p0.profile
+        if (rawProfile) setOtherUser(rawProfile)
       }
 
       setTimeout(() => bottomRef.current?.scrollIntoView(), 100)

@@ -68,14 +68,15 @@ export default function ServicesPage() {
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase
-      .from('listings')
-      .select('*, seller:profiles(full_name, avatar_url)')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-      .limit(24)
-      .then(({ data }) => {
+    const supabase = createClient();
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('listings')
+          .select('*, seller:profiles(full_name, avatar_url)')
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(24)
         if (data && data.length > 0) {
           const mapped: Service[] = data.map((l: Record<string, unknown>) => {
             const seller = l.seller as { full_name?: string } | null
@@ -89,7 +90,7 @@ export default function ServicesPage() {
               rating: 4.8,
               reviews: 0,
               price: Number(l.price),
-              currency: l.currency as string ?? '£',
+              currency: (l.currency as string) ?? '£',
               delivery: '7 days',
               tags: (l.tags as string[]) ?? [],
               category: 'Design & Creative',
@@ -100,8 +101,10 @@ export default function ServicesPage() {
           })
           setServices(mapped)
         }
-      })
-      .catch(() => { /* keep mock */ })
+      } catch {
+        /* keep mock */
+      }
+    })()
   }, [])
 
   const searchFiltered = search

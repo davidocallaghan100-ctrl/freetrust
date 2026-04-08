@@ -97,13 +97,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Award ₮15 Trust for hosting
-    await supabase.rpc('issue_trust', {
-      p_user_id: user.id,
-      p_amount: 15,
-      p_type: 'event_hosted',
-      p_ref: event.id,
-      p_desc: `Hosted event: ${title}`,
-    }).catch(err => console.warn('[POST /api/events] trust award failed:', err))
+    try {
+      await supabase.rpc('issue_trust', {
+        p_user_id: user.id,
+        p_amount: 15,
+        p_type: 'event_hosted',
+        p_ref: event.id,
+        p_desc: `Hosted event: ${title}`,
+      })
+    } catch (trustErr) {
+      console.warn('[POST /api/events] trust award failed:', trustErr)
+    }
 
     return NextResponse.json({ event, trust_earned: 15 })
   } catch (err) {

@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect, use } from 'react'
+import React, { useState, useEffect, use, useCallback } from 'react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -98,6 +98,7 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
   const [postBody, setPostBody] = useState('')
   const [postType, setPostType] = useState<'discussion' | 'question' | 'announcement'>('discussion')
   const [submitting, setSubmitting] = useState(false)
+  const [postError, setPostError] = useState('')
   const [memberSearch, setMemberSearch] = useState('')
   const [votedPosts, setVotedPosts] = useState<Set<string>>(new Set())
   const [rsvpEvents, setRsvpEvents] = useState<Set<string>>(new Set())
@@ -105,6 +106,24 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
   const [editDesc, setEditDesc] = useState(community.description)
 
   const isOwner = true // mock: replace with auth check
+
+  // Load real posts from API (falls back gracefully to mock if API fails / table not ready)
+  const loadPosts = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/communities/${slug}/posts`)
+      if (!res.ok) return
+      const json = await res.json()
+      if (Array.isArray(json.posts) && json.posts.length > 0) {
+        setPosts(json.posts)
+      }
+    } catch {
+      // silently keep mock data
+    }
+  }, [slug])
+
+  useEffect(() => {
+    loadPosts()
+  }, [loadPosts])
 
   // Sort: pinned first, then by date
   const sortedPosts = [...posts].sort((a, b) => {
@@ -125,15 +144,17 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
 
   const handleVote = (postId: string) => {
     if (votedPosts.has(postId)) return
-    setVotedPosts(prev => new Set([...prev, postId]))
+    setVotedPosts(prev => { const next = new Set(prev); next.add(postId); return next })
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, upvotes: p.upvotes + 1 } : p))
   }
 
   const handlePost = async () => {
     if (!postTitle.trim()) return
     setSubmitting(true)
-    const newPost: Post = {
-      id: String(Date.now()),
+    setPostError('')
+    // Optimistic UI update
+    const tempPost: Post = {
+      id: `temp-${Date.now()}`,
       title: postTitle,
       body: postBody,
       type: postType,
@@ -143,9 +164,28 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
       created_at: new Date().toISOString(),
       author: { id: 'me', full_name: 'You', avatar_url: null },
     }
-    setPosts(prev => [newPost, ...prev])
+    setPosts(prev => [tempPost, ...prev])
     setPostTitle('')
     setPostBody('')
+    try {
+      const res = await fetch(`/api/communities/${slug}/posts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: postTitle, body: postBody, type: postType }),
+      })
+      if (res.ok) {
+        const json = await res.json()
+        if (json.post) {
+          // Replace temp post with real one
+          setPosts(prev => prev.map(p => p.id === tempPost.id ? json.post : p))
+        }
+      } else {
+        const json = await res.json().catch(() => ({}))
+        if (json.error) setPostError(json.error)
+      }
+    } catch {
+      // Keep optimistic post even if API fails
+    }
     setSubmitting(false)
   }
 
@@ -258,7 +298,11 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
                 rows={3}
                 style={{ width: '100%', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 7, padding: '0.55rem 0.8rem', fontSize: '0.85rem', color: '#f1f5f9', outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'system-ui', marginBottom: '0.75rem' }}
               />
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                {postError
+                  ? <span style={{ fontSize: '0.78rem', color: '#f87171' }}>{postError}</span>
+                  : <span />
+                }
                 <button onClick={handlePost} disabled={!postTitle.trim() || submitting} style={{ background: postTitle.trim() ? '#38bdf8' : 'rgba(56,189,248,0.3)', border: 'none', borderRadius: 7, padding: '0.45rem 1.1rem', fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', cursor: postTitle.trim() ? 'pointer' : 'not-allowed' }}>
                   {submitting ? 'Posting...' : 'Post'}
                 </button>

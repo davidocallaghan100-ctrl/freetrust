@@ -1,5 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 const CATEGORIES = ['All', 'Digital Downloads', 'Physical Goods', 'Templates', 'Courses', 'Software', 'Books']
@@ -56,15 +57,15 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS)
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase
-      .from('listings')
-      .select('*, seller:profiles(full_name)')
-      .eq('status', 'active')
-      .in('category_id', []) // will be empty unless categories seeded
-      .order('created_at', { ascending: false })
-      .limit(24)
-      .then(({ data }) => {
+    const supabase = createClient();
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('listings')
+          .select('*, seller:profiles(full_name)')
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(24)
         if (data && data.length > 0) {
           const mapped: Product[] = data.map((l: Record<string, unknown>) => {
             const seller = l.seller as { full_name?: string } | null
@@ -88,8 +89,10 @@ export default function ProductsPage() {
           })
           setProducts(mapped)
         }
-      })
-      .catch(() => { /* keep mock */ })
+      } catch {
+        // keep mock data
+      }
+    })()
   }, [])
 
   const filtered = active === 'All' ? products : products.filter(p => p.category === active)
@@ -171,7 +174,7 @@ export default function ProductsPage() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(56,189,248,0.06)', padding: '0.75rem 1rem', marginTop: 'auto' }}>
                 <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#38bdf8' }}>{p.currency}{p.price}</span>
-                <button style={{ background: '#38bdf8', border: 'none', borderRadius: 7, padding: '0.45rem 0.9rem', fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer' }}>Buy Now</button>
+                <Link href={`/products/${p.id}`} style={{ background: '#38bdf8', border: 'none', borderRadius: 7, padding: '0.45rem 0.9rem', fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>Buy Now</Link>
               </div>
             </div>
           ))}
