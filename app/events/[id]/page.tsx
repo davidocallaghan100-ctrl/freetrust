@@ -1,4 +1,3 @@
-<<<FILE: app/events/[id]/page.tsx>>>
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -1497,4 +1496,167 @@ export default function EventDetailPage() {
               </span>
             )}
             {eventIsToday && (
-              <span className="inline
+              <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-400/30 animate-pulse">
+                🔴 Happening Today
+              </span>
+            )}
+            {inPast && (
+              <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-500/20 text-gray-300">
+                Past Event
+              </span>
+            )}
+          </div>
+
+          <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight mb-3">
+            {event.title}
+          </h1>
+          <p className="text-violet-200 text-sm leading-relaxed mb-5 max-w-2xl">
+            {event.description}
+          </p>
+
+          {/* Key details row */}
+          <div className="flex flex-wrap gap-4 text-sm text-violet-200">
+            <div className="flex items-center gap-1.5">
+              <CalendarDaysIcon className="w-4 h-4" />
+              <span>{format(startDate, "EEE d MMM yyyy")}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <ClockIcon className="w-4 h-4" />
+              <span>{format(startDate, "HH:mm")} – {format(endDate, "HH:mm")} {event.timezone}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <MapPinIcon className="w-4 h-4" />
+              <span>{event.location.city}, {event.location.country}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <UserGroupIcon className="w-4 h-4" />
+              <span>{event.totalRsvp} attending</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Main content ── */}
+      <div className="max-w-4xl mx-auto px-4 py-6 pb-24 sm:pb-8">
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Left: tabs content */}
+          <div className="flex-1 min-w-0 space-y-5">
+            {/* RSVP success banner */}
+            {rsvp.confirmed && (
+              <RsvpSuccessBanner trustEarned={rsvp.trustEarned} />
+            )}
+
+            {/* Trust reward notice (pre-RSVP) */}
+            {!rsvp.confirmed && (
+              <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 flex items-center gap-3">
+                <ShieldCheckIcon className="w-5 h-5 text-violet-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-violet-900">
+                    Earn ₮{event.trustReward} Trust tokens
+                  </p>
+                  <p className="text-xs text-violet-600 mt-0.5">
+                    Awarded automatically when you attend this event.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <Tabs />
+
+            <div className="pt-2">
+              {activeTab === "about" && <AboutTab event={event} />}
+              {activeTab === "agenda" && <AgendaTab event={event} />}
+              {activeTab === "attendees" && <AttendeesTab event={event} />}
+              {activeTab === "comments" && <CommentsTab event={event} />}
+              {activeTab === "faqs" && <FaqsTab event={event} />}
+            </div>
+          </div>
+
+          {/* Right: desktop RSVP sidebar */}
+          <div className="hidden sm:block w-72 flex-shrink-0">
+            <div className="sticky top-6 space-y-4">
+              {rsvp.confirmed ? (
+                <RsvpSuccessBanner trustEarned={rsvp.trustEarned} />
+              ) : (
+                <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+                  <div className="p-5 border-b border-gray-100">
+                    <div className="flex items-baseline justify-between mb-1">
+                      <span className="text-2xl font-bold text-gray-900">
+                        {Math.min(...event.tickets.map((t) => t.price)) === 0
+                          ? "Free"
+                          : `£${Math.min(...event.tickets.map((t) => t.price))}`}
+                      </span>
+                      {event.tickets.some((t) => t.price > 0) &&
+                        event.tickets.some((t) => t.price === 0) && (
+                          <span className="text-xs text-gray-500">+ paid options</span>
+                        )}
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-1.5 mt-3 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${
+                          capacityPct(event.totalRsvp, event.capacity) >= 90
+                            ? "bg-rose-500"
+                            : "bg-violet-600"
+                        }`}
+                        style={{ width: `${capacityPct(event.totalRsvp, event.capacity)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {event.capacity - event.totalRsvp} spots remaining
+                    </p>
+                  </div>
+                  <div className="p-5">
+                    <button
+                      disabled={soldOut || inPast}
+                      onClick={() => setCheckoutOpen(true)}
+                      className="w-full py-3.5 bg-violet-600 hover:bg-violet-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl transition-colors"
+                    >
+                      {inPast
+                        ? "Event Ended"
+                        : soldOut
+                        ? "Sold Out"
+                        : "RSVP Now"}
+                    </button>
+                    <div className="mt-3 flex items-center gap-2 justify-center">
+                      <ShieldCheckIcon className="w-4 h-4 text-violet-500" />
+                      <p className="text-xs text-violet-600 font-medium">
+                        Earn ₮{event.trustReward} on attendance
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Organiser mini card */}
+              <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+                <h3 className="font-semibold text-gray-900 text-sm mb-3">Organiser</h3>
+                <div className="flex items-center gap-3">
+                  <Avatar name={event.organiser.name} size="md" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium text-gray-900 text-sm truncate">
+                        {event.organiser.name}
+                      </span>
+                      {event.organiser.verified && (
+                        <ShieldCheckIcon className="w-3.5 h-3.5 text-violet-600 flex-shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500">{event.organiser.eventsHosted} events hosted</p>
+                  </div>
+                  <TrustBadge score={event.organiser.trustScore} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      {checkoutOpen && <CheckoutModal event={event} />}
+      {shareOpen && <ShareModal event={event} />}
+
+      {/* Mobile sticky CTA */}
+      <StickyCta event={event} />
+    </div>
+  );
+}
