@@ -1,216 +1,737 @@
-import { Suspense } from 'react'
-import SearchResults from '@/components/search/SearchResults'
-import SearchFilters from '@/components/search/SearchFilters'
-import SearchBar from '@/components/search/SearchBar'
+'use client';
 
-export const metadata = {
-  title: 'Search | FreeTrust',
-  description: 'Search across services, products, events, organisations, articles and members on FreeTrust.',
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import {
+  MagnifyingGlassIcon,
+  FunnelIcon,
+  XMarkIcon,
+  UserCircleIcon,
+  BriefcaseIcon,
+  CubeIcon,
+  BuildingOffice2Icon,
+  UsersIcon,
+  DocumentTextIcon,
+  StarIcon,
+  MapPinIcon,
+  TagIcon,
+  AdjustmentsHorizontalIcon,
+} from '@heroicons/react/24/outline';
+import { StarIcon as StarSolid } from '@heroicons/react/24/solid';
+import { formatDistanceToNow } from 'date-fns';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+type ContentType = 'all' | 'services' | 'products' | 'users' | 'organisations' | 'communities' | 'posts';
+
+interface SearchResult {
+  id: string;
+  type: Exclude<ContentType, 'all'>;
+  title: string;
+  description: string;
+  imageUrl?: string;
+  price?: number;
+  currency?: string;
+  rating?: number;
+  reviewCount?: number;
+  location?: string;
+  tags?: string[];
+  author?: string;
+  authorAvatar?: string;
+  verified?: boolean;
+  createdAt: Date;
+  slug: string;
 }
 
-export default function SearchPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined }
-}) {
-  const query = typeof searchParams.q === 'string' ? searchParams.q : ''
-  const category = typeof searchParams.category === 'string' ? searchParams.category : 'all'
-  const location = typeof searchParams.location === 'string' ? searchParams.location : ''
-  const priceMin = typeof searchParams.priceMin === 'string' ? searchParams.priceMin : ''
-  const priceMax = typeof searchParams.priceMax === 'string' ? searchParams.priceMax : ''
-  const trustScore = typeof searchParams.trustScore === 'string' ? searchParams.trustScore : '0'
-  const page = typeof searchParams.page === 'string' ? parseInt(searchParams.page, 10) : 1
+interface FilterState {
+  minPrice: string;
+  maxPrice: string;
+  minRating: string;
+  location: string;
+  tags: string;
+  sortBy: 'relevance' | 'newest' | 'price_asc' | 'price_desc' | 'rating';
+}
+
+// ─── Mock Data ────────────────────────────────────────────────────────────────
+
+const MOCK_RESULTS: SearchResult[] = [
+  {
+    id: '1',
+    type: 'services',
+    title: 'Professional Logo Design',
+    description: 'High-quality logo design tailored to your brand identity. Includes 3 concepts, unlimited revisions, and full source files.',
+    price: 150,
+    currency: 'USDT',
+    rating: 4.8,
+    reviewCount: 124,
+    location: 'Remote',
+    tags: ['design', 'branding', 'logo'],
+    author: 'Alex Rivera',
+    authorAvatar: '',
+    verified: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
+    slug: '/services/professional-logo-design',
+  },
+  {
+    id: '2',
+    type: 'products',
+    title: 'UI Component Library — Pro',
+    description: 'Over 500 ready-to-use React components with Tailwind CSS. Dark mode, accessibility, TypeScript support included.',
+    price: 89,
+    currency: 'USDT',
+    rating: 4.9,
+    reviewCount: 312,
+    tags: ['react', 'ui', 'tailwind', 'typescript'],
+    author: 'DesignLab',
+    authorAvatar: '',
+    verified: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12),
+    slug: '/products/ui-component-library-pro',
+  },
+  {
+    id: '3',
+    type: 'users',
+    title: 'Maria Chen',
+    description: 'Full-stack developer specialising in Next.js, TypeScript, and Web3 integrations. 7+ years experience.',
+    location: 'Singapore',
+    tags: ['nextjs', 'web3', 'typescript'],
+    rating: 4.7,
+    reviewCount: 89,
+    verified: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30),
+    slug: '/users/maria-chen',
+  },
+  {
+    id: '4',
+    type: 'organisations',
+    title: 'OpenBuild Collective',
+    description: 'A decentralised organisation of builders, designers, and marketers working on open-source Web3 tools.',
+    location: 'Global',
+    tags: ['web3', 'open-source', 'dao'],
+    rating: 4.6,
+    reviewCount: 55,
+    verified: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 60),
+    slug: '/organisations/openbuild-collective',
+  },
+  {
+    id: '5',
+    type: 'services',
+    title: 'Smart Contract Audit',
+    description: 'Comprehensive security audit for Solidity smart contracts. Includes detailed report, vulnerability analysis, and remediation advice.',
+    price: 800,
+    currency: 'USDT',
+    rating: 5.0,
+    reviewCount: 42,
+    location: 'Remote',
+    tags: ['solidity', 'security', 'blockchain', 'audit'],
+    author: 'CryptoGuard',
+    authorAvatar: '',
+    verified: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3),
+    slug: '/services/smart-contract-audit',
+  },
+  {
+    id: '6',
+    type: 'communities',
+    title: 'Web3 Builders Hub',
+    description: 'A thriving community for Web3 developers, designers, and entrepreneurs to collaborate and grow together.',
+    tags: ['web3', 'builders', 'community'],
+    rating: 4.5,
+    reviewCount: 210,
+    location: 'Online',
+    verified: false,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 90),
+    slug: '/communities/web3-builders-hub',
+  },
+  {
+    id: '7',
+    type: 'posts',
+    title: 'How to structure a FreeTrust escrow deal',
+    description: 'A step-by-step guide on setting up milestone-based escrow payments on FreeTrust, protecting both buyers and sellers.',
+    tags: ['escrow', 'guide', 'tutorial'],
+    author: 'FreeTrust Team',
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7),
+    slug: '/posts/how-to-structure-escrow-deal',
+  },
+  {
+    id: '8',
+    type: 'products',
+    title: 'Crypto Payment Gateway SDK',
+    description: 'Accept USDT, ETH, and BTC on your platform with a single SDK. React & Node.js compatible, full docs included.',
+    price: 299,
+    currency: 'USDT',
+    rating: 4.8,
+    reviewCount: 67,
+    tags: ['crypto', 'payments', 'sdk', 'web3'],
+    author: 'PayKit',
+    verified: false,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 20),
+    slug: '/products/crypto-payment-gateway-sdk',
+  },
+  {
+    id: '9',
+    type: 'users',
+    title: 'James Okafor',
+    description: 'Creative director and brand strategist with 10+ years helping Web2 and Web3 companies build memorable identities.',
+    location: 'Lagos, Nigeria',
+    tags: ['branding', 'design', 'strategy'],
+    rating: 4.9,
+    reviewCount: 143,
+    verified: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 45),
+    slug: '/users/james-okafor',
+  },
+  {
+    id: '10',
+    type: 'services',
+    title: 'SEO & Content Strategy',
+    description: 'Drive organic growth with tailored SEO strategy, keyword research, competitor analysis, and monthly performance reports.',
+    price: 350,
+    currency: 'USDT',
+    rating: 4.6,
+    reviewCount: 98,
+    location: 'Remote',
+    tags: ['seo', 'content', 'marketing'],
+    author: 'GrowthStudio',
+    verified: false,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 8),
+    slug: '/services/seo-content-strategy',
+  },
+];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const TYPE_CONFIG: Record<Exclude<ContentType, 'all'>, { label: string; icon: React.ReactNode; color: string }> = {
+  services: { label: 'Service', icon: <BriefcaseIcon className="w-3.5 h-3.5" />, color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
+  products: { label: 'Product', icon: <CubeIcon className="w-3.5 h-3.5" />, color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' },
+  users: { label: 'User', icon: <UserCircleIcon className="w-3.5 h-3.5" />, color: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' },
+  organisations: { label: 'Organisation', icon: <BuildingOffice2Icon className="w-3.5 h-3.5" />, color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300' },
+  communities: { label: 'Community', icon: <UsersIcon className="w-3.5 h-3.5" />, color: 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300' },
+  posts: { label: 'Post', icon: <DocumentTextIcon className="w-3.5 h-3.5" />, color: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' },
+};
+
+const TAB_ITEMS: { key: ContentType; label: string; icon: React.ReactNode }[] = [
+  { key: 'all', label: 'All', icon: <MagnifyingGlassIcon className="w-4 h-4" /> },
+  { key: 'services', label: 'Services', icon: <BriefcaseIcon className="w-4 h-4" /> },
+  { key: 'products', label: 'Products', icon: <CubeIcon className="w-4 h-4" /> },
+  { key: 'users', label: 'People', icon: <UserCircleIcon className="w-4 h-4" /> },
+  { key: 'organisations', label: 'Orgs', icon: <BuildingOffice2Icon className="w-4 h-4" /> },
+  { key: 'communities', label: 'Communities', icon: <UsersIcon className="w-4 h-4" /> },
+  { key: 'posts', label: 'Posts', icon: <DocumentTextIcon className="w-4 h-4" /> },
+];
+
+function filterAndSort(results: SearchResult[], query: string, type: ContentType, filters: FilterState): SearchResult[] {
+  let filtered = results.filter((r) => {
+    const q = query.toLowerCase();
+    const matchesQuery =
+      !q ||
+      r.title.toLowerCase().includes(q) ||
+      r.description.toLowerCase().includes(q) ||
+      r.tags?.some((t) => t.toLowerCase().includes(q)) ||
+      r.author?.toLowerCase().includes(q);
+    const matchesType = type === 'all' || r.type === type;
+    const matchesMin = !filters.minPrice || (r.price !== undefined && r.price >= parseFloat(filters.minPrice));
+    const matchesMax = !filters.maxPrice || (r.price !== undefined && r.price <= parseFloat(filters.maxPrice));
+    const matchesRating = !filters.minRating || (r.rating !== undefined && r.rating >= parseFloat(filters.minRating));
+    const matchesLocation = !filters.location || r.location?.toLowerCase().includes(filters.location.toLowerCase());
+    const matchesTags =
+      !filters.tags ||
+      filters.tags
+        .split(',')
+        .map((t) => t.trim().toLowerCase())
+        .every((ft) => r.tags?.some((rt) => rt.toLowerCase().includes(ft)));
+    return matchesQuery && matchesType && matchesMin && matchesMax && matchesRating && matchesLocation && matchesTags;
+  });
+
+  switch (filters.sortBy) {
+    case 'newest':
+      filtered = filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      break;
+    case 'price_asc':
+      filtered = filtered.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+      break;
+    case 'price_desc':
+      filtered = filtered.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
+      break;
+    case 'rating':
+      filtered = filtered.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+      break;
+    default:
+      break;
+  }
+  return filtered;
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function RatingStars({ rating }: { rating: number }) {
+  return (
+    <span className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((s) => (
+        <StarSolid
+          key={s}
+          className={`w-3.5 h-3.5 ${s <= Math.round(rating) ? 'text-yellow-400' : 'text-gray-200 dark:text-gray-600'}`}
+        />
+      ))}
+    </span>
+  );
+}
+
+function TypeBadge({ type }: { type: Exclude<ContentType, 'all'> }) {
+  const cfg = TYPE_CONFIG[type];
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.color}`}>
+      {cfg.icon}
+      {cfg.label}
+    </span>
+  );
+}
+
+function ResultCard({ result }: { result: SearchResult }) {
+  const hasPrice = result.price !== undefined;
+  const hasRating = result.rating !== undefined;
 
   return (
-    <>
-      <style>{`
-        .sp-page { min-height: 100vh; background: #0f172a; color: #f1f5f9; }
-        .sp-hero { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-bottom: 1px solid rgba(56,189,248,0.15); padding: 2.5rem 1.25rem 2rem; }
-        .sp-hero-inner { max-width: 720px; margin: 0 auto; text-align: center; }
-        .sp-title { font-size: clamp(1.5rem, 4vw, 2.25rem); font-weight: 900; color: #f1f5f9; margin: 0 0 0.5rem; letter-spacing: -0.5px; }
-        .sp-title-q { color: #38bdf8; }
-        .sp-subtitle { font-size: 0.95rem; color: #64748b; margin: 0 0 1.5rem; }
-        .sp-bar-wrap { max-width: 640px; margin: 0 auto; }
-
-        /* Search bar dark overrides */
-        .search-bar { position: relative; width: 100%; }
-        .search-bar__form { display: flex; gap: 0.5rem; }
-        .search-bar__input-wrap { position: relative; flex: 1; display: flex; align-items: center; }
-        .search-bar__icon { position: absolute; left: 1rem; color: #64748b; display: flex; pointer-events: none; }
-        .search-bar__input { width: 100%; background: #1e293b; border: 1px solid rgba(56,189,248,0.2); border-radius: 10px; padding: 0.85rem 2.8rem 0.85rem 2.8rem; font-size: 1rem; color: #f1f5f9; outline: none; transition: border-color 0.2s; }
-        .search-bar__input:focus { border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56,189,248,0.12); }
-        .search-bar__input::placeholder { color: #475569; }
-        .search-bar__clear { position: absolute; right: 0.75rem; background: none; border: none; cursor: pointer; color: #64748b; display: flex; padding: 4px; border-radius: 4px; }
-        .search-bar__clear:hover { color: #f1f5f9; }
-        .search-bar__submit { background: #38bdf8; color: #0f172a; border: none; border-radius: 10px; padding: 0.85rem 1.5rem; font-size: 0.95rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: opacity 0.15s; }
-        .search-bar__submit:hover { opacity: 0.88; }
-        .search-bar__dropdown { position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: #1e293b; border: 1px solid rgba(56,189,248,0.2); border-radius: 10px; z-index: 200; box-shadow: 0 12px 40px rgba(0,0,0,0.4); overflow: hidden; }
-        .search-bar__group-label { padding: 0.5rem 1rem 0.25rem; font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.4rem; }
-        .search-bar__suggestion { display: flex; align-items: center; gap: 0.75rem; width: 100%; padding: 0.65rem 1rem; background: none; border: none; cursor: pointer; text-align: left; color: #f1f5f9; font-size: 0.9rem; transition: background 0.1s; }
-        .search-bar__suggestion:hover, .search-bar__suggestion--active { background: rgba(56,189,248,0.08); }
-        .search-bar__suggestion-body { flex: 1; min-width: 0; }
-        .search-bar__suggestion-title { display: block; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .search-bar__suggestion-sub { display: block; font-size: 0.78rem; color: #64748b; }
-        .search-bar__highlight { background: rgba(56,189,248,0.25); color: #38bdf8; border-radius: 2px; }
-        .search-bar__dropdown-footer { padding: 0.6rem 1rem; border-top: 1px solid rgba(56,189,248,0.1); }
-        .search-bar__see-all { font-size: 0.85rem; color: #38bdf8; display: flex; align-items: center; gap: 0.4rem; text-decoration: none; }
-        .search-bar__see-all:hover { text-decoration: underline; }
-        .search-bar__spinner { position: absolute; right: 2.8rem; }
-
-        /* Body layout */
-        .sp-body { max-width: 1300px; margin: 0 auto; padding: 2rem 1.25rem; display: grid; grid-template-columns: 240px 1fr; gap: 1.75rem; align-items: start; }
-        @media (max-width: 900px) { .sp-body { grid-template-columns: 1fr; } }
-
-        /* Filters dark */
-        .search-filters { background: #1e293b; border: 1px solid rgba(56,189,248,0.1); border-radius: 12px; padding: 1.25rem; }
-        .search-filters__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-        .search-filters__title { font-size: 0.95rem; font-weight: 700; color: #f1f5f9; }
-        .search-filters__clear-all { font-size: 0.8rem; color: #38bdf8; background: none; border: none; cursor: pointer; }
-        .search-filters__clear-all:hover { text-decoration: underline; }
-        .search-filters__mobile-toggle { display: none; font-size: 0.82rem; color: #64748b; background: none; border: none; cursor: pointer; align-items: center; gap: 0.3rem; }
-        @media (max-width: 900px) { .search-filters__mobile-toggle { display: flex; } .search-filters__body { display: none; } .search-filters__body--open { display: block; } }
-        .search-filters__section { margin-bottom: 1.25rem; }
-        .search-filters__section-title { font-size: 0.8rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.6rem; display: flex; align-items: center; justify-content: space-between; }
-        .search-filters__trust-value { font-size: 0.9rem; font-weight: 700; color: #38bdf8; text-transform: none; }
-        .search-filters__category-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.2rem; }
-        .search-filters__category-btn { display: flex; align-items: center; gap: 0.5rem; width: 100%; padding: 0.5rem 0.65rem; border-radius: 7px; background: none; border: 1px solid transparent; cursor: pointer; color: #94a3b8; font-size: 0.875rem; text-align: left; transition: all 0.15s; }
-        .search-filters__category-btn:hover { color: #f1f5f9; background: rgba(56,189,248,0.06); }
-        .search-filters__category-btn--active { color: #38bdf8; background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.25); font-weight: 600; }
-        .search-filters__cat-icon { font-size: 0.9rem; }
-        .search-filters__location-wrap { position: relative; display: flex; align-items: center; }
-        .search-filters__location-icon { position: absolute; left: 0.65rem; color: #64748b; }
-        .search-filters__input { width: 100%; background: #0f172a; border: 1px solid rgba(56,189,248,0.15); border-radius: 7px; padding: 0.55rem 0.65rem 0.55rem 2rem; font-size: 0.875rem; color: #f1f5f9; outline: none; }
-        .search-filters__input:focus { border-color: #38bdf8; }
-        .search-filters__input::placeholder { color: #475569; }
-        .search-filters__price-row { display: flex; align-items: center; gap: 0.5rem; }
-        .search-filters__input--price { padding-left: 0.65rem; }
-        .search-filters__price-sep { color: #64748b; font-size: 0.9rem; }
-        .search-filters__range { width: 100%; accent-color: #38bdf8; margin: 0.4rem 0; }
-        .search-filters__range-labels { display: flex; justify-content: space-between; font-size: 0.72rem; color: #64748b; }
-        .search-filters__trust-tiers { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.5rem; }
-        .search-filters__trust-tier { padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.78rem; font-weight: 600; background: rgba(148,163,184,0.08); border: 1px solid rgba(148,163,184,0.15); color: #94a3b8; cursor: pointer; transition: all 0.15s; }
-        .search-filters__trust-tier--active { background: rgba(56,189,248,0.12); border-color: rgba(56,189,248,0.35); color: #38bdf8; }
-        .search-filters__apply { width: 100%; padding: 0.7rem; background: #38bdf8; color: #0f172a; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: opacity 0.15s; margin-top: 0.5rem; }
-        .search-filters__apply:hover { opacity: 0.88; }
-        .search-filters__apply:disabled { opacity: 0.5; cursor: not-allowed; }
-        .search-filters--loading { opacity: 0.7; pointer-events: none; }
-
-        /* Results */
-        .search-results__meta { font-size: 0.875rem; color: #64748b; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
-        .search-results__count { font-weight: 600; color: #f1f5f9; }
-        .search-results__active-cat { background: rgba(var(--cat-color, 56,189,248),0.12); color: var(--cat-color, #38bdf8); padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700; border: 1px solid rgba(56,189,248,0.2); }
-        .search-results__list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; }
-
-        /* Result cards */
-        .result-card { display: flex; gap: 1rem; padding: 1rem; background: #1e293b; border: 1px solid rgba(56,189,248,0.08); border-radius: 12px; text-decoration: none; color: #f1f5f9; transition: all 0.15s; }
-        .result-card:hover { border-color: rgba(56,189,248,0.25); background: rgba(30,41,59,0.9); transform: translateY(-1px); }
-        .result-card__thumb-wrap { position: relative; flex-shrink: 0; width: 80px; height: 80px; border-radius: 8px; overflow: hidden; }
-        .result-card__thumb { width: 100%; height: 100%; object-fit: cover; }
-        .result-card__thumb-placeholder { width: 100%; height: 100%; background: rgba(56,189,248,0.1); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; color: #38bdf8; }
-        .result-card__cat-badge { position: absolute; bottom: 4px; left: 4px; background: rgba(15,23,42,0.85); color: var(--cat-color, #38bdf8); font-size: 0.65rem; font-weight: 700; padding: 0.1rem 0.35rem; border-radius: 4px; }
-        .result-card__body { flex: 1; min-width: 0; }
-        .result-card__title { font-size: 1rem; font-weight: 700; color: #f1f5f9; margin: 0 0 0.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .result-card__subtitle { font-size: 0.8rem; color: #38bdf8; margin: 0 0 0.3rem; font-weight: 600; }
-        .result-card__desc { font-size: 0.85rem; color: #94a3b8; margin: 0 0 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .result-card__meta { display: flex; flex-wrap: wrap; gap: 0.75rem; font-size: 0.78rem; color: #64748b; }
-        .result-card__meta-item { display: flex; align-items: center; gap: 0.3rem; }
-        .result-card__meta-item--price { color: #34d399; font-weight: 700; }
-        .result-card__trust { display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; }
-        .trust-meter { display: flex; flex-direction: column; align-items: center; position: relative; }
-        .trust-meter__score { font-size: 0.7rem; font-weight: 800; margin-top: -28px; }
-        .trust-meter__label { font-size: 0.6rem; color: #64748b; margin-top: 2px; }
-        .trust-badge { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.78rem; font-weight: 700; color: var(--trust-color, #38bdf8); }
-        .search-bar__highlight { background: rgba(56,189,248,0.2); color: #38bdf8; border-radius: 2px; }
-
-        /* Empty/no results */
-        .search-empty { padding: 4rem 2rem; text-align: center; }
-        .search-empty__icon { font-size: 3rem; display: block; margin-bottom: 1rem; }
-        .search-empty__title { font-size: 1.25rem; font-weight: 700; color: #f1f5f9; margin: 0 0 0.5rem; }
-        .search-empty__text { color: #64748b; font-size: 0.95rem; }
-
-        /* Skeleton */
-        .search-skeleton { display: flex; flex-direction: column; gap: 0.75rem; }
-        .search-skeleton__meta { height: 20px; background: rgba(56,189,248,0.06); border-radius: 6px; width: 200px; margin-bottom: 0.5rem; }
-        .search-skeleton__card { display: flex; gap: 1rem; padding: 1rem; background: #1e293b; border: 1px solid rgba(56,189,248,0.06); border-radius: 12px; }
-        .search-skeleton__thumb { width: 80px; height: 80px; border-radius: 8px; background: rgba(56,189,248,0.08); flex-shrink: 0; animation: pulse 1.5s ease-in-out infinite; }
-        .search-skeleton__content { flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
-        .search-skeleton__line { background: rgba(56,189,248,0.08); border-radius: 4px; animation: pulse 1.5s ease-in-out infinite; }
-        .search-skeleton__line--title { height: 18px; width: 60%; }
-        .search-skeleton__line--sub { height: 14px; width: 40%; }
-        .search-skeleton__line--meta { height: 12px; width: 30%; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-        /* Pagination */
-        .search-pagination { display: flex; justify-content: center; align-items: center; gap: 0.5rem; padding: 2rem 0 1rem; flex-wrap: wrap; }
-        .search-pagination__btn { padding: 0.5rem 0.9rem; background: #1e293b; border: 1px solid rgba(56,189,248,0.15); border-radius: 7px; color: #94a3b8; font-size: 0.875rem; text-decoration: none; transition: all 0.15s; }
-        .search-pagination__btn:hover { border-color: rgba(56,189,248,0.4); color: #38bdf8; }
-        .search-pagination__btn--active { background: rgba(56,189,248,0.12); border-color: rgba(56,189,248,0.4); color: #38bdf8; font-weight: 700; }
-        .search-pagination__btn--disabled { opacity: 0.35; pointer-events: none; }
-      `}</style>
-      <div className="sp-page">
-        <div className="sp-hero">
-          <div className="sp-hero-inner">
-            <h1 className="sp-title">
-              {query ? (
-                <>Results for <span className="sp-title-q">&ldquo;{query}&rdquo;</span></>
-              ) : (
-                'Search FreeTrust'
-              )}
-            </h1>
-            <p className="sp-subtitle">
-              Find trusted services, products, events, organisations, articles and members
-            </p>
-            <div className="sp-bar-wrap">
-              <SearchBar initialQuery={query} large />
-            </div>
+    <Link href={result.slug} className="block group">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200">
+        <div className="flex items-start gap-4">
+          {/* Avatar/Icon placeholder */}
+          <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+            {result.title.charAt(0)}
           </div>
-        </div>
 
-        <div className="sp-body">
-          <aside>
-            <SearchFilters
-              category={category}
-              location={location}
-              priceMin={priceMin}
-              priceMax={priceMax}
-              trustScore={trustScore}
-              query={query}
-            />
-          </aside>
+          <div className="flex-1 min-w-0">
+            {/* Top row */}
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              <TypeBadge type={result.type} />
+              {result.verified && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                  ✓ Verified
+                </span>
+              )}
+              <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">
+                {formatDistanceToNow(result.createdAt, { addSuffix: true })}
+              </span>
+            </div>
 
-          <main>
-            <Suspense fallback={<SearchResultsSkeleton />}>
-              <SearchResults
-                query={query}
-                category={category}
-                location={location}
-                priceMin={priceMin}
-                priceMax={priceMax}
-                trustScore={Number(trustScore)}
-                page={page}
-              />
-            </Suspense>
-          </main>
+            {/* Title */}
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
+              {result.title}
+            </h3>
+
+            {/* Description */}
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{result.description}</p>
+
+            {/* Meta row */}
+            <div className="flex flex-wrap items-center gap-3 mt-3">
+              {hasRating && result.rating !== undefined && (
+                <span className="flex items-center gap-1.5">
+                  <RatingStars rating={result.rating} />
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{result.rating.toFixed(1)}</span>
+                  {result.reviewCount !== undefined && (
+                    <span className="text-xs text-gray-400 dark:text-gray-500">({result.reviewCount})</span>
+                  )}
+                </span>
+              )}
+              {result.location && (
+                <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+                  <MapPinIcon className="w-3.5 h-3.5" />
+                  {result.location}
+                </span>
+              )}
+              {result.author && (
+                <span className="text-xs text-gray-400 dark:text-gray-500">by {result.author}</span>
+              )}
+              {hasPrice && (
+                <span className="ml-auto text-sm font-semibold text-blue-600 dark:text-blue-400">
+                  {result.currency} {result.price?.toLocaleString()}
+                </span>
+              )}
+            </div>
+
+            {/* Tags */}
+            {result.tags && result.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {result.tags.slice(0, 4).map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                  >
+                    <TagIcon className="w-3 h-3" />
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </>
-  )
+    </Link>
+  );
 }
 
-function SearchResultsSkeleton() {
+function FilterPanel({
+  filters,
+  onChange,
+  onReset,
+  activeType,
+}: {
+  filters: FilterState;
+  onChange: (k: keyof FilterState, v: string) => void;
+  onReset: () => void;
+  activeType: ContentType;
+}) {
+  const showPrice = activeType === 'all' || activeType === 'services' || activeType === 'products';
+
   return (
-    <div className="search-skeleton">
-      <div className="search-skeleton__meta" />
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="search-skeleton__card">
-          <div className="search-skeleton__thumb" />
-          <div className="search-skeleton__content">
-            <div className="search-skeleton__line search-skeleton__line--title" />
-            <div className="search-skeleton__line search-skeleton__line--sub" />
-            <div className="search-skeleton__line search-skeleton__line--meta" />
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-5">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+          <AdjustmentsHorizontalIcon className="w-4 h-4" />
+          Filters
+        </h3>
+        <button
+          onClick={onReset}
+          className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          Reset all
+        </button>
+      </div>
+
+      {/* Sort */}
+      <div>
+        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Sort by</label>
+        <select
+          value={filters.sortBy}
+          onChange={(e) => onChange('sortBy', e.target.value)}
+          className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="relevance">Relevance</option>
+          <option value="newest">Newest</option>
+          <option value="rating">Highest rated</option>
+          {showPrice && <option value="price_asc">Price: low to high</option>}
+          {showPrice && <option value="price_desc">Price: high to low</option>}
+        </select>
+      </div>
+
+      {/* Price range */}
+      {showPrice && (
+        <div>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Price (USDT)</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              placeholder="Min"
+              value={filters.minPrice}
+              onChange={(e) => onChange('minPrice', e.target.value)}
+              className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="text-gray-400 dark:text-gray-500 text-xs">–</span>
+            <input
+              type="number"
+              placeholder="Max"
+              value={filters.maxPrice}
+              onChange={(e) => onChange('maxPrice', e.target.value)}
+              className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
         </div>
-      ))}
+      )}
+
+      {/* Min rating */}
+      <div>
+        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Min. rating</label>
+        <select
+          value={filters.minRating}
+          onChange={(e) => onChange('minRating', e.target.value)}
+          className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Any</option>
+          <option value="3">3+</option>
+          <option value="4">4+</option>
+          <option value="4.5">4.5+</option>
+          <option value="5">5 only</option>
+        </select>
+      </div>
+
+      {/* Location */}
+      <div>
+        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Location</label>
+        <input
+          type="text"
+          placeholder="e.g. Remote, Lagos…"
+          value={filters.location}
+          onChange={(e) => onChange('location', e.target.value)}
+          className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      {/* Tags */}
+      <div>
+        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Tags (comma-separated)</label>
+        <input
+          type="text"
+          placeholder="e.g. react, web3, design"
+          value={filters.tags}
+          onChange={(e) => onChange('tags', e.target.value)}
+          className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
     </div>
-  )
+  );
 }
+
+function EmptyState({ query }: { query: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <MagnifyingGlassIcon className="w-14 h-14 text-gray-300 dark:text-gray-600 mb-4" />
+      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
+        {query ? `No results for "${query}"` : 'Start searching'}
+      </h3>
+      <p className="text-sm text-gray-400 dark:text-gray-500 max-w-sm">
+        {query
+          ? 'Try different keywords, adjust filters, or explore a different category.'
+          : 'Enter a search term above to find services, products, people, and more.'}
+      </p>
+    </div>
+  );
+}
+
+// ─── Main inner component (uses useSearchParams) ───────────────────────────
+
+function SearchPageInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const initialQuery = searchParams.get('q') ?? '';
+  const initialType = (searchParams.get('type') as ContentType) ?? 'all';
+
+  const [query, setQuery] = useState(initialQuery);
+  const [inputValue, setInputValue] = useState(initialQuery);
+  const [activeType, setActiveType] = useState<ContentType>(initialType);
+  const [showFilters, setShowFilters] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({
+    minPrice: '',
+    maxPrice: '',
+    minRating: '',
+    location: '',
+    tags: '',
+    sortBy: 'relevance',
+  });
+
+  const results = filterAndSort(MOCK_RESULTS, query, activeType, filters);
+
+  // Sync URL params
+  const updateUrl = useCallback(
+    (q: string, type: ContentType) => {
+      const params = new URLSearchParams();
+      if (q) params.set('q', q);
+      if (type !== 'all') params.set('type', type);
+      router.replace(`/search?${params.toString()}`, { scroll: false });
+    },
+    [router]
+  );
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setQuery(inputValue);
+    updateUrl(inputValue, activeType);
+    setTimeout(() => setIsLoading(false), 300);
+  };
+
+  const handleTypeChange = (type: ContentType) => {
+    setActiveType(type);
+    updateUrl(query, type);
+  };
+
+  const handleFilterChange = (k: keyof FilterState, v: string) => {
+    setFilters((prev) => ({ ...prev, [k]: v }));
+  };
+
+  const resetFilters = () => {
+    setFilters({ minPrice: '', maxPrice: '', minRating: '', location: '', tags: '', sortBy: 'relevance' });
+  };
+
+  const activeFilterCount = [filters.minPrice, filters.maxPrice, filters.minRating, filters.location, filters.tags].filter(Boolean).length;
+
+  // Count results per type
+  const countByType = (type: ContentType) => {
+    if (type === 'all') return filterAndSort(MOCK_RESULTS, query, 'all', filters).length;
+    return filterAndSort(MOCK_RESULTS, query, type, filters).length;
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          {/* Search bar */}
+          <form onSubmit={handleSearch} className="flex gap-3">
+            <div className="relative flex-1">
+              <MagnifyingGlassIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500 pointer-events-none" />
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="Search services, products, people, organisations…"
+                className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                autoFocus
+              />
+              {inputValue && (
+                <button
+                  type="button"
+                  onClick={() => { setInputValue(''); setQuery(''); updateUrl('', activeType); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <XMarkIcon className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            <button
+              type="submit"
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-60"
+              disabled={isLoading}
+            >
+              Search
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowFilters((v) => !v)}
+              className={`relative px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors flex items-center gap-2 ${
+                showFilters
+                  ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-300'
+                  : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+              }`}
+            >
+              <FunnelIcon className="w-4 h-4" />
+              <span className="hidden sm:inline">Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+          </form>
+
+          {/* Tabs */}
+          <div className="flex gap-0.5 mt-3 overflow-x-auto scrollbar-hide">
+            {TAB_ITEMS.map((tab) => {
+              const count = countByType(tab.key);
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => handleTypeChange(tab.key)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                    activeType === tab.key
+                      ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeType === tab.key ? 'bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-200' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex gap-6 items-start">
+          {/* Filter sidebar */}
+          {showFilters && (
+            <div className="hidden lg:block w-64 flex-shrink-0 sticky top-[130px]">
+              <FilterPanel
+                filters={filters}
+                onChange={handleFilterChange}
+                onReset={resetFilters}
+                activeType={activeType}
+              />
+            </div>
+          )}
+
+          {/* Results */}
+          <div className="flex-1 min-w-0">
+            {/* Mobile filters */}
+            {showFilters && (
+              <div className="lg:hidden mb-4">
+                <FilterPanel
+                  filters={filters}
+                  onChange={handleFilterChange}
+                  onReset={resetFilters}
+                  activeType={activeType}
+                />
+              </div>
+            )}
+
+            {/* Results count */}
+            {query && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                {isLoading ? 'Searching…' : (
+                  <>
+                    <span className="font-semibold text-gray-900 dark:text-white">{results.length}</span>
+                    {' '}result{results.length !== 1 ? 's' : ''} for{' '}
+                    <span className="font-semibold text-gray-900 dark:text-white">"{query}"</span>
+                  </>
+                )}
+              </p>
+            )}
+
+            {/* Cards */}
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 animate-pulse">
+                    <div className="flex gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-gray-200 dark:bg-gray-700" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4" />
+                        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full" />
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : results.length > 0 ? (
+              <div className="space-y-3">
+                {results.map((r) => (
+                  <ResultCard key={r.id} result={r} />
+                ))}
+              </div>
+            ) : (
+              <EmptyState query={query} />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Page export (wraps in Suspense for useSearchParams) ──────────────────────
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <MagnifyingGlassIcon className="w-10 h-10 text-gray-300 dark:text-gray-600 animate-pulse" />
+          <p className="text-sm text-gray-400 dark:text-gray-500">Loading search…</p>
+        </div>
+      </div>
+    }>
+      <SearchPageInner />
+    </Suspense>
+  );
+}
+

@@ -1,403 +1,534 @@
-'use client'
+"use client";
 
-import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { useState, useEffect } from "react";
+import {
+  BellIcon,
+  CheckIcon,
+  TrashIcon,
+  Cog6ToothIcon,
+  ShoppingBagIcon,
+  UserGroupIcon,
+  StarIcon,
+  ChatBubbleLeftIcon,
+  BanknotesIcon,
+  ExclamationCircleIcon,
+} from "@heroicons/react/24/outline";
+import { BellAlertIcon } from "@heroicons/react/24/solid";
+import { formatDistanceToNow } from "date-fns";
 
-interface DBNotification {
-  id: string
-  type: string
-  title: string
-  body: string
-  link: string | null
-  read: boolean
-  created_at: string
+type NotifCategory = "all" | "orders" | "community" | "reviews" | "messages" | "payments" | "system";
+type NotifType = "order" | "community" | "review" | "message" | "payment" | "system";
+
+interface Notification {
+  id: string;
+  type: NotifType;
+  title: string;
+  body: string;
+  href: string;
+  read: boolean;
+  createdAt: Date;
+  avatarUrl?: string;
+  actorName?: string;
 }
 
-function formatRelativeTime(isoString: string): string {
-  const now = Date.now()
-  const then = new Date(isoString).getTime()
-  const diff = now - then
-  const seconds = Math.floor(diff / 1000)
-  const minutes = Math.floor(diff / (1000 * 60))
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  if (seconds < 60) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
-  if (hours < 24) return `${hours}h ago`
-  if (days < 7) return `${days}d ago`
-  return new Date(isoString).toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' })
+interface PrefState {
+  orders: boolean;
+  community: boolean;
+  reviews: boolean;
+  messages: boolean;
+  payments: boolean;
+  system: boolean;
+  emailDigest: boolean;
+  pushEnabled: boolean;
 }
 
-function getTypeIcon(type: string): string {
-  switch (type) {
-    case 'message': return '💬'
-    case 'order': return '📦'
-    case 'trust': return '₮'
-    case 'review': return '⭐'
-    case 'gig_liked': return '❤️'
-    case 'system': return '🔔'
-    default: return '🔔'
-  }
-}
+const MOCK_NOTIFICATIONS: Notification[] = [
+  {
+    id: "n1",
+    type: "order",
+    title: "Order #FT-2041 dispatched",
+    body: "Your order for \"Logo Design Package\" has been dispatched by the seller.",
+    href: "/orders/FT-2041",
+    read: false,
+    createdAt: new Date(Date.now() - 1000 * 60 * 8),
+    actorName: "DesignPro Studio",
+    avatarUrl: "https://api.dicebear.com/7.x/initials/svg?seed=DesignPro",
+  },
+  {
+    id: "n2",
+    type: "payment",
+    title: "Escrow released — ₮340",
+    body: "Funds for order #FT-2039 have been released to your wallet.",
+    href: "/orders/FT-2039",
+    read: false,
+    createdAt: new Date(Date.now() - 1000 * 60 * 35),
+    actorName: "FreeTrust Escrow",
+  },
+  {
+    id: "n3",
+    type: "review",
+    title: "New 5-star review",
+    body: "Alex M. left a glowing review on your \"SEO Audit\" service.",
+    href: "/services/seo-audit/reviews",
+    read: false,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
+    actorName: "Alex M.",
+    avatarUrl: "https://api.dicebear.com/7.x/initials/svg?seed=AlexM",
+  },
+  {
+    id: "n4",
+    type: "community",
+    title: "Your post is trending 🔥",
+    body: "\"Best practices for remote freelancing\" has 47 upvotes in the last hour.",
+    href: "/community/post/best-practices-remote",
+    read: false,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3),
+  },
+  {
+    id: "n5",
+    type: "message",
+    title: "New message from Sarah K.",
+    body: "\"Hey! Quick question about your branding package — do you offer...",
+    href: "/messages/sarah-k",
+    read: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5),
+    actorName: "Sarah K.",
+    avatarUrl: "https://api.dicebear.com/7.x/initials/svg?seed=SarahK",
+  },
+  {
+    id: "n6",
+    type: "order",
+    title: "Dispute opened on #FT-2035",
+    body: "A buyer has opened a dispute. Please respond within 48 hours.",
+    href: "/orders/FT-2035",
+    read: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
+    actorName: "FreeTrust Support",
+  },
+  {
+    id: "n7",
+    type: "system",
+    title: "You earned a Trust Badge 🏅",
+    body: "Congratulations! You've reached 100 successful orders and earned the \"Century\" badge.",
+    href: "/profile/badges",
+    read: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48),
+  },
+  {
+    id: "n8",
+    type: "payment",
+    title: "₮5 trust bonus credited",
+    body: "You received a ₮5 trust bonus for completing your first purchase.",
+    href: "/wallet",
+    read: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 72),
+  },
+  {
+    id: "n9",
+    type: "community",
+    title: "New follower",
+    body: "Jordan T. started following your organisation.",
+    href: "/organisations/your-org/followers",
+    read: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 96),
+    actorName: "Jordan T.",
+    avatarUrl: "https://api.dicebear.com/7.x/initials/svg?seed=JordanT",
+  },
+  {
+    id: "n10",
+    type: "review",
+    title: "Respond to a 3-star review",
+    body: "Marcus L. left feedback on \"Website Speed Optimisation\" — consider replying.",
+    href: "/services/website-speed/reviews",
+    read: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 120),
+    actorName: "Marcus L.",
+    avatarUrl: "https://api.dicebear.com/7.x/initials/svg?seed=MarcusL",
+  },
+];
 
-function getTypeLabel(type: string): string {
-  switch (type) {
-    case 'message': return 'Message'
-    case 'order': return 'Order'
-    case 'trust': return 'Trust'
-    case 'review': return 'Review'
-    case 'gig_liked': return 'Like'
-    case 'system': return 'System'
-    default: return 'Notification'
-  }
-}
+const DEFAULT_PREFS: PrefState = {
+  orders: true,
+  community: true,
+  reviews: true,
+  messages: true,
+  payments: true,
+  system: true,
+  emailDigest: true,
+  pushEnabled: false,
+};
 
-function getTypeColors(type: string): { bg: string; color: string } {
-  switch (type) {
-    case 'message': return { bg: 'rgba(99,102,241,0.15)', color: '#818cf8' }
-    case 'order': return { bg: 'rgba(16,185,129,0.15)', color: '#34d399' }
-    case 'trust': return { bg: 'rgba(245,158,11,0.15)', color: '#fbbf24' }
-    case 'review': return { bg: 'rgba(139,92,246,0.15)', color: '#a78bfa' }
-    case 'gig_liked': return { bg: 'rgba(239,68,68,0.15)', color: '#f87171' }
-    case 'system': return { bg: 'rgba(56,189,248,0.15)', color: '#38bdf8' }
-    default: return { bg: 'rgba(56,189,248,0.15)', color: '#38bdf8' }
-  }
-}
+const CATEGORY_MAP: Record<NotifType, NotifCategory> = {
+  order: "orders",
+  payment: "payments",
+  review: "reviews",
+  message: "messages",
+  community: "community",
+  system: "system",
+};
 
-const TABS = ['All', 'Unread', 'Messages', 'Orders', 'Trust', 'Reviews']
+const TYPE_ICON: Record<NotifType, React.ReactNode> = {
+  order: <ShoppingBagIcon className="w-5 h-5" />,
+  community: <UserGroupIcon className="w-5 h-5" />,
+  review: <StarIcon className="w-5 h-5" />,
+  message: <ChatBubbleLeftIcon className="w-5 h-5" />,
+  payment: <BanknotesIcon className="w-5 h-5" />,
+  system: <ExclamationCircleIcon className="w-5 h-5" />,
+};
+
+const TYPE_COLOR: Record<NotifType, string> = {
+  order: "bg-blue-100 text-blue-600",
+  community: "bg-purple-100 text-purple-600",
+  review: "bg-yellow-100 text-yellow-600",
+  message: "bg-green-100 text-green-600",
+  payment: "bg-emerald-100 text-emerald-600",
+  system: "bg-orange-100 text-orange-600",
+};
+
+const TABS: { key: NotifCategory; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "orders", label: "Orders" },
+  { key: "payments", label: "Payments" },
+  { key: "messages", label: "Messages" },
+  { key: "reviews", label: "Reviews" },
+  { key: "community", label: "Community" },
+  { key: "system", label: "System" },
+];
 
 export default function NotificationsPage() {
-  const router = useRouter()
-  const [notifications, setNotifications] = useState<DBNotification[]>([])
-  const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState('All')
-  const [markingAll, setMarkingAll] = useState(false)
-  const [authed, setAuthed] = useState<boolean | null>(null)
+  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
+  const [activeTab, setActiveTab] = useState<NotifCategory>("all");
+  const [showPrefs, setShowPrefs] = useState(false);
+  const [prefs, setPrefs] = useState<PrefState>(DEFAULT_PREFS);
+  const [prefsSaved, setPrefsSaved] = useState(false);
 
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) {
-        router.push('/login?redirect=/notifications')
-      } else {
-        setAuthed(true)
-      }
-    })
-  }, [router])
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const fetchNotifications = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await fetch('/api/notifications?limit=100')
-      const data = await res.json()
-      setNotifications(data.notifications ?? [])
-    } catch {
-      // fail silently
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const filtered = notifications.filter((n) => {
+    if (activeTab === "all") return true;
+    return CATEGORY_MAP[n.type] === activeTab;
+  });
 
-  useEffect(() => {
-    if (authed) fetchNotifications()
-  }, [authed, fetchNotifications])
+  const markRead = (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+    );
+  };
 
-  const handleMarkAllRead = async () => {
-    setMarkingAll(true)
-    try {
-      await fetch('/api/notifications', { method: 'PATCH' })
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
-    } finally {
-      setMarkingAll(false)
-    }
-  }
+  const markAllRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
 
-  const handleMarkOneRead = async (id: string) => {
-    await fetch(`/api/notifications/${id}`, { method: 'PATCH' })
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
-  }
+  const deleteNotif = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
 
-  const handleDelete = async (id: string) => {
-    await fetch(`/api/notifications/${id}`, { method: 'DELETE' })
-    setNotifications(prev => prev.filter(n => n.id !== id))
-  }
+  const clearRead = () => {
+    setNotifications((prev) => prev.filter((n) => !n.read));
+  };
 
-  const filtered = notifications.filter(n => {
-    if (tab === 'Unread') return !n.read
-    if (tab === 'Messages') return n.type === 'message'
-    if (tab === 'Orders') return n.type === 'order'
-    if (tab === 'Trust') return n.type === 'trust'
-    if (tab === 'Reviews') return n.type === 'review'
-    return true
-  })
+  const savePrefs = () => {
+    setPrefsSaved(true);
+    setTimeout(() => setPrefsSaved(false), 2000);
+  };
 
-  const unreadCount = notifications.filter(n => !n.read).length
-
-  if (authed === null) return null
+  const togglePref = (key: keyof PrefState) => {
+    setPrefs((p) => ({ ...p, [key]: !p[key] }));
+  };
 
   return (
-    <>
-      <style>{`
-        .notif-page { min-height: 100vh; background: #0f172a; padding: 2rem 1.25rem; }
-        .notif-page-inner { max-width: 720px; margin: 0 auto; }
-        .notif-page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; }
-        .notif-page-title { font-size: 1.6rem; font-weight: 900; color: #f1f5f9; }
-        .notif-page-actions { display: flex; gap: 0.75rem; align-items: center; }
-        .notif-page-mark-all {
-          padding: 0.45rem 1rem;
-          background: rgba(56,189,248,0.12);
-          color: #38bdf8;
-          border: 1px solid rgba(56,189,248,0.3);
-          border-radius: 8px;
-          font-size: 0.82rem;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.15s;
-        }
-        .notif-page-mark-all:hover { background: rgba(56,189,248,0.2); }
-        .notif-page-mark-all:disabled { opacity: 0.5; cursor: not-allowed; }
-        .notif-page-prefs {
-          padding: 0.45rem 1rem;
-          background: transparent;
-          color: #64748b;
-          border: 1px solid rgba(148,163,184,0.2);
-          border-radius: 8px;
-          font-size: 0.82rem;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.15s;
-          text-decoration: none;
-          display: inline-flex;
-          align-items: center;
-          gap: 0.35rem;
-        }
-        .notif-page-prefs:hover { color: #94a3b8; border-color: rgba(148,163,184,0.4); }
-        .notif-tabs { display: flex; gap: 0.35rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
-        .notif-tab-btn {
-          padding: 0.4rem 1rem;
-          border-radius: 999px;
-          font-size: 0.8rem;
-          font-weight: 600;
-          cursor: pointer;
-          border: 1px solid transparent;
-          background: none;
-          color: #64748b;
-          transition: all 0.15s;
-        }
-        .notif-tab-btn:hover { color: #94a3b8; border-color: rgba(148,163,184,0.2); }
-        .notif-tab-btn.active {
-          color: #38bdf8;
-          background: rgba(56,189,248,0.1);
-          border-color: rgba(56,189,248,0.3);
-        }
-        .notif-list-card {
-          background: #1e293b;
-          border: 1px solid rgba(56,189,248,0.1);
-          border-radius: 12px;
-          overflow: hidden;
-        }
-        .notif-row {
-          display: flex;
-          align-items: flex-start;
-          gap: 0.85rem;
-          padding: 1rem 1.1rem;
-          border-left: 3px solid transparent;
-          border-bottom: 1px solid rgba(56,189,248,0.06);
-          transition: background 0.15s;
-          cursor: pointer;
-          text-decoration: none;
-          color: inherit;
-          background: transparent;
-          width: 100%;
-          text-align: left;
-        }
-        .notif-row:last-child { border-bottom: none; }
-        .notif-row.unread { border-left-color: #38bdf8; background: rgba(56,189,248,0.03); }
-        .notif-row:hover { background: rgba(56,189,248,0.06); }
-        .notif-row-icon {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.1rem;
-          flex-shrink: 0;
-          margin-top: 2px;
-        }
-        .notif-row-body { flex: 1; min-width: 0; }
-        .notif-row-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.15rem; }
-        .notif-row-title { font-size: 0.88rem; font-weight: 700; color: #f1f5f9; }
-        .notif-row-title.read { font-weight: 500; color: #94a3b8; }
-        .notif-type-badge {
-          font-size: 0.65rem;
-          font-weight: 700;
-          padding: 0.1rem 0.4rem;
-          border-radius: 999px;
-          flex-shrink: 0;
-        }
-        .notif-row-body-text { font-size: 0.78rem; color: #64748b; line-height: 1.45; }
-        .notif-row-time { font-size: 0.72rem; color: #475569; margin-top: 0.3rem; }
-        .notif-row-actions { display: flex; gap: 0.25rem; flex-shrink: 0; margin-top: 2px; }
-        .notif-action-btn {
-          background: none;
-          border: none;
-          cursor: pointer;
-          padding: 0.25rem;
-          border-radius: 4px;
-          transition: background 0.15s;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .notif-action-btn:hover { background: rgba(56,189,248,0.1); }
-        .notif-empty-state {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 4rem 2rem;
-          gap: 0.65rem;
-          text-align: center;
-        }
-        .notif-empty-icon { font-size: 3rem; }
-        .notif-empty-title { font-size: 1.1rem; font-weight: 700; color: #f1f5f9; }
-        .notif-empty-sub { font-size: 0.85rem; color: #64748b; }
-        @media (max-width: 600px) {
-          .notif-page { padding: 1.25rem 1rem; }
-          .notif-page-title { font-size: 1.3rem; }
-          .notif-page-header { flex-direction: column; align-items: flex-start; }
-        }
-      `}</style>
-
-      <main className="notif-page">
-        <div className="notif-page-inner">
-          {/* Header */}
-          <div className="notif-page-header">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            {unreadCount > 0 ? (
+              <BellAlertIcon className="w-7 h-7 text-indigo-600" />
+            ) : (
+              <BellIcon className="w-7 h-7 text-gray-500" />
+            )}
             <div>
-              <h1 className="notif-page-title">Notifications</h1>
-              {unreadCount > 0 && (
-                <p style={{ margin: '0.2rem 0 0', fontSize: '0.85rem', color: '#64748b' }}>
-                  {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
-                </p>
-              )}
-            </div>
-            <div className="notif-page-actions">
-              {unreadCount > 0 && (
-                <button
-                  className="notif-page-mark-all"
-                  onClick={handleMarkAllRead}
-                  disabled={markingAll}
-                >
-                  {markingAll ? 'Marking...' : 'Mark all read'}
-                </button>
-              )}
-              <Link href="/notifications/preferences" className="notif-page-prefs">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-                Preferences
-              </Link>
+              <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
+              <p className="text-sm text-gray-500">
+                {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
+              </p>
             </div>
           </div>
-
-          {/* Tabs */}
-          <div className="notif-tabs" role="tablist">
-            {TABS.map(t => (
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
               <button
-                key={t}
-                role="tab"
-                aria-selected={tab === t}
-                className={`notif-tab-btn${tab === t ? ' active' : ''}`}
-                onClick={() => setTab(t)}
+                onClick={markAllRead}
+                className="flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-800 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors"
               >
-                {t}
-                {t === 'Unread' && unreadCount > 0 && (
-                  <span style={{ marginLeft: '0.3rem', background: '#ef4444', color: '#fff', borderRadius: 999, padding: '0 4px', fontSize: '0.65rem', fontWeight: 700, verticalAlign: 'middle' }}>
-                    {unreadCount}
+                <CheckIcon className="w-4 h-4" />
+                Mark all read
+              </button>
+            )}
+            <button
+              onClick={clearRead}
+              className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+            >
+              <TrashIcon className="w-4 h-4" />
+              Clear read
+            </button>
+            <button
+              onClick={() => setShowPrefs(!showPrefs)}
+              className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                showPrefs
+                  ? "bg-indigo-600 text-white"
+                  : "text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              <Cog6ToothIcon className="w-4 h-4" />
+              Preferences
+            </button>
+          </div>
+        </div>
+
+        {/* Preferences Panel */}
+        {showPrefs && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 className="text-base font-semibold text-gray-900 mb-4">
+              Notification Preferences
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+              {(
+                [
+                  { key: "orders", label: "Order updates", desc: "Dispatch, delivery, disputes" },
+                  { key: "payments", label: "Payment & escrow", desc: "Releases, refunds, bonuses" },
+                  { key: "messages", label: "Direct messages", desc: "New messages from buyers/sellers" },
+                  { key: "reviews", label: "Reviews", desc: "New ratings on your services" },
+                  { key: "community", label: "Community", desc: "Followers, trending posts" },
+                  { key: "system", label: "System alerts", desc: "Badges, account notices" },
+                ] as { key: keyof PrefState; label: string; desc: string }[]
+              ).map(({ key, label, desc }) => (
+                <label
+                  key={key}
+                  className="flex items-start gap-3 p-3 rounded-xl border border-gray-100 hover:border-indigo-200 cursor-pointer transition-colors"
+                >
+                  <div className="mt-0.5">
+                    <div
+                      onClick={() => togglePref(key)}
+                      className={`w-10 h-6 rounded-full flex items-center px-1 cursor-pointer transition-colors ${
+                        prefs[key] ? "bg-indigo-600" : "bg-gray-300"
+                      }`}
+                    >
+                      <div
+                        className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                          prefs[key] ? "translate-x-4" : "translate-x-0"
+                        }`}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{label}</p>
+                    <p className="text-xs text-gray-500">{desc}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <div className="border-t border-gray-100 pt-4 mb-4">
+              <p className="text-sm font-semibold text-gray-700 mb-3">Delivery</p>
+              <div className="flex flex-col gap-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <div
+                    onClick={() => togglePref("emailDigest")}
+                    className={`w-10 h-6 rounded-full flex items-center px-1 cursor-pointer transition-colors ${
+                      prefs.emailDigest ? "bg-indigo-600" : "bg-gray-300"
+                    }`}
+                  >
+                    <div
+                      className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                        prefs.emailDigest ? "translate-x-4" : "translate-x-0"
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Email digest</p>
+                    <p className="text-xs text-gray-500">Daily summary to your inbox</p>
+                  </div>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <div
+                    onClick={() => togglePref("pushEnabled")}
+                    className={`w-10 h-6 rounded-full flex items-center px-1 cursor-pointer transition-colors ${
+                      prefs.pushEnabled ? "bg-indigo-600" : "bg-gray-300"
+                    }`}
+                  >
+                    <div
+                      className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                        prefs.pushEnabled ? "translate-x-4" : "translate-x-0"
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Push notifications</p>
+                    <p className="text-xs text-gray-500">Browser push alerts (requires permission)</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+            <button
+              onClick={savePrefs}
+              className={`w-full py-2 rounded-xl text-sm font-semibold transition-colors ${
+                prefsSaved
+                  ? "bg-green-500 text-white"
+                  : "bg-indigo-600 hover:bg-indigo-700 text-white"
+              }`}
+            >
+              {prefsSaved ? "✓ Saved!" : "Save preferences"}
+            </button>
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div className="flex gap-1 overflow-x-auto mb-4 pb-1 scrollbar-hide">
+          {TABS.map((tab) => {
+            const count =
+              tab.key === "all"
+                ? notifications.filter((n) => !n.read).length
+                : notifications.filter(
+                    (n) => CATEGORY_MAP[n.type] === tab.key && !n.read
+                  ).length;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                  activeTab === tab.key
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                }`}
+              >
+                {tab.label}
+                {count > 0 && (
+                  <span
+                    className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
+                      activeTab === tab.key
+                        ? "bg-white/20 text-white"
+                        : "bg-indigo-100 text-indigo-700"
+                    }`}
+                  >
+                    {count}
                   </span>
                 )}
               </button>
-            ))}
-          </div>
+            );
+          })}
+        </div>
 
-          {/* List */}
-          {loading ? (
-            <div style={{ background: '#1e293b', borderRadius: 12, padding: '3rem', textAlign: 'center', color: '#64748b', border: '1px solid rgba(56,189,248,0.1)' }}>
-              Loading notifications...
-            </div>
-          ) : filtered.length === 0 ? (
-            <div style={{ background: '#1e293b', borderRadius: 12, border: '1px solid rgba(56,189,248,0.1)' }}>
-              <div className="notif-empty-state">
-                <span className="notif-empty-icon">🔔</span>
-                <p className="notif-empty-title">No notifications</p>
-                <p className="notif-empty-sub">
-                  {tab === 'Unread' ? 'All caught up! No unread notifications.' : `No ${tab.toLowerCase()} notifications yet.`}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="notif-list-card" role="list">
-              {filtered.map(notif => {
-                const { bg, color } = getTypeColors(notif.type)
-                const row = (
-                  <div
-                    className={`notif-row${!notif.read ? ' unread' : ''}`}
-                    role="listitem"
-                    key={notif.id}
-                  >
-                    <div className="notif-row-icon" style={{ background: bg, color }}>
-                      {getTypeIcon(notif.type)}
-                    </div>
-                    <div className="notif-row-body">
-                      <div className="notif-row-header">
-                        <span className={`notif-row-title${notif.read ? ' read' : ''}`}>{notif.title}</span>
-                        <span className="notif-type-badge" style={{ background: bg, color }}>{getTypeLabel(notif.type)}</span>
-                      </div>
-                      <p className="notif-row-body-text">{notif.body}</p>
-                      <p className="notif-row-time">{formatRelativeTime(notif.created_at)}</p>
-                    </div>
-                    <div className="notif-row-actions">
-                      {!notif.read && (
-                        <button
-                          className="notif-action-btn"
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleMarkOneRead(notif.id) }}
-                          title="Mark as read"
-                          aria-label="Mark as read"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-                        </button>
-                      )}
-                      <button
-                        className="notif-action-btn"
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(notif.id) }}
-                        title="Delete"
-                        aria-label="Delete notification"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                      </button>
-                    </div>
-                  </div>
-                )
-
-                if (notif.link) {
-                  return (
-                    <Link
-                      key={notif.id}
-                      href={notif.link}
-                      style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}
-                      onClick={() => { if (!notif.read) handleMarkOneRead(notif.id) }}
-                    >
-                      {row}
-                    </Link>
-                  )
-                }
-                return <div key={notif.id} style={{ display: 'block' }}>{row}</div>
-              })}
+        {/* Notifications List */}
+        <div className="space-y-2">
+          {filtered.length === 0 && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+              <BellIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">No notifications here</p>
+              <p className="text-sm text-gray-400 mt-1">
+                You&apos;re all caught up in this category.
+              </p>
             </div>
           )}
+
+          {filtered.map((notif) => (
+            <NotificationCard
+              key={notif.id}
+              notif={notif}
+              onRead={markRead}
+              onDelete={deleteNotif}
+            />
+          ))}
         </div>
-      </main>
-    </>
-  )
+      </div>
+    </div>
+  );
 }
+
+function NotificationCard({
+  notif,
+  onRead,
+  onDelete,
+}: {
+  notif: Notification;
+  onRead: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <div
+      className={`group relative flex items-start gap-4 p-4 rounded-2xl border transition-all ${
+        notif.read
+          ? "bg-white border-gray-200"
+          : "bg-indigo-50/60 border-indigo-200 shadow-sm"
+      }`}
+    >
+      {/* Unread dot */}
+      {!notif.read && (
+        <span className="absolute top-4 right-4 w-2.5 h-2.5 rounded-full bg-indigo-500 shadow" />
+      )}
+
+      {/* Avatar or Icon */}
+      <div className="shrink-0 mt-0.5">
+        {notif.avatarUrl ? (
+          <img
+            src={notif.avatarUrl}
+            alt={notif.actorName ?? ""}
+            className="w-10 h-10 rounded-full object-cover bg-gray-100"
+          />
+        ) : (
+          <div
+            className={`w-10 h-10 rounded-full flex items-center justify-center ${TYPE_COLOR[notif.type]}`}
+          >
+            {TYPE_ICON[notif.type]}
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0 pr-8">
+        <div className="flex items-center gap-2 mb-0.5">
+          <span
+            className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${TYPE_COLOR[notif.type]}`}
+          >
+            {TYPE_ICON[notif.type]}
+            <span className="capitalize">{notif.type}</span>
+          </span>
+          <span className="text-xs text-gray-400">
+            {formatDistanceToNow(notif.createdAt, { addSuffix: true })}
+          </span>
+        </div>
+        <p className={`text-sm font-semibold ${notif.read ? "text-gray-700" : "text-gray-900"}`}>
+          {notif.title}
+        </p>
+        <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">{notif.body}</p>
+
+        {/* Actions */}
+        <div className="flex items-center gap-3 mt-2">
+          <a
+            href={notif.href}
+            onClick={() => onRead(notif.id)}
+            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+          >
+            View →
+          </a>
+          {!notif.read && (
+            <button
+              onClick={() => onRead(notif.id)}
+              className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              Mark as read
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Delete */}
+      <button
+        onClick={() => onDelete(notif.id)}
+        className="absolute top-3 right-7 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500"
+        aria-label="Delete notification"
+      >
+        <TrashIcon className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
