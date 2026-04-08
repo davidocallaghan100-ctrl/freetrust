@@ -59,18 +59,8 @@ export default function BrowsePage() {
   return (
     <>
       <style>{`
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        *, *::before, *::after { box-sizing: border-box; }
         body { background: #0f172a; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; min-height: 100vh; color: #f8fafc; }
-        .nav { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 16px 28px; background: rgba(15,23,42,0.92); border-bottom: 1px solid rgba(255,255,255,0.06); backdrop-filter: blur(12px); }
-        .nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; }
-        .nav-logo-icon { width: 30px; height: 30px; background: linear-gradient(135deg, #10b981, #3b82f6); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
-        .nav-logo-text { font-size: 17px; font-weight: 700; color: #f8fafc; }
-        .nav-logo-text span { color: #10b981; }
-        .nav-actions { display: flex; align-items: center; gap: 12px; }
-        .nav-link { font-size: 14px; color: #94a3b8; text-decoration: none; padding: 6px 12px; border-radius: 8px; transition: color 0.2s, background 0.2s; }
-        .nav-link:hover { color: #f8fafc; background: rgba(255,255,255,0.05); }
-        .nav-cta { font-size: 13px; font-weight: 600; color: #0f172a; background: linear-gradient(135deg, #10b981, #059669); border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer; text-decoration: none; transition: opacity 0.2s; }
-        .nav-cta:hover { opacity: 0.88; }
         .hero-bar { background: linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(59,130,246,0.06) 100%); border-bottom: 1px solid rgba(255,255,255,0.05); padding: 40px 28px 32px; text-align: center; }
         .hero-bar h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.8px; margin-bottom: 10px; }
         .hero-bar h1 span { color: #10b981; }
@@ -130,17 +120,6 @@ export default function BrowsePage() {
         .submit-btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 22px; background: linear-gradient(135deg, #10b981, #059669); border: none; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; text-decoration: none; transition: opacity 0.2s, transform 0.15s; }
         .submit-btn:hover { opacity: 0.9; transform: translateY(-1px); }
       `}</style>
-
-      <nav className="nav">
-        <Link href="/" className="nav-logo">
-          <div className="nav-logo-icon">🛡</div>
-          <span className="nav-logo-text">Free<span>Trust</span></span>
-        </Link>
-        <div className="nav-actions">
-          <Link href="/login" className="nav-link">Sign in</Link>
-          <Link href="/register" className="nav-cta">Get started</Link>
-        </div>
-      </nav>
 
       <div className="hero-bar">
         <h1>The <span>Open Trust</span> Marketplace</h1>
