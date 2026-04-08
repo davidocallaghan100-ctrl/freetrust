@@ -3,13 +3,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useNotificationStore } from "@/lib/notifications/store";
+import type { NotificationState } from "@/lib/notifications/store";
 import NotificationDropdown from "./NotificationDropdown";
 import styles from "./NotificationBell.module.css";
 
 export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const unreadCount = useNotificationStore((s: NotificationState) => s.unreadCount);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

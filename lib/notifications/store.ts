@@ -7,7 +7,7 @@ import type {
   NotificationType,
 } from "@/types/notifications";
 
-interface NotificationState {
+export interface NotificationState {
   notifications: Notification[];
   preferences: NotificationPreferences;
   unreadCount: number;
