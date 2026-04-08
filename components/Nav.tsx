@@ -13,6 +13,7 @@ const links = [
   { href: '/events', label: 'Events' },
   { href: '/community', label: 'Community' },
   { href: '/articles', label: 'Articles' },
+  { href: '/jobs', label: 'Jobs' },
   { href: '/organisations', label: 'Orgs' },
   { href: '/impact', label: 'Impact' },
   { href: '/dashboard', label: 'Dashboard' },
