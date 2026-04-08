@@ -55,7 +55,8 @@ export default function ServiceDetailPage() {
   const router = useRouter()
   const serviceId = params.id as string
 
-  const [service, setService] = useState<typeof MOCK_SERVICES['1'] | null>(null)
+  type ServiceType = typeof MOCK_SERVICES['1']
+  const [service, setService] = useState<ServiceType | null>(null)
   const [selectedPackage, setSelectedPackage] = useState(1) // 0=Basic, 1=Standard, 2=Premium
   const [loading, setLoading] = useState(true)
   const [buying, setBuying] = useState(false)
