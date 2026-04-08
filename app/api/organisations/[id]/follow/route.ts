@@ -1,52 +1,110 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(
-  _request: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+  }
+
+  const orgId = params.id;
+  const userId = session.user.id;
+
   try {
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const supabase = createClient();
 
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { data: existing, error: fetchError } = await supabase
+      .from("organisation_followers")
+      .select("id")
+      .eq("organisation_id", orgId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error("[follow] fetch error:", fetchError);
+      return NextResponse.json({ error: "DB error" }, { status: 500 });
     }
-
-    const { id: org_id } = params
-
-    // Check if already following
-    const { data: existing } = await supabase
-      .from('organisation_follows')
-      .select('user_id')
-      .eq('user_id', user.id)
-      .eq('org_id', org_id)
-      .single()
 
     if (existing) {
-      // Unfollow
-      await supabase
-        .from('organisation_follows')
+      const { error: deleteError } = await supabase
+        .from("organisation_followers")
         .delete()
-        .eq('user_id', user.id)
-        .eq('org_id', org_id)
+        .eq("organisation_id", orgId)
+        .eq("user_id", userId);
 
-      await supabase
-        .from('organisations')
-        .update({ follower_count: supabase.rpc('follower_count - 1') as unknown as number })
-        .eq('id', org_id)
+      if (deleteError) {
+        console.error("[follow] delete error:", deleteError);
+        return NextResponse.json({ error: "DB error" }, { status: 500 });
+      }
 
-      return NextResponse.json({ following: false })
-    } else {
-      // Follow
-      await supabase
-        .from('organisation_follows')
-        .insert({ user_id: user.id, org_id })
+      const { count } = await supabase
+        .from("organisation_followers")
+        .select("id", { count: "exact", head: true })
+        .eq("organisation_id", orgId);
 
-      return NextResponse.json({ following: true })
+      return NextResponse.json({ following: false, followers: count ?? 0 });
     }
-  } catch (error) {
-    console.error('Follow error:', error)
-    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+
+    const { error: insertError } = await supabase
+      .from("organisation_followers")
+      .insert({ organisation_id: orgId, user_id: userId });
+
+    if (insertError) {
+      console.error("[follow] insert error:", insertError);
+      return NextResponse.json({ error: "DB error" }, { status: 500 });
+    }
+
+    const { count } = await supabase
+      .from("organisation_followers")
+      .select("id", { count: "exact", head: true })
+      .eq("organisation_id", orgId);
+
+    return NextResponse.json({ following: true, followers: count ?? 0 });
+  } catch (err) {
+    console.error("[follow] unexpected error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const session = await getServerSession(authOptions);
+  const orgId = params.id;
+  const userId = session?.user?.id ?? null;
+
+  try {
+    const supabase = createClient();
+
+    const { count: followers } = await supabase
+      .from("organisation_followers")
+      .select("id", { count: "exact", head: true })
+      .eq("organisation_id", orgId);
+
+    if (!userId) {
+      return NextResponse.json({ following: false, followers: followers ?? 0 });
+    }
+
+    const { data: existing } = await supabase
+      .from("organisation_followers")
+      .select("id")
+      .eq("organisation_id", orgId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    return NextResponse.json({
+      following: !!existing,
+      followers: followers ?? 0,
+    });
+  } catch (err) {
+    console.error("[follow/GET] unexpected error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+

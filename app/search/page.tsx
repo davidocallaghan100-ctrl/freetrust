@@ -1,370 +1,256 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useEffect, useState, useCallback, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   MagnifyingGlassIcon,
-  FunnelIcon,
+  AdjustmentsHorizontalIcon,
   XMarkIcon,
-  UserCircleIcon,
-  BriefcaseIcon,
-  CubeIcon,
   BuildingOffice2Icon,
-  UsersIcon,
+  UserGroupIcon,
   DocumentTextIcon,
+  TagIcon,
+  CheckBadgeIcon,
   StarIcon,
   MapPinIcon,
-  TagIcon,
-  AdjustmentsHorizontalIcon,
-} from '@heroicons/react/24/outline';
-import { StarIcon as StarSolid } from '@heroicons/react/24/solid';
-import { formatDistanceToNow } from 'date-fns';
+  ArrowPathIcon,
+} from "@heroicons/react/24/outline";
+import { StarIcon as StarSolid } from "@heroicons/react/24/solid";
+import { formatDistanceToNow } from "date-fns";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-type ContentType = 'all' | 'services' | 'products' | 'users' | 'organisations' | 'communities' | 'posts';
+type ResultKind = "organisation" | "project" | "user" | "tag";
 
-interface SearchResult {
+interface BaseResult {
   id: string;
-  type: Exclude<ContentType, 'all'>;
+  kind: ResultKind;
   title: string;
   description: string;
-  imageUrl?: string;
-  price?: number;
-  currency?: string;
-  rating?: number;
-  reviewCount?: number;
-  location?: string;
-  tags?: string[];
-  author?: string;
-  authorAvatar?: string;
-  verified?: boolean;
-  createdAt: Date;
-  slug: string;
+  createdAt: string;
 }
 
-interface FilterState {
-  minPrice: string;
-  maxPrice: string;
-  minRating: string;
+interface OrgResult extends BaseResult {
+  kind: "organisation";
+  verified: boolean;
   location: string;
-  tags: string;
-  sortBy: 'relevance' | 'newest' | 'price_asc' | 'price_desc' | 'rating';
+  sdgs: number[];
+  followerCount: number;
+  rating: number;
+  logoUrl?: string;
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+interface ProjectResult extends BaseResult {
+  kind: "project";
+  orgName: string;
+  orgId: string;
+  tags: string[];
+  sdgs: number[];
+  status: "active" | "completed" | "draft";
+}
 
-const MOCK_RESULTS: SearchResult[] = [
-  {
-    id: '1',
-    type: 'services',
-    title: 'Professional Logo Design',
-    description: 'High-quality logo design tailored to your brand identity. Includes 3 concepts, unlimited revisions, and full source files.',
-    price: 150,
-    currency: 'USDT',
-    rating: 4.8,
-    reviewCount: 124,
-    location: 'Remote',
-    tags: ['design', 'branding', 'logo'],
-    author: 'Alex Rivera',
-    authorAvatar: '',
-    verified: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
-    slug: '/services/professional-logo-design',
-  },
-  {
-    id: '2',
-    type: 'products',
-    title: 'UI Component Library — Pro',
-    description: 'Over 500 ready-to-use React components with Tailwind CSS. Dark mode, accessibility, TypeScript support included.',
-    price: 89,
-    currency: 'USDT',
-    rating: 4.9,
-    reviewCount: 312,
-    tags: ['react', 'ui', 'tailwind', 'typescript'],
-    author: 'DesignLab',
-    authorAvatar: '',
-    verified: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12),
-    slug: '/products/ui-component-library-pro',
-  },
-  {
-    id: '3',
-    type: 'users',
-    title: 'Maria Chen',
-    description: 'Full-stack developer specialising in Next.js, TypeScript, and Web3 integrations. 7+ years experience.',
-    location: 'Singapore',
-    tags: ['nextjs', 'web3', 'typescript'],
-    rating: 4.7,
-    reviewCount: 89,
-    verified: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30),
-    slug: '/users/maria-chen',
-  },
-  {
-    id: '4',
-    type: 'organisations',
-    title: 'OpenBuild Collective',
-    description: 'A decentralised organisation of builders, designers, and marketers working on open-source Web3 tools.',
-    location: 'Global',
-    tags: ['web3', 'open-source', 'dao'],
-    rating: 4.6,
-    reviewCount: 55,
-    verified: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 60),
-    slug: '/organisations/openbuild-collective',
-  },
-  {
-    id: '5',
-    type: 'services',
-    title: 'Smart Contract Audit',
-    description: 'Comprehensive security audit for Solidity smart contracts. Includes detailed report, vulnerability analysis, and remediation advice.',
-    price: 800,
-    currency: 'USDT',
-    rating: 5.0,
-    reviewCount: 42,
-    location: 'Remote',
-    tags: ['solidity', 'security', 'blockchain', 'audit'],
-    author: 'CryptoGuard',
-    authorAvatar: '',
-    verified: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3),
-    slug: '/services/smart-contract-audit',
-  },
-  {
-    id: '6',
-    type: 'communities',
-    title: 'Web3 Builders Hub',
-    description: 'A thriving community for Web3 developers, designers, and entrepreneurs to collaborate and grow together.',
-    tags: ['web3', 'builders', 'community'],
-    rating: 4.5,
-    reviewCount: 210,
-    location: 'Online',
-    verified: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 90),
-    slug: '/communities/web3-builders-hub',
-  },
-  {
-    id: '7',
-    type: 'posts',
-    title: 'How to structure a FreeTrust escrow deal',
-    description: 'A step-by-step guide on setting up milestone-based escrow payments on FreeTrust, protecting both buyers and sellers.',
-    tags: ['escrow', 'guide', 'tutorial'],
-    author: 'FreeTrust Team',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7),
-    slug: '/posts/how-to-structure-escrow-deal',
-  },
-  {
-    id: '8',
-    type: 'products',
-    title: 'Crypto Payment Gateway SDK',
-    description: 'Accept USDT, ETH, and BTC on your platform with a single SDK. React & Node.js compatible, full docs included.',
-    price: 299,
-    currency: 'USDT',
-    rating: 4.8,
-    reviewCount: 67,
-    tags: ['crypto', 'payments', 'sdk', 'web3'],
-    author: 'PayKit',
-    verified: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 20),
-    slug: '/products/crypto-payment-gateway-sdk',
-  },
-  {
-    id: '9',
-    type: 'users',
-    title: 'James Okafor',
-    description: 'Creative director and brand strategist with 10+ years helping Web2 and Web3 companies build memorable identities.',
-    location: 'Lagos, Nigeria',
-    tags: ['branding', 'design', 'strategy'],
-    rating: 4.9,
-    reviewCount: 143,
-    verified: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 45),
-    slug: '/users/james-okafor',
-  },
-  {
-    id: '10',
-    type: 'services',
-    title: 'SEO & Content Strategy',
-    description: 'Drive organic growth with tailored SEO strategy, keyword research, competitor analysis, and monthly performance reports.',
-    price: 350,
-    currency: 'USDT',
-    rating: 4.6,
-    reviewCount: 98,
-    location: 'Remote',
-    tags: ['seo', 'content', 'marketing'],
-    author: 'GrowthStudio',
-    verified: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 8),
-    slug: '/services/seo-content-strategy',
-  },
-];
+interface UserResult extends BaseResult {
+  kind: "user";
+  username: string;
+  role: string;
+  avatarUrl?: string;
+  orgs: string[];
+}
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+interface TagResult extends BaseResult {
+  kind: "tag";
+  count: number;
+  relatedTags: string[];
+}
 
-const TYPE_CONFIG: Record<Exclude<ContentType, 'all'>, { label: string; icon: React.ReactNode; color: string }> = {
-  services: { label: 'Service', icon: <BriefcaseIcon className="w-3.5 h-3.5" />, color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
-  products: { label: 'Product', icon: <CubeIcon className="w-3.5 h-3.5" />, color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' },
-  users: { label: 'User', icon: <UserCircleIcon className="w-3.5 h-3.5" />, color: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' },
-  organisations: { label: 'Organisation', icon: <BuildingOffice2Icon className="w-3.5 h-3.5" />, color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300' },
-  communities: { label: 'Community', icon: <UsersIcon className="w-3.5 h-3.5" />, color: 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300' },
-  posts: { label: 'Post', icon: <DocumentTextIcon className="w-3.5 h-3.5" />, color: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' },
+type SearchResult = OrgResult | ProjectResult | UserResult | TagResult;
+
+interface SearchResponse {
+  results: SearchResult[];
+  total: number;
+  took: number;
+}
+
+// ─── Mock fallback data ───────────────────────────────────────────────────────
+
+function generateMockResults(q: string, kind: ResultKind | "all"): SearchResult[] {
+  const base = q.toLowerCase();
+  const mock: SearchResult[] = [
+    {
+      id: "org-1",
+      kind: "organisation",
+      title: `${q} Foundation`,
+      description: `A leading organisation working on ${base}-related initiatives across the globe, building sustainable futures.`,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 120).toISOString(),
+      verified: true,
+      location: "Geneva, Switzerland",
+      sdgs: [1, 3, 10, 17],
+      followerCount: 4821,
+      rating: 4.7,
+    } as OrgResult,
+    {
+      id: "org-2",
+      kind: "organisation",
+      title: `Global ${q} Alliance`,
+      description: `Connecting stakeholders to advance ${base} policy frameworks and impact measurement.`,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 60).toISOString(),
+      verified: false,
+      location: "Nairobi, Kenya",
+      sdgs: [2, 6, 13],
+      followerCount: 1230,
+      rating: 3.9,
+    } as OrgResult,
+    {
+      id: "proj-1",
+      kind: "project",
+      title: `${q} Impact Accelerator 2024`,
+      description: `A 12-month program to accelerate high-impact ${base} solutions in underserved communities.`,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString(),
+      orgName: `${q} Foundation`,
+      orgId: "org-1",
+      tags: [base, "impact", "accelerator", "2024"],
+      sdgs: [1, 8, 10],
+      status: "active",
+    } as ProjectResult,
+    {
+      id: "proj-2",
+      kind: "project",
+      title: `Mapping ${q} Resources`,
+      description: `Open-data initiative to map and visualise ${base} resources across 50 countries.`,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(),
+      orgName: `Global ${q} Alliance`,
+      orgId: "org-2",
+      tags: [base, "open-data", "mapping"],
+      sdgs: [9, 17],
+      status: "active",
+    } as ProjectResult,
+    {
+      id: "user-1",
+      kind: "user",
+      title: `Alex ${q.charAt(0).toUpperCase() + q.slice(1)}`,
+      description: `Policy researcher and advocate with 8 years experience in ${base} sector.`,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 200).toISOString(),
+      username: `alex_${base}`,
+      role: "Researcher",
+      orgs: [`${q} Foundation`],
+    } as UserResult,
+    {
+      id: "tag-1",
+      kind: "tag",
+      title: `#${base}`,
+      description: `Browse all content tagged with #${base}`,
+      createdAt: new Date().toISOString(),
+      count: 382,
+      relatedTags: [`${base}-policy`, `${base}-impact`, `sustainable-${base}`],
+    } as TagResult,
+  ];
+
+  if (kind === "all") return mock;
+  return mock.filter((r) => r.kind === kind);
+}
+
+// ─── Fetch helper ─────────────────────────────────────────────────────────────
+
+async function fetchResults(
+  q: string,
+  kind: ResultKind | "all",
+  page: number
+): Promise<SearchResponse> {
+  try {
+    const params = new URLSearchParams({ q, kind, page: String(page) });
+    const res = await fetch(`/api/search?${params.toString()}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error("API error");
+    return res.json();
+  } catch {
+    await new Promise((r) => setTimeout(r, 300));
+    const results = generateMockResults(q, kind);
+    return { results, total: results.length, took: 12 };
+  }
+}
+
+// ─── SDG badge colours ────────────────────────────────────────────────────────
+
+const SDG_COLORS: Record<number, string> = {
+  1: "#E5243B", 2: "#DDA63A", 3: "#4C9F38", 4: "#C5192D",
+  5: "#FF3A21", 6: "#26BDE2", 7: "#FCC30B", 8: "#A21942",
+  9: "#FD6925", 10: "#DD1367", 11: "#FD9D24", 12: "#BF8B2E",
+  13: "#3F7E44", 14: "#0A97D9", 15: "#56C02B", 16: "#00689D",
+  17: "#19486A",
 };
 
-const TAB_ITEMS: { key: ContentType; label: string; icon: React.ReactNode }[] = [
-  { key: 'all', label: 'All', icon: <MagnifyingGlassIcon className="w-4 h-4" /> },
-  { key: 'services', label: 'Services', icon: <BriefcaseIcon className="w-4 h-4" /> },
-  { key: 'products', label: 'Products', icon: <CubeIcon className="w-4 h-4" /> },
-  { key: 'users', label: 'People', icon: <UserCircleIcon className="w-4 h-4" /> },
-  { key: 'organisations', label: 'Orgs', icon: <BuildingOffice2Icon className="w-4 h-4" /> },
-  { key: 'communities', label: 'Communities', icon: <UsersIcon className="w-4 h-4" /> },
-  { key: 'posts', label: 'Posts', icon: <DocumentTextIcon className="w-4 h-4" /> },
-];
-
-function filterAndSort(results: SearchResult[], query: string, type: ContentType, filters: FilterState): SearchResult[] {
-  let filtered = results.filter((r) => {
-    const q = query.toLowerCase();
-    const matchesQuery =
-      !q ||
-      r.title.toLowerCase().includes(q) ||
-      r.description.toLowerCase().includes(q) ||
-      r.tags?.some((t) => t.toLowerCase().includes(q)) ||
-      r.author?.toLowerCase().includes(q);
-    const matchesType = type === 'all' || r.type === type;
-    const matchesMin = !filters.minPrice || (r.price !== undefined && r.price >= parseFloat(filters.minPrice));
-    const matchesMax = !filters.maxPrice || (r.price !== undefined && r.price <= parseFloat(filters.maxPrice));
-    const matchesRating = !filters.minRating || (r.rating !== undefined && r.rating >= parseFloat(filters.minRating));
-    const matchesLocation = !filters.location || r.location?.toLowerCase().includes(filters.location.toLowerCase());
-    const matchesTags =
-      !filters.tags ||
-      filters.tags
-        .split(',')
-        .map((t) => t.trim().toLowerCase())
-        .every((ft) => r.tags?.some((rt) => rt.toLowerCase().includes(ft)));
-    return matchesQuery && matchesType && matchesMin && matchesMax && matchesRating && matchesLocation && matchesTags;
-  });
-
-  switch (filters.sortBy) {
-    case 'newest':
-      filtered = filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-      break;
-    case 'price_asc':
-      filtered = filtered.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
-      break;
-    case 'price_desc':
-      filtered = filtered.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
-      break;
-    case 'rating':
-      filtered = filtered.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-      break;
-    default:
-      break;
-  }
-  return filtered;
+function SdgBadge({ n }: { n: number }) {
+  return (
+    <span
+      className="inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-[10px] font-bold"
+      style={{ backgroundColor: SDG_COLORS[n] ?? "#555" }}
+      title={`SDG ${n}`}
+    >
+      {n}
+    </span>
+  );
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Star rating ──────────────────────────────────────────────────────────────
 
-function RatingStars({ rating }: { rating: number }) {
+function Stars({ rating }: { rating: number }) {
   return (
     <span className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((s) => (
-        <StarSolid
-          key={s}
-          className={`w-3.5 h-3.5 ${s <= Math.round(rating) ? 'text-yellow-400' : 'text-gray-200 dark:text-gray-600'}`}
-        />
+      {[1, 2, 3, 4, 5].map((i) => (
+        <span key={i}>
+          {i <= Math.round(rating) ? (
+            <StarSolid className="w-3.5 h-3.5 text-amber-400" />
+          ) : (
+            <StarIcon className="w-3.5 h-3.5 text-neutral-600" />
+          )}
+        </span>
       ))}
+      <span className="ml-1 text-xs text-neutral-400">{rating.toFixed(1)}</span>
     </span>
   );
 }
 
-function TypeBadge({ type }: { type: Exclude<ContentType, 'all'> }) {
-  const cfg = TYPE_CONFIG[type];
+// ─── Result cards ─────────────────────────────────────────────────────────────
+
+function OrgCard({ r }: { r: OrgResult }) {
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.color}`}>
-      {cfg.icon}
-      {cfg.label}
-    </span>
-  );
-}
-
-function ResultCard({ result }: { result: SearchResult }) {
-  const hasPrice = result.price !== undefined;
-  const hasRating = result.rating !== undefined;
-
-  return (
-    <Link href={result.slug} className="block group">
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200">
-        <div className="flex items-start gap-4">
-          {/* Avatar/Icon placeholder */}
-          <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
-            {result.title.charAt(0)}
-          </div>
-
-          <div className="flex-1 min-w-0">
-            {/* Top row */}
-            <div className="flex flex-wrap items-center gap-2 mb-1">
-              <TypeBadge type={result.type} />
-              {result.verified && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-                  ✓ Verified
-                </span>
-              )}
-              <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">
-                {formatDistanceToNow(result.createdAt, { addSuffix: true })}
-              </span>
-            </div>
-
-            {/* Title */}
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
-              {result.title}
-            </h3>
-
-            {/* Description */}
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{result.description}</p>
-
-            {/* Meta row */}
-            <div className="flex flex-wrap items-center gap-3 mt-3">
-              {hasRating && result.rating !== undefined && (
-                <span className="flex items-center gap-1.5">
-                  <RatingStars rating={result.rating} />
-                  <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{result.rating.toFixed(1)}</span>
-                  {result.reviewCount !== undefined && (
-                    <span className="text-xs text-gray-400 dark:text-gray-500">({result.reviewCount})</span>
-                  )}
-                </span>
-              )}
-              {result.location && (
-                <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
-                  <MapPinIcon className="w-3.5 h-3.5" />
-                  {result.location}
-                </span>
-              )}
-              {result.author && (
-                <span className="text-xs text-gray-400 dark:text-gray-500">by {result.author}</span>
-              )}
-              {hasPrice && (
-                <span className="ml-auto text-sm font-semibold text-blue-600 dark:text-blue-400">
-                  {result.currency} {result.price?.toLocaleString()}
-                </span>
-              )}
-            </div>
-
-            {/* Tags */}
-            {result.tags && result.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-3">
-                {result.tags.slice(0, 4).map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                  >
-                    <TagIcon className="w-3 h-3" />
-                    {tag}
-                  </span>
-                ))}
-              </div>
+    <Link
+      href={`/organisation/${r.id}`}
+      className="group flex gap-4 p-4 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-indigo-500/60 hover:bg-neutral-800/60 transition-all duration-200"
+    >
+      <div className="shrink-0 w-12 h-12 rounded-lg bg-neutral-800 border border-neutral-700 flex items-center justify-center overflow-hidden">
+        {r.logoUrl ? (
+          <img src={r.logoUrl} alt={r.title} className="w-full h-full object-cover" />
+        ) : (
+          <BuildingOffice2Icon className="w-6 h-6 text-neutral-500" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-white group-hover:text-indigo-300 transition-colors truncate">
+              {r.title}
+            </span>
+            {r.verified && (
+              <CheckBadgeIcon className="w-4 h-4 text-indigo-400 shrink-0" title="Verified" />
             )}
+          </div>
+          <Stars rating={r.rating} />
+        </div>
+        <p className="text-sm text-neutral-400 mt-1 line-clamp-2">{r.description}</p>
+        <div className="flex flex-wrap items-center gap-3 mt-2.5">
+          <span className="flex items-center gap-1 text-xs text-neutral-500">
+            <MapPinIcon className="w-3.5 h-3.5" /> {r.location}
+          </span>
+          <span className="flex items-center gap-1 text-xs text-neutral-500">
+            <UserGroupIcon className="w-3.5 h-3.5" /> {r.followerCount.toLocaleString()} followers
+          </span>
+          <div className="flex items-center gap-1">
+            {r.sdgs.map((n) => (
+              <SdgBadge key={n} n={n} />
+            ))}
           </div>
         </div>
       </div>
@@ -372,220 +258,286 @@ function ResultCard({ result }: { result: SearchResult }) {
   );
 }
 
-function FilterPanel({
-  filters,
-  onChange,
-  onReset,
-  activeType,
-}: {
-  filters: FilterState;
-  onChange: (k: keyof FilterState, v: string) => void;
-  onReset: () => void;
-  activeType: ContentType;
-}) {
-  const showPrice = activeType === 'all' || activeType === 'services' || activeType === 'products';
+function ProjectCard({ r }: { r: ProjectResult }) {
+  const statusColor =
+    r.status === "active"
+      ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/20"
+      : r.status === "completed"
+      ? "text-sky-400 bg-sky-400/10 border-sky-400/20"
+      : "text-neutral-400 bg-neutral-400/10 border-neutral-400/20";
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-5">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <AdjustmentsHorizontalIcon className="w-4 h-4" />
-          Filters
-        </h3>
-        <button
-          onClick={onReset}
-          className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-        >
-          Reset all
-        </button>
+    <Link
+      href={`/projects/${r.id}`}
+      className="group flex gap-4 p-4 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-indigo-500/60 hover:bg-neutral-800/60 transition-all duration-200"
+    >
+      <div className="shrink-0 w-12 h-12 rounded-lg bg-neutral-800 border border-neutral-700 flex items-center justify-center">
+        <DocumentTextIcon className="w-6 h-6 text-neutral-500" />
       </div>
-
-      {/* Sort */}
-      <div>
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Sort by</label>
-        <select
-          value={filters.sortBy}
-          onChange={(e) => onChange('sortBy', e.target.value)}
-          className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="relevance">Relevance</option>
-          <option value="newest">Newest</option>
-          <option value="rating">Highest rated</option>
-          {showPrice && <option value="price_asc">Price: low to high</option>}
-          {showPrice && <option value="price_desc">Price: high to low</option>}
-        </select>
-      </div>
-
-      {/* Price range */}
-      {showPrice && (
-        <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Price (USDT)</label>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              placeholder="Min"
-              value={filters.minPrice}
-              onChange={(e) => onChange('minPrice', e.target.value)}
-              className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <span className="text-gray-400 dark:text-gray-500 text-xs">–</span>
-            <input
-              type="number"
-              placeholder="Max"
-              value={filters.maxPrice}
-              onChange={(e) => onChange('maxPrice', e.target.value)}
-              className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2 flex-wrap">
+          <span className="font-semibold text-white group-hover:text-indigo-300 transition-colors">
+            {r.title}
+          </span>
+          <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${statusColor}`}>
+            {r.status}
+          </span>
         </div>
-      )}
-
-      {/* Min rating */}
-      <div>
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Min. rating</label>
-        <select
-          value={filters.minRating}
-          onChange={(e) => onChange('minRating', e.target.value)}
-          className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <Link
+          href={`/organisation/${r.orgId}`}
+          onClick={(e) => e.stopPropagation()}
+          className="text-xs text-indigo-400 hover:underline mt-0.5 inline-block"
         >
-          <option value="">Any</option>
-          <option value="3">3+</option>
-          <option value="4">4+</option>
-          <option value="4.5">4.5+</option>
-          <option value="5">5 only</option>
-        </select>
+          {r.orgName}
+        </Link>
+        <p className="text-sm text-neutral-400 mt-1 line-clamp-2">{r.description}</p>
+        <div className="flex flex-wrap items-center gap-2 mt-2.5">
+          {r.sdgs.map((n) => (
+            <SdgBadge key={n} n={n} />
+          ))}
+          {r.tags.map((t) => (
+            <span
+              key={t}
+              className="text-[11px] text-neutral-400 bg-neutral-800 border border-neutral-700 rounded-full px-2 py-0.5"
+            >
+              #{t}
+            </span>
+          ))}
+        </div>
       </div>
-
-      {/* Location */}
-      <div>
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Location</label>
-        <input
-          type="text"
-          placeholder="e.g. Remote, Lagos…"
-          value={filters.location}
-          onChange={(e) => onChange('location', e.target.value)}
-          className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-
-      {/* Tags */}
-      <div>
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Tags (comma-separated)</label>
-        <input
-          type="text"
-          placeholder="e.g. react, web3, design"
-          value={filters.tags}
-          onChange={(e) => onChange('tags', e.target.value)}
-          className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-    </div>
+    </Link>
   );
 }
 
-function EmptyState({ query }: { query: string }) {
+function UserCard({ r }: { r: UserResult }) {
+  const initials = r.title
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <MagnifyingGlassIcon className="w-14 h-14 text-gray-300 dark:text-gray-600 mb-4" />
-      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
-        {query ? `No results for "${query}"` : 'Start searching'}
-      </h3>
-      <p className="text-sm text-gray-400 dark:text-gray-500 max-w-sm">
-        {query
-          ? 'Try different keywords, adjust filters, or explore a different category.'
-          : 'Enter a search term above to find services, products, people, and more.'}
-      </p>
-    </div>
+    <Link
+      href={`/profile/${r.username}`}
+      className="group flex gap-4 p-4 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-indigo-500/60 hover:bg-neutral-800/60 transition-all duration-200"
+    >
+      <div className="shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
+        {r.avatarUrl ? (
+          <img src={r.avatarUrl} alt={r.title} className="w-full h-full object-cover" />
+        ) : (
+          initials
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-semibold text-white group-hover:text-indigo-300 transition-colors">
+            {r.title}
+          </span>
+          <span className="text-xs text-neutral-500">@{r.username}</span>
+          <span className="text-[11px] text-indigo-400 bg-indigo-400/10 border border-indigo-400/20 rounded-full px-2 py-0.5">
+            {r.role}
+          </span>
+        </div>
+        <p className="text-sm text-neutral-400 mt-1 line-clamp-2">{r.description}</p>
+        {r.orgs.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {r.orgs.map((o) => (
+              <span
+                key={o}
+                className="text-[11px] text-neutral-400 bg-neutral-800 border border-neutral-700 rounded-full px-2 py-0.5 flex items-center gap-1"
+              >
+                <BuildingOffice2Icon className="w-3 h-3" /> {o}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </Link>
   );
 }
 
-// ─── Main inner component (uses useSearchParams) ───────────────────────────
+function TagCard({ r }: { r: TagResult }) {
+  return (
+    <Link
+      href={`/tags/${r.title.replace("#", "")}`}
+      className="group flex gap-4 p-4 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-indigo-500/60 hover:bg-neutral-800/60 transition-all duration-200"
+    >
+      <div className="shrink-0 w-12 h-12 rounded-lg bg-neutral-800 border border-neutral-700 flex items-center justify-center">
+        <TagIcon className="w-6 h-6 text-neutral-500" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="font-semibold text-white group-hover:text-indigo-300 transition-colors">
+            {r.title}
+          </span>
+          <span className="text-xs text-neutral-400">{r.count.toLocaleString()} items</span>
+        </div>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {r.relatedTags.map((t) => (
+            <span
+              key={t}
+              className="text-[11px] text-neutral-400 bg-neutral-800 border border-neutral-700 rounded-full px-2 py-0.5"
+            >
+              #{t}
+            </span>
+          ))}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function ResultCard({ result }: { result: SearchResult }) {
+  switch (result.kind) {
+    case "organisation":
+      return <OrgCard r={result} />;
+    case "project":
+      return <ProjectCard r={result} />;
+    case "user":
+      return <UserCard r={result} />;
+    case "tag":
+      return <TagCard r={result} />;
+  }
+}
+
+// ─── Filter pill ──────────────────────────────────────────────────────────────
+
+type KindFilter = ResultKind | "all";
+
+const KIND_LABELS: { value: KindFilter; label: string; icon: React.ReactNode }[] = [
+  { value: "all", label: "All", icon: <MagnifyingGlassIcon className="w-3.5 h-3.5" /> },
+  { value: "organisation", label: "Orgs", icon: <BuildingOffice2Icon className="w-3.5 h-3.5" /> },
+  { value: "project", label: "Projects", icon: <DocumentTextIcon className="w-3.5 h-3.5" /> },
+  { value: "user", label: "People", icon: <UserGroupIcon className="w-3.5 h-3.5" /> },
+  { value: "tag", label: "Tags", icon: <TagIcon className="w-3.5 h-3.5" /> },
+];
+
+// ─── Sort options ──────────────────────────────────────────────────────────────
+
+type SortOption = "relevance" | "newest" | "popular";
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "relevance", label: "Most Relevant" },
+  { value: "newest", label: "Newest" },
+  { value: "popular", label: "Most Popular" },
+];
+
+// ─── Main search page (inner) ─────────────────────────────────────────────────
 
 function SearchPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const initialQuery = searchParams.get('q') ?? '';
-  const initialType = (searchParams.get('type') as ContentType) ?? 'all';
+  const initialQ = searchParams.get("q") ?? "";
+  const initialKind = (searchParams.get("kind") as KindFilter) ?? "all";
+  const initialSort = (searchParams.get("sort") as SortOption) ?? "relevance";
 
-  const [query, setQuery] = useState(initialQuery);
-  const [inputValue, setInputValue] = useState(initialQuery);
-  const [activeType, setActiveType] = useState<ContentType>(initialType);
+  const [query, setQuery] = useState(initialQ);
+  const [inputVal, setInputVal] = useState(initialQ);
+  const [kind, setKind] = useState<KindFilter>(initialKind);
+  const [sort, setSort] = useState<SortOption>(initialSort);
+  const [page, setPage] = useState(1);
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [total, setTotal] = useState(0);
+  const [took, setTook] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [filters, setFilters] = useState<FilterState>({
-    minPrice: '',
-    maxPrice: '',
-    minRating: '',
-    location: '',
-    tags: '',
-    sortBy: 'relevance',
-  });
+  const [sdgFilter, setSdgFilter] = useState<number[]>([]);
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
 
-  const results = filterAndSort(MOCK_RESULTS, query, activeType, filters);
+  const PER_PAGE = 10;
 
-  // Sync URL params
-  const updateUrl = useCallback(
-    (q: string, type: ContentType) => {
-      const params = new URLSearchParams();
-      if (q) params.set('q', q);
-      if (type !== 'all') params.set('type', type);
-      router.replace(`/search?${params.toString()}`, { scroll: false });
+  const doSearch = useCallback(
+    async (q: string, k: KindFilter, p: number) => {
+      if (!q.trim()) return;
+      setLoading(true);
+      try {
+        const data = await fetchResults(q, k, p);
+        if (p === 1) {
+          setResults(data.results);
+        } else {
+          setResults((prev) => [...prev, ...data.results]);
+        }
+        setTotal(data.total);
+        setTook(data.took);
+      } finally {
+        setLoading(false);
+      }
     },
-    [router]
+    []
   );
 
-  const handleSearch = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (query) doSearch(query, kind, page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, kind, page]);
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setQuery(inputValue);
-    updateUrl(inputValue, activeType);
-    setTimeout(() => setIsLoading(false), 300);
+    const q = inputVal.trim();
+    if (!q) return;
+    setPage(1);
+    setQuery(q);
+    const params = new URLSearchParams({ q, kind, sort });
+    router.push(`/search?${params.toString()}`, { scroll: false });
   };
 
-  const handleTypeChange = (type: ContentType) => {
-    setActiveType(type);
-    updateUrl(query, type);
+  const handleKind = (k: KindFilter) => {
+    setKind(k);
+    setPage(1);
+    const params = new URLSearchParams({ q: query, kind: k, sort });
+    router.push(`/search?${params.toString()}`, { scroll: false });
   };
 
-  const handleFilterChange = (k: keyof FilterState, v: string) => {
-    setFilters((prev) => ({ ...prev, [k]: v }));
+  const handleClear = () => {
+    setInputVal("");
+    setQuery("");
+    setResults([]);
+    setTotal(0);
+    router.push("/search", { scroll: false });
   };
 
-  const resetFilters = () => {
-    setFilters({ minPrice: '', maxPrice: '', minRating: '', location: '', tags: '', sortBy: 'relevance' });
+  const toggleSdg = (n: number) => {
+    setSdgFilter((prev) =>
+      prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]
+    );
   };
 
-  const activeFilterCount = [filters.minPrice, filters.maxPrice, filters.minRating, filters.location, filters.tags].filter(Boolean).length;
+  const filteredResults = results.filter((r) => {
+    if (verifiedOnly && r.kind === "organisation" && !r.verified) return false;
+    if (sdgFilter.length > 0) {
+      if (r.kind === "organisation" || r.kind === "project") {
+        const hasSdg = sdgFilter.some((n) => r.sdgs.includes(n));
+        if (!hasSdg) return false;
+      }
+    }
+    return true;
+  });
 
-  // Count results per type
-  const countByType = (type: ContentType) => {
-    if (type === 'all') return filterAndSort(MOCK_RESULTS, query, 'all', filters).length;
-    return filterAndSort(MOCK_RESULTS, query, type, filters).length;
-  };
+  const hasMore = results.length < total;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* Search bar */}
-          <form onSubmit={handleSearch} className="flex gap-3">
+    <div className="min-h-screen bg-neutral-950 text-white">
+      {/* ── Header / search bar ── */}
+      <div className="sticky top-0 z-30 bg-neutral-950/90 backdrop-blur border-b border-neutral-800 px-4 py-3">
+        <div className="max-w-3xl mx-auto space-y-3">
+          <form onSubmit={handleSubmit} className="flex items-center gap-2">
             <div className="relative flex-1">
-              <MagnifyingGlassIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500 pointer-events-none" />
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 pointer-events-none" />
               <input
                 type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Search services, products, people, organisations…"
-                className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                value={inputVal}
+                onChange={(e) => setInputVal(e.target.value)}
+                placeholder="Search organisations, projects, people…"
+                className="w-full pl-9 pr-9 py-2.5 rounded-lg bg-neutral-900 border border-neutral-700 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm text-white placeholder-neutral-500 transition"
                 autoFocus
               />
-              {inputValue && (
+              {inputVal && (
                 <button
                   type="button"
-                  onClick={() => { setInputValue(''); setQuery(''); updateUrl('', activeType); }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  onClick={handleClear}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition"
                 >
                   <XMarkIcon className="w-4 h-4" />
                 </button>
@@ -593,143 +545,257 @@ function SearchPageInner() {
             </div>
             <button
               type="submit"
-              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-60"
-              disabled={isLoading}
+              className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition"
             >
               Search
             </button>
             <button
               type="button"
               onClick={() => setShowFilters((v) => !v)}
-              className={`relative px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors flex items-center gap-2 ${
+              className={`p-2.5 rounded-lg border transition ${
                 showFilters
-                  ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-300'
-                  : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                  ? "bg-indigo-600 border-indigo-500 text-white"
+                  : "bg-neutral-900 border-neutral-700 text-neutral-400 hover:text-white"
               }`}
+              title="Filters"
             >
-              <FunnelIcon className="w-4 h-4" />
-              <span className="hidden sm:inline">Filters</span>
-              {activeFilterCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
-                  {activeFilterCount}
-                </span>
-              )}
+              <AdjustmentsHorizontalIcon className="w-4 h-4" />
             </button>
           </form>
 
-          {/* Tabs */}
-          <div className="flex gap-0.5 mt-3 overflow-x-auto scrollbar-hide">
-            {TAB_ITEMS.map((tab) => {
-              const count = countByType(tab.key);
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => handleTypeChange(tab.key)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                    activeType === tab.key
-                      ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
-                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {tab.icon}
-                  {tab.label}
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeType === tab.key ? 'bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-200' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+          {/* Kind filter pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none">
+            {KIND_LABELS.map(({ value, label, icon }) => (
+              <button
+                key={value}
+                onClick={() => handleKind(value)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition ${
+                  kind === value
+                    ? "bg-indigo-600 border-indigo-500 text-white"
+                    : "bg-neutral-900 border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-600"
+                }`}
+              >
+                {icon}
+                {label}
+              </button>
+            ))}
 
-      {/* Body */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex gap-6 items-start">
-          {/* Filter sidebar */}
+            <div className="ml-auto flex items-center gap-2 shrink-0">
+              <select
+                value={sort}
+                onChange={(e) => {
+                  setSort(e.target.value as SortOption);
+                  setPage(1);
+                }}
+                className="bg-neutral-900 border border-neutral-700 text-neutral-400 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-indigo-500 transition cursor-pointer"
+              >
+                {SORT_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Expandable filter panel */}
           {showFilters && (
-            <div className="hidden lg:block w-64 flex-shrink-0 sticky top-[130px]">
-              <FilterPanel
-                filters={filters}
-                onChange={handleFilterChange}
-                onReset={resetFilters}
-                activeType={activeType}
-              />
+            <div className="rounded-xl bg-neutral-900 border border-neutral-800 p-4 space-y-4">
+              <div>
+                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">
+                  SDGs
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {Object.keys(SDG_COLORS).map((k) => {
+                    const n = Number(k);
+                    const active = sdgFilter.includes(n);
+                    return (
+                      <button
+                        key={n}
+                        onClick={() => toggleSdg(n)}
+                        className={`w-8 h-8 rounded-full text-white text-[10px] font-bold border-2 transition ${
+                          active ? "border-white scale-110" : "border-transparent opacity-60 hover:opacity-90"
+                        }`}
+                        style={{ backgroundColor: SDG_COLORS[n] }}
+                        title={`SDG ${n}`}
+                      >
+                        {n}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <div
+                    onClick={() => setVerifiedOnly((v) => !v)}
+                    className={`w-9 h-5 rounded-full transition-colors relative ${
+                      verifiedOnly ? "bg-indigo-600" : "bg-neutral-700"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                        verifiedOnly ? "translate-x-4" : ""
+                      }`}
+                    />
+                  </div>
+                  <span className="text-sm text-neutral-300 flex items-center gap-1">
+                    <CheckBadgeIcon className="w-4 h-4 text-indigo-400" />
+                    Verified only
+                  </span>
+                </label>
+
+                {(sdgFilter.length > 0 || verifiedOnly) && (
+                  <button
+                    onClick={() => {
+                      setSdgFilter([]);
+                      setVerifiedOnly(false);
+                    }}
+                    className="ml-auto text-xs text-neutral-500 hover:text-white transition"
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </div>
             </div>
           )}
-
-          {/* Results */}
-          <div className="flex-1 min-w-0">
-            {/* Mobile filters */}
-            {showFilters && (
-              <div className="lg:hidden mb-4">
-                <FilterPanel
-                  filters={filters}
-                  onChange={handleFilterChange}
-                  onReset={resetFilters}
-                  activeType={activeType}
-                />
-              </div>
-            )}
-
-            {/* Results count */}
-            {query && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                {isLoading ? 'Searching…' : (
-                  <>
-                    <span className="font-semibold text-gray-900 dark:text-white">{results.length}</span>
-                    {' '}result{results.length !== 1 ? 's' : ''} for{' '}
-                    <span className="font-semibold text-gray-900 dark:text-white">"{query}"</span>
-                  </>
-                )}
-              </p>
-            )}
-
-            {/* Cards */}
-            {isLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 animate-pulse">
-                    <div className="flex gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-gray-200 dark:bg-gray-700" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4" />
-                        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full" />
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : results.length > 0 ? (
-              <div className="space-y-3">
-                {results.map((r) => (
-                  <ResultCard key={r.id} result={r} />
-                ))}
-              </div>
-            ) : (
-              <EmptyState query={query} />
-            )}
-          </div>
         </div>
       </div>
+
+      {/* ── Results area ── */}
+      <main className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+        {/* Meta line */}
+        {query && !loading && results.length > 0 && (
+          <div className="flex items-center justify-between text-xs text-neutral-500">
+            <span>
+              {total.toLocaleString()} result{total !== 1 ? "s" : ""} for{" "}
+              <span className="text-neutral-300 font-medium">"{query}"</span>
+            </span>
+            <span>{took}ms</span>
+          </div>
+        )}
+
+        {/* Active filter chips */}
+        {(sdgFilter.length > 0 || verifiedOnly) && (
+          <div className="flex flex-wrap gap-2">
+            {sdgFilter.map((n) => (
+              <button
+                key={n}
+                onClick={() => toggleSdg(n)}
+                className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-red-500/50 hover:text-red-400 transition"
+              >
+                <span
+                  className="w-3.5 h-3.5 rounded-full"
+                  style={{ backgroundColor: SDG_COLORS[n] }}
+                />
+                SDG {n}
+                <XMarkIcon className="w-3 h-3" />
+              </button>
+            ))}
+            {verifiedOnly && (
+              <button
+                onClick={() => setVerifiedOnly(false)}
+                className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-red-500/50 hover:text-red-400 transition"
+              >
+                <CheckBadgeIcon className="w-3.5 h-3.5 text-indigo-400" />
+                Verified only
+                <XMarkIcon className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Loading skeleton */}
+        {loading && page === 1 && (
+          <div className="space-y-3">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="h-28 rounded-xl bg-neutral-900 border border-neutral-800 animate-pulse"
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Empty / no-query state */}
+        {!loading && !query && (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <MagnifyingGlassIcon className="w-12 h-12 text-neutral-700 mb-4" />
+            <p className="text-neutral-400 text-lg font-medium">Search FreeTrust</p>
+            <p className="text-neutral-600 text-sm mt-1 max-w-xs">
+              Find organisations, projects, people, and topics across the platform.
+            </p>
+          </div>
+        )}
+
+        {/* No results */}
+        {!loading && query && filteredResults.length === 0 && results.length > 0 && (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <AdjustmentsHorizontalIcon className="w-10 h-10 text-neutral-700 mb-3" />
+            <p className="text-neutral-400 font-medium">No results match your filters</p>
+            <button
+              onClick={() => {
+                setSdgFilter([]);
+                setVerifiedOnly(false);
+              }}
+              className="mt-3 text-sm text-indigo-400 hover:underline"
+            >
+              Clear all filters
+            </button>
+          </div>
+        )}
+
+        {!loading && query && results.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <MagnifyingGlassIcon className="w-10 h-10 text-neutral-700 mb-3" />
+            <p className="text-neutral-400 font-medium">No results for "{query}"</p>
+            <p className="text-neutral-600 text-sm mt-1">
+              Try different keywords or broaden your search.
+            </p>
+          </div>
+        )}
+
+        {/* Results list */}
+        {filteredResults.map((r) => (
+          <ResultCard key={`${r.kind}-${r.id}`} result={r} />
+        ))}
+
+        {/* Load more */}
+        {!loading && hasMore && filteredResults.length > 0 && (
+          <div className="flex justify-center pt-2">
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              className="px-6 py-2.5 rounded-lg bg-neutral-900 border border-neutral-700 hover:border-indigo-500/60 text-sm text-neutral-300 hover:text-white transition flex items-center gap-2"
+            >
+              <ArrowPathIcon className="w-4 h-4" />
+              Load more results
+            </button>
+          </div>
+        )}
+
+        {/* Load more spinner */}
+        {loading && page > 1 && (
+          <div className="flex justify-center py-4">
+            <ArrowPathIcon className="w-5 h-5 text-neutral-500 animate-spin" />
+          </div>
+        )}
+      </main>
     </div>
   );
 }
 
-// ─── Page export (wraps in Suspense for useSearchParams) ──────────────────────
+// ─── Exported page (Suspense boundary for useSearchParams) ───────────────────
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <MagnifyingGlassIcon className="w-10 h-10 text-gray-300 dark:text-gray-600 animate-pulse" />
-          <p className="text-sm text-gray-400 dark:text-gray-500">Loading search…</p>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+          <ArrowPathIcon className="w-6 h-6 text-neutral-600 animate-spin" />
         </div>
-      </div>
-    }>
+      }
+    >
       <SearchPageInner />
     </Suspense>
   );

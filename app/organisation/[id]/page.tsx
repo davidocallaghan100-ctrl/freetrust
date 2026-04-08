@@ -1,653 +1,972 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import {
+  BuildingOffice2Icon,
+  GlobeAltIcon,
+  MapPinIcon,
+  UserGroupIcon,
+  StarIcon,
+  HeartIcon,
+  ShareIcon,
+  CheckBadgeIcon,
+  ChatBubbleLeftRightIcon,
+  DocumentTextIcon,
+  ChartBarIcon,
+  PhotoIcon,
+  ArrowLeftIcon,
+  CalendarIcon,
+  LinkIcon,
+  FlagIcon,
+} from "@heroicons/react/24/outline";
+import {
+  HeartIcon as HeartSolid,
+  StarIcon as StarSolid,
+} from "@heroicons/react/24/solid";
+import { format, parseISO } from "date-fns";
 
-interface OrgMember {
-  id: string
-  name: string
-  role: string
-  avatar_url?: string
-  linkedin_url?: string
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type SDGNumber = 1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17;
+
+interface SDG {
+  number: SDGNumber;
+  label: string;
+  color: string;
 }
 
-interface OrgReview {
-  id: string
-  reviewer_name?: string
-  reviewer_avatar?: string
-  rating: number
-  title?: string
-  body: string
-  verified: boolean
-  created_at: string
+interface Review {
+  id: string;
+  author: string;
+  avatar: string;
+  rating: number;
+  date: string;
+  body: string;
+  verified: boolean;
 }
 
-interface OrgListing {
-  id: string
-  title: string
-  description: string
-  price?: number
-  currency?: string
-  images?: string[]
+interface Project {
+  id: string;
+  title: string;
+  status: "active" | "completed" | "planned";
+  summary: string;
+  startDate: string;
+  endDate?: string;
+  budget?: string;
+  sdgs: SDGNumber[];
+}
+
+interface Update {
+  id: string;
+  title: string;
+  date: string;
+  body: string;
+  imageUrl?: string;
+}
+
+interface GalleryItem {
+  id: string;
+  url: string;
+  caption: string;
 }
 
 interface Organisation {
-  id: string
-  name: string
-  slug: string
-  type: string
-  description?: string
-  mission?: string
-  logo_url?: string
-  cover_url?: string
-  location?: string
-  website?: string
-  founded_year?: number
-  verified: boolean
-  follower_count: number
-  member_count: number
-  trust_score: number
-  sdg_goals?: number[]
+  id: string;
+  name: string;
+  tagline: string;
+  description: string;
+  logoUrl: string;
+  coverUrl: string;
+  location: string;
+  country: string;
+  website: string;
+  founded: string;
+  type: string;
+  size: string;
+  verified: boolean;
+  followerCount: number;
+  reviewCount: number;
+  avgRating: number;
+  sdgs: SDGNumber[];
+  projects: Project[];
+  reviews: Review[];
+  updates: Update[];
+  gallery: GalleryItem[];
+  stats: { label: string; value: string }[];
+  socialLinks: { platform: string; url: string }[];
+  tags: string[];
 }
 
-const SDG_LABELS: Record<number, string> = {
-  1: 'No Poverty', 2: 'Zero Hunger', 3: 'Good Health', 4: 'Quality Education',
-  5: 'Gender Equality', 6: 'Clean Water', 7: 'Clean Energy', 8: 'Decent Work',
-  9: 'Industry & Innovation', 10: 'Reduced Inequalities', 11: 'Sustainable Cities',
-  12: 'Responsible Consumption', 13: 'Climate Action', 14: 'Life Below Water',
-  15: 'Life on Land', 16: 'Peace & Justice', 17: 'Partnerships',
+// ─── Mock data ────────────────────────────────────────────────────────────────
+
+const SDG_META: Record<SDGNumber, { label: string; color: string }> = {
+  1:  { label: "No Poverty",             color: "#E5243B" },
+  2:  { label: "Zero Hunger",            color: "#DDA63A" },
+  3:  { label: "Good Health",            color: "#4C9F38" },
+  4:  { label: "Quality Education",      color: "#C5192D" },
+  5:  { label: "Gender Equality",        color: "#FF3A21" },
+  6:  { label: "Clean Water",            color: "#26BDE2" },
+  7:  { label: "Clean Energy",           color: "#FCC30B" },
+  8:  { label: "Decent Work",            color: "#A21942" },
+  9:  { label: "Industry & Innovation",  color: "#FD6925" },
+  10: { label: "Reduced Inequalities",   color: "#DD1367" },
+  11: { label: "Sustainable Cities",     color: "#FD9D24" },
+  12: { label: "Responsible Consumption",color: "#BF8B2E" },
+  13: { label: "Climate Action",         color: "#3F7E44" },
+  14: { label: "Life Below Water",       color: "#0A97D9" },
+  15: { label: "Life on Land",           color: "#56C02B" },
+  16: { label: "Peace & Justice",        color: "#00689D" },
+  17: { label: "Partnerships",           color: "#19486A" },
+};
+
+function buildMockOrg(id: string): Organisation {
+  return {
+    id,
+    name: "GreenFuture Initiative",
+    tagline: "Empowering communities through sustainable innovation",
+    description:
+      "GreenFuture Initiative is a global non-profit dedicated to accelerating the transition to sustainable, equitable communities. Founded in 2012, we operate across 40+ countries partnering with governments, corporations, and grassroots organisations to deliver measurable impact on climate, education, and economic resilience. Our evidence-based programmes have reached over 2.3 million beneficiaries since inception.",
+    logoUrl: "",
+    coverUrl: "",
+    location: "Geneva, Switzerland",
+    country: "CH",
+    website: "https://greenfuture.example.org",
+    founded: "2012-03-15",
+    type: "Non-profit / NGO",
+    size: "201–500 employees",
+    verified: true,
+    followerCount: 14820,
+    reviewCount: 238,
+    avgRating: 4.6,
+    sdgs: [1, 3, 4, 7, 11, 13, 17],
+    tags: ["climate", "education", "clean energy", "community", "SDGs", "sustainability"],
+    socialLinks: [
+      { platform: "Twitter / X", url: "https://twitter.com" },
+      { platform: "LinkedIn",    url: "https://linkedin.com" },
+      { platform: "Instagram",   url: "https://instagram.com" },
+    ],
+    stats: [
+      { label: "Countries active",   value: "43" },
+      { label: "Beneficiaries",      value: "2.3M+" },
+      { label: "Projects completed", value: "186" },
+      { label: "Partnerships",       value: "320+" },
+      { label: "Funds deployed",     value: "$48M" },
+      { label: "Years active",       value: "12" },
+    ],
+    projects: [
+      {
+        id: "p1",
+        title: "Solar Villages Phase III",
+        status: "active",
+        summary: "Off-grid solar deployment for 120 rural villages across sub-Saharan Africa.",
+        startDate: "2023-01-01",
+        endDate: "2025-12-31",
+        budget: "$3.2M",
+        sdgs: [7, 1, 3],
+      },
+      {
+        id: "p2",
+        title: "Urban Resilience Accelerator",
+        status: "active",
+        summary: "Co-designing climate adaptation plans with 15 mid-size cities in Latin America.",
+        startDate: "2024-04-01",
+        budget: "$1.8M",
+        sdgs: [11, 13, 17],
+      },
+      {
+        id: "p3",
+        title: "Girls STEM Scholarship Fund",
+        status: "completed",
+        summary: "Awarded 4,200 scholarships to girls in STEM across 12 countries.",
+        startDate: "2020-09-01",
+        endDate: "2023-08-31",
+        budget: "$2.1M",
+        sdgs: [4, 5, 10],
+      },
+      {
+        id: "p4",
+        title: "Ocean Plastics Data Platform",
+        status: "planned",
+        summary: "Open-source platform aggregating citizen-science ocean-plastic data.",
+        startDate: "2025-06-01",
+        sdgs: [14, 12, 17],
+      },
+    ],
+    reviews: [
+      {
+        id: "r1",
+        author: "Amara Diallo",
+        avatar: "",
+        rating: 5,
+        date: "2024-08-14",
+        body: "Exceptional transparency and genuine community engagement. GreenFuture's Solar Villages project transformed our region — reliable electricity has kept children in school and clinics open at night.",
+        verified: true,
+      },
+      {
+        id: "r2",
+        author: "Priya Nair",
+        avatar: "",
+        rating: 4,
+        date: "2024-06-02",
+        body: "Strong programme design and clear reporting. Communication with local partners could be more timely, but the on-ground outcomes are impressive and well-documented.",
+        verified: true,
+      },
+      {
+        id: "r3",
+        author: "Carlos Mendes",
+        avatar: "",
+        rating: 5,
+        date: "2024-03-19",
+        body: "Partnered with them on the Urban Resilience Accelerator. Their facilitation methodology is best-in-class and the cross-city peer learning was invaluable.",
+        verified: false,
+      },
+      {
+        id: "r4",
+        author: "Sophie Laurent",
+        avatar: "",
+        rating: 4,
+        date: "2023-11-30",
+        body: "Solid track record. Would love to see more detailed beneficiary-level data published in annual reports, but overall a highly trustworthy organisation.",
+        verified: true,
+      },
+    ],
+    updates: [
+      {
+        id: "u1",
+        title: "Solar Villages Phase III reaches 80% deployment milestone",
+        date: "2024-09-10",
+        body: "We are thrilled to announce that 96 of 120 target villages now have fully operational solar micro-grids. This milestone was reached three months ahead of schedule thanks to our local partner network.",
+        imageUrl: "",
+      },
+      {
+        id: "u2",
+        title: "New partnership with the European Climate Foundation",
+        date: "2024-07-22",
+        body: "GreenFuture and the European Climate Foundation have signed a 3-year €4M strategic partnership to scale urban adaptation programmes across Southern Europe and North Africa.",
+      },
+      {
+        id: "u3",
+        title: "2023 Annual Impact Report published",
+        date: "2024-04-05",
+        body: "Our 2023 Annual Impact Report is now available. Key highlights: 580,000 new beneficiaries reached, 14 new country programmes launched, and third-party verification of all impact metrics.",
+      },
+    ],
+    gallery: [
+      { id: "g1", url: "", caption: "Solar micro-grid installation, Kenya 2024" },
+      { id: "g2", url: "", caption: "Girls STEM programme graduation, Bangladesh" },
+      { id: "g3", url: "", caption: "Urban Resilience workshop, Medellín" },
+      { id: "g4", url: "", caption: "Community water-point, Mali" },
+      { id: "g5", url: "", caption: "Annual Summit 2023, Geneva" },
+      { id: "g6", url: "", caption: "Ocean data volunteer day, Philippines" },
+    ],
+  };
 }
 
-const SDG_COLORS: Record<number, string> = {
-  1: '#e5243b', 2: '#dda63a', 3: '#4c9f38', 4: '#c5192d', 5: '#ff3a21',
-  6: '#26bde2', 7: '#fcc30b', 8: '#a21942', 9: '#fd6925', 10: '#dd1367',
-  11: '#fd9d24', 12: '#bf8b2e', 13: '#3f7e44', 14: '#0a97d9', 15: '#56c02b',
-  16: '#00689d', 17: '#19486a',
-}
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
-// Mock fallback for when org ID doesn't exist in DB yet
-const MOCK_ORG: Organisation = {
-  id: '1',
-  name: 'GreenFuture Initiative',
-  slug: 'greenfuture-initiative',
-  type: 'Social Enterprise',
-  description: 'GreenFuture Initiative is a leading social enterprise dedicated to creating sustainable solutions for communities. We work at the intersection of environmental sustainability, social impact, and economic opportunity.',
-  mission: 'To accelerate the transition to a sustainable, equitable economy by connecting people, businesses, and communities with the tools, knowledge, and resources they need to thrive in a net-zero world.',
-  location: 'London, United Kingdom',
-  website: 'https://greenfuture.org',
-  founded_year: 2018,
-  verified: true,
-  follower_count: 3842,
-  member_count: 247,
-  trust_score: 94,
-  sdg_goals: [4, 7, 13, 15, 17],
-}
-
-const MOCK_MEMBERS: OrgMember[] = [
-  { id: 't1', name: 'Sarah Okonkwo', role: 'Chief Executive Officer', avatar_url: 'https://api.dicebear.com/7.x/initials/svg?seed=SO&backgroundColor=0ea5e9' },
-  { id: 't2', name: 'James Whitfield', role: 'Head of Sustainability', avatar_url: 'https://api.dicebear.com/7.x/initials/svg?seed=JW&backgroundColor=8b5cf6' },
-  { id: 't3', name: 'Priya Sharma', role: 'Community Lead', avatar_url: 'https://api.dicebear.com/7.x/initials/svg?seed=PS&backgroundColor=ec4899' },
-  { id: 't4', name: 'Tom Adeyemi', role: 'Head of Partnerships', avatar_url: 'https://api.dicebear.com/7.x/initials/svg?seed=TA&backgroundColor=f59e0b' },
-]
-
-const MOCK_REVIEWS: OrgReview[] = [
-  { id: 'r1', reviewer_name: 'Claire Hutchinson', rating: 5, title: 'Transformed our sustainability strategy', body: 'GreenFuture delivered an outstanding sustainability audit. Their team was thorough, professional, and genuinely passionate. The roadmap they produced has already saved us 18% on energy costs.', verified: true, created_at: '2024-03-15' },
-  { id: 'r2', reviewer_name: 'Marcus Bell', rating: 5, title: 'Incredible community grant support', body: 'The grant programme was a lifeline for our local environmental project. The application process was straightforward and the team were supportive throughout.', verified: true, created_at: '2024-02-28' },
-  { id: 'r3', reviewer_name: 'Fatima Al-Rashid', rating: 4, title: 'Great training programme', body: 'The Green Skills workshop was well-structured and informative. Would have given 5 stars but the online materials could be improved. Overall a really valuable experience.', verified: true, created_at: '2024-01-10' },
-]
-
-const MOCK_LISTINGS: OrgListing[] = [
-  { id: 'l1', title: 'Sustainability Auditing', description: 'Comprehensive audits of your environmental impact with actionable improvement plans.', price: 1200 },
-  { id: 'l2', title: 'Net Zero Strategy', description: 'End-to-end strategy development to help your business achieve net zero emissions.', price: 3500 },
-  { id: 'l3', title: 'Green Skills Training', description: 'Workshops and certifications for individuals seeking careers in the green economy.', price: 150 },
-]
-
-type Tab = 'about' | 'services' | 'products' | 'events' | 'team' | 'reviews'
-
-function getInitials(name: string) {
-  return name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()
-}
-
-function StarRating({ rating, max = 5 }: { rating: number; max?: number }) {
+function Avatar({ name, size = 40 }: { name: string; size?: number }) {
+  const initials = name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
   return (
-    <span style={{ display: 'inline-flex', gap: 2 }}>
-      {Array.from({ length: max }).map((_, i) => (
-        <svg key={i} width="14" height="14" viewBox="0 0 24 24" fill={i < rating ? '#fbbf24' : 'none'} stroke="#fbbf24" strokeWidth="1.5">
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-        </svg>
-      ))}
-    </span>
-  )
+    <div
+      className="rounded-full flex items-center justify-center font-semibold text-white flex-shrink-0"
+      style={{
+        width: size,
+        height: size,
+        fontSize: size * 0.35,
+        background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+      }}
+    >
+      {initials}
+    </div>
+  );
 }
 
-export default function OrganisationPage({ params }: { params: { id: string } }) {
-  const [org, setOrg] = useState<Organisation | null>(null)
-  const [members, setMembers] = useState<OrgMember[]>([])
-  const [reviews, setReviews] = useState<OrgReview[]>([])
-  const [services, setServices] = useState<OrgListing[]>([])
-  const [products, setProducts] = useState<OrgListing[]>([])
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<Tab>('about')
-  const [following, setFollowing] = useState(false)
-  const [followerCount, setFollowerCount] = useState(0)
+function StarRating({ value, max = 5, size = 16 }: { value: number; max?: number; size?: number }) {
+  return (
+    <span className="flex gap-0.5">
+      {Array.from({ length: max }).map((_, i) => {
+        const filled = i < Math.floor(value);
+        const half = !filled && i < value;
+        return filled || half ? (
+          <StarSolid key={i} style={{ width: size, height: size, color: "#facc15" }} />
+        ) : (
+          <StarIcon key={i} style={{ width: size, height: size, color: "#4b5563" }} />
+        );
+      })}
+    </span>
+  );
+}
 
-  useEffect(() => {
-    async function load() {
-      try {
-        // Try to fetch from API
-        const res = await fetch(`/api/organisations/${params.id}`)
-        if (res.ok) {
-          const data = await res.json()
-          setOrg(data.org ?? MOCK_ORG)
-          setMembers(data.members ?? MOCK_MEMBERS)
-          setReviews(data.reviews ?? MOCK_REVIEWS)
-          setServices(data.services ?? MOCK_LISTINGS)
-          setProducts(data.products ?? [])
-          setFollowerCount(data.org?.follower_count ?? MOCK_ORG.follower_count)
-        } else {
-          throw new Error('Not found')
-        }
-      } catch {
-        // Fall back to mock
-        setOrg(MOCK_ORG)
-        setMembers(MOCK_MEMBERS)
-        setReviews(MOCK_REVIEWS)
-        setServices(MOCK_LISTINGS)
-        setProducts([])
-        setFollowerCount(MOCK_ORG.follower_count)
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
-  }, [params.id])
+function SDGBadge({ number }: { number: SDGNumber }) {
+  const meta = SDG_META[number];
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold text-white"
+      style={{ backgroundColor: meta.color }}
+      title={meta.label}
+    >
+      SDG {number}
+      <span className="hidden sm:inline">· {meta.label}</span>
+    </span>
+  );
+}
 
-  const handleFollow = async () => {
-    setFollowing(f => !f)
-    setFollowerCount(c => following ? c - 1 : c + 1)
-    try {
-      await fetch(`/api/organisations/${params.id}/follow`, { method: 'POST' })
-    } catch {}
-  }
+function StatusPill({ status }: { status: Project["status"] }) {
+  const map: Record<Project["status"], string> = {
+    active:    "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
+    completed: "bg-sky-500/20 text-sky-400 border border-sky-500/30",
+    planned:   "bg-amber-500/20 text-amber-400 border border-amber-500/30",
+  };
+  return (
+    <span className={`text-xs font-medium rounded-full px-2.5 py-0.5 ${map[status]}`}>
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
+  );
+}
 
-  const avgRating = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0
-  const ratingBreakdown = [5, 4, 3, 2, 1].map(n => ({
-    star: n,
-    count: reviews.filter(r => r.rating === n).length,
-  }))
+// ─── Tab: Overview ────────────────────────────────────────────────────────────
 
-  const TABS: { id: Tab; label: string; count?: number }[] = [
-    { id: 'about', label: 'About' },
-    { id: 'services', label: 'Services', count: services.length },
-    { id: 'products', label: 'Products', count: products.length },
-    { id: 'events', label: 'Events' },
-    { id: 'team', label: 'Team', count: members.length },
-    { id: 'reviews', label: 'Reviews', count: reviews.length },
-  ]
+function TabOverview({ org }: { org: Organisation }) {
+  return (
+    <div className="space-y-8">
+      {/* Stats grid */}
+      <section>
+        <h3 className="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-4">
+          Impact at a Glance
+        </h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {org.stats.map((s) => (
+            <div
+              key={s.label}
+              className="rounded-xl bg-white/5 border border-white/10 p-4 flex flex-col gap-1"
+            >
+              <span className="text-2xl font-bold text-white">{s.value}</span>
+              <span className="text-xs text-gray-400 leading-tight">{s.label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
 
-  if (loading) {
-    return (
-      <>
-        <style>{orgStyles}</style>
-        <div className="op-page">
-          <div className="op-skeleton-cover" />
-          <div className="op-container">
-            <div className="op-skeleton-header" />
-            <div className="op-skeleton-body" />
+      {/* About */}
+      <section>
+        <h3 className="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-3">
+          About
+        </h3>
+        <p className="text-gray-300 leading-relaxed whitespace-pre-line">{org.description}</p>
+      </section>
+
+      {/* SDGs */}
+      <section>
+        <h3 className="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-3">
+          Sustainable Development Goals
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          {org.sdgs.map((n) => (
+            <SDGBadge key={n} number={n} />
+          ))}
+        </div>
+      </section>
+
+      {/* Tags */}
+      <section>
+        <h3 className="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-3">
+          Focus Areas
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          {org.tags.map((t) => (
+            <span
+              key={t}
+              className="rounded-full bg-white/8 border border-white/10 px-3 py-1 text-sm text-gray-300"
+            >
+              #{t}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      {/* Meta info */}
+      <section className="grid sm:grid-cols-2 gap-4 text-sm text-gray-400">
+        {[
+          { icon: BuildingOffice2Icon, label: "Type",     value: org.type },
+          { icon: UserGroupIcon,       label: "Size",     value: org.size },
+          { icon: MapPinIcon,          label: "Location", value: org.location },
+          { icon: CalendarIcon,        label: "Founded",  value: format(parseISO(org.founded), "MMMM yyyy") },
+        ].map(({ icon: Icon, label, value }) => (
+          <div key={label} className="flex items-center gap-3">
+            <Icon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+            <span className="text-gray-500">{label}:</span>
+            <span className="text-gray-200">{value}</span>
+          </div>
+        ))}
+        <div className="flex items-center gap-3">
+          <GlobeAltIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+          <span className="text-gray-500">Website:</span>
+          <a
+            href={org.website}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-indigo-400 hover:underline truncate"
+          >
+            {org.website.replace(/^https?:\/\//, "")}
+          </a>
+        </div>
+        <div className="flex items-center gap-3">
+          <LinkIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+          <span className="text-gray-500">Socials:</span>
+          <div className="flex gap-3">
+            {org.socialLinks.map((s) => (
+              <a
+                key={s.platform}
+                href={s.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-indigo-400 hover:underline text-xs"
+              >
+                {s.platform}
+              </a>
+            ))}
           </div>
         </div>
-      </>
-    )
-  }
+      </section>
+    </div>
+  );
+}
 
-  if (!org) return null
+// ─── Tab: Projects ────────────────────────────────────────────────────────────
 
+function TabProjects({ projects }: { projects: Project[] }) {
+  const [filter, setFilter] = useState<"all" | Project["status"]>("all");
+  const visible = filter === "all" ? projects : projects.filter((p) => p.status === filter);
+  const counts = {
+    all:       projects.length,
+    active:    projects.filter((p) => p.status === "active").length,
+    completed: projects.filter((p) => p.status === "completed").length,
+    planned:   projects.filter((p) => p.status === "planned").length,
+  };
   return (
-    <>
-      <style>{orgStyles}</style>
-      <div className="op-page">
-        {/* Cover */}
-        <div
-          className="op-cover"
-          style={{
-            background: org.cover_url
-              ? `url(${org.cover_url}) center/cover no-repeat`
-              : 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%)',
-          }}
-        >
-          <div className="op-cover-overlay" />
-        </div>
-
-        <div className="op-container">
-          {/* Logo + Header */}
-          <div className="op-header">
-            <div className="op-logo-wrap">
-              {org.logo_url ? (
-                <img src={org.logo_url} alt={org.name} className="op-logo" />
-              ) : (
-                <div className="op-logo op-logo-fallback">
-                  {getInitials(org.name)}
-                </div>
-              )}
-              {org.verified && (
-                <span className="op-verified-badge" title="Verified Organisation">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#38bdf8">
-                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#38bdf8" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+    <div className="space-y-6">
+      <div className="flex flex-wrap gap-2">
+        {(["all", "active", "completed", "planned"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              filter === f
+                ? "bg-indigo-600 text-white"
+                : "bg-white/8 text-gray-400 hover:text-white border border-white/10"
+            }`}
+          >
+            {f.charAt(0).toUpperCase() + f.slice(1)}{" "}
+            <span className="opacity-60">({counts[f]})</span>
+          </button>
+        ))}
+      </div>
+      <div className="space-y-4">
+        {visible.map((p) => (
+          <div
+            key={p.id}
+            className="rounded-xl bg-white/5 border border-white/10 p-5 space-y-3 hover:border-indigo-500/50 transition-colors"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <h4 className="text-white font-semibold leading-tight">{p.title}</h4>
+              <StatusPill status={p.status} />
+            </div>
+            <p className="text-gray-400 text-sm leading-relaxed">{p.summary}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {p.sdgs.map((n) => (
+                <SDGBadge key={n} number={n} />
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-4 text-xs text-gray-500 pt-1">
+              <span className="flex items-center gap-1">
+                <CalendarIcon className="w-3.5 h-3.5" />
+                {format(parseISO(p.startDate), "MMM yyyy")}
+                {p.endDate && ` → ${format(parseISO(p.endDate), "MMM yyyy")}`}
+              </span>
+              {p.budget && (
+                <span className="flex items-center gap-1">
+                  <ChartBarIcon className="w-3.5 h-3.5" />
+                  Budget: {p.budget}
                 </span>
               )}
             </div>
-
-            <div className="op-header-info">
-              <div className="op-name-row">
-                <h1 className="op-name">{org.name}</h1>
-                <span className="op-type-badge">{org.type}</span>
-              </div>
-              <div className="op-meta-row">
-                {org.location && (
-                  <span className="op-meta-item">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                    {org.location}
-                  </span>
-                )}
-                {org.founded_year && (
-                  <span className="op-meta-item">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                    Est. {org.founded_year}
-                  </span>
-                )}
-                {org.website && (
-                  <a href={org.website} target="_blank" rel="noopener noreferrer" className="op-meta-item op-meta-link">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                    Website
-                  </a>
-                )}
-              </div>
-            </div>
-
-            <div className="op-follow-wrap">
-              <button
-                onClick={handleFollow}
-                className={`op-follow-btn${following ? ' op-follow-btn--following' : ''}`}
-              >
-                {following ? (
-                  <>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="15" y1="3" x2="19" y2="7"/></svg>
-                    Following
-                  </>
-                ) : (
-                  <>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="17" y1="10" x2="17" y2="16"/><line x1="14" y1="13" x2="20" y2="13"/></svg>
-                    Follow
-                  </>
-                )}
-              </button>
-              <span className="op-follower-count">
-                <strong>{followerCount.toLocaleString()}</strong> followers
-              </span>
-            </div>
           </div>
-
-          {/* Stats bar */}
-          <div className="op-stats">
-            {[
-              { label: 'Members', value: org.member_count.toLocaleString(), icon: '👥' },
-              { label: 'Services', value: services.length.toString(), icon: '🔧' },
-              { label: 'Trust Score', value: `${org.trust_score}%`, icon: '₮' },
-              { label: 'Reviews', value: reviews.length.toString(), icon: '⭐' },
-            ].map(s => (
-              <div key={s.label} className="op-stat">
-                <span className="op-stat-icon">{s.icon}</span>
-                <span className="op-stat-value">{s.value}</span>
-                <span className="op-stat-label">{s.label}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Tabs */}
-          <div className="op-tabs">
-            {TABS.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`op-tab${activeTab === tab.id ? ' op-tab--active' : ''}`}
-              >
-                {tab.label}
-                {tab.count !== undefined && tab.count > 0 && (
-                  <span className="op-tab-count">{tab.count}</span>
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* Tab content */}
-          <div className="op-tab-body">
-            {/* About */}
-            {activeTab === 'about' && (
-              <div className="op-about">
-                <div className="op-card">
-                  <h2 className="op-card-title">About</h2>
-                  <p className="op-text">{org.description}</p>
-                </div>
-                {org.mission && (
-                  <div className="op-card">
-                    <h2 className="op-card-title">Our Mission</h2>
-                    <blockquote className="op-mission">{org.mission}</blockquote>
-                  </div>
-                )}
-                {org.sdg_goals && org.sdg_goals.length > 0 && (
-                  <div className="op-card">
-                    <h2 className="op-card-title">UN Sustainable Development Goals</h2>
-                    <div className="op-sdgs">
-                      {org.sdg_goals.map(n => (
-                        <span
-                          key={n}
-                          className="op-sdg"
-                          style={{ background: SDG_COLORS[n] ?? '#38bdf8' }}
-                          title={SDG_LABELS[n]}
-                        >
-                          SDG {n}: {SDG_LABELS[n]}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <div className="op-card">
-                  <h2 className="op-card-title">Contact</h2>
-                  <div className="op-contact-grid">
-                    {org.location && (
-                      <div className="op-contact-item">
-                        <span className="op-contact-label">Location</span>
-                        <span className="op-contact-value">{org.location}</span>
-                      </div>
-                    )}
-                    {org.website && (
-                      <div className="op-contact-item">
-                        <span className="op-contact-label">Website</span>
-                        <a href={org.website} target="_blank" rel="noopener noreferrer" className="op-contact-link">{org.website.replace(/^https?:\/\//, '')}</a>
-                      </div>
-                    )}
-                    {org.founded_year && (
-                      <div className="op-contact-item">
-                        <span className="op-contact-label">Founded</span>
-                        <span className="op-contact-value">{org.founded_year}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Services */}
-            {activeTab === 'services' && (
-              <div className="op-listings-grid">
-                {services.length === 0 ? (
-                  <div className="op-empty">
-                    <span>🔧</span>
-                    <p>No services listed yet.</p>
-                  </div>
-                ) : services.map(s => (
-                  <Link key={s.id} href={`/services/${s.id}`} className="op-listing-card">
-                    {s.images?.[0] && <img src={s.images[0]} alt={s.title} className="op-listing-img" />}
-                    {!s.images?.[0] && (
-                      <div className="op-listing-img op-listing-img-placeholder">🔧</div>
-                    )}
-                    <div className="op-listing-body">
-                      <h3 className="op-listing-title">{s.title}</h3>
-                      <p className="op-listing-desc">{s.description}</p>
-                      {s.price !== undefined && (
-                        <span className="op-listing-price">From £{s.price.toLocaleString()}</span>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-
-            {/* Products */}
-            {activeTab === 'products' && (
-              <div className="op-listings-grid">
-                {products.length === 0 ? (
-                  <div className="op-empty">
-                    <span>📦</span>
-                    <p>No products listed yet.</p>
-                  </div>
-                ) : products.map(p => (
-                  <Link key={p.id} href={`/products/${p.id}`} className="op-listing-card">
-                    {p.images?.[0] && <img src={p.images[0]} alt={p.title} className="op-listing-img" />}
-                    {!p.images?.[0] && (
-                      <div className="op-listing-img op-listing-img-placeholder">📦</div>
-                    )}
-                    <div className="op-listing-body">
-                      <h3 className="op-listing-title">{p.title}</h3>
-                      <p className="op-listing-desc">{p.description}</p>
-                      {p.price !== undefined && (
-                        <span className="op-listing-price">£{p.price.toLocaleString()}</span>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-
-            {/* Events */}
-            {activeTab === 'events' && (
-              <div className="op-empty">
-                <span>📅</span>
-                <p>No upcoming events.</p>
-                <Link href="/events" className="op-empty-link">Browse all events →</Link>
-              </div>
-            )}
-
-            {/* Team */}
-            {activeTab === 'team' && (
-              <div className="op-team-grid">
-                {members.length === 0 ? (
-                  <div className="op-empty"><span>👥</span><p>No team members listed.</p></div>
-                ) : members.map(m => (
-                  <div key={m.id} className="op-team-card">
-                    {m.avatar_url ? (
-                      <img src={m.avatar_url} alt={m.name} className="op-team-avatar" />
-                    ) : (
-                      <div className="op-team-avatar op-team-avatar-fallback">{getInitials(m.name)}</div>
-                    )}
-                    <div className="op-team-info">
-                      <span className="op-team-name">{m.name}</span>
-                      <span className="op-team-role">{m.role}</span>
-                      {m.linkedin_url && (
-                        <a href={m.linkedin_url} target="_blank" rel="noopener noreferrer" className="op-team-linkedin">
-                          LinkedIn →
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Reviews */}
-            {activeTab === 'reviews' && (
-              <div className="op-reviews">
-                {reviews.length > 0 && (
-                  <div className="op-rating-summary">
-                    <div className="op-rating-big">
-                      <span className="op-rating-num">{avgRating.toFixed(1)}</span>
-                      <StarRating rating={Math.round(avgRating)} />
-                      <span className="op-rating-total">{reviews.length} review{reviews.length !== 1 ? 's' : ''}</span>
-                    </div>
-                    <div className="op-rating-bars">
-                      {ratingBreakdown.map(({ star, count }) => (
-                        <div key={star} className="op-rating-bar-row">
-                          <span className="op-rating-bar-label">{star}★</span>
-                          <div className="op-rating-bar-track">
-                            <div
-                              className="op-rating-bar-fill"
-                              style={{ width: reviews.length ? `${(count / reviews.length) * 100}%` : '0%' }}
-                            />
-                          </div>
-                          <span className="op-rating-bar-count">{count}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <div className="op-reviews-list">
-                  {reviews.length === 0 ? (
-                    <div className="op-empty"><span>⭐</span><p>No reviews yet.</p></div>
-                  ) : reviews.map(r => (
-                    <div key={r.id} className="op-review-card">
-                      <div className="op-review-header">
-                        <div className="op-review-avatar">
-                          {r.reviewer_avatar ? (
-                            <img src={r.reviewer_avatar} alt={r.reviewer_name ?? ''} className="op-review-avatar-img" />
-                          ) : (
-                            <div className="op-review-avatar-fallback">{getInitials(r.reviewer_name ?? 'AN')}</div>
-                          )}
-                        </div>
-                        <div className="op-review-meta">
-                          <span className="op-review-name">{r.reviewer_name ?? 'Anonymous'}</span>
-                          <div className="op-review-stars-row">
-                            <StarRating rating={r.rating} />
-                            {r.verified && <span className="op-review-verified">✓ Verified</span>}
-                          </div>
-                        </div>
-                        <span className="op-review-date">{new Date(r.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                      </div>
-                      {r.title && <h4 className="op-review-title">{r.title}</h4>}
-                      <p className="op-review-body">{r.body}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        ))}
       </div>
-    </>
-  )
+    </div>
+  );
 }
 
-const orgStyles = `
-  .op-page { min-height: 100vh; background: #0f172a; color: #f1f5f9; }
+// ─── Tab: Updates ────────────────────────────────────────────────────────────
 
-  /* Cover */
-  .op-cover { height: 220px; position: relative; background: linear-gradient(135deg,#0f172a,#1e3a5f); }
-  .op-cover-overlay { position: absolute; inset: 0; background: rgba(15,23,42,0.5); }
-  @media (max-width: 600px) { .op-cover { height: 140px; } }
+function TabUpdates({ updates }: { updates: Update[] }) {
+  return (
+    <div className="space-y-6">
+      {updates.map((u) => (
+        <article
+          key={u.id}
+          className="rounded-xl bg-white/5 border border-white/10 overflow-hidden hover:border-indigo-500/40 transition-colors"
+        >
+          {u.imageUrl && (
+            <div className="h-40 bg-white/10 flex items-center justify-center">
+              <PhotoIcon className="w-10 h-10 text-gray-600" />
+            </div>
+          )}
+          <div className="p-5 space-y-2">
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <CalendarIcon className="w-3.5 h-3.5" />
+              {format(parseISO(u.date), "d MMMM yyyy")}
+            </div>
+            <h4 className="text-white font-semibold">{u.title}</h4>
+            <p className="text-gray-400 text-sm leading-relaxed">{u.body}</p>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
 
-  /* Container */
-  .op-container { max-width: 1100px; margin: 0 auto; padding: 0 1.25rem 4rem; }
+// ─── Tab: Reviews ────────────────────────────────────────────────────────────
 
-  /* Header */
-  .op-header { display: flex; align-items: flex-end; gap: 1.25rem; margin-top: -56px; margin-bottom: 1.5rem; flex-wrap: wrap; }
-  .op-logo-wrap { position: relative; flex-shrink: 0; }
-  .op-logo { width: 100px; height: 100px; border-radius: 16px; border: 3px solid #1e293b; object-fit: cover; background: #1e293b; }
-  .op-logo-fallback { display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 900; color: #38bdf8; background: linear-gradient(135deg,#1e293b,#0f172a); }
-  .op-verified-badge { position: absolute; bottom: 4px; right: 4px; background: #0f172a; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border: 2px solid #38bdf8; }
-  .op-header-info { flex: 1; min-width: 200px; padding-bottom: 0.5rem; }
-  .op-name-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
-  .op-name { font-size: clamp(1.25rem, 3vw, 1.75rem); font-weight: 900; color: #f1f5f9; margin: 0; }
-  .op-type-badge { background: rgba(56,189,248,0.12); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); border-radius: 999px; padding: 0.15rem 0.65rem; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
-  .op-meta-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
-  .op-meta-item { display: flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; color: #94a3b8; }
-  .op-meta-link { color: #38bdf8; text-decoration: none; }
-  .op-meta-link:hover { text-decoration: underline; }
-  .op-follow-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem; padding-bottom: 0.5rem; }
-  .op-follow-btn { display: flex; align-items: center; gap: 0.45rem; padding: 0.55rem 1.25rem; border-radius: 10px; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: all 0.15s; border: 2px solid #38bdf8; background: #38bdf8; color: #0f172a; }
-  .op-follow-btn--following { background: transparent; color: #38bdf8; }
-  .op-follow-btn:hover { opacity: 0.88; }
-  .op-follower-count { font-size: 0.8rem; color: #64748b; }
-  .op-follower-count strong { color: #f1f5f9; }
+function TabReviews({ reviews, avg, count }: { reviews: Review[]; avg: number; count: number }) {
+  const [sort, setSort] = useState<"recent" | "highest" | "lowest">("recent");
+  const sorted = [...reviews].sort((a, b) => {
+    if (sort === "recent")  return parseISO(b.date).getTime() - parseISO(a.date).getTime();
+    if (sort === "highest") return b.rating - a.rating;
+    return a.rating - b.rating;
+  });
+  const dist = [5, 4, 3, 2, 1].map((r) => ({
+    r,
+    pct: Math.round((reviews.filter((x) => x.rating === r).length / reviews.length) * 100),
+  }));
 
-  /* Stats */
-  .op-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 0.75rem; margin-bottom: 1.5rem; }
-  @media (max-width: 600px) { .op-stats { grid-template-columns: repeat(2,1fr); } }
-  .op-stat { background: #1e293b; border: 1px solid rgba(56,189,248,0.1); border-radius: 12px; padding: 1rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.2rem; }
-  .op-stat-icon { font-size: 1.25rem; }
-  .op-stat-value { font-size: 1.3rem; font-weight: 900; color: #38bdf8; }
-  .op-stat-label { font-size: 0.75rem; color: #64748b; font-weight: 500; }
+  return (
+    <div className="space-y-8">
+      {/* Summary */}
+      <div className="flex flex-col sm:flex-row gap-6 rounded-xl bg-white/5 border border-white/10 p-6">
+        <div className="flex flex-col items-center justify-center gap-1 min-w-[100px]">
+          <span className="text-5xl font-bold text-white">{avg.toFixed(1)}</span>
+          <StarRating value={avg} size={20} />
+          <span className="text-xs text-gray-500 mt-1">{count} reviews</span>
+        </div>
+        <div className="flex-1 space-y-2">
+          {dist.map(({ r, pct }) => (
+            <div key={r} className="flex items-center gap-3 text-sm">
+              <span className="w-4 text-gray-400 text-right">{r}</span>
+              <StarSolid className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
+              <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-yellow-400"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <span className="w-8 text-gray-500 text-right">{pct}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
 
-  /* Tabs */
-  .op-tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid rgba(56,189,248,0.1); margin-bottom: 1.5rem; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-  .op-tabs::-webkit-scrollbar { display: none; }
-  .op-tab { padding: 0.7rem 1rem; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 0.875rem; font-weight: 500; color: #64748b; white-space: nowrap; display: flex; align-items: center; gap: 0.4rem; transition: all 0.15s; }
-  .op-tab:hover { color: #f1f5f9; }
-  .op-tab--active { color: #38bdf8; border-bottom-color: #38bdf8; font-weight: 700; }
-  .op-tab-count { background: rgba(56,189,248,0.12); color: #38bdf8; border-radius: 999px; padding: 0.05rem 0.45rem; font-size: 0.72rem; font-weight: 700; }
+      {/* Sort */}
+      <div className="flex gap-2">
+        {(["recent", "highest", "lowest"] as const).map((s) => (
+          <button
+            key={s}
+            onClick={() => setSort(s)}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              sort === s
+                ? "bg-indigo-600 text-white"
+                : "bg-white/8 text-gray-400 hover:text-white border border-white/10"
+            }`}
+          >
+            {s.charAt(0).toUpperCase() + s.slice(1)}
+          </button>
+        ))}
+      </div>
 
-  /* Tab body */
-  .op-tab-body { }
-  .op-card { background: #1e293b; border: 1px solid rgba(56,189,248,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; }
-  .op-card-title { font-size: 1rem; font-weight: 700; color: #f1f5f9; margin: 0 0 0.75rem; }
-  .op-text { color: #94a3b8; font-size: 0.9375rem; line-height: 1.7; margin: 0; }
-  .op-mission { border-left: 3px solid #38bdf8; padding-left: 1rem; margin: 0; color: #94a3b8; font-style: italic; line-height: 1.7; }
-  .op-about { display: flex; flex-direction: column; gap: 0; }
-  .op-sdgs { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-  .op-sdg { padding: 0.3rem 0.7rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; color: #fff; }
-  .op-contact-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem; }
-  .op-contact-item { display: flex; flex-direction: column; gap: 0.2rem; }
-  .op-contact-label { font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
-  .op-contact-value { font-size: 0.9rem; color: #f1f5f9; }
-  .op-contact-link { font-size: 0.9rem; color: #38bdf8; text-decoration: none; }
-  .op-contact-link:hover { text-decoration: underline; }
+      {/* Reviews list */}
+      <div className="space-y-4">
+        {sorted.map((r) => (
+          <div key={r.id} className="rounded-xl bg-white/5 border border-white/10 p-5 space-y-3">
+            <div className="flex items-start gap-3">
+              <Avatar name={r.author} size={38} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-white text-sm">{r.author}</span>
+                  {r.verified && (
+                    <span className="flex items-center gap-1 text-xs text-emerald-400">
+                      <CheckBadgeIcon className="w-3.5 h-3.5" />
+                      Verified
+                    </span>
+                  )}
+                  <span className="ml-auto text-xs text-gray-500">
+                    {format(parseISO(r.date), "d MMM yyyy")}
+                  </span>
+                </div>
+                <StarRating value={r.rating} size={14} />
+              </div>
+            </div>
+            <p className="text-gray-300 text-sm leading-relaxed">{r.body}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-  /* Listings grid */
-  .op-listings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
-  .op-listing-card { background: #1e293b; border: 1px solid rgba(56,189,248,0.1); border-radius: 12px; overflow: hidden; text-decoration: none; color: #f1f5f9; transition: all 0.15s; display: flex; flex-direction: column; }
-  .op-listing-card:hover { border-color: rgba(56,189,248,0.3); transform: translateY(-2px); }
-  .op-listing-img { width: 100%; height: 160px; object-fit: cover; }
-  .op-listing-img-placeholder { background: rgba(56,189,248,0.08); display: flex; align-items: center; justify-content: center; font-size: 2rem; }
-  .op-listing-body { padding: 1rem; flex: 1; display: flex; flex-direction: column; gap: 0.4rem; }
-  .op-listing-title { font-size: 0.9375rem; font-weight: 700; color: #f1f5f9; margin: 0; }
-  .op-listing-desc { font-size: 0.85rem; color: #94a3b8; margin: 0; flex: 1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .op-listing-price { font-size: 0.875rem; font-weight: 700; color: #34d399; }
+// ─── Tab: Gallery ────────────────────────────────────────────────────────────
 
-  /* Team */
-  .op-team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
-  .op-team-card { background: #1e293b; border: 1px solid rgba(56,189,248,0.1); border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; align-items: center; gap: 0.75rem; text-align: center; }
-  .op-team-avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(56,189,248,0.2); }
-  .op-team-avatar-fallback { background: linear-gradient(135deg,#38bdf8,#0284c7); color: #0f172a; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; font-weight: 700; }
-  .op-team-info { display: flex; flex-direction: column; gap: 0.2rem; align-items: center; }
-  .op-team-name { font-size: 0.9rem; font-weight: 700; color: #f1f5f9; }
-  .op-team-role { font-size: 0.78rem; color: #64748b; }
-  .op-team-linkedin { font-size: 0.78rem; color: #38bdf8; text-decoration: none; }
-  .op-team-linkedin:hover { text-decoration: underline; }
+function TabGallery({ items }: { items: GalleryItem[] }) {
+  const [active, setActive] = useState<GalleryItem | null>(null);
+  return (
+    <>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {items.map((g) => (
+          <button
+            key={g.id}
+            onClick={() => setActive(g)}
+            className="rounded-xl overflow-hidden bg-white/8 border border-white/10 aspect-video flex flex-col items-center justify-center gap-2 text-gray-500 hover:border-indigo-500/50 hover:text-gray-300 transition-colors group"
+          >
+            <PhotoIcon className="w-8 h-8 group-hover:scale-110 transition-transform" />
+            <span className="text-xs px-2 text-center line-clamp-2">{g.caption}</span>
+          </button>
+        ))}
+      </div>
+      {active && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6"
+          onClick={() => setActive(null)}
+        >
+          <div
+            className="bg-gray-900 border border-white/10 rounded-2xl overflow-hidden max-w-lg w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="aspect-video bg-white/8 flex items-center justify-center">
+              <PhotoIcon className="w-16 h-16 text-gray-600" />
+            </div>
+            <div className="p-4 flex items-center justify-between">
+              <span className="text-sm text-gray-300">{active.caption}</span>
+              <button
+                onClick={() => setActive(null)}
+                className="text-gray-500 hover:text-white text-xs"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 
-  /* Reviews */
-  .op-rating-summary { background: #1e293b; border: 1px solid rgba(56,189,248,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; display: flex; gap: 2rem; align-items: center; flex-wrap: wrap; }
-  .op-rating-big { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; min-width: 100px; }
-  .op-rating-num { font-size: 2.5rem; font-weight: 900; color: #fbbf24; line-height: 1; }
-  .op-rating-total { font-size: 0.78rem; color: #64748b; }
-  .op-rating-bars { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 0.4rem; }
-  .op-rating-bar-row { display: flex; align-items: center; gap: 0.6rem; font-size: 0.78rem; }
-  .op-rating-bar-label { color: #64748b; width: 22px; text-align: right; flex-shrink: 0; }
-  .op-rating-bar-track { flex: 1; height: 8px; background: rgba(56,189,248,0.08); border-radius: 4px; overflow: hidden; }
-  .op-rating-bar-fill { height: 100%; background: #fbbf24; border-radius: 4px; transition: width 0.4s; }
-  .op-rating-bar-count { color: #64748b; width: 20px; flex-shrink: 0; }
-  .op-reviews-list { display: flex; flex-direction: column; gap: 0.75rem; }
-  .op-review-card { background: #1e293b; border: 1px solid rgba(56,189,248,0.08); border-radius: 12px; padding: 1.25rem; }
-  .op-review-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.6rem; }
-  .op-review-avatar { flex-shrink: 0; }
-  .op-review-avatar-img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; }
-  .op-review-avatar-fallback { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg,#38bdf8,#0284c7); color: #0f172a; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; }
-  .op-review-meta { flex: 1; min-width: 0; }
-  .op-review-name { display: block; font-size: 0.875rem; font-weight: 700; color: #f1f5f9; }
-  .op-review-stars-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.15rem; }
-  .op-review-verified { font-size: 0.72rem; color: #34d399; font-weight: 600; }
-  .op-review-date { font-size: 0.78rem; color: #64748b; flex-shrink: 0; }
-  .op-review-title { font-size: 0.9rem; font-weight: 700; color: #f1f5f9; margin: 0 0 0.4rem; }
-  .op-review-body { font-size: 0.875rem; color: #94a3b8; line-height: 1.6; margin: 0; }
+// ─── Tab: Documents ──────────────────────────────────────────────────────────
 
-  /* Empty state */
-  .op-empty { padding: 3rem; text-align: center; color: #64748b; }
-  .op-empty span { font-size: 2.5rem; display: block; margin-bottom: 0.75rem; }
-  .op-empty p { margin: 0; font-size: 0.9rem; }
-  .op-empty-link { display: inline-block; margin-top: 0.75rem; color: #38bdf8; font-size: 0.875rem; text-decoration: none; }
-  .op-empty-link:hover { text-decoration: underline; }
+function TabDocuments() {
+  const docs = [
+    { name: "2023 Annual Impact Report",     type: "PDF",  size: "3.4 MB", date: "2024-04-05" },
+    { name: "2022 Financial Audit",           type: "PDF",  size: "1.2 MB", date: "2023-07-14" },
+    { name: "Strategic Plan 2024–2027",       type: "PDF",  size: "892 KB", date: "2024-01-10" },
+    { name: "Solar Villages III — Baseline",  type: "XLSX", size: "540 KB", date: "2023-02-20" },
+    { name: "Safeguarding Policy",            type: "PDF",  size: "215 KB", date: "2022-09-01" },
+  ];
+  return (
+    <div className="space-y-3">
+      {docs.map((d) => (
+        <div
+          key={d.name}
+          className="flex items-center gap-4 rounded-xl bg-white/5 border border-white/10 p-4 hover:border-indigo-500/40 transition-colors"
+        >
+          <div className="w-10 h-10 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center flex-shrink-0">
+            <DocumentTextIcon className="w-5 h-5 text-indigo-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-white text-sm font-medium truncate">{d.name}</p>
+            <p className="text-gray-500 text-xs">
+              {d.type} · {d.size} · {format(parseISO(d.date), "d MMM yyyy")}
+            </p>
+          </div>
+          <button className="text-indigo-400 hover:text-indigo-300 text-xs font-medium flex-shrink-0">
+            Download
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-  /* Skeleton */
-  .op-skeleton-cover { height: 220px; background: linear-gradient(135deg,#1e293b,#0f172a); }
-  .op-skeleton-header { height: 120px; background: rgba(56,189,248,0.05); border-radius: 12px; margin: 1.5rem 0; animation: pulse 1.5s ease-in-out infinite; }
-  .op-skeleton-body { height: 400px; background: rgba(56,189,248,0.04); border-radius: 12px; animation: pulse 1.5s ease-in-out infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-`
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+const TABS = [
+  { id: "overview",   label: "Overview",   icon: BuildingOffice2Icon },
+  { id: "projects",   label: "Projects",   icon: ChartBarIcon },
+  { id: "updates",    label: "Updates",    icon: DocumentTextIcon },
+  { id: "reviews",    label: "Reviews",    icon: ChatBubbleLeftRightIcon },
+  { id: "gallery",    label: "Gallery",    icon: PhotoIcon },
+  { id: "documents",  label: "Documents",  icon: DocumentTextIcon },
+] as const;
+
+type TabId = (typeof TABS)[number]["id"];
+
+export default function OrganisationPage() {
+  const params = useParams();
+  const router = useRouter();
+  const id = Array.isArray(params.id) ? params.id[0] : (params.id ?? "1");
+
+  const [org, setOrg] = useState<Organisation | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const [followed, setFollowed] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [reported, setReported] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/organisations/${id}`);
+      if (!res.ok) throw new Error("not found");
+      const data: Organisation = await res.json();
+      setOrg(data);
+    } catch {
+      setOrg(buildMockOrg(id));
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleFollow = async () => {
+    if (!org) return;
+    setFollowLoading(true);
+    try {
+      await fetch(`/api/organisations/${org.id}/follow`, {
+        method: followed ? "DELETE" : "POST",
+      });
+      setFollowed((f) => !f);
+      setOrg((o) =>
+        o
+          ? { ...o, followerCount: o.followerCount + (followed ? -1 : 1) }
+          : o
+      );
+    } catch {
+      setFollowed((f) => !f);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // fallback — do nothing
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+          <span className="text-gray-500 text-sm">Loading organisation…</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!org) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="text-white text-xl font-semibold">Organisation not found</p>
+          <button
+            onClick={() => router.back()}
+            className="text-indigo-400 hover:underline text-sm"
+          >
+            ← Go back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-950 text-white">
+      {/* Cover */}
+      <div className="relative h-52 sm:h-64 bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 overflow-hidden">
+        <div
+          className="absolute inset-0 opacity-30"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 20% 50%, #6366f1 0%, transparent 60%), radial-gradient(circle at 80% 20%, #8b5cf6 0%, transparent 50%)",
+          }}
+        />
+        {/* Back button */}
+        <button
+          onClick={() => router.back()}
+          className="absolute top-4 left-4 flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur px-3 py-1.5 text-sm text-white hover:bg-black/60 transition-colors"
+        >
+          <ArrowLeftIcon className="w-4 h-4" />
+          Back
+        </button>
+        {/* Share / Report */}
+        <div className="absolute top-4 right-4 flex gap-2">
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur px-3 py-1.5 text-sm text-white hover:bg-black/60 transition-colors"
+          >
+            <ShareIcon className="w-4 h-4" />
+            {copied ? "Copied!" : "Share"}
+          </button>
+          <button
+            onClick={() => setReported(true)}
+            className={`flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur px-3 py-1.5 text-sm transition-colors ${
+              reported ? "text-red-400" : "text-white hover:bg-black/60"
+            }`}
+          >
+            <FlagIcon className="w-4 h-4" />
+            {reported ? "Reported" : "Report"}
+          </button>
+        </div>
+      </div>
+
+      {/* Header card */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        <div className="relative -mt-16 mb-6 rounded-2xl bg-gray-900 border border-white/10 p-6 shadow-xl">
+          <div className="flex flex-col sm:flex-row gap-5">
+            {/* Logo */}
+            <div className="flex-shrink-0 -mt-12 sm:-mt-0 sm:-translate-y-6">
+              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 border-4 border-gray-900 flex items-center justify-center shadow-lg">
+                <BuildingOffice2Icon className="w-10 h-10 text-white/80" />
+              </div>
+            </div>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-start gap-3 justify-between">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
+                      {org.name}
+                    </h1>
+                    {org.verified && (
+                      <CheckBadgeIcon
+                        className="w-6 h-6 text-indigo-400 flex-shrink-0"
+                        title="Verified organisation"
+                      />
+                    )}
+                  </div>
+                  <p className="text-gray-400 mt-0.5 text-sm">{org.tagline}</p>
+                </div>
+                {/* Follow button */}
+                <button
+                  onClick={handleFollow}
+                  disabled={followLoading}
+                  className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all ${
+                    followed
+                      ? "bg-indigo-600/20 border border-indigo-500/50 text-indigo-300 hover:bg-red-500/20 hover:border-red-500/50 hover:text-red-300"
+                      : "bg-indigo-600 text-white hover:bg-indigo-500"
+                  } disabled:opacity-50`}
+                >
+                  {followed ? (
+                    <HeartSolid className="w-4 h-4" />
+                  ) : (
+                    <HeartIcon className="w-4 h-4" />
+                  )}
+                  {followLoading ? "…" : followed ? "Following" : "Follow"}
+                </button>
+              </div>
+
+              {/* Meta row */}
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-gray-400">
+                <span className="flex items-center gap-1">
+                  <MapPinIcon className="w-3.5 h-3.5" />
+                  {org.location}
+                </span>
+                <span className="flex items-center gap-1">
+                  <UserGroupIcon className="w-3.5 h-3.5" />
+                  {org.followerCount.toLocaleString()} followers
+                </span>
+                <span className="flex items-center gap-1">
+                  <StarSolid className="w-3.5 h-3.5 text-yellow-400" />
+                  {org.avgRating.toFixed(1)}
+                  <span className="text-gray-600">({org.reviewCount})</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <GlobeAltIcon className="w-3.5 h-3.5" />
+                  <a
+                    href={org.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-indigo-400 hover:underline"
+                  >
+                    {org.website.replace(/^https?:\/\//, "")}
+                  </a>
+                </span>
+              </div>
+
+              {/* SDG strip */}
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {org.sdgs.map((n) => (
+                  <SDGBadge key={n} number={n} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="border-b border-white/10 mb-8 overflow-x-auto scrollbar-none">
+          <nav className="flex gap-1 min-w-max">
+            {TABS.map(({ id: tid, label, icon: Icon }) => (
+              <button
+                key={tid}
+                onClick={() => setActiveTab(tid)}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  activeTab === tid
+                    ? "border-indigo-500 text-indigo-400"
+                    : "border-transparent text-gray-500 hover:text-gray-200"
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+                {tid === "reviews" && (
+                  <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-xs">
+                    {org.reviewCount}
+                  </span>
+                )}
+                {tid === "projects" && (
+                  <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-xs">
+                    {org.projects.length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Tab content */}
+        <div className="pb-20">
+          {activeTab === "overview"   && <TabOverview org={org} />}
+          {activeTab === "projects"   && <TabProjects projects={org.projects} />}
+          {activeTab === "updates"    && <TabUpdates updates={org.updates} />}
+          {activeTab === "reviews"    && (
+            <TabReviews reviews={org.reviews} avg={org.avgRating} count={org.reviewCount} />
+          )}
+          {activeTab === "gallery"    && <TabGallery items={org.gallery} />}
+          {activeTab === "documents"  && <TabDocuments />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
