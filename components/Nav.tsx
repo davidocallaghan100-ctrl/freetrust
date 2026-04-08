@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import NotificationBell from '@/components/notifications/NotificationBell'
 import { createClient } from '@/lib/supabase/client'
 import { useUnreadCount } from '@/hooks/useUnreadCount'
@@ -45,7 +45,21 @@ export default function Nav() {
   const [open, setOpen] = useState(false)
   const [user, setUser] = useState<{ email: string | null; name: string | null } | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const { unreadCount } = useUnreadCount()
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
+      setSearchQuery('')
+      searchInputRef.current?.blur()
+    } else {
+      router.push('/search')
+    }
+  }
 
   // Close mobile menu on route change
   useEffect(() => { setOpen(false) }, [path])
@@ -205,6 +219,53 @@ export default function Nav() {
           transition: all 0.15s;
         }
         .ft-nav-search-btn:hover { color: #38bdf8; border-color: rgba(56,189,248,0.4); background: rgba(56,189,248,0.06); }
+
+        /* Inline search bar in nav (desktop) */
+        .ft-nav-search-form {
+          display: flex;
+          align-items: center;
+          position: relative;
+        }
+        .ft-nav-search-wrap {
+          display: flex;
+          align-items: center;
+          background: rgba(30,41,59,0.8);
+          border: 1px solid rgba(56,189,248,0.15);
+          border-radius: 8px;
+          padding: 0 0.5rem 0 0.75rem;
+          height: 34px;
+          gap: 0.4rem;
+          transition: border-color 0.2s, box-shadow 0.2s;
+          min-width: 180px;
+        }
+        .ft-nav-search-wrap:focus-within {
+          border-color: rgba(56,189,248,0.5);
+          box-shadow: 0 0 0 2px rgba(56,189,248,0.1);
+        }
+        .ft-nav-search-icon { color: #64748b; display: flex; flex-shrink: 0; }
+        .ft-nav-search-input {
+          background: none;
+          border: none;
+          outline: none;
+          color: #f1f5f9;
+          font-size: 0.82rem;
+          width: 140px;
+          padding: 0;
+        }
+        .ft-nav-search-input::placeholder { color: #475569; }
+        .ft-nav-search-submit {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #64748b;
+          display: flex;
+          padding: 2px;
+          border-radius: 4px;
+          transition: color 0.15s;
+          flex-shrink: 0;
+        }
+        .ft-nav-search-submit:hover { color: #38bdf8; }
+        @media (max-width: 1100px) { .ft-nav-search-wrap { min-width: 130px; } .ft-nav-search-input { width: 100px; } }
 
         /* User avatar in nav */
         .ft-nav-user {
@@ -434,9 +495,28 @@ export default function Nav() {
 
           {/* Desktop search + auth */}
           <div className="ft-nav-auth">
-            <Link href="/search" className="ft-nav-search-btn" aria-label="Search">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            </Link>
+            {/* Inline search form */}
+            <form onSubmit={handleSearchSubmit} className="ft-nav-search-form" role="search">
+              <div className="ft-nav-search-wrap">
+                <span className="ft-nav-search-icon" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </span>
+                <input
+                  ref={searchInputRef}
+                  type="search"
+                  className="ft-nav-search-input"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setSearchFocused(false)}
+                  placeholder="Search…"
+                  aria-label="Search FreeTrust"
+                />
+                <button type="submit" className="ft-nav-search-submit" aria-label="Go">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </button>
+              </div>
+            </form>
             <Link href="/messages" className="ft-nav-search-btn" aria-label="Messages" style={{ position: 'relative' }}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               {unreadCount > 0 && (
