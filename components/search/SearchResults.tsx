@@ -167,10 +167,56 @@ function ResultCard({ result }: { result: SearchResult }) {
   )
 }
 
-function TrustMeter({ score }: { score: number }) {
+function TrustMeter({ score }: { score: number }): React.ReactElement {
   const color = score >= 80 ? "#22c55e" : score >= 60 ? "#3b82f6" : score >= 40 ? "#f59e0b" : "#ef4444"
   const label = score >= 80 ? "High" : score >= 60 ? "Good" : score >= 40 ? "Fair" : "Low"
+  const radius = 16
+  const circumference = 2 * Math.PI * radius
+  const dash = (score / 100) * circumference
+
   return (
     <div className="trust-meter" title={`Trust score: ${score}/100`}>
       <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true">
-        <circle cx="20" cy="20" r="16" fill="none" stroke="#e2e8f0" strokeWidth="4"
+        <circle cx="20" cy="20" r={radius} fill="none" stroke="#e2e8f0" strokeWidth="4" />
+        <circle
+          cx="20"
+          cy="20"
+          r={radius}
+          fill="none"
+          stroke={color}
+          strokeWidth="4"
+          strokeDasharray={`${dash} ${circumference - dash}`}
+          strokeLinecap="round"
+          transform="rotate(-90 20 20)"
+        />
+      </svg>
+      <span className="trust-meter__score" style={{ color }}>{score}</span>
+      <span className="trust-meter__label">{label}</span>
+    </div>
+  )
+}
+
+function EmptyPrompt() {
+  return (
+    <div className="search-empty">
+      <span className="search-empty__icon">🔍</span>
+      <h2 className="search-empty__title">What are you looking for?</h2>
+      <p className="search-empty__text">
+        Search across services, products, events, organisations, articles and members.
+      </p>
+    </div>
+  )
+}
+
+function NoResults({ query, category }: { query: string; category: string }) {
+  return (
+    <div className="search-empty">
+      <span className="search-empty__icon">😕</span>
+      <h2 className="search-empty__title">No results found</h2>
+      <p className="search-empty__text">
+        No{category !== "all" ? ` ${CATEGORY_LABELS[category] ?? category}` : ""} results for{" "}
+        <strong>&ldquo;{query}&rdquo;</strong>. Try a different search term or category.
+      </p>
+    </div>
+  )
+}
