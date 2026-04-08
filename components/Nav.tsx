@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
+import NotificationBell from '@/components/notifications/NotificationBell'
 
 const links = [
   { href: '/browse', label: 'Browse' },
@@ -125,6 +126,32 @@ export default function Nav() {
           white-space: nowrap;
         }
         .ft-nav-join:hover { opacity: 0.88; }
+        .ft-nav-search-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 34px;
+          height: 34px;
+          border-radius: 6px;
+          color: #94a3b8;
+          border: 1px solid rgba(148,163,184,0.2);
+          text-decoration: none;
+          transition: all 0.15s;
+        }
+        .ft-nav-search-btn:hover { color: #38bdf8; border-color: rgba(56,189,248,0.4); background: rgba(56,189,248,0.06); }
+        .ft-nav-profile {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 34px;
+          height: 34px;
+          border-radius: 50%;
+          color: #94a3b8;
+          border: 1px solid rgba(148,163,184,0.2);
+          text-decoration: none;
+          transition: all 0.15s;
+        }
+        .ft-nav-profile:hover { color: #38bdf8; border-color: rgba(56,189,248,0.4); background: rgba(56,189,248,0.06); }
 
         /* Hamburger button — hidden on desktop */
         .ft-burger {
@@ -270,8 +297,15 @@ export default function Nav() {
             ))}
           </div>
 
-          {/* Desktop auth */}
+          {/* Desktop search + auth */}
           <div className="ft-nav-auth">
+            <Link href="/search" className="ft-nav-search-btn" aria-label="Search">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </Link>
+            <NotificationBell />
+            <Link href="/profile" className="ft-nav-profile" aria-label="Profile">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </Link>
             <Link href="/login" className="ft-nav-signin">Sign In</Link>
             <Link href="/register" className="ft-nav-join">Join Free</Link>
           </div>
@@ -303,6 +337,19 @@ export default function Nav() {
               {l.label}
             </Link>
           ))}
+          <div className="ft-mobile-divider" />
+          <Link href="/search" className="ft-mobile-link" onClick={() => setOpen(false)}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight:'0.65rem'}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Search
+          </Link>
+          <Link href="/profile" className="ft-mobile-link" onClick={() => setOpen(false)}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight:'0.65rem'}}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            My Profile
+          </Link>
+          <Link href="/messages" className="ft-mobile-link" onClick={() => setOpen(false)}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight:'0.65rem'}}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Messages
+          </Link>
           <div className="ft-mobile-divider" />
           <div className="ft-mobile-auth">
             <Link href="/login" className="signin" onClick={() => setOpen(false)}>Sign In</Link>
