@@ -1,194 +1,1222 @@
-'use client'
-import React, { useState } from 'react'
-import Link from 'next/link'
+"use client";
 
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+import { useState, useMemo } from "react";
+import Link from "next/link";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  PlusIcon,
+  MapPinIcon,
+  VideoCameraIcon,
+  TicketIcon,
+  UserGroupIcon,
+  CalendarDaysIcon,
+  ClockIcon,
+} from "@heroicons/react/24/outline";
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  addDays,
+  addMonths,
+  subMonths,
+  isSameMonth,
+  isSameDay,
+  isToday,
+  parseISO,
+} from "date-fns";
 
-interface CalEvent {
-  id: number
-  title: string
-  day: number
-  month: number
-  year: number
-  type: string
-  free: boolean
-  color: string
+type EventMode = "online" | "in-person";
+type TicketType = "free" | "paid";
+
+interface CalendarEvent {
+  id: string;
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  mode: EventMode;
+  ticketType: TicketType;
+  price?: number;
+  location?: string;
+  meetingUrl?: string;
+  attendees: number;
+  maxAttendees: number;
+  organiser: string;
+  organiserAvatar: string;
+  category: string;
+  color: string;
+  description: string;
 }
 
-const calEvents: CalEvent[] = [
-  { id: 1, title: 'FreeTrust Founder Summit', day: 17, month: 3, year: 2025, type: 'Conference', free: true, color: '#38bdf8' },
-  { id: 2, title: 'AI for Sustainable Business', day: 22, month: 3, year: 2025, type: 'Webinar', free: true, color: '#a78bfa' },
-  { id: 3, title: 'UX Research Masterclass', day: 23, month: 3, year: 2025, type: 'Workshop', free: false, color: '#fbbf24' },
-  { id: 4, title: 'African Founders Network Meetup', day: 25, month: 3, year: 2025, type: 'Meetup', free: false, color: '#f472b6' },
-  { id: 5, title: 'Next.js & Supabase Deep Dive', day: 28, month: 3, year: 2025, type: 'Live Stream', free: true, color: '#34d399' },
-  { id: 6, title: 'Impact Investing for Beginners', day: 1, month: 4, year: 2025, type: 'Webinar', free: true, color: '#a78bfa' },
-  { id: 7, title: 'Community Leadership Summit', day: 5, month: 4, year: 2025, type: 'Conference', free: false, color: '#38bdf8' },
-  { id: 8, title: 'No-Code Tools Workshop', day: 9, month: 4, year: 2025, type: 'Workshop', free: true, color: '#fbbf24' },
-]
+const MOCK_EVENTS: CalendarEvent[] = [
+  {
+    id: "1",
+    title: "Web3 Trust Summit",
+    date: format(new Date(), "yyyy-MM-dd"),
+    startTime: "10:00",
+    endTime: "12:00",
+    mode: "online",
+    ticketType: "free",
+    attendees: 142,
+    maxAttendees: 200,
+    organiser: "Alex Rivera",
+    organiserAvatar: "AR",
+    category: "Technology",
+    color: "bg-violet-500",
+    description: "Explore how blockchain is reshaping digital trust.",
+    meetingUrl: "https://meet.example.com/web3-trust",
+  },
+  {
+    id: "2",
+    title: "Community Builders Meetup",
+    date: format(addDays(new Date(), 2), "yyyy-MM-dd"),
+    startTime: "18:00",
+    endTime: "20:00",
+    mode: "in-person",
+    ticketType: "free",
+    location: "The Hub, 12 Main St, London",
+    attendees: 38,
+    maxAttendees: 50,
+    organiser: "Priya Nair",
+    organiserAvatar: "PN",
+    category: "Community",
+    color: "bg-emerald-500",
+    description: "Connect with local community builders and change-makers.",
+  },
+  {
+    id: "3",
+    title: "DeFi Masterclass",
+    date: format(addDays(new Date(), 4), "yyyy-MM-dd"),
+    startTime: "14:00",
+    endTime: "16:30",
+    mode: "online",
+    ticketType: "paid",
+    price: 25,
+    attendees: 67,
+    maxAttendees: 100,
+    organiser: "Marco Chen",
+    organiserAvatar: "MC",
+    category: "Finance",
+    color: "bg-blue-500",
+    description: "Deep dive into decentralised finance protocols.",
+    meetingUrl: "https://meet.example.com/defi-masterclass",
+  },
+  {
+    id: "4",
+    title: "Trust Score Workshop",
+    date: format(addDays(new Date(), 7), "yyyy-MM-dd"),
+    startTime: "11:00",
+    endTime: "13:00",
+    mode: "in-person",
+    ticketType: "paid",
+    price: 10,
+    location: "Innovation Centre, 45 Tech Park, Manchester",
+    attendees: 22,
+    maxAttendees: 30,
+    organiser: "Sarah Okafor",
+    organiserAvatar: "SO",
+    category: "Education",
+    color: "bg-amber-500",
+    description: "Learn how to build and maintain your FreeTrust score.",
+  },
+  {
+    id: "5",
+    title: "Freelancer Networking Night",
+    date: format(addDays(new Date(), 10), "yyyy-MM-dd"),
+    startTime: "19:00",
+    endTime: "21:00",
+    mode: "in-person",
+    ticketType: "free",
+    location: "Workspace Co, 8 Digital Ave, Birmingham",
+    attendees: 55,
+    maxAttendees: 80,
+    organiser: "Jake Williams",
+    organiserAvatar: "JW",
+    category: "Networking",
+    color: "bg-pink-500",
+    description: "Meet freelancers, share opportunities and grow your network.",
+  },
+  {
+    id: "6",
+    title: "NFT Art & Identity Panel",
+    date: format(addDays(new Date(), 14), "yyyy-MM-dd"),
+    startTime: "15:00",
+    endTime: "17:00",
+    mode: "online",
+    ticketType: "free",
+    attendees: 210,
+    maxAttendees: 500,
+    organiser: "Luna Park",
+    organiserAvatar: "LP",
+    category: "Art",
+    color: "bg-rose-500",
+    description: "Panellists discuss NFTs as tools for digital identity.",
+    meetingUrl: "https://meet.example.com/nft-panel",
+  },
+  {
+    id: "7",
+    title: "Smart Contract Bootcamp",
+    date: format(addDays(new Date(), 18), "yyyy-MM-dd"),
+    startTime: "09:00",
+    endTime: "17:00",
+    mode: "online",
+    ticketType: "paid",
+    price: 75,
+    attendees: 44,
+    maxAttendees: 60,
+    organiser: "Dev Collective",
+    organiserAvatar: "DC",
+    category: "Technology",
+    color: "bg-cyan-500",
+    description: "Full-day intensive on writing and auditing smart contracts.",
+    meetingUrl: "https://meet.example.com/sc-bootcamp",
+  },
+  {
+    id: "8",
+    title: "Local DAO Governance Call",
+    date: format(addDays(new Date(), 21), "yyyy-MM-dd"),
+    startTime: "17:00",
+    endTime: "18:30",
+    mode: "online",
+    ticketType: "free",
+    attendees: 89,
+    maxAttendees: 300,
+    organiser: "FreeTrust DAO",
+    organiserAvatar: "FD",
+    category: "Governance",
+    color: "bg-indigo-500",
+    description: "Monthly governance call — vote on proposals and updates.",
+    meetingUrl: "https://meet.example.com/dao-call",
+  },
+  {
+    id: "9",
+    title: "Women in Web3 Brunch",
+    date: format(addDays(new Date(), 5), "yyyy-MM-dd"),
+    startTime: "10:30",
+    endTime: "13:00",
+    mode: "in-person",
+    ticketType: "paid",
+    price: 15,
+    location: "Bloom Café, 22 Garden Lane, Edinburgh",
+    attendees: 18,
+    maxAttendees: 25,
+    organiser: "WiW3 Scotland",
+    organiserAvatar: "WS",
+    category: "Community",
+    color: "bg-fuchsia-500",
+    description: "Brunch and conversations for women building in Web3.",
+  },
+  {
+    id: "10",
+    title: "Beginner's Crypto AMA",
+    date: format(new Date(), "yyyy-MM-dd"),
+    startTime: "20:00",
+    endTime: "21:30",
+    mode: "online",
+    ticketType: "free",
+    attendees: 320,
+    maxAttendees: 1000,
+    organiser: "CryptoHelp UK",
+    organiserAvatar: "CU",
+    category: "Education",
+    color: "bg-teal-500",
+    description: "Ask anything about crypto — experts answer live.",
+    meetingUrl: "https://meet.example.com/crypto-ama",
+  },
+];
 
-function getDaysInMonth(month: number, year: number) {
-  return new Date(year, month + 1, 0).getDate()
+const CATEGORY_COLORS: Record<string, string> = {
+  Technology: "bg-violet-100 text-violet-700",
+  Community: "bg-emerald-100 text-emerald-700",
+  Finance: "bg-blue-100 text-blue-700",
+  Education: "bg-amber-100 text-amber-700",
+  Networking: "bg-pink-100 text-pink-700",
+  Art: "bg-rose-100 text-rose-700",
+  Governance: "bg-indigo-100 text-indigo-700",
+};
+
+type ViewMode = "month" | "week" | "list";
+
+export default function CalendarPage() {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [rsvpedEvents, setRsvpedEvents] = useState<Set<string>>(new Set());
+  const [filterMode, setFilterMode] = useState<"all" | EventMode>("all");
+  const [filterTicket, setFilterTicket] = useState<"all" | TicketType>("all");
+  const [shareToast, setShareToast] = useState(false);
+
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const calEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+
+  const calendarDays = useMemo(() => {
+    const days: Date[] = [];
+    let d = calStart;
+    while (d <= calEnd) {
+      days.push(d);
+      d = addDays(d, 1);
+    }
+    return days;
+  }, [calStart, calEnd]);
+
+  const filteredEvents = useMemo(() => {
+    return MOCK_EVENTS.filter((e) => {
+      if (filterMode !== "all" && e.mode !== filterMode) return false;
+      if (filterTicket !== "all" && e.ticketType !== filterTicket) return false;
+      return true;
+    });
+  }, [filterMode, filterTicket]);
+
+  const getEventsForDay = (day: Date) =>
+    filteredEvents.filter((e) => isSameDay(parseISO(e.date), day));
+
+  const selectedDayEvents = selectedDate ? getEventsForDay(selectedDate) : [];
+
+  const upcomingEvents = useMemo(() => {
+    const today = new Date();
+    return filteredEvents
+      .filter((e) => parseISO(e.date) >= today)
+      .sort((a, b) => (a.date > b.date ? 1 : -1));
+  }, [filteredEvents]);
+
+  const handleRsvp = (eventId: string) => {
+    setRsvpedEvents((prev) => {
+      const next = new Set(prev);
+      if (next.has(eventId)) next.delete(eventId);
+      else next.add(eventId);
+      return next;
+    });
+  };
+
+  const handleShare = (event: CalendarEvent) => {
+    navigator.clipboard
+      .writeText(`https://freetrust.app/events/${event.id}`)
+      .catch(() => {});
+    setShareToast(true);
+    setTimeout(() => setShareToast(false), 2500);
+  };
+
+  const pct = (a: number, b: number) => Math.round((a / b) * 100);
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <CalendarDaysIcon className="w-6 h-6 text-violet-600" />
+              <h1 className="text-xl font-bold text-gray-900">Events Calendar</h1>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Trust badge */}
+              <div className="hidden sm:flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
+                <span className="text-amber-600 text-sm font-semibold">₮15</span>
+                <span className="text-amber-500 text-xs">per event hosted</span>
+              </div>
+              <Link
+                href="/events/create"
+                className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                <PlusIcon className="w-4 h-4" />
+                <span className="hidden sm:inline">Create Event</span>
+                <span className="sm:hidden">New</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Filters + View Toggle */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Mode filter */}
+            <div className="flex bg-white border border-gray-200 rounded-lg overflow-hidden">
+              {(["all", "online", "in-person"] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setFilterMode(m)}
+                  className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                    filterMode === m
+                      ? "bg-violet-600 text-white"
+                      : "text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {m === "all" ? "All" : m === "online" ? "Online" : "In-Person"}
+                </button>
+              ))}
+            </div>
+            {/* Ticket filter */}
+            <div className="flex bg-white border border-gray-200 rounded-lg overflow-hidden">
+              {(["all", "free", "paid"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setFilterTicket(t)}
+                  className={`px-3 py-1.5 text-sm font-medium transition-colors capitalize ${
+                    filterTicket === t
+                      ? "bg-violet-600 text-white"
+                      : "text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {t === "all" ? "Any Price" : t}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* View mode */}
+          <div className="flex bg-white border border-gray-200 rounded-lg overflow-hidden">
+            {(["month", "week", "list"] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setViewMode(v)}
+                className={`px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
+                  viewMode === v
+                    ? "bg-violet-600 text-white"
+                    : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* LEFT: Calendar or List */}
+          <div className="lg:col-span-2">
+            {viewMode === "list" ? (
+              <ListView
+                events={upcomingEvents}
+                rsvpedEvents={rsvpedEvents}
+                onRsvp={handleRsvp}
+                onShare={handleShare}
+                onSelect={setSelectedEvent}
+              />
+            ) : (
+              <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                {/* Calendar Nav */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                  <button
+                    onClick={() =>
+                      setCurrentDate(
+                        viewMode === "month"
+                          ? subMonths(currentDate, 1)
+                          : addDays(currentDate, -7)
+                      )
+                    }
+                    className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <ChevronLeftIcon className="w-5 h-5 text-gray-600" />
+                  </button>
+                  <div className="text-center">
+                    <h2 className="text-base font-semibold text-gray-900">
+                      {viewMode === "month"
+                        ? format(currentDate, "MMMM yyyy")
+                        : `${format(startOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM")} – ${format(
+                            endOfWeek(currentDate, { weekStartsOn: 1 }),
+                            "d MMM yyyy"
+                          )}`}
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() =>
+                      setCurrentDate(
+                        viewMode === "month"
+                          ? addMonths(currentDate, 1)
+                          : addDays(currentDate, 7)
+                      )
+                    }
+                    className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <ChevronRightIcon className="w-5 h-5 text-gray-600" />
+                  </button>
+                </div>
+
+                {/* Day Headers */}
+                <div className="grid grid-cols-7 border-b border-gray-100">
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
+                    <div
+                      key={d}
+                      className="py-2 text-center text-xs font-medium text-gray-500"
+                    >
+                      {d}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Month Grid */}
+                {viewMode === "month" && (
+                  <div className="grid grid-cols-7">
+                    {calendarDays.map((day, idx) => {
+                      const dayEvents = getEventsForDay(day);
+                      const isSelected = selectedDate
+                        ? isSameDay(day, selectedDate)
+                        : false;
+                      const inMonth = isSameMonth(day, currentDate);
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => setSelectedDate(day)}
+                          className={`min-h-[80px] p-1.5 border-b border-r border-gray-100 cursor-pointer transition-colors ${
+                            inMonth ? "bg-white hover:bg-gray-50" : "bg-gray-50"
+                          } ${isSelected ? "ring-2 ring-inset ring-violet-400" : ""}`}
+                        >
+                          <div
+                            className={`w-7 h-7 flex items-center justify-center rounded-full text-sm font-medium mb-1 ${
+                              isToday(day)
+                                ? "bg-violet-600 text-white"
+                                : inMonth
+                                ? "text-gray-900"
+                                : "text-gray-400"
+                            }`}
+                          >
+                            {format(day, "d")}
+                          </div>
+                          <div className="space-y-0.5">
+                            {dayEvents.slice(0, 2).map((e) => (
+                              <div
+                                key={e.id}
+                                onClick={(ev) => {
+                                  ev.stopPropagation();
+                                  setSelectedEvent(e);
+                                }}
+                                className={`${e.color} text-white text-[10px] font-medium px-1 py-0.5 rounded truncate cursor-pointer hover:opacity-90 transition-opacity`}
+                              >
+                                {e.title}
+                              </div>
+                            ))}
+                            {dayEvents.length > 2 && (
+                              <div className="text-[10px] text-gray-500 pl-1">
+                                +{dayEvents.length - 2} more
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Week Grid */}
+                {viewMode === "week" && (
+                  <WeekView
+                    currentDate={currentDate}
+                    filteredEvents={filteredEvents}
+                    selectedDate={selectedDate}
+                    onSelectDate={setSelectedDate}
+                    onSelectEvent={setSelectedEvent}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Selected day events (only in month/week view) */}
+            {viewMode !== "list" && selectedDate && selectedDayEvents.length > 0 && (
+              <div className="mt-4 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="px-5 py-3 border-b border-gray-100">
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    {isToday(selectedDate)
+                      ? "Today"
+                      : format(selectedDate, "EEEE, d MMMM")}
+                    <span className="ml-2 text-xs text-gray-500 font-normal">
+                      {selectedDayEvents.length} event
+                      {selectedDayEvents.length !== 1 ? "s" : ""}
+                    </span>
+                  </h3>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {selectedDayEvents.map((e) => (
+                    <DayEventRow
+                      key={e.id}
+                      event={e}
+                      rsvped={rsvpedEvents.has(e.id)}
+                      onRsvp={handleRsvp}
+                      onShare={handleShare}
+                      onSelect={setSelectedEvent}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+            {viewMode !== "list" && selectedDate && selectedDayEvents.length === 0 && (
+              <div className="mt-4 bg-white rounded-2xl border border-gray-200 shadow-sm px-5 py-6 text-center">
+                <CalendarDaysIcon className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">
+                  No events on {format(selectedDate, "d MMMM")}
+                </p>
+                <Link
+                  href="/events/create"
+                  className="mt-3 inline-flex items-center gap-1.5 text-sm text-violet-600 hover:text-violet-700 font-medium"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  Create one
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT: Sidebar */}
+          <div className="space-y-5">
+            {/* Stats */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+              <h3 className="text-sm font-semibold text-gray-900 mb-4">This Month</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  {
+                    label: "Total Events",
+                    value: filteredEvents.filter((e) =>
+                      isSameMonth(parseISO(e.date), currentDate)
+                    ).length,
+                    color: "text-violet-600",
+                  },
+                  {
+                    label: "Attending",
+                    value: filteredEvents.filter(
+                      (e) =>
+                        rsvpedEvents.has(e.id) &&
+                        isSameMonth(parseISO(e.date), currentDate)
+                    ).length,
+                    color: "text-emerald-600",
+                  },
+                  {
+                    label: "Online",
+                    value: filteredEvents.filter(
+                      (e) =>
+                        e.mode === "online" &&
+                        isSameMonth(parseISO(e.date), currentDate)
+                    ).length,
+                    color: "text-blue-600",
+                  },
+                  {
+                    label: "Free",
+                    value: filteredEvents.filter(
+                      (e) =>
+                        e.ticketType === "free" &&
+                        isSameMonth(parseISO(e.date), currentDate)
+                    ).length,
+                    color: "text-amber-600",
+                  },
+                ].map((s) => (
+                  <div key={s.label} className="bg-gray-50 rounded-xl p-3 text-center">
+                    <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Upcoming Events */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-900">Upcoming</h3>
+                <span className="text-xs text-gray-500">{upcomingEvents.length} events</span>
+              </div>
+              <div className="divide-y divide-gray-100 max-h-[420px] overflow-y-auto">
+                {upcomingEvents.slice(0, 8).map((e) => (
+                  <button
+                    key={e.id}
+                    onClick={() => setSelectedEvent(e)}
+                    className="w-full px-5 py-3 flex items-start gap-3 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <div
+                      className={`${e.color} w-1 self-stretch rounded-full flex-shrink-0`}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {e.title}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className="text-xs text-gray-500">
+                          {format(parseISO(e.date), "d MMM")} · {e.startTime}
+                        </span>
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                            e.ticketType === "free"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-amber-100 text-amber-700"
+                          }`}
+                        >
+                          {e.ticketType === "free" ? "Free" : `£${e.price}`}
+                        </span>
+                      </div>
+                    </div>
+                    {rsvpedEvents.has(e.id) && (
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0 mt-1.5" />
+                    )}
+                  </button>
+                ))}
+              </div>
+              {upcomingEvents.length === 0 && (
+                <div className="px-5 py-8 text-center">
+                  <p className="text-sm text-gray-500">No upcoming events</p>
+                </div>
+              )}
+            </div>
+
+            {/* Host CTA */}
+            <div className="bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl p-5 text-white">
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="font-semibold text-base">Host an Event</h3>
+                <div className="bg-white/20 rounded-full px-2.5 py-1 text-xs font-semibold">
+                  Earn ₮15
+                </div>
+              </div>
+              <p className="text-sm text-white/80 mb-4">
+                Share your knowledge, grow your trust score, and connect with the
+                community.
+              </p>
+              <Link
+                href="/events/create"
+                className="flex items-center justify-center gap-2 bg-white text-violet-700 font-medium text-sm px-4 py-2.5 rounded-xl hover:bg-violet-50 transition-colors"
+              >
+                <PlusIcon className="w-4 h-4" />
+                Create Event
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Event Detail Modal */}
+      {selectedEvent && (
+        <EventModal
+          event={selectedEvent}
+          rsvped={rsvpedEvents.has(selectedEvent.id)}
+          onRsvp={handleRsvp}
+          onShare={handleShare}
+          onClose={() => setSelectedEvent(null)}
+        />
+      )}
+
+      {/* Share Toast */}
+      {shareToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 animate-fade-in">
+          <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          Link copied to clipboard!
+        </div>
+      )}
+    </div>
+  );
 }
 
-function getFirstDayOfMonth(month: number, year: number) {
-  // 0=Sun → convert to Mon-based (0=Mon)
-  const d = new Date(year, month, 1).getDay()
-  return d === 0 ? 6 : d - 1
+/* ─── Sub-components ─── */
+
+function DayEventRow({
+  event,
+  rsvped,
+  onRsvp,
+  onShare,
+  onSelect,
+}: {
+  event: CalendarEvent;
+  rsvped: boolean;
+  onRsvp: (id: string) => void;
+  onShare: (e: CalendarEvent) => void;
+  onSelect: (e: CalendarEvent) => void;
+}) {
+  return (
+    <div className="px-5 py-3 flex items-start gap-3">
+      <div className={`${event.color} w-1 self-stretch rounded-full flex-shrink-0`} />
+      <div className="flex-1 min-w-0">
+        <button
+          onClick={() => onSelect(event)}
+          className="text-sm font-medium text-gray-900 hover:text-violet-700 truncate block w-full text-left"
+        >
+          {event.title}
+        </button>
+        <div className="flex items-center gap-3 mt-1 flex-wrap">
+          <span className="flex items-center gap-1 text-xs text-gray-500">
+            <ClockIcon className="w-3.5 h-3.5" />
+            {event.startTime} – {event.endTime}
+          </span>
+          {event.mode === "online" ? (
+            <span className="flex items-center gap-1 text-xs text-blue-600">
+              <VideoCameraIcon className="w-3.5 h-3.5" />
+              Online
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-xs text-gray-600">
+              <MapPinIcon className="w-3.5 h-3.5" />
+              <span className="truncate max-w-[120px]">{event.location}</span>
+            </span>
+          )}
+          <span
+            className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+              event.ticketType === "free"
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-amber-100 text-amber-700"
+            }`}
+          >
+            {event.ticketType === "free" ? "Free" : `£${event.price}`}
+          </span>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <button
+          onClick={() => onShare(event)}
+          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+          title="Share"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+          </svg>
+        </button>
+        <button
+          onClick={() => onRsvp(event.id)}
+          className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+            rsvped
+              ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+              : "bg-violet-600 text-white hover:bg-violet-700"
+          }`}
+        >
+          {rsvped ? "✓ Going" : "RSVP"}
+        </button>
+      </div>
+    </div>
+  );
 }
 
-const S: Record<string, React.CSSProperties> = {
-  page: { minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' },
-  hero: { background: 'linear-gradient(180deg,rgba(56,189,248,0.07) 0%,transparent 100%)', borderBottom: '1px solid rgba(56,189,248,0.08)', padding: '2rem 1.5rem' },
-  heroInner: { maxWidth: 1100, margin: '0 auto' },
-  heroTitle: { fontSize: '1.8rem', fontWeight: 800, marginBottom: '0.5rem' },
-  heroSub: { color: '#64748b', fontSize: '0.9rem' },
-  navRow: { display: 'flex', gap: '0.5rem', marginTop: '1rem' },
-  navLink: { padding: '0.35rem 0.8rem', borderRadius: 999, fontSize: '0.8rem', background: 'rgba(148,163,184,0.07)', border: '1px solid rgba(148,163,184,0.12)', color: '#94a3b8', textDecoration: 'none' },
-  navLinkActive: { background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', color: '#38bdf8', fontWeight: 700 },
-  inner: { maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem', display: 'grid', gridTemplateColumns: '1fr 280px', gap: '2rem', alignItems: 'start' },
-  calCard: { background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, overflow: 'hidden' },
-  calHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', borderBottom: '1px solid rgba(56,189,248,0.08)' },
-  monthTitle: { fontSize: '1.1rem', fontWeight: 700 },
-  navBtn: { background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 7, padding: '0.35rem 0.75rem', color: '#94a3b8', cursor: 'pointer', fontSize: '0.9rem' },
-  dayHeaders: { display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', background: 'rgba(56,189,248,0.04)', borderBottom: '1px solid rgba(56,189,248,0.06)' },
-  dayHeader: { padding: '0.6rem', textAlign: 'center' as const, fontSize: '0.75rem', fontWeight: 600, color: '#475569' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(7,1fr)' },
-  cell: { minHeight: 80, borderRight: '1px solid rgba(56,189,248,0.05)', borderBottom: '1px solid rgba(56,189,248,0.05)', padding: '0.4rem' },
-  cellNum: { fontSize: '0.78rem', color: '#64748b', marginBottom: '0.25rem' },
-  cellNumToday: { fontSize: '0.78rem', background: '#38bdf8', color: '#0f172a', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, marginBottom: '0.25rem' },
-  eventPill: { borderRadius: 4, padding: '0.15rem 0.3rem', fontSize: '0.65rem', fontWeight: 600, marginBottom: '0.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, cursor: 'pointer' },
-  emptyCell: { minHeight: 80, borderRight: '1px solid rgba(56,189,248,0.05)', borderBottom: '1px solid rgba(56,189,248,0.05)', background: 'rgba(15,23,42,0.4)' },
-  sidebar: { position: 'sticky', top: 78, display: 'flex', flexDirection: 'column', gap: '1rem' },
-  sideCard: { background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1.25rem' },
-  sideTitle: { fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem' },
-  eventRow: { display: 'flex', gap: '0.6rem', alignItems: 'flex-start', padding: '0.5rem 0', borderBottom: '1px solid rgba(56,189,248,0.05)' },
-  eventDot: { width: 8, height: 8, borderRadius: '50%', marginTop: '0.3rem', flexShrink: 0 },
-  eventTitle2: { fontSize: '0.8rem', color: '#f1f5f9', fontWeight: 500 },
-  eventMeta2: { fontSize: '0.72rem', color: '#64748b', marginTop: '0.15rem' },
-  hostBtn: { width: '100%', background: '#38bdf8', border: 'none', borderRadius: 9, padding: '0.65rem', fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer' },
+function ListViewRow({
+  event,
+  rsvped,
+  onRsvp,
+  onShare,
+  onSelect,
+}: {
+  event: CalendarEvent;
+  rsvped: boolean;
+  onRsvp: (id: string) => void;
+  onShare: (e: CalendarEvent) => void;
+  onSelect: (e: CalendarEvent) => void;
+}) {
+  const pct = Math.round((event.attendees / event.maxAttendees) * 100);
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-start gap-4">
+        {/* Date badge */}
+        <div className={`${event.color} rounded-xl px-3 py-2 text-white text-center flex-shrink-0 min-w-[52px]`}>
+          <div className="text-xs font-medium opacity-80">
+            {format(parseISO(event.date), "MMM")}
+          </div>
+          <div className="text-xl font-bold leading-none">
+            {format(parseISO(event.date), "d")}
+          </div>
+        </div>
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <button
+              onClick={() => onSelect(event)}
+              className="text-base font-semibold text-gray-900 hover:text-violet-700 text-left transition-colors"
+            >
+              {event.title}
+            </button>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <button
+                onClick={() => onShare(event)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+              </button>
+              <button
+                onClick={() => onRsvp(event.id)}
+                className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                  rsvped
+                    ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                    : "bg-violet-600 text-white hover:bg-violet-700"
+                }`}
+              >
+                {rsvped ? "✓ Going" : "RSVP"}
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 mt-1.5 flex-wrap text-xs text-gray-500">
+            <span className="flex items-center gap-1">
+              <ClockIcon className="w-3.5 h-3.5" />
+              {event.startTime} – {event.endTime}
+            </span>
+            {event.mode === "online" ? (
+              <span className="flex items-center gap-1 text-blue-600">
+                <VideoCameraIcon className="w-3.5 h-3.5" />
+                Online
+              </span>
+            ) : (
+              <span className="flex items-center gap-1">
+                <MapPinIcon className="w-3.5 h-3.5" />
+                {event.location}
+              </span>
+            )}
+            <span className="flex items-center gap-1">
+              <UserGroupIcon className="w-3.5 h-3.5" />
+              {event.attendees}/{event.maxAttendees}
+            </span>
+            <span
+              className={`px-1.5 py-0.5 rounded-full font-medium ${
+                event.ticketType === "free"
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-amber-100 text-amber-700"
+              }`}
+            >
+              {event.ticketType === "free" ? "Free" : `£${event.price}`}
+            </span>
+          </div>
+          {/* Capacity bar */}
+          <div className="mt-2 flex items-center gap-2">
+            <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+              <div
+                className={`${event.color} h-1.5 rounded-full transition-all`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <span className="text-[10px] text-gray-400 flex-shrink-0">{pct}% full</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-export default function EventsCalendarPage() {
-  const now = new Date()
-  const [month, setMonth] = useState(now.getMonth()) // 0-indexed
-  const [year, setYear] = useState(now.getFullYear())
+function ListView({
+  events,
+  rsvpedEvents,
+  onRsvp,
+  onShare,
+  onSelect,
+}: {
+  events: CalendarEvent[];
+  rsvpedEvents: Set<string>;
+  onRsvp: (id: string) => void;
+  onShare: (e: CalendarEvent) => void;
+  onSelect: (e: CalendarEvent) => void;
+}) {
+  const grouped = useMemo(() => {
+    const map: Record<string, CalendarEvent[]> = {};
+    events.forEach((e) => {
+      const k = format(parseISO(e.date), "EEEE, d MMMM yyyy");
+      if (!map[k]) map[k] = [];
+      map[k].push(e);
+    });
+    return map;
+  }, [events]);
 
-  const daysInMonth = getDaysInMonth(month, year)
-  const firstDay = getFirstDayOfMonth(month, year)
-  const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7
-
-  const eventsThisMonth = calEvents.filter(e => e.month === month && e.year === year)
-
-  const prevMonth = () => {
-    if (month === 0) { setMonth(11); setYear(y => y - 1) }
-    else setMonth(m => m - 1)
-  }
-  const nextMonth = () => {
-    if (month === 11) { setMonth(0); setYear(y => y + 1) }
-    else setMonth(m => m + 1)
+  if (events.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+        <CalendarDaysIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+        <p className="text-gray-500">No events match your filters.</p>
+      </div>
+    );
   }
 
   return (
-    <div style={S.page}>
-      <style>{`
-        .cal-inner { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; display: grid; grid-template-columns: 1fr 280px; gap: 2rem; align-items: start; }
-        .cal-sidebar { display: flex; flex-direction: column; gap: 1rem; position: sticky; top: 78px; }
-        .cal-cell { min-height: 80px; border-right: 1px solid rgba(56,189,248,0.05); border-bottom: 1px solid rgba(56,189,248,0.05); padding: 0.4rem; }
-        .cal-empty-cell { min-height: 80px; border-right: 1px solid rgba(56,189,248,0.05); border-bottom: 1px solid rgba(56,189,248,0.05); background: rgba(15,23,42,0.4); }
-        @media (max-width: 768px) {
-          .cal-inner { grid-template-columns: 1fr !important; padding: 0.75rem !important; gap: 0.75rem !important; }
-          .cal-sidebar { display: none !important; }
-          .cal-cell, .cal-empty-cell { min-height: 48px !important; padding: 0.2rem !important; }
-          .cal-event-pill { font-size: 0.55rem !important; padding: 0.1rem 0.2rem !important; }
-          .cal-cell-num { font-size: 0.7rem !important; }
-          .cal-day-header { font-size: 0.65rem !important; padding: 0.4rem 0.2rem !important; }
-          .cal-hero { padding: 1.25rem 1rem !important; }
-          .cal-hero-inner { padding: 0 !important; }
-          .cal-month-title { font-size: 0.95rem !important; }
-        }
-        @media (max-width: 380px) {
-          .cal-cell, .cal-empty-cell { min-height: 38px !important; }
-          .cal-event-pill { display: none !important; }
-        }
-      `}</style>
-      <div className="cal-hero" style={S.hero}>
-        <div style={S.heroInner}>
-          <h1 style={S.heroTitle}>Events Calendar</h1>
-          <p style={S.heroSub}>Browse upcoming FreeTrust events by date.</p>
-          <div style={S.navRow}>
-            <Link href="/events" style={S.navLink}>List View</Link>
-            <span style={{ ...S.navLink, ...S.navLinkActive }}>📅 Calendar</span>
-            <Link href="/events/create" style={S.navLink}>+ Host an Event</Link>
-          </div>
-        </div>
-      </div>
-
-      <div className="cal-inner" style={S.inner}>
-        <div>
-          <div style={S.calCard}>
-            <div style={S.calHeader}>
-              <button style={S.navBtn} onClick={prevMonth}>‹</button>
-              <div style={S.monthTitle}>{MONTHS[month]} {year}</div>
-              <button style={S.navBtn} onClick={nextMonth}>›</button>
-            </div>
-
-            <div style={S.dayHeaders}>
-              {DAYS.map(d => <div key={d} className="cal-day-header" style={S.dayHeader}>{d}</div>)}
-            </div>
-
-            <div style={S.grid}>
-              {Array.from({ length: totalCells }).map((_, idx) => {
-                const dayNum = idx - firstDay + 1
-                const isCurrentMonth = dayNum >= 1 && dayNum <= daysInMonth
-                const isToday = isCurrentMonth && dayNum === now.getDate() && month === now.getMonth() && year === now.getFullYear()
-                const dayEvents = calEvents.filter(e => e.day === dayNum && e.month === month && e.year === year)
-
-                if (!isCurrentMonth) return <div key={idx} className="cal-empty-cell" style={S.emptyCell} />
-                return (
-                  <div key={idx} className="cal-cell" style={S.cell}>
-                    {isToday
-                      ? <div className="cal-cell-num" style={S.cellNumToday}>{dayNum}</div>
-                      : <div className="cal-cell-num" style={S.cellNum}>{dayNum}</div>
-                    }
-                    {dayEvents.map(ev => (
-                      <div key={ev.id} className="cal-event-pill" style={{ ...S.eventPill, background: ev.color + '20', color: ev.color }}>
-                        {ev.title}
-                      </div>
-                    ))}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-
-        <aside className="cal-sidebar" style={S.sidebar}>
-          <div style={S.sideCard}>
-            <div style={S.sideTitle}>Events This Month</div>
-            {eventsThisMonth.length === 0 && <p style={{ fontSize: '0.82rem', color: '#64748b' }}>No events this month.</p>}
-            {eventsThisMonth.map(ev => (
-              <div key={ev.id} style={S.eventRow}>
-                <div style={{ ...S.eventDot, background: ev.color }} />
-                <div>
-                  <div style={S.eventTitle2}>{ev.title}</div>
-                  <div style={S.eventMeta2}>Apr {ev.day} · {ev.type} · {ev.free ? 'Free' : 'Paid'}</div>
-                </div>
-              </div>
+    <div className="space-y-6">
+      {Object.entries(grouped).map(([date, dayEvents]) => (
+        <div key={date}>
+          <h3 className="text-sm font-semibold text-gray-500 mb-3 flex items-center gap-2">
+            <span className="flex-1 h-px bg-gray-200" />
+            {date}
+            <span className="flex-1 h-px bg-gray-200" />
+          </h3>
+          <div className="space-y-3">
+            {dayEvents.map((e) => (
+              <ListViewRow
+                key={e.id}
+                event={e}
+                rsvped={rsvpedEvents.has(e.id)}
+                onRsvp={onRsvp}
+                onShare={onShare}
+                onSelect={onSelect}
+              />
             ))}
           </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-          <div style={{ ...S.sideCard, background: 'rgba(56,189,248,0.04)', border: '1px solid rgba(56,189,248,0.12)' }}>
-            <div style={S.sideTitle}>Host Your Own Event</div>
-            <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.5, marginBottom: '0.75rem' }}>
-              Earn ₮15 Trust Tokens when you host a community event.
-            </p>
-            <Link href="/events/create">
-              <button style={S.hostBtn}>Create Event →</button>
+function WeekView({
+  currentDate,
+  filteredEvents,
+  selectedDate,
+  onSelectDate,
+  onSelectEvent,
+}: {
+  currentDate: Date;
+  filteredEvents: CalendarEvent[];
+  selectedDate: Date | null;
+  onSelectDate: (d: Date) => void;
+  onSelectEvent: (e: CalendarEvent) => void;
+}) {
+  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  return (
+    <div className="grid grid-cols-7">
+      {days.map((day, idx) => {
+        const dayEvents = filteredEvents.filter((e) =>
+          isSameDay(parseISO(e.date), day)
+        );
+        const isSelected = selectedDate ? isSameDay(day, selectedDate) : false;
+        return (
+          <div
+            key={idx}
+            onClick={() => onSelectDate(day)}
+            className={`min-h-[120px] p-2 border-r border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
+              isSelected ? "ring-2 ring-inset ring-violet-400" : ""
+            }`}
+          >
+            <div
+              className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-medium mb-2 ${
+                isToday(day) ? "bg-violet-600 text-white" : "text-gray-900"
+              }`}
+            >
+              {format(day, "d")}
+            </div>
+            <div className="space-y-1">
+              {dayEvents.map((e) => (
+                <div
+                  key={e.id}
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    onSelectEvent(e);
+                  }}
+                  className={`${e.color} text-white text-[10px] font-medium px-1.5 py-1 rounded cursor-pointer hover:opacity-90`}
+                >
+                  <div className="truncate">{e.title}</div>
+                  <div className="opacity-80">{e.startTime}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function EventModal({
+  event,
+  rsvped,
+  onRsvp,
+  onShare,
+  onClose,
+}: {
+  event: CalendarEvent;
+  rsvped: boolean;
+  onRsvp: (id: string) => void;
+  onShare: (e: CalendarEvent) => void;
+  onClose: () => void;
+}) {
+  const pct = Math.round((event.attendees / event.maxAttendees) * 100);
+  const spotsLeft = event.maxAttendees - event.attendees;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div
+        className="relative bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header strip */}
+        <div className={`${event.color} px-6 py-5 text-white`}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <span
+                  className={`text-[11px] px-2 py-0.5 rounded-full font-medium bg-white/20 backdrop-blur-sm`}
+                >
+                  {event.category}
+                </span>
+                <span className="text-[11px] px-2 py-0.5 rounded-full font-medium bg-white/20">
+                  {event.mode === "online" ? "Online" : "In-Person"}
+                </span>
+                <span
+                  className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                    event.ticketType === "free"
+                      ? "bg-emerald-500/80"
+                      : "bg-amber-500/80"
+                  }`}
+                >
+                  {event.ticketType === "free" ? "Free" : `£${event.price}`}
+                </span>
+              </div>
+              <h2 className="text-xl font-bold leading-snug">{event.title}</h2>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg bg-white/20 hover:bg-white/30 transition-colors flex-shrink-0"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+          {/* Event details grid */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-gray-50 rounded-xl p-3">
+              <div className="text-xs text-gray-500 mb-1">Date & Time</div>
+              <div className="text-sm font-semibold text-gray-900">
+                {format(parseISO(event.date), "d MMMM yyyy")}
+              </div>
+              <div className="text-sm text-gray-700">
+                {event.startTime} – {event.endTime}
+              </div>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-3">
+              <div className="text-xs text-gray-500 mb-1">Location</div>
+              {event.mode === "online" ? (
+                <>
+                  <div className="flex items-center gap-1.5 text-sm font-semibold text-blue-700">
+                    <VideoCameraIcon className="w-4 h-4" />
+                    Online Event
+                  </div>
+                  {event.meetingUrl && (
+                    <a
+                      href={event.meetingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-500 hover:underline"
+                    >
+                      Join link
+                    </a>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
+                    <MapPinIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                    In-Person
+                  </div>
+                  <div className="text-xs text-gray-600 mt-0.5">{event.location}</div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Description */}
+          <div>
+            <h4 className="text-sm font-semibold text-gray-900 mb-1.5">About</h4>
+            <p className="text-sm text-gray-600 leading-relaxed">{event.description}</p>
+          </div>
+
+          {/* Attendees */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <UserGroupIcon className="w-4 h-4 text-gray-500" />
+                Attendees
+              </h4>
+              <span className="text-xs text-gray-500">
+                {event.attendees} / {event.maxAttendees}
+              </span>
+            </div>
+            <div className="bg-gray-100 rounded-full h-2 mb-1.5">
+              <div
+                className={`${event.color} h-2 rounded-full transition-all`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-gray-500">
+              <span>{pct}% full</span>
+              <span
+                className={
+                  spotsLeft <= 5 ? "text-red-500 font-medium" : "text-emerald-600"
+                }
+              >
+                {spotsLeft} spots left
+              </span>
+            </div>
+          </div>
+
+          {/* Organiser */}
+          <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
+            <div
+              className={`${event.color} w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0`}
+            >
+              {event.organiserAvatar}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs text-gray-500">Organised by</div>
+              <div className="text-sm font-semibold text-gray-900">{event.organiser}</div>
+            </div>
+            <Link
+              href={`/profile/${event.organiser.toLowerCase().replace(" ", "-")}`}
+              className="text-xs text-violet-600 hover:text-violet-700 font-medium flex-shrink-0"
+            >
+              View Profile →
             </Link>
           </div>
-        </aside>
+
+          {/* Ticket info */}
+          {event.ticketType === "paid" && event.price && (
+            <div className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl p-3">
+              <TicketIcon className="w-5 h-5 text-amber-600 flex-shrink-0" />
+              <div>
+                <div className="text-sm font-semibold text-gray-900">
+                  Paid Event — £{event.price} per ticket
+                </div>
+                <div className="text-xs text-gray-600">
+                  Secure checkout after RSVP confirmation
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer actions */}
+        <div className="px-6 py-4 border-t border-gray-100 flex items-center gap-3">
+          <button
+            onClick={() => onShare(event)}
+            className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+            </svg>
+            Share
+          </button>
+          <button
+            onClick={() => onRsvp(event.id)}
+            disabled={!rsvped && spotsLeft === 0}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+              rsvped
+                ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                : spotsLeft === 0
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : event.ticketType === "paid"
+                ? "bg-amber-500 hover:bg-amber-600 text-white"
+                : "bg-violet-600 hover:bg-violet-700 text-white"
+            }`}
+          >
+            {rsvped
+              ? "✓ You're Going — Cancel RSVP"
+              : spotsLeft === 0
+              ? "Sold Out"
+              : event.ticketType === "paid"
+              ? `Get Ticket — £${event.price}`
+              : "RSVP — Free"}
+          </button>
+        </div>
       </div>
     </div>
-  )
+  );
 }
+
