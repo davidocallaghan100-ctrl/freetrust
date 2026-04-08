@@ -763,4 +763,844 @@ export default function CreateGigPage() {
                   </p>
 
                   {/* Tags */}
-                  {form.tags.length
+                  {form.tags.length > 0 && (
+                    <div style={styles.previewTags}>
+                      {form.tags.map(tag => (
+                        <span key={tag} style={styles.previewTag}>#{tag}</span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Packages Preview */}
+                  <div style={styles.previewPackages}>
+                    {(['basic', 'standard', 'premium'] as const).map(tier => {
+                      const pkg = form.packages[tier]
+                      const colors = { basic: '#3b82f6', standard: '#8b5cf6', premium: '#f59e0b' }
+                      return (
+                        <div key={tier} style={{ ...styles.previewPackage, borderColor: colors[tier] }}>
+                          <div style={{ ...styles.previewPackageName, color: colors[tier] }}>{pkg.name}</div>
+                          <div style={styles.previewPackagePrice}>
+                            {pkg.price ? `$${pkg.price}` : '—'}
+                          </div>
+                          <div style={styles.previewPackageDelivery}>
+                            🕐 {pkg.deliveryTime} · {pkg.revisions} revision{pkg.revisions === '1' ? '' : 's'}
+                          </div>
+                          {pkg.description && (
+                            <p style={styles.previewPackageDesc}>{pkg.description}</p>
+                          )}
+                          {pkg.features.filter(f => f.trim()).length > 0 && (
+                            <ul style={styles.previewFeatureList}>
+                              {pkg.features.filter(f => f.trim()).map((feat, i) => (
+                                <li key={i} style={styles.previewFeatureItem}>✓ {feat}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Skills */}
+                  {form.skills.length > 0 && (
+                    <div style={styles.previewSkillsSection}>
+                      <p style={styles.previewSectionLabel}>Skills</p>
+                      <div style={styles.previewTags}>
+                        {form.skills.map(skill => (
+                          <span key={skill} style={styles.previewSkillTag}>{skill}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Publish CTA */}
+              <div style={styles.publishNote}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="16 12 12 8 8 12" />
+                  <line x1="12" y1="16" x2="12" y2="8" />
+                </svg>
+                <p style={styles.publishNoteText}>
+                  Your gig will go live immediately after publishing. You can edit it anytime from your seller dashboard.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer Navigation */}
+        <div style={styles.footer}>
+          <button
+            style={{ ...styles.btn, ...styles.btnOutline }}
+            onClick={prevStep}
+            disabled={step === 1}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
+
+          <div style={styles.stepIndicator}>
+            Step {step} of {STEPS.length}
+          </div>
+
+          {step < 4 ? (
+            <button style={{ ...styles.btn, ...styles.btnPrimary }} onClick={nextStep}>
+              Continue
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              style={{ ...styles.btn, ...styles.btnSuccess, ...(isSubmitting ? styles.btnDisabled : {}) }}
+              onClick={handlePublish}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <span style={styles.spinner} />
+                  Publishing...
+                </>
+              ) : (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Publish Gig
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const styles: Record<string, React.CSSProperties> = {
+  page: {
+    minHeight: '100vh',
+    backgroundColor: '#f9fafb',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  },
+  container: {
+    maxWidth: '900px',
+    margin: '0 auto',
+    padding: '24px 16px 80px',
+  },
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+    marginBottom: '32px',
+  },
+  backBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    background: 'none',
+    border: '1px solid #e5e7eb',
+    borderRadius: '8px',
+    padding: '8px 14px',
+    cursor: 'pointer',
+    color: '#374151',
+    fontSize: '14px',
+    fontWeight: 500,
+    whiteSpace: 'nowrap',
+  },
+  headerTitle: { flex: 1 },
+  title: { margin: 0, fontSize: '24px', fontWeight: 700, color: '#111827' },
+  subtitle: { margin: '4px 0 0', fontSize: '14px', color: '#6b7280' },
+  stepper: {
+    display: 'flex',
+    alignItems: 'center',
+    marginBottom: '28px',
+    overflowX: 'auto',
+    paddingBottom: '4px',
+  },
+  stepWrapper: {
+    display: 'flex',
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+  },
+  stepItem: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    gap: '6px',
+    flexShrink: 0,
+  },
+  stepActive: {},
+  stepDone: {},
+  stepPending: {},
+  stepCircle: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '50%',
+    border: '2px solid #d1d5db',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '13px',
+    fontWeight: 600,
+    color: '#9ca3af',
+    backgroundColor: '#fff',
+    transition: 'all 0.2s',
+  },
+  stepCircleActive: {
+    borderColor: '#6366f1',
+    color: '#6366f1',
+  },
+  stepCircleDone: {
+    borderColor: '#10b981',
+    backgroundColor: '#10b981',
+    color: '#fff',
+  },
+  stepLabel: {
+    fontSize: '11px',
+    color: '#6b7280',
+    fontWeight: 500,
+    textAlign: 'center' as const,
+  },
+  stepConnector: {
+    flex: 1,
+    height: '2px',
+    backgroundColor: '#e5e7eb',
+    margin: '0 4px',
+    marginBottom: '20px',
+    transition: 'background-color 0.2s',
+  },
+  stepConnectorDone: {
+    backgroundColor: '#10b981',
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: '16px',
+    border: '1px solid #e5e7eb',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+    overflow: 'hidden',
+    marginBottom: '16px',
+  },
+  stepContent: {
+    padding: '32px',
+  },
+  stepTitle: {
+    margin: '0 0 4px',
+    fontSize: '20px',
+    fontWeight: 700,
+    color: '#111827',
+  },
+  stepDesc: {
+    margin: '0 0 28px',
+    fontSize: '14px',
+    color: '#6b7280',
+  },
+  field: {
+    marginBottom: '24px',
+  },
+  label: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    fontSize: '14px',
+    fontWeight: 600,
+    color: '#374151',
+    marginBottom: '8px',
+  },
+  labelHint: {
+    fontSize: '12px',
+    color: '#9ca3af',
+    fontWeight: 400,
+  },
+  fieldHint: {
+    fontSize: '12px',
+    color: '#6b7280',
+    margin: '0 0 10px',
+  },
+  input: {
+    width: '100%',
+    padding: '10px 14px',
+    fontSize: '14px',
+    border: '1.5px solid #e5e7eb',
+    borderRadius: '10px',
+    outline: 'none',
+    color: '#111827',
+    boxSizing: 'border-box' as const,
+    transition: 'border-color 0.15s',
+  },
+  inputError: {
+    borderColor: '#ef4444',
+  },
+  textarea: {
+    width: '100%',
+    padding: '10px 14px',
+    fontSize: '14px',
+    border: '1.5px solid #e5e7eb',
+    borderRadius: '10px',
+    outline: 'none',
+    color: '#111827',
+    resize: 'vertical' as const,
+    boxSizing: 'border-box' as const,
+    fontFamily: 'inherit',
+    lineHeight: '1.6',
+  },
+  inputIcon: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    border: '1.5px solid #e5e7eb',
+    borderRadius: '10px',
+    padding: '0 14px',
+    backgroundColor: '#fff',
+  },
+  inputWithIcon: {
+    flex: 1,
+    padding: '10px 0',
+    fontSize: '14px',
+    border: 'none',
+    outline: 'none',
+    color: '#111827',
+    backgroundColor: 'transparent',
+  },
+  error: {
+    color: '#ef4444',
+    fontSize: '12px',
+    marginTop: '4px',
+  },
+  categoryToggle: {
+    display: 'flex',
+    gap: '12px',
+  },
+  toggleBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flex: 1,
+    padding: '12px 16px',
+    border: '1.5px solid #e5e7eb',
+    borderRadius: '12px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 500,
+    color: '#6b7280',
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    transition: 'all 0.15s',
+  },
+  toggleBtnActive: {
+    borderColor: '#6366f1',
+    color: '#6366f1',
+    backgroundColor: '#eef2ff',
+  },
+  categoryGrid: {
+    display: 'flex',
+    flexWrap: 'wrap' as const,
+    gap: '8px',
+  },
+  catChip: {
+    padding: '6px 14px',
+    border: '1.5px solid #e5e7eb',
+    borderRadius: '20px',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: 500,
+    color: '#6b7280',
+    backgroundColor: '#fff',
+    transition: 'all 0.15s',
+  },
+  catChipActive: {
+    borderColor: '#6366f1',
+    color: '#6366f1',
+    backgroundColor: '#eef2ff',
+  },
+  packagesGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gap: '20px',
+  },
+  packageCard: {
+    border: '1px solid #e5e7eb',
+    borderRadius: '14px',
+    overflow: 'hidden',
+    borderTop: '4px solid',
+  },
+  packageHeader: {
+    padding: '16px',
+    textAlign: 'center' as const,
+  },
+  packageBadge: {
+    display: 'inline-block',
+    color: '#fff',
+    fontWeight: 700,
+    fontSize: '13px',
+    padding: '4px 12px',
+    borderRadius: '20px',
+    marginBottom: '12px',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.5px',
+  },
+  priceWrapper: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '4px',
+  },
+  currencySymbol: {
+    fontSize: '20px',
+    fontWeight: 700,
+    color: '#111827',
+  },
+  priceInput: {
+    fontSize: '28px',
+    fontWeight: 800,
+    color: '#111827',
+    border: 'none',
+    outline: 'none',
+    width: '90px',
+    textAlign: 'center' as const,
+    backgroundColor: 'transparent',
+  },
+  packageBody: {
+    padding: '16px',
+  },
+  packageField: {
+    marginBottom: '14px',
+  },
+  packageLabel: {
+    display: 'block',
+    fontSize: '12px',
+    fontWeight: 600,
+    color: '#6b7280',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.5px',
+    marginBottom: '6px',
+  },
+  packageTextarea: {
+    width: '100%',
+    padding: '8px 10px',
+    fontSize: '13px',
+    border: '1.5px solid #e5e7eb',
+    borderRadius: '8px',
+    outline: 'none',
+    resize: 'vertical' as const,
+    fontFamily: 'inherit',
+    color: '#111827',
+    boxSizing: 'border-box' as const,
+  },
+  packageRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '10px',
+  },
+  select: {
+    width: '100%',
+    padding: '8px 10px',
+    fontSize: '13px',
+    border: '1.5px solid #e5e7eb',
+    borderRadius: '8px',
+    outline: 'none',
+    color: '#111827',
+    backgroundColor: '#fff',
+    cursor: 'pointer',
+  },
+  featureRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '6px',
+  },
+  featureDot: {
+    width: '6px',
+    height: '6px',
+    borderRadius: '50%',
+    backgroundColor: '#6366f1',
+    flexShrink: 0,
+  },
+  featureInput: {
+    flex: 1,
+    padding: '6px 10px',
+    fontSize: '13px',
+    border: '1px solid #e5e7eb',
+    borderRadius: '6px',
+    outline: 'none',
+    color: '#111827',
+  },
+  featureRemoveBtn: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    color: '#9ca3af',
+    padding: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  addFeatureBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    background: 'none',
+    border: '1px dashed #d1d5db',
+    borderRadius: '6px',
+    padding: '6px 10px',
+    cursor: 'pointer',
+    fontSize: '12px',
+    color: '#6b7280',
+    width: '100%',
+    justifyContent: 'center',
+    marginTop: '4px',
+  },
+  dropZone: {
+    border: '2px dashed #d1d5db',
+    borderRadius: '12px',
+    padding: '40px 20px',
+    textAlign: 'center' as const,
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+    backgroundColor: '#fafafa',
+  },
+  dropZoneActive: {
+    borderColor: '#6366f1',
+    backgroundColor: '#eef2ff',
+  },
+  dropZoneError: {
+    borderColor: '#ef4444',
+  },
+  dropText: {
+    fontSize: '14px',
+    fontWeight: 600,
+    color: '#374151',
+    margin: '12px 0 4px',
+  },
+  dropSubText: {
+    fontSize: '12px',
+    color: '#9ca3af',
+    margin: 0,
+  },
+  imageGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(5, 1fr)',
+    gap: '10px',
+    marginTop: '16px',
+  },
+  imagePreviewWrapper: {
+    position: 'relative' as const,
+    aspectRatio: '1',
+    borderRadius: '10px',
+    overflow: 'hidden',
+    border: '1px solid #e5e7eb',
+  },
+  thumbnailBadge: {
+    position: 'absolute' as const,
+    bottom: '6px',
+    left: '6px',
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    color: '#fff',
+    fontSize: '10px',
+    fontWeight: 600,
+    padding: '2px 7px',
+    borderRadius: '4px',
+  },
+  removeImageBtn: {
+    position: 'absolute' as const,
+    top: '6px',
+    right: '6px',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    border: 'none',
+    borderRadius: '50%',
+    width: '22px',
+    height: '22px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+  },
+  tagInputWrapper: {
+    display: 'flex',
+    flexWrap: 'wrap' as const,
+    gap: '8px',
+    padding: '8px 12px',
+    border: '1.5px solid #e5e7eb',
+    borderRadius: '10px',
+    alignItems: 'center',
+    minHeight: '44px',
+    backgroundColor: '#fff',
+  },
+  tag: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    backgroundColor: '#eef2ff',
+    color: '#6366f1',
+    fontSize: '13px',
+    fontWeight: 500,
+    padding: '3px 10px',
+    borderRadius: '20px',
+  },
+  skillTag: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    backgroundColor: '#f0fdf4',
+    color: '#16a34a',
+    fontSize: '13px',
+    fontWeight: 500,
+    padding: '3px 10px',
+    borderRadius: '20px',
+  },
+  tagRemove: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '16px',
+    lineHeight: 1,
+    color: 'inherit',
+    opacity: 0.6,
+    padding: 0,
+  },
+  tagInput: {
+    border: 'none',
+    outline: 'none',
+    fontSize: '13px',
+    color: '#111827',
+    minWidth: '120px',
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  // Preview styles
+  preview: {
+    border: '1px solid #e5e7eb',
+    borderRadius: '14px',
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+  },
+  previewImageWrapper: {
+    position: 'relative' as const,
+    width: '100%',
+    height: '280px',
+    backgroundColor: '#f3f4f6',
+  },
+  previewImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewCategoryBadge: {
+    position: 'absolute' as const,
+    top: '12px',
+    left: '12px',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    color: '#fff',
+    fontSize: '12px',
+    fontWeight: 600,
+    padding: '4px 10px',
+    borderRadius: '20px',
+  },
+  thumbnailStrip: {
+    display: 'flex',
+    gap: '8px',
+    padding: '12px 16px',
+    borderBottom: '1px solid #f3f4f6',
+    backgroundColor: '#fafafa',
+    overflowX: 'auto' as const,
+  },
+  thumbnailItem: {
+    position: 'relative' as const,
+    width: '56px',
+    height: '56px',
+    flexShrink: 0,
+    borderRadius: '6px',
+    overflow: 'hidden',
+    border: '1px solid #e5e7eb',
+  },
+  previewBody: {
+    padding: '20px 24px 24px',
+  },
+  previewCategory: {
+    fontSize: '12px',
+    fontWeight: 600,
+    color: '#6366f1',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.5px',
+    margin: '0 0 8px',
+  },
+  previewTitle: {
+    fontSize: '20px',
+    fontWeight: 700,
+    color: '#111827',
+    margin: '0 0 10px',
+    lineHeight: 1.4,
+  },
+  previewLocation: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '5px',
+    fontSize: '13px',
+    color: '#6b7280',
+    marginBottom: '12px',
+  },
+  previewDesc: {
+    fontSize: '14px',
+    color: '#4b5563',
+    lineHeight: '1.7',
+    margin: '0 0 16px',
+    whiteSpace: 'pre-wrap' as const,
+  },
+  previewTags: {
+    display: 'flex',
+    flexWrap: 'wrap' as const,
+    gap: '8px',
+    marginBottom: '20px',
+  },
+  previewTag: {
+    backgroundColor: '#eef2ff',
+    color: '#6366f1',
+    fontSize: '12px',
+    fontWeight: 500,
+    padding: '3px 10px',
+    borderRadius: '20px',
+  },
+  previewSkillTag: {
+    backgroundColor: '#f0fdf4',
+    color: '#16a34a',
+    fontSize: '12px',
+    fontWeight: 500,
+    padding: '3px 10px',
+    borderRadius: '20px',
+  },
+  previewPackages: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '14px',
+    marginBottom: '20px',
+  },
+  previewPackage: {
+    border: '1.5px solid',
+    borderRadius: '12px',
+    padding: '14px',
+  },
+  previewPackageName: {
+    fontSize: '11px',
+    fontWeight: 700,
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.5px',
+    marginBottom: '4px',
+  },
+  previewPackagePrice: {
+    fontSize: '22px',
+    fontWeight: 800,
+    color: '#111827',
+    marginBottom: '4px',
+  },
+  previewPackageDelivery: {
+    fontSize: '12px',
+    color: '#6b7280',
+    marginBottom: '8px',
+  },
+  previewPackageDesc: {
+    fontSize: '13px',
+    color: '#4b5563',
+    margin: '0 0 8px',
+    lineHeight: 1.5,
+  },
+  previewFeatureList: {
+    listStyle: 'none',
+    padding: 0,
+    margin: 0,
+  },
+  previewFeatureItem: {
+    fontSize: '12px',
+    color: '#374151',
+    padding: '2px 0',
+  },
+  previewSectionLabel: {
+    fontSize: '12px',
+    fontWeight: 600,
+    color: '#6b7280',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.5px',
+    margin: '0 0 8px',
+  },
+  previewSkillsSection: {
+    marginTop: '4px',
+  },
+  publishNote: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '12px',
+    backgroundColor: '#f0fdf4',
+    border: '1px solid #bbf7d0',
+    borderRadius: '10px',
+    padding: '14px 18px',
+    marginTop: '20px',
+  },
+  publishNoteText: {
+    fontSize: '13px',
+    color: '#166534',
+    margin: 0,
+    lineHeight: 1.6,
+  },
+  // Footer
+  footer: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    border: '1px solid #e5e7eb',
+    borderRadius: '14px',
+    padding: '16px 24px',
+    boxShadow: '0 -1px 4px rgba(0,0,0,0.04)',
+  },
+  stepIndicator: {
+    fontSize: '13px',
+    color: '#9ca3af',
+    fontWeight: 500,
+  },
+  btn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '10px 20px',
+    borderRadius: '10px',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    border: 'none',
+    transition: 'all 0.15s',
+  },
+  btnPrimary: {
+    backgroundColor: '#6366f1',
+    color: '#fff',
+  },
+  btnOutline: {
+    backgroundColor: '#fff',
+    color: '#374151',
+    border: '1.5px solid #e5e7eb',
+  },
+  btnSuccess: {
+    backgroundColor: '#10b981',
+    color: '#fff',
+  },
+  btnDisabled: {
+    opacity: 0.6,
+    cursor: 'not-allowed',
+  },
+  spinner: {
+    display: 'inline-block',
+    width: '14px',
+    height: '14px',
+    border: '2px solid rgba(255,255,255,0.3)',
+    borderTop: '2px solid #fff',
+    borderRadius: '50%',
+    animation: 'spin 0.8s linear infinite',
+  },
+}
