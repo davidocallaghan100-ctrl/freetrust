@@ -974,3 +974,255 @@ tr:hover td { background: rgba(255,255,255,.02); }
   overflow: hidden;
   text-align: center;
 }
+
+/* ============================================================
+   MOBILE RESPONSIVE — FreeTrust Pages
+   Targets inline-style layouts used across all pages
+   ============================================================ */
+
+/* Prevent horizontal scroll site-wide */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* iOS zoom prevention — all inputs must be 16px */
+input, textarea, select {
+  font-size: 16px !important;
+}
+
+/* ---- Utility: responsive 2-col → 1-col layouts ---- */
+.ft-layout {
+  display: grid;
+  gap: 1.5rem;
+  align-items: start;
+}
+.ft-layout-sidebar {
+  /* sidebar used as second column */
+}
+
+/* ---- Page-level padding helper ---- */
+.ft-page-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+/* ============================================================
+   MOBILE OVERRIDES  (≤ 768px)
+   ============================================================ */
+@media (max-width: 768px) {
+
+  /* ---- General spacing ---- */
+  .ft-page-inner {
+    padding: 1.25rem 1rem;
+  }
+
+  /* ---- Homepage ---- */
+
+  /* Hero — tighten vertical padding */
+  [style*="padding: '5rem 1.5rem 4rem'"],
+  [style*="padding: 5rem 1.5rem 4rem"] {
+    padding: 2.5rem 1rem 2rem !important;
+  }
+
+  /* CTA banner — full width, no side margin */
+  [style*="margin: '0 1.5rem 4rem'"],
+  [style*="margin: 0 1.5rem 4rem"] {
+    margin: 0 0 2rem !important;
+    border-radius: 0 !important;
+    padding: 2rem 1.25rem !important;
+  }
+
+  /* ---- Feed / Community / Events — collapse sidebar layouts ---- */
+  /* Any element with gridTemplateColumns containing a pixel sidebar */
+  [style*="gridTemplateColumns: '1fr 300px'"],
+  [style*="gridTemplateColumns: '1fr 280px'"],
+  [style*="gridTemplateColumns: '1fr 260px'"],
+  [style*="gridTemplateColumns: '1fr 300px'"],
+  [style*="gridTemplateColumns: '1fr 280px'"],
+  [style*="gridTemplateColumns: 1fr 300px"],
+  [style*="gridTemplateColumns: 1fr 280px"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Hide sticky sidebars on mobile (they reflow to bottom — hide them) */
+  [style*="position: 'sticky'"][style*="top: 78"] {
+    display: none !important;
+  }
+
+  /* ---- Events listing page ---- */
+
+  /* Event card — stack date box + body vertically on very small screens */
+  [style*="display: 'flex'"][style*="gap: '1.25rem'"] > [style*="minWidth: 70"] {
+    min-width: 56px !important;
+  }
+
+  /* Event card footer — wrap cleanly */
+  [style*="display: 'flex'"][style*="flexWrap: 'wrap'"] {
+    flex-wrap: wrap !important;
+  }
+
+  /* Register button on event cards — full row */
+  [style*="marginLeft: 'auto'"] {
+    margin-left: 0 !important;
+    width: 100%;
+  }
+
+  /* Content area padding */
+  [style*="padding: '2rem 1.5rem'"],
+  [style*="padding: 2rem 1.5rem"] {
+    padding: 1.25rem 1rem !important;
+  }
+
+  [style*="padding: '2.5rem 1.5rem 2rem'"],
+  [style*="padding: 2.5rem 1.5rem 2rem"] {
+    padding: 1.5rem 1rem 1.25rem !important;
+  }
+
+  /* ---- Events detail page ---- */
+  /* Info grid — 2 columns max on mobile */
+  [style*="gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))'"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Layout: main + sidebar → single column */
+  [style*="gridTemplateColumns: '1fr 300px'"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Speaker grid — 2 cols on mobile */
+  [style*="gridTemplateColumns: 'repeat(auto-fill,minmax(120px,1fr))'"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* ---- Calendar page ---- */
+  [style*="gridTemplateColumns: 'repeat(7,1fr)'"] {
+    /* keep 7-col calendar grid but shrink cells */
+  }
+  /* Calendar cells — shrink for mobile */
+  [style*="minHeight: 80"] {
+    min-height: 54px !important;
+    padding: 0.25rem !important;
+  }
+  [style*="fontSize: '0.65rem'"] {
+    font-size: 0.6rem !important;
+  }
+
+  /* ---- Community / Articles / Feed sidebars ---- */
+  /* Already handled by gridTemplateColumns collapse above */
+
+  /* ---- Create event form ---- */
+  [style*="gridTemplateColumns: '1fr 1fr'"],
+  [style*="gridTemplateColumns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  [style*="gridTemplateColumns: 'repeat(4,1fr)'"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* ---- Organisation profile ---- */
+  [style*="gridTemplateColumns: 'repeat(auto-fill,minmax(200px"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ---- Articles featured card ---- */
+  [style*="gridTemplateColumns: '2fr 1fr'"],
+  [style*="gridTemplateColumns: 2fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ---- Generic: tighten max-width inner sections ---- */
+  [style*="maxWidth: 1200"],
+  [style*="maxWidth: 1100"],
+  [style*="maxWidth: 1400"] {
+    max-width: 100% !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  /* ---- Nav logo size ---- */
+  .ft-nav-logo {
+    font-size: 1.05rem !important;
+  }
+
+  /* ---- Stats row on homepage — 2×2 grid ---- */
+  [style*="display: 'flex'"][style*="gap: '2rem'"][style*="justifyContent: 'center'"][style*="flexWrap: 'wrap'"] {
+    gap: 1rem !important;
+    padding: 1.5rem 1rem !important;
+  }
+
+  /* ---- Feature grid — 1 col on mobile ---- */
+  [style*="gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))'"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ---- Hero h1 — already uses clamp, just tighten padding ---- */
+  [style*="padding: '5rem 1.5rem'"] {
+    padding: 2.5rem 1rem !important;
+  }
+
+  /* ---- Wallet / profile pages ---- */
+  [style*="gridTemplateColumns: '1fr 320px'"],
+  [style*="gridTemplateColumns: 1fr 320px"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ---- Filter rows — ensure wrapping ---- */
+  [style*="display: 'flex'"][style*="gap: '0.5rem'"][style*="flexWrap: 'wrap'"] {
+    flex-wrap: wrap !important;
+    overflow-x: hidden !important;
+  }
+
+  /* ---- Section titles — reduce font size ---- */
+  [style*="fontSize: '2rem'"][style*="fontWeight: 800"] {
+    font-size: 1.5rem !important;
+  }
+  [style*="fontSize: '1.8rem'"][style*="fontWeight: 800"] {
+    font-size: 1.4rem !important;
+  }
+
+  /* ---- Buttons — ensure minimum tap target height ---- */
+  button, a[style*="borderRadius"] {
+    min-height: 40px;
+  }
+
+  /* ---- Register / RSVP button on event detail ---- */
+  [style*="width: '100%'"][style*="background: '#38bdf8'"] {
+    font-size: 0.95rem !important;
+    padding: 0.75rem 1rem !important;
+  }
+}
+
+/* ---- Very small screens (≤ 380px) ---- */
+@media (max-width: 380px) {
+  /* Calendar: reduce cell text further */
+  [style*="minHeight: 54"] {
+    min-height: 44px !important;
+  }
+
+  /* Event card date box */
+  [style*="minWidth: 56"] {
+    display: none !important;
+  }
+
+  /* Even tighter padding */
+  [style*="padding: '1.25rem'"],
+  [style*="padding: 1.25rem"] {
+    padding: 0.9rem !important;
+  }
+}
+
+/* ============================================================
+   TABLET ADJUSTMENTS  (769px – 1024px)
+   ============================================================ */
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Narrow sidebars a bit */
+  [style*="gridTemplateColumns: '1fr 300px'"] {
+    grid-template-columns: 1fr 240px !important;
+  }
+  [style*="gridTemplateColumns: '1fr 280px'"] {
+    grid-template-columns: 1fr 220px !important;
+  }
+}

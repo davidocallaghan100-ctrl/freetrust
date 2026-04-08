@@ -97,7 +97,20 @@ export default function ArticlesPage() {
 
   return (
     <div style={S.page}>
-      <div style={S.hero}>
+      <style>{`
+        .articles-featcard { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center; }
+        .articles-layout { display: grid; grid-template-columns: 1fr 280px; gap: 2rem; max-width: 1200px; margin: 0 auto; padding: 0 1.5rem 3rem; align-items: start; }
+        .articles-sidebar { display: flex; flex-direction: column; gap: 1.25rem; position: sticky; top: 78px; }
+        @media (max-width: 768px) {
+          .articles-featcard { grid-template-columns: 1fr !important; }
+          .articles-featcard > div:last-child { display: none !important; }
+          .articles-layout { grid-template-columns: 1fr !important; padding: 0 1rem 2rem !important; }
+          .articles-sidebar { display: none !important; }
+          .articles-hero { padding: 1.5rem 1rem 1.25rem !important; }
+          .articles-featured-wrap { padding: 1rem 1rem 0 !important; }
+        }
+      `}</style>
+      <div className="articles-hero" style={S.hero}>
         <div style={S.inner}>
           <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.5rem' }}>Articles</h1>
           <p style={{ color: '#64748b' }}>Insights, guides and stories from the FreeTrust community</p>
@@ -105,8 +118,8 @@ export default function ArticlesPage() {
       </div>
 
       {/* Featured Article */}
-      <div style={{ padding: '2rem 1.5rem 0', maxWidth: 1200, margin: '0 auto' }}>
-        <div style={S.featCard}>
+      <div className="articles-featured-wrap" style={{ padding: '2rem 1.5rem 0', maxWidth: 1200, margin: '0 auto' }}>
+        <div className="articles-featcard" style={S.featCard}>
           <div>
             <span style={S.featLabel}>EDITOR&apos;S PICK</span>
             <h2 style={S.featTitle}>{featured.title}</h2>
@@ -127,7 +140,7 @@ export default function ArticlesPage() {
         </div>
       </div>
 
-      <div style={S.layout}>
+      <div className="articles-layout" style={S.layout}>
         <div>
           <div style={S.catRow}>
             {categories.map(c => (
@@ -161,7 +174,7 @@ export default function ArticlesPage() {
           ))}
         </div>
 
-        <aside style={S.sidebar}>
+        <aside className="articles-sidebar" style={S.sidebar}>
           <div style={S.sideCard}>
             <div style={S.sideTitle}>Top Writers</div>
             {[

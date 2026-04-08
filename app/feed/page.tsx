@@ -88,15 +88,24 @@ export default function FeedPage() {
 
   return (
     <div style={S.page}>
+      <style>{`
+        .feed-layout { display: grid; grid-template-columns: 1fr 300px; gap: 2rem; max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; align-items: start; }
+        .feed-sidebar { display: flex; flex-direction: column; gap: 1.25rem; position: sticky; top: 78px; }
+        @media (max-width: 768px) {
+          .feed-layout { grid-template-columns: 1fr !important; padding: 1rem !important; gap: 1rem !important; }
+          .feed-sidebar { display: none !important; }
+          .feed-header { padding: 1rem 1rem 0.75rem !important; }
+        }
+      `}</style>
       {/* Page header */}
-      <div style={{ borderBottom: '1px solid rgba(56,189,248,0.08)', padding: '1.5rem 1.5rem 1rem' }}>
+      <div className="feed-header" style={{ borderBottom: '1px solid rgba(56,189,248,0.08)', padding: '1.5rem 1.5rem 1rem' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Community Feed</h1>
           <p style={{ color: '#64748b', fontSize: '0.88rem', marginTop: '0.25rem' }}>What&apos;s happening in the FreeTrust community</p>
         </div>
       </div>
 
-      <div style={S.layout}>
+      <div className="feed-layout">
         <div style={S.main}>
           {/* Compose */}
           <div style={S.composeBox}>
@@ -147,7 +156,7 @@ export default function FeedPage() {
         </div>
 
         {/* Sidebar */}
-        <aside style={S.sidebar}>
+        <aside className="feed-sidebar" style={S.sidebar}>
           {/* Trending */}
           <div style={S.sideCard}>
             <div style={S.sideTitle}>Trending Topics</div>
