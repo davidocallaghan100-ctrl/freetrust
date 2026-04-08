@@ -1,111 +1,442 @@
-'use client'
-import React, { useState, useEffect } from 'react'
-import Link from 'next/link'
 
-const taglines = [
-  "Where trust is the currency.",
-  "Buy, sell and connect with confidence.",
-  "Earn reputation, unlock opportunities.",
-  "Community-powered commerce.",
-]
-
-const features = [
-  { icon: '🛒', title: 'Marketplace', desc: 'Browse services, products, and talent from verified members.', href: '/services' },
-  { icon: '🌱', title: 'Impact Fund', desc: 'Every transaction contributes to sustainability projects worldwide.', href: '/impact' },
-  { icon: '🤝', title: 'Communities', desc: 'Join purpose-driven groups and grow your network.', href: '/community' },
-  { icon: '🗓️', title: 'Events', desc: 'Attend virtual and in-person events hosted by members.', href: '/events' },
-  { icon: '📰', title: 'Articles', desc: 'Read and publish insights from the FreeTrust community.', href: '/articles' },
-  { icon: '🏢', title: 'Organisations', desc: 'Discover and connect with values-aligned organisations.', href: '/organisations' },
-]
-
-const stats = [
-  { value: '24,800+', label: 'Members' },
-  { value: '6,200+', label: 'Services Listed' },
-  { value: '£1.2M+', label: 'Impact Funded' },
-  { value: '340+', label: 'Organisations' },
-]
-
-const S: Record<string, React.CSSProperties> = {
-  page: { minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' },
-  hero: { background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(56,189,248,0.12) 0%, transparent 70%)', padding: '5rem 1.5rem 4rem', textAlign: 'center' },
-  badge: { display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 999, padding: '0.3rem 1rem', fontSize: '0.8rem', color: '#38bdf8', marginBottom: '1.5rem', letterSpacing: '0.05em' },
-  h1: { fontSize: 'clamp(2.5rem, 6vw, 4.5rem)', fontWeight: 900, lineHeight: 1.1, margin: '0 0 1.5rem', letterSpacing: '-1px' },
-  tagline: { fontSize: '1.2rem', color: '#94a3b8', marginBottom: '2.5rem', minHeight: '2rem', transition: 'opacity 0.5s' },
-  ctaRow: { display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '4rem' },
-  ctaPrimary: { background: '#38bdf8', color: '#0f172a', padding: '0.8rem 2rem', borderRadius: 8, fontWeight: 700, fontSize: '1rem', textDecoration: 'none', display: 'inline-block' },
-  ctaSecondary: { background: 'transparent', color: '#cbd5e1', padding: '0.8rem 2rem', borderRadius: 8, fontWeight: 600, fontSize: '1rem', textDecoration: 'none', display: 'inline-block', border: '1px solid rgba(148,163,184,0.25)' },
-  statsRow: { display: 'flex', gap: '2rem', justifyContent: 'center', flexWrap: 'wrap', padding: '3rem 1.5rem', borderTop: '1px solid rgba(56,189,248,0.08)', borderBottom: '1px solid rgba(56,189,248,0.08)' },
-  statItem: { textAlign: 'center' },
-  statVal: { fontSize: '2.2rem', fontWeight: 800, color: '#38bdf8', display: 'block' },
-  statLabel: { fontSize: '0.85rem', color: '#64748b', marginTop: '0.25rem' },
-  section: { maxWidth: 1200, margin: '0 auto', padding: '4rem 1.5rem' },
-  sectionTitle: { fontSize: '1.8rem', fontWeight: 800, marginBottom: '0.5rem', textAlign: 'center' },
-  sectionSub: { color: '#64748b', textAlign: 'center', marginBottom: '2.5rem', fontSize: '1rem' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.25rem' },
-  card: { background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1.5rem', textDecoration: 'none', display: 'block', transition: 'all 0.2s' },
-  cardIcon: { fontSize: '2rem', marginBottom: '0.75rem' },
-  cardTitle: { fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem' },
-  cardDesc: { fontSize: '0.88rem', color: '#64748b', lineHeight: 1.5 },
-  footer: { borderTop: '1px solid rgba(56,189,248,0.08)', padding: '2rem 1.5rem', textAlign: 'center', color: '#475569', fontSize: '0.85rem' },
-}
+import Link from "next/link";
 
 export default function Home() {
-  const [t, setT] = useState(0)
-  useEffect(() => {
-    const id = setInterval(() => setT(x => (x + 1) % taglines.length), 4000)
-    return () => clearInterval(id)
-  }, [])
-
   return (
-    <main style={S.page}>
-      {/* Hero */}
-      <div style={S.hero}>
-        <div style={S.badge}>TRUST-BASED SOCIAL COMMERCE</div>
-        <h1 style={S.h1}>
-          Free<span style={{ color: '#38bdf8' }}>Trust</span>
-        </h1>
-        <p style={S.tagline}>{taglines[t]}</p>
-        <div style={S.ctaRow}>
-          <Link href="/register" style={S.ctaPrimary}>Get Started Free</Link>
-          <Link href="/marketplace" style={S.ctaSecondary}>Browse Marketplace</Link>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div style={S.statsRow}>
-        {stats.map(s => (
-          <div key={s.label} style={S.statItem}>
-            <span style={S.statVal}>{s.value}</span>
-            <div style={S.statLabel}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Features */}
-      <div style={S.section}>
-        <h2 style={S.sectionTitle}>Everything in one platform</h2>
-        <p style={S.sectionSub}>FreeTrust brings together commerce, community, and impact under one roof.</p>
-        <div style={S.grid}>
-          {features.map(f => (
-            <Link key={f.title} href={f.href} style={S.card}>
-              <div style={S.cardIcon}>{f.icon}</div>
-              <div style={S.cardTitle}>{f.title}</div>
-              <p style={S.cardDesc}>{f.desc}</p>
+    <main className="home-main">
+      <section className="hero">
+        <div className="hero-content">
+          <h1 className="hero-title">
+            Welcome to <span className="brand">FreeTrust</span>
+          </h1>
+          <p className="hero-subtitle">
+            A transparent, open-source platform built on trust, security, and
+            community.
+          </p>
+          <div className="hero-actions">
+            <Link href="/register" className="btn btn-primary">
+              Get Started
             </Link>
+            <Link href="/about" className="btn btn-outline">
+              Learn More
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="features-section">
+        <div className="section-header">
+          <h2 className="section-title">Why FreeTrust?</h2>
+          <p className="section-subtitle">
+            Everything you need to build and maintain trust in your digital
+            world.
+          </p>
+        </div>
+        <div className="features-grid">
+          {features.map((feature, index) => (
+            <div className="feature-card" key={index}>
+              <div className="feature-icon">{feature.icon}</div>
+              <h3 className="feature-title">{feature.title}</h3>
+              <p className="feature-desc">{feature.description}</p>
+            </div>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* CTA Banner */}
-      <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.12)', margin: '0 1.5rem 4rem', borderRadius: 16, padding: '3rem', textAlign: 'center' }}>
-        <h2 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.75rem' }}>Ready to build trust?</h2>
-        <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>Join 24,800+ members already using FreeTrust to grow their businesses and communities.</p>
-        <Link href="/register" style={S.ctaPrimary}>Create Free Account</Link>
-      </div>
+      <section className="stats-section">
+        <div className="stats-grid">
+          {stats.map((stat, index) => (
+            <div className="stat-card" key={index}>
+              <span className="stat-number">{stat.number}</span>
+              <span className="stat-label">{stat.label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
 
-      <footer style={S.footer}>
-        © 2025 FreeTrust · Built on trust, powered by community
-      </footer>
+      <section className="cta-section">
+        <div className="cta-content">
+          <h2 className="cta-title">Ready to get started?</h2>
+          <p className="cta-subtitle">
+            Join thousands of users who already trust FreeTrust.
+          </p>
+          <Link href="/register" className="btn btn-primary btn-large">
+            Create Free Account
+          </Link>
+        </div>
+      </section>
     </main>
-  )
+  );
+}
+
+const features = [
+  {
+    icon: "🔒",
+    title: "Secure by Design",
+    description:
+      "End-to-end encryption and zero-knowledge architecture ensure your data stays private at all times.",
+  },
+  {
+    icon: "🌐",
+    title: "Open Source",
+    description:
+      "Fully transparent codebase audited by the community. No hidden backdoors, ever.",
+  },
+  {
+    icon: "⚡",
+    title: "Lightning Fast",
+    description:
+      "Optimised infrastructure delivers sub-100ms response times globally.",
+  },
+  {
+    icon: "🤝",
+    title: "Community Driven",
+    description:
+      "Governed by its users. Every major decision is voted on by the community.",
+  },
+  {
+    icon: "🛡️",
+    title: "Privacy First",
+    description:
+      "We collect only what is necessary. Your data is never sold or shared with third parties.",
+  },
+  {
+    icon: "🔧",
+    title: "Developer Friendly",
+    description:
+      "Rich APIs, SDKs, and documentation to integrate FreeTrust into any stack.",
+  },
+];
+
+const stats = [
+  { number: "50K+", label: "Active Users" },
+  { number: "99.9%", label: "Uptime" },
+  { number: "128-bit", label: "Encryption" },
+  { number: "0", label: "Data Breaches" },
+];
+
+{"file": "app/page.module.css", "action": "write"}
+
+/* ───────────────────────────────────────────
+   Base / Reset
+─────────────────────────────────────────── */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ───────────────────────────────────────────
+   Main wrapper
+─────────────────────────────────────────── */
+.home-main {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  color: #1a1a2e;
+  background: #f8f9fc;
+}
+
+/* ───────────────────────────────────────────
+   Hero Section
+─────────────────────────────────────────── */
+.hero {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  padding: clamp(2rem, 6vw, 6rem) clamp(1rem, 4vw, 2rem);
+}
+
+.hero-content {
+  width: 100%;
+  max-width: 720px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.hero-title {
+  font-size: clamp(2rem, 5vw, 3.75rem);
+  font-weight: 800;
+  line-height: 1.15;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+.brand {
+  background: linear-gradient(90deg, #e94560, #0f3460);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  color: #a8b2d8;
+  max-width: 560px;
+  line-height: 1.7;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+/* ───────────────────────────────────────────
+   Buttons
+─────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 2rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-primary {
+  background: #e94560;
+  color: #ffffff;
+  border: 2px solid #e94560;
+}
+
+.btn-primary:hover {
+  background: #c73652;
+  border-color: #c73652;
+}
+
+.btn-outline {
+  background: transparent;
+  color: #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+.btn-outline:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #ffffff;
+}
+
+.btn-large {
+  padding: 1rem 2.5rem;
+  font-size: 1.1rem;
+}
+
+/* ───────────────────────────────────────────
+   Features Section
+─────────────────────────────────────────── */
+.features-section {
+  width: 100%;
+  padding: clamp(3rem, 8vw, 6rem) clamp(1rem, 5vw, 2rem);
+  background: #ffffff;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: clamp(2rem, 5vw, 3.5rem);
+}
+
+.section-title {
+  font-size: clamp(1.6rem, 3.5vw, 2.5rem);
+  font-weight: 800;
+  color: #1a1a2e;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.75rem;
+}
+
+.section-subtitle {
+  font-size: clamp(0.95rem, 2vw, 1.15rem);
+  color: #6b7280;
+  max-width: 520px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.feature-card {
+  background: #f8f9fc;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+  border-color: #e94560;
+}
+
+.feature-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.feature-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.feature-desc {
+  font-size: 0.95rem;
+  color: #6b7280;
+  line-height: 1.65;
+}
+
+/* ───────────────────────────────────────────
+   Stats Section
+─────────────────────────────────────────── */
+.stats-section {
+  width: 100%;
+  background: linear-gradient(135deg, #1a1a2e, #0f3460);
+  padding: clamp(3rem, 7vw, 5rem) clamp(1rem, 5vw, 2rem);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: clamp(1.5rem, 3vw, 2rem) 1rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 0.2s ease;
+}
+
+.stat-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.stat-number {
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  font-weight: 800;
+  color: #e94560;
+  letter-spacing: -0.02em;
+}
+
+.stat-label {
+  font-size: 0.95rem;
+  color: #a8b2d8;
+  font-weight: 500;
+}
+
+/* ───────────────────────────────────────────
+   CTA Section
+─────────────────────────────────────────── */
+.cta-section {
+  width: 100%;
+  background: #f8f9fc;
+  padding: clamp(3rem, 8vw, 6rem) clamp(1rem, 5vw, 2rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cta-content {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  max-width: 580px;
+}
+
+.cta-title {
+  font-size: clamp(1.6rem, 3.5vw, 2.5rem);
+  font-weight: 800;
+  color: #1a1a2e;
+  letter-spacing: -0.02em;
+}
+
+.cta-subtitle {
+  font-size: clamp(0.95rem, 2vw, 1.15rem);
+  color: #6b7280;
+  line-height: 1.7;
+}
+
+/* ───────────────────────────────────────────
+   Responsive overrides
+─────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .hero-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .btn {
+    width: 100%;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 900px) {
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 901px) {
+  .features-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
