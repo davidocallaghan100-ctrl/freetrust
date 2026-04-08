@@ -1,23 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
   const orgId = params.id;
-  const userId = session.user.id;
+  const userId = user.id;
 
   try {
-    const supabase = createClient();
-
     const { data: existing, error: fetchError } = await supabase
       .from("organisation_followers")
       .select("id")
@@ -75,13 +73,12 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   const orgId = params.id;
-  const userId = session?.user?.id ?? null;
+  const userId = user?.id ?? null;
 
   try {
-    const supabase = createClient();
-
     const { count: followers } = await supabase
       .from("organisation_followers")
       .select("id", { count: "exact", head: true })
@@ -107,4 +104,3 @@ export async function GET(
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-

@@ -161,7 +161,7 @@ export default function ConnectionsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ targetUserId: targetId }),
       })
-      setFollowingIds(prev => new Set([...prev, targetId]))
+      setFollowingIds(prev => { const n = new Set(prev); n.add(targetId); return n })
     } catch { /* silent */ }
   }
 
