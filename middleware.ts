@@ -39,7 +39,18 @@ export async function middleware(request: NextRequest) {
     // Auth check failed — allow through, page-level will handle
   }
 
-  const protectedPaths = ['/dashboard', '/wallet', '/admin']
+  const protectedPaths = [
+    '/dashboard',
+    '/wallet',
+    '/admin',
+    '/profile',
+    '/messages',
+    '/seller',
+    '/community/new',
+    '/articles/new',
+    '/articles/drafts',
+    '/jobs/new',
+  ]
   const isProtected = protectedPaths.some(p =>
     request.nextUrl.pathname.startsWith(p)
   )

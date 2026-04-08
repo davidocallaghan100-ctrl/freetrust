@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import Nav from "@/components/Nav";
@@ -17,7 +17,12 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "FreeTrust – Trust-Based Social Commerce",
   description: "FreeTrust is the platform where trust is the currency. Buy, sell, connect, and grow with verified community members.",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({

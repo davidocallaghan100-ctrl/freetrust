@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -21,7 +21,7 @@ function estimateReadTime(wordCount: number): number {
 
 type ToastType = 'success' | 'error'
 
-export default function NewArticlePage() {
+function NewArticleInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const draftId = searchParams.get('draft')
@@ -344,5 +344,17 @@ export default function NewArticlePage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function NewArticlePage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+        Loading editor…
+      </div>
+    }>
+      <NewArticleInner />
+    </Suspense>
   )
 }

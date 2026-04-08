@@ -16,6 +16,7 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [trustToast, setTrustToast] = useState(false)
 
   // Password strength
   const pwStrength = (() => {
@@ -36,6 +37,19 @@ export default function RegisterPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
     setError('')
+  }
+
+  const issueSignupBonus = async () => {
+    try {
+      const res = await fetch('/api/auth/signup-bonus', { method: 'POST' })
+      const data = await res.json() as { issued?: boolean }
+      if (data.issued) {
+        setTrustToast(true)
+        setTimeout(() => setTrustToast(false), 4000)
+      }
+    } catch {
+      // Silently fail — trust bonus is non-critical
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,6 +82,8 @@ export default function RegisterPage() {
         throw new Error(msg || 'Something went wrong. Please try again.')
       }
       setSuccess(true)
+      // Issue ₮25 signup bonus
+      void issueSignupBonus()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
@@ -141,6 +157,30 @@ export default function RegisterPage() {
         }
         .auth-logo-text { font-size: 18px; font-weight: 800; color: #f1f5f9; letter-spacing: -0.3px; }
         .auth-logo-text span { color: #38bdf8; }
+
+        /* Trust toast */
+        .trust-toast {
+          position: fixed;
+          bottom: 24px;
+          right: 24px;
+          background: linear-gradient(135deg, rgba(56,189,248,0.15), rgba(52,211,153,0.1));
+          border: 1px solid rgba(56,189,248,0.3);
+          border-radius: 12px;
+          padding: 12px 18px;
+          font-size: 14px;
+          font-weight: 600;
+          color: #38bdf8;
+          z-index: 9999;
+          animation: slideIn 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+        @keyframes slideIn {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
 
         /* Perks strip */
         .perks-strip {
@@ -297,8 +337,16 @@ export default function RegisterPage() {
           .perks-strip { gap: 8px; padding: 8px 10px; }
           .perk { font-size: 11px; }
           .btn-google { font-size: 14px; }
+          .trust-toast { bottom: 16px; right: 16px; left: 16px; }
         }
       `}</style>
+
+      {trustToast && (
+        <div className="trust-toast">
+          <span>₮</span>
+          <span>₮25 Trust awarded! Welcome to FreeTrust 🎉</span>
+        </div>
+      )}
 
       <div className="auth-page">
         <div className="blob blob-1" />
@@ -317,7 +365,7 @@ export default function RegisterPage() {
               <p className="success-sub">
                 We sent a confirmation link to{' '}
                 <span className="success-email">{form.email}</span>.<br />
-                Click it to activate your account.
+                Click it to activate your account and claim your ₮25 Trust tokens.
               </p>
               <div className="success-next">
                 💡 Can&apos;t find it? Check your spam or junk folder — it sometimes lands there.
@@ -332,7 +380,7 @@ export default function RegisterPage() {
               <div className="perks-strip">
                 <div className="perk">✅ Free forever</div>
                 <div className="perk">🔒 No spam</div>
-                <div className="perk">₮ Earn trust tokens</div>
+                <div className="perk">₮ Earn ₮25 on signup</div>
               </div>
 
               {/* Google — primary */}
@@ -462,6 +510,7 @@ export default function RegisterPage() {
                   By signing up you agree to our{' '}
                   <Link href="#">Terms of Service</Link> and{' '}
                   <Link href="#">Privacy Policy</Link>.
+                  You&apos;ll receive ₮25 Trust tokens to start.
                 </p>
               </form>
             </>
