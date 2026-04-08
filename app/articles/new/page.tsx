@@ -136,7 +136,12 @@ function NewArticleInner() {
         result = await supabase.from('articles').insert(payload).select().single()
       }
 
-      if (result.error) throw result.error
+      if (result.error) {
+        if (result.error.code === '42P01' || result.error.message?.includes('relation') || result.error.message?.includes('does not exist')) {
+          throw new Error('Articles table not yet created. Ask your admin to run the articles-schema.sql migration in Supabase.')
+        }
+        throw result.error
+      }
 
       if (status === 'published') {
         showToast('Article published! ₮20 Trust earned 🎉', 'success')

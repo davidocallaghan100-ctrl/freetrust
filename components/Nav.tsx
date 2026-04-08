@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import NotificationBell from '@/components/notifications/NotificationBell'
 import { createClient } from '@/lib/supabase/client'
+import { useUnreadCount } from '@/hooks/useUnreadCount'
 
 const links = [
   { href: '/browse', label: 'Browse' },
@@ -44,6 +45,7 @@ export default function Nav() {
   const [open, setOpen] = useState(false)
   const [user, setUser] = useState<{ email: string | null; name: string | null } | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const { unreadCount } = useUnreadCount()
 
   // Close mobile menu on route change
   useEffect(() => { setOpen(false) }, [path])
@@ -435,6 +437,14 @@ export default function Nav() {
             <Link href="/search" className="ft-nav-search-btn" aria-label="Search">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </Link>
+            <Link href="/messages" className="ft-nav-search-btn" aria-label="Messages" style={{ position: 'relative' }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              {unreadCount > 0 && (
+                <span style={{ position: 'absolute', top: -4, right: -4, background: '#ef4444', borderRadius: '50%', minWidth: 16, height: 16, fontSize: '0.6rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', border: '2px solid rgba(15,23,42,0.97)' }}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Link>
             <NotificationBell />
             {!authLoading && (
               user ? (
@@ -506,6 +516,11 @@ export default function Nav() {
           <Link href="/messages" className="ft-mobile-link" onClick={() => setOpen(false)}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight:'0.65rem'}}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             Messages
+            {unreadCount > 0 && (
+              <span style={{ marginLeft: 'auto', background: '#ef4444', borderRadius: 999, padding: '0.1rem 0.45rem', fontSize: '0.72rem', fontWeight: 700, color: '#fff' }}>
+                {unreadCount}
+              </span>
+            )}
           </Link>
           <div className="ft-mobile-divider" />
           <div className="ft-mobile-auth">
