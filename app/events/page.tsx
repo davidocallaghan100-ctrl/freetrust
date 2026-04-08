@@ -1,5 +1,6 @@
 'use client'
 import React, { useState } from 'react'
+import Link from 'next/link'
 
 const filters = ['All Events', 'Online', 'In Person', 'Free', 'This Week', 'This Month']
 
@@ -119,14 +120,20 @@ export default function EventsPage() {
       <div style={S.content}>
         <div style={S.list}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.88rem', color: '#64748b' }}>{filtered.length} events</span>
-            <button style={{ background: '#38bdf8', border: 'none', borderRadius: 7, padding: '0.4rem 1rem', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer' }}>+ Host an Event</button>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.88rem', color: '#64748b' }}>{filtered.length} events</span>
+              <Link href="/events/calendar" style={{ fontSize: '0.78rem', color: '#38bdf8', textDecoration: 'none', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.2rem 0.6rem' }}>📅 Calendar</Link>
+            </div>
+            <Link href="/events/create">
+              <button style={{ background: '#38bdf8', border: 'none', borderRadius: 7, padding: '0.4rem 1rem', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer' }}>+ Host an Event</button>
+            </Link>
           </div>
 
           {filtered.map(ev => {
             const [dayOfWeek, dayNum, month] = ev.date.split(' ')
             return (
-              <div key={ev.id} style={S.card}>
+              <Link key={ev.id} href={`/events/${ev.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div style={S.card}>
                 <div style={S.dateBox}>
                   <div style={S.dateDay}>{dayOfWeek.toUpperCase()}</div>
                   <div style={S.dateNum}>{dayNum}</div>
@@ -153,6 +160,7 @@ export default function EventsPage() {
                   </div>
                 </div>
               </div>
+              </Link>
             )
           })}
         </div>
@@ -172,7 +180,9 @@ export default function EventsPage() {
           <div style={{ ...S.sideCard, background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)' }}>
             <div style={S.sideTitle}>Host Your Event</div>
             <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.5, marginBottom: '0.75rem' }}>Share your knowledge with the FreeTrust community. Online or in-person.</p>
-            <button style={{ width: '100%', background: '#38bdf8', border: 'none', borderRadius: 8, padding: '0.6rem', fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer' }}>Create Event</button>
+            <Link href="/events/create">
+              <button style={{ width: '100%', background: '#38bdf8', border: 'none', borderRadius: 8, padding: '0.6rem', fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer' }}>Create Event</button>
+            </Link>
           </div>
 
           <div style={S.sideCard}>
