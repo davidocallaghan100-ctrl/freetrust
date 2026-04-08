@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useNotificationStore } from "@/lib/notifications/store";
 import NotificationItem from "./NotificationItem";
 import styles from "./NotificationDropdown.module.css";
-import type { NotificationType } from "@/types/notifications";
+import type { Notification, NotificationType } from "@/types/notifications";
 
 const FILTERS: { label: string; value: "all" | NotificationType }[] = [
   { label: "All", value: "all" },
@@ -29,9 +29,9 @@ export default function NotificationDropdown({ onClose }: Props) {
   const filtered =
     filter === "all"
       ? notifications
-      : notifications.filter((n) => n.type === filter);
+      : notifications.filter((n: Notification) => n.type === filter);
 
-  const unreadFiltered = filtered.filter((n) => !n.read).length;
+  const unreadFiltered = filtered.filter((n: Notification) => !n.read).length;
 
   return (
     <div className={styles.dropdown} role="dialog" aria-label="Notifications">
