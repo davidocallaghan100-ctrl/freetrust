@@ -1195,6 +1195,34 @@ input, textarea, select {
   }
 }
 
+/* ============================================================
+   SIDEBAR + PAGE CONTENT LAYOUT
+   ============================================================ */
+
+/* Sidebar: visible on desktop, hidden on mobile */
+.ft-sidebar {
+  display: block;
+}
+
+/* Main content: offset by sidebar width + topbar on desktop */
+.ft-page-content {
+  margin-left: 220px;
+  padding-top: 58px;
+  min-height: 100vh;
+  width: calc(100% - 220px);
+}
+
+@media (max-width: 768px) {
+  .ft-sidebar {
+    display: none !important;
+  }
+  .ft-page-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding-bottom: 72px; /* space for bottom nav */
+  }
+}
+
 /* ---- Very small screens (≤ 380px) ---- */
 @media (max-width: 380px) {
   /* Calendar: reduce cell text further */
