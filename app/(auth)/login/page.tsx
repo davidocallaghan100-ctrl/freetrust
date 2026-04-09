@@ -33,22 +33,34 @@ export default function LoginPage() {
     }
     setLoading(true)
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: form.email,
-        password: form.password,
+      // Use server-side login endpoint (has rate limiting + lockout)
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email.trim(), password: form.password }),
       })
-      if (error) throw error
+      if (res.status === 429) {
+        const data = await res.json() as { error?: string }
+        setError(data.error ?? 'Too many attempts. Please wait 15 minutes before trying again.')
+        return
+      }
+      if (res.status === 401) {
+        setError('Incorrect email or password. Please try again.')
+        return
+      }
+      if (!res.ok) {
+        const data = await res.json() as { error?: string }
+        if ((data.error ?? '').includes('Email not confirmed')) {
+          setError('Please confirm your email address before signing in.')
+        } else {
+          setError(data.error ?? 'Unable to sign in. Please try again.')
+        }
+        return
+      }
       router.push('/feed')
       router.refresh()
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : ''
-      if (msg.includes('Invalid login credentials')) {
-        setError('Incorrect email or password. Please try again.')
-      } else if (msg.includes('Email not confirmed')) {
-        setError('Please confirm your email address before signing in.')
-      } else {
-        setError(msg || 'Unable to sign in. Please try again.')
-      }
+    } catch {
+      setError('Unable to sign in. Please check your connection and try again.')
     } finally {
       setLoading(false)
     }

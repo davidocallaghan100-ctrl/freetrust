@@ -65,7 +65,11 @@ export default function RegisterPage() {
     if (!form.name.trim()) { setError('Please enter your full name.'); return }
     if (!form.email) { setError('Please enter your email address.'); return }
     if (!form.password) { setError('Please choose a password.'); return }
+    // Strong password enforcement
     if (form.password.length < 8) { setError('Password must be at least 8 characters.'); return }
+    if (!/[A-Z]/.test(form.password)) { setError('Password must contain at least one uppercase letter.'); return }
+    if (!/[0-9]/.test(form.password)) { setError('Password must contain at least one number.'); return }
+    if (!/[^A-Za-z0-9]/.test(form.password)) { setError('Password must contain at least one special character (e.g. ! @ # $).'); return }
     if (form.password !== form.confirm) { setError('Passwords don\'t match.'); return }
 
     setLoading(true)

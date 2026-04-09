@@ -1,35 +1,114 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { checkApiRateLimit, checkLoginRateLimit } from '@/lib/security/rate-limit'
+
+function getClientIp(req: NextRequest): string {
+  return (
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    req.headers.get('x-real-ip') ||
+    req.headers.get('cf-connecting-ip') ||
+    'unknown'
+  )
+}
+
+/** Attach security headers to every response */
+function applySecurityHeaders(response: NextResponse): NextResponse {
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('X-Frame-Options', 'SAMEORIGIN')
+  response.headers.set('X-XSS-Protection', '1; mode=block')
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+  response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
+  // Content Security Policy
+  response.headers.set(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com",
+      "img-src 'self' data: blob: https: http:",
+      "media-src 'self' https:",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://www.google-analytics.com",
+      "frame-src https://js.stripe.com https://hooks.stripe.com",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "upgrade-insecure-requests",
+    ].join('; ')
+  )
+  return response
+}
 
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
+  const { pathname } = request.nextUrl
+  const ip = getClientIp(request)
 
+  // ── 1. API rate limiting ────────────────────────────────────────────────
+  if (pathname.startsWith('/api/')) {
+    // Special: login endpoint uses stricter login rate limit
+    if (pathname === '/api/auth/login' && request.method === 'POST') {
+      let email = ''
+      try {
+        const body = await request.clone().json() as { email?: string }
+        email = body.email ?? ''
+      } catch { /* ignore parse errors */ }
+      const loginResult = checkLoginRateLimit(ip, email)
+      if (!loginResult.allowed) {
+        const waitSecs = loginResult.lockedUntil
+          ? Math.ceil((loginResult.lockedUntil - Date.now()) / 1000)
+          : 900
+        const res = NextResponse.json(
+          { error: `Too many login attempts. Please wait ${Math.ceil(waitSecs / 60)} minutes before trying again.` },
+          { status: 429 }
+        )
+        res.headers.set('Retry-After', String(waitSecs))
+        return applySecurityHeaders(res)
+      }
+    }
+
+    // General API rate limit: 100 req/min per IP
+    const apiResult = checkApiRateLimit(ip)
+    if (!apiResult.allowed) {
+      const res = NextResponse.json(
+        { error: 'Too many requests. Please slow down.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(Math.ceil((apiResult.resetAt - Date.now()) / 1000)),
+            'X-RateLimit-Limit': '100',
+            'X-RateLimit-Remaining': '0',
+          },
+        }
+      )
+      return applySecurityHeaders(res)
+    }
+  }
+
+  // ── 2. Supabase auth session refresh ────────────────────────────────────
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  // If Supabase is not configured, allow all requests through
   if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'https://placeholder.supabase.co') {
-    return supabaseResponse
+    return applySecurityHeaders(NextResponse.next({ request }))
   }
 
-  const supabase = createServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
+  let supabaseResponse = NextResponse.next({ request })
+
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll()
       },
-    }
-  )
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+        supabaseResponse = NextResponse.next({ request })
+        cookiesToSet.forEach(({ name, value, options }) =>
+          supabaseResponse.cookies.set(name, value, options)
+        )
+      },
+    },
+  })
 
   let user = null
   try {
@@ -39,8 +118,7 @@ export async function middleware(request: NextRequest) {
     // Auth check failed — allow through, page-level will handle
   }
 
-  // Landing page is accessible to everyone — logged-in users can visit it via the logo
-
+  // ── 3. Protected route redirect ─────────────────────────────────────────
   const protectedPaths = [
     '/dashboard',
     '/wallet',
@@ -56,18 +134,17 @@ export async function middleware(request: NextRequest) {
     '/create-business',
     '/orders',
   ]
-  const isProtected = protectedPaths.some(p =>
-    request.nextUrl.pathname.startsWith(p)
-  )
+  const isProtected = protectedPaths.some(p => pathname.startsWith(p))
 
   if (isProtected && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    url.searchParams.set('redirect', request.nextUrl.pathname)
-    return NextResponse.redirect(url)
+    url.searchParams.set('redirect', pathname)
+    const redirectRes = NextResponse.redirect(url)
+    return applySecurityHeaders(redirectRes)
   }
 
-  return supabaseResponse
+  return applySecurityHeaders(supabaseResponse)
 }
 
 export const config = {

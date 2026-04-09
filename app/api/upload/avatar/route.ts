@@ -1,6 +1,8 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { validateFileUpload, ALLOWED_IMAGE_TYPES } from '@/lib/security/validate'
+import { sanitizeFilename } from '@/lib/security/sanitize'
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,18 +18,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
 
-    // Validate size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: 'File too large (max 5MB)' }, { status: 400 })
+    // Validate size (10MB) and allowed types
+    const { valid, error: fileError } = validateFileUpload(file)
+    if (!valid) return NextResponse.json({ error: fileError }, { status: 400 })
+
+    // Avatars: images only
+    if (!(ALLOWED_IMAGE_TYPES as readonly string[]).includes(file.type)) {
+      return NextResponse.json({ error: 'Avatars must be an image (jpg, png, gif, webp)' }, { status: 400 })
     }
 
-    // Validate type
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-    if (!allowed.includes(file.type)) {
-      return NextResponse.json({ error: 'Invalid file type' }, { status: 400 })
-    }
-
-    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+    const safeFilename = sanitizeFilename(file.name)
+    const ext = safeFilename.split('.').pop()?.toLowerCase() ?? 'jpg'
     const path = `${user.id}/${Date.now()}.${ext}`
 
     const arrayBuffer = await file.arrayBuffer()
@@ -52,12 +53,11 @@ export async function POST(req: NextRequest) {
 
     if (dbError) {
       console.error('[avatar upload] db error:', dbError)
-      // Still return the URL even if DB update fails
     }
 
     return NextResponse.json({ url: avatar_url })
   } catch (err) {
     console.error('[avatar upload] unexpected error:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
   }
 }

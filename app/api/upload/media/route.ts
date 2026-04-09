@@ -1,6 +1,8 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { validateFileUpload } from '@/lib/security/validate'
+import { sanitizeFilename } from '@/lib/security/sanitize'
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,8 +16,15 @@ export async function POST(req: NextRequest) {
 
     if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
-    const ext = file.name.split('.').pop() ?? 'bin'
-    const path = `${type}/${user.id}/${Date.now()}.${ext}`
+    // Validate size (10MB) and type allowlist (jpg, png, gif, mp4, pdf)
+    const { valid, error: fileError } = validateFileUpload(file)
+    if (!valid) return NextResponse.json({ error: fileError }, { status: 400 })
+
+    const safeFilename = sanitizeFilename(file.name)
+    const ext = safeFilename.split('.').pop()?.toLowerCase() ?? 'bin'
+    // Sanitise type param — only allow known bucket folders
+    const safeType = ['photo', 'video', 'document', 'listing'].includes(type) ? type : 'photo'
+    const path = `${safeType}/${user.id}/${Date.now()}.${ext}`
 
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
@@ -31,6 +40,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: publicUrl, path })
   } catch (err) {
     console.error('[upload/media]', err)
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
+    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
   }
 }

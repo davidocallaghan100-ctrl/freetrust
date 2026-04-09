@@ -33,7 +33,7 @@ interface TrustLedgerEntry {
   created_at: string
 }
 
-type Tab = 'account' | 'privacy' | 'notifications' | 'trust' | 'stripe' | 'danger'
+type Tab = 'account' | 'privacy' | 'notifications' | 'trust' | 'stripe' | 'security' | 'danger'
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'account',       label: 'Account',        icon: '👤' },
@@ -41,6 +41,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'notifications', label: 'Notifications',   icon: '🔔' },
   { id: 'trust',         label: 'Trust Breakdown', icon: '₮'  },
   { id: 'stripe',        label: 'Stripe Connect',  icon: '💳' },
+  { id: 'security',      label: 'Security',        icon: '🛡️'  },
   { id: 'danger',        label: 'Danger Zone',     icon: '⚠️'  },
 ]
 
@@ -201,6 +202,9 @@ export default function SettingsPage() {
           )}
           {activeTab === 'stripe' && (
             <StripeTab profile={profile} />
+          )}
+          {activeTab === 'security' && (
+            <SecurityTab user={user} />
           )}
           {activeTab === 'danger' && (
             <DangerTab onDeleted={() => router.push('/')} />
@@ -691,6 +695,201 @@ function StripeTab({ profile }: { profile: Profile }) {
             )}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── Security Tab ───────────────────────────────────────────────────────────────
+
+function SecurityTab({ user }: { user: { email?: string } }) {
+  const supabase = createClient()
+  const [mfaFactors, setMfaFactors] = useState<{ id: string; friendly_name?: string; factor_type: string; status: string }[]>([])
+  const [mfaLoading, setMfaLoading] = useState(true)
+  const [enrolling, setEnrolling] = useState(false)
+  const [qrCode, setQrCode] = useState<string | null>(null)
+  const [secret, setSecret] = useState<string | null>(null)
+  const [verifyCode, setVerifyCode] = useState('')
+  const [verifyError, setVerifyError] = useState('')
+  const [verifying, setVerifying] = useState(false)
+  const [enrollId, setEnrollId] = useState<string | null>(null)
+  const [success, setSuccess] = useState('')
+  const [unenrolling, setUnenrolling] = useState<string | null>(null)
+  const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' })
+  const [pwLoading, setPwLoading] = useState(false)
+  const [pwError, setPwError] = useState('')
+  const [pwSuccess, setPwSuccess] = useState('')
+
+  useEffect(() => {
+    async function loadFactors() {
+      try {
+        const { data } = await supabase.auth.mfa.listFactors()
+        setMfaFactors((data?.totp ?? []).map(f => ({ ...f, factor_type: 'totp' })))
+      } catch { /* ignore */ } finally { setMfaLoading(false) }
+    }
+    loadFactors()
+  }, [supabase])
+
+  const startEnroll = async () => {
+    setEnrolling(true)
+    setVerifyError('')
+    try {
+      const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Authenticator App' })
+      if (error || !data) { setVerifyError(error?.message ?? 'Failed to start 2FA setup'); return }
+      setQrCode(data.totp.qr_code)
+      setSecret(data.totp.secret)
+      setEnrollId(data.id)
+    } finally { setEnrolling(false) }
+  }
+
+  const verifyEnroll = async () => {
+    if (!enrollId || !verifyCode) return
+    setVerifying(true)
+    setVerifyError('')
+    try {
+      const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: enrollId, code: verifyCode })
+      if (error) { setVerifyError('Invalid code. Please try again.'); return }
+      setQrCode(null); setSecret(null); setEnrollId(null); setVerifyCode('')
+      setSuccess('Two-factor authentication enabled!')
+      const { data } = await supabase.auth.mfa.listFactors()
+      setMfaFactors((data?.totp ?? []).map(f => ({ ...f, factor_type: 'totp' })))
+    } finally { setVerifying(false) }
+  }
+
+  const unenroll = async (factorId: string) => {
+    setUnenrolling(factorId)
+    try {
+      await supabase.auth.mfa.unenroll({ factorId })
+      setMfaFactors(prev => prev.filter(f => f.id !== factorId))
+      setSuccess('Two-factor authentication removed.')
+    } finally { setUnenrolling(null) }
+  }
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPwError(''); setPwSuccess('')
+    if (!pwForm.current) { setPwError('Enter your current password.'); return }
+    if (pwForm.newPw.length < 8) { setPwError('New password must be at least 8 characters.'); return }
+    if (!/[A-Z]/.test(pwForm.newPw)) { setPwError('New password must contain an uppercase letter.'); return }
+    if (!/[0-9]/.test(pwForm.newPw)) { setPwError('New password must contain a number.'); return }
+    if (!/[^A-Za-z0-9]/.test(pwForm.newPw)) { setPwError('New password must contain a special character.'); return }
+    if (pwForm.newPw !== pwForm.confirm) { setPwError('Passwords don\'t match.'); return }
+    setPwLoading(true)
+    try {
+      // Re-authenticate first
+      const { error: reAuthError } = await supabase.auth.signInWithPassword({ email: user.email ?? '', password: pwForm.current })
+      if (reAuthError) { setPwError('Current password is incorrect.'); return }
+      const { error } = await supabase.auth.updateUser({ password: pwForm.newPw })
+      if (error) { setPwError(error.message); return }
+      setPwSuccess('Password updated successfully.')
+      setPwForm({ current: '', newPw: '', confirm: '' })
+    } finally { setPwLoading(false) }
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {/* Password change */}
+      <div className="card">
+        <h2 className="section-title">Change Password</h2>
+        <p className="section-desc">Use a strong password: min 8 characters, uppercase, number, and special character.</p>
+        <form onSubmit={handlePasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {['current', 'newPw', 'confirm'].map((key, i) => (
+            <div key={key}>
+              <label style={{ fontSize: 13, color: '#94a3b8', display: 'block', marginBottom: 5 }}>
+                {['Current password', 'New password', 'Confirm new password'][i]}
+              </label>
+              <input
+                className="field-input"
+                type="password"
+                autoComplete={key === 'current' ? 'current-password' : 'new-password'}
+                value={pwForm[key as keyof typeof pwForm]}
+                onChange={e => setPwForm(p => ({ ...p, [key]: e.target.value }))}
+              />
+            </div>
+          ))}
+          {pwError && <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#fca5a5' }}>{pwError}</div>}
+          {pwSuccess && <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#6ee7b7' }}>{pwSuccess}</div>}
+          <button type="submit" className="save-btn" disabled={pwLoading}>{pwLoading ? 'Updating…' : 'Update password'}</button>
+        </form>
+      </div>
+
+      {/* 2FA */}
+      <div className="card">
+        <h2 className="section-title">Two-Factor Authentication</h2>
+        <p className="section-desc">Add an extra layer of security with an authenticator app (Google Authenticator, Authy, etc.).</p>
+
+        {success && <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#6ee7b7', marginBottom: 14 }}>{success}</div>}
+
+        {mfaLoading ? (
+          <div style={{ color: '#64748b', fontSize: 13 }}>Loading…</div>
+        ) : mfaFactors.length > 0 ? (
+          <div>
+            {mfaFactors.map(f => (
+              <div key={f.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderTop: '1px solid #1e293b' }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#f1f5f9' }}>🔐 {f.friendly_name ?? 'Authenticator App'}</div>
+                  <div style={{ fontSize: 12, color: '#22c55e', marginTop: 2 }}>✓ Active</div>
+                </div>
+                <button
+                  className="danger-btn"
+                  style={{ fontSize: 12, padding: '6px 12px' }}
+                  onClick={() => unenroll(f.id)}
+                  disabled={unenrolling === f.id}
+                >
+                  {unenrolling === f.id ? 'Removing…' : 'Remove'}
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : qrCode ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <p style={{ fontSize: 13, color: '#94a3b8' }}>Scan this QR code with your authenticator app:</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={qrCode} alt="2FA QR Code" style={{ width: 180, height: 180, borderRadius: 10, background: '#fff', padding: 8 }} />
+            {secret && <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#94a3b8', wordBreak: 'break-all' }}>Manual key: <strong style={{ color: '#f1f5f9' }}>{secret}</strong></div>}
+            <div>
+              <label style={{ fontSize: 13, color: '#94a3b8', display: 'block', marginBottom: 6 }}>Enter the 6-digit code from your app:</label>
+              <input
+                className="field-input"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                value={verifyCode}
+                onChange={e => setVerifyCode(e.target.value.replace(/\D/g, ''))}
+                placeholder="000000"
+                style={{ letterSpacing: '0.2em', maxWidth: 160 }}
+              />
+            </div>
+            {verifyError && <div style={{ fontSize: 13, color: '#fca5a5' }}>{verifyError}</div>}
+            <button className="save-btn" onClick={verifyEnroll} disabled={verifying || verifyCode.length < 6}>
+              {verifying ? 'Verifying…' : 'Enable 2FA'}
+            </button>
+          </div>
+        ) : (
+          <div style={{ paddingTop: 8 }}>
+            <p style={{ fontSize: 13, color: '#64748b', marginBottom: 14 }}>2FA is not enabled on your account.</p>
+            <button className="save-btn" onClick={startEnroll} disabled={enrolling}>
+              {enrolling ? 'Setting up…' : '+ Enable Two-Factor Authentication'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Sign out all sessions */}
+      <div className="card">
+        <h2 className="section-title">Active Sessions</h2>
+        <p className="section-desc">Sign out of all devices at once. You&apos;ll need to log in again everywhere.</p>
+        <button
+          className="danger-btn"
+          style={{ fontSize: 13 }}
+          onClick={async () => {
+            await fetch('/api/auth/logout', { method: 'POST' })
+            window.location.href = '/login'
+          }}
+        >
+          Sign out all sessions
+        </button>
       </div>
     </div>
   )
