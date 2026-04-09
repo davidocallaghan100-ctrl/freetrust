@@ -45,17 +45,7 @@ const CAT_GRADIENTS: Record<string, string> = {
 
 const CATEGORIES = ['All', 'Community', 'Business', 'Technology', 'Design', 'Finance', 'Sustainability', 'Education', 'Health']
 
-const MOCK_EVENTS: EventItem[] = [
-  { id:'e1', title:'FreeTrust Founders Meetup — Dublin', date:new Date(Date.now()+1*86400000), time:'6:30 PM', location:'Dogpatch Labs, Dublin 2', mode:'in-person', price:null, rsvpCount:87, description:'Monthly in-person meetup for FreeTrust founders and early members. Drinks, demos and networking.', category:'Community', organiser:'Sarah Chen', organiserTrust:1240, organiserAvatar:'https://i.pravatar.cc/40?img=47', imageGradient:'linear-gradient(135deg,#0284c7,#1e40af)' },
-  { id:'e2', title:'How I Hit £10k/mo on FreeTrust — Live Q&A', date:new Date(Date.now()+2*86400000), time:'7:00 PM', location:'Online', mode:'online', price:null, rsvpCount:312, description:'Tom Walsh shares his exact strategy for building a £10k/mo consulting business using FreeTrust. Live Q&A included.', category:'Business', organiser:'Tom Walsh', organiserTrust:890, organiserAvatar:'https://i.pravatar.cc/40?img=53', imageGradient:'linear-gradient(135deg,#7c3aed,#4c1d95)' },
-  { id:'e3', title:'Sustainable Business Workshop', date:new Date(Date.now()+3*86400000), time:'2:00 PM', location:'Online', mode:'online', price:19, rsvpCount:74, description:'A practical 2-hour workshop on embedding sustainability into your business model. Certificate on completion.', category:'Sustainability', organiser:'Amara Diallo', organiserTrust:650, organiserAvatar:'https://i.pravatar.cc/40?img=45', imageGradient:'linear-gradient(135deg,#059669,#065f46)' },
-  { id:'e4', title:'Design Systems Summit 2026', date:new Date(Date.now()+5*86400000), time:'9:00 AM', location:'RDS, Dublin 4', mode:'in-person', price:149, rsvpCount:540, description:'Full-day summit on design tokens, component libraries, and cross-team design collaboration. Speakers from Shopify, Stripe and Figma.', category:'Design', organiser:'Priya Nair', organiserTrust:1580, organiserAvatar:'https://i.pravatar.cc/40?img=44', imageGradient:'linear-gradient(135deg,#db2777,#9d174d)' },
-  { id:'e5', title:'Trust Score Masterclass: Earn Faster', date:new Date(Date.now()+6*86400000), time:'6:00 PM', location:'Online', mode:'online', price:null, rsvpCount:228, description:'Learn exactly how the Trust scoring system works and the fastest legitimate paths to Elite level.', category:'FreeTrust', organiser:'Marcus Obi', organiserTrust:2100, organiserAvatar:'https://i.pravatar.cc/40?img=12', imageGradient:'linear-gradient(135deg,#0284c7,#1e40af)' },
-  { id:'e6', title:'AI Automation Hackathon — 48hr', date:new Date(Date.now()+7*86400000), time:'10:00 AM', location:'Dogpatch Labs, Dublin 2', mode:'in-person', price:null, rsvpCount:88, description:'48-hour hackathon. Build AI-powered business automation tools. €5,000 in prizes for top 3 teams.', category:'Technology', organiser:'Lena Fischer', organiserTrust:780, organiserAvatar:'https://i.pravatar.cc/40?img=41', imageGradient:'linear-gradient(135deg,#059669,#047857)' },
-  { id:'e7', title:'Impact Investment Pitch Night', date:new Date(Date.now()+10*86400000), time:'7:30 PM', location:'Online', mode:'online', price:25, rsvpCount:140, description:'Six purpose-driven startups pitch to a panel of impact investors. Audience Q&A and networking after.', category:'Finance', organiser:'James Okafor', organiserTrust:920, organiserAvatar:'https://i.pravatar.cc/40?img=13', imageGradient:'linear-gradient(135deg,#d97706,#92400e)' },
-  { id:'e8', title:'Community Photography Walk — Phoenix Park', date:new Date(Date.now()+12*86400000), time:'10:00 AM', location:'Phoenix Park, Dublin', mode:'in-person', price:null, rsvpCount:43, description:'A relaxed morning walk through Phoenix Park. Any skill level welcome. Coffee and chat after.', category:'Community', organiser:'Ciara Murphy', organiserTrust:340, organiserAvatar:'https://i.pravatar.cc/40?img=39', imageGradient:'linear-gradient(135deg,#0ea5e9,#0369a1)' },
-  { id:'e9', title:'Freelance Finance: Tax, VAT & Invoicing', date:new Date(Date.now()+14*86400000), time:'11:00 AM', location:'Online', mode:'online', price:29, rsvpCount:196, description:'Everything freelancers need to know about money: VAT registration, expenses, invoicing best practices and more.', category:'Finance', organiser:'Dave Kelly', organiserTrust:1100, organiserAvatar:'https://i.pravatar.cc/40?img=15', imageGradient:'linear-gradient(135deg,#d97706,#92400e)' },
-]
+
 
 function formatEventDate(date: Date) {
   return {
@@ -85,7 +75,8 @@ function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void
   const gradient = CAT_GRADIENTS[ev.category] ?? ev.imageGradient ?? 'linear-gradient(135deg,#0284c7,#1e40af)'
 
   return (
-    <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer' }}
+    <Link href={`/events/${ev.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+    <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer', height: '100%' }}
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 8px 32px rgba(56,189,248,0.15)' }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
 
@@ -155,11 +146,12 @@ function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.4rem' }}>
             <button
-              onClick={() => onRsvp(ev.id)}
+              onClick={e => { e.preventDefault(); e.stopPropagation(); onRsvp(ev.id) }}
               style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.78rem', fontWeight: 700, color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 36 }}>
               {ev.price ? `Buy · £${ev.price}` : 'RSVP Free'}
             </button>
             <button
+              onClick={e => { e.preventDefault(); e.stopPropagation(); if (navigator.share) { navigator.share({ title: ev.title, url: `${window.location.origin}/events/${ev.id}` }) } else { navigator.clipboard.writeText(`${window.location.origin}/events/${ev.id}`) } }}
               style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.45rem 0.6rem', fontSize: '0.78rem', color: '#38bdf8', cursor: 'pointer', minHeight: 36 }}
               title="Share event">
               ↗
@@ -168,6 +160,7 @@ function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void
         </div>
       </div>
     </div>
+    </Link>
   )
 }
 
@@ -210,7 +203,7 @@ export default function EventsPage() {
     load()
   }, [])
 
-  const events = dbEvents ?? MOCK_EVENTS
+  const events = dbEvents ?? []
 
   const filtered = events.filter(ev => {
     if (modeFilter !== 'all' && ev.mode !== modeFilter) return false
