@@ -284,8 +284,9 @@ export default function Nav() {
             ACCOUNT
           </div>
           {[
-            { href: '/profile',  label: 'Profile',  icon: '👤' },
-            { href: '/settings', label: 'Settings', icon: '⚙️' },
+            { href: '/profile',    label: 'Profile',             icon: '👤' },
+            { href: '/analytics',  label: 'Analytics Dashboard', icon: '📊' },
+            { href: '/settings',   label: 'Settings',            icon: '⚙️' },
           ].map(({ href, label, icon }) => {
             const active = isActive(href)
             return (
