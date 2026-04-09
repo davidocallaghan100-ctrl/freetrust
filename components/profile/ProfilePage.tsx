@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Avatar from '@/components/Avatar'
@@ -81,6 +82,8 @@ function calcCompleteness(profile: Profile | null, email: string | null): { pct:
 
 export default function ProfilePage() {
   const supabase = createClient()
+  const searchParams = useSearchParams()
+  const viewingId = searchParams.get('id') // null = own profile
 
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -99,6 +102,7 @@ export default function ProfilePage() {
   const [showAllServices, setShowAllServices] = useState(false)
   const [bonusAwarded, setBonusAwarded] = useState(false)
   const [toast, setToast] = useState('')
+  const [isOwnProfile, setIsOwnProfile] = useState(true)
 
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
@@ -129,15 +133,26 @@ export default function ProfilePage() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loadTrust = useCallback(async () => {
+  const loadTrust = useCallback(async (userId?: string) => {
     try {
-      const res = await fetch('/api/trust')
-      if (res.ok) {
-        const data = await res.json() as { balance?: number }
-        setTrustBalance(data.balance ?? 0)
+      if (userId) {
+        // Loading another user's trust balance directly from DB
+        const { data } = await supabase
+          .from('trust_balances')
+          .select('balance')
+          .eq('user_id', userId)
+          .single()
+        setTrustBalance(data?.balance ?? 0)
+      } else {
+        // Own trust balance via API
+        const res = await fetch('/api/trust')
+        if (res.ok) {
+          const data = await res.json() as { balance?: number }
+          setTrustBalance(data.balance ?? 0)
+        }
       }
     } catch { /* silent */ }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadServices = useCallback(async (userId: string) => {
     try {
@@ -311,7 +326,19 @@ export default function ProfilePage() {
       try {
         const { data: { user: u } } = await supabase.auth.getUser()
         setUser(u)
-        if (u) {
+
+        if (viewingId && (!u || viewingId !== u.id)) {
+          // Viewing someone else's profile — read-only
+          setIsOwnProfile(false)
+          await Promise.all([
+            loadProfile(viewingId),
+            loadTrust(viewingId),
+            loadActivity(viewingId),
+            loadServices(viewingId),
+          ])
+        } else if (u) {
+          // Own profile
+          setIsOwnProfile(true)
           await Promise.all([loadProfile(u.id), loadTrust(), loadActivity(u.id), loadServices(u.id)])
         }
       } catch (err) {
@@ -321,7 +348,7 @@ export default function ProfilePage() {
       }
     }
     init()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [viewingId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Award ₮10 bonus when profile hits 100%
   useEffect(() => {
@@ -433,12 +460,22 @@ export default function ProfilePage() {
     )
   }
 
-  if (!user) {
+  if (!user && isOwnProfile) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', background: '#0f172a', color: '#f1f5f9', gap: '1rem' }}>
         <div style={{ fontSize: '3rem' }}>🔒</div>
         <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Sign in to view your profile</h3>
         <Link href="/login" style={{ background: '#38bdf8', color: '#0f172a', borderRadius: 8, padding: '0.6rem 1.4rem', fontWeight: 700, textDecoration: 'none', fontSize: '0.9rem' }}>Sign In</Link>
+      </div>
+    )
+  }
+
+  if (!isOwnProfile && !profile && !loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', background: '#0f172a', color: '#f1f5f9', gap: '1rem' }}>
+        <div style={{ fontSize: '3rem' }}>👤</div>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Profile not found</h3>
+        <Link href="/members" style={{ color: '#38bdf8', textDecoration: 'none', fontSize: '0.9rem' }}>← Back to Members</Link>
       </div>
     )
   }
@@ -462,39 +499,45 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Hidden file inputs */}
-      <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
-      <input ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={handleCoverUpload} />
+      {/* Hidden file inputs — own profile only */}
+      {isOwnProfile && (
+        <>
+          <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
+          <input ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={handleCoverUpload} />
+        </>
+      )}
 
       {/* Cover photo */}
       <div
-        className="cover-wrap"
-        style={{ position: 'relative', height: '220px', cursor: 'pointer', overflow: 'hidden' }}
-        onClick={() => !coverUploading && coverInputRef.current?.click()}
-        onMouseEnter={() => setCoverHover(true)}
-        onMouseLeave={() => setCoverHover(false)}
+        className={isOwnProfile ? 'cover-wrap' : ''}
+        style={{ position: 'relative', height: '220px', cursor: isOwnProfile ? 'pointer' : 'default', overflow: 'hidden' }}
+        onClick={() => isOwnProfile && !coverUploading && coverInputRef.current?.click()}
+        onMouseEnter={() => isOwnProfile && setCoverHover(true)}
+        onMouseLeave={() => isOwnProfile && setCoverHover(false)}
       >
         {profile?.cover_url ? (
           <img src={profile.cover_url} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, rgba(56,189,248,0.15) 100%)' }} />
         )}
-        {/* Upload overlay */}
-        <div
-          className="cover-overlay"
-          style={{
-            position: 'absolute', inset: 0,
-            background: 'rgba(15,23,42,0.55)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            gap: '0.5rem', color: '#f1f5f9', fontSize: '0.9rem', fontWeight: 600,
-          }}
-        >
-          {coverUploading ? (
-            <div style={{ width: 24, height: 24, border: '2px solid rgba(56,189,248,0.3)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-          ) : (
-            <>📷 Change cover photo</>
-          )}
-        </div>
+        {/* Upload overlay — own profile only */}
+        {isOwnProfile && (
+          <div
+            className="cover-overlay"
+            style={{
+              position: 'absolute', inset: 0,
+              background: 'rgba(15,23,42,0.55)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: '0.5rem', color: '#f1f5f9', fontSize: '0.9rem', fontWeight: 600,
+            }}
+          >
+            {coverUploading ? (
+              <div style={{ width: 24, height: 24, border: '2px solid rgba(56,189,248,0.3)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+            ) : (
+              <>📷 Change cover photo</>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Profile header */}
@@ -502,29 +545,29 @@ export default function ProfilePage() {
         <div style={{ position: 'relative', marginBottom: '1rem' }}>
           {/* Avatar — overlaps cover */}
           <div
-            style={{ position: 'absolute', top: '-52px', left: 0, cursor: 'pointer' }}
-            onMouseEnter={() => setAvatarHover(true)}
-            onMouseLeave={() => setAvatarHover(false)}
-            onClick={() => !avatarUploading && avatarInputRef.current?.click()}
-            title="Change profile photo"
+            style={{ position: 'absolute', top: '-52px', left: 0, cursor: isOwnProfile ? 'pointer' : 'default' }}
+            onMouseEnter={() => isOwnProfile && setAvatarHover(true)}
+            onMouseLeave={() => isOwnProfile && setAvatarHover(false)}
+            onClick={() => isOwnProfile && !avatarUploading && avatarInputRef.current?.click()}
+            title={isOwnProfile ? 'Change profile photo' : undefined}
           >
             <div style={{ position: 'relative', width: 96, height: 96 }}>
               <Avatar
                 url={profile?.avatar_url}
                 name={profile?.full_name}
-                email={user.email}
+                email={isOwnProfile ? user?.email : undefined}
                 size={96}
               />
               {/* Ring */}
               <div style={{ position: 'absolute', inset: -3, borderRadius: '50%', border: '3px solid #0f172a', pointerEvents: 'none' }} />
-              {/* Uploading */}
-              {avatarUploading && (
+              {/* Uploading — own profile only */}
+              {isOwnProfile && avatarUploading && (
                 <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(15,23,42,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <div style={{ width: 20, height: 20, border: '2px solid rgba(56,189,248,0.3)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
                 </div>
               )}
-              {/* Hover */}
-              {avatarHover && !avatarUploading && (
+              {/* Hover — own profile only */}
+              {isOwnProfile && avatarHover && !avatarUploading && (
                 <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(15,23,42,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>
                   📷
                 </div>
@@ -532,20 +575,26 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Edit button */}
+          {/* Edit button — own profile only */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.75rem' }}>
-            <button
-              onClick={() => setEditing(!editing)}
-              style={{ background: editing ? 'rgba(148,163,184,0.1)' : 'rgba(56,189,248,0.1)', border: `1px solid ${editing ? 'rgba(148,163,184,0.2)' : 'rgba(56,189,248,0.3)'}`, borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.82rem', fontWeight: 600, color: editing ? '#94a3b8' : '#38bdf8', cursor: 'pointer' }}
-            >
-              {editing ? 'Cancel' : '✏️ Edit Profile'}
-            </button>
+            {isOwnProfile ? (
+              <button
+                onClick={() => setEditing(!editing)}
+                style={{ background: editing ? 'rgba(148,163,184,0.1)' : 'rgba(56,189,248,0.1)', border: `1px solid ${editing ? 'rgba(148,163,184,0.2)' : 'rgba(56,189,248,0.3)'}`, borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.82rem', fontWeight: 600, color: editing ? '#94a3b8' : '#38bdf8', cursor: 'pointer' }}
+              >
+                {editing ? 'Cancel' : '✏️ Edit Profile'}
+              </button>
+            ) : (
+              <Link href="/members" style={{ fontSize: '0.82rem', color: '#64748b', textDecoration: 'none', border: '1px solid rgba(100,116,139,0.25)', borderRadius: 8, padding: '0.45rem 1rem' }}>
+                ← Members
+              </Link>
+            )}
           </div>
 
           {/* Name + meta — offset for avatar */}
           <div style={{ paddingTop: '2.5rem' }}>
             <h1 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: '0.3rem' }}>
-              {profile?.full_name ?? user.email ?? 'Member'}
+              {profile?.full_name ?? user?.email ?? 'Member'}
             </h1>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center', fontSize: '0.85rem', color: '#64748b', marginBottom: '0.5rem' }}>
               {profile?.location && <span>📍 {profile.location}</span>}
@@ -554,7 +603,7 @@ export default function ProfilePage() {
                   🔗 {profile.website.replace(/^https?:\/\//, '')}
                 </a>
               )}
-              <span>🗓 Member since {new Date(user.created_at ?? '').toLocaleDateString('en-IE', { month: 'long', year: 'numeric' })}</span>
+              <span>🗓 Member since {new Date(profile?.created_at ?? user?.created_at ?? '').toLocaleDateString('en-IE', { month: 'long', year: 'numeric' })}</span>
             </div>
             <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem', color: '#94a3b8' }}>
               <span><strong style={{ color: '#f1f5f9' }}>{profile?.follower_count ?? 0}</strong> followers</span>
@@ -748,23 +797,25 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* Account info */}
-        <div className="profile-card">
-          <h3 style={{ marginBottom: '0.75rem', fontWeight: 700, fontSize: '1rem' }}>Account</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.88rem', color: '#64748b' }}>
-            <span>📧 {user.email}</span>
-            <span>🗓️ Joined {new Date(user.created_at ?? '').toLocaleDateString('en-IE', { month: 'long', year: 'numeric' })}</span>
-            <span>✅ Email {user.email_confirmed_at ? 'verified' : 'not verified'}</span>
+        {/* Account info — own profile only */}
+        {isOwnProfile && user && (
+          <div className="profile-card">
+            <h3 style={{ marginBottom: '0.75rem', fontWeight: 700, fontSize: '1rem' }}>Account</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.88rem', color: '#64748b' }}>
+              <span>📧 {user.email}</span>
+              <span>🗓️ Joined {new Date(user.created_at ?? '').toLocaleDateString('en-IE', { month: 'long', year: 'numeric' })}</span>
+              <span>✅ Email {user.email_confirmed_at ? 'verified' : 'not verified'}</span>
+            </div>
+            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <Link href="/settings" style={{ fontSize: '0.82rem', color: '#38bdf8', textDecoration: 'none', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 6, padding: '0.35rem 0.75rem' }}>
+                ⚙️ Settings
+              </Link>
+              <Link href="/wallet" style={{ fontSize: '0.82rem', color: '#38bdf8', textDecoration: 'none', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 6, padding: '0.35rem 0.75rem' }}>
+                💎 Wallet
+              </Link>
+            </div>
           </div>
-          <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <Link href="/settings" style={{ fontSize: '0.82rem', color: '#38bdf8', textDecoration: 'none', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 6, padding: '0.35rem 0.75rem' }}>
-              ⚙️ Settings
-            </Link>
-            <Link href="/wallet" style={{ fontSize: '0.82rem', color: '#38bdf8', textDecoration: 'none', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 6, padding: '0.35rem 0.75rem' }}>
-              💎 Wallet
-            </Link>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   )

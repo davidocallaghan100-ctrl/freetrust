@@ -37,23 +37,23 @@ export async function GET() {
       // Members this month
       supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', monthAgo).is('deleted_at', null),
       // Services listed (from listings table)
-      supabase.from('listings').select('id', { count: 'exact', head: true }).eq('type', 'service'),
-      // Products listed (from listings table)
-      supabase.from('listings').select('id', { count: 'exact', head: true }).eq('type', 'product'),
+      supabase.from('listings').select('id', { count: 'exact', head: true }).eq('product_type', 'service').eq('status', 'active'),
+      // Products listed (from listings table) — physical/digital/everything non-service
+      supabase.from('listings').select('id', { count: 'exact', head: true }).neq('product_type', 'service').eq('status', 'active'),
       // Upcoming events
       supabase.from('community_events').select('id', { count: 'exact', head: true }).gte('starts_at', now),
       // Published articles
       supabase.from('articles').select('id', { count: 'exact', head: true }).eq('status', 'published'),
       // Communities
       supabase.from('communities').select('id', { count: 'exact', head: true }),
-      // Total trust issued (sum all positive amounts)
-      supabase.from('trust_ledger').select('amount').gt('amount', 0),
-      // Trust issued this week
-      supabase.from('trust_ledger').select('amount').gte('created_at', weekAgo).gt('amount', 0),
+      // Total trust issued (sum lifetime balances across all users)
+      supabase.from('trust_balances').select('lifetime'),
+      // Trust this week — use balances updated this week as proxy
+      supabase.from('trust_balances').select('lifetime').gte('updated_at', weekAgo),
       // Recent member joins (for ticker)
       supabase.from('profiles').select('id, full_name, location, created_at').is('deleted_at', null).order('created_at', { ascending: false }).limit(10),
-      // Recent trust events (for ticker)
-      supabase.from('trust_ledger').select('id, description, amount, type, created_at').gt('amount', 0).order('created_at', { ascending: false }).limit(10),
+      // Recent trust events — pull from trust_balances (fallback: no ledger table)
+      supabase.from('trust_balances').select('user_id, lifetime, updated_at').order('updated_at', { ascending: false }).limit(10),
       // Recent articles (for ticker)
       supabase.from('articles').select('id, title, created_at').eq('status', 'published').order('created_at', { ascending: false }).limit(5),
       // Growth: last 30 profiles with created_at for sparkline
@@ -77,12 +77,12 @@ export async function GET() {
     const articlesPublished = getCount(articlesRes)
     const communitiesCount = getCount(communitiesRes)
 
-    // Sum trust
-    const trustRows = getData<{ amount: number }>(trustSumRes)
-    const totalTrust = trustRows.reduce((sum, r) => sum + (r.amount ?? 0), 0)
+    // Sum trust from lifetime balances
+    const trustRows = getData<{ lifetime: number }>(trustSumRes)
+    const totalTrust = trustRows.reduce((sum, r) => sum + (r.lifetime ?? 0), 0)
 
-    const trustWeekRows = getData<{ amount: number }>(trustWeekRes)
-    const trustThisWeek = trustWeekRows.reduce((sum, r) => sum + (r.amount ?? 0), 0)
+    const trustWeekRows = getData<{ lifetime: number }>(trustWeekRes)
+    const trustThisWeek = trustWeekRows.reduce((sum, r) => sum + (r.lifetime ?? 0), 0)
 
     // Ticker feed — mix of recent joins, trust events, articles
     type TickerItem = {
@@ -100,10 +100,9 @@ export async function GET() {
       ticker.push({ id: p.id, type: 'join', text: `${name}${loc} just joined FreeTrust`, time: p.created_at })
     }
 
-    const recentTrust = getData<{ id: string; description: string | null; amount: number; type: string; created_at: string }>(recentTrustRes)
+    const recentTrust = getData<{ user_id: string; lifetime: number; updated_at: string }>(recentTrustRes)
     for (const t of recentTrust) {
-      const desc = t.description ?? `₮${t.amount} Trust issued`
-      ticker.push({ id: t.id, type: 'trust', text: `₮${t.amount} Trust issued — ${desc.replace(/^Published article: /, 'New article: ')}`, time: t.created_at })
+      ticker.push({ id: t.user_id, type: 'trust', text: `₮${t.lifetime} Trust earned by a member`, time: t.updated_at })
     }
 
     const recentArticles = getData<{ id: string; title: string; created_at: string }>(recentArticlesRes)
