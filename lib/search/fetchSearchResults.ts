@@ -126,7 +126,7 @@ export async function fetchSearchResults({
             title: m.full_name ?? 'Anonymous',
             subtitle: m.role,
             description: m.bio?.slice(0, 100),
-            href: `/profile/${m.id}`,
+            href: `/profile?id=${m.id}`,
             category: 'member',
             location: m.location,
             thumbnail: m.avatar_url,

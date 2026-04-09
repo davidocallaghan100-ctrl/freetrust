@@ -338,7 +338,7 @@ export default function ServiceDetailPage() {
               <Avatar url={svc.seller.avatar_url} name={svc.seller.full_name || 'Seller'} size={40} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                  <Link href={`/profile/${svc.seller.id}`} style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9', textDecoration: 'none' }}>
+                  <Link href={`/profile?id=${svc.seller.id}`} style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9', textDecoration: 'none' }}>
                     {svc.seller.full_name || 'FreeTrust Member'}
                   </Link>
                   <span style={{ fontSize: '10px', fontWeight: 700, color: '#38bdf8', background: 'rgba(56,189,248,0.1)', padding: '2px 7px', borderRadius: 999 }}>Verified Seller</span>
@@ -389,7 +389,7 @@ export default function ServiceDetailPage() {
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '12px' }}>
                 <Avatar url={svc.seller.avatar_url} name={svc.seller.full_name || 'Seller'} size={52} />
                 <div>
-                  <Link href={`/profile/${svc.seller.id}`} style={{ fontSize: '15px', fontWeight: 700, color: '#f1f5f9', textDecoration: 'none', display: 'block' }}>
+                  <Link href={`/profile?id=${svc.seller.id}`} style={{ fontSize: '15px', fontWeight: 700, color: '#f1f5f9', textDecoration: 'none', display: 'block' }}>
                     {svc.seller.full_name || 'FreeTrust Member'}
                   </Link>
                   <div style={{ fontSize: '11px', color: '#38bdf8', fontWeight: 600 }}>Verified Seller</div>
@@ -399,7 +399,7 @@ export default function ServiceDetailPage() {
               {svc.seller.bio && (
                 <p style={{ fontSize: '12px', color: '#94a3b8', lineHeight: 1.65, margin: '0 0 14px' }}>{svc.seller.bio}</p>
               )}
-              <Link href={`/profile/${svc.seller.id}`} style={{ display: 'block', padding: '9px', textAlign: 'center', border: '1px solid #334155', borderRadius: '10px', fontSize: '12px', fontWeight: 600, color: '#94a3b8', textDecoration: 'none' }}>
+              <Link href={`/profile?id=${svc.seller.id}`} style={{ display: 'block', padding: '9px', textAlign: 'center', border: '1px solid #334155', borderRadius: '10px', fontSize: '12px', fontWeight: 600, color: '#94a3b8', textDecoration: 'none' }}>
                 View Full Profile
               </Link>
             </div>

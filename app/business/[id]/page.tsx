@@ -260,7 +260,7 @@ export default function BusinessProfilePage() {
             {business.members.length > 0 ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
                 {business.members.map(m => (
-                  <Link key={m.id} href={`/profile/${m.user.id}`} style={{ textDecoration: 'none' }}>
+                  <Link key={m.id} href={`/profile?id=${m.user.id}`} style={{ textDecoration: 'none' }}>
                     <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1.1rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                       <div style={{ width: 40, height: 40, borderRadius: '50%', background: m.user.avatar_url ? `url(${m.user.avatar_url}) center/cover` : getGrad(m.user.full_name ?? ''), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: '#0f172a', flexShrink: 0 }}>
                         {!m.user.avatar_url && initials(m.user.full_name ?? '?')}
