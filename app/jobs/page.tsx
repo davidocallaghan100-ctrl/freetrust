@@ -39,8 +39,8 @@ const TYPE_COLORS: Record<string, string> = { full_time: '#38bdf8', part_time: '
 const LOC_COLORS: Record<string, string> = { remote: '#34d399', hybrid: '#38bdf8', on_site: '#fb923c' }
 const LOC_LABELS: Record<string, string> = { remote: 'Remote', hybrid: 'Hybrid', on_site: 'On-Site' }
 const SALARY_FILTERS = [
-  { label: 'Any', min: 0 }, { label: '£20k+', min: 20000 }, { label: '£40k+', min: 40000 },
-  { label: '£60k+', min: 60000 }, { label: '£80k+', min: 80000 },
+  { label: 'Any', min: 0 }, { label: '20k+', min: 20000 }, { label: '40k+', min: 40000 },
+  { label: '60k+', min: 60000 }, { label: '80k+', min: 80000 },
 ]
 const CATEGORIES = ['All', 'Tech', 'Design', 'Marketing', 'Sales', 'Finance', 'Operations', 'Trades', 'Other']
 

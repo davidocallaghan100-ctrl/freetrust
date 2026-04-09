@@ -2,6 +2,7 @@
 import React, { useState, useEffect, use, useCallback } from 'react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
+import { useCurrency } from '@/context/CurrencyContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Community {
@@ -87,6 +88,7 @@ const ROLE_COLOR: Record<string, string> = {
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function CommunityPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params)
+  const { format } = useCurrency()
   const [tab, setTab] = useState<'feed' | 'classroom' | 'events' | 'members' | 'leaderboard' | 'admin'>('feed')
   const [community] = useState<Community>(MOCK_COMMUNITY)
   const [posts, setPosts] = useState<Post[]>(MOCK_POSTS)
@@ -231,7 +233,7 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
                 <span>👥 {community.member_count.toLocaleString()} members</span>
                 <span>💬 {community.post_count.toLocaleString()} posts</span>
                 <span>📁 {community.category}</span>
-                {community.is_paid && <span style={{ color: '#fbbf24' }}>🔒 £{community.price_monthly}/mo</span>}
+                {community.is_paid && <span style={{ color: '#fbbf24' }}>🔒 {format(community.price_monthly, 'GBP')}/mo</span>}
                 <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
                   {community.tags.map(t => <span key={t} style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '0.1rem 0.5rem', fontSize: '0.72rem', color: '#94a3b8' }}>{t}</span>)}
                 </div>
@@ -242,7 +244,7 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
                 onClick={() => setJoined(p => !p)}
                 style={{ background: joined ? 'rgba(56,189,248,0.1)' : '#38bdf8', border: joined ? '1px solid rgba(56,189,248,0.3)' : 'none', borderRadius: 8, padding: '0.55rem 1.25rem', fontSize: '0.88rem', fontWeight: 700, color: joined ? '#38bdf8' : '#0f172a', cursor: 'pointer' }}
               >
-                {joined ? '✓ Joined' : community.is_paid ? `Join £${community.price_monthly}/mo` : 'Join Community'}
+                {joined ? '✓ Joined' : community.is_paid ? `Join ${format(community.price_monthly, 'GBP')}/mo` : 'Join Community'}
               </button>
               {isOwner && (
                 <Link href={`/community/${slug}/admin`} style={{ fontSize: '0.78rem', color: '#64748b', textDecoration: 'none' }}>

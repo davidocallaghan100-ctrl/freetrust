@@ -511,7 +511,7 @@ export default function CreateGigPage() {
                           {pkg.name}
                         </div>
                         <div style={styles.priceWrapper}>
-                          <span style={styles.currencySymbol}>$</span>
+                           <span style={styles.currencySymbol}>€</span>
                           <input
                             style={styles.priceInput}
                             type="number"
@@ -842,7 +842,7 @@ export default function CreateGigPage() {
                         <div key={tier} style={{ ...styles.previewPackage, borderColor: colors[tier] }}>
                           <div style={{ ...styles.previewPackageName, color: colors[tier] }}>{pkg.name}</div>
                           <div style={styles.previewPackagePrice}>
-                            {pkg.price ? `$${pkg.price}` : '—'}
+                            {pkg.price ? `€${pkg.price}` : '—'}
                           </div>
                           <div style={styles.previewPackageDelivery}>
                             🕐 {pkg.deliveryTime} · {pkg.revisions} revision{pkg.revisions === '1' ? '' : 's'}

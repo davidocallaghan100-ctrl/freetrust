@@ -1,6 +1,7 @@
 'use client'
 import React, { useState } from 'react'
 import Link from 'next/link'
+import { useCurrency } from '@/context/CurrencyContext'
 
 const categories = ['All', 'Business', 'Technology', 'Sustainability', 'Creative', 'Finance', 'Health']
 
@@ -83,6 +84,7 @@ const S: Record<string, React.CSSProperties> = {
 }
 
 export default function CommunityPage() {
+  const { format } = useCurrency()
   const [activeCat, setActiveCat] = useState('All')
   const [search, setSearch] = useState('')
   const [joined, setJoined] = useState<Set<number>>(new Set(communities.filter(c => c.joined).map(c => c.id)))
@@ -160,7 +162,7 @@ export default function CommunityPage() {
                   <span style={S.cardCat}>{c.category}</span>
                   {c.price > 0 && (
                     <span style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 999, padding: '0.1rem 0.5rem', fontSize: '0.68rem', color: '#fbbf24', fontWeight: 700 }}>
-                      🔒 £{c.price}/mo
+                      🔒 {format(c.price, 'GBP')}/mo
                     </span>
                   )}
                 </div>
@@ -175,7 +177,7 @@ export default function CommunityPage() {
               <span><span style={S.statNum}>{c.posts.toLocaleString()}</span> posts</span>
             </div>
             <div style={S.footer}>
-              <span style={S.price}>{c.price > 0 ? `£${c.price}/month` : 'Free to join'}</span>
+              <span style={S.price}>{c.price > 0 ? `${format(c.price, 'GBP')}/month` : 'Free to join'}</span>
               <button
                 onClick={e => { e.preventDefault(); setJoined(prev => { const n = new Set(prev); n.has(c.id) ? n.delete(c.id) : n.add(c.id); return n }) }}
                 style={{
@@ -185,7 +187,7 @@ export default function CommunityPage() {
                   border: joined.has(c.id) ? '1px solid rgba(56,189,248,0.3)' : 'none',
                 }}
               >
-                {joined.has(c.id) ? '✓ Joined' : c.price > 0 ? `Join £${c.price}/mo` : 'Join Community'}
+                {joined.has(c.id) ? '✓ Joined' : c.price > 0 ? `Join ${format(c.price, 'GBP')}/mo` : 'Join Community'}
               </button>
             </div>
           </Link>

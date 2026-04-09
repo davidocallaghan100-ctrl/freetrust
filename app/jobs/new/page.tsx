@@ -39,7 +39,7 @@ export default function PostJobPage() {
     tags: [] as string[],
     salary_min: '',
     salary_max: '',
-    salary_currency: 'GBP',
+    salary_currency: 'EUR',
     application_deadline: '',
   })
 
@@ -151,7 +151,7 @@ export default function PostJobPage() {
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>{form.title || 'Job Title'}</h3>
             <div style={{ fontSize: '0.82rem', color: '#94a3b8', marginBottom: '0.5rem' }}>
               {form.location_type !== 'remote' && form.location ? `📍 ${form.location}  ` : ''}
-              {form.salary_min || form.salary_max ? `💰 £${form.salary_min || '?'}k – £${form.salary_max || '?'}k` : '💰 Competitive'}
+              {form.salary_min || form.salary_max ? `💰 ${form.salary_currency === 'EUR' ? '€' : form.salary_currency === 'USD' ? '$' : '£'}${form.salary_min || '?'}k – ${form.salary_currency === 'EUR' ? '€' : form.salary_currency === 'USD' ? '$' : '£'}${form.salary_max || '?'}k` : '💰 Competitive'}
             </div>
             {form.tags.length > 0 && (
               <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
@@ -224,8 +224,8 @@ export default function PostJobPage() {
                 </div>
                 <div>
                   <select value={form.salary_currency} onChange={e => set('salary_currency', e.target.value)} style={selectStyle}>
-                    <option value="GBP">GBP (£)</option>
                     <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
                     <option value="USD">USD ($)</option>
                   </select>
                 </div>

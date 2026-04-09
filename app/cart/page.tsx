@@ -19,7 +19,7 @@ function fmt(p: number, cur: string) {
 }
 
 const TRUST_FEE_PCT = 5
-const FREE_SHIPPING_THRESHOLD = 5000 // £50
+const FREE_SHIPPING_THRESHOLD = 5000 // €50
 
 export default function CartPage() {
   const router = useRouter()

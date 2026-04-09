@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
         tags:                 Array.isArray(tags) ? tags : [],
         salary_min:           salary_min ?? null,
         salary_max:           salary_max ?? null,
-        salary_currency:      salary_currency ?? 'GBP',
+        salary_currency:      salary_currency ?? 'EUR',
         application_deadline: application_deadline ?? null,
         status:               'active',
       })

@@ -17,7 +17,7 @@ const organisations = [
     members: 340, avatar: 'AK', sector: 'Finance',
     desc: 'Member-owned digital savings and credit cooperative serving 340+ East African entrepreneurs.',
     tags: ['Finance', 'Cooperative', 'Africa'], verified: true, hiring: false,
-    impact: '£2.1M in member loans',
+    impact: '€2.1M in member loans',
   },
   {
     id: 3, name: 'Open Source Seeds', type: 'NGO / Charity', location: 'Berlin, Germany', founded: 2016,

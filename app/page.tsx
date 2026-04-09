@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import { useCurrency } from '@/context/CurrencyContext'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type TickerItem = { id: string; type: string; text: string; time: string }
@@ -218,6 +219,7 @@ const VALUE_PROPS = [
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function Home() {
+  const { format } = useCurrency()
   const [stats, setStats] = useState<StatsData | null>(null)
 
   const fetchStats = useCallback(async () => {
@@ -403,7 +405,7 @@ export default function Home() {
                       <span style={{ fontSize: '0.72rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.provider}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#f1f5f9' }}>£{s.price}</span>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#f1f5f9' }}>{format(s.price, 'GBP')}</span>
                       <span style={{ fontSize: '0.68rem', color: '#fbbf24' }}>★ {s.rating} ({s.reviews})</span>
                     </div>
                   </div>
@@ -439,7 +441,7 @@ export default function Home() {
                       <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{p.seller}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#f1f5f9' }}>£{p.price}</span>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#f1f5f9' }}>{format(p.price, 'GBP')}</span>
                       <span style={{ fontSize: '0.65rem', color: '#fbbf24' }}>★ {p.rating}</span>
                     </div>
                   </div>

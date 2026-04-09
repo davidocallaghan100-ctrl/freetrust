@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useCurrency } from '@/context/CurrencyContext'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -52,9 +53,10 @@ function getTrustLevel(score: number) {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function fmt(n: number, currency: Currency = 'GBP') {
+// fmt is used internally — currency symbol injected at render via useCurrency
+function fmt(n: number, currency: Currency = 'GBP', sym = '€') {
   if (currency === 'TRUST') return `₮${Math.abs(n).toLocaleString()}`
-  return `£${Math.abs(n).toFixed(2)}`
+  return `${sym}${Math.abs(n).toFixed(2)}`
 }
 
 function fmtDate(ts: string) {
@@ -119,6 +121,8 @@ function StatCard({ label, value, sub, color = '#38bdf8', icon }: {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function WalletPage() {
+  const { currency: curr } = useCurrency()
+  const sym = curr.symbol
   const [data,        setData]        = useState<WalletData | null>(null)
   const [actions,     setActions]     = useState<TrustAction[]>([])
   const [loading,     setLoading]     = useState(true)
@@ -291,12 +295,12 @@ export default function WalletPage() {
             <div style={{ background: 'linear-gradient(135deg, rgba(56,189,248,0.15) 0%, rgba(129,140,248,0.1) 100%)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '18px', padding: '24px 22px', marginBottom: '16px' }}>
               <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Available Balance</div>
               <div style={{ fontSize: '44px', fontWeight: 900, lineHeight: 1, color: '#f1f5f9', marginBottom: '4px' }}>
-                <span style={{ fontSize: '22px', color: '#64748b', fontWeight: 400 }}>£</span>
+                <span style={{ fontSize: '22px', color: '#64748b', fontWeight: 400 }}>{sym}</span>
                 {Math.max(data?.money.available ?? 0, 0).toFixed(2)}
               </div>
               {(data?.money.pendingPayout ?? 0) > 0 && (
                 <div style={{ fontSize: '12px', color: '#f59e0b', marginBottom: '4px' }}>
-                  + £{(data?.money.pendingPayout ?? 0).toFixed(2)} pending payout
+                  + {sym}{(data?.money.pendingPayout ?? 0).toFixed(2)} pending payout
                 </div>
               )}
               <div style={{ fontSize: '12px', color: '#475569', marginBottom: '18px' }}>FreeTrust earnings account</div>
@@ -334,9 +338,9 @@ export default function WalletPage() {
 
             {/* Stats grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
-              <StatCard icon="⬇" label="Total Earned" value={`£${(data?.money.totalEarned ?? 0).toFixed(2)}`} color="#34d399" />
-              <StatCard icon="⬆" label="Total Spent" value={`£${(data?.money.totalSpent ?? 0).toFixed(2)}`} color="#f87171" />
-              <StatCard icon="⏳" label="Pending" value={`£${(data?.money.pendingPayout ?? 0).toFixed(2)}`} color="#f59e0b" sub="Awaiting completion" />
+              <StatCard icon="⬇" label="Total Earned" value={`${sym}${(data?.money.totalEarned ?? 0).toFixed(2)}`} color="#34d399" />
+              <StatCard icon="⬆" label="Total Spent" value={`${sym}${(data?.money.totalSpent ?? 0).toFixed(2)}`} color="#f87171" />
+              <StatCard icon="⏳" label="Pending" value={`${sym}${(data?.money.pendingPayout ?? 0).toFixed(2)}`} color="#f59e0b" sub="Awaiting completion" />
               <StatCard icon="💎" label="Trust Lifetime" value={`₮${(data?.trust.lifetime ?? 0).toLocaleString()}`} color="#818cf8" sub="All-time earned" />
             </div>
 
@@ -399,7 +403,7 @@ export default function WalletPage() {
                       </div>
                     </div>
                     <div style={{ fontSize: '15px', fontWeight: 700, flexShrink: 0, color: tx.amount >= 0 ? TX_COLORS[tx.category] : '#f87171' }}>
-                      {tx.amount >= 0 ? '+' : ''}{fmt(tx.amount, tx.currency)}
+                      {tx.amount >= 0 ? '+' : ''}{fmt(tx.amount, tx.currency, sym)}
                     </div>
                   </div>
                 ))

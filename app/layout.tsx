@@ -6,6 +6,7 @@ import Nav from "@/components/Nav";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import SearchBar from "@/components/SearchBar";
+import { CurrencyProvider } from "@/context/CurrencyContext";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -83,6 +84,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         style={{ background: '#0f172a', minHeight: '100vh', color: '#f1f5f9' }}
       >
+        <CurrencyProvider>
         {/* Top bar — 58px fixed */}
         <Nav />
 
@@ -102,6 +104,7 @@ export default function RootLayout({
 
         {/* Mobile bottom nav — shown only on mobile via CSS */}
         <BottomNav />
+        </CurrencyProvider>
 
         {/* Floating + button — desktop only, bottom right */}
         <style>{`

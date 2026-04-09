@@ -3,6 +3,7 @@ import React, { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useCurrency } from '@/context/CurrencyContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Product {
@@ -89,6 +90,7 @@ function ProductCard({ p, wishlist, onWishlist }: {
   wishlist: Set<string>
   onWishlist: (id: string) => void
 }) {
+  const { format } = useCurrency()
   const catLabel = ALL_CATEGORIES.find(c => c.id === p.category)?.label ?? p.category
   const gradient = p.image ? undefined : (CAT_GRAD[p.category] ?? 'linear-gradient(135deg,#334155,#1e293b)')
 
@@ -151,7 +153,7 @@ function ProductCard({ p, wishlist, onWishlist }: {
 
         {/* Price + CTA */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
-          <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#f1f5f9' }}>£{p.price}</span>
+          <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#f1f5f9' }}>{format(p.price, 'GBP')}</span>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.35rem' }}>
             <button style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 8, padding: '0.45rem 0.9rem', fontSize: '0.75rem', fontWeight: 700, color: '#fff', cursor: 'pointer', minHeight: 36 }}>
               Buy Now
@@ -167,6 +169,7 @@ function ProductCard({ p, wishlist, onWishlist }: {
 
 // ─── Inner page (needs useSearchParams) ──────────────────────────────────────
 function ProductsInner() {
+  const { format } = useCurrency()
   const searchParams = useSearchParams()
   const initCat = searchParams.get('category') ?? 'all'
   const initType = (searchParams.get('type') ?? 'all') as 'all' | 'digital' | 'physical'
@@ -295,7 +298,7 @@ function ProductsInner() {
         {/* Price + rating */}
         <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', marginBottom: '1.25rem', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#64748b' }}>
-            <span>Max price: <strong style={{ color: '#f1f5f9' }}>£{maxPrice === 500 ? '500+' : maxPrice}</strong></span>
+            <span>Max price: <strong style={{ color: '#f1f5f9' }}>{format(maxPrice === 500 ? 501 : maxPrice, 'GBP')}{maxPrice === 500 ? '+' : ''}</strong></span>
             <input type="range" min={5} max={500} step={5} value={maxPrice}
               onChange={e => setMaxPrice(Number(e.target.value))}
               style={{ accentColor: '#38bdf8', width: 100 }} />

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { useCurrency } from '@/context/CurrencyContext'
 
 interface Listing {
   id: string
@@ -60,6 +61,7 @@ const MOCK_LISTINGS: Listing[] = [
 
 function MarketplaceContent() {
   const searchParams = useSearchParams()
+  const { format } = useCurrency()
 
   const [listings, setListings]   = useState<Listing[]>([])
   const [loading, setLoading]     = useState(true)
@@ -308,7 +310,7 @@ function MarketplaceContent() {
 
                       {/* Footer */}
                       <div className="mk-card-footer">
-                        <span className="mk-card-price">{l.currency || '£'}{l.price}</span>
+                        <span className="mk-card-price">{format(l.price, l.currency === 'GBP' ? 'GBP' : l.currency === 'USD' ? 'USD' : 'EUR')}</span>
                         <span className="mk-card-cta">View</span>
                       </div>
                     </Link>

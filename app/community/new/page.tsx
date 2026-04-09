@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useCurrency } from '@/context/CurrencyContext'
 
 const CATEGORIES = ['Business', 'Technology', 'Sustainability', 'Creative', 'Finance', 'Health', 'Education', 'General']
 
@@ -35,6 +36,7 @@ const S: Record<string, React.CSSProperties> = {
 
 export default function NewCommunityPage() {
   const router = useRouter()
+  const { format, currency } = useCurrency()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState('Business')
@@ -72,7 +74,7 @@ export default function NewCommunityPage() {
     setError('')
     if (!name.trim()) { setError('Community name is required.'); return }
     if (!description.trim()) { setError('Description is required.'); return }
-    if (isPaid && (parseFloat(price) < 5 || isNaN(parseFloat(price)))) { setError('Paid communities require a minimum price of £5/month.'); return }
+    if (isPaid && (parseFloat(price) < 5 || isNaN(parseFloat(price)))) { setError(`Paid communities require a minimum price of ${currency.symbol}5/month.`); return }
 
     setLoading(true)
     try {
@@ -233,7 +235,7 @@ export default function NewCommunityPage() {
             {isPaid && (
               <div>
                 <div style={S.field}>
-                  <label style={S.label}>Monthly Price (£)</label>
+                  <label style={S.label}>Monthly Price ({currency.symbol})</label>
                   <input
                     className="nc-input"
                     style={{ ...S.input, maxWidth: 160 }}
@@ -248,9 +250,9 @@ export default function NewCommunityPage() {
                 <div style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, padding: '0.75rem 1rem', fontSize: '0.83rem', color: '#94a3b8' }}>
                   <span style={{ color: '#38bdf8', fontWeight: 700 }}>FreeTrust fee: 5%</span>
                   {' '}— You receive{' '}
-                  <span style={{ color: '#34d399', fontWeight: 700 }}>£{paidNet}/member/month</span>
+                  <span style={{ color: '#34d399', fontWeight: 700 }}>{currency.symbol}{paidNet}/member/month</span>
                   {' '}after the platform fee of{' '}
-                  <span style={{ color: '#f472b6' }}>£{(parseFloat(price || '0') * 0.05).toFixed(2)}</span>
+                  <span style={{ color: '#f472b6' }}>{currency.symbol}{(parseFloat(price || '0') * 0.05).toFixed(2)}</span>
                 </div>
               </div>
             )}

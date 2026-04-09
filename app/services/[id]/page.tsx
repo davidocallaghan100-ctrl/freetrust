@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { ALL_CATEGORIES, DELIVERY_OPTIONS } from '@/lib/service-categories'
+import { useCurrency } from '@/context/CurrencyContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -164,6 +165,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 // ─── Package selector (interactive) ──────────────────────────────────────────
 
 function PackageSelector({ packages, serviceId }: { packages: Package[]; serviceId: string }) {
+  const { format } = useCurrency()
   const [activePkg, setActivePkg] = useState<PkgId>('standard')
   const pkg = packages.find(p => p.id === activePkg) ?? packages[1] ?? packages[0]
 
@@ -198,7 +200,7 @@ function PackageSelector({ packages, serviceId }: { packages: Package[]; service
       <div style={{ padding: '18px' }}>
         {/* Price */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '6px' }}>
-          <span style={{ fontSize: '32px', fontWeight: 900, color: '#f1f5f9', letterSpacing: '-1px' }}>£{pkg.price}</span>
+          <span style={{ fontSize: '32px', fontWeight: 900, color: '#f1f5f9', letterSpacing: '-1px' }}>{format(pkg.price, 'GBP')}</span>
           <span style={{ fontSize: '13px', color: '#64748b' }}>/ project</span>
         </div>
         <p style={{ fontSize: '13px', color: '#94a3b8', margin: '0 0 14px', lineHeight: 1.5 }}>{pkg.description}</p>
@@ -227,7 +229,7 @@ function PackageSelector({ packages, serviceId }: { packages: Package[]; service
           href={`/checkout?service=${serviceId}&pkg=${pkg.id}`}
           style={{ display: 'block', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', borderRadius: '12px', padding: '14px', textAlign: 'center', fontWeight: 800, fontSize: '15px', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.25)' }}
         >
-          Continue — £{pkg.price}
+          Continue — {format(pkg.price, 'GBP')}
         </Link>
 
         {/* Compare row */}
@@ -239,7 +241,7 @@ function PackageSelector({ packages, serviceId }: { packages: Package[]; service
               style={{ textAlign: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '8px', transition: 'background 0.15s', fontFamily: 'inherit' }}
             >
               <div style={{ fontSize: '11px', fontWeight: 700, color: PKG_COLORS[p.id], textTransform: 'uppercase', letterSpacing: '0.04em' }}>{p.label}</div>
-              <div style={{ fontSize: '14px', fontWeight: 800, color: activePkg === p.id ? '#f1f5f9' : '#64748b' }}>£{p.price}</div>
+              <div style={{ fontSize: '14px', fontWeight: 800, color: activePkg === p.id ? '#f1f5f9' : '#64748b' }}>{format(p.price, 'GBP')}</div>
               <div style={{ fontSize: '10px', color: '#475569' }}>{p.delivery}</div>
             </button>
           ))}
@@ -252,6 +254,7 @@ function PackageSelector({ packages, serviceId }: { packages: Package[]; service
 // ─── Mobile sticky book bar ───────────────────────────────────────────────────
 
 function MobileStickyBar({ packages, serviceId }: { packages: Package[]; serviceId: string }) {
+  const { format } = useCurrency()
   const [activePkg, setActivePkg] = useState<PkgId>('standard')
   const [showPicker, setShowPicker] = useState(false)
   const pkg = packages.find(p => p.id === activePkg) ?? packages[1] ?? packages[0]
@@ -285,7 +288,7 @@ function MobileStickyBar({ packages, serviceId }: { packages: Package[]; service
                     <span style={{ fontSize: '13px', fontWeight: 800, color: PKG_COLORS[p.id] }}>{p.label}</span>
                     {activePkg === p.id && <span style={{ marginLeft: '8px', fontSize: '11px', color: '#34d399', fontWeight: 600 }}>✓ Selected</span>}
                   </div>
-                  <span style={{ fontSize: '18px', fontWeight: 900, color: '#f1f5f9' }}>£{p.price}</span>
+                  <span style={{ fontSize: '18px', fontWeight: 900, color: '#f1f5f9' }}>{format(p.price, 'GBP')}</span>
                 </div>
                 <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 8px', lineHeight: 1.4 }}>{p.description}</p>
                 <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: '#475569' }}>
@@ -311,7 +314,7 @@ function MobileStickyBar({ packages, serviceId }: { packages: Package[]; service
           style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', background: '#1e293b', border: `1px solid ${PKG_COLORS[activePkg]}`, borderRadius: '12px', padding: '8px 12px', cursor: 'pointer', minWidth: 90, fontFamily: 'inherit' }}
         >
           <span style={{ fontSize: '10px', color: PKG_COLORS[activePkg], fontWeight: 700, textTransform: 'uppercase' }}>{pkg.label} ▾</span>
-          <span style={{ fontSize: '16px', fontWeight: 900, color: '#f1f5f9' }}>£{pkg.price}</span>
+          <span style={{ fontSize: '16px', fontWeight: 900, color: '#f1f5f9' }}>{format(pkg.price, 'GBP')}</span>
         </button>
 
         {/* CTA */}
@@ -319,7 +322,7 @@ function MobileStickyBar({ packages, serviceId }: { packages: Package[]; service
           href={`/checkout?service=${serviceId}&pkg=${pkg.id}`}
           style={{ flex: 1, display: 'block', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', borderRadius: '12px', padding: '14px', textAlign: 'center', fontWeight: 800, fontSize: '15px', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.25)' }}
         >
-          Book Now — £{pkg.price}
+          Book Now — {format(pkg.price, 'GBP')}
         </Link>
       </div>
     </>

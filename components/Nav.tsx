@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import NotificationBell from '@/components/notifications/NotificationBell'
 import Avatar from '@/components/Avatar'
 import { createClient } from '@/lib/supabase/client'
+import CurrencySwitcher from '@/components/CurrencySwitcher'
 
 const DRAWER_SECTIONS = [
   {
@@ -175,6 +176,7 @@ export default function Nav() {
               ₮{walletBalance.toFixed(0)}
             </Link>
           )}
+          <CurrencySwitcher compact />
           {user && <NotificationBell />}
           {!loading && !user && (
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -276,6 +278,14 @@ export default function Nav() {
               })}
             </div>
           ))}
+        </div>
+
+        {/* Currency switcher */}
+        <div style={{ borderTop: '1px solid #1e293b', padding: '14px 20px' }}>
+          <div style={{ fontSize: '10px', fontWeight: 700, color: '#475569', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '10px' }}>
+            CURRENCY
+          </div>
+          <CurrencySwitcher />
         </div>
 
         {/* Account section at bottom */}

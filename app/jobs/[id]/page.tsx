@@ -32,7 +32,7 @@ const LOC_LABELS: Record<string, string> = { remote: 'Remote', hybrid: 'Hybrid',
 const MOCK_JOB: Job = {
   id: '1', title: 'Senior Full-Stack Engineer', description: `We are looking for an experienced Full-Stack Engineer to join our growing product team. You will work closely with design, product, and backend engineers to build features that serve thousands of users across the FreeTrust platform.\n\nYou will own complete feature development from API design through to frontend implementation, and be expected to contribute to architecture decisions, code reviews, and engineering culture.\n\nThis is a remote-first role with flexible hours. We care about outcomes, not hours.`,
   requirements: `• 4+ years of professional software engineering experience\n• Strong TypeScript and React skills\n• Experience with Next.js (app router preferred)\n• Comfortable with SQL and Supabase or similar BaaS\n• Git-based workflow, code review experience\n• Bonus: experience with real-time features, WebSockets or Supabase Realtime\n• Bonus: experience at a startup or scale-up`,
-  job_type: 'full_time', location_type: 'remote', location: null, salary_min: 70000, salary_max: 95000, salary_currency: 'GBP',
+  job_type: 'full_time', location_type: 'remote', location: null, salary_min: 70000, salary_max: 95000, salary_currency: 'EUR',
   category: 'Tech', tags: ['React', 'Node.js', 'TypeScript', 'Next.js', 'Supabase'],
   created_at: new Date(Date.now() - 86400000).toISOString(), updated_at: new Date().toISOString(),
   applicant_count: 24, application_deadline: new Date(Date.now() + 14 * 86400000).toISOString(),
@@ -40,9 +40,9 @@ const MOCK_JOB: Job = {
 }
 
 const SIMILAR_JOBS = [
-  { id: '3', title: 'Frontend Engineer', job_type: 'contract', location_type: 'remote', salary_min: 55000, salary_max: 75000, salary_currency: 'GBP', poster_name: 'Webflow Agency' },
-  { id: '5', title: 'Full-Stack Developer', job_type: 'freelance', location_type: 'remote', salary_min: 400, salary_max: 600, salary_currency: 'GBP', poster_name: 'Startup Labs' },
-  { id: '7', title: 'Backend Engineer', job_type: 'full_time', location_type: 'hybrid', salary_min: 65000, salary_max: 85000, salary_currency: 'GBP', poster_name: 'TrustTech' },
+  { id: '3', title: 'Frontend Engineer', job_type: 'contract', location_type: 'remote', salary_min: 55000, salary_max: 75000, salary_currency: 'EUR', poster_name: 'Webflow Agency' },
+  { id: '5', title: 'Full-Stack Developer', job_type: 'freelance', location_type: 'remote', salary_min: 400, salary_max: 600, salary_currency: 'EUR', poster_name: 'Startup Labs' },
+  { id: '7', title: 'Backend Engineer', job_type: 'full_time', location_type: 'hybrid', salary_min: 65000, salary_max: 85000, salary_currency: 'EUR', poster_name: 'TrustTech' },
 ]
 
 function formatSalary(min: number | null, max: number | null, currency: string, type: string) {

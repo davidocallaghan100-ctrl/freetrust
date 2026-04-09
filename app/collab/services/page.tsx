@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { useCurrency } from '@/context/CurrencyContext'
 
 interface ServiceListing {
   id: string
@@ -58,6 +59,7 @@ const MOCK_SERVICES: ServiceListing[] = [
 
 function ServicesContent() {
   const searchParams = useSearchParams()
+  const { format, currency } = useCurrency()
   const [services, setServices]   = useState<ServiceListing[]>([])
   const [loading, setLoading]     = useState(true)
   const [search, setSearch]       = useState(searchParams.get('q') || '')
@@ -138,13 +140,13 @@ function ServicesContent() {
       {/* Max budget */}
       <div style={{ marginBottom: 18 }}>
         <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
-          Max Budget: <span style={{ color: '#a78bfa' }}>£{maxPrice >= 5000 ? '5k+' : maxPrice}</span>
+          Max Budget: <span style={{ color: '#a78bfa' }}>{currency.symbol}{maxPrice >= 5000 ? '5k+' : maxPrice}</span>
         </label>
         <input type="range" min={0} max={5000} step={50} value={maxPrice}
           onChange={e => { setMaxPrice(parseInt(e.target.value)); setPage(1) }}
           style={{ width: '100%', accentColor: '#a78bfa' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#475569', marginTop: 2 }}>
-          <span>£0</span><span>£5k+</span>
+          <span>{currency.symbol}0</span><span>{currency.symbol}5k+</span>
         </div>
       </div>
 
@@ -324,7 +326,7 @@ function ServicesContent() {
 
                         {/* Footer */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px 14px', marginTop: 'auto', borderTop: '1px solid rgba(167,139,250,0.08)', gap: 8 }}>
-                          <span style={{ fontSize: 20, fontWeight: 800, color: '#f1f5f9' }}>{s.currency || '£'}{s.price.toLocaleString()}</span>
+                          <span style={{ fontSize: 20, fontWeight: 800, color: '#f1f5f9' }}>{format(s.price, s.currency === 'GBP' ? 'GBP' : s.currency === 'USD' ? 'USD' : 'EUR')}</span>
                           <span className="cs-book">Book Now</span>
                         </div>
                       </Link>

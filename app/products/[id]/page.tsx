@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
+import { useCurrency } from '@/context/CurrencyContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -83,7 +84,7 @@ const MOCK_PRODUCTS: Record<string, Product> = {
 Per-key RGB illumination with 16.8 million colours lets you customise every key individually. The aluminium top plate adds rigidity and a premium feel, while the detachable USB-C cable keeps your desk tidy.
 
 Includes a set of PBT double-shot keycaps that resist shine and fade over years of heavy use. On-board memory stores up to 5 lighting profiles without software.`,
-    price: 12900, originalPrice: 16900, currency: 'GBP', category: 'Electronics',
+    price: 12900, originalPrice: 16900, currency: 'EUR', category: 'Electronics',
     type: 'physical', condition: 'New', stock: 7,
     images: [
       { id: 'i1', url: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800&q=80', alt: 'Keyboard front' },
@@ -112,7 +113,7 @@ Includes a set of PBT double-shot keycaps that resist shine and fade over years 
 The S-shaped lumbar support adapts to your spine's natural curve, reducing lower back fatigue. Four-dimensional armrests let you dial in the perfect position for your shoulders and wrists.
 
 Height, recline tension, and headrest angle are all independently adjustable, making this chair suitable for a wide range of body types and work styles.`,
-    price: 38900, originalPrice: 49900, currency: 'GBP', category: 'Furniture',
+    price: 38900, originalPrice: 49900, currency: 'EUR', category: 'Furniture',
     type: 'physical', condition: 'New', stock: 3,
     images: [
       { id: 'i1', url: 'https://images.unsplash.com/photo-1580480055273-228ff5388ef8?w=800&q=80', alt: 'Chair front' },
@@ -138,7 +139,7 @@ Height, recline tension, and headrest angle are all independently adjustable, ma
 Includes 12 linked databases, 30+ page templates, and a step-by-step setup guide. Used by 2,000+ freelancers and founders.
 
 One-time purchase. Instant digital delivery. Lifetime updates included.`,
-    price: 2900, currency: 'GBP', category: 'Digital Products',
+    price: 2900, currency: 'EUR', category: 'Digital Products',
     type: 'digital', condition: 'New', stock: 999,
     images: [
       { id: 'i1', url: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=800&q=80', alt: 'Notion dashboard' },
@@ -160,8 +161,11 @@ One-time purchase. Instant digital delivery. Lifetime updates included.`,
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function fmt(p: number, cur: string) {
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: cur, minimumFractionDigits: 2 }).format(p / 100)
+function fmt(p: number, cur: string, formatFn?: (amount: number, from: 'EUR' | 'GBP' | 'USD') => string) {
+  if (formatFn && (cur === 'EUR' || cur === 'GBP' || cur === 'USD')) {
+    return formatFn(p / 100, cur)
+  }
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: cur || 'EUR', minimumFractionDigits: 2 }).format(p / 100)
 }
 
 function Stars({ rating }: { rating: number }) {
@@ -179,6 +183,7 @@ function Stars({ rating }: { rating: number }) {
 export default function ProductDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const { format: formatCurrency } = useCurrency()
   const id = typeof params.id === 'string' ? params.id : ''
 
   const product: Product = MOCK_PRODUCTS[id] ?? MOCK_PRODUCTS['1']
@@ -332,9 +337,9 @@ export default function ProductDetailPage() {
 
             {/* Price */}
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '2.5rem', fontWeight: 900, lineHeight: 1, letterSpacing: '-1px' }}>{fmt(product.price, product.currency)}</span>
+              <span style={{ fontSize: '2.5rem', fontWeight: 900, lineHeight: 1, letterSpacing: '-1px' }}>{fmt(product.price, product.currency, formatCurrency)}</span>
               {product.originalPrice && (
-                <span style={{ fontSize: '1.2rem', color: muted, textDecoration: 'line-through', lineHeight: 1.5 }}>{fmt(product.originalPrice, product.currency)}</span>
+                <span style={{ fontSize: '1.2rem', color: muted, textDecoration: 'line-through', lineHeight: 1.5 }}>{fmt(product.originalPrice, product.currency, formatCurrency)}</span>
               )}
               {discPct && <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f87171', lineHeight: 2 }}>Save {discPct}%</span>}
             </div>
@@ -367,16 +372,16 @@ export default function ProductDetailPage() {
             {qty > 1 && (
               <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, padding: '0.85rem 1rem', fontSize: '0.82rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: muted, marginBottom: 5 }}>
-                  <span>Subtotal ({qty} × {fmt(product.price, product.currency)})</span>
-                  <span>{fmt(subtotal, product.currency)}</span>
+                  <span>Subtotal ({qty} × {fmt(product.price, product.currency, formatCurrency)})</span>
+                  <span>{fmt(subtotal, product.currency, formatCurrency)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: muted, marginBottom: 8 }}>
                   <span>FreeTrust fee ({product.trustFee}%)</span>
-                  <span>{fmt(fee, product.currency)}</span>
+                  <span>{fmt(fee, product.currency, formatCurrency)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, color: text, borderTop: `1px solid ${border}`, paddingTop: 8 }}>
                   <span>Total</span>
-                  <span>{fmt(total, product.currency)}</span>
+                  <span>{fmt(total, product.currency, formatCurrency)}</span>
                 </div>
               </div>
             )}

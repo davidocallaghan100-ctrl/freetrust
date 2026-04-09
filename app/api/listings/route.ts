@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     // Validate required fields
-    const { title, description, price, currency = 'GBP', category_id, category, service_mode = 'online', location, service_radius, delivery_types = [], tags = [], images = [] } = body
+    const { title, description, price, currency = 'EUR', category_id, category, service_mode = 'online', location, service_radius, delivery_types = [], tags = [], images = [] } = body
 
     if (!title || typeof title !== 'string' || title.trim().length < 3) {
       return NextResponse.json({ error: 'Title must be at least 3 characters' }, { status: 400 })

@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Category is required.' }, { status: 400 })
     }
     if (is_paid && (typeof price_monthly !== 'number' || price_monthly < 5)) {
-      return NextResponse.json({ error: 'Paid communities require a minimum price of £5/month.' }, { status: 400 })
+      return NextResponse.json({ error: 'Paid communities require a minimum price of €5/month.' }, { status: 400 })
     }
 
     // Generate unique slug
