@@ -2,252 +2,324 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { format, isToday, isThisWeek } from 'date-fns'
 
 type EventMode = 'online' | 'in-person'
-type Filter = 'all' | 'today' | 'this-week' | 'online' | 'in-person' | 'free'
+type TimeFilter = 'all' | 'this-week' | 'this-month'
+type ModeFilter = 'all' | 'online' | 'in-person'
+type PriceFilter = 'all' | 'free' | 'paid'
 
 interface EventItem {
   id: string
   title: string
   date: Date
+  time?: string
   location: string
   mode: EventMode
   price: number | null
   rsvpCount: number
   description: string
   category: string
+  organiser?: string
+  organiserTrust?: number
+  organiserAvatar?: string
+  imageGradient?: string
 }
+
+const CAT_COLORS: Record<string, string> = {
+  Community: '#38bdf8', Business: '#a78bfa', Technology: '#34d399',
+  Design: '#f472b6', Finance: '#fbbf24', Sustainability: '#34d399',
+  FreeTrust: '#38bdf8', Health: '#fb923c', Education: '#a78bfa',
+}
+
+const CAT_GRADIENTS: Record<string, string> = {
+  Community:    'linear-gradient(135deg,#0ea5e9,#0369a1)',
+  Business:     'linear-gradient(135deg,#7c3aed,#4c1d95)',
+  Technology:   'linear-gradient(135deg,#059669,#047857)',
+  Design:       'linear-gradient(135deg,#db2777,#9d174d)',
+  Finance:      'linear-gradient(135deg,#d97706,#92400e)',
+  Sustainability:'linear-gradient(135deg,#059669,#065f46)',
+  FreeTrust:    'linear-gradient(135deg,#0284c7,#1e40af)',
+  Health:       'linear-gradient(135deg,#ea580c,#c2410c)',
+  Education:    'linear-gradient(135deg,#7c3aed,#4338ca)',
+}
+
+const CATEGORIES = ['All', 'Community', 'Business', 'Technology', 'Design', 'Finance', 'Sustainability', 'Education', 'Health']
 
 const MOCK_EVENTS: EventItem[] = [
-  { id: '1', title: 'FreeTrust Founders Meetup — Dublin', date: new Date(Date.now() + 1 * 86400000), location: 'Dogpatch Labs, Dublin 2', mode: 'in-person', price: null, rsvpCount: 87, description: 'Monthly in-person meetup for FreeTrust founders and early community members. Drinks, demos and networking.', category: 'Community' },
-  { id: '2', title: 'How I Hit £10k/mo on FreeTrust — Live Q&A', date: new Date(Date.now() + 2 * 86400000), location: 'Online', mode: 'online', price: null, rsvpCount: 312, description: 'Tom Walsh shares his exact strategy for building a £10k/mo consulting business. Live Q&A at the end.', category: 'Business' },
-  { id: '3', title: 'Sustainable Business Workshop', date: new Date(Date.now() + 3 * 86400000), location: 'Online', mode: 'online', price: 19, rsvpCount: 74, description: 'A practical 2-hour workshop on embedding sustainability into your business model. Certificate on completion.', category: 'Sustainability' },
-  { id: '4', title: 'Design Systems Summit 2026', date: new Date(Date.now() + 5 * 86400000), location: 'RDS, Dublin 4', mode: 'in-person', price: 149, rsvpCount: 540, description: 'Full-day summit on design tokens, component libraries, and cross-team design collaboration.', category: 'Design' },
-  { id: '5', title: 'Trust Score Masterclass: Earn Faster', date: new Date(Date.now() + 6 * 86400000), location: 'Online', mode: 'online', price: null, rsvpCount: 228, description: 'Learn exactly how the Trust scoring system works and the fastest legitimate paths to Elite level.', category: 'FreeTrust' },
-  { id: '6', title: 'AI Automation Hackathon — 48hr', date: new Date(Date.now() + 7 * 86400000), location: 'Dogpatch Labs, Dublin 2', mode: 'in-person', price: null, rsvpCount: 88, description: '48-hour hackathon. Build AI-powered business automation tools. Prizes for top 3 teams.', category: 'Technology' },
-  { id: '7', title: 'Impact Investment Pitch Night', date: new Date(Date.now() + 10 * 86400000), location: 'Online', mode: 'online', price: 25, rsvpCount: 140, description: '6 purpose-driven startups pitch to a panel of impact investors. Audience Q&A included.', category: 'Finance' },
-  { id: '8', title: 'Community Photography Walk — Phoenix Park', date: new Date(), location: 'Phoenix Park, Dublin', mode: 'in-person', price: null, rsvpCount: 43, description: 'A relaxed morning walk through Phoenix Park (any skill level welcome). Coffee and chat after.', category: 'Community' },
-  { id: '9', title: 'Next.js 15 Advanced Patterns', date: new Date(Date.now() + 4 * 86400000), location: 'Online', mode: 'online', price: 29, rsvpCount: 195, description: 'Deep dive into server components, partial prerendering, and advanced data patterns in Next.js 15.', category: 'Technology' },
-  { id: '10', title: 'Women in Tech Networking Brunch', date: new Date(Date.now() + 12 * 86400000), location: 'The Alex Hotel, Dublin 2', mode: 'in-person', price: 35, rsvpCount: 61, description: 'Monthly brunch for women in tech and entrepreneurship. Informal, welcoming, and genuinely useful.', category: 'Community' },
-  { id: '11', title: 'SEO in 2026: What Actually Works', date: new Date(Date.now() + 14 * 86400000), location: 'Online', mode: 'online', price: null, rsvpCount: 407, description: 'Marcus Obi breaks down the SEO strategies working right now and what to stop wasting time on.', category: 'Business' },
-  { id: '12', title: 'Artisan Food Market — FreeTrust Sellers', date: new Date(Date.now() + 9 * 86400000), location: 'Smithfield Square, Dublin 7', mode: 'in-person', price: null, rsvpCount: 510, description: 'Monthly outdoor food market featuring FreeTrust sellers. Artisan bread, cheese, coffee, and more.', category: 'Food' },
+  { id:'e1', title:'FreeTrust Founders Meetup — Dublin', date:new Date(Date.now()+1*86400000), time:'6:30 PM', location:'Dogpatch Labs, Dublin 2', mode:'in-person', price:null, rsvpCount:87, description:'Monthly in-person meetup for FreeTrust founders and early members. Drinks, demos and networking.', category:'Community', organiser:'Sarah Chen', organiserTrust:1240, organiserAvatar:'https://i.pravatar.cc/40?img=47', imageGradient:'linear-gradient(135deg,#0284c7,#1e40af)' },
+  { id:'e2', title:'How I Hit £10k/mo on FreeTrust — Live Q&A', date:new Date(Date.now()+2*86400000), time:'7:00 PM', location:'Online', mode:'online', price:null, rsvpCount:312, description:'Tom Walsh shares his exact strategy for building a £10k/mo consulting business using FreeTrust. Live Q&A included.', category:'Business', organiser:'Tom Walsh', organiserTrust:890, organiserAvatar:'https://i.pravatar.cc/40?img=53', imageGradient:'linear-gradient(135deg,#7c3aed,#4c1d95)' },
+  { id:'e3', title:'Sustainable Business Workshop', date:new Date(Date.now()+3*86400000), time:'2:00 PM', location:'Online', mode:'online', price:19, rsvpCount:74, description:'A practical 2-hour workshop on embedding sustainability into your business model. Certificate on completion.', category:'Sustainability', organiser:'Amara Diallo', organiserTrust:650, organiserAvatar:'https://i.pravatar.cc/40?img=45', imageGradient:'linear-gradient(135deg,#059669,#065f46)' },
+  { id:'e4', title:'Design Systems Summit 2026', date:new Date(Date.now()+5*86400000), time:'9:00 AM', location:'RDS, Dublin 4', mode:'in-person', price:149, rsvpCount:540, description:'Full-day summit on design tokens, component libraries, and cross-team design collaboration. Speakers from Shopify, Stripe and Figma.', category:'Design', organiser:'Priya Nair', organiserTrust:1580, organiserAvatar:'https://i.pravatar.cc/40?img=44', imageGradient:'linear-gradient(135deg,#db2777,#9d174d)' },
+  { id:'e5', title:'Trust Score Masterclass: Earn Faster', date:new Date(Date.now()+6*86400000), time:'6:00 PM', location:'Online', mode:'online', price:null, rsvpCount:228, description:'Learn exactly how the Trust scoring system works and the fastest legitimate paths to Elite level.', category:'FreeTrust', organiser:'Marcus Obi', organiserTrust:2100, organiserAvatar:'https://i.pravatar.cc/40?img=12', imageGradient:'linear-gradient(135deg,#0284c7,#1e40af)' },
+  { id:'e6', title:'AI Automation Hackathon — 48hr', date:new Date(Date.now()+7*86400000), time:'10:00 AM', location:'Dogpatch Labs, Dublin 2', mode:'in-person', price:null, rsvpCount:88, description:'48-hour hackathon. Build AI-powered business automation tools. €5,000 in prizes for top 3 teams.', category:'Technology', organiser:'Lena Fischer', organiserTrust:780, organiserAvatar:'https://i.pravatar.cc/40?img=41', imageGradient:'linear-gradient(135deg,#059669,#047857)' },
+  { id:'e7', title:'Impact Investment Pitch Night', date:new Date(Date.now()+10*86400000), time:'7:30 PM', location:'Online', mode:'online', price:25, rsvpCount:140, description:'Six purpose-driven startups pitch to a panel of impact investors. Audience Q&A and networking after.', category:'Finance', organiser:'James Okafor', organiserTrust:920, organiserAvatar:'https://i.pravatar.cc/40?img=13', imageGradient:'linear-gradient(135deg,#d97706,#92400e)' },
+  { id:'e8', title:'Community Photography Walk — Phoenix Park', date:new Date(Date.now()+12*86400000), time:'10:00 AM', location:'Phoenix Park, Dublin', mode:'in-person', price:null, rsvpCount:43, description:'A relaxed morning walk through Phoenix Park. Any skill level welcome. Coffee and chat after.', category:'Community', organiser:'Ciara Murphy', organiserTrust:340, organiserAvatar:'https://i.pravatar.cc/40?img=39', imageGradient:'linear-gradient(135deg,#0ea5e9,#0369a1)' },
+  { id:'e9', title:'Freelance Finance: Tax, VAT & Invoicing', date:new Date(Date.now()+14*86400000), time:'11:00 AM', location:'Online', mode:'online', price:29, rsvpCount:196, description:'Everything freelancers need to know about money: VAT registration, expenses, invoicing best practices and more.', category:'Finance', organiser:'Dave Kelly', organiserTrust:1100, organiserAvatar:'https://i.pravatar.cc/40?img=15', imageGradient:'linear-gradient(135deg,#d97706,#92400e)' },
 ]
 
-const FILTERS: { label: string; value: Filter; icon: string }[] = [
-  { label: 'All Events', value: 'all',       icon: '📅' },
-  { label: 'Today',      value: 'today',     icon: '⚡' },
-  { label: 'This Week',  value: 'this-week', icon: '📆' },
-  { label: 'Online',     value: 'online',    icon: '💻' },
-  { label: 'In Person',  value: 'in-person', icon: '📍' },
-  { label: 'Free',       value: 'free',      icon: '🆓' },
-]
-
-const CAT_EMOJI: Record<string, string> = {
-  Technology: '💻', Business: '💼', Community: '🤝', Design: '🎨',
-  Sustainability: '🌱', Finance: '💰', FreeTrust: '⭐', Food: '🍽️', General: '📅',
-}
-const CAT_COLOR: Record<string, string> = {
-  Technology: '#38bdf8', Business: '#fbbf24', Community: '#a78bfa', Design: '#f472b6',
-  Sustainability: '#34d399', Finance: '#fb923c', FreeTrust: '#38bdf8', Food: '#fb923c', General: '#64748b',
-}
-const CAT_BANNER: Record<string, string> = {
-  Technology:    'linear-gradient(135deg,rgba(56,189,248,0.15),rgba(56,189,248,0.04))',
-  Business:      'linear-gradient(135deg,rgba(251,191,36,0.15),rgba(251,191,36,0.04))',
-  Community:     'linear-gradient(135deg,rgba(167,139,250,0.15),rgba(167,139,250,0.04))',
-  Design:        'linear-gradient(135deg,rgba(244,114,182,0.15),rgba(244,114,182,0.04))',
-  Sustainability:'linear-gradient(135deg,rgba(52,211,153,0.15),rgba(52,211,153,0.04))',
-  Finance:       'linear-gradient(135deg,rgba(251,146,60,0.15),rgba(251,146,60,0.04))',
-  FreeTrust:     'linear-gradient(135deg,rgba(56,189,248,0.15),rgba(129,140,248,0.04))',
-  Food:          'linear-gradient(135deg,rgba(251,146,60,0.15),rgba(251,191,36,0.04))',
-  General:       'linear-gradient(135deg,rgba(100,116,139,0.15),rgba(100,116,139,0.04))',
-}
-
-function applyFilter(events: EventItem[], filter: Filter): EventItem[] {
-  switch (filter) {
-    case 'today':     return events.filter(e => isToday(e.date))
-    case 'this-week': return events.filter(e => isThisWeek(e.date, { weekStartsOn: 1 }))
-    case 'online':    return events.filter(e => e.mode === 'online')
-    case 'in-person': return events.filter(e => e.mode === 'in-person')
-    case 'free':      return events.filter(e => e.price === null)
-    default:          return events
+function formatEventDate(date: Date) {
+  return {
+    day: date.toLocaleDateString('en-GB', { weekday: 'short' }),
+    num: date.getDate(),
+    month: date.toLocaleDateString('en-GB', { month: 'short' }),
+    year: date.getFullYear(),
+    full: date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
   }
 }
 
-export default function EventsPage() {
-  const [activeFilter, setActiveFilter] = useState<Filter>('all')
-  const [events, setEvents] = useState<EventItem[]>(MOCK_EVENTS)
+function isThisWeek(date: Date) {
+  const now = new Date()
+  const end = new Date(now); end.setDate(now.getDate() + 7)
+  return date >= now && date <= end
+}
 
-  useEffect(() => {
-    const supabase = createClient();
-    (async () => {
-      try {
-        const { data } = await supabase
-          .from('events').select('*')
-          .gte('starts_at', new Date().toISOString())
-          .order('starts_at', { ascending: true }).limit(24)
-        if (data && data.length > 0) {
-          setEvents(data.map((e: Record<string, unknown>) => ({
-            id: e.id as string, title: e.title as string,
-            date: new Date(e.starts_at as string),
-            location: (e.location as string) ?? (e.is_online ? 'Online' : 'TBD'),
-            mode: (e.is_online ? 'online' : 'in-person') as EventMode,
-            price: e.price ? Number(e.price) : null,
-            rsvpCount: (e.attendee_count as number) ?? 0,
-            description: (e.description as string) ?? '',
-            category: (e.category as string) ?? 'General',
-          })))
-        }
-      } catch { /* keep mock */ }
-    })()
-  }, [])
+function isThisMonth(date: Date) {
+  const now = new Date()
+  const end = new Date(now); end.setDate(now.getDate() + 30)
+  return date >= now && date <= end
+}
 
-  const filtered = applyFilter(events, activeFilter)
+function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void }) {
+  const { day, num, month, year } = formatEventDate(ev.date)
+  const catColor = CAT_COLORS[ev.category] ?? '#38bdf8'
+  const gradient = CAT_GRADIENTS[ev.category] ?? ev.imageGradient ?? 'linear-gradient(135deg,#0284c7,#1e40af)'
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 104px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', paddingTop: 104 }}>
-      <style>{`
-        .ev-hero { padding: 24px 20px 18px; background: linear-gradient(180deg,rgba(56,189,248,0.07) 0%,transparent 100%); border-bottom: 1px solid rgba(56,189,248,0.08); }
-        .ev-hero-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-        .ev-content { max-width: 1200px; margin: 0 auto; padding: 20px 20px 100px; }
-        .ev-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+    <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer' }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 8px 32px rgba(56,189,248,0.15)' }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
 
-        .ev-filters { display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
-        .ev-filters::-webkit-scrollbar { display: none; }
-        .ev-pill { flex-shrink: 0; display: flex; align-items: center; gap: 5px; border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid rgba(148,163,184,0.2); background: transparent; color: #94a3b8; font-family: inherit; white-space: nowrap; transition: all 0.12s; min-height: 38px; }
-        .ev-pill.active { background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.35); color: #38bdf8; font-weight: 700; }
-        .ev-pill:hover:not(.active) { background: rgba(255,255,255,0.04); color: #f1f5f9; }
+      {/* Cover / gradient header */}
+      <div style={{ height: 120, background: gradient, position: 'relative', flexShrink: 0 }}>
+        {/* Date stamp */}
+        <div style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(8px)', borderRadius: 10, padding: '6px 10px', textAlign: 'center', minWidth: 48 }}>
+          <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{day}</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#f1f5f9', lineHeight: 1 }}>{num}</div>
+          <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8' }}>{month} {year}</div>
+        </div>
 
-        .ev-card { background: #1e293b; border: 1px solid rgba(56,189,248,0.08); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; text-decoration: none; transition: border-color 0.15s, transform 0.15s; }
-        .ev-card:hover { border-color: rgba(56,189,248,0.28); transform: translateY(-2px); }
-        .ev-card:active { transform: scale(0.99); }
-        .ev-banner { height: 90px; display: flex; align-items: center; justify-content: center; font-size: 2.4rem; position: relative; }
-        .ev-body { padding: 14px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
-        .ev-title { font-size: 15px; font-weight: 700; color: #f1f5f9; line-height: 1.35; }
-        .ev-desc { font-size: 12px; color: #64748b; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0; }
-        .ev-footer { padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 5px; border-top: 1px solid rgba(56,189,248,0.06); }
-        .ev-meta { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #94a3b8; min-width: 0; }
-        .ev-meta span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .ev-badge { display: inline-flex; align-items: center; gap: 3px; border-radius: 999px; padding: 2px 8px; font-size: 10px; font-weight: 700; white-space: nowrap; }
-        .ev-badges { position: absolute; bottom: 8px; left: 10px; display: flex; gap: 5px; flex-wrap: wrap; }
-        .ev-cat-chip { position: absolute; top: 8px; right: 10px; border-radius: 999px; padding: 2px 8px; font-size: 10px; font-weight: 700; }
-        .ev-create-btn { display: inline-flex; align-items: center; gap: 6px; background: #38bdf8; color: #0f172a; border-radius: 10px; padding: 10px 18px; font-weight: 700; font-size: 14px; text-decoration: none; white-space: nowrap; min-height: 44px; }
-        .ev-rsvp { background: #38bdf8; color: #0f172a; border-radius: 7px; padding: 5px 14px; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+        {/* Badges top right */}
+        <div style={{ position: 'absolute', top: 12, right: 12, display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+          {ev.mode === 'online'
+            ? <span style={{ background: 'rgba(56,189,248,0.9)', color: '#0f172a', fontSize: '0.65rem', fontWeight: 800, padding: '2px 8px', borderRadius: 999 }}>ONLINE</span>
+            : <span style={{ background: 'rgba(148,163,184,0.9)', color: '#0f172a', fontSize: '0.65rem', fontWeight: 800, padding: '2px 8px', borderRadius: 999 }}>IN-PERSON</span>
+          }
+          {ev.price === null || ev.price === 0
+            ? <span style={{ background: 'rgba(52,211,153,0.9)', color: '#0f172a', fontSize: '0.65rem', fontWeight: 800, padding: '2px 8px', borderRadius: 999 }}>FREE</span>
+            : <span style={{ background: 'rgba(245,158,11,0.9)', color: '#0f172a', fontSize: '0.65rem', fontWeight: 800, padding: '2px 8px', borderRadius: 999 }}>£{ev.price}</span>
+          }
+        </div>
 
-        @media (max-width: 640px) {
-          .ev-hero { padding: 16px 14px 14px; }
-          .ev-content { padding: 14px 12px 100px; }
-          .ev-grid { grid-template-columns: 1fr; gap: 12px; }
-          .ev-create-btn { width: 100%; justify-content: center; }
-          .ev-banner { height: 80px; font-size: 2rem; }
-          .ev-body { padding: 12px; }
-          .ev-footer { padding: 8px 12px 12px; }
-          .ev-hero-inner h1 { font-size: 22px !important; }
-        }
-      `}</style>
-
-      {/* ── Hero ── */}
-      <div className="ev-hero">
-        <div className="ev-hero-inner">
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: '0 0 4px' }}>Events</h1>
-            <p style={{ color: '#64748b', fontSize: 14, margin: 0 }}>Discover and join community events online and in person</p>
-          </div>
-          <Link href="/events/create" className="ev-create-btn">+ Create Event</Link>
+        {/* Category pill bottom */}
+        <div style={{ position: 'absolute', bottom: 10, left: 12 }}>
+          <span style={{ background: `${catColor}22`, border: `1px solid ${catColor}50`, color: catColor, fontSize: '0.65rem', fontWeight: 700, padding: '2px 8px', borderRadius: 999 }}>{ev.category}</span>
         </div>
       </div>
 
-      <div className="ev-content">
-        {/* ── Filter Pills ── */}
-        <div className="ev-filters">
-          {FILTERS.map(f => (
-            <button
-              key={f.value}
-              onClick={() => setActiveFilter(f.value)}
-              className={`ev-pill${activeFilter === f.value ? ' active' : ''}`}
-            >
-              <span>{f.icon}</span>
-              {f.label}
-            </button>
-          ))}
+      {/* Card body */}
+      <div style={{ padding: '1rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.3 }}>{ev.title}</div>
+
+        {/* Date + time row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: '#38bdf8', fontWeight: 600 }}>
+          <span>🗓</span>
+          <span>{formatEventDate(ev.date).full}{ev.time ? ` · ${ev.time}` : ''}</span>
         </div>
 
-        {/* ── Count + clear ── */}
-        <div style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>
-          <strong style={{ color: '#f1f5f9' }}>{filtered.length}</strong>&nbsp;
-          {filtered.length === 1 ? 'event' : 'events'}
-          {activeFilter !== 'all' && (
-            <button
-              onClick={() => setActiveFilter('all')}
-              style={{ marginLeft: 10, background: 'none', border: '1px solid #334155', borderRadius: 6, padding: '2px 8px', fontSize: 11, color: '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}
-            >
-              ✕ Clear
-            </button>
-          )}
+        {/* Location */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: '#64748b' }}>
+          <span>📍</span>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.location}</span>
         </div>
 
-        {/* ── Grid ── */}
-        {filtered.length > 0 ? (
+        {/* Description */}
+        <p style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.55, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{ev.description}</p>
+
+        {/* Organiser */}
+        {ev.organiser && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingTop: '0.25rem', borderTop: '1px solid rgba(56,189,248,0.07)' }}>
+            {ev.organiserAvatar
+              ? <img src={ev.organiserAvatar} alt={ev.organiser} style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+              : <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#334155', flexShrink: 0 }} />
+            }
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{ev.organiser}</span>
+            {ev.organiserTrust && <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#38bdf8', fontWeight: 700, background: 'rgba(56,189,248,0.08)', padding: '1px 6px', borderRadius: 6 }}>₮{ev.organiserTrust.toLocaleString()}</span>}
+          </div>
+        )}
+
+        {/* Footer: attendees + buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: '#64748b' }}>
+            <span>👥</span>
+            <span>{ev.rsvpCount.toLocaleString()} attending</span>
+          </div>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.4rem' }}>
+            <button
+              onClick={() => onRsvp(ev.id)}
+              style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.78rem', fontWeight: 700, color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 36 }}>
+              {ev.price ? `Buy · £${ev.price}` : 'RSVP Free'}
+            </button>
+            <button
+              style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.45rem 0.6rem', fontSize: '0.78rem', color: '#38bdf8', cursor: 'pointer', minHeight: 36 }}
+              title="Share event">
+              ↗
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function EventsPage() {
+  const [modeFilter, setModeFilter] = useState<ModeFilter>('all')
+  const [priceFilter, setPriceFilter] = useState<PriceFilter>('all')
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all')
+  const [catFilter, setCatFilter] = useState('All')
+  const [rsvped, setRsvped] = useState<Set<string>>(new Set())
+  const [dbEvents, setDbEvents] = useState<EventItem[] | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const supabase = createClient()
+    async function load() {
+      try {
+        const { data } = await supabase
+          .from('community_events')
+          .select('id, title, description, starts_at, ends_at, location, is_online, price, attendee_count, category')
+          .gte('starts_at', new Date().toISOString())
+          .order('starts_at', { ascending: true })
+          .limit(50)
+        if (data && data.length > 0) {
+          setDbEvents(data.map((e: Record<string, unknown>) => ({
+            id: String(e.id),
+            title: String(e.title ?? ''),
+            date: new Date(String(e.starts_at ?? Date.now())),
+            time: e.starts_at ? new Date(String(e.starts_at)).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : undefined,
+            location: String(e.location ?? (e.is_online ? 'Online' : 'TBC')),
+            mode: e.is_online ? 'online' : 'in-person',
+            price: e.price as number | null,
+            rsvpCount: Number(e.attendee_count ?? 0),
+            description: String(e.description ?? ''),
+            category: String(e.category ?? 'Community'),
+          })))
+        }
+      } catch { /* use mock */ }
+      finally { setLoading(false) }
+    }
+    load()
+  }, [])
+
+  const events = dbEvents ?? MOCK_EVENTS
+
+  const filtered = events.filter(ev => {
+    if (modeFilter !== 'all' && ev.mode !== modeFilter) return false
+    if (priceFilter === 'free' && ev.price !== null && ev.price > 0) return false
+    if (priceFilter === 'paid' && (ev.price === null || ev.price === 0)) return false
+    if (timeFilter === 'this-week' && !isThisWeek(ev.date)) return false
+    if (timeFilter === 'this-month' && !isThisMonth(ev.date)) return false
+    if (catFilter !== 'All' && ev.category !== catFilter) return false
+    return true
+  })
+
+  function handleRsvp(id: string) {
+    setRsvped(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
+  }
+
+  const pillStyle = (active: boolean, color = '#38bdf8') => ({
+    padding: '0.4rem 0.9rem', borderRadius: 999, fontSize: '0.8rem', fontWeight: active ? 700 : 500,
+    cursor: 'pointer', border: `1px solid ${active ? color : 'rgba(148,163,184,0.2)'}`,
+    background: active ? `${color}18` : 'transparent', color: active ? color : '#94a3b8',
+    whiteSpace: 'nowrap' as const, minHeight: 36,
+  })
+
+  return (
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 104, paddingBottom: 80 }}>
+      <style>{`
+        .ev-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.25rem; }
+        .ev-filter-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .ev-filter-row { display: flex; gap: 0.5rem; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+        .ev-filter-row::-webkit-scrollbar { display: none; }
+        @media (max-width: 1024px) { .ev-grid { grid-template-columns: repeat(2,1fr) !important; } }
+        @media (max-width: 640px)  { .ev-grid { grid-template-columns: 1fr !important; } }
+      `}</style>
+
+      {/* Header */}
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 1.25rem 1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.5rem' }}>
+          <div>
+            <h1 style={{ fontSize: 'clamp(1.6rem,4vw,2.2rem)', fontWeight: 900, margin: '0 0 0.25rem', letterSpacing: '-0.5px' }}>Events</h1>
+            <p style={{ color: '#64748b', margin: 0, fontSize: '0.9rem' }}>{filtered.length} upcoming event{filtered.length !== 1 ? 's' : ''}</p>
+          </div>
+          <Link href="/events/create" style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.6rem 1.25rem', borderRadius: 10, fontWeight: 700, fontSize: '0.88rem', textDecoration: 'none', flexShrink: 0, minHeight: 44, display: 'flex', alignItems: 'center' }}>
+            + Create Event
+          </Link>
+        </div>
+
+        {/* Filters */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+          {/* Mode + Price + Time */}
+          <div className="ev-filter-row">
+            {(['all','online','in-person'] as ModeFilter[]).map(f => (
+              <button key={f} onClick={() => setModeFilter(f)} style={pillStyle(modeFilter === f)}>
+                {f === 'all' ? 'All Formats' : f === 'online' ? '💻 Online' : '📍 In-Person'}
+              </button>
+            ))}
+            <div style={{ width: 1, background: 'rgba(148,163,184,0.2)', margin: '0 4px', flexShrink: 0 }} />
+            {(['all','free','paid'] as PriceFilter[]).map(f => (
+              <button key={f} onClick={() => setPriceFilter(f)} style={pillStyle(priceFilter === f, f === 'free' ? '#34d399' : f === 'paid' ? '#f59e0b' : '#38bdf8')}>
+                {f === 'all' ? 'Any Price' : f === 'free' ? '🟢 Free' : '💳 Paid'}
+              </button>
+            ))}
+            <div style={{ width: 1, background: 'rgba(148,163,184,0.2)', margin: '0 4px', flexShrink: 0 }} />
+            {(['all','this-week','this-month'] as TimeFilter[]).map(f => (
+              <button key={f} onClick={() => setTimeFilter(f)} style={pillStyle(timeFilter === f)}>
+                {f === 'all' ? 'All Upcoming' : f === 'this-week' ? 'This Week' : 'This Month'}
+              </button>
+            ))}
+          </div>
+
+          {/* Category pills */}
+          <div className="ev-filter-row">
+            {CATEGORIES.map(c => (
+              <button key={c} onClick={() => setCatFilter(c)} style={pillStyle(catFilter === c, CAT_COLORS[c] ?? '#38bdf8')}>
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Grid or empty state */}
+        {loading ? (
           <div className="ev-grid">
-            {filtered.map(event => {
-              const cat = event.category
-              const catColor  = CAT_COLOR[cat]  ?? '#64748b'
-              const bannerBg  = CAT_BANNER[cat] ?? CAT_BANNER.General
-              const emoji     = CAT_EMOJI[cat]  ?? '📅'
-              const dateLabel = isToday(event.date)
-                ? `Today · ${format(event.date, 'h:mm a')}`
-                : format(event.date, 'EEE d MMM · h:mm a')
-
-              return (
-                <Link key={event.id} href={`/events/${event.id}`} className="ev-card">
-                  <div className="ev-banner" style={{ background: bannerBg }}>
-                    <span>{emoji}</span>
-                    {/* Category chip */}
-                    <span className="ev-cat-chip" style={{ background: `${catColor}18`, color: catColor, border: `1px solid ${catColor}30` }}>
-                      {cat}
-                    </span>
-                    {/* Mode + price badges */}
-                    <div className="ev-badges">
-                      <span className="ev-badge" style={{ background: event.mode === 'online' ? 'rgba(52,211,153,0.18)' : 'rgba(167,139,250,0.18)', color: event.mode === 'online' ? '#34d399' : '#a78bfa', border: `1px solid ${event.mode === 'online' ? 'rgba(52,211,153,0.35)' : 'rgba(167,139,250,0.35)'}` }}>
-                        {event.mode === 'online' ? '💻 Online' : '📍 In Person'}
-                      </span>
-                      <span className="ev-badge" style={{ background: event.price === null ? 'rgba(52,211,153,0.12)' : 'rgba(56,189,248,0.12)', color: event.price === null ? '#34d399' : '#38bdf8', border: `1px solid ${event.price === null ? 'rgba(52,211,153,0.3)' : 'rgba(56,189,248,0.25)'}` }}>
-                        {event.price === null ? '🆓 Free' : `£${event.price}`}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="ev-body">
-                    <div className="ev-title">{event.title}</div>
-                    <p className="ev-desc">{event.description}</p>
-                  </div>
-
-                  <div className="ev-footer">
-                    <div className="ev-meta"><span>📅</span><span>{dateLabel}</span></div>
-                    <div className="ev-meta">
-                      <span>{event.mode === 'online' ? '🌐' : '📍'}</span>
-                      <span>{event.location}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
-                      <div className="ev-meta" style={{ margin: 0 }}>
-                        <span>👥</span>
-                        <span><strong style={{ color: '#f1f5f9' }}>{event.rsvpCount.toLocaleString()}</strong> going</span>
-                      </div>
-                      <span className="ev-rsvp">RSVP →</span>
-                    </div>
-                  </div>
-                </Link>
-              )
-            })}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} style={{ background: '#1e293b', borderRadius: 16, height: 340, opacity: 0.5 }}>
+                <div style={{ height: 120, background: '#334155', borderRadius: '16px 16px 0 0' }} />
+                <div style={{ padding: '1rem' }}>
+                  <div style={{ height: 14, background: '#334155', borderRadius: 6, marginBottom: 8, width: '80%' }} />
+                  <div style={{ height: 12, background: '#334155', borderRadius: 6, width: '60%' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
+            <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>📅</div>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.5rem', color: '#f1f5f9' }}>No events found</h2>
+            <p style={{ color: '#64748b', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+              {catFilter !== 'All' || modeFilter !== 'all' || priceFilter !== 'all' || timeFilter !== 'all'
+                ? 'Try adjusting your filters — or be the first to create an event in this category.'
+                : 'No upcoming events yet — why not create one?'}
+            </p>
+            <Link href="/events/create" style={{ display: 'inline-block', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.75rem 1.75rem', borderRadius: 10, fontWeight: 700, textDecoration: 'none', fontSize: '0.95rem' }}>
+              Create an Event →
+            </Link>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#1e293b', border: '1px dashed rgba(56,189,248,0.2)', borderRadius: 14, padding: '60px 24px', textAlign: 'center' }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>📅</div>
-            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>No events found</p>
-            <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>Try a different filter or create a new event.</p>
-            <Link href="/events/create" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#38bdf8', color: '#0f172a', borderRadius: 8, padding: '10px 20px', fontWeight: 700, fontSize: 14, textDecoration: 'none' }}>
-              + Create Event
-            </Link>
+          <div className="ev-grid">
+            {filtered.map(ev => (
+              <EventCard key={ev.id} ev={ev} onRsvp={handleRsvp} />
+            ))}
           </div>
         )}
       </div>

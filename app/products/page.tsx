@@ -1,467 +1,343 @@
 'use client'
-import React, { useState, useEffect, useCallback, Suspense } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-// ─── Categories ──────────────────────────────────────────────
-const DIGITAL_CATEGORIES = [
-  { id: 'templates', label: 'Templates & Documents', icon: '📋' },
-  { id: 'software', label: 'Software & Apps', icon: '⚙️' },
-  { id: 'digital-downloads', label: 'Digital Downloads', icon: '💾' },
-  { id: 'courses', label: 'Courses & Training', icon: '🎓' },
-  { id: 'ebooks', label: 'eBooks & Guides', icon: '📚' },
-  { id: 'design-assets', label: 'Design Assets', icon: '🎨' },
-  { id: 'audio', label: 'Music & Audio', icon: '🎵' },
-  { id: 'video', label: 'Video & Stock', icon: '🎬' },
-  { id: 'photography', label: 'Photography', icon: '📷' },
-  { id: 'fonts', label: 'Fonts & Typography', icon: '✍️' },
-  { id: 'plugins', label: 'Plugins & Integrations', icon: '🔌' },
-  { id: 'datasets', label: 'Data & Research', icon: '📊' },
-]
-
-const PHYSICAL_CATEGORIES = [
-  { id: 'handmade', label: 'Handmade & Crafts', icon: '🤲' },
-  { id: 'books-physical', label: 'Books & Publications', icon: '📖' },
-  { id: 'clothing', label: 'Clothing & Apparel', icon: '👕' },
-  { id: 'home-garden', label: 'Home & Garden', icon: '🏡' },
-  { id: 'art-prints', label: 'Art & Prints', icon: '🖼️' },
-  { id: 'tech-gadgets', label: 'Tech & Gadgets', icon: '🔧' },
-  { id: 'food-drink', label: 'Food & Drink', icon: '🍵' },
-  { id: 'food-groceries', label: 'Food & Groceries', icon: '🛒' },
-  { id: 'health-wellness', label: 'Health & Wellness', icon: '💊' },
-  { id: 'stationery', label: 'Stationery & Office', icon: '✏️' },
-  { id: 'baby-kids', label: 'Baby & Kids', icon: '🧸' },
-  { id: 'pets', label: 'Pet Food & Treats', icon: '🐾' },
-]
-
-const SHIPPING_OPTIONS = [
-  { id: 'download', label: 'Instant Download', icon: '⚡' },
-  { id: 'email', label: 'Email Delivery', icon: '📧' },
-  { id: 'standard', label: 'Standard Shipping', icon: '📦' },
-  { id: 'tracked', label: 'Tracked Delivery', icon: '🔍' },
-  { id: 'express', label: 'Express Shipping', icon: '🚀' },
-  { id: 'international', label: 'International', icon: '🌍' },
-  { id: 'collection', label: 'Collection', icon: '🏪' },
-]
-
-const PRICE_RANGES = [
-  { label: 'Any Price', max: null },
-  { label: 'Under £10', max: 10 },
-  { label: '£10–£50', min: 10, max: 50 },
-  { label: '£50–£100', min: 50, max: 100 },
-  { label: '£100–£500', min: 100, max: 500 },
-  { label: '£500+', min: 500, max: null },
-]
-
-const SORT_OPTIONS = [
-  { value: 'best', label: 'Best Match' },
-  { value: 'newest', label: 'Newest First' },
-  { value: 'price_asc', label: 'Price: Low → High' },
-  { value: 'price_desc', label: 'Price: High → Low' },
-  { value: 'top_rated', label: 'Top Rated' },
-  { value: 'best_sellers', label: 'Best Sellers' },
-]
-
-const BADGE_COLORS: Record<string, string> = {
-  Bestseller: '#fbbf24',
-  'Top Rated': '#38bdf8',
-  New: '#34d399',
-  'Eco Verified': '#4ade80',
-  Featured: '#a78bfa',
-}
-
-const MOCK_PRODUCTS = [
-  { id: 'm1', title: 'Figma Component Library Pro', category_id: 'design-assets', product_type: 'digital', price: 49, currency: '£', seller_name: 'Sarah Chen', seller_avatar: 'https://i.pravatar.cc/150?img=47', rating: 4.9, reviews: 312, sales: 1840, description: '850+ production-ready Figma components with auto-layout, variants, and dark mode.', tags: ['Figma', 'UI Kit', 'Design System'], badge: 'Bestseller', shipping_options: ['download'] },
-  { id: 'm2', title: 'Next.js SaaS Boilerplate', category_id: 'templates', product_type: 'digital', price: 129, currency: '£', seller_name: 'Priya Nair', seller_avatar: 'https://i.pravatar.cc/150?img=44', rating: 5.0, reviews: 89, sales: 420, description: 'Production-ready Next.js 14 starter with auth, billing, dashboard and Supabase integration.', tags: ['Next.js', 'TypeScript', 'Supabase'], badge: 'Top Rated', shipping_options: ['download'] },
-  { id: 'm3', title: 'Impact Business Handbook', category_id: 'ebooks', product_type: 'digital', price: 24, currency: '£', seller_name: 'Amara Diallo', seller_avatar: 'https://i.pravatar.cc/150?img=45', rating: 4.8, reviews: 156, sales: 2300, description: 'A practical guide to building a purpose-driven business that delivers profit and positive impact.', tags: ['Business', 'Sustainability', 'Strategy'], badge: null, shipping_options: ['download', 'email'] },
-  { id: 'm4', title: 'SEO Audit Spreadsheet Kit', category_id: 'templates', product_type: 'digital', price: 19, currency: '£', seller_name: 'Marcus Obi', seller_avatar: 'https://i.pravatar.cc/150?img=12', rating: 4.7, reviews: 203, sales: 3100, description: '14 interconnected spreadsheets covering technical SEO, content gaps, backlink analysis and reporting.', tags: ['SEO', 'Spreadsheet', 'Marketing'], badge: null, shipping_options: ['download'] },
-  { id: 'm5', title: 'Mindful Leadership Course', category_id: 'courses', product_type: 'digital', price: 89, currency: '£', seller_name: 'Tom Walsh', seller_avatar: 'https://i.pravatar.cc/150?img=53', rating: 4.9, reviews: 67, sales: 580, description: '8-week self-paced course on conscious leadership, team culture and sustainable growth.', tags: ['Leadership', 'Course', 'Self-paced'], badge: 'New', shipping_options: ['download', 'email'] },
-  { id: 'm6', title: 'Handmade Ceramic Mug Set', category_id: 'handmade', product_type: 'physical', price: 65, currency: '£', seller_name: 'Lena Fischer', seller_avatar: 'https://i.pravatar.cc/150?img=41', rating: 4.9, reviews: 44, sales: 290, description: 'Set of 4 hand-thrown ceramic mugs, each unique. Sustainably fired in a wood kiln. Ships worldwide.', tags: ['Handmade', 'Ceramic', 'Sustainable'], badge: 'Eco Verified', shipping_options: ['standard', 'tracked', 'international'] },
-  { id: 'm7', title: 'Startup Financial Model', category_id: 'templates', product_type: 'digital', price: 35, currency: '£', seller_name: 'James Okafor', seller_avatar: 'https://i.pravatar.cc/150?img=13', rating: 4.8, reviews: 128, sales: 960, description: '5-year financial model for SaaS startups. Includes revenue, burn rate, runway and investor dashboards.', tags: ['Finance', 'Excel', 'Startup'], badge: null, shipping_options: ['download'] },
-  { id: 'm8', title: 'Social Media Content Calendar', category_id: 'templates', product_type: 'digital', price: 15, currency: '£', seller_name: 'Yuki Tanaka', seller_avatar: 'https://i.pravatar.cc/150?img=5', rating: 4.6, reviews: 445, sales: 6200, description: '52-week content calendar with 300+ prompts, hooks, and post templates for all major platforms.', tags: ['Social Media', 'Content', 'Notion'], badge: 'Bestseller', shipping_options: ['download', 'email'] },
-  { id: 'm9', title: 'Linen Art Print — Coastal Collection', category_id: 'art-prints', product_type: 'physical', price: 45, currency: '£', seller_name: 'Maja Eriksson', seller_avatar: 'https://i.pravatar.cc/150?img=25', rating: 4.8, reviews: 31, sales: 215, description: 'Giclée printed on archival linen. A3 and A2 sizes available. Ready to frame.', tags: ['Art', 'Print', 'Coastal'], badge: 'Featured', shipping_options: ['standard', 'tracked'] },
-  { id: 'm10', title: 'Brand Identity Kit — Canva', category_id: 'design-assets', product_type: 'digital', price: 28, currency: '£', seller_name: 'Carlos Ruiz', seller_avatar: 'https://i.pravatar.cc/150?img=33', rating: 4.7, reviews: 91, sales: 1120, description: 'Complete brand identity pack — logos, colour palettes, typography, and 50+ social templates.', tags: ['Branding', 'Canva', 'Logo'], badge: null, shipping_options: ['download'] },
-  { id: 'm11', title: 'Herbal Wellness Tea Set', category_id: 'food-drink', product_type: 'physical', price: 32, currency: '£', seller_name: 'Ayesha Patel', seller_avatar: 'https://i.pravatar.cc/150?img=9', rating: 4.9, reviews: 78, sales: 480, description: 'Curated selection of 6 organic herbal teas. Zero plastic. Sustainable packaging. UK roasted.', tags: ['Organic', 'Tea', 'Wellness'], badge: 'Eco Verified', shipping_options: ['standard', 'tracked', 'express'] },
-  { id: 'm12', title: 'Podcast Editing Toolkit', category_id: 'audio', product_type: 'digital', price: 22, currency: '£', seller_name: 'Dave McCann', seller_avatar: 'https://i.pravatar.cc/150?img=52', rating: 4.6, reviews: 55, sales: 640, description: 'Royalty-free music, sound effects, and Audacity presets for podcasters. 200+ assets.', tags: ['Podcast', 'Audio', 'Royalty-Free'], badge: null, shipping_options: ['download'] },
-  // ── Food & Groceries ─────────────────────────────────────────
-  { id: 'fg1', title: 'Organic Sourdough Loaf — Weekly Subscription', category_id: 'food-groceries', product_type: 'physical', price: 8, currency: '£', seller_name: 'Ciara Murphy', seller_avatar: 'https://i.pravatar.cc/150?img=39', rating: 4.9, reviews: 143, sales: 980, description: 'Freshly baked organic sourdough delivered to your door weekly. Made with heritage wheat, long-fermented for flavour and gut health. Dublin only.', tags: ['Organic', 'Sourdough', 'Subscription'], badge: 'Bestseller', shipping_options: ['standard'] },
-  { id: 'fg2', title: 'Irish Raw Honey — 500g Jar', category_id: 'food-groceries', product_type: 'physical', price: 14, currency: '£', seller_name: 'Tom Walsh', seller_avatar: 'https://i.pravatar.cc/150?img=53', rating: 5.0, reviews: 87, sales: 560, description: 'Single-origin raw Irish honey from wildflower meadows in County Clare. Unfiltered, unpasteurised. Every batch lab-tested for purity.', tags: ['Honey', 'Raw', 'Irish'], badge: 'Top Rated', shipping_options: ['standard', 'tracked'] },
-  { id: 'fg3', title: 'Artisan Pasta Box — Mixed Selection', category_id: 'food-groceries', product_type: 'physical', price: 22, currency: '£', seller_name: 'Lucia Romano', seller_avatar: 'https://i.pravatar.cc/150?img=49', rating: 4.8, reviews: 62, sales: 340, description: '6 varieties of hand-extruded bronze-die pasta from our Dublin kitchen. Rigatoni, pappardelle, fusilli, and more. Free recipe card included.', tags: ['Pasta', 'Artisan', 'Italian'], badge: null, shipping_options: ['standard', 'tracked'] },
-  { id: 'fg4', title: 'Seasonal Veg Box — Farm Direct', category_id: 'food-groceries', product_type: 'physical', price: 28, currency: '£', seller_name: 'Dave Kelly', seller_avatar: 'https://i.pravatar.cc/150?img=15', rating: 4.7, reviews: 201, sales: 1240, description: 'Weekly seasonal vegetables direct from our family farm in Wicklow. Mixed box for 2–4 people. Zero plastic packaging. Collected Monday, delivered Tuesday.', tags: ['Veg Box', 'Organic', 'Local Farm'], badge: 'Eco Verified', shipping_options: ['standard'] },
-  { id: 'fg5', title: 'Cold Brew Coffee Concentrate — 4-Pack', category_id: 'food-groceries', product_type: 'physical', price: 18, currency: '£', seller_name: 'Marcus Obi', seller_avatar: 'https://i.pravatar.cc/150?img=12', rating: 4.9, reviews: 115, sales: 730, description: 'Premium cold brew concentrate made with single-origin Ethiopian and Colombian beans. Makes 16 drinks. Ready in 30 seconds — just add water or milk.', tags: ['Coffee', 'Cold Brew', 'Specialty'], badge: null, shipping_options: ['standard', 'express'] },
-  { id: 'fg6', title: 'Gluten-Free Granola Gift Set', category_id: 'food-groceries', product_type: 'physical', price: 24, currency: '£', seller_name: 'Amara Diallo', seller_avatar: 'https://i.pravatar.cc/150?img=45', rating: 4.8, reviews: 49, sales: 210, description: 'Three flavours of handmade gluten-free granola in a beautifully packaged gift box. Dark chocolate & hazelnut, berry & coconut, and classic maple pecan. Makes a perfect foodie gift.', tags: ['Gluten-Free', 'Granola', 'Gift'], badge: 'New', shipping_options: ['standard', 'tracked', 'express'] },
-  { id: 'fg7', title: 'Hot Sauce Bundle — 5 Bottles', category_id: 'food-groceries', product_type: 'physical', price: 32, currency: '£', seller_name: 'James Okafor', seller_avatar: 'https://i.pravatar.cc/150?img=13', rating: 4.9, reviews: 178, sales: 890, description: 'Five small-batch hot sauces ranging from mild fermented jalapeño to scorching habanero-mango. All natural ingredients. Made in Cork. Ships worldwide.', tags: ['Hot Sauce', 'Small Batch', 'Vegan'], badge: 'Bestseller', shipping_options: ['standard', 'tracked', 'international'] },
-  { id: 'fg8', title: 'Specialty Cheese & Charcuterie Hamper', category_id: 'food-groceries', product_type: 'physical', price: 55, currency: '£', seller_name: 'Lena Fischer', seller_avatar: 'https://i.pravatar.cc/150?img=41', rating: 5.0, reviews: 34, sales: 120, description: 'A curated hamper of Irish and Continental artisan cheeses, cured meats, crackers, and preserves. Serves 4–6 as a sharing board. Delivered chilled in insulated packaging.', tags: ['Cheese', 'Charcuterie', 'Hamper'], badge: 'Featured', shipping_options: ['tracked', 'express'] },
-]
-
-// ─── Types ────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface Product {
   id: string
   title: string
-  category_id: string
-  product_type: 'digital' | 'physical' | string
+  description: string
   price: number
-  currency: string
+  category: string
+  type: 'digital' | 'physical'
+  image?: string
+  imageGradient?: string
   seller_name: string
   seller_avatar?: string
+  seller_trust: number
+  seller_verified?: boolean
   rating: number
-  reviews: number
-  sales: number
-  description: string
-  tags: string[]
-  badge: string | null
-  shipping_options: string[]
-  condition?: string
-  stock_qty?: number
+  review_count: number
+  free_shipping?: boolean
+  delivery?: string
+  wishlist?: boolean
 }
 
-// ─── Helper ────────────────────────────────────────────────────
-function getGrad(str: string): string {
-  const grads = [
-    'linear-gradient(135deg,#38bdf8,#0284c7)',
-    'linear-gradient(135deg,#a78bfa,#7c3aed)',
-    'linear-gradient(135deg,#34d399,#059669)',
-    'linear-gradient(135deg,#fb923c,#ea580c)',
-    'linear-gradient(135deg,#f472b6,#db2777)',
-    'linear-gradient(135deg,#fbbf24,#d97706)',
-  ]
-  return grads[(str.charCodeAt(0) + str.charCodeAt(1)) % grads.length]
+// ─── Category data ────────────────────────────────────────────────────────────
+const ALL_CATEGORIES = [
+  { id: 'all', label: 'All', icon: '🌐' },
+  { id: 'art', label: 'Art', icon: '🎨' },
+  { id: 'music', label: 'Music', icon: '🎵' },
+  { id: 'courses', label: 'Courses', icon: '🎓' },
+  { id: 'templates', label: 'Templates', icon: '📋' },
+  { id: 'handmade', label: 'Handmade', icon: '🤲' },
+  { id: 'food-groceries', label: 'Food', icon: '🥦' },
+  { id: 'books', label: 'Books', icon: '📖' },
+  { id: 'software', label: 'Software', icon: '⚙️' },
+  { id: 'photography', label: 'Photography', icon: '📷' },
+  { id: 'merch', label: 'Merch', icon: '👕' },
+]
+
+const SORT_OPTIONS = ['Newest', 'Popular', 'Price: Low', 'Price: High', 'Trust Score']
+
+// ─── Category gradients ───────────────────────────────────────────────────────
+const CAT_GRAD: Record<string, string> = {
+  art:           'linear-gradient(135deg,#f472b6,#db2777)',
+  music:         'linear-gradient(135deg,#a78bfa,#7c3aed)',
+  courses:       'linear-gradient(135deg,#38bdf8,#0284c7)',
+  templates:     'linear-gradient(135deg,#34d399,#059669)',
+  handmade:      'linear-gradient(135deg,#fb923c,#ea580c)',
+  'food-groceries':'linear-gradient(135deg,#86efac,#16a34a)',
+  books:         'linear-gradient(135deg,#fbbf24,#d97706)',
+  software:      'linear-gradient(135deg,#818cf8,#4338ca)',
+  photography:   'linear-gradient(135deg,#94a3b8,#475569)',
+  merch:         'linear-gradient(135deg,#f472b6,#7c3aed)',
 }
 
-function getCategoryIcon(catId: string): string {
-  const all = [...DIGITAL_CATEGORIES, ...PHYSICAL_CATEGORIES]
-  return all.find(c => c.id === catId)?.icon ?? '📦'
-}
+// ─── Mock data ────────────────────────────────────────────────────────────────
+const MOCK_PRODUCTS: Product[] = [
+  { id:'p1', title:'Notion Business OS', description:'Complete business management system built in Notion. Includes CRM, project tracker, finance dashboard and more.', price:29, category:'templates', type:'digital', imageGradient:'linear-gradient(135deg,#34d399,#059669)', seller_name:'Priya Nair', seller_avatar:'https://i.pravatar.cc/40?img=44', seller_trust:1580, seller_verified:true, rating:4.9, review_count:284, delivery:'Instant Download' },
+  { id:'p2', title:'FreeTrust Merch Hoodie', description:'Premium heavyweight hoodie with embroidered FreeTrust logo. Ethically made, super soft, available in 6 colours.', price:65, category:'merch', type:'physical', imageGradient:'linear-gradient(135deg,#38bdf8,#0284c7)', seller_name:'Maja Eriksson', seller_avatar:'https://i.pravatar.cc/40?img=25', seller_trust:740, seller_verified:true, rating:4.8, review_count:91, free_shipping:true, delivery:'3–5 business days' },
+  { id:'p3', title:'Sustainable Biz Starter Kit', description:'A 90-page guide + templates for launching a carbon-neutral business. Includes ESG reporting spreadsheet.', price:19, category:'courses', type:'digital', imageGradient:'linear-gradient(135deg,#86efac,#16a34a)', seller_name:'Amara Diallo', seller_avatar:'https://i.pravatar.cc/40?img=45', seller_trust:890, seller_verified:true, rating:4.7, review_count:147, delivery:'Instant Download' },
+  { id:'p4', title:'UI Component Library — Figma', description:'500+ production-ready Figma components. Dark and light modes, auto-layout, variables system included.', price:79, category:'art', type:'digital', imageGradient:'linear-gradient(135deg,#f472b6,#db2777)', seller_name:'Sarah Chen', seller_avatar:'https://i.pravatar.cc/40?img=47', seller_trust:2100, seller_verified:true, rating:5.0, review_count:512, delivery:'Instant Download' },
+  { id:'p5', title:'Irish Sourdough Starter Culture', description:'Live active sourdough starter — 20-year-old culture, fed and ready to ship in an insulated pouch.', price:14, category:'food-groceries', type:'physical', imageGradient:'linear-gradient(135deg,#fbbf24,#d97706)', seller_name:'Dave Kelly', seller_avatar:'https://i.pravatar.cc/40?img=15', seller_trust:420, rating:4.6, review_count:63, free_shipping:false, delivery:'1–2 days (refrigerated)' },
+  { id:'p6', title:'Ambient Lo-Fi Music Pack', description:'80 royalty-free lo-fi tracks — perfect for videos, podcasts and study sessions. All stems included.', price:24, category:'music', type:'digital', imageGradient:'linear-gradient(135deg,#a78bfa,#7c3aed)', seller_name:'Lena Fischer', seller_avatar:'https://i.pravatar.cc/40?img=41', seller_trust:780, rating:4.8, review_count:203, delivery:'Instant Download' },
+  { id:'p7', title:'Next.js SaaS Boilerplate', description:'Production-ready Next.js 14 starter with Supabase auth, Stripe billing, Resend email and Tailwind UI.', price:129, category:'software', type:'digital', imageGradient:'linear-gradient(135deg,#818cf8,#4338ca)', seller_name:'Marcus Obi', seller_avatar:'https://i.pravatar.cc/40?img=12', seller_trust:2100, seller_verified:true, rating:4.9, review_count:378, delivery:'Instant Download' },
+  { id:'p8', title:'Handwoven Linen Tote Bag', description:'Beautiful handwoven linen tote in natural dye colours. Each bag is unique — handmade in small batches.', price:38, category:'handmade', type:'physical', imageGradient:'linear-gradient(135deg,#fb923c,#ea580c)', seller_name:'Ciara Murphy', seller_avatar:'https://i.pravatar.cc/40?img=39', seller_trust:580, rating:4.9, review_count:45, free_shipping:true, delivery:'4–7 business days' },
+  { id:'p9', title:'SEO Content Strategy Course', description:'12-module course on building organic traffic from zero. Includes keyword research, content frameworks and case studies.', price:97, category:'courses', type:'digital', imageGradient:'linear-gradient(135deg,#38bdf8,#0284c7)', seller_name:'Tom Walsh', seller_avatar:'https://i.pravatar.cc/40?img=53', seller_trust:1240, seller_verified:true, rating:4.8, review_count:267, delivery:'Instant Download' },
+  { id:'p10', title:'Dublin Street Photography Prints', description:'Limited edition A3 prints of Dublin city life. Shot on film, printed on Hahnemühle Fine Art paper.', price:55, category:'photography', type:'physical', imageGradient:'linear-gradient(135deg,#94a3b8,#475569)', seller_name:'James Okafor', seller_avatar:'https://i.pravatar.cc/40?img=13', seller_trust:680, rating:5.0, review_count:28, free_shipping:false, delivery:'5–7 business days' },
+  { id:'p11', title:'Organic Seed Collection (30 varieties)', description:'Heirloom vegetable seeds — 30 varieties, non-GMO, sustainably grown. Includes planting guide.', price:22, category:'food-groceries', type:'physical', imageGradient:'linear-gradient(135deg,#86efac,#16a34a)', seller_name:'Yuki Tanaka', seller_avatar:'https://i.pravatar.cc/40?img=5', seller_trust:390, rating:4.7, review_count:81, free_shipping:true, delivery:'2–4 business days' },
+  { id:'p12', title:'Brand Identity Design Book', description:'The definitive guide to building brand identities — from strategy to visual systems. 380 pages, hardcover.', price:42, category:'books', type:'physical', imageGradient:'linear-gradient(135deg,#fbbf24,#d97706)', seller_name:'Priya Nair', seller_avatar:'https://i.pravatar.cc/40?img=44', seller_trust:1580, seller_verified:true, rating:4.8, review_count:193, free_shipping:true, delivery:'3–5 business days' },
+]
 
-// ─── Main Component ───────────────────────────────────────────
-function ProductsInner() {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-
-  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS as Product[])
-  const [loading, setLoading] = useState(false)
-  const [total, setTotal] = useState(MOCK_PRODUCTS.length)
-
-  const [search, setSearch] = useState(searchParams.get('q') ?? '')
-  const [activeType, setActiveType] = useState<'all' | 'digital' | 'physical'>(
-    (searchParams.get('type') as 'digital' | 'physical') ?? 'all'
+// ─── Star rating ──────────────────────────────────────────────────────────────
+function Stars({ rating }: { rating: number }) {
+  return (
+    <span>
+      {[1,2,3,4,5].map(i => (
+        <span key={i} style={{ color: i <= Math.round(rating) ? '#fbbf24' : '#334155', fontSize: '0.7rem' }}>★</span>
+      ))}
+    </span>
   )
-  const [activeCat, setActiveCat] = useState(searchParams.get('cat') ?? 'all')
-  const [priceRange, setPriceRange] = useState(0)
-  const [sort, setSort] = useState('best')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+}
 
-  const visibleDigital = activeType === 'physical' ? [] : DIGITAL_CATEGORIES
-  const visiblePhysical = activeType === 'digital' ? [] : PHYSICAL_CATEGORIES
-
-  const loadProducts = useCallback(async () => {
-    setLoading(true)
-    try {
-      const supabase = createClient()
-      let query = supabase
-        .from('listings')
-        .select('*, seller:profiles!seller_id(full_name)', { count: 'exact' })
-        .eq('status', 'active')
-        .limit(48)
-
-      if (activeType !== 'all') query = query.eq('product_type', activeType)
-      if (activeCat !== 'all') query = query.eq('category_id', activeCat)
-      if (search) query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`)
-
-      const priceFilter = PRICE_RANGES[priceRange]
-      if (priceFilter.min != null) query = query.gte('price', priceFilter.min)
-      if (priceFilter.max != null) query = query.lte('price', priceFilter.max)
-
-      if (sort === 'newest') query = query.order('created_at', { ascending: false })
-      else if (sort === 'price_asc') query = query.order('price', { ascending: true })
-      else if (sort === 'price_desc') query = query.order('price', { ascending: false })
-      else query = query.order('created_at', { ascending: false })
-
-      const { data, count } = await query
-
-      if (data && data.length > 0) {
-        const mapped: Product[] = data.map((l: Record<string, unknown>) => {
-          const sellerObj = l.seller as { full_name?: string } | null
-          const sellerName = sellerObj?.full_name ?? 'Unknown'
-          return {
-            id: l.id as string,
-            title: l.title as string,
-            category_id: (l.category_id as string) ?? 'digital-downloads',
-            product_type: (l.product_type as string) ?? 'digital',
-            price: Number(l.price),
-            currency: (l.currency as string) ?? '£',
-            seller_name: sellerName,
-            rating: 4.8,
-            reviews: 0,
-            sales: 0,
-            description: (l.description as string) ?? '',
-            tags: (l.tags as string[]) ?? [],
-            badge: null,
-            shipping_options: (l.shipping_options as string[]) ?? [],
-            condition: l.condition as string,
-            stock_qty: l.stock_qty as number,
-          }
-        })
-        setProducts(mapped)
-        setTotal(count ?? mapped.length)
-      } else {
-        // Fallback to mock filtered
-        let filtered = MOCK_PRODUCTS as Product[]
-        if (activeType !== 'all') filtered = filtered.filter(p => p.product_type === activeType)
-        if (activeCat !== 'all') filtered = filtered.filter(p => p.category_id === activeCat)
-        if (search) filtered = filtered.filter(p => p.title.toLowerCase().includes(search.toLowerCase()) || p.description.toLowerCase().includes(search.toLowerCase()))
-        setProducts(filtered)
-        setTotal(filtered.length)
-      }
-    } catch {
-      // keep mock data
-    } finally {
-      setLoading(false)
-    }
-  }, [activeType, activeCat, search, priceRange, sort])
-
-  useEffect(() => {
-    loadProducts()
-  }, [loadProducts])
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    loadProducts()
-  }
-
-  const handleCatSelect = (catId: string) => {
-    setActiveCat(catId)
-    setSidebarOpen(false)
-  }
-
-  const filteredByMock = (() => {
-    if (loading) return products
-    return products
-  })()
+// ─── Product card ─────────────────────────────────────────────────────────────
+function ProductCard({ p, wishlist, onWishlist }: {
+  p: Product
+  wishlist: Set<string>
+  onWishlist: (id: string) => void
+}) {
+  const catLabel = ALL_CATEGORIES.find(c => c.id === p.category)?.label ?? p.category
+  const gradient = p.image ? undefined : (CAT_GRAD[p.category] ?? 'linear-gradient(135deg,#334155,#1e293b)')
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 104px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 104 }}>
-      <style>{`
-        .pm-layout { display: flex; max-width: 1280px; margin: 0 auto; padding: 1.5rem 1rem; gap: 1.5rem; }
-        .pm-sidebar { width: 220px; flex-shrink: 0; }
-        .pm-sidebar-sticky { position: sticky; top: 116px; }
-        .pm-main { flex: 1; min-width: 0; }
-        .pm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }
-        .pm-card { background: #1e293b; border: 1px solid rgba(56,189,248,0.1); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; transition: border-color 0.15s, transform 0.15s; cursor: pointer; }
-        .pm-card:hover { border-color: rgba(56,189,248,0.3); transform: translateY(-2px); }
-        .pm-cat-btn { display: flex; align-items: center; gap: 0.5rem; width: 100%; padding: 0.45rem 0.65rem; background: transparent; border: none; border-radius: 7px; cursor: pointer; font-size: 0.82rem; color: #94a3b8; text-align: left; transition: background 0.12s, color 0.12s; }
-        .pm-cat-btn:hover { background: rgba(56,189,248,0.07); color: #f1f5f9; }
-        .pm-cat-btn.active { background: rgba(56,189,248,0.12); color: #38bdf8; font-weight: 600; }
-        .pm-type-tab { padding: 0.45rem 1rem; border-radius: 999px; font-size: 0.82rem; font-weight: 500; cursor: pointer; border: 1px solid rgba(148,163,184,0.2); background: transparent; color: #94a3b8; transition: all 0.12s; }
-        .pm-type-tab.active { background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.3); color: #38bdf8; }
-        .pm-sidebar-toggle { display: none; }
-        @media (max-width: 768px) {
-          .pm-layout { padding: 1rem; gap: 0; flex-direction: column; }
-          .pm-sidebar { display: none; width: 100%; }
-          .pm-sidebar.open { display: block; margin-bottom: 1rem; }
-          .pm-sidebar-sticky { position: static; }
-          .pm-sidebar-toggle { display: block; }
-          .pm-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem; }
+    <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.15s, box-shadow 0.15s' }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 8px 32px rgba(56,189,248,0.18)' }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
+
+      {/* Image / gradient */}
+      <div style={{ position: 'relative', height: 160, background: p.image ? undefined : gradient, flexShrink: 0 }}>
+        {p.image && <img src={p.image} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+
+        {/* Category badge — top left */}
+        <div style={{ position: 'absolute', top: 8, left: 8 }}>
+          <span style={{ background: 'rgba(15,23,42,0.85)', color: '#94a3b8', fontSize: '0.62rem', fontWeight: 700, padding: '2px 7px', borderRadius: 999 }}>{catLabel}</span>
+        </div>
+
+        {/* Digital/Physical badge + wishlist — top right */}
+        <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+          {p.type === 'digital'
+            ? <span style={{ background: 'rgba(56,189,248,0.9)', color: '#0f172a', fontSize: '0.6rem', fontWeight: 800, padding: '2px 7px', borderRadius: 999 }}>DIGITAL</span>
+            : <span style={{ background: 'rgba(148,163,184,0.9)', color: '#0f172a', fontSize: '0.6rem', fontWeight: 800, padding: '2px 7px', borderRadius: 999 }}>PHYSICAL</span>
+          }
+          <button
+            onClick={() => onWishlist(p.id)}
+            style={{ background: 'rgba(15,23,42,0.8)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.85rem', flexShrink: 0 }}>
+            {wishlist.has(p.id) ? '❤️' : '🤍'}
+          </button>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div style={{ padding: '0.85rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.25 }}>{p.title}</div>
+        <p style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.5, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.description}</p>
+
+        {/* Rating */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+          <Stars rating={p.rating} />
+          <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{p.rating.toFixed(1)} ({p.review_count})</span>
+        </div>
+
+        {/* Seller row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', paddingTop: '0.25rem', borderTop: '1px solid rgba(56,189,248,0.06)' }}>
+          {p.seller_avatar
+            ? <img src={p.seller_avatar} alt={p.seller_name} style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+            : <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#334155', flexShrink: 0 }} />
+          }
+          <span style={{ fontSize: '0.72rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{p.seller_name}</span>
+          {p.seller_verified && <span style={{ fontSize: '0.62rem', color: '#38bdf8', flexShrink: 0 }}>✓</span>}
+          <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: 700, background: 'rgba(56,189,248,0.08)', padding: '1px 5px', borderRadius: 5, flexShrink: 0 }}>₮{p.seller_trust.toLocaleString()}</span>
+        </div>
+
+        {/* Delivery info */}
+        <div style={{ fontSize: '0.7rem', color: p.type === 'digital' ? '#34d399' : '#64748b', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+          <span>{p.type === 'digital' ? '⚡' : '📦'}</span>
+          <span>{p.delivery ?? (p.type === 'digital' ? 'Instant Download' : 'Standard delivery')}</span>
+          {p.free_shipping && <span style={{ marginLeft: 2, color: '#34d399', fontWeight: 700 }}>· Free shipping</span>}
+        </div>
+
+        {/* Price + CTA */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
+          <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#f1f5f9' }}>£{p.price}</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.35rem' }}>
+            <button style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 8, padding: '0.45rem 0.9rem', fontSize: '0.75rem', fontWeight: 700, color: '#fff', cursor: 'pointer', minHeight: 36 }}>
+              Buy Now
+            </button>
+            <button style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.45rem 0.5rem', fontSize: '0.75rem', color: '#38bdf8', cursor: 'pointer', minHeight: 36 }}
+              title="Share">↗</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Inner page (needs useSearchParams) ──────────────────────────────────────
+function ProductsInner() {
+  const searchParams = useSearchParams()
+  const initCat = searchParams.get('category') ?? 'all'
+  const initType = (searchParams.get('type') ?? 'all') as 'all' | 'digital' | 'physical'
+
+  const [typeFilter, setTypeFilter] = useState<'all'|'digital'|'physical'>(initType)
+  const [catFilter, setCatFilter] = useState(initCat)
+  const [sortBy, setSortBy] = useState('Newest')
+  const [maxPrice, setMaxPrice] = useState(500)
+  const [minRating, setMinRating] = useState(0)
+  const [wishlist, setWishlist] = useState<Set<string>>(new Set())
+  const [dbProducts, setDbProducts] = useState<Product[] | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const supabase = createClient()
+    async function load() {
+      try {
+        const { data } = await supabase
+          .from('listings')
+          .select('id, title, description, price, category, type, seller_id, profiles!seller_id(full_name, avatar_url, trust_balance)')
+          .eq('status', 'active')
+          .in('type', ['product', 'digital'])
+          .order('created_at', { ascending: false })
+          .limit(50)
+        if (data && data.length > 0) {
+          setDbProducts(data.map((d: Record<string, unknown>) => {
+            const profile = d.profiles as Record<string, unknown> | null
+            return {
+              id: String(d.id),
+              title: String(d.title ?? ''),
+              description: String(d.description ?? ''),
+              price: Number(d.price ?? 0),
+              category: String(d.category ?? 'templates'),
+              type: d.type === 'digital' ? 'digital' : 'physical',
+              seller_name: String(profile?.full_name ?? 'Seller'),
+              seller_avatar: profile?.avatar_url ? String(profile.avatar_url) : undefined,
+              seller_trust: Number(profile?.trust_balance ?? 0),
+              rating: 0, review_count: 0,
+            }
+          }))
         }
+      } catch { /* use mock */ }
+      finally { setLoading(false) }
+    }
+    load()
+  }, [])
+
+  const products = dbProducts ?? MOCK_PRODUCTS
+
+  let filtered = products.filter(p => {
+    if (typeFilter !== 'all' && p.type !== typeFilter) return false
+    if (catFilter !== 'all' && p.category !== catFilter) return false
+    if (p.price > maxPrice) return false
+    if (p.rating > 0 && p.rating < minRating) return false
+    return true
+  })
+
+  filtered = [...filtered].sort((a, b) => {
+    if (sortBy === 'Price: Low') return a.price - b.price
+    if (sortBy === 'Price: High') return b.price - a.price
+    if (sortBy === 'Popular') return b.review_count - a.review_count
+    if (sortBy === 'Trust Score') return b.seller_trust - a.seller_trust
+    return 0
+  })
+
+  function toggleWishlist(id: string) {
+    setWishlist(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
+  }
+
+  const pillStyle = (active: boolean, color = '#38bdf8') => ({
+    padding: '0.4rem 0.85rem', borderRadius: 999, fontSize: '0.78rem', fontWeight: active ? 700 : 500,
+    cursor: 'pointer', border: `1px solid ${active ? color : 'rgba(148,163,184,0.2)'}`,
+    background: active ? `${color}18` : 'transparent', color: active ? color : '#94a3b8',
+    whiteSpace: 'nowrap' as const, minHeight: 36, flexShrink: 0 as const,
+  })
+
+  return (
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 104, paddingBottom: 80 }}>
+      <style>{`
+        .prod-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1.1rem; }
+        .prod-filter-row { display: flex; gap: 0.5rem; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+        .prod-filter-row::-webkit-scrollbar { display: none; }
+        @media (max-width: 1280px) { .prod-grid { grid-template-columns: repeat(3,1fr) !important; } }
+        @media (max-width: 900px)  { .prod-grid { grid-template-columns: repeat(2,1fr) !important; } }
+        @media (max-width: 480px)  { .prod-grid { grid-template-columns: repeat(2,1fr) !important; } }
       `}</style>
 
-      {/* Hero */}
-      <div style={{ background: 'linear-gradient(180deg,rgba(56,189,248,0.07) 0%,transparent 100%)', borderBottom: '1px solid rgba(56,189,248,0.08)', padding: '2rem 1.5rem 1.5rem' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-            <div>
-              <h1 style={{ fontSize: '1.9rem', fontWeight: 800, marginBottom: '0.3rem' }}>Product Marketplace</h1>
-              <p style={{ color: '#64748b', fontSize: '0.92rem' }}>Discover digital downloads and physical products made by FreeTrust members</p>
-            </div>
-            <Link href="/seller/products/create" style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#0f172a', fontWeight: 700, fontSize: '0.85rem', padding: '0.6rem 1.2rem', borderRadius: 8, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-              + Sell a Product
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 1.25rem 2rem' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.5rem' }}>
+          <div>
+            <h1 style={{ fontSize: 'clamp(1.6rem,4vw,2.2rem)', fontWeight: 900, margin: '0 0 0.25rem', letterSpacing: '-0.5px' }}>Products</h1>
+            <p style={{ color: '#64748b', margin: 0, fontSize: '0.9rem' }}>{filtered.length} product{filtered.length !== 1 ? 's' : ''} found</p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value)}
+              style={{ background: '#1e293b', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: '#94a3b8', cursor: 'pointer', minHeight: 36 }}>
+              {SORT_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <Link href="/seller/gigs/create" style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.5rem 1.1rem', borderRadius: 9, fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none', minHeight: 36, display: 'flex', alignItems: 'center' }}>
+              + List Product
             </Link>
           </div>
+        </div>
 
-          {/* Search + Sort */}
-          <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem', flexWrap: 'wrap' }}>
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search products…"
-              style={{ flex: 1, minWidth: 200, background: '#1e293b', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.65rem 1rem', fontSize: '0.9rem', color: '#f1f5f9', outline: 'none' }}
-            />
-            <select
-              value={sort}
-              onChange={e => setSort(e.target.value)}
-              style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, padding: '0.65rem 0.75rem', fontSize: '0.82rem', color: '#94a3b8', outline: 'none' }}
-            >
-              {SORT_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
-            <button type="submit" style={{ background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 8, padding: '0.65rem 1.2rem', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}>
-              Search
+        {/* Type filters */}
+        <div className="prod-filter-row" style={{ marginBottom: '0.75rem' }}>
+          {(['all','digital','physical'] as const).map(t => (
+            <button key={t} onClick={() => setTypeFilter(t)} style={pillStyle(typeFilter === t)}>
+              {t === 'all' ? 'All Types' : t === 'digital' ? '💾 Digital' : '📦 Physical'}
             </button>
-          </form>
+          ))}
+        </div>
 
-          {/* Type tabs */}
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap' }}>
-            {(['all', 'digital', 'physical'] as const).map(t => (
-              <button key={t} className={`pm-type-tab${activeType === t ? ' active' : ''}`} onClick={() => { setActiveType(t); setActiveCat('all') }}>
-                {t === 'all' ? '🛍️ All Products' : t === 'digital' ? '💾 Digital' : '📦 Physical'}
+        {/* Category pills */}
+        <div className="prod-filter-row" style={{ marginBottom: '1rem' }}>
+          {ALL_CATEGORIES.map(c => (
+            <button key={c.id} onClick={() => setCatFilter(c.id)} style={pillStyle(catFilter === c.id)}>
+              {c.icon} {c.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Price + rating */}
+        <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', marginBottom: '1.25rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#64748b' }}>
+            <span>Max price: <strong style={{ color: '#f1f5f9' }}>£{maxPrice === 500 ? '500+' : maxPrice}</strong></span>
+            <input type="range" min={5} max={500} step={5} value={maxPrice}
+              onChange={e => setMaxPrice(Number(e.target.value))}
+              style={{ accentColor: '#38bdf8', width: 100 }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#64748b' }}>
+            <span>Min rating:</span>
+            {[0,3,4,4.5].map(r => (
+              <button key={r} onClick={() => setMinRating(r)}
+                style={{ ...pillStyle(minRating === r), padding: '0.3rem 0.6rem', fontSize: '0.72rem', minHeight: 30 }}>
+                {r === 0 ? 'Any' : `${r}★+`}
               </button>
             ))}
           </div>
         </div>
-      </div>
 
-      <div className="pm-layout">
-        {/* Sidebar toggle (mobile) */}
-        <button className="pm-sidebar-toggle" onClick={() => setSidebarOpen(o => !o)} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.55rem 1rem', fontSize: '0.82rem', color: '#94a3b8', cursor: 'pointer', marginBottom: '0.75rem' }}>
-          ☰ Categories {sidebarOpen ? '▲' : '▼'}
-        </button>
-
-        {/* Sidebar */}
-        <aside className={`pm-sidebar${sidebarOpen ? ' open' : ''}`}>
-          <div className="pm-sidebar-sticky">
-            {/* Price filter */}
-            <div style={{ marginBottom: '1.5rem' }}>
-              <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748b', marginBottom: '0.5rem' }}>Price Range</div>
-              {PRICE_RANGES.map((r, i) => (
-                <button key={i} className={`pm-cat-btn${priceRange === i ? ' active' : ''}`} onClick={() => setPriceRange(i)}>
-                  {r.label}
-                </button>
-              ))}
-            </div>
-
-            {/* All */}
-            <div style={{ marginBottom: '0.5rem' }}>
-              <button className={`pm-cat-btn${activeCat === 'all' ? ' active' : ''}`} onClick={() => handleCatSelect('all')}>
-                <span>🛍️</span> All Categories
-              </button>
-            </div>
-
-            {/* Digital */}
-            {visibleDigital.length > 0 && (
-              <div style={{ marginBottom: '1.25rem' }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748b', padding: '0.5rem 0.65rem 0.35rem', marginTop: '0.5rem' }}>Digital Products</div>
-                {visibleDigital.map(c => (
-                  <button key={c.id} className={`pm-cat-btn${activeCat === c.id ? ' active' : ''}`} onClick={() => handleCatSelect(c.id)}>
-                    <span>{c.icon}</span> {c.label}
-                  </button>
-                ))}
+        {/* Grid or empty state */}
+        {loading ? (
+          <div className="prod-grid">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} style={{ background: '#1e293b', borderRadius: 14, height: 320, opacity: 0.5 }}>
+                <div style={{ height: 160, background: '#334155', borderRadius: '14px 14px 0 0' }} />
               </div>
-            )}
-
-            {/* Physical */}
-            {visiblePhysical.length > 0 && (
-              <div style={{ marginBottom: '1.25rem' }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748b', padding: '0.5rem 0.65rem 0.35rem', marginTop: '0.5rem' }}>Physical Products</div>
-                {visiblePhysical.map(c => (
-                  <button key={c.id} className={`pm-cat-btn${activeCat === c.id ? ' active' : ''}`} onClick={() => handleCatSelect(c.id)}>
-                    <span>{c.icon}</span> {c.label}
-                  </button>
-                ))}
-              </div>
-            )}
+            ))}
           </div>
-        </aside>
-
-        {/* Main content */}
-        <main className="pm-main">
-          {/* Toolbar */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <span style={{ fontSize: '0.88rem', color: '#64748b' }}>
-              {loading ? 'Loading…' : `${total} product${total !== 1 ? 's' : ''}`}
-              {activeCat !== 'all' && (
-                <button onClick={() => setActiveCat('all')} style={{ marginLeft: '0.6rem', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 999, padding: '0.1rem 0.55rem', fontSize: '0.75rem', color: '#38bdf8', cursor: 'pointer' }}>
-                  ✕ Clear filter
-                </button>
-              )}
-            </span>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
+            <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>📦</div>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.5rem' }}>No products found</h2>
+            <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>
+              {catFilter !== 'all' ? `No products yet in this category — be the first to list one.` : 'No products match your filters.'}
+            </p>
+            <Link href="/seller/gigs/create" style={{ display: 'inline-block', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.75rem 1.75rem', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>
+              + List a Product
+            </Link>
           </div>
-
-          {/* Grid */}
-          <div className="pm-grid">
-            {filteredByMock.map(p => {
-              const initials = p.seller_name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
-              const catIcon = getCategoryIcon(p.category_id)
-              const isDigital = p.product_type === 'digital'
-              const hasInstant = p.shipping_options?.includes('download')
-              return (
-                <Link key={p.id} href={`/products/${p.id}`} style={{ textDecoration: 'none' }}>
-                  <div className="pm-card">
-                    {/* Thumbnail */}
-                    <div style={{ height: 130, background: 'linear-gradient(135deg,rgba(56,189,248,0.08),rgba(148,163,184,0.04))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.8rem', position: 'relative' }}>
-                      <span>{catIcon}</span>
-                      {/* Badges */}
-                      <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        <span style={{ background: isDigital ? 'rgba(56,189,248,0.2)' : 'rgba(251,191,36,0.2)', color: isDigital ? '#38bdf8' : '#fbbf24', border: `1px solid ${isDigital ? 'rgba(56,189,248,0.3)' : 'rgba(251,191,36,0.3)'}`, borderRadius: 999, padding: '0.1rem 0.5rem', fontSize: '0.68rem', fontWeight: 700 }}>
-                          {isDigital ? '💾 Digital' : '📦 Physical'}
-                        </span>
-                        {hasInstant && (
-                          <span style={{ background: 'rgba(52,211,153,0.15)', color: '#34d399', border: '1px solid rgba(52,211,153,0.25)', borderRadius: 999, padding: '0.1rem 0.5rem', fontSize: '0.68rem', fontWeight: 700 }}>
-                            ⚡ Instant
-                          </span>
-                        )}
-                      </div>
-                      {p.badge && (
-                        <span style={{ position: 'absolute', top: 8, right: 8, background: BADGE_COLORS[p.badge] ?? '#38bdf8', color: '#0f172a', borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.7rem', fontWeight: 700 }}>
-                          {p.badge}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Body */}
-                    <div style={{ padding: '0.9rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                      {/* Seller */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: '#64748b' }}>
-                        {p.seller_avatar
-                          ? <img src={p.seller_avatar} alt={p.seller_name} width={18} height={18} style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                          : <div style={{ width: 18, height: 18, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 700, color: '#0f172a', background: getGrad(p.seller_name), flexShrink: 0 }}>{initials}</div>
-                        }
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.seller_name}</span>
-                      </div>
-
-                      {/* Title */}
-                      <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f1f5f9', lineHeight: 1.35 }}>{p.title}</div>
-
-                      {/* Description */}
-                      <p style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: 0 }}>{p.description}</p>
-
-                      {/* Tags */}
-                      <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
-                        {p.tags.slice(0, 3).map(t => <span key={t} style={{ background: 'rgba(148,163,184,0.08)', borderRadius: 4, padding: '0.1rem 0.4rem', fontSize: '0.68rem', color: '#94a3b8' }}>{t}</span>)}
-                      </div>
-
-                      {/* Rating */}
-                      {p.reviews > 0 && (
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                          ★ {p.rating} ({p.reviews}) · {p.sales.toLocaleString()} sales
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Footer */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(56,189,248,0.06)', padding: '0.65rem 0.9rem' }}>
-                      <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#38bdf8' }}>{p.currency}{p.price}</span>
-                      <span style={{ background: '#38bdf8', borderRadius: 7, padding: '0.35rem 0.8rem', fontSize: '0.78rem', fontWeight: 700, color: '#0f172a' }}>
-                        {isDigital ? 'Buy Now' : 'View'}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              )
-            })}
+        ) : (
+          <div className="prod-grid">
+            {filtered.map(p => (
+              <ProductCard key={p.id} p={p} wishlist={wishlist} onWishlist={toggleWishlist} />
+            ))}
           </div>
-
-          {/* Empty state */}
-          {!loading && filteredByMock.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '4rem 2rem', color: '#64748b' }}>
-              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📦</div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem', color: '#94a3b8' }}>No products found</div>
-              <p style={{ fontSize: '0.88rem' }}>Try adjusting your filters or search terms</p>
-              <button onClick={() => { setActiveCat('all'); setSearch(''); setPriceRange(0) }} style={{ marginTop: '1rem', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.55rem 1.2rem', fontSize: '0.85rem', color: '#38bdf8', cursor: 'pointer' }}>
-                Clear all filters
-              </button>
-            </div>
-          )}
-        </main>
+        )}
       </div>
     </div>
   )
@@ -469,7 +345,7 @@ function ProductsInner() {
 
 export default function ProductsPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>Loading…</div>}>
+    <Suspense fallback={<div style={{ paddingTop: 104, textAlign: 'center', color: '#64748b' }}>Loading…</div>}>
       <ProductsInner />
     </Suspense>
   )
