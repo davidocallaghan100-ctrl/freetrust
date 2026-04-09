@@ -21,9 +21,11 @@ const DRAWER_SECTIONS = [
   {
     label: 'SOCIAL',
     links: [
-      { href: '/community', label: 'Community',  icon: '👥' },
-      { href: '/articles',  label: 'Articles',   icon: '✍️' },
-      { href: '/jobs',      label: 'Jobs',        icon: '💼' },
+      { href: '/community',       label: 'Community',         icon: '👥' },
+      { href: '/articles',        label: 'Articles',          icon: '✍️' },
+      { href: '/jobs',            label: 'Jobs',              icon: '💼' },
+      { href: '/organisations',   label: 'Organisations',     icon: '🏢' },
+      { href: '/organisations/new', label: 'Add Organisation', icon: '➕' },
     ],
   },
   {
@@ -279,14 +281,6 @@ export default function Nav() {
               })}
             </div>
           ))}
-        </div>
-
-        {/* Currency switcher */}
-        <div style={{ borderTop: '1px solid #1e293b', padding: '14px 20px' }}>
-          <div style={{ fontSize: '10px', fontWeight: 700, color: '#475569', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '10px' }}>
-            CURRENCY
-          </div>
-          <CurrencySwitcher />
         </div>
 
         {/* Account section at bottom */}
