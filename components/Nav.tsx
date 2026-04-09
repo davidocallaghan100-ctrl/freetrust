@@ -166,7 +166,7 @@ export default function Nav() {
 
         {/* Logo — always links to landing page */}
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
-          <span style={{ background: 'linear-gradient(135deg, #38bdf8, #818cf8)', borderRadius: '8px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '13px', color: '#fff', flexShrink: 0 }}>FT</span>
+          <img src="https://davidocallaghan100829028694.adaptive.ai/cdn/freetrust-logo-v1.png" alt="FreeTrust" style={{ width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0, display: 'block' }} />
           <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '15px', letterSpacing: '-0.3px' }}>FreeTrust</span>
         </Link>
 
@@ -230,7 +230,10 @@ export default function Nav() {
       }}>
         {/* Drawer header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #1e293b', height: '58px', flexShrink: 0 }}>
-          <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '15px', letterSpacing: '-0.3px' }}>Menu</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <img src="https://davidocallaghan100829028694.adaptive.ai/cdn/freetrust-logo-v1.png" alt="FreeTrust" style={{ width: '26px', height: '26px', borderRadius: '6px' }} />
+            <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '15px', letterSpacing: '-0.3px' }}>FreeTrust</span>
+          </div>
           <button onClick={() => setDrawerOpen(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', background: '#1e293b', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#94a3b8', fontSize: '16px' }} aria-label="Close menu">
             ✕
           </button>
