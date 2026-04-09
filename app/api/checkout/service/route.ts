@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
       const session = await stripe.checkout.sessions.create({
         mode: 'payment',
-        payment_method_types: ['card'],
+        // Auto-enables Apple Pay, Google Pay, Link etc based on buyer device
         customer_email: user.email,
         line_items: [{
           price_data: {
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      payment_method_types: ['card'],
+      // Auto-enables Apple Pay, Google Pay, Link etc based on buyer device
       customer_email: user.email,
       line_items: [{
         price_data: {

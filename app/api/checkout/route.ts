@@ -55,7 +55,8 @@ export async function POST(req: NextRequest) {
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      payment_method_types: ["card"],
+      // Omitting payment_method_types lets Stripe auto-enable all eligible methods
+      // including Apple Pay, Google Pay, Link, and card — based on buyer's device/browser
       customer_email: buyerEmail || undefined,
       line_items: [
         {
