@@ -138,7 +138,13 @@ export default function FeedPage() {
       <style>{`
         .feed-grid { display: grid; grid-template-columns: 1fr 272px; gap: 1.5rem; max-width: 1080px; margin: 0 auto; padding: 1.5rem; align-items: start; }
         .feed-sidebar-col { position: sticky; top: 110px; display: flex; flex-direction: column; gap: 1rem; }
-        @media (max-width: 800px) { .feed-grid { grid-template-columns: 1fr !important; padding: 1rem !important; gap: 0; } .feed-sidebar-col { display: none !important; } }
+        @media (max-width: 800px) {
+          .feed-grid { grid-template-columns: 1fr !important; padding: 0.75rem !important; gap: 0; }
+          .feed-sidebar-col { display: none !important; }
+        }
+        .feed-filter-pills { display: flex; gap: 0.4rem; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; margin-bottom: 1rem; scrollbar-width: none; }
+        .feed-filter-pills::-webkit-scrollbar { display: none; }
+        .feed-filter-pills button { flex-shrink: 0; }
       `}</style>
 
       <div className="feed-grid">
@@ -146,7 +152,7 @@ export default function FeedPage() {
           <ComposerCard />
 
           {/* Filter pills */}
-          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+          <div className="feed-filter-pills">
             {FILTERS.map(({ key, label }) => {
               const isActive = activeFilter === key
               return (

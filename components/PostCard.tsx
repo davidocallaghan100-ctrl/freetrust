@@ -453,7 +453,7 @@ export default function PostCard({
       })() : null}
 
       {/* ── Action bar ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0 10px 10px', borderTop: '1px solid rgba(51,65,85,0.6)', marginTop: '10px', paddingTop: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '0 8px 10px', borderTop: '1px solid rgba(51,65,85,0.6)', marginTop: '10px', paddingTop: '10px', overflowX: 'hidden' }}>
         <ActionBtn
           icon={liked ? '❤️' : '🤍'}
           label={likeCount > 0 ? likeCount.toString() : 'Like'}
@@ -541,20 +541,27 @@ export default function PostCard({
 
 function ActionBtn({ icon, label, active, onClick }: { icon: string; label: string; active: boolean; onClick: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      style={{
-        display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px',
-        background: active ? 'rgba(56,189,248,0.1)' : 'none',
-        border: 'none', borderRadius: '8px', cursor: 'pointer',
-        fontSize: '13px', color: active ? '#38bdf8' : '#64748b',
-        fontFamily: 'inherit', transition: 'all 0.15s', fontWeight: active ? 600 : 400,
-      }}
-      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#38bdf8' }}
-      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = active ? '#38bdf8' : '#64748b' }}
-    >
-      <span style={{ fontSize: '15px' }}>{icon}</span>
-      <span>{label}</span>
-    </button>
+    <>
+      <style>{`
+        .action-btn-label { display: inline; }
+        @media (max-width: 380px) { .action-btn-label { display: none !important; } }
+      `}</style>
+      <button
+        onClick={onClick}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '3px', padding: '6px 8px',
+          background: active ? 'rgba(56,189,248,0.1)' : 'none',
+          border: 'none', borderRadius: '8px', cursor: 'pointer',
+          fontSize: '13px', color: active ? '#38bdf8' : '#64748b',
+          fontFamily: 'inherit', transition: 'all 0.15s', fontWeight: active ? 600 : 400,
+          flexShrink: 0,
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#38bdf8' }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = active ? '#38bdf8' : '#64748b' }}
+      >
+        <span style={{ fontSize: '15px', lineHeight: 1 }}>{icon}</span>
+        <span className="action-btn-label">{label}</span>
+      </button>
+    </>
   )
 }
