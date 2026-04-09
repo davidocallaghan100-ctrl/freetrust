@@ -21,7 +21,13 @@ interface Job {
   updated_at: string
   applicant_count: number
   application_deadline: string | null
-  poster?: { id: string; full_name: string | null; bio: string | null; created_at: string; trust_score?: number }
+  poster?: { id: string; full_name: string | null; bio: string | null; created_at: string; trust_balance?: number }
+}
+
+interface SimilarJob {
+  id: string; title: string; job_type: string; location_type: string
+  salary_min: number | null; salary_max: number | null; salary_currency: string
+  poster_name: string
 }
 
 const TYPE_LABELS: Record<string, string> = { full_time: 'Full Time', part_time: 'Part Time', contract: 'Contract', freelance: 'Freelance' }
@@ -36,14 +42,10 @@ const MOCK_JOB: Job = {
   category: 'Tech', tags: ['React', 'Node.js', 'TypeScript', 'Next.js', 'Supabase'],
   created_at: new Date(Date.now() - 86400000).toISOString(), updated_at: new Date().toISOString(),
   applicant_count: 24, application_deadline: new Date(Date.now() + 14 * 86400000).toISOString(),
-  poster: { id: 'poster-1', full_name: 'SaaS Builders Co', bio: 'We build B2B SaaS tools for modern teams. 45 people, Series A, fully remote.', created_at: '2023-06-01T00:00:00Z', trust_score: 312 },
+  poster: { id: 'poster-1', full_name: 'SaaS Builders Co', bio: 'We build B2B SaaS tools for modern teams. 45 people, Series A, fully remote.', created_at: '2023-06-01T00:00:00Z', trust_balance: 312 },
 }
 
-const SIMILAR_JOBS = [
-  { id: '3', title: 'Frontend Engineer', job_type: 'contract', location_type: 'remote', salary_min: 55000, salary_max: 75000, salary_currency: 'EUR', poster_name: 'Webflow Agency' },
-  { id: '5', title: 'Full-Stack Developer', job_type: 'freelance', location_type: 'remote', salary_min: 400, salary_max: 600, salary_currency: 'EUR', poster_name: 'Startup Labs' },
-  { id: '7', title: 'Backend Engineer', job_type: 'full_time', location_type: 'hybrid', salary_min: 65000, salary_max: 85000, salary_currency: 'EUR', poster_name: 'TrustTech' },
-]
+const SIMILAR_JOBS_FALLBACK: SimilarJob[] = []
 
 function formatSalary(min: number | null, max: number | null, currency: string, type: string) {
   if (!min && !max) return 'Competitive'
@@ -66,6 +68,7 @@ export default function JobDetailPage() {
   const id = params?.id as string
   const [job, setJob] = useState<Job | null>(null)
   const [jobLoading, setJobLoading] = useState(true)
+  const [similarJobs, setSimilarJobs] = useState<SimilarJob[]>(SIMILAR_JOBS_FALLBACK)
   const [showModal, setShowModal] = useState(false)
   const [applied, setApplied] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -82,11 +85,31 @@ export default function JobDetailPage() {
         const supabase = createClient()
         const { data } = await supabase
           .from('jobs')
-          .select('*, poster:profiles!poster_id(id, full_name, bio, created_at)')
+          .select('*, poster:profiles!poster_id(id, full_name, bio, created_at, trust_balance)')
           .eq('id', id)
           .single()
         if (data) {
           setJob(data as Job)
+          // Load similar jobs from same category, excluding current
+          const { data: similar } = await supabase
+            .from('jobs')
+            .select('id, title, job_type, location_type, salary_min, salary_max, salary_currency, poster:profiles!poster_id(full_name)')
+            .eq('status', 'active')
+            .eq('category', (data as Job).category)
+            .neq('id', id)
+            .limit(3)
+          if (similar && similar.length > 0) {
+            setSimilarJobs(similar.map((j: Record<string, unknown>) => ({
+              id: j.id as string,
+              title: j.title as string,
+              job_type: j.job_type as string,
+              location_type: j.location_type as string,
+              salary_min: j.salary_min as number | null,
+              salary_max: j.salary_max as number | null,
+              salary_currency: j.salary_currency as string,
+              poster_name: (j.poster as { full_name: string | null } | null)?.full_name ?? 'FreeTrust Member',
+            })))
+          }
         } else {
           setJob(MOCK_JOB)
         }
@@ -168,7 +191,7 @@ export default function JobDetailPage() {
   )
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 104 }}>
       <style>{`
         .job-detail-layout { display: grid; grid-template-columns: 1fr 320px; gap: 2rem; max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; align-items: start; }
         .job-apply-sticky { position: sticky; top: 78px; }
@@ -234,14 +257,38 @@ export default function JobDetailPage() {
           {/* Description */}
           <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 14, padding: '1.75rem', marginBottom: '1.5rem' }}>
             <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', color: '#f1f5f9' }}>About the Role</h2>
-            <div style={{ fontSize: '0.9rem', color: '#94a3b8', lineHeight: 1.85, whiteSpace: 'pre-wrap' }}>{job.description}</div>
+            <style>{`
+              .job-desc p { margin: 0 0 0.9em; }
+              .job-desc ul, .job-desc ol { margin: 0 0 0.9em; padding-left: 1.5em; }
+              .job-desc li { margin-bottom: 0.3em; }
+              .job-desc strong, .job-desc b { color: #f1f5f9; }
+              .job-desc a { color: #38bdf8; }
+              .job-desc h1, .job-desc h2, .job-desc h3 { color: #f1f5f9; margin: 1em 0 0.5em; font-weight: 700; }
+            `}</style>
+            {job.description.includes('<') ? (
+              <div
+                className="job-desc"
+                style={{ fontSize: '0.9rem', color: '#94a3b8', lineHeight: 1.85 }}
+                dangerouslySetInnerHTML={{ __html: job.description }}
+              />
+            ) : (
+              <div style={{ fontSize: '0.9rem', color: '#94a3b8', lineHeight: 1.85, whiteSpace: 'pre-wrap' }}>{job.description}</div>
+            )}
           </div>
 
           {/* Requirements */}
           {job.requirements && (
             <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 14, padding: '1.75rem', marginBottom: '1.5rem' }}>
               <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', color: '#f1f5f9' }}>Requirements</h2>
-              <div style={{ fontSize: '0.9rem', color: '#94a3b8', lineHeight: 2, whiteSpace: 'pre-line' }}>{job.requirements}</div>
+              {job.requirements.includes('<') ? (
+                <div
+                  className="job-desc"
+                  style={{ fontSize: '0.9rem', color: '#94a3b8', lineHeight: 2 }}
+                  dangerouslySetInnerHTML={{ __html: job.requirements }}
+                />
+              ) : (
+                <div style={{ fontSize: '0.9rem', color: '#94a3b8', lineHeight: 2, whiteSpace: 'pre-line' }}>{job.requirements}</div>
+              )}
             </div>
           )}
 
@@ -256,9 +303,9 @@ export default function JobDetailPage() {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.25rem' }}>
                     {job.poster.full_name}
-                    {(job.poster.trust_score ?? 0) > 200 && <span style={{ marginLeft: '0.5rem', fontSize: '0.72rem', color: '#38bdf8', fontWeight: 600, background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 999, padding: '0.1rem 0.5rem' }}>✓ Verified</span>}
+                    {(job.poster.trust_balance ?? 0) > 200 && <span style={{ marginLeft: '0.5rem', fontSize: '0.72rem', color: '#38bdf8', fontWeight: 600, background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 999, padding: '0.1rem 0.5rem' }}>✓ Verified</span>}
                   </div>
-                  {(job.poster.trust_score ?? 0) > 0 && <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.5rem' }}>⭐ Trust Score: {job.poster.trust_score}</div>}
+                  {(job.poster.trust_balance ?? 0) > 0 && <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.5rem' }}>₮ Trust Balance: {job.poster.trust_balance}</div>}
                   <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.5rem' }}>Member since {new Date(job.poster.created_at).getFullYear()}</div>
                   {job.poster.bio && <div style={{ fontSize: '0.85rem', color: '#64748b', lineHeight: 1.6 }}>{job.poster.bio}</div>}
                 </div>
@@ -267,20 +314,22 @@ export default function JobDetailPage() {
           )}
 
           {/* Similar jobs */}
-          <div>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', color: '#f1f5f9' }}>Similar Jobs</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {SIMILAR_JOBS.map(j => (
-                <Link key={j.id} href={`/jobs/${j.id}`} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 10, padding: '1rem 1.25rem', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-                  <div>
-                    <div style={{ fontWeight: 600, color: '#f1f5f9', fontSize: '0.92rem', marginBottom: '0.3rem' }}>{j.title}</div>
-                    <div style={{ fontSize: '0.78rem', color: '#64748b' }}>{j.poster_name} · {formatSalary(j.salary_min, j.salary_max, j.salary_currency, j.job_type)}</div>
-                  </div>
-                  <span style={{ color: '#38bdf8', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>View →</span>
-                </Link>
-              ))}
+          {similarJobs.length > 0 && (
+            <div>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', color: '#f1f5f9' }}>Similar Jobs</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {similarJobs.map(j => (
+                  <Link key={j.id} href={`/jobs/${j.id}`} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 10, padding: '1rem 1.25rem', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                    <div>
+                      <div style={{ fontWeight: 600, color: '#f1f5f9', fontSize: '0.92rem', marginBottom: '0.3rem' }}>{j.title}</div>
+                      <div style={{ fontSize: '0.78rem', color: '#64748b' }}>{j.poster_name} · {formatSalary(j.salary_min, j.salary_max, j.salary_currency, j.job_type)}</div>
+                    </div>
+                    <span style={{ color: '#38bdf8', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>View →</span>
+                  </Link>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Sidebar */}

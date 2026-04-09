@@ -1,62 +1,28 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useCurrency } from '@/context/CurrencyContext'
 
-const categories = ['All', 'Business', 'Technology', 'Sustainability', 'Creative', 'Finance', 'Health']
+const categories = ['All', 'Business', 'Technology', 'Sustainability', 'Creative', 'Finance', 'Health', 'Education', 'General']
 
-const communities = [
-  {
-    id: 1, name: 'African Founders Network', slug: 'african-founders-network', category: 'Business', members: 512, posts: 1840,
-    avatar: 'AF', desc: 'A community for founders of African heritage building global businesses. Monthly meetups, mentorship, and deal flow.',
-    tags: ['Founders', 'Africa', 'Startup'], joined: false, featured: true, price: 0,
-  },
-  {
-    id: 2, name: 'SaaS Builders Circle', slug: 'saas-builders-circle', category: 'Technology', members: 1240, posts: 5600,
-    avatar: 'SB', desc: 'Share learnings, get feedback, and grow your SaaS business with 1,200+ founders who have been there.',
-    tags: ['SaaS', 'Startups', 'Dev'], joined: true, featured: true, price: 0,
-  },
-  {
-    id: 3, name: 'Sustainable Business Hub', slug: 'sustainable-business-hub', category: 'Sustainability', members: 889, posts: 2900,
-    avatar: 'SH', desc: 'For entrepreneurs embedding sustainability into their business model. ESG strategy, impact measurement, and green finance.',
-    tags: ['ESG', 'Impact', 'Green'], joined: false, featured: false, price: 0,
-  },
-  {
-    id: 4, name: 'Design & Brand Collective', slug: 'design-brand-collective', category: 'Creative', members: 678, posts: 3400,
-    avatar: 'DC', desc: 'A safe space for designers to share work, get critique, and find collaborators. Weekly design challenges.',
-    tags: ['Design', 'Branding', 'Creative'], joined: false, featured: false, price: 0,
-  },
-  {
-    id: 5, name: 'Impact Investors Forum', slug: 'impact-investors-forum', category: 'Finance', members: 343, posts: 1200,
-    avatar: 'II', desc: 'Private community for impact investors and fund managers. Deal sharing, due diligence support, and co-investment opportunities.',
-    tags: ['Investing', 'Impact', 'Finance'], joined: false, featured: true, price: 29,
-  },
-  {
-    id: 6, name: 'Freelancer Freedom', slug: 'freelancer-freedom', category: 'Business', members: 2100, posts: 8900,
-    avatar: 'FF', desc: 'The largest freelancer community on FreeTrust. Rates, contracts, client management, and work-life balance.',
-    tags: ['Freelance', 'Remote', 'Business'], joined: true, featured: false, price: 0,
-  },
-  {
-    id: 7, name: 'Women in Tech', slug: 'women-in-tech', category: 'Technology', members: 920, posts: 4200,
-    avatar: 'WT', desc: 'Empowering women in technology through mentorship, networking and amplifying underrepresented voices in the industry.',
-    tags: ['Women', 'Tech', 'Mentorship'], joined: false, featured: false, price: 0,
-  },
-  {
-    id: 8, name: 'Mindful Founders', slug: 'mindful-founders', category: 'Health', members: 445, posts: 1800,
-    avatar: 'MF', desc: 'Building sustainable businesses without burning out. Mental health, routines, and founder wellbeing support.',
-    tags: ['Wellness', 'Founders', 'Mindfulness'], joined: false, featured: false, price: 0,
-  },
+// Fallback mock data — shown while loading or if DB is empty
+const MOCK_COMMUNITIES = [
+  { id: '1', name: 'African Founders Network', slug: 'african-founders-network', category: 'Business', member_count: 512, post_count: 1840, avatar_initials: 'AF', avatar_gradient: 'linear-gradient(135deg,#f472b6,#db2777)', description: 'A community for founders of African heritage building global businesses. Monthly meetups, mentorship, and deal flow.', tags: ['Founders', 'Africa', 'Startup'], is_featured: true, is_paid: false, price_monthly: 0 },
+  { id: '2', name: 'SaaS Builders Circle', slug: 'saas-builders-circle', category: 'Technology', member_count: 1240, post_count: 5600, avatar_initials: 'SB', avatar_gradient: 'linear-gradient(135deg,#38bdf8,#0284c7)', description: 'Share learnings, get feedback, and grow your SaaS business with 1,200+ founders who have been there.', tags: ['SaaS', 'Startups', 'Dev'], is_featured: true, is_paid: false, price_monthly: 0 },
+  { id: '3', name: 'Sustainable Business Hub', slug: 'sustainable-business-hub', category: 'Sustainability', member_count: 889, post_count: 2900, avatar_initials: 'SH', avatar_gradient: 'linear-gradient(135deg,#34d399,#059669)', description: 'For entrepreneurs embedding sustainability into their business model. ESG strategy, impact measurement, and green finance.', tags: ['ESG', 'Impact', 'Green'], is_featured: false, is_paid: false, price_monthly: 0 },
+  { id: '4', name: 'Design & Brand Collective', slug: 'design-brand-collective', category: 'Creative', member_count: 678, post_count: 3400, avatar_initials: 'DC', avatar_gradient: 'linear-gradient(135deg,#a78bfa,#7c3aed)', description: 'A safe space for designers to share work, get critique, and find collaborators. Weekly design challenges.', tags: ['Design', 'Branding', 'Creative'], is_featured: false, is_paid: false, price_monthly: 0 },
+  { id: '5', name: 'Impact Investors Forum', slug: 'impact-investors-forum', category: 'Finance', member_count: 343, post_count: 1200, avatar_initials: 'II', avatar_gradient: 'linear-gradient(135deg,#fbbf24,#d97706)', description: 'Private community for impact investors and fund managers. Deal sharing, due diligence support, and co-investment opportunities.', tags: ['Investing', 'Impact', 'Finance'], is_featured: true, is_paid: true, price_monthly: 29 },
+  { id: '6', name: 'Freelancer Freedom', slug: 'freelancer-freedom', category: 'Business', member_count: 2100, post_count: 8900, avatar_initials: 'FF', avatar_gradient: 'linear-gradient(135deg,#fb923c,#ea580c)', description: 'The largest freelancer community on FreeTrust. Rates, contracts, client management, and work-life balance.', tags: ['Freelance', 'Remote', 'Business'], is_featured: false, is_paid: false, price_monthly: 0 },
+  { id: '7', name: 'Women in Tech', slug: 'women-in-tech', category: 'Technology', member_count: 920, post_count: 4200, avatar_initials: 'WT', avatar_gradient: 'linear-gradient(135deg,#f472b6,#a78bfa)', description: 'Empowering women in technology through mentorship, networking and amplifying underrepresented voices in the industry.', tags: ['Women', 'Tech', 'Mentorship'], is_featured: false, is_paid: false, price_monthly: 0 },
+  { id: '8', name: 'Mindful Founders', slug: 'mindful-founders', category: 'Health', member_count: 445, post_count: 1800, avatar_initials: 'MF', avatar_gradient: 'linear-gradient(135deg,#34d399,#38bdf8)', description: 'Building sustainable businesses without burning out. Mental health, routines, and founder wellbeing support.', tags: ['Wellness', 'Founders', 'Mindfulness'], is_featured: false, is_paid: false, price_monthly: 0 },
 ]
 
-const avatarGrad: Record<string, string> = {
-  AF: 'linear-gradient(135deg,#f472b6,#db2777)',
-  SB: 'linear-gradient(135deg,#38bdf8,#0284c7)',
-  SH: 'linear-gradient(135deg,#34d399,#059669)',
-  DC: 'linear-gradient(135deg,#a78bfa,#7c3aed)',
-  II: 'linear-gradient(135deg,#fbbf24,#d97706)',
-  FF: 'linear-gradient(135deg,#fb923c,#ea580c)',
-  WT: 'linear-gradient(135deg,#f472b6,#a78bfa)',
-  MF: 'linear-gradient(135deg,#34d399,#38bdf8)',
+interface Community {
+  id: string; name: string; slug: string; category: string
+  member_count: number; post_count: number; avatar_initials: string
+  avatar_gradient: string; description: string; tags: string[]
+  is_featured: boolean; is_paid: boolean; price_monthly: number
 }
 
 const S: Record<string, React.CSSProperties> = {
@@ -85,20 +51,53 @@ const S: Record<string, React.CSSProperties> = {
 
 export default function CommunityPage() {
   const { format } = useCurrency()
+  const router = useRouter()
   const [activeCat, setActiveCat] = useState('All')
   const [search, setSearch] = useState('')
-  const [joined, setJoined] = useState<Set<number>>(new Set(communities.filter(c => c.joined).map(c => c.id)))
+  const [communities, setCommunities] = useState<Community[]>(MOCK_COMMUNITIES)
+  const [loading, setLoading] = useState(true)
+  const [joined, setJoined] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch('/api/communities')
+        if (!res.ok) return
+        const json = await res.json()
+        if (Array.isArray(json.communities) && json.communities.length > 0) {
+          setCommunities(json.communities)
+        }
+      } catch {
+        // keep mock data
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
 
   const filtered = communities.filter(c => {
     const catMatch = activeCat === 'All' || c.category === activeCat
-    const searchMatch = !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.desc.toLowerCase().includes(search.toLowerCase())
+    const searchMatch = !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.description.toLowerCase().includes(search.toLowerCase())
     return catMatch && searchMatch
   })
+
+  const featured = communities.filter(c => c.is_featured).slice(0, 3)
+
+  const handleJoin = (e: React.MouseEvent, communityId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setJoined(prev => { const n = new Set(prev); n.has(communityId) ? n.delete(communityId) : n.add(communityId); return n })
+  }
+
+  const handleCardClick = (slug: string) => {
+    router.push(`/community/${slug}`)
+  }
 
   return (
     <div style={S.page}>
       <style>{`
-        .comm-card:hover { border-color: rgba(56,189,248,0.25) !important; transform: translateY(-1px); transition: all 0.15s; }
+        .comm-card:hover { border-color: rgba(56,189,248,0.25) !important; transform: translateY(-1px); transition: all 0.15s; cursor: pointer; }
         .comm-card { transition: all 0.15s; }
         @media (max-width: 640px) {
           .comm-hero { padding: 1.5rem 1rem 1.25rem !important; }
@@ -141,11 +140,13 @@ export default function CommunityPage() {
               style={{ width: '100%', background: '#1e293b', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 8, padding: '0.42rem 0.75rem 0.42rem 2rem', fontSize: '0.85rem', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
-          <span style={{ fontSize: '0.82rem', color: '#64748b' }}>{filtered.length} communities</span>
+          <span style={{ fontSize: '0.82rem', color: '#64748b' }}>
+            {loading ? 'Loading...' : `${filtered.length} communities`}
+          </span>
           <div className="comm-featured-list" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
             <span style={{ fontSize: '0.72rem', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 999, padding: '0.2rem 0.7rem', color: '#38bdf8', fontWeight: 600 }}>✦ Featured</span>
-            {communities.filter(c => c.featured).slice(0, 3).map(c => (
-              <span key={c.id} style={{ fontSize: '0.78rem', color: '#94a3b8' }}>{c.name} · {c.members.toLocaleString()} members</span>
+            {featured.map(c => (
+              <span key={c.id} style={{ fontSize: '0.78rem', color: '#94a3b8' }}>{c.name} · {c.member_count.toLocaleString()} members</span>
             ))}
           </div>
         </div>
@@ -153,34 +154,42 @@ export default function CommunityPage() {
 
       <div className="comm-grid" style={S.grid}>
         {filtered.map(c => (
-          <Link key={c.id} href={`/community/${c.slug}`} className="comm-card" style={S.card}>
-            {c.featured && <span style={S.featuredBanner}>✦ Featured</span>}
+          <div
+            key={c.id}
+            className="comm-card"
+            style={S.card}
+            onClick={() => handleCardClick(c.slug)}
+            role="link"
+            tabIndex={0}
+            onKeyDown={e => e.key === 'Enter' && handleCardClick(c.slug)}
+          >
+            {c.is_featured && <span style={S.featuredBanner}>✦ Featured</span>}
             <div style={S.cardTop}>
-              <div style={{ ...S.avatar, background: avatarGrad[c.avatar] }}>{c.avatar}</div>
+              <div style={{ ...S.avatar, background: c.avatar_gradient }}>{c.avatar_initials}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={S.cardName}>{c.name}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
                   <span style={S.cardCat}>{c.category}</span>
-                  {c.price > 0 && (
+                  {c.is_paid && c.price_monthly > 0 && (
                     <span style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 999, padding: '0.1rem 0.5rem', fontSize: '0.68rem', color: '#fbbf24', fontWeight: 700 }}>
-                      🔒 {format(c.price, 'GBP')}/mo
+                      🔒 {format(c.price_monthly, 'EUR')}/mo
                     </span>
                   )}
                 </div>
               </div>
             </div>
-            <p style={S.desc}>{c.desc}</p>
+            <p style={S.desc}>{c.description}</p>
             <div style={S.tags}>
-              {c.tags.map(t => <span key={t} style={S.tag}>{t}</span>)}
+              {(c.tags ?? []).map(t => <span key={t} style={S.tag}>{t}</span>)}
             </div>
             <div style={S.stats}>
-              <span><span style={S.statNum}>{c.members.toLocaleString()}</span> members</span>
-              <span><span style={S.statNum}>{c.posts.toLocaleString()}</span> posts</span>
+              <span><span style={S.statNum}>{c.member_count.toLocaleString()}</span> members</span>
+              <span><span style={S.statNum}>{c.post_count.toLocaleString()}</span> posts</span>
             </div>
             <div style={S.footer}>
-              <span style={S.price}>{c.price > 0 ? `${format(c.price, 'GBP')}/month` : 'Free to join'}</span>
+              <span style={S.price}>{c.is_paid && c.price_monthly > 0 ? `${format(c.price_monthly, 'EUR')}/month` : 'Free to join'}</span>
               <button
-                onClick={e => { e.preventDefault(); setJoined(prev => { const n = new Set(prev); n.has(c.id) ? n.delete(c.id) : n.add(c.id); return n }) }}
+                onClick={e => handleJoin(e, c.id)}
                 style={{
                   ...S.joinBtn,
                   background: joined.has(c.id) ? 'rgba(56,189,248,0.1)' : '#38bdf8',
@@ -188,10 +197,10 @@ export default function CommunityPage() {
                   border: joined.has(c.id) ? '1px solid rgba(56,189,248,0.3)' : 'none',
                 }}
               >
-                {joined.has(c.id) ? '✓ Joined' : c.price > 0 ? `Join ${format(c.price, 'GBP')}/mo` : 'Join Community'}
+                {joined.has(c.id) ? '✓ Joined' : c.is_paid && c.price_monthly > 0 ? `Join ${format(c.price_monthly, 'EUR')}/mo` : 'Join Community'}
               </button>
             </div>
-          </Link>
+          </div>
         ))}
       </div>
     </div>
