@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import Avatar from "@/components/Avatar";
 import {
   UserGroupIcon,
   StarIcon,
@@ -78,6 +79,21 @@ interface FollowerProfile {
   avatar_url: string | null;
   username: string | null;
   trust_balance: number;
+}
+
+interface OrgReview {
+  id: string;
+  rating: number;
+  title: string | null;
+  content: string;
+  created_at: string;
+  reviewer: {
+    id: string;
+    full_name: string | null;
+    avatar_url: string | null;
+    username: string | null;
+    trust_balance: number | null;
+  } | null;
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
@@ -222,6 +238,17 @@ export default function OrgProfilePage() {
   const [followersLoading, setFollowersLoading] = useState(false);
   const [followersLoaded, setFollowersLoaded] = useState(false);
 
+  // Reviews
+  const [reviews, setReviews] = useState<OrgReview[]>([]);
+  const [reviewsAvg, setReviewsAvg] = useState<number | null>(null);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsLoaded, setReviewsLoaded] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewContent, setReviewContent] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+
   // Load org
   useEffect(() => {
     if (!id) return;
@@ -280,6 +307,45 @@ export default function OrgProfilePage() {
     }
   }, [activeTab, org, id, followersLoaded, followersLoading]);
 
+  // Load reviews on tab open
+  useEffect(() => {
+    if (activeTab === "reviews" && org && !reviewsLoaded && !reviewsLoading) {
+      setReviewsLoading(true);
+      fetch(`/api/organisations/${id}/reviews`)
+        .then(r => r.json())
+        .then(d => {
+          setReviews(d.reviews ?? []);
+          setReviewsAvg(d.avg ?? null);
+          setReviewsLoaded(true);
+        })
+        .catch(() => {})
+        .finally(() => setReviewsLoading(false));
+    }
+  }, [activeTab, org, id, reviewsLoaded, reviewsLoading]);
+
+  async function handleReviewSubmit() {
+    if (!reviewContent.trim()) return;
+    setReviewSubmitting(true);
+    try {
+      const res = await fetch(`/api/organisations/${id}/reviews`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating: reviewRating, title: reviewTitle.trim() || null, content: reviewContent.trim() }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setReviews(prev => [d.review, ...prev.filter(r => r.reviewer?.id !== d.review.reviewer?.id)]);
+        const newAvg = Math.round((reviews.concat(d.review).reduce((s, r) => s + r.rating, 0) / (reviews.length + 1)) * 10) / 10;
+        setReviewsAvg(newAvg);
+        setShowReviewForm(false);
+        setReviewTitle('');
+        setReviewContent('');
+        setReviewRating(5);
+      }
+    } catch { /* silent */ }
+    finally { setReviewSubmitting(false); }
+  }
+
   function handleFollow() {
     if (!org) return;
     const nowFollowing = !isFollowing;
@@ -325,7 +391,7 @@ export default function OrgProfilePage() {
     { key: "overview", label: "Overview" },
     { key: "members", label: `Members (${org.members_count})` },
     { key: "followers", label: `Followers (${followerCount})` },
-    { key: "reviews", label: "Reviews" },
+    { key: "reviews", label: reviews.length > 0 ? `Reviews (${reviews.length})` : "Reviews" },
   ];
 
   return (
@@ -636,7 +702,125 @@ export default function OrgProfilePage() {
 
           {/* ── REVIEWS ── */}
           {activeTab === "reviews" && (
-            <EmptyState icon={<StarIcon className="h-8 w-8 text-gray-500" />} title="No reviews yet" sub="Reviews will appear here once members leave feedback." />
+            <div>
+              {/* Summary bar */}
+              {reviewsAvg !== null && reviews.length > 0 && (
+                <div className="flex items-center gap-4 mb-5 p-4 rounded-2xl bg-gray-900 border border-gray-800">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-white">{reviewsAvg.toFixed(1)}</div>
+                    <div className="flex gap-0.5 justify-center mt-1">
+                      {[1,2,3,4,5].map(s => (
+                        <StarIcon key={s} className={`h-4 w-4 ${s <= Math.round(reviewsAvg!) ? 'text-amber-400 fill-amber-400' : 'text-gray-600'}`} />
+                      ))}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">{reviews.length} review{reviews.length !== 1 ? 's' : ''}</div>
+                  </div>
+                  <div className="flex-1">
+                    {[5,4,3,2,1].map(s => {
+                      const count = reviews.filter(r => r.rating === s).length;
+                      const pct = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
+                      return (
+                        <div key={s} className="flex items-center gap-2 mb-1">
+                          <span className="text-xs text-gray-500 w-2">{s}</span>
+                          <StarIcon className="h-3 w-3 text-amber-400 fill-amber-400 flex-shrink-0" />
+                          <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-xs text-gray-600 w-3">{count}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Write review button */}
+              {!showReviewForm && (
+                <button
+                  onClick={() => setShowReviewForm(true)}
+                  className="w-full mb-4 flex items-center justify-center gap-2 rounded-xl border border-violet-700/50 bg-violet-900/20 py-2.5 text-sm font-semibold text-violet-300 hover:bg-violet-900/40 transition"
+                >
+                  <StarIcon className="h-4 w-4" />
+                  Write a Review
+                </button>
+              )}
+
+              {/* Review form */}
+              {showReviewForm && (
+                <div className="mb-5 p-4 rounded-2xl bg-gray-900 border border-violet-700/40">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-semibold text-white">Your Review</span>
+                    <button onClick={() => setShowReviewForm(false)} className="text-gray-500 hover:text-gray-300 text-lg leading-none">✕</button>
+                  </div>
+                  {/* Star picker */}
+                  <div className="flex gap-1 mb-3">
+                    {[1,2,3,4,5].map(s => (
+                      <button key={s} onClick={() => setReviewRating(s)} className="p-0.5">
+                        <StarIcon className={`h-7 w-7 transition ${s <= reviewRating ? 'text-amber-400 fill-amber-400' : 'text-gray-600 hover:text-amber-300'}`} />
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    className="w-full mb-2 rounded-xl bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-600"
+                    placeholder="Title (optional)"
+                    value={reviewTitle}
+                    onChange={e => setReviewTitle(e.target.value)}
+                  />
+                  <textarea
+                    className="w-full mb-3 rounded-xl bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-600 resize-none"
+                    placeholder="Share your experience with this organisation…"
+                    rows={3}
+                    value={reviewContent}
+                    onChange={e => setReviewContent(e.target.value)}
+                  />
+                  <button
+                    onClick={handleReviewSubmit}
+                    disabled={reviewSubmitting || !reviewContent.trim()}
+                    className="w-full rounded-xl bg-violet-600 py-2 text-sm font-bold text-white hover:bg-violet-700 transition disabled:opacity-50"
+                  >
+                    {reviewSubmitting ? 'Submitting…' : 'Submit Review'}
+                  </button>
+                </div>
+              )}
+
+              {/* Reviews list */}
+              {reviewsLoading ? (
+                <div className="space-y-3">
+                  {[1,2].map(i => <div key={i} className="h-28 rounded-2xl bg-gray-800 animate-pulse" />)}
+                </div>
+              ) : reviews.length === 0 ? (
+                <EmptyState icon={<StarIcon className="h-8 w-8 text-gray-500" />} title="No reviews yet" sub="Be the first to leave a review for this organisation." />
+              ) : (
+                <div className="space-y-3">
+                  {reviews.map(r => (
+                    <div key={r.id} className="p-4 rounded-2xl bg-gray-900 border border-gray-800">
+                      <div className="flex items-start gap-3 mb-2">
+                        <Link href={r.reviewer?.id ? `/profile?id=${r.reviewer.id}` : '#'} className="flex-shrink-0">
+                          <Avatar url={r.reviewer?.avatar_url ?? null} name={r.reviewer?.full_name ?? 'Member'} size={36} />
+                        </Link>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <Link href={r.reviewer?.id ? `/profile?id=${r.reviewer.id}` : '#'} className="text-sm font-semibold text-white hover:text-violet-300 transition truncate">
+                              {r.reviewer?.full_name ?? 'FreeTrust Member'}
+                            </Link>
+                            <span className="text-xs text-gray-500 flex-shrink-0">
+                              {new Date(r.created_at).toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                          </div>
+                          <div className="flex gap-0.5 mt-0.5">
+                            {[1,2,3,4,5].map(s => (
+                              <StarIcon key={s} className={`h-3.5 w-3.5 ${s <= r.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-700'}`} />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      {r.title && <p className="text-sm font-semibold text-white mb-1">{r.title}</p>}
+                      <p className="text-sm text-gray-300 leading-relaxed">{r.content}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
