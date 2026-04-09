@@ -32,10 +32,11 @@ interface ActivityItem {
 }
 
 function getTrustLevel(balance: number) {
-  if (balance >= 1000) return { label: 'Elite', color: '#fbbf24', nextAt: 1000, next: 'Max level' }
-  if (balance >= 500) return { label: 'Verified', color: '#34d399', nextAt: 1000, next: 'Elite at ₮1000' }
-  if (balance >= 100) return { label: 'Trusted', color: '#38bdf8', nextAt: 500, next: 'Verified at ₮500' }
-  return { label: 'Newcomer', color: '#94a3b8', nextAt: 100, next: 'Trusted at ₮100' }
+  if (balance >= 5000) return { label: 'FreeTrust Ambassador', icon: '👑', color: '#f59e0b', nextAt: null,  next: 'Max level reached' }
+  if (balance >= 1000) return { label: 'Community Leader',    icon: '🏆', color: '#a78bfa', nextAt: 5000, next: 'Ambassador at ₮5000' }
+  if (balance >= 500)  return { label: 'Verified Member',     icon: '✅', color: '#34d399', nextAt: 1000, next: 'Leader at ₮1000' }
+  if (balance >= 100)  return { label: 'Trusted Member',      icon: '⭐', color: '#38bdf8', nextAt: 500,  next: 'Verified at ₮500' }
+  return                      { label: 'New Member',          icon: '🌱', color: '#94a3b8', nextAt: 100,  next: 'Trusted at ₮100' }
 }
 
 function timeAgo(ts: string) {
@@ -529,7 +530,7 @@ export default function ProfilePage() {
               <span><strong style={{ color: '#f1f5f9' }}>{profile?.follower_count ?? 0}</strong> followers</span>
               <span><strong style={{ color: '#f1f5f9' }}>{profile?.following_count ?? 0}</strong> following</span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: `${trustLevel.color}18`, border: `1px solid ${trustLevel.color}40`, borderRadius: 999, padding: '0.15rem 0.65rem', fontSize: '0.78rem', fontWeight: 700, color: trustLevel.color }}>
-                ₮ {trustLevel.label}
+                {trustLevel.icon} {trustLevel.label}
               </span>
             </div>
           </div>
@@ -583,12 +584,12 @@ export default function ProfilePage() {
             </div>
             <div>
               <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.4rem' }}>Progress</div>
-              {trustBalance < 1000 && (
+              {trustLevel.nextAt !== null && (
                 <div style={{ height: 6, background: 'rgba(56,189,248,0.1)', borderRadius: 3, overflow: 'hidden' }}>
                   <div style={{ width: `${Math.min((trustBalance / trustLevel.nextAt) * 100, 100)}%`, height: '100%', background: `linear-gradient(90deg,#38bdf8,${trustLevel.color})`, borderRadius: 3 }} />
                 </div>
               )}
-              <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '0.25rem' }}>{trustBalance}/{trustLevel.nextAt}</div>
+              <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '0.25rem' }}>{trustBalance}{trustLevel.nextAt !== null ? `/${trustLevel.nextAt}` : ' MAX'}</div>
             </div>
           </div>
         </div>
