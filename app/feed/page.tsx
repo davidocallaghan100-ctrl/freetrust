@@ -137,6 +137,7 @@ export default function FeedPage() {
     <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif' }}>
       <style>{`
         .feed-grid { display: grid; grid-template-columns: 1fr 272px; gap: 1.5rem; max-width: 1080px; margin: 0 auto; padding: 1.5rem; align-items: start; }
+        .feed-main-col { min-width: 0; width: 100%; overflow: hidden; }
         .feed-sidebar-col { position: sticky; top: 110px; display: flex; flex-direction: column; gap: 1rem; }
         @media (max-width: 800px) {
           .feed-grid { grid-template-columns: 1fr !important; padding: 0.75rem !important; gap: 0; }
@@ -148,7 +149,7 @@ export default function FeedPage() {
       `}</style>
 
       <div className="feed-grid">
-        <main>
+        <main className="feed-main-col">
           <ComposerCard />
 
           {/* Filter pills */}

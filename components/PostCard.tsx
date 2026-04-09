@@ -380,16 +380,16 @@ export default function PostCard({
   const shareText = post.title ?? post.content ?? ''
 
   return (
-    <article style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', marginBottom: '12px', overflow: 'hidden' }}>
+    <article style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', marginBottom: '12px', overflow: 'hidden', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
 
       {/* ── Header ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px 10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px 10px', minWidth: 0, overflow: 'hidden' }}>
         <Link href={`/profile?id=${authorId}`} style={{ flexShrink: 0, textDecoration: 'none' }}>
           <Avatar url={avatarUrl} name={name} size={42} />
         </Link>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <Link href={`/profile?id=${authorId}`} style={{ fontWeight: 700, fontSize: '14px', color: '#f1f5f9', textDecoration: 'none' }}>{name}</Link>
+        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
+            <Link href={`/profile?id=${authorId}`} style={{ fontWeight: 700, fontSize: '14px', color: '#f1f5f9', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}>{name}</Link>
             {trust !== null && trust > 0 && (
               <span style={{ fontSize: '11px', color: '#38bdf8', background: 'rgba(56,189,248,0.12)', padding: '1px 7px', borderRadius: '20px', fontWeight: 600 }}>₮{Math.round(trust)}</span>
             )}
@@ -409,12 +409,12 @@ export default function PostCard({
       </div>
 
       {/* ── Body ── */}
-      <div style={{ padding: '0 16px' }}>
+      <div style={{ padding: '0 16px', minWidth: 0, overflow: 'hidden' }}>
         {post.title ? (
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f1f5f9', margin: '0 0 8px', lineHeight: 1.4 }}>{String(post.title)}</h3>
+          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f1f5f9', margin: '0 0 8px', lineHeight: 1.4, wordBreak: 'break-word' }}>{String(post.title)}</h3>
         ) : null}
         {post.content ? (
-          <p style={{ fontSize: '14px', lineHeight: 1.65, color: '#cbd5e1', margin: '0 0 12px', whiteSpace: 'pre-wrap' }}>
+          <p style={{ fontSize: '14px', lineHeight: 1.65, color: '#cbd5e1', margin: '0 0 12px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
             {!expanded && post.content.length > 280
               ? <>{post.content.slice(0, 280)}<Link href={`/feed/${post.id}`} style={{ color: '#38bdf8', textDecoration: 'none' }}> …more</Link></>
               : post.content
@@ -453,7 +453,7 @@ export default function PostCard({
       })() : null}
 
       {/* ── Action bar ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '0 8px 10px', borderTop: '1px solid rgba(51,65,85,0.6)', marginTop: '10px', paddingTop: '10px', overflowX: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '10px 8px 10px', borderTop: '1px solid rgba(51,65,85,0.6)', marginTop: '10px', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
         <ActionBtn
           icon={liked ? '❤️' : '🤍'}
           label={likeCount > 0 ? likeCount.toString() : 'Like'}
