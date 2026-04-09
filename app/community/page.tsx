@@ -60,7 +60,7 @@ const avatarGrad: Record<string, string> = {
 }
 
 const S: Record<string, React.CSSProperties> = {
-  page: { minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' },
+  page: { minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 104 },
   hero: { background: 'linear-gradient(180deg,rgba(56,189,248,0.07) 0%,transparent 100%)', padding: '2.5rem 1.5rem 2rem', borderBottom: '1px solid rgba(56,189,248,0.08)' },
   inner: { maxWidth: 1200, margin: '0 auto' },
   catRow: { display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1.25rem' },
@@ -102,8 +102,9 @@ export default function CommunityPage() {
         .comm-card { transition: all 0.15s; }
         @media (max-width: 640px) {
           .comm-hero { padding: 1.5rem 1rem 1.25rem !important; }
-          .comm-toolbar { flex-direction: column !important; align-items: flex-start !important; gap: 0.75rem !important; }
+          .comm-toolbar { flex-wrap: wrap !important; gap: 0.5rem !important; }
           .comm-featured-list { display: none !important; }
+          .comm-grid { padding: 1rem !important; gap: 0.875rem !important; }
         }
       `}</style>
       <div className="comm-hero" style={S.hero}>
@@ -131,7 +132,7 @@ export default function CommunityPage() {
       {/* Toolbar: search + featured */}
       <div style={{ background: 'rgba(56,189,248,0.03)', borderBottom: '1px solid rgba(56,189,248,0.08)', padding: '0.85rem 1.5rem' }}>
         <div className="comm-toolbar" style={{ ...S.inner, display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', flex: '0 0 280px' }}>
+          <div style={{ position: 'relative', flex: '1 1 220px', maxWidth: 360 }}>
             <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#475569', pointerEvents: 'none' }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input
               value={search}
@@ -150,7 +151,7 @@ export default function CommunityPage() {
         </div>
       </div>
 
-      <div style={S.grid}>
+      <div className="comm-grid" style={S.grid}>
         {filtered.map(c => (
           <Link key={c.id} href={`/community/${c.slug}`} className="comm-card" style={S.card}>
             {c.featured && <span style={S.featuredBanner}>✦ Featured</span>}
