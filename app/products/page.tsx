@@ -3,7 +3,7 @@ import React, { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { useCurrency } from '@/context/CurrencyContext'
+import { useCurrency, type CurrencyCode } from '@/context/CurrencyContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Product {
@@ -11,6 +11,7 @@ interface Product {
   title: string
   description: string
   price: number
+  currency: string
   category: string
   type: 'digital' | 'physical'
   image?: string
@@ -18,7 +19,6 @@ interface Product {
   seller_name: string
   seller_avatar?: string
   seller_id?: string | null
-  seller_trust: number
   seller_verified?: boolean
   rating: number
   review_count: number
@@ -43,7 +43,7 @@ const ALL_CATEGORIES = [
   { id: 'merch', label: 'Merch', icon: '👕' },
 ]
 
-const SORT_OPTIONS = ['Newest', 'Popular', 'Price: Low', 'Price: High', 'Trust Score']
+const SORT_OPTIONS = ['Newest', 'Popular', 'Price: Low', 'Price: High']
 
 // ─── Category gradients ───────────────────────────────────────────────────────
 const CAT_GRAD: Record<string, string> = {
@@ -60,21 +60,6 @@ const CAT_GRAD: Record<string, string> = {
   merch:         'linear-gradient(135deg,#f472b6,#7c3aed)',
 }
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-const MOCK_PRODUCTS: Product[] = [
-  { id:'p1', title:'Notion Business OS', description:'Complete business management system built in Notion. Includes CRM, project tracker, finance dashboard and more.', price:29, category:'templates', type:'digital', imageGradient:'linear-gradient(135deg,#34d399,#059669)', seller_name:'Priya Nair', seller_avatar:'https://i.pravatar.cc/40?img=44', seller_trust:1580, seller_verified:true, rating:4.9, review_count:284, delivery:'Instant Download' },
-  { id:'p2', title:'FreeTrust Merch Hoodie', description:'Premium heavyweight hoodie with embroidered FreeTrust logo. Ethically made, super soft, available in 6 colours.', price:65, category:'merch', type:'physical', imageGradient:'linear-gradient(135deg,#38bdf8,#0284c7)', seller_name:'Maja Eriksson', seller_avatar:'https://i.pravatar.cc/40?img=25', seller_trust:740, seller_verified:true, rating:4.8, review_count:91, free_shipping:true, delivery:'3–5 business days' },
-  { id:'p3', title:'Sustainable Biz Starter Kit', description:'A 90-page guide + templates for launching a carbon-neutral business. Includes ESG reporting spreadsheet.', price:19, category:'courses', type:'digital', imageGradient:'linear-gradient(135deg,#86efac,#16a34a)', seller_name:'Amara Diallo', seller_avatar:'https://i.pravatar.cc/40?img=45', seller_trust:890, seller_verified:true, rating:4.7, review_count:147, delivery:'Instant Download' },
-  { id:'p4', title:'UI Component Library — Figma', description:'500+ production-ready Figma components. Dark and light modes, auto-layout, variables system included.', price:79, category:'art', type:'digital', imageGradient:'linear-gradient(135deg,#f472b6,#db2777)', seller_name:'Sarah Chen', seller_avatar:'https://i.pravatar.cc/40?img=47', seller_trust:2100, seller_verified:true, rating:5.0, review_count:512, delivery:'Instant Download' },
-  { id:'p5', title:'Irish Sourdough Starter Culture', description:'Live active sourdough starter — 20-year-old culture, fed and ready to ship in an insulated pouch.', price:14, category:'food-groceries', type:'physical', imageGradient:'linear-gradient(135deg,#fbbf24,#d97706)', seller_name:'Dave Kelly', seller_avatar:'https://i.pravatar.cc/40?img=15', seller_trust:420, rating:4.6, review_count:63, free_shipping:false, delivery:'1–2 days (refrigerated)' },
-  { id:'p6', title:'Ambient Lo-Fi Music Pack', description:'80 royalty-free lo-fi tracks — perfect for videos, podcasts and study sessions. All stems included.', price:24, category:'music', type:'digital', imageGradient:'linear-gradient(135deg,#a78bfa,#7c3aed)', seller_name:'Lena Fischer', seller_avatar:'https://i.pravatar.cc/40?img=41', seller_trust:780, rating:4.8, review_count:203, delivery:'Instant Download' },
-  { id:'p7', title:'Next.js SaaS Boilerplate', description:'Production-ready Next.js 14 starter with Supabase auth, Stripe billing, Resend email and Tailwind UI.', price:129, category:'software', type:'digital', imageGradient:'linear-gradient(135deg,#818cf8,#4338ca)', seller_name:'Marcus Obi', seller_avatar:'https://i.pravatar.cc/40?img=12', seller_trust:2100, seller_verified:true, rating:4.9, review_count:378, delivery:'Instant Download' },
-  { id:'p8', title:'Handwoven Linen Tote Bag', description:'Beautiful handwoven linen tote in natural dye colours. Each bag is unique — handmade in small batches.', price:38, category:'handmade', type:'physical', imageGradient:'linear-gradient(135deg,#fb923c,#ea580c)', seller_name:'Ciara Murphy', seller_avatar:'https://i.pravatar.cc/40?img=39', seller_trust:580, rating:4.9, review_count:45, free_shipping:true, delivery:'4–7 business days' },
-  { id:'p9', title:'SEO Content Strategy Course', description:'12-module course on building organic traffic from zero. Includes keyword research, content frameworks and case studies.', price:97, category:'courses', type:'digital', imageGradient:'linear-gradient(135deg,#38bdf8,#0284c7)', seller_name:'Tom Walsh', seller_avatar:'https://i.pravatar.cc/40?img=53', seller_trust:1240, seller_verified:true, rating:4.8, review_count:267, delivery:'Instant Download' },
-  { id:'p10', title:'Dublin Street Photography Prints', description:'Limited edition A3 prints of Dublin city life. Shot on film, printed on Hahnemühle Fine Art paper.', price:55, category:'photography', type:'physical', imageGradient:'linear-gradient(135deg,#94a3b8,#475569)', seller_name:'James Okafor', seller_avatar:'https://i.pravatar.cc/40?img=13', seller_trust:680, rating:5.0, review_count:28, free_shipping:false, delivery:'5–7 business days' },
-  { id:'p11', title:'Organic Seed Collection (30 varieties)', description:'Heirloom vegetable seeds — 30 varieties, non-GMO, sustainably grown. Includes planting guide.', price:22, category:'food-groceries', type:'physical', imageGradient:'linear-gradient(135deg,#86efac,#16a34a)', seller_name:'Yuki Tanaka', seller_avatar:'https://i.pravatar.cc/40?img=5', seller_trust:390, rating:4.7, review_count:81, free_shipping:true, delivery:'2–4 business days' },
-  { id:'p12', title:'Brand Identity Design Book', description:'The definitive guide to building brand identities — from strategy to visual systems. 380 pages, hardcover.', price:42, category:'books', type:'physical', imageGradient:'linear-gradient(135deg,#fbbf24,#d97706)', seller_name:'Priya Nair', seller_avatar:'https://i.pravatar.cc/40?img=44', seller_trust:1580, seller_verified:true, rating:4.8, review_count:193, free_shipping:true, delivery:'3–5 business days' },
-]
 
 // ─── Star rating ──────────────────────────────────────────────────────────────
 function Stars({ rating }: { rating: number }) {
@@ -136,10 +121,16 @@ function ProductCard({ p, wishlist, onWishlist }: {
 
       {/* Body (non-link) */}
       <div style={{ padding: '0.4rem 0.85rem 0.85rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-        {/* Rating */}
+        {/* Rating — only show if real reviews exist */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-          <Stars rating={p.rating} />
-          <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{p.rating > 0 ? `${p.rating.toFixed(1)} (${p.review_count})` : 'No reviews yet'}</span>
+          {p.review_count > 0 ? (
+            <>
+              <Stars rating={p.rating} />
+              <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{p.rating.toFixed(1)} ({p.review_count} reviews)</span>
+            </>
+          ) : (
+            <span style={{ fontSize: '0.72rem', color: '#475569' }}>No reviews yet</span>
+          )}
         </div>
 
         {/* Seller row */}
@@ -160,7 +151,6 @@ function ProductCard({ p, wishlist, onWishlist }: {
             : <span style={{ fontSize: '0.72rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{p.seller_name}</span>
           }
           {p.seller_verified && <span style={{ fontSize: '0.62rem', color: '#38bdf8', flexShrink: 0 }}>✓</span>}
-          {p.seller_trust > 0 && <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: 700, background: 'rgba(56,189,248,0.08)', padding: '1px 5px', borderRadius: 5, flexShrink: 0 }}>₮{p.seller_trust.toLocaleString()}</span>}
         </div>
 
         {/* Delivery info */}
@@ -172,7 +162,7 @@ function ProductCard({ p, wishlist, onWishlist }: {
 
         {/* Price + CTA */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
-          <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#38bdf8' }}>₮{p.price.toLocaleString()}</span>
+          <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#f1f5f9' }}>{format(p.price, (p.currency || 'EUR') as CurrencyCode)}</span>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.35rem' }}>
             <Link
               href={`/products/${p.id}`}
@@ -212,7 +202,7 @@ function ProductsInner() {
       try {
         const { data } = await supabase
           .from('listings')
-          .select('id, title, description, price, product_type, tags, images, cover_image, avg_rating, review_count, seller_id, profiles!seller_id(id, full_name, avatar_url, trust_balance)')
+          .select('id, title, description, price, currency, product_type, tags, images, cover_image, avg_rating, review_count, seller_id, profiles!seller_id(id, full_name, avatar_url)')
           .eq('status', 'active')
           .order('created_at', { ascending: false })
           .limit(100)
@@ -243,14 +233,15 @@ function ProductsInner() {
               title: String(d.title ?? ''),
               description: String(d.description ?? ''),
               price: Number(d.price ?? 0),
+              currency: String(d.currency ?? 'EUR'),
               category,
               type: d.product_type === 'digital' ? 'digital' as const : 'physical' as const,
               image: coverImage ?? images[0] ?? undefined,
               seller_name: String(profile?.full_name ?? 'FreeTrust Store'),
               seller_avatar: profile?.avatar_url ? String(profile.avatar_url) : undefined,
               seller_id: profile?.id ? String(profile.id) : (d.seller_id ? String(d.seller_id) : null),
-              seller_trust: Number(profile?.trust_balance ?? 0),
               seller_verified: true,
+              // Only show real FreeTrust reviews — avg_rating/review_count are 0 until a user leaves one
               rating: Number(d.avg_rating ?? 0),
               review_count: Number(d.review_count ?? 0),
               free_shipping: true,
@@ -258,13 +249,13 @@ function ProductsInner() {
             }
           }))
         }
-      } catch { /* use mock */ }
+      } catch { /* leave as empty */ }
       finally { setLoading(false) }
     }
     load()
   }, [])
 
-  const products = dbProducts ?? []
+  const products = dbProducts ?? ([] as Product[])
 
   let filtered = products.filter(p => {
     if (typeFilter !== 'all' && p.type !== typeFilter) return false
@@ -278,7 +269,6 @@ function ProductsInner() {
     if (sortBy === 'Price: Low') return a.price - b.price
     if (sortBy === 'Price: High') return b.price - a.price
     if (sortBy === 'Popular') return b.review_count - a.review_count
-    if (sortBy === 'Trust Score') return b.seller_trust - a.seller_trust
     return 0
   })
 
