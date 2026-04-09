@@ -176,7 +176,7 @@ function AIVoiceBubble({ size = 220 }: { size?: number }) {
       </div>
 
       {/* Talk to AI button */}
-      <Link href="/feed" style={{
+      <Link href="/ai" style={{
         display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
         background: 'linear-gradient(135deg, rgba(56,189,248,0.15), rgba(52,211,153,0.1))',
         border: '1px solid rgba(56,189,248,0.35)',
