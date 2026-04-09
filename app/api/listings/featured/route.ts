@@ -21,7 +21,7 @@ export async function GET() {
     const supabase = await createClient()
     const { data, error } = await supabase
       .from('listings')
-      .select('id, title, price, currency, avg_rating, review_count, seller:profiles!seller_id(full_name, avatar_url)')
+      .select('id, title, price, currency, avg_rating, review_count, cover_image, seller:profiles!seller_id(full_name, avatar_url)')
       .eq('product_type', 'service')
       .eq('status', 'active')
       .order('review_count', { ascending: false })
@@ -42,6 +42,7 @@ export async function GET() {
         reviews: Number(s.review_count ?? 0),
         provider: seller?.full_name ?? 'FreeTrust Member',
         avatarUrl: seller?.avatar_url ?? null,
+        coverImage: (s.cover_image as string | null) ?? null,
         grad: gradForTitle(String(s.title)),
         tags: [],
       }

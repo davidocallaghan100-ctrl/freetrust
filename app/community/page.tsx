@@ -189,6 +189,7 @@ export default function CommunityPage() {
                   <span style={{ fontSize: '0.85rem', fontWeight: 700, color: i === 0 ? '#fbbf24' : i === 1 ? '#94a3b8' : i === 2 ? '#fb923c' : '#64748b', minWidth: 18, textAlign: 'center' }}>
                     {i + 1}
                   </span>
+                  <a href={`/profile?id=${entry.user_id}`} style={{ flexShrink: 0, textDecoration: 'none' }}>
                   {entry.avatar_url ? (
                     <img src={entry.avatar_url} alt={entry.full_name ?? ''} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                   ) : (
@@ -196,6 +197,7 @@ export default function CommunityPage() {
                       {(entry.full_name ?? '?')[0].toUpperCase()}
                     </div>
                   )}
+                  </a>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.full_name ?? 'Member'}</div>
                     <div style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: 700 }}>₮{entry.balance.toLocaleString()}</div>

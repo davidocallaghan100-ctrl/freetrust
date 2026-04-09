@@ -199,6 +199,7 @@ type FeaturedService = {
   title: string
   provider: string
   avatarUrl: string | null
+  coverImage?: string | null
   price: number
   currency: string
   rating: number
@@ -221,6 +222,7 @@ type FeaturedProduct = {
   title: string
   seller: string
   avatarUrl: string | null
+  coverImage?: string | null
   price: number
   currency: string
   rating: number
@@ -448,13 +450,15 @@ export default function Home() {
                     <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s' }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.15)' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
-                      {/* Banner / avatar */}
-                      <div style={{ height: 88, background: s.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                        {s.avatarUrl
-                          ? <img src={s.avatarUrl} alt={s.provider} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.3)' }} />
-                          : <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.1rem', color: '#fff' }}>
-                              {s.provider.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}
-                            </div>
+                      {/* Banner / cover image */}
+                      <div style={{ height: 88, background: s.coverImage ? '#0f172a' : s.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
+                        {s.coverImage
+                          ? <img src={s.coverImage} alt={s.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                          : s.avatarUrl
+                            ? <img src={s.avatarUrl} alt={s.provider} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.3)' }} />
+                            : <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.1rem', color: '#fff' }}>
+                                {s.provider.split(' ').map((w: string) => w[0]).join('').slice(0,2).toUpperCase()}
+                              </div>
                         }
                       </div>
                       <div style={{ padding: '0.85rem' }}>
@@ -490,12 +494,14 @@ export default function Home() {
                   <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s' }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.15)' }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
-                    <div style={{ height: 88, background: p.grad, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {p.avatarUrl
-                        ? <img src={p.avatarUrl} alt={p.seller} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.3)' }} />
-                        : <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', color: '#fff' }}>
-                            {p.seller.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}
-                          </div>
+                    <div style={{ height: 88, background: p.coverImage ? '#0f172a' : p.grad, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {p.coverImage
+                        ? <img src={p.coverImage} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                        : p.avatarUrl
+                          ? <img src={p.avatarUrl} alt={p.seller} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.3)' }} />
+                          : <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', color: '#fff' }}>
+                              {p.seller.split(' ').map((w: string) => w[0]).join('').slice(0,2).toUpperCase()}
+                            </div>
                       }
                       <span style={{ position: 'absolute', top: 8, right: 8, background: p.type === 'digital' ? 'rgba(56,189,248,0.9)' : 'rgba(148,163,184,0.9)', color: '#0f172a', fontSize: '0.58rem', fontWeight: 800, padding: '2px 6px', borderRadius: 999 }}>
                         {p.type === 'digital' ? 'DIGITAL' : 'PHYSICAL'}

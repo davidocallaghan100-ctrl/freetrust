@@ -437,12 +437,14 @@ export default function ServiceDetailPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {reviews.map(rev => (
                     <div key={rev.id} style={{ background: '#0f172a', borderRadius: '10px', padding: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      <a href={`/profile?id=${rev.reviewer.id}`} style={{ flexShrink: 0, textDecoration: 'none' }}>
                       {rev.reviewer.avatar_url
                         ? <img src={rev.reviewer.avatar_url} alt={rev.reviewer.full_name} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                         : <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '13px', color: '#0f172a', flexShrink: 0 }}>
                             {rev.reviewer.full_name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}
                           </div>
                       }
+                      </a>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4, marginBottom: '4px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

@@ -55,6 +55,26 @@ interface Organisation {
   userId: string | null;
 }
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface OrgMember {
+  id: string;
+  role: "owner" | "admin" | "member";
+  title: string | null;
+  joined_at: string;
+  profile: {
+    id: string;
+    full_name: string;
+    avatar_url: string | null;
+    username: string | null;
+    trust_balance: number;
+    avg_rating: number | null;
+    review_count: number;
+    bio: string | null;
+    location: string | null;
+  };
+}
+
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function TrustBadge({ score }: { score: number }) {
@@ -106,6 +126,53 @@ function EmptyTabState({ label }: { label: string }) {
   );
 }
 
+function RoleBadge({ role }: { role: OrgMember["role"] }) {
+  const map: Record<OrgMember["role"], { label: string; cls: string }> = {
+    owner: { label: "Owner", cls: "bg-violet-900/50 text-violet-300" },
+    admin: { label: "Admin", cls: "bg-blue-900/50 text-blue-300" },
+    member: { label: "Member", cls: "bg-gray-800 text-gray-400" },
+  };
+  const { label, cls } = map[role];
+  return (
+    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>
+      {label}
+    </span>
+  );
+}
+
+function MemberCard({ member }: { member: OrgMember }) {
+  return (
+    <Link
+      href={`/profile?id=${member.profile.id}`}
+      className="flex items-center gap-3 p-4 rounded-xl bg-gray-900 border border-gray-800 hover:border-violet-700 transition"
+    >
+      <div className="h-12 w-12 rounded-full overflow-hidden bg-gray-800 flex-shrink-0 flex items-center justify-center">
+        {member.profile.avatar_url ? (
+          <img
+            src={member.profile.avatar_url}
+            alt={member.profile.full_name}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <UserIcon className="h-6 w-6 text-gray-500" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-white truncate">
+          {member.profile.full_name}
+        </p>
+        {member.title && (
+          <p className="text-xs text-gray-400 truncate">{member.title}</p>
+        )}
+        <p className="text-xs text-violet-400 mt-0.5">
+          ₮{(member.profile.trust_balance ?? 0).toLocaleString()}
+        </p>
+      </div>
+      <RoleBadge role={member.role} />
+    </Link>
+  );
+}
+
 function LoadingSkeleton() {
   return (
     <div className="min-h-screen bg-gray-950 animate-pulse">
@@ -145,6 +212,8 @@ export default function OrgProfilePage() {
   const [copied, setCopied] = useState(false);
   const [coverError, setCoverError] = useState(false);
   const [logoError, setLogoError] = useState(false);
+  const [members, setMembers] = useState<OrgMember[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -173,9 +242,29 @@ export default function OrgProfilePage() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  // Fetch members when Members tab is opened
+  useEffect(() => {
+    if (activeTab === "members" && org && members.length === 0 && !membersLoading) {
+      setMembersLoading(true);
+      fetch(`/api/organisations/${id}/members`)
+        .then((r) => r.json())
+        .then((d) => setMembers(d.members ?? []))
+        .catch(() => {})
+        .finally(() => setMembersLoading(false));
+    }
+  }, [activeTab, org, id, members.length, membersLoading]);
+
   function handleFollow() {
-    setIsFollowing((prev) => !prev);
-    // TODO: wire up follow/unfollow API when available
+    if (!org) return;
+    const nowFollowing = !isFollowing;
+    setIsFollowing(nowFollowing);
+    fetch(`/api/organisations/${id}/follow`, {
+      method: nowFollowing ? "POST" : "DELETE",
+      headers: { "Content-Type": "application/json" },
+    }).catch(() => {
+      // Revert on error
+      setIsFollowing(!nowFollowing);
+    });
   }
 
   function handleShare() {
@@ -627,7 +716,21 @@ export default function OrgProfilePage() {
               <p className="mb-5 text-sm text-gray-500">
                 {org.members_count} active member{org.members_count !== 1 ? "s" : ""}
               </p>
-              <EmptyTabState label="Member profiles coming soon" />
+              {membersLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-20 rounded-xl bg-gray-800 animate-pulse" />
+                  ))}
+                </div>
+              ) : members.length === 0 ? (
+                <EmptyTabState label="No members listed yet" />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {members.map((m) => (
+                    <MemberCard key={m.id} member={m} />
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

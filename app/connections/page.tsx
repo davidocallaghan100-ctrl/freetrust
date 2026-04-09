@@ -324,7 +324,7 @@ function MemberCard({ member, isFollowing, isMutual, onFollow, onUnfollow, showF
   return (
     <div className="conn-card">
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-        <Link href={`/profile/${member.id}`}>
+        <Link href={`/profile?id=${member.id}`}>
           <div className="conn-avatar" style={{ background: member.avatar_url ? undefined : avatarGrad(member.id) }}>
             {member.avatar_url
               ? <img src={member.avatar_url} alt={member.full_name ?? ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -333,7 +333,7 @@ function MemberCard({ member, isFollowing, isMutual, onFollow, onUnfollow, showF
           </div>
         </Link>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <Link href={`/profile/${member.id}`} style={{ textDecoration: 'none' }}>
+          <Link href={`/profile?id=${member.id}`} style={{ textDecoration: 'none' }}>
             <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f1f5f9', marginBottom: '0.15rem' }}>{member.full_name ?? 'FreeTrust Member'}</div>
           </Link>
           {member.location && <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.3rem' }}>📍 {member.location}</div>}
