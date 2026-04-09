@@ -1,126 +1,35 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { ALL_CATEGORIES, DELIVERY_OPTIONS } from '@/lib/service-categories'
-import { useCurrency } from '@/context/CurrencyContext'
+import { createClient } from '@/lib/supabase/client'
+import { ALL_CATEGORIES } from '@/lib/service-categories'
+import { useCurrency, type CurrencyCode } from '@/context/CurrencyContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type PkgId = 'basic' | 'standard' | 'premium'
-
-type Package = {
-  id: PkgId
-  label: string
-  price: number
-  delivery: string
-  revisions: number
-  description: string
-  features: string[]
-}
-
-type Review = {
-  id: string
-  author: string
-  avatar: string | null
-  country: string
-  rating: number
-  date: string
-  body: string
-  helpful: number
-}
-
-type ServiceDetail = {
+type ServiceListing = {
   id: string
   title: string
-  category: string
-  categoryId: string
-  rating: number
-  reviewCount: number
-  images: string[]
-  mode: 'online' | 'offline' | 'both'
-  location?: string
-  distance?: number
-  deliveryTypes?: string[]
+  description: string
+  price: number
+  currency: string
+  service_mode: 'online' | 'offline' | 'both' | null
+  tags: string[] | null
+  location: string | null
+  avg_rating: number | null
+  review_count: number | null
+  images: string[] | null
+  category_id: string | null
+  delivery_types: string[] | null
   seller: {
     id: string
-    name: string
-    username: string
-    avatar: string | null
-    level: string
-    location: string
-    languages: string[]
-    memberSince: string
-    responseTime: string
-    lastSeen: string
-    bio: string
-    skills: string[]
-    totalOrders: number
-    completionRate: number
-    trust: number
+    full_name: string | null
+    avatar_url: string | null
+    bio: string | null
+    location: string | null
   }
-  packages: Package[]
-  description: string
-  faq: { q: string; a: string }[]
-  tags: string[]
-  reviews: Review[]
-}
-
-// ─── Mock data ────────────────────────────────────────────────────────────────
-
-const MOCK: Record<string, ServiceDetail> = {
-  'svc-001': {
-    id: 'svc-001',
-    title: 'I will design a professional logo and brand identity for your business',
-    category: 'Design & Creative',
-    categoryId: 'design-creative',
-    rating: 4.9,
-    reviewCount: 342,
-    images: [
-      'https://images.unsplash.com/photo-1626785774573-4b799315345d?w=800&q=80',
-      'https://images.unsplash.com/photo-1558655146-364adaf1fcc9?w=800&q=80',
-    ],
-    mode: 'online',
-    deliveryTypes: ['digital'],
-    seller: {
-      id: 'usr-101',
-      name: 'Alex Morgan',
-      username: 'alexdesigns',
-      avatar: 'https://i.pravatar.cc/150?img=11',
-      level: 'Top Rated Seller',
-      location: 'United Kingdom',
-      languages: ['English', 'French'],
-      memberSince: 'January 2021',
-      responseTime: '1 hour',
-      lastSeen: 'Online',
-      bio: 'Award-winning graphic designer with 8+ years of experience creating compelling visual identities for startups and Fortune 500 companies.',
-      skills: ['Logo Design', 'Brand Identity', 'Figma', 'Typography'],
-      totalOrders: 1204,
-      completionRate: 99,
-      trust: 4200,
-    },
-    packages: [
-      { id: 'basic',    label: 'Basic',    price: 49,  delivery: '3 days', revisions: 2,  description: 'Clean, simple logo for early-stage brands.', features: ['1 concept', 'PNG & SVG files', '2 revisions', 'Commercial use'] },
-      { id: 'standard', label: 'Standard', price: 99,  delivery: '5 days', revisions: 5,  description: 'Full brand kit — most popular choice.', features: ['3 concepts', 'All file formats', '5 revisions', 'Brand style guide', 'Social media kit'] },
-      { id: 'premium',  label: 'Premium',  price: 199, delivery: '7 days', revisions: -1, description: 'Complete brand identity with everything included.', features: ['5 concepts', 'All file formats', 'Unlimited revisions', 'Full brand guide', 'Source files (AI/EPS)', 'Priority support'] },
-    ],
-    description: 'A professional, memorable logo crafted from scratch — no templates. Includes full commercial rights and all file formats.\n\nI work closely with each client to understand their vision, target audience, and brand values before designing. Every concept is original and tailored specifically to your business.\n\nYou\'ll receive all source files plus guidelines on usage, typography, and colour palette.',
-    faq: [
-      { q: 'What do you need to get started?', a: 'Business name, industry, target audience, and any colour/style preferences. A brief questionnaire is sent after purchase.' },
-      { q: 'Can I request changes after delivery?', a: 'Yes — revisions are included in every package. Unlimited on the Premium package.' },
-      { q: 'Do I own the copyright?', a: 'Yes. Full commercial rights transfer to you upon delivery and payment.' },
-    ],
-    tags: ['logo design', 'brand identity', 'startup branding'],
-    reviews: [
-      { id: 'r1', author: 'Sarah K.', avatar: 'https://i.pravatar.cc/150?img=5', country: 'United States', rating: 5, date: '2024-05-12', body: 'Alex delivered exactly what I envisioned — and then some. The brand guide is incredibly detailed. Highly recommend!', helpful: 24 },
-      { id: 'r2', author: 'James T.', avatar: 'https://i.pravatar.cc/150?img=8', country: 'Australia', rating: 5, date: '2024-04-28', body: 'Third time working with Alex and still blown away every time. Fastest turnaround I\'ve seen.', helpful: 17 },
-    ],
-  },
-}
-
-function getMock(id: string): ServiceDetail {
-  return MOCK[id] ?? { ...MOCK['svc-001'], id }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -128,7 +37,7 @@ function getMock(id: string): ServiceDetail {
 function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
   return (
     <span style={{ display: 'inline-flex', gap: '1px' }}>
-      {[1,2,3,4,5].map(n => (
+      {[1, 2, 3, 4, 5].map(n => (
         <span key={n} style={{ color: n <= Math.round(rating) ? '#fbbf24' : '#334155', fontSize: size + 'px' }}>★</span>
       ))}
     </span>
@@ -141,191 +50,106 @@ function Avatar({ url, name, size = 48 }: { url: string | null; name: string; si
   return <div style={{ width: size, height: size, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: Math.round(size * 0.33) + 'px', color: '#0f172a', flexShrink: 0 }}>{initials}</div>
 }
 
-const PKG_COLORS: Record<PkgId, string> = { basic: '#60a5fa', standard: '#a78bfa', premium: '#fbbf24' }
-const PKG_BG: Record<PkgId, string> = { basic: 'rgba(96,165,250,0.08)', standard: 'rgba(167,139,250,0.08)', premium: 'rgba(251,191,36,0.08)' }
+// ─── Book CTA Card (desktop sidebar + mobile) ─────────────────────────────────
 
-// ─── Collapsible FAQ item ─────────────────────────────────────────────────────
-
-function FaqItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div style={{ borderBottom: '1px solid #1e293b' }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '14px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', fontFamily: 'inherit', textAlign: 'left' }}
-      >
-        <span style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9', lineHeight: 1.4 }}>{q}</span>
-        <span style={{ fontSize: '16px', color: '#475569', flexShrink: 0, transition: 'transform 0.2s', display: 'inline-block', transform: open ? 'rotate(45deg)' : 'rotate(0deg)' }}>+</span>
-      </button>
-      {open && <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.65, margin: '0 0 14px', paddingRight: '24px' }}>{a}</p>}
-    </div>
-  )
-}
-
-// ─── Package selector (interactive) ──────────────────────────────────────────
-
-function PackageSelector({ packages, serviceId }: { packages: Package[]; serviceId: string }) {
+function BookCard({ svc, mobile = false }: { svc: ServiceListing; mobile?: boolean }) {
   const { format } = useCurrency()
-  const [activePkg, setActivePkg] = useState<PkgId>('standard')
-  const pkg = packages.find(p => p.id === activePkg) ?? packages[1] ?? packages[0]
+  const currency = (svc.currency || 'GBP') as CurrencyCode
 
   return (
     <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '16px', overflow: 'hidden' }}>
-      {/* Tab row */}
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${packages.length}, 1fr)`, borderBottom: '1px solid #334155' }}>
-        {packages.map(p => (
-          <button
-            key={p.id}
-            onClick={() => setActivePkg(p.id)}
-            style={{
-              padding: '12px 6px',
-              border: 'none',
-              borderBottom: activePkg === p.id ? `2px solid ${PKG_COLORS[p.id]}` : '2px solid transparent',
-              background: activePkg === p.id ? PKG_BG[p.id] : 'transparent',
-              color: activePkg === p.id ? PKG_COLORS[p.id] : '#64748b',
-              fontSize: '13px',
-              fontWeight: activePkg === p.id ? 700 : 500,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              transition: 'all 0.15s',
-              marginBottom: -1,
-            }}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Active package body */}
-      <div style={{ padding: '18px' }}>
+      <div style={{ padding: '20px' }}>
         {/* Price */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '6px' }}>
-          <span style={{ fontSize: '32px', fontWeight: 900, color: '#f1f5f9', letterSpacing: '-1px' }}>{format(pkg.price, 'GBP')}</span>
+          <span style={{ fontSize: '36px', fontWeight: 900, color: '#f1f5f9', letterSpacing: '-1px' }}>
+            {format(svc.price, currency)}
+          </span>
           <span style={{ fontSize: '13px', color: '#64748b' }}>/ project</span>
         </div>
-        <p style={{ fontSize: '13px', color: '#94a3b8', margin: '0 0 14px', lineHeight: 1.5 }}>{pkg.description}</p>
-
-        {/* Meta */}
-        <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#64748b', marginBottom: '14px', flexWrap: 'wrap' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span>⏱</span> {pkg.delivery}
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span>🔄</span> {pkg.revisions < 0 ? 'Unlimited' : pkg.revisions} revision{pkg.revisions !== 1 ? 's' : ''}
-          </span>
-        </div>
-
-        {/* Features */}
-        <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 18px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
-          {pkg.features.map((f, i) => (
-            <li key={i} style={{ fontSize: '13px', color: '#94a3b8', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-              <span style={{ color: '#34d399', flexShrink: 0, marginTop: '1px' }}>✓</span> {f}
-            </li>
-          ))}
-        </ul>
+        <p style={{ fontSize: '13px', color: '#94a3b8', margin: '0 0 18px', lineHeight: 1.5 }}>
+          One clear price. No surprises.
+        </p>
 
         {/* CTA */}
         <Link
-          href={`/checkout?service=${serviceId}&pkg=${pkg.id}`}
-          style={{ display: 'block', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', borderRadius: '12px', padding: '14px', textAlign: 'center', fontWeight: 800, fontSize: '15px', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.25)' }}
+          href={`/checkout?service=${svc.id}`}
+          style={{ display: 'block', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', borderRadius: '12px', padding: '15px', textAlign: 'center', fontWeight: 800, fontSize: '16px', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.25)', marginBottom: '10px' }}
         >
-          Continue — {format(pkg.price, 'GBP')}
+          Book Now — {format(svc.price, currency)}
         </Link>
 
-        {/* Compare row */}
-        <div style={{ marginTop: '14px', display: 'grid', gridTemplateColumns: `repeat(${packages.length}, 1fr)`, borderTop: '1px solid #334155', paddingTop: '12px', gap: '4px' }}>
-          {packages.map(p => (
-            <button
-              key={p.id}
-              onClick={() => setActivePkg(p.id)}
-              style={{ textAlign: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '8px', transition: 'background 0.15s', fontFamily: 'inherit' }}
-            >
-              <div style={{ fontSize: '11px', fontWeight: 700, color: PKG_COLORS[p.id], textTransform: 'uppercase', letterSpacing: '0.04em' }}>{p.label}</div>
-              <div style={{ fontSize: '14px', fontWeight: 800, color: activePkg === p.id ? '#f1f5f9' : '#64748b' }}>{format(p.price, 'GBP')}</div>
-              <div style={{ fontSize: '10px', color: '#475569' }}>{p.delivery}</div>
-            </button>
-          ))}
+        {/* AI Agent link */}
+        <Link
+          href="/ai"
+          style={{ display: 'block', padding: '12px', textAlign: 'center', border: '1px solid #334155', borderRadius: '12px', fontSize: '13px', fontWeight: 600, color: '#94a3b8', textDecoration: 'none' }}
+        >
+          🤖 Ask AI Agent
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+// ─── Mobile sticky bottom bar ─────────────────────────────────────────────────
+
+function MobileStickyBar({ svc }: { svc: ServiceListing }) {
+  const { format } = useCurrency()
+  const currency = (svc.currency || 'GBP') as CurrencyCode
+
+  return (
+    <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 48, background: '#0f172a', borderTop: '1px solid #1e293b', padding: '10px 16px 20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+      {/* Price pill */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '8px 12px', minWidth: 90 }}>
+        <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Price</span>
+        <span style={{ fontSize: '16px', fontWeight: 900, color: '#f1f5f9' }}>{format(svc.price, currency)}</span>
+      </div>
+
+      {/* CTA */}
+      <Link
+        href={`/checkout?service=${svc.id}`}
+        style={{ flex: 1, display: 'block', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', borderRadius: '12px', padding: '14px', textAlign: 'center', fontWeight: 800, fontSize: '15px', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.25)' }}
+      >
+        Book Now — {format(svc.price, currency)}
+      </Link>
+    </div>
+  )
+}
+
+// ─── Loading skeleton ─────────────────────────────────────────────────────────
+
+function LoadingSkeleton() {
+  const pulse: React.CSSProperties = { background: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite', borderRadius: '8px' }
+  return (
+    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', paddingTop: 104 }}>
+      <style>{`@keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }`}</style>
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '16px' }}>
+        <div style={{ ...pulse, height: 12, width: 200, marginBottom: 24 }} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ ...pulse, height: 28, width: '80%' }} />
+            <div style={{ ...pulse, height: 16, width: '40%' }} />
+            <div style={{ ...pulse, height: 280, borderRadius: 14 }} />
+            <div style={{ ...pulse, height: 120, borderRadius: 14 }} />
+          </div>
+          <div style={{ ...pulse, height: 300, borderRadius: 16 }} />
         </div>
       </div>
     </div>
   )
 }
 
-// ─── Mobile sticky book bar ───────────────────────────────────────────────────
+// ─── Not Found ────────────────────────────────────────────────────────────────
 
-function MobileStickyBar({ packages, serviceId }: { packages: Package[]; serviceId: string }) {
-  const { format } = useCurrency()
-  const [activePkg, setActivePkg] = useState<PkgId>('standard')
-  const [showPicker, setShowPicker] = useState(false)
-  const pkg = packages.find(p => p.id === activePkg) ?? packages[1] ?? packages[0]
-
+function NotFound() {
   return (
-    <>
-      {/* Backdrop */}
-      {showPicker && (
-        <div
-          onClick={() => setShowPicker(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 49, backdropFilter: 'blur(2px)' }}
-        />
-      )}
-
-      {/* Bottom sheet package picker */}
-      {showPicker && (
-        <div style={{ position: 'fixed', bottom: 72, left: 0, right: 0, zIndex: 50, background: '#1e293b', borderTop: '1px solid #334155', borderRadius: '20px 20px 0 0', padding: '8px 16px 20px', maxHeight: '70vh', overflowY: 'auto' }}>
-          {/* Handle */}
-          <div style={{ width: 40, height: 4, background: '#334155', borderRadius: 99, margin: '8px auto 16px' }} />
-          <div style={{ fontSize: '13px', fontWeight: 700, color: '#94a3b8', marginBottom: '12px' }}>Choose a package</div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {packages.map(p => (
-              <button
-                key={p.id}
-                onClick={() => { setActivePkg(p.id); setShowPicker(false) }}
-                style={{ background: activePkg === p.id ? PKG_BG[p.id] : 'rgba(255,255,255,0.03)', border: `1.5px solid ${activePkg === p.id ? PKG_COLORS[p.id] : '#334155'}`, borderRadius: '12px', padding: '14px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                  <div>
-                    <span style={{ fontSize: '13px', fontWeight: 800, color: PKG_COLORS[p.id] }}>{p.label}</span>
-                    {activePkg === p.id && <span style={{ marginLeft: '8px', fontSize: '11px', color: '#34d399', fontWeight: 600 }}>✓ Selected</span>}
-                  </div>
-                  <span style={{ fontSize: '18px', fontWeight: 900, color: '#f1f5f9' }}>{format(p.price, 'GBP')}</span>
-                </div>
-                <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 8px', lineHeight: 1.4 }}>{p.description}</p>
-                <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: '#475569' }}>
-                  <span>⏱ {p.delivery}</span>
-                  <span>🔄 {p.revisions < 0 ? 'Unlimited' : p.revisions} revisions</span>
-                </div>
-                <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                  {p.features.map((f, i) => (
-                    <span key={i} style={{ fontSize: '10px', color: '#64748b', background: 'rgba(255,255,255,0.05)', padding: '2px 7px', borderRadius: 999 }}>✓ {f}</span>
-                  ))}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Sticky bar */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 48, background: '#0f172a', borderTop: '1px solid #1e293b', padding: '10px 16px 20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
-        {/* Package selector pill */}
-        <button
-          onClick={() => setShowPicker(v => !v)}
-          style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', background: '#1e293b', border: `1px solid ${PKG_COLORS[activePkg]}`, borderRadius: '12px', padding: '8px 12px', cursor: 'pointer', minWidth: 90, fontFamily: 'inherit' }}
-        >
-          <span style={{ fontSize: '10px', color: PKG_COLORS[activePkg], fontWeight: 700, textTransform: 'uppercase' }}>{pkg.label} ▾</span>
-          <span style={{ fontSize: '16px', fontWeight: 900, color: '#f1f5f9' }}>{format(pkg.price, 'GBP')}</span>
-        </button>
-
-        {/* CTA */}
-        <Link
-          href={`/checkout?service=${serviceId}&pkg=${pkg.id}`}
-          style={{ flex: 1, display: 'block', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', borderRadius: '12px', padding: '14px', textAlign: 'center', fontWeight: 800, fontSize: '15px', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.25)' }}
-        >
-          Book Now — {format(pkg.price, 'GBP')}
-        </Link>
-      </div>
-    </>
+    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', paddingTop: 104, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, padding: '104px 24px 0' }}>
+      <div style={{ fontSize: 64 }}>🔍</div>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Service Not Found</h1>
+      <p style={{ color: '#64748b', margin: 0 }}>This listing doesn't exist or has been removed.</p>
+      <Link href="/services" style={{ background: '#38bdf8', color: '#0f172a', borderRadius: 10, padding: '10px 20px', fontWeight: 700, fontSize: '14px', textDecoration: 'none' }}>
+        ← Browse Services
+      </Link>
+    </div>
   )
 }
 
@@ -336,11 +160,77 @@ export default function ServiceDetailPage() {
   const router = useRouter()
   const id = typeof params.id === 'string' ? params.id : ''
 
-  const svc = getMock(id)
-  const catInfo = ALL_CATEGORIES.find(c => c.id === svc.categoryId)
-  const deliveryLabels = svc.deliveryTypes
-    ? svc.deliveryTypes.map(d => DELIVERY_OPTIONS.find(o => o.id === d)).filter(Boolean)
-    : []
+  const [svc, setSvc] = useState<ServiceListing | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
+
+  useEffect(() => {
+    if (!id) { setNotFound(true); setLoading(false); return }
+
+    const load = async () => {
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from('listings')
+          .select(`
+            id, title, description, price, currency,
+            service_mode, tags, location, avg_rating, review_count,
+            images, category_id, delivery_types,
+            seller:profiles!seller_id (
+              id, full_name, avatar_url, bio, location
+            )
+          `)
+          .eq('id', id)
+          .eq('product_type', 'service')
+          .eq('status', 'active')
+          .single()
+
+        if (error || !data) {
+          setNotFound(true)
+        } else {
+          const raw = data as Record<string, unknown>
+          const sellerRaw = raw.seller as Record<string, unknown> | null
+          setSvc({
+            id: raw.id as string,
+            title: raw.title as string,
+            description: raw.description as string,
+            price: raw.price as number,
+            currency: (raw.currency as string) || 'GBP',
+            service_mode: raw.service_mode as ServiceListing['service_mode'],
+            tags: raw.tags as string[] | null,
+            location: raw.location as string | null,
+            avg_rating: raw.avg_rating as number | null,
+            review_count: raw.review_count as number | null,
+            images: raw.images as string[] | null,
+            category_id: raw.category_id as string | null,
+            delivery_types: raw.delivery_types as string[] | null,
+            seller: {
+              id: (sellerRaw?.id as string) || '',
+              full_name: (sellerRaw?.full_name as string | null) || 'FreeTrust Member',
+              avatar_url: (sellerRaw?.avatar_url as string | null) || null,
+              bio: (sellerRaw?.bio as string | null) || null,
+              location: (sellerRaw?.location as string | null) || null,
+            },
+          })
+        }
+      } catch {
+        setNotFound(true)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [id])
+
+  if (loading) return <LoadingSkeleton />
+  if (notFound || !svc) return <NotFound />
+
+  const catInfo = ALL_CATEGORIES.find(c => c.id === svc.category_id)
+  const rating = svc.avg_rating ?? 0
+  const reviewCount = svc.review_count ?? 0
+  const images = svc.images ?? []
+  const tags = svc.tags ?? []
+  const mode = svc.service_mode
 
   const card: React.CSSProperties = { background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '20px' }
 
@@ -349,10 +239,9 @@ export default function ServiceDetailPage() {
       <style>{`
         .sd-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
         .sd-right { position: sticky; top: 112px; }
-        /* On mobile: single column, right col goes above content, sticky bar replaces desktop CTA */
         @media (max-width: 768px) {
           .sd-grid { grid-template-columns: 1fr; }
-          .sd-right { position: static; display: none; }
+          .sd-right { position: static; display: none !important; }
           .sd-mobile-pkg { display: block !important; }
           .sd-mobile-bar { display: flex !important; }
           .sd-main { padding-bottom: 100px !important; }
@@ -373,9 +262,9 @@ export default function ServiceDetailPage() {
           {catInfo && <><span>›</span><span style={{ color: '#94a3b8' }}>{catInfo.icon} {catInfo.label}</span></>}
         </nav>
 
-        {/* Mobile: package selector sits at the top */}
+        {/* Mobile: book card at top */}
         <div className="sd-mobile-pkg" style={{ marginBottom: '20px' }}>
-          <PackageSelector packages={svc.packages} serviceId={svc.id} />
+          <BookCard svc={svc} mobile />
         </div>
 
         <div className="sd-grid">
@@ -386,60 +275,64 @@ export default function ServiceDetailPage() {
             {/* Title + rating */}
             <div>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, background: 'rgba(56,189,248,0.1)', color: '#38bdf8', padding: '3px 10px', borderRadius: '20px' }}>
-                  {catInfo?.icon} {catInfo?.label ?? svc.category}
-                </span>
-                <span style={{ fontSize: '11px', fontWeight: 700, background: svc.mode === 'online' ? 'rgba(56,189,248,0.08)' : 'rgba(52,211,153,0.08)', color: svc.mode === 'online' ? '#38bdf8' : '#34d399', padding: '3px 10px', borderRadius: '20px' }}>
-                  {svc.mode === 'online' ? '💻 Online' : '📍 Local'}
-                </span>
+                {catInfo && (
+                  <span style={{ fontSize: '11px', fontWeight: 700, background: 'rgba(56,189,248,0.1)', color: '#38bdf8', padding: '3px 10px', borderRadius: '20px' }}>
+                    {catInfo.icon} {catInfo.label}
+                  </span>
+                )}
+                {mode && (
+                  <span style={{ fontSize: '11px', fontWeight: 700, background: mode === 'online' ? 'rgba(56,189,248,0.08)' : 'rgba(52,211,153,0.08)', color: mode === 'online' ? '#38bdf8' : '#34d399', padding: '3px 10px', borderRadius: '20px' }}>
+                    {mode === 'online' ? '💻 Online' : mode === 'offline' ? '📍 Local' : '🌐 Online & Local'}
+                  </span>
+                )}
                 {svc.location && (
                   <span style={{ fontSize: '11px', color: '#64748b', padding: '3px 10px', borderRadius: '20px', background: '#1e293b' }}>
-                    📍 {svc.location}{svc.distance ? ` · ${svc.distance}km` : ''}
+                    📍 {svc.location}
                   </span>
                 )}
               </div>
               <h1 style={{ fontSize: 'clamp(17px,4vw,22px)', fontWeight: 800, lineHeight: 1.3, margin: '0 0 10px' }}>{svc.title}</h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '13px', color: '#94a3b8' }}>
-                <Stars rating={svc.rating} />
-                <strong style={{ color: '#fbbf24' }}>{svc.rating.toFixed(1)}</strong>
-                <span>({svc.reviewCount} reviews)</span>
-                <span style={{ color: '#334155' }}>·</span>
-                <span>{svc.seller.totalOrders.toLocaleString()} orders</span>
-              </div>
+              {rating > 0 ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '13px', color: '#94a3b8' }}>
+                  <Stars rating={rating} />
+                  <strong style={{ color: '#fbbf24' }}>{rating.toFixed(1)}</strong>
+                  <span>({reviewCount} review{reviewCount !== 1 ? 's' : ''})</span>
+                </div>
+              ) : (
+                <div style={{ fontSize: '13px', color: '#475569' }}>No reviews yet — be the first!</div>
+              )}
             </div>
 
             {/* Seller mini row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '12px' }}>
-              <Avatar url={svc.seller.avatar} name={svc.seller.name} size={40} />
+              <Avatar url={svc.seller.avatar_url} name={svc.seller.full_name || 'Seller'} size={40} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                  <Link href={`/profile/${svc.seller.username}`} style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9', textDecoration: 'none' }}>{svc.seller.name}</Link>
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#38bdf8', background: 'rgba(56,189,248,0.1)', padding: '2px 7px', borderRadius: 999 }}>{svc.seller.level}</span>
+                  <Link href={`/profile/${svc.seller.id}`} style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9', textDecoration: 'none' }}>
+                    {svc.seller.full_name || 'FreeTrust Member'}
+                  </Link>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#38bdf8', background: 'rgba(56,189,248,0.1)', padding: '2px 7px', borderRadius: 999 }}>Verified Seller</span>
                 </div>
-                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                  ⚡ Responds in {svc.seller.responseTime} · ₮{svc.seller.trust.toLocaleString()} trust
-                </div>
+                {svc.seller.location && (
+                  <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                    📍 {svc.seller.location}
+                  </div>
+                )}
               </div>
-              <Link href={`/messages`} style={{ fontSize: '12px', fontWeight: 700, color: '#38bdf8', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '8px', padding: '7px 12px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                💬 Message
+              <Link href="/ai" style={{ fontSize: '12px', fontWeight: 700, color: '#38bdf8', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '8px', padding: '7px 12px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                🤖 AI Agent
               </Link>
             </div>
 
             {/* Cover image */}
-            {svc.images[0] && (
+            {images[0] ? (
               <div style={{ borderRadius: '14px', overflow: 'hidden', border: '1px solid #334155', background: '#1e293b' }}>
-                <img src={svc.images[0]} alt={svc.title} style={{ width: '100%', maxHeight: '340px', objectFit: 'cover', display: 'block' }} />
+                <img src={images[0]} alt={svc.title} style={{ width: '100%', maxHeight: '340px', objectFit: 'cover', display: 'block' }} />
               </div>
-            )}
-
-            {/* Delivery types */}
-            {deliveryLabels.length > 0 && (
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {deliveryLabels.map(d => d && (
-                  <span key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: '20px', fontSize: '12px', color: '#94a3b8' }}>
-                    {d.icon} {d.label}
-                  </span>
-                ))}
+            ) : (
+              <div style={{ borderRadius: '14px', overflow: 'hidden', border: '1px solid #334155', background: 'linear-gradient(135deg,#1e293b,#0f172a)', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ fontSize: '48px', opacity: 0.4 }}>🎯</div>
+                <div style={{ fontSize: '12px', color: '#475569' }}>No preview image yet</div>
               </div>
             )}
 
@@ -450,9 +343,9 @@ export default function ServiceDetailPage() {
             </div>
 
             {/* Tags */}
-            {svc.tags.length > 0 && (
+            {tags.length > 0 && (
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {svc.tags.map(t => (
+                {tags.map(t => (
                   <Link key={t} href={`/search?q=${encodeURIComponent(t)}`} style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid #334155', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', color: '#64748b', textDecoration: 'none' }}>
                     #{t}
                   </Link>
@@ -460,75 +353,23 @@ export default function ServiceDetailPage() {
               </div>
             )}
 
-            {/* FAQ — collapsible */}
-            {svc.faq.length > 0 && (
-              <div style={card}>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', marginBottom: '4px' }}>FAQs</div>
-                {svc.faq.map((f, i) => <FaqItem key={i} q={f.q} a={f.a} />)}
-              </div>
-            )}
-
-            {/* Reviews */}
-            {svc.reviews.length > 0 && (
-              <div style={card}>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', marginBottom: '16px' }}>
-                  Reviews <span style={{ color: '#475569', fontWeight: 400 }}>({svc.reviewCount})</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                  {svc.reviews.map(r => (
-                    <div key={r.id} style={{ borderBottom: '1px solid #334155', paddingBottom: '18px' }}>
-                      <div style={{ display: 'flex', gap: '10px', marginBottom: '8px', alignItems: 'flex-start' }}>
-                        <Avatar url={r.avatar} name={r.author} size={36} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
-                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9' }}>{r.author}</span>
-                            <Stars rating={r.rating} />
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                            {r.country} · {new Date(r.date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
-                          </div>
-                        </div>
-                      </div>
-                      <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.65, margin: 0 }}>{r.body}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Seller full card — mobile only shows below content */}
+            {/* Seller full card */}
             <div style={card}>
               <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', marginBottom: '14px' }}>About the Seller</div>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '12px' }}>
-                <Avatar url={svc.seller.avatar} name={svc.seller.name} size={52} />
+                <Avatar url={svc.seller.avatar_url} name={svc.seller.full_name || 'Seller'} size={52} />
                 <div>
-                  <Link href={`/profile/${svc.seller.username}`} style={{ fontSize: '15px', fontWeight: 700, color: '#f1f5f9', textDecoration: 'none', display: 'block' }}>{svc.seller.name}</Link>
-                  <div style={{ fontSize: '11px', color: '#38bdf8', fontWeight: 600 }}>{svc.seller.level}</div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>📍 {svc.seller.location} · since {svc.seller.memberSince}</div>
+                  <Link href={`/profile/${svc.seller.id}`} style={{ fontSize: '15px', fontWeight: 700, color: '#f1f5f9', textDecoration: 'none', display: 'block' }}>
+                    {svc.seller.full_name || 'FreeTrust Member'}
+                  </Link>
+                  <div style={{ fontSize: '11px', color: '#38bdf8', fontWeight: 600 }}>Verified Seller</div>
+                  {svc.seller.location && <div style={{ fontSize: '11px', color: '#64748b' }}>📍 {svc.seller.location}</div>}
                 </div>
               </div>
-              <p style={{ fontSize: '12px', color: '#94a3b8', lineHeight: 1.65, margin: '0 0 14px' }}>{svc.seller.bio}</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', marginBottom: '14px' }}>
-                {[
-                  ['📦 Orders', svc.seller.totalOrders.toLocaleString()],
-                  ['✅ Completion', `${svc.seller.completionRate}%`],
-                  ['⚡ Response', svc.seller.responseTime],
-                  ['🌐 Languages', svc.seller.languages.join(', ')],
-                ].map(([label, val]) => (
-                  <div key={label} style={{ background: 'rgba(56,189,248,0.05)', borderRadius: '8px', padding: '8px 10px' }}>
-                    <div style={{ color: '#475569', marginBottom: '2px', fontSize: '11px' }}>{label}</div>
-                    <div style={{ color: '#f1f5f9', fontWeight: 700 }}>{val}</div>
-                  </div>
-                ))}
-              </div>
-              {svc.seller.skills.length > 0 && (
-                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginBottom: '14px' }}>
-                  {svc.seller.skills.map(s => (
-                    <span key={s} style={{ fontSize: '10px', padding: '3px 8px', background: 'rgba(56,189,248,0.07)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: '20px', color: '#38bdf8' }}>{s}</span>
-                  ))}
-                </div>
+              {svc.seller.bio && (
+                <p style={{ fontSize: '12px', color: '#94a3b8', lineHeight: 1.65, margin: '0 0 14px' }}>{svc.seller.bio}</p>
               )}
-              <Link href={`/profile/${svc.seller.username}`} style={{ display: 'block', padding: '9px', textAlign: 'center', border: '1px solid #334155', borderRadius: '10px', fontSize: '12px', fontWeight: 600, color: '#94a3b8', textDecoration: 'none' }}>
+              <Link href={`/profile/${svc.seller.id}`} style={{ display: 'block', padding: '9px', textAlign: 'center', border: '1px solid #334155', borderRadius: '10px', fontSize: '12px', fontWeight: 600, color: '#94a3b8', textDecoration: 'none' }}>
                 View Full Profile
               </Link>
             </div>
@@ -546,7 +387,7 @@ export default function ServiceDetailPage() {
 
           {/* ── Right column (desktop only) ── */}
           <div className="sd-right" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <PackageSelector packages={svc.packages} serviceId={svc.id} />
+            <BookCard svc={svc} />
 
             {/* Trust badge desktop */}
             <div style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: '12px', padding: '14px', fontSize: '12px', color: '#64748b', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
@@ -562,7 +403,7 @@ export default function ServiceDetailPage() {
 
       {/* Mobile sticky bottom bar */}
       <div className="sd-mobile-bar" style={{ display: 'none' }}>
-        <MobileStickyBar packages={svc.packages} serviceId={svc.id} />
+        <MobileStickyBar svc={svc} />
       </div>
     </div>
   )
