@@ -705,12 +705,12 @@ function TabDocuments() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: "overview",   label: "Overview",   icon: BuildingOffice2Icon },
-  { id: "projects",   label: "Projects",   icon: ChartBarIcon },
-  { id: "updates",    label: "Updates",    icon: DocumentTextIcon },
-  { id: "reviews",    label: "Reviews",    icon: ChatBubbleLeftRightIcon },
-  { id: "gallery",    label: "Gallery",    icon: PhotoIcon },
-  { id: "documents",  label: "Documents",  icon: DocumentTextIcon },
+  { id: "overview",   label: "Overview" },
+  { id: "projects",   label: "Projects" },
+  { id: "updates",    label: "Updates" },
+  { id: "reviews",    label: "Reviews" },
+  { id: "gallery",    label: "Gallery" },
+  { id: "documents",  label: "Documents" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -832,173 +832,164 @@ export default function OrganisationPage() {
     );
   }
 
+  const initials = org.name.split(' ').filter(Boolean).slice(0, 2).map((w: string) => w[0].toUpperCase()).join('')
+
   return (
-    <div className="min-h-screen bg-gray-950 text-white" style={{ paddingTop: 104 }}>
-      {/* Cover */}
-      <div className="relative h-52 sm:h-64 bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 overflow-hidden">
-        <div
-          className="absolute inset-0 opacity-30"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 20% 50%, #6366f1 0%, transparent 60%), radial-gradient(circle at 80% 20%, #8b5cf6 0%, transparent 50%)",
-          }}
-        />
-        {/* Back button */}
-        <button
-          onClick={() => router.back()}
-          className="absolute top-4 left-4 flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur px-3 py-1.5 text-sm text-white hover:bg-black/60 transition-colors"
-        >
-          <ArrowLeftIcon className="w-4 h-4" />
-          Back
+    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 104, paddingBottom: 80 }}>
+      <style>{`
+        .org-tab { transition: all 0.15s; white-space: nowrap; }
+        .org-sdg { display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 10px; font-size: 0.7rem; font-weight: 700; color: #fff; margin: 2px; }
+        .org-tag { display: inline-block; background: rgba(148,163,184,0.1); border: 1px solid rgba(148,163,184,0.15); border-radius: 999px; padding: 2px 10px; font-size: 0.72rem; color: #94a3b8; margin: 2px; }
+        @media (max-width: 640px) {
+          .org-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+      `}</style>
+
+      {/* Cover banner */}
+      <div style={{ position: 'relative', height: 140, background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e293b 100%)', overflow: 'hidden', flexShrink: 0 }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 20% 50%, rgba(99,102,241,0.4) 0%, transparent 60%), radial-gradient(circle at 80% 20%, rgba(139,92,246,0.3) 0%, transparent 50%)' }} />
+        <button onClick={() => router.back()} style={{ position: 'absolute', top: 12, left: 12, display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', border: 'none', borderRadius: 999, padding: '6px 12px', fontSize: '0.82rem', color: '#f1f5f9', cursor: 'pointer' }}>
+          ← Back
         </button>
-        {/* Share / Report */}
-        <div className="absolute top-4 right-4 flex gap-2">
-          <button
-            onClick={handleShare}
-            className="flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur px-3 py-1.5 text-sm text-white hover:bg-black/60 transition-colors"
-          >
-            <ShareIcon className="w-4 h-4" />
-            {copied ? "Copied!" : "Share"}
-          </button>
-          <button
-            onClick={() => setReported(true)}
-            className={`flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur px-3 py-1.5 text-sm transition-colors ${
-              reported ? "text-red-400" : "text-white hover:bg-black/60"
-            }`}
-          >
-            <FlagIcon className="w-4 h-4" />
-            {reported ? "Reported" : "Report"}
+        <div style={{ position: 'absolute', top: 12, right: 12, display: 'flex', gap: 6 }}>
+          <button onClick={handleShare} style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', border: 'none', borderRadius: 999, padding: '6px 12px', fontSize: '0.8rem', color: '#f1f5f9', cursor: 'pointer' }}>
+            {copied ? '✓ Copied' : '↗ Share'}
           </button>
         </div>
       </div>
 
-      {/* Header card */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6">
-        <div className="relative -mt-16 mb-6 rounded-2xl bg-gray-900 border border-white/10 p-6 shadow-xl">
-          <div className="flex flex-col sm:flex-row gap-5">
+      <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 16px' }}>
+        {/* Logo + name card */}
+        <div style={{ background: '#1e293b', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16, padding: '16px', marginTop: -32, marginBottom: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', position: 'relative' }}>
+          <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
             {/* Logo */}
-            <div className="flex-shrink-0 -mt-12 sm:-mt-0 sm:-translate-y-6">
-              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 border-4 border-gray-900 flex items-center justify-center shadow-lg">
-                <BuildingOffice2Icon className="w-10 h-10 text-white/80" />
-              </div>
+            <div style={{ width: 64, height: 64, borderRadius: 14, background: org.logoUrl ? undefined : 'linear-gradient(135deg,#6366f1,#8b5cf6)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 800, color: '#fff', border: '3px solid #0f172a', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>
+              {org.logoUrl ? <img src={org.logoUrl} alt={org.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
             </div>
-
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-start gap-3 justify-between">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
-                      {org.name}
-                    </h1>
-                    {org.verified && (
-                      <CheckBadgeIcon
-                        className="w-6 h-6 text-indigo-400 flex-shrink-0"
-                        title="Verified organisation"
-                      />
-                    )}
+            {/* Name + tagline + follow */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <h1 style={{ fontSize: 'clamp(1.1rem,4vw,1.5rem)', fontWeight: 800, margin: 0, lineHeight: 1.2, wordBreak: 'break-word' }}>{org.name}</h1>
+                    {org.verified && <span style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.4)', borderRadius: 999, padding: '1px 8px', fontSize: '0.65rem', color: '#818cf8', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>✓ Verified</span>}
                   </div>
-                  <p className="text-gray-400 mt-0.5 text-sm">{org.tagline}</p>
+                  {org.tagline && <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: '4px 0 0', lineHeight: 1.4 }}>{org.tagline}</p>}
                 </div>
-                {/* Follow button */}
                 <button
                   onClick={handleFollow}
                   disabled={followLoading}
-                  className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all ${
-                    followed
-                      ? "bg-indigo-600/20 border border-indigo-500/50 text-indigo-300 hover:bg-red-500/20 hover:border-red-500/50 hover:text-red-300"
-                      : "bg-indigo-600 text-white hover:bg-indigo-500"
-                  } disabled:opacity-50`}
+                  style={{ background: followed ? 'rgba(99,102,241,0.15)' : '#6366f1', border: followed ? '1px solid rgba(99,102,241,0.4)' : 'none', borderRadius: 999, padding: '7px 16px', fontSize: '0.8rem', fontWeight: 700, color: followed ? '#818cf8' : '#fff', cursor: 'pointer', flexShrink: 0, opacity: followLoading ? 0.6 : 1 }}
                 >
-                  {followed ? (
-                    <HeartSolid className="w-4 h-4" />
-                  ) : (
-                    <HeartIcon className="w-4 h-4" />
-                  )}
-                  {followLoading ? "…" : followed ? "Following" : "Follow"}
+                  {followLoading ? '…' : followed ? '✓ Following' : '+ Follow'}
                 </button>
               </div>
 
-              {/* Meta row */}
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-gray-400">
-                <span className="flex items-center gap-1">
-                  <MapPinIcon className="w-3.5 h-3.5" />
-                  {org.location}
-                </span>
-                <span className="flex items-center gap-1">
-                  <UserGroupIcon className="w-3.5 h-3.5" />
-                  {org.followerCount.toLocaleString()} followers
-                </span>
-                <span className="flex items-center gap-1">
-                  <StarSolid className="w-3.5 h-3.5 text-yellow-400" />
-                  {org.avgRating.toFixed(1)}
-                  <span className="text-gray-600">({org.reviewCount})</span>
-                </span>
-                {org.website && (
-                  <span className="flex items-center gap-1">
-                    <GlobeAltIcon className="w-3.5 h-3.5" />
-                    <a
-                      href={org.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-indigo-400 hover:underline"
-                    >
-                      {org.website.replace(/^https?:\/\//, "")}
-                    </a>
-                  </span>
-                )}
+              {/* Meta pills */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 12px', marginTop: 10, fontSize: '0.78rem', color: '#64748b' }}>
+                {org.location && <span>📍 {org.location}</span>}
+                {org.followerCount > 0 && <span>👥 {org.followerCount.toLocaleString()} followers</span>}
+                {org.type && <span>🏢 {org.type}</span>}
+                {org.founded && <span>📅 Est. {org.founded.slice(0, 4)}</span>}
+                {org.website && <a href={org.website} target="_blank" rel="noopener noreferrer" style={{ color: '#818cf8', textDecoration: 'none' }}>🌐 {org.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}</a>}
               </div>
 
-              {/* SDG strip */}
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {org.sdgs.map((n) => (
-                  <SDGBadge key={n} number={n} />
-                ))}
-              </div>
+              {/* SDG badges */}
+              {org.sdgs.length > 0 && (
+                <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {org.sdgs.map((n: SDGNumber) => {
+                    const meta = SDG_META[n]
+                    return <span key={n} className="org-sdg" style={{ background: meta.color }}>SDG {n}</span>
+                  })}
+                </div>
+              )}
+
+              {/* Tags */}
+              {org.tags.length > 0 && (
+                <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap' }}>
+                  {org.tags.map((t: string) => <span key={t} className="org-tag">#{t}</span>)}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="border-b border-white/10 mb-8 overflow-x-auto scrollbar-none">
-          <nav className="flex gap-1 min-w-max">
-            {TABS.map(({ id: tid, label, icon: Icon }) => (
-              <button
-                key={tid}
-                onClick={() => setActiveTab(tid)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  activeTab === tid
-                    ? "border-indigo-500 text-indigo-400"
-                    : "border-transparent text-gray-500 hover:text-gray-200"
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                {label}
-                {tid === "reviews" && (
-                  <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-xs">
-                    {org.reviewCount}
-                  </span>
-                )}
-                {tid === "projects" && (
-                  <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-xs">
-                    {org.projects.length}
-                  </span>
-                )}
-              </button>
-            ))}
-          </nav>
+        {/* Tab navigation */}
+        <div style={{ display: 'flex', overflowX: 'auto', borderBottom: '1px solid rgba(99,102,241,0.15)', marginBottom: 20, scrollbarWidth: 'none' }}>
+          {TABS.map(({ id: tid, label }) => (
+            <button
+              key={tid}
+              className="org-tab"
+              onClick={() => setActiveTab(tid)}
+              style={{ padding: '10px 14px', background: 'none', border: 'none', borderBottom: activeTab === tid ? '2px solid #6366f1' : '2px solid transparent', color: activeTab === tid ? '#818cf8' : '#64748b', fontWeight: activeTab === tid ? 700 : 500, fontSize: '0.82rem', cursor: 'pointer', flexShrink: 0 }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* Tab content */}
-        <div className="pb-20">
-          {activeTab === "overview"   && <TabOverview org={org} />}
-          {activeTab === "projects"   && <TabProjects projects={org.projects} />}
-          {activeTab === "updates"    && <TabUpdates updates={org.updates} />}
-          {activeTab === "reviews"    && (
-            <TabReviews reviews={org.reviews} avg={org.avgRating} count={org.reviewCount} />
+        <div style={{ paddingBottom: 40 }}>
+          {/* OVERVIEW */}
+          {activeTab === 'overview' && (
+            <div>
+              {/* Description */}
+              {org.description && (
+                <div style={{ background: '#1e293b', border: '1px solid rgba(99,102,241,0.12)', borderRadius: 12, padding: '16px', marginBottom: 16 }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>About</div>
+                  <p style={{ color: '#cbd5e1', fontSize: '0.88rem', lineHeight: 1.7, margin: 0 }}>{org.description}</p>
+                </div>
+              )}
+
+              {/* Stats grid */}
+              {org.stats.length > 0 && (
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Impact at a Glance</div>
+                  <div className="org-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 16 }}>
+                    {org.stats.map((s: { label: string; value: string }) => (
+                      <div key={s.label} style={{ background: '#1e293b', border: '1px solid rgba(99,102,241,0.12)', borderRadius: 12, padding: '14px 12px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f1f5f9' }}>{s.value}</div>
+                        <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: 4, lineHeight: 1.3 }}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Meta details */}
+              <div style={{ background: '#1e293b', border: '1px solid rgba(99,102,241,0.12)', borderRadius: 12, padding: '16px' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Details</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 20px', fontSize: '0.82rem' }}>
+                  {org.type && <div><span style={{ color: '#475569' }}>Type</span><div style={{ color: '#f1f5f9', marginTop: 2 }}>{org.type}</div></div>}
+                  {org.size && <div><span style={{ color: '#475569' }}>Size</span><div style={{ color: '#f1f5f9', marginTop: 2 }}>{org.size}</div></div>}
+                  {org.location && <div><span style={{ color: '#475569' }}>Location</span><div style={{ color: '#f1f5f9', marginTop: 2 }}>{org.location}</div></div>}
+                  {org.founded && org.founded !== '2020-01-01' && <div><span style={{ color: '#475569' }}>Founded</span><div style={{ color: '#f1f5f9', marginTop: 2 }}>{format(parseISO(org.founded), 'MMMM yyyy')}</div></div>}
+                </div>
+              </div>
+            </div>
           )}
-          {activeTab === "gallery"    && <TabGallery items={org.gallery} />}
-          {activeTab === "documents"  && <TabDocuments />}
+
+          {/* PROJECTS */}
+          {activeTab === 'projects' && <TabProjects projects={org.projects} />}
+
+          {/* UPDATES */}
+          {activeTab === 'updates' && <TabUpdates updates={org.updates} />}
+
+          {/* REVIEWS */}
+          {activeTab === 'reviews' && (
+            org.reviews.length > 0
+              ? <TabReviews reviews={org.reviews} avg={org.avgRating} count={org.reviewCount} />
+              : <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#475569' }}>
+                  <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>⭐</div>
+                  <p>No reviews yet — be the first to review this organisation.</p>
+                </div>
+          )}
+
+          {/* GALLERY */}
+          {activeTab === 'gallery' && <TabGallery items={org.gallery} />}
+
+          {/* DOCUMENTS */}
+          {activeTab === 'documents' && <TabDocuments />}
         </div>
       </div>
     </div>
