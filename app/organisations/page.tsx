@@ -1,7 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
 
 const CATEGORIES = ['All', 'Freelancers', 'Businesses', 'Developers', 'Designers', 'Marketers', 'Consultants']
 
@@ -52,31 +51,22 @@ export default function MemberDirectoryPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient()
       try {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name, avatar_url, bio, location, skills, account_type')
-          .not('full_name', 'is', null)
-          .order('created_at', { ascending: false })
-          .limit(100)
-
-        if (profiles && profiles.length > 0) {
-          // Fetch trust balances
-          const ids = profiles.map((p: { id: string }) => p.id)
-          const { data: balances } = await supabase
-            .from('trust_balances')
-            .select('user_id, balance')
-            .in('user_id', ids)
-
-          const balanceMap: Record<string, number> = {}
-          ;(balances ?? []).forEach((b: { user_id: string; balance: number }) => {
-            balanceMap[b.user_id] = b.balance
-          })
-
-          setMembers(profiles.map((p: { id: string; full_name: string | null; avatar_url: string | null; bio: string | null; location: string | null; skills: string[] | null; account_type: string | null }) => ({
-            ...p,
-            trust_balance: balanceMap[p.id] ?? 0,
+        const res = await fetch('/api/directory/members')
+        if (res.ok) {
+          const { members: data } = await res.json()
+          setMembers((data ?? []).map((p: {
+            id: string; full_name: string | null; avatar_url: string | null
+            bio: string | null; location: string | null; trust_balance: number
+          }) => ({
+            id: p.id,
+            full_name: p.full_name,
+            avatar_url: p.avatar_url,
+            bio: p.bio,
+            location: p.location,
+            skills: [],
+            account_type: 'individual',
+            trust_balance: p.trust_balance ?? 0,
           })))
         }
       } catch {
