@@ -1,746 +1,355 @@
-"use client";
+'use client'
+import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 
-import { useState } from "react";
-import {
-  ShoppingBagIcon,
-  TagIcon,
-  ClockIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ExclamationTriangleIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  BanknotesIcon,
-  ArrowPathIcon,
-} from "@heroicons/react/24/outline";
-import { CheckCircleIcon as CheckCircleSolid } from "@heroicons/react/24/solid";
-import { formatDistanceToNow, format } from "date-fns";
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-type OrderStatus =
-  | "pending"
-  | "paid"
-  | "in_progress"
-  | "delivered"
-  | "completed"
-  | "disputed"
-  | "refunded"
-  | "cancelled";
-
-type OrderType = "service" | "product";
-
-interface TimelineEvent {
-  status: OrderStatus;
-  label: string;
-  timestamp: string | null;
-  completed: boolean;
-}
+type OrderStatus = 'pending' | 'paid' | 'in_progress' | 'delivered' | 'completed' | 'disputed' | 'refunded' | 'cancelled'
 
 interface Order {
-  id: string;
-  type: OrderType;
-  title: string;
-  description: string;
-  status: OrderStatus;
-  amount: number;
-  fee: number;
-  escrowAmount: number;
-  currency: string;
-  counterparty: {
-    name: string;
-    avatar: string;
-    handle: string;
-  };
-  createdAt: string;
-  updatedAt: string;
-  deliveryDue: string | null;
-  stripePaymentId: string;
-  timeline: TimelineEvent[];
-  canRelease: boolean;
-  canDispute: boolean;
-  canCancel: boolean;
+  id: string
+  listing_id: string | null
+  buyer_id: string
+  seller_id: string
+  status: OrderStatus
+  amount: number
+  currency: string
+  notes: string | null
+  buyer_reviewed: boolean
+  seller_reviewed: boolean
+  created_at: string
+  updated_at: string
+  listing?: { title: string | null; product_type: string | null } | null
+  buyer_profile?: { full_name: string | null; avatar_url: string | null } | null
+  seller_profile?: { full_name: string | null; avatar_url: string | null } | null
 }
 
-const MOCK_BUYING: Order[] = [
-  {
-    id: "ord_001",
-    type: "service",
-    title: "Full-Stack Web App Development",
-    description: "Custom Next.js application with Supabase backend, auth, and Stripe integration.",
-    status: "in_progress",
-    amount: 1200,
-    fee: 96,
-    escrowAmount: 1104,
-    currency: "USDT",
-    counterparty: {
-      name: "Alexei Petrov",
-      avatar: "AP",
-      handle: "@alexei.dev",
-    },
-    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-    deliveryDue: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
-    stripePaymentId: "pi_3PxABC",
-    canRelease: true,
-    canDispute: true,
-    canCancel: false,
-    timeline: [
-      { status: "pending", label: "Order placed", timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), completed: true },
-      { status: "paid", label: "Payment confirmed", timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 + 120000).toISOString(), completed: true },
-      { status: "in_progress", label: "Work started", timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), completed: true },
-      { status: "delivered", label: "Delivered", timestamp: null, completed: false },
-      { status: "completed", label: "Escrow released", timestamp: null, completed: false },
-    ],
-  },
-  {
-    id: "ord_002",
-    type: "product",
-    title: "UI Component Library — Pro License",
-    description: "Lifetime license for 200+ Tailwind components with Figma source files.",
-    status: "completed",
-    amount: 149,
-    fee: 7.45,
-    escrowAmount: 141.55,
-    currency: "USDT",
-    counterparty: {
-      name: "DesignForge Studio",
-      avatar: "DS",
-      handle: "@designforge",
-    },
-    createdAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
-    deliveryDue: null,
-    stripePaymentId: "pi_3PyDEF",
-    canRelease: false,
-    canDispute: false,
-    canCancel: false,
-    timeline: [
-      { status: "pending", label: "Order placed", timestamp: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(), completed: true },
-      { status: "paid", label: "Payment confirmed", timestamp: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000 + 90000).toISOString(), completed: true },
-      { status: "delivered", label: "Delivered", timestamp: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(), completed: true },
-      { status: "completed", label: "Escrow released", timestamp: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(), completed: true },
-    ],
-  },
-  {
-    id: "ord_003",
-    type: "service",
-    title: "SEO Audit & Strategy Report",
-    description: "Comprehensive SEO audit covering technical, on-page, and backlink analysis.",
-    status: "disputed",
-    amount: 320,
-    fee: 25.6,
-    escrowAmount: 294.4,
-    currency: "USDT",
-    counterparty: {
-      name: "RankUp Agency",
-      avatar: "RA",
-      handle: "@rankup.seo",
-    },
-    createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    deliveryDue: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    stripePaymentId: "pi_3PzGHI",
-    canRelease: false,
-    canDispute: false,
-    canCancel: false,
-    timeline: [
-      { status: "pending", label: "Order placed", timestamp: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(), completed: true },
-      { status: "paid", label: "Payment confirmed", timestamp: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000 + 60000).toISOString(), completed: true },
-      { status: "in_progress", label: "Work started", timestamp: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000).toISOString(), completed: true },
-      { status: "disputed", label: "Dispute raised", timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), completed: true },
-    ],
-  },
-  {
-    id: "ord_004",
-    type: "service",
-    title: "Brand Identity Package",
-    description: "Logo, color palette, typography guide, and brand usage document.",
-    status: "pending",
-    amount: 550,
-    fee: 44,
-    escrowAmount: 506,
-    currency: "USDT",
-    counterparty: {
-      name: "Mia Hoffmann",
-      avatar: "MH",
-      handle: "@mia.design",
-    },
-    createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    deliveryDue: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    stripePaymentId: "pi_3PaJKL",
-    canRelease: false,
-    canDispute: false,
-    canCancel: true,
-    timeline: [
-      { status: "pending", label: "Order placed", timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(), completed: true },
-      { status: "paid", label: "Payment confirmed", timestamp: null, completed: false },
-      { status: "in_progress", label: "Work started", timestamp: null, completed: false },
-      { status: "delivered", label: "Delivered", timestamp: null, completed: false },
-      { status: "completed", label: "Escrow released", timestamp: null, completed: false },
-    ],
-  },
-];
+// ── Status config ─────────────────────────────────────────────────────────────
 
-const MOCK_SELLING: Order[] = [
-  {
-    id: "ord_101",
-    type: "service",
-    title: "Mobile App UI Design",
-    description: "iOS & Android UI design for fintech app — 30 screens, Figma delivery.",
-    status: "delivered",
-    amount: 800,
-    fee: 64,
-    escrowAmount: 736,
-    currency: "USDT",
-    counterparty: {
-      name: "Pavel Novak",
-      avatar: "PN",
-      handle: "@pavel.fin",
-    },
-    createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    deliveryDue: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
-    stripePaymentId: "pi_3PbMNO",
-    canRelease: false,
-    canDispute: false,
-    canCancel: false,
-    timeline: [
-      { status: "pending", label: "Order received", timestamp: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), completed: true },
-      { status: "paid", label: "Payment confirmed", timestamp: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000 + 80000).toISOString(), completed: true },
-      { status: "in_progress", label: "Work started", timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), completed: true },
-      { status: "delivered", label: "Delivered", timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), completed: true },
-      { status: "completed", label: "Escrow released", timestamp: null, completed: false },
-    ],
-  },
-  {
-    id: "ord_102",
-    type: "product",
-    title: "Notion Business OS Template",
-    description: "Complete business operating system in Notion — CRM, projects, finance.",
-    status: "completed",
-    amount: 59,
-    fee: 2.95,
-    escrowAmount: 56.05,
-    currency: "USDT",
-    counterparty: {
-      name: "Sara Lin",
-      avatar: "SL",
-      handle: "@sara.ops",
-    },
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-    deliveryDue: null,
-    stripePaymentId: "pi_3PcPQR",
-    canRelease: false,
-    canDispute: false,
-    canCancel: false,
-    timeline: [
-      { status: "pending", label: "Order received", timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), completed: true },
-      { status: "paid", label: "Payment confirmed", timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000 + 45000).toISOString(), completed: true },
-      { status: "delivered", label: "Delivered", timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000 + 60000).toISOString(), completed: true },
-      { status: "completed", label: "Escrow released", timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), completed: true },
-    ],
-  },
-  {
-    id: "ord_103",
-    type: "service",
-    title: "API Integration — Stripe + Webhooks",
-    description: "End-to-end Stripe checkout, webhook handler, and escrow logic implementation.",
-    status: "in_progress",
-    amount: 650,
-    fee: 52,
-    escrowAmount: 598,
-    currency: "USDT",
-    counterparty: {
-      name: "BlockChain Ventures",
-      avatar: "BV",
-      handle: "@bcventures",
-    },
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-    deliveryDue: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-    stripePaymentId: "pi_3PdSTU",
-    canRelease: false,
-    canDispute: false,
-    canCancel: false,
-    timeline: [
-      { status: "pending", label: "Order received", timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), completed: true },
-      { status: "paid", label: "Payment confirmed", timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 + 100000).toISOString(), completed: true },
-      { status: "in_progress", label: "Work started", timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), completed: true },
-      { status: "delivered", label: "Delivered", timestamp: null, completed: false },
-      { status: "completed", label: "Escrow released", timestamp: null, completed: false },
-    ],
-  },
-];
+const STATUS: Record<OrderStatus, { label: string; color: string; bg: string; icon: string }> = {
+  pending:     { label: 'Pending',     color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',   icon: '⏳' },
+  paid:        { label: 'Paid',        color: '#38bdf8', bg: 'rgba(56,189,248,0.12)',   icon: '💳' },
+  in_progress: { label: 'In Progress', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', icon: '🔄' },
+  delivered:   { label: 'Delivered',   color: '#818cf8', bg: 'rgba(129,140,248,0.12)', icon: '📦' },
+  completed:   { label: 'Completed',   color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: '✅' },
+  disputed:    { label: 'Disputed',    color: '#f87171', bg: 'rgba(248,113,113,0.12)', icon: '⚠️' },
+  refunded:    { label: 'Refunded',    color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', icon: '↩️' },
+  cancelled:   { label: 'Cancelled',   color: '#475569', bg: 'rgba(71,85,105,0.12)',   icon: '✕'  },
+}
 
-const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-  pending: {
-    label: "Pending",
-    color: "text-yellow-600",
-    bg: "bg-yellow-50 border-yellow-200",
-    icon: <ClockIcon className="w-4 h-4" />,
-  },
-  paid: {
-    label: "Paid",
-    color: "text-blue-600",
-    bg: "bg-blue-50 border-blue-200",
-    icon: <BanknotesIcon className="w-4 h-4" />,
-  },
-  in_progress: {
-    label: "In Progress",
-    color: "text-indigo-600",
-    bg: "bg-indigo-50 border-indigo-200",
-    icon: <ArrowPathIcon className="w-4 h-4" />,
-  },
-  delivered: {
-    label: "Delivered",
-    color: "text-purple-600",
-    bg: "bg-purple-50 border-purple-200",
-    icon: <CheckCircleIcon className="w-4 h-4" />,
-  },
-  completed: {
-    label: "Completed",
-    color: "text-emerald-600",
-    bg: "bg-emerald-50 border-emerald-200",
-    icon: <CheckCircleSolid className="w-4 h-4" />,
-  },
-  disputed: {
-    label: "Disputed",
-    color: "text-red-600",
-    bg: "bg-red-50 border-red-200",
-    icon: <ExclamationTriangleIcon className="w-4 h-4" />,
-  },
-  refunded: {
-    label: "Refunded",
-    color: "text-gray-600",
-    bg: "bg-gray-50 border-gray-200",
-    icon: <ArrowPathIcon className="w-4 h-4" />,
-  },
-  cancelled: {
-    label: "Cancelled",
-    color: "text-gray-500",
-    bg: "bg-gray-50 border-gray-200",
-    icon: <XCircleIcon className="w-4 h-4" />,
-  },
-};
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-type Tab = "buying" | "selling";
-type FilterStatus = "all" | OrderStatus;
+function timeAgo(ts: string) {
+  const diff = Date.now() - new Date(ts).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
 
-function Avatar({ initials, size = "md" }: { initials: string; size?: "sm" | "md" }) {
-  const sz = size === "sm" ? "w-8 h-8 text-xs" : "w-10 h-10 text-sm";
+function fmtDate(ts: string) {
+  return new Date(ts).toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function fmtAmount(amount: number, currency: string) {
+  const sym = currency?.toUpperCase() === 'GBP' ? '£' : currency?.toUpperCase() === 'EUR' ? '€' : '$'
+  return `${sym}${(amount / 100).toFixed(2)}`
+}
+
+function Avatar({ url, name, size = 36 }: { url: string | null | undefined; name: string | null | undefined; size?: number }) {
+  const initials = (name ?? '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  if (url) return <img src={url} alt={name ?? ''} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
   return (
-    <div className={`${sz} rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-semibold text-white flex-shrink-0`}>
+    <div style={{ width: size, height: size, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: size * 0.33, color: '#0f172a', flexShrink: 0 }}>
       {initials}
     </div>
-  );
+  )
 }
 
-function StatusBadge({ status }: { status: OrderStatus }) {
-  const cfg = STATUS_CONFIG[status];
-  return (
-    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${cfg.color} ${cfg.bg}`}>
-      {cfg.icon}
-      {cfg.label}
-    </span>
-  );
-}
+// ── Order card ────────────────────────────────────────────────────────────────
 
-function Timeline({ events }: { events: TimelineEvent[] }) {
-  return (
-    <div className="mt-4 pt-4 border-t border-gray-100">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Timeline</p>
-      <div className="flex items-start gap-0">
-        {events.map((ev, i) => {
-          const isLast = i === events.length - 1;
-          const cfg = STATUS_CONFIG[ev.status];
-          return (
-            <div key={ev.status} className="flex flex-col items-center flex-1 relative">
-              {/* Connector line */}
-              {!isLast && (
-                <div className={`absolute top-3 left-1/2 w-full h-0.5 ${ev.completed ? "bg-indigo-400" : "bg-gray-200"}`} style={{ transform: "translateY(-50%)" }} />
-              )}
-              {/* Dot */}
-              <div className={`relative z-10 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 border-2 ${ev.completed ? "bg-indigo-500 border-indigo-500" : "bg-white border-gray-300"}`}>
-                {ev.completed && <CheckCircleSolid className="w-3.5 h-3.5 text-white" />}
-              </div>
-              {/* Label */}
-              <div className="mt-2 text-center px-1">
-                <p className={`text-xs font-medium ${ev.completed ? "text-gray-800" : "text-gray-400"}`}>{ev.label}</p>
-                {ev.timestamp && (
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {format(new Date(ev.timestamp), "MMM d")}
-                  </p>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function EscrowPanel({ order, isBuying }: { order: Order; isBuying: boolean }) {
-  const [releasing, setReleasing] = useState(false);
-  const [disputing, setDisputing] = useState(false);
-  const [releaseConfirm, setReleaseConfirm] = useState(false);
-  const [disputeReason, setDisputeReason] = useState("");
-  const [showDisputeForm, setShowDisputeForm] = useState(false);
+function OrderCard({ order, role }: { order: Order; role: 'buyer' | 'seller' }) {
+  const [releasing, setReleasing] = useState(false)
+  const [released, setReleased] = useState(false)
+  const st = STATUS[order.status] ?? STATUS.pending
+  const isBuying = role === 'buyer'
+  const counterparty = isBuying ? order.seller_profile : order.buyer_profile
+  const counterLabel = isBuying ? 'Seller' : 'Buyer'
+  const title = order.listing?.title ?? (isBuying ? 'Purchase' : 'Sale')
+  const isEscrowable = isBuying && order.status === 'delivered' && !released
 
   const handleRelease = async () => {
-    if (!releaseConfirm) { setReleaseConfirm(true); return; }
-    setReleasing(true);
-    await new Promise(r => setTimeout(r, 1200));
-    setReleasing(false);
-    setReleaseConfirm(false);
-    alert(`Escrow of ${order.escrowAmount} ${order.currency} released to ${order.counterparty.name}! +₮5 trust awarded.`);
-  };
-
-  const handleDispute = async () => {
-    if (!showDisputeForm) { setShowDisputeForm(true); return; }
-    if (!disputeReason.trim()) return;
-    setDisputing(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setDisputing(false);
-    setShowDisputeForm(false);
-    alert("Dispute raised. FreeTrust team will review within 24 hours.");
-  };
-
-  if (!order.canRelease && !order.canDispute) return null;
+    if (!confirm('Release escrow funds to the seller? This confirms delivery.')) return
+    setReleasing(true)
+    try {
+      await fetch(`/api/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' }),
+      })
+      setReleased(true)
+    } catch { /* silent */ }
+    finally { setReleasing(false) }
+  }
 
   return (
-    <div className="mt-4 pt-4 border-t border-gray-100">
-      <div className="flex items-center gap-2 mb-3">
-        <BanknotesIcon className="w-4 h-4 text-indigo-500" />
-        <span className="text-sm font-semibold text-gray-700">Escrow</span>
-        <span className="ml-auto text-sm font-bold text-indigo-600">{order.escrowAmount} {order.currency}</span>
-      </div>
-      <p className="text-xs text-gray-500 mb-3">
-        Funds are held securely in escrow. Release payment once you are satisfied with the delivery.
-      </p>
-      <div className="flex flex-col gap-2">
-        {isBuying && order.canRelease && (
-          <>
-            {releaseConfirm ? (
-              <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3">
-                <p className="text-xs text-emerald-700 font-medium mb-2">
-                  Confirm release of {order.escrowAmount} {order.currency} to {order.counterparty.name}?
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleRelease}
-                    disabled={releasing}
-                    className="flex-1 py-1.5 text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors disabled:opacity-60"
-                  >
-                    {releasing ? "Releasing…" : "Yes, Release Funds"}
-                  </button>
-                  <button
-                    onClick={() => setReleaseConfirm(false)}
-                    className="flex-1 py-1.5 text-xs font-semibold bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={handleRelease}
-                className="w-full py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                <CheckCircleIcon className="w-4 h-4" />
-                Release Escrow
-              </button>
-            )}
-          </>
-        )}
-        {isBuying && order.canDispute && (
-          <>
-            {showDisputeForm ? (
-              <div className="rounded-lg bg-red-50 border border-red-200 p-3">
-                <p className="text-xs font-semibold text-red-700 mb-2">Describe the issue:</p>
-                <textarea
-                  value={disputeReason}
-                  onChange={e => setDisputeReason(e.target.value)}
-                  placeholder="Explain why you're raising a dispute…"
-                  rows={3}
-                  className="w-full text-xs border border-red-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
-                />
-                <div className="flex gap-2 mt-2">
-                  <button
-                    onClick={handleDispute}
-                    disabled={disputing || !disputeReason.trim()}
-                    className="flex-1 py-1.5 text-xs font-semibold bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-60"
-                  >
-                    {disputing ? "Submitting…" : "Submit Dispute"}
-                  </button>
-                  <button
-                    onClick={() => { setShowDisputeForm(false); setDisputeReason(""); }}
-                    className="flex-1 py-1.5 text-xs font-semibold bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={handleDispute}
-                className="w-full py-2 text-sm font-semibold border border-red-300 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                <ExclamationTriangleIcon className="w-4 h-4" />
-                Raise Dispute
-              </button>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
+    <Link href={`/orders/${order.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+      <div style={{ background: '#1e293b', border: `1px solid ${order.status === 'disputed' ? 'rgba(248,113,113,0.35)' : 'rgba(56,189,248,0.1)'}`, borderRadius: 14, overflow: 'hidden', transition: 'border-color 0.15s' }}
+        onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = 'rgba(56,189,248,0.3)'}
+        onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = order.status === 'disputed' ? 'rgba(248,113,113,0.35)' : 'rgba(56,189,248,0.1)'}>
 
-function OrderCard({ order, isBuying }: { order: Order; isBuying: boolean }) {
-  const [expanded, setExpanded] = useState(false);
-  const cfg = STATUS_CONFIG[order.status];
-  const isOverdue = order.deliveryDue && new Date(order.deliveryDue) < new Date() && !["completed", "disputed", "refunded", "cancelled"].includes(order.status);
+        {/* Status bar */}
+        <div style={{ height: 3, background: released ? STATUS.completed.color : st.color, opacity: 0.7 }} />
 
-  return (
-    <div className={`bg-white rounded-2xl border ${order.status === "disputed" ? "border-red-200" : "border-gray-200"} shadow-sm hover:shadow-md transition-shadow overflow-hidden`}>
-      <div className="p-5">
-        {/* Header row */}
-        <div className="flex items-start gap-3">
-          <Avatar initials={order.counterparty.avatar} />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2 flex-wrap">
-              <div>
-                <h3 className="font-semibold text-gray-900 text-sm leading-tight">{order.title}</h3>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-gray-500">{isBuying ? "Seller:" : "Buyer:"} {order.counterparty.name}</span>
-                  <span className="text-xs text-gray-400">{order.counterparty.handle}</span>
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-1">
-                <StatusBadge status={order.status} />
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${order.type === "service" ? "bg-blue-50 text-blue-600" : "bg-violet-50 text-violet-600"}`}>
-                  {order.type === "service" ? "Service" : "Product"}
-                </span>
+        <div style={{ padding: '1rem 1.1rem' }}>
+          {/* Top row */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+            <Avatar url={counterparty?.avatar_url} name={counterparty?.full_name} size={40} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f1f5f9', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
+              <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                {counterLabel}: <span style={{ color: '#94a3b8', fontWeight: 600 }}>{counterparty?.full_name ?? 'Unknown'}</span>
               </div>
             </div>
-
-            {/* Amount + meta */}
-            <div className="flex items-center gap-4 mt-2 flex-wrap">
-              <div>
-                <span className="text-lg font-bold text-gray-900">{order.amount}</span>
-                <span className="text-sm text-gray-500 ml-1">{order.currency}</span>
-              </div>
-              <span className="text-xs text-gray-400">Fee: {order.fee} {order.currency}</span>
-              <span className="text-xs text-gray-400">
-                {formatDistanceToNow(new Date(order.createdAt), { addSuffix: true })}
-              </span>
-              {order.deliveryDue && (
-                <span className={`text-xs font-medium ${isOverdue ? "text-red-500" : "text-gray-500"}`}>
-                  {isOverdue ? "⚠ Overdue · " : "Due: "}
-                  {format(new Date(order.deliveryDue), "MMM d, yyyy")}
-                </span>
-              )}
+            {/* Status badge */}
+            <div style={{ background: released ? STATUS.completed.bg : st.bg, color: released ? STATUS.completed.color : st.color, borderRadius: 999, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
+              {released ? '✅ Completed' : `${st.icon} ${st.label}`}
             </div>
           </div>
-        </div>
 
-        {/* Description */}
-        <p className="text-sm text-gray-600 mt-3 line-clamp-2">{order.description}</p>
+          {/* Amount + meta row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '1.2rem', fontWeight: 900, color: '#f1f5f9' }}>{fmtAmount(order.amount, order.currency)}</span>
+            <span style={{ fontSize: '0.72rem', color: '#475569', background: 'rgba(148,163,184,0.08)', padding: '2px 8px', borderRadius: 999 }}>
+              {order.listing?.product_type === 'digital' ? '⚡ Digital' : order.listing?.product_type === 'physical' ? '📦 Physical' : '🛠 Service'}
+            </span>
+            <span style={{ fontSize: '0.72rem', color: '#475569', marginLeft: 'auto' }}>{timeAgo(order.created_at)}</span>
+          </div>
 
-        {/* Order ID */}
-        <p className="text-xs text-gray-400 mt-2 font-mono">
-          {order.id} · {order.stripePaymentId}
-        </p>
+          {/* Escrow notice for active orders */}
+          {['pending', 'paid', 'in_progress', 'delivered'].includes(order.status) && !released && (
+            <div style={{ marginTop: '0.75rem', background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.12)', borderRadius: 8, padding: '8px 12px', fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>🔒</span>
+              <span>Funds held in escrow · Ordered {fmtDate(order.created_at)}</span>
+            </div>
+          )}
 
-        {/* Cancel quick action */}
-        {order.canCancel && (
-          <div className="mt-3">
+          {/* Release escrow CTA for buyers when delivered */}
+          {isEscrowable && (
             <button
-              onClick={() => alert("Order cancellation request submitted.")}
-              className="text-xs text-red-500 hover:text-red-700 font-medium underline underline-offset-2 transition-colors"
-            >
-              Cancel Order
+              onClick={e => { e.preventDefault(); e.stopPropagation(); handleRelease() }}
+              disabled={releasing}
+              style={{ marginTop: '0.75rem', width: '100%', background: 'linear-gradient(135deg,#34d399,#059669)', border: 'none', borderRadius: 9, padding: '10px', fontSize: '0.85rem', fontWeight: 700, color: '#fff', cursor: 'pointer', opacity: releasing ? 0.7 : 1 }}>
+              {releasing ? 'Releasing…' : '✅ Confirm Delivery & Release Escrow'}
             </button>
-          </div>
-        )}
-      </div>
+          )}
 
-      {/* Expand toggle */}
-      <button
-        onClick={() => setExpanded(v => !v)}
-        className="w-full flex items-center justify-center gap-1.5 py-2 bg-gray-50 hover:bg-gray-100 border-t border-gray-100 text-xs font-medium text-gray-500 transition-colors"
-      >
-        {expanded ? (
-          <>Hide details <ChevronUpIcon className="w-3.5 h-3.5" /></>
-        ) : (
-          <>View details <ChevronDownIcon className="w-3.5 h-3.5" /></>
-        )}
-      </button>
-
-      {/* Expanded panel */}
-      {expanded && (
-        <div className="px-5 pb-5 bg-white border-t border-gray-100">
-          <Timeline events={order.timeline} />
-          <EscrowPanel order={order} isBuying={isBuying} />
+          {/* Notes */}
+          {order.notes && (
+            <div style={{ marginTop: '0.6rem', fontSize: '0.78rem', color: '#64748b', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>"{order.notes}"</div>
+          )}
         </div>
-      )}
-    </div>
-  );
-}
-
-function EmptyState({ tab }: { tab: Tab }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center mb-4">
-        {tab === "buying" ? (
-          <ShoppingBagIcon className="w-8 h-8 text-indigo-400" />
-        ) : (
-          <TagIcon className="w-8 h-8 text-indigo-400" />
-        )}
       </div>
-      <h3 className="text-lg font-semibold text-gray-700 mb-1">No orders yet</h3>
-      <p className="text-sm text-gray-500 max-w-xs">
-        {tab === "buying"
-          ? "When you purchase a service or product, your orders will appear here."
-          : "When someone buys from you, their orders will appear here."}
-      </p>
-    </div>
-  );
+    </Link>
+  )
 }
 
-const ALL_STATUSES: { value: FilterStatus; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "pending", label: "Pending" },
-  { value: "paid", label: "Paid" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "delivered", label: "Delivered" },
-  { value: "completed", label: "Completed" },
-  { value: "disputed", label: "Disputed" },
-  { value: "cancelled", label: "Cancelled" },
-];
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+
+function Skeleton() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      {[1, 2, 3].map(i => (
+        <div key={i} style={{ background: '#1e293b', borderRadius: 14, padding: '1rem 1.1rem', height: 110 }}>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(90deg,#243047 25%,#2d3f55 50%,#243047 75%)', backgroundSize: '200%', animation: 'shimmer 1.5s infinite', flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ height: 14, width: '60%', background: 'linear-gradient(90deg,#243047 25%,#2d3f55 50%,#243047 75%)', backgroundSize: '200%', animation: 'shimmer 1.5s infinite', borderRadius: 6, marginBottom: 8 }} />
+              <div style={{ height: 11, width: '35%', background: 'linear-gradient(90deg,#243047 25%,#2d3f55 50%,#243047 75%)', backgroundSize: '200%', animation: 'shimmer 1.5s infinite', borderRadius: 6 }} />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
+type TabKey = 'buying' | 'selling'
+type StatusFilter = 'all' | OrderStatus
 
 export default function OrdersPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("buying");
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
+  const [tab, setTab] = useState<TabKey>('buying')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [buyingOrders, setBuyingOrders] = useState<Order[]>([])
+  const [sellingOrders, setSellingOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+  const [toast, setToast] = useState<string | null>(null)
 
-  const orders = activeTab === "buying" ? MOCK_BUYING : MOCK_SELLING;
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3500) }
 
-  const filtered = filterStatus === "all"
-    ? orders
-    : orders.filter(o => o.status === filterStatus);
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [bRes, sRes] = await Promise.all([
+        fetch('/api/orders?role=buyer'),
+        fetch('/api/orders?role=seller'),
+      ])
+      if (bRes.ok) {
+        const { orders } = await bRes.json()
+        setBuyingOrders(orders ?? [])
+      }
+      if (sRes.ok) {
+        const { orders } = await sRes.json()
+        setSellingOrders(orders ?? [])
+      }
+    } catch { /* silent */ }
+    finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const orders = tab === 'buying' ? buyingOrders : sellingOrders
+  const filtered = statusFilter === 'all' ? orders : orders.filter(o => o.status === statusFilter)
 
   const stats = {
-    total: orders.length,
-    active: orders.filter(o => ["pending", "paid", "in_progress", "delivered"].includes(o.status)).length,
-    completed: orders.filter(o => o.status === "completed").length,
-    disputed: orders.filter(o => o.status === "disputed").length,
-    escrow: orders
-      .filter(o => !["completed", "cancelled", "refunded"].includes(o.status))
-      .reduce((s, o) => s + o.escrowAmount, 0),
-  };
+    active: orders.filter(o => ['pending', 'paid', 'in_progress', 'delivered'].includes(o.status)).length,
+    completed: orders.filter(o => o.status === 'completed').length,
+    disputed: orders.filter(o => o.status === 'disputed').length,
+    escrow: orders.filter(o => !['completed', 'cancelled', 'refunded'].includes(o.status)).reduce((s, o) => s + o.amount, 0),
+    currency: orders[0]?.currency ?? 'GBP',
+  }
+
+  const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
+    { value: 'all', label: 'All' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'in_progress', label: 'In Progress' },
+    { value: 'delivered', label: 'Delivered' },
+    { value: 'completed', label: 'Completed' },
+    { value: 'disputed', label: 'Disputed' },
+  ]
+
+  void showToast
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Page header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-0">
-          <h1 className="text-2xl font-bold text-gray-900">Orders</h1>
-          <p className="text-sm text-gray-500 mt-1">Track your purchases and sales with escrow protection.</p>
+    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
+      <style>{`
+        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+        .order-tab-btn { flex:1; padding:0.75rem 0.5rem; border:none; cursor:pointer; font-family:inherit; font-size:0.88rem; font-weight:600; transition:all 0.15s; border-bottom:2px solid transparent; background:transparent; }
+      `}</style>
 
-          {/* Stats row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+      {/* Toast */}
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: '11px 20px', fontSize: 13, color: '#f1f5f9', zIndex: 9999, whiteSpace: 'nowrap', boxShadow: '0 8px 30px rgba(0,0,0,0.4)' }}>
+          {toast}
+        </div>
+      )}
+
+      <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 1rem' }}>
+
+        {/* Header */}
+        <div style={{ marginBottom: '1.25rem' }}>
+          <h1 style={{ fontSize: 22, fontWeight: 900, margin: '0 0 4px', letterSpacing: '-0.5px' }}>Orders</h1>
+          <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>Track all your purchases and sales in one place</p>
+        </div>
+
+        {/* Buying / Selling tabs — visually distinct */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', marginBottom: '1.25rem' }}>
+          {/* Buying tab */}
+          <button
+            onClick={() => { setTab('buying'); setStatusFilter('all') }}
+            style={{ background: tab === 'buying' ? 'rgba(56,189,248,0.12)' : '#1e293b', border: `2px solid ${tab === 'buying' ? '#38bdf8' : 'rgba(56,189,248,0.1)'}`, borderRadius: 12, padding: '14px 12px', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', textAlign: 'left' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: 18 }}>🛒</span>
+              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: tab === 'buying' ? '#38bdf8' : '#f1f5f9' }}>Buying</span>
+              <span style={{ marginLeft: 'auto', background: tab === 'buying' ? '#38bdf8' : 'rgba(56,189,248,0.15)', color: tab === 'buying' ? '#0f172a' : '#38bdf8', borderRadius: 999, padding: '1px 8px', fontSize: '0.72rem', fontWeight: 700 }}>{buyingOrders.length}</span>
+            </div>
+            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Your purchases &amp; escrow</div>
+          </button>
+
+          {/* Selling tab */}
+          <button
+            onClick={() => { setTab('selling'); setStatusFilter('all') }}
+            style={{ background: tab === 'selling' ? 'rgba(52,211,153,0.1)' : '#1e293b', border: `2px solid ${tab === 'selling' ? '#34d399' : 'rgba(52,211,153,0.1)'}`, borderRadius: 12, padding: '14px 12px', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', textAlign: 'left' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: 18 }}>🏷️</span>
+              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: tab === 'selling' ? '#34d399' : '#f1f5f9' }}>Selling</span>
+              <span style={{ marginLeft: 'auto', background: tab === 'selling' ? '#34d399' : 'rgba(52,211,153,0.12)', color: tab === 'selling' ? '#0f172a' : '#34d399', borderRadius: 999, padding: '1px 8px', fontSize: '0.72rem', fontWeight: 700 }}>{sellingOrders.length}</span>
+            </div>
+            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Your sales &amp; earnings</div>
+          </button>
+        </div>
+
+        {/* Stats strip */}
+        {orders.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.5rem', marginBottom: '1.25rem' }}>
             {[
-              { label: "Total", value: stats.total, color: "text-gray-900" },
-              { label: "Active", value: stats.active, color: "text-indigo-600" },
-              { label: "Completed", value: stats.completed, color: "text-emerald-600" },
-              { label: "In Escrow", value: `${stats.escrow.toFixed(2)} ₮`, color: "text-violet-600" },
+              { label: 'Active', value: stats.active, color: '#38bdf8' },
+              { label: 'Completed', value: stats.completed, color: '#34d399' },
+              { label: 'In Escrow', value: fmtAmount(stats.escrow, stats.currency), color: '#a78bfa' },
             ].map(s => (
-              <div key={s.label} className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3">
-                <p className="text-xs text-gray-500 font-medium">{s.label}</p>
-                <p className={`text-xl font-bold mt-0.5 ${s.color}`}>{s.value}</p>
+              <div key={s.label} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>{s.label}</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: s.color }}>{s.value}</div>
               </div>
             ))}
           </div>
+        )}
 
-          {/* Tabs */}
-          <div className="flex mt-6 gap-0 border-b border-gray-200">
-            {([
-              { id: "buying" as Tab, label: "Buying", icon: <ShoppingBagIcon className="w-4 h-4" /> },
-              { id: "selling" as Tab, label: "Selling", icon: <TagIcon className="w-4 h-4" /> },
-            ] as const).map(t => (
-              <button
-                key={t.id}
-                onClick={() => { setActiveTab(t.id); setFilterStatus("all"); }}
-                className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
-                  activeTab === t.id
-                    ? "border-indigo-600 text-indigo-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                {t.icon}
-                {t.label}
-                <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full font-medium ${
-                  activeTab === t.id ? "bg-indigo-100 text-indigo-600" : "bg-gray-100 text-gray-500"
-                }`}>
-                  {t.id === "buying" ? MOCK_BUYING.length : MOCK_SELLING.length}
-                </span>
-              </button>
-            ))}
+        {/* Status filter pills */}
+        {orders.length > 0 && (
+          <div style={{ display: 'flex', gap: '0.4rem', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2, marginBottom: '1.1rem' }}>
+            {STATUS_FILTERS.map(f => {
+              const count = f.value === 'all' ? orders.length : orders.filter(o => o.status === f.value).length
+              return (
+                <button key={f.value} onClick={() => setStatusFilter(f.value)}
+                  style={{ flexShrink: 0, padding: '5px 12px', borderRadius: 999, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: statusFilter === f.value ? 700 : 500, background: statusFilter === f.value ? (tab === 'buying' ? '#38bdf8' : '#34d399') : 'rgba(148,163,184,0.08)', color: statusFilter === f.value ? '#0f172a' : '#94a3b8', transition: 'all 0.15s' }}>
+                  {f.label} {count > 0 && <span style={{ opacity: 0.75 }}>({count})</span>}
+                </button>
+              )
+            })}
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* Filter bar */}
-      <div className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-2.5 flex gap-2 overflow-x-auto scrollbar-none">
-          {ALL_STATUSES.map(s => (
-            <button
-              key={s.value}
-              onClick={() => setFilterStatus(s.value)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                filterStatus === s.value
-                  ? "bg-indigo-600 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              {s.label}
-              {s.value !== "all" && (
-                <span className="ml-1 opacity-75">
-                  ({orders.filter(o => o.status === s.value).length})
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Order list */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
-        {filtered.length === 0 ? (
-          filterStatus === "all" ? (
-            <EmptyState tab={activeTab} />
-          ) : (
-            <div className="text-center py-16">
-              <p className="text-gray-500 text-sm">No {filterStatus.replace("_", " ")} orders.</p>
-              <button
-                onClick={() => setFilterStatus("all")}
-                className="mt-3 text-sm text-indigo-600 hover:underline"
-              >
-                Clear filter
-              </button>
+        {/* Orders list */}
+        {loading ? (
+          <Skeleton />
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{tab === 'buying' ? '🛒' : '🏷️'}</div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem' }}>
+              {orders.length === 0
+                ? (tab === 'buying' ? 'No purchases yet' : 'No sales yet')
+                : `No ${statusFilter.replace('_', ' ')} orders`}
             </div>
-          )
+            <div style={{ fontSize: '0.85rem', color: '#475569', marginBottom: '1.5rem' }}>
+              {orders.length === 0
+                ? (tab === 'buying' ? 'Browse services and products to make your first purchase.' : 'List a service or product to start selling.')
+                : 'Try a different filter.'}
+            </div>
+            {orders.length === 0 && (
+              <Link href={tab === 'buying' ? '/services' : '/listings/new'}
+                style={{ display: 'inline-block', background: tab === 'buying' ? '#38bdf8' : '#34d399', color: '#0f172a', borderRadius: 10, padding: '10px 24px', fontWeight: 800, fontSize: '0.9rem', textDecoration: 'none' }}>
+                {tab === 'buying' ? 'Browse Services →' : 'Create a Listing →'}
+              </Link>
+            )}
+            {orders.length > 0 && (
+              <button onClick={() => setStatusFilter('all')} style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', color: '#38bdf8', borderRadius: 8, padding: '8px 20px', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem', fontFamily: 'inherit' }}>
+                Show all orders
+              </button>
+            )}
+          </div>
         ) : (
-          <div className="flex flex-col gap-4">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {filtered.map(order => (
-              <OrderCard key={order.id} order={order} isBuying={activeTab === "buying"} />
+              <OrderCard key={order.id} order={order} role={tab === 'buying' ? 'buyer' : 'seller'} />
             ))}
           </div>
         )}
       </div>
     </div>
-  );
+  )
 }
-
