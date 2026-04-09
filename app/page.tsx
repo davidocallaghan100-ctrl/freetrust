@@ -67,7 +67,7 @@ export default function Home() {
         <p style={S.tagline}>{taglines[t]}</p>
         <div style={S.ctaRow}>
           <Link href="/register" style={S.ctaPrimary}>Get Started Free</Link>
-          <Link href="/marketplace" style={S.ctaSecondary}>Browse Marketplace</Link>
+          <Link href="/services" style={S.ctaSecondary}>Browse Marketplace</Link>
         </div>
       </div>
 
