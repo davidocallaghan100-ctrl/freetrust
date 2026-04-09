@@ -146,7 +146,7 @@ export default function AnalyticsDashboard() {
     const load = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.user) { router.push('/auth/signin'); return }
+        if (!session?.user) { router.push('/login?redirect=/analytics'); return }
         const uid = session.user.id
         setUserId(uid)
 
@@ -298,7 +298,7 @@ export default function AnalyticsDashboard() {
   ] as const
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', paddingTop: 104 }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '3px solid #1e293b', borderTopColor: '#38bdf8', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
         <div style={{ fontSize: '14px', color: '#64748b' }}>Loading analytics…</div>
@@ -308,7 +308,7 @@ export default function AnalyticsDashboard() {
   )
 
   return (
-    <div style={{ maxWidth: '760px', margin: '0 auto', padding: '0 0 80px' }}>
+    <div style={{ maxWidth: '760px', margin: '0 auto', padding: '104px 0 80px' }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg) } }
         .analytics-tab { transition: all 0.15s ease; }
