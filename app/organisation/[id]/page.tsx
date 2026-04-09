@@ -807,7 +807,7 @@ export default function OrganisationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center" style={{ paddingTop: 104 }}>
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
           <span className="text-gray-500 text-sm">Loading organisation…</span>
@@ -818,7 +818,7 @@ export default function OrganisationPage() {
 
   if (!org) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center" style={{ paddingTop: 104 }}>
         <div className="text-center space-y-4">
           <p className="text-white text-xl font-semibold">Organisation not found</p>
           <button
@@ -833,7 +833,7 @@ export default function OrganisationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen bg-gray-950 text-white" style={{ paddingTop: 104 }}>
       {/* Cover */}
       <div className="relative h-52 sm:h-64 bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 overflow-hidden">
         <div

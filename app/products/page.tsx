@@ -29,6 +29,7 @@ interface Product {
 // ─── Category data ────────────────────────────────────────────────────────────
 const ALL_CATEGORIES = [
   { id: 'all', label: 'All', icon: '🌐' },
+  { id: 'technology', label: 'Tech', icon: '💻' },
   { id: 'art', label: 'Art', icon: '🎨' },
   { id: 'music', label: 'Music', icon: '🎵' },
   { id: 'courses', label: 'Courses', icon: '🎓' },
@@ -45,6 +46,7 @@ const SORT_OPTIONS = ['Newest', 'Popular', 'Price: Low', 'Price: High', 'Trust S
 
 // ─── Category gradients ───────────────────────────────────────────────────────
 const CAT_GRAD: Record<string, string> = {
+  technology:    'linear-gradient(135deg,#06b6d4,#0284c7)',
   art:           'linear-gradient(135deg,#f472b6,#db2777)',
   music:         'linear-gradient(135deg,#a78bfa,#7c3aed)',
   courses:       'linear-gradient(135deg,#38bdf8,#0284c7)',
@@ -189,25 +191,47 @@ function ProductsInner() {
       try {
         const { data } = await supabase
           .from('listings')
-          .select('id, title, description, price, category, type, seller_id, profiles!seller_id(full_name, avatar_url, trust_balance)')
+          .select('id, title, description, price, product_type, tags, images, avg_rating, review_count, seller_id, profiles!seller_id(full_name, avatar_url, trust_balance)')
           .eq('status', 'active')
-          .in('type', ['product', 'digital'])
           .order('created_at', { ascending: false })
-          .limit(50)
+          .limit(100)
         if (data && data.length > 0) {
           setDbProducts(data.map((d: Record<string, unknown>) => {
             const profile = d.profiles as Record<string, unknown> | null
+            const tags = Array.isArray(d.tags) ? (d.tags as string[]) : []
+            const images = Array.isArray(d.images) ? (d.images as string[]) : []
+            // Derive category from tags — look for known category keywords
+            const CAT_KEYWORDS: Record<string, string> = {
+              'charger': 'technology', 'headphones': 'technology', 'mouse': 'technology',
+              'keyboard': 'technology', 'ssd': 'technology', 'router': 'technology',
+              'led': 'technology', 'gimbal': 'technology', 'tracker': 'technology',
+              'stream deck': 'technology', 'power bank': 'technology', 'wifi': 'technology',
+              'course': 'courses', 'template': 'templates', 'music': 'music',
+              'photo': 'photography', 'art': 'art', 'book': 'books', 'software': 'software',
+              'merch': 'merch', 'hoodie': 'merch', 'handmade': 'handmade', 'food': 'food-groceries',
+            }
+            let category = 'technology'
+            const titleLower = String(d.title ?? '').toLowerCase()
+            const tagsStr = tags.join(' ').toLowerCase()
+            for (const [kw, cat] of Object.entries(CAT_KEYWORDS)) {
+              if (titleLower.includes(kw) || tagsStr.includes(kw)) { category = cat; break }
+            }
             return {
               id: String(d.id),
               title: String(d.title ?? ''),
               description: String(d.description ?? ''),
               price: Number(d.price ?? 0),
-              category: String(d.category ?? 'templates'),
-              type: d.type === 'digital' ? 'digital' : 'physical',
-              seller_name: String(profile?.full_name ?? 'Seller'),
+              category,
+              type: d.product_type === 'digital' ? 'digital' as const : 'physical' as const,
+              image: images[0] ?? undefined,
+              seller_name: String(profile?.full_name ?? 'FreeTrust Store'),
               seller_avatar: profile?.avatar_url ? String(profile.avatar_url) : undefined,
               seller_trust: Number(profile?.trust_balance ?? 0),
-              rating: 0, review_count: 0,
+              seller_verified: true,
+              rating: Number(d.avg_rating ?? 0),
+              review_count: Number(d.review_count ?? 0),
+              free_shipping: true,
+              delivery: d.product_type === 'digital' ? 'Instant Download' : '3–7 business days',
             }
           }))
         }
