@@ -1,820 +1,375 @@
-import { Metadata } from "next";
-import Image from "next/image";
-import Link from "next/link";
-import {
-  StarIcon,
-  CheckBadgeIcon,
-  ClockIcon,
-  ArrowPathIcon,
-  ShieldCheckIcon,
-  ChatBubbleLeftRightIcon,
-  HeartIcon,
-  ShareIcon,
-  ChevronRightIcon,
-  UserCircleIcon,
-  MapPinIcon,
-  BriefcaseIcon,
-} from "@heroicons/react/24/outline";
-import { StarIcon as StarSolid } from "@heroicons/react/24/solid";
+import { Metadata } from 'next'
+import Link from 'next/link'
+import { ALL_CATEGORIES, DELIVERY_OPTIONS } from '@/lib/service-categories'
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type Package = {
-  id: "basic" | "standard" | "premium";
-  label: string;
-  price: number;
-  delivery: string;
-  revisions: number;
-  description: string;
-  features: string[];
-};
+  id: 'basic' | 'standard' | 'premium'
+  label: string
+  price: number
+  delivery: string
+  revisions: number
+  description: string
+  features: string[]
+}
 
 type Review = {
-  id: string;
-  author: string;
-  avatar: string | null;
-  country: string;
-  rating: number;
-  date: string;
-  body: string;
-  helpful: number;
-};
+  id: string
+  author: string
+  avatar: string | null
+  country: string
+  rating: number
+  date: string
+  body: string
+  helpful: number
+}
 
 type ServiceDetail = {
-  id: string;
-  title: string;
-  category: string;
-  subcategory: string;
-  rating: number;
-  reviewCount: number;
-  images: string[];
+  id: string
+  title: string
+  category: string
+  categoryId: string
+  rating: number
+  reviewCount: number
+  images: string[]
+  mode: 'online' | 'offline' | 'both'
+  location?: string
+  distance?: number
+  deliveryTypes?: string[]
   seller: {
-    id: string;
-    name: string;
-    username: string;
-    avatar: string | null;
-    level: string;
-    location: string;
-    languages: string[];
-    memberSince: string;
-    responseTime: string;
-    lastSeen: string;
-    bio: string;
-    skills: string[];
-    totalOrders: number;
-    completionRate: number;
-  };
-  packages: Package[];
-  description: string;
-  faq: { q: string; a: string }[];
-  tags: string[];
-  reviews: Review[];
-};
+    id: string
+    name: string
+    username: string
+    avatar: string | null
+    level: string
+    location: string
+    languages: string[]
+    memberSince: string
+    responseTime: string
+    lastSeen: string
+    bio: string
+    skills: string[]
+    totalOrders: number
+    completionRate: number
+  }
+  packages: Package[]
+  description: string
+  faq: { q: string; a: string }[]
+  tags: string[]
+  reviews: Review[]
+}
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+// ─── Mock ─────────────────────────────────────────────────────────────────────
 
-const MOCK_SERVICES: Record<string, ServiceDetail> = {
-  "svc-001": {
-    id: "svc-001",
-    title: "I will design a professional logo for your brand or business",
-    category: "Graphics & Design",
-    subcategory: "Logo Design",
+const MOCK: Record<string, ServiceDetail> = {
+  'svc-001': {
+    id: 'svc-001',
+    title: 'I will design a professional logo and brand identity for your business',
+    category: 'Design & Creative',
+    categoryId: 'design-creative',
     rating: 4.9,
     reviewCount: 342,
     images: [
-      "https://images.unsplash.com/photo-1626785774573-4b799315345d?w=800&q=80",
-      "https://images.unsplash.com/photo-1558655146-364adaf1fcc9?w=800&q=80",
-      "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&q=80",
+      'https://images.unsplash.com/photo-1626785774573-4b799315345d?w=800&q=80',
+      'https://images.unsplash.com/photo-1558655146-364adaf1fcc9?w=800&q=80',
     ],
+    mode: 'online',
+    deliveryTypes: ['digital'],
     seller: {
-      id: "usr-101",
-      name: "Alex Morgan",
-      username: "alexdesigns",
-      avatar: "https://i.pravatar.cc/150?img=11",
-      level: "Top Rated Seller",
-      location: "United Kingdom",
-      languages: ["English", "French"],
-      memberSince: "January 2021",
-      responseTime: "1 hour",
-      lastSeen: "Online",
-      bio: "Award-winning graphic designer with 8+ years of experience creating compelling visual identities for startups and Fortune 500 companies. I specialise in logo design, brand systems, and visual storytelling.",
-      skills: ["Logo Design", "Brand Identity", "Illustrator", "Figma", "Typography"],
+      id: 'usr-101',
+      name: 'Alex Morgan',
+      username: 'alexdesigns',
+      avatar: 'https://i.pravatar.cc/150?img=11',
+      level: 'Top Rated Seller',
+      location: 'United Kingdom',
+      languages: ['English', 'French'],
+      memberSince: 'January 2021',
+      responseTime: '1 hour',
+      lastSeen: 'Online',
+      bio: 'Award-winning graphic designer with 8+ years of experience creating compelling visual identities for startups and Fortune 500 companies.',
+      skills: ['Logo Design', 'Brand Identity', 'Figma', 'Typography'],
       totalOrders: 1204,
       completionRate: 99,
     },
     packages: [
-      {
-        id: "basic",
-        label: "Basic",
-        price: 49,
-        delivery: "3 days",
-        revisions: 2,
-        description: "Clean, simple logo for your brand",
-        features: [
-          "1 concept",
-          "PNG & SVG files",
-          "2 revisions",
-          "3-day delivery",
-          "Commercial use",
-        ],
-      },
-      {
-        id: "standard",
-        label: "Standard",
-        price: 99,
-        delivery: "5 days",
-        revisions: 5,
-        description: "Full brand kit with multiple concepts",
-        features: [
-          "3 concepts",
-          "All file formats",
-          "5 revisions",
-          "5-day delivery",
-          "Commercial use",
-          "Brand style guide",
-          "Social media kit",
-        ],
-      },
-      {
-        id: "premium",
-        label: "Premium",
-        price: 199,
-        delivery: "7 days",
-        revisions: -1,
-        description: "Complete brand identity system",
-        features: [
-          "5 concepts",
-          "All file formats",
-          "Unlimited revisions",
-          "7-day delivery",
-          "Commercial use",
-          "Full brand guide",
-          "Stationery design",
-          "Source files",
-          "Priority support",
-        ],
-      },
+      { id: 'basic',    label: 'Basic',    price: 49,  delivery: '3 days', revisions: 2,  description: 'Clean, simple logo', features: ['1 concept', 'PNG & SVG', '2 revisions', 'Commercial use'] },
+      { id: 'standard', label: 'Standard', price: 99,  delivery: '5 days', revisions: 5,  description: 'Full brand kit', features: ['3 concepts', 'All formats', '5 revisions', 'Brand style guide', 'Social media kit'] },
+      { id: 'premium',  label: 'Premium',  price: 199, delivery: '7 days', revisions: -1, description: 'Complete brand identity', features: ['5 concepts', 'All formats', 'Unlimited revisions', 'Full brand guide', 'Source files', 'Priority support'] },
     ],
-    description: `## What you'll get
-
-A **professional, memorable logo** that captures your brand's essence. Every design is crafted from scratch — no templates, no clip art.
-
-## My process
-
-1. **Discovery** — I'll ask about your brand, audience, and vision
-2. **Research** — competitor analysis and mood-boarding  
-3. **Design** — multiple original concepts tailored to your brief
-4. **Refine** — iterate until you're 100% satisfied
-5. **Deliver** — all files in every format you need
-
-## Why choose me?
-
-- 8+ years of professional design experience
-- 1,200+ completed projects across 40 countries
-- Featured in Creative Bloq and Design Week
-- 99% completion rate and 4.9-star average
-
-All work is **100% original** and you receive full commercial rights upon delivery.`,
+    description: 'A professional, memorable logo crafted from scratch — no templates. Includes full commercial rights and all file formats.',
     faq: [
-      {
-        q: "What information do you need to get started?",
-        a: "I'll need your business name, industry, target audience, preferred colour palette (if any), and any design references you like. A brief questionnaire is sent after purchase.",
-      },
-      {
-        q: "Can I request changes after delivery?",
-        a: "Yes! Revisions are included in every package. Unlimited revisions are available on the Premium package.",
-      },
-      {
-        q: "What file formats will I receive?",
-        a: "Basic delivers PNG and SVG. Standard and Premium include AI, EPS, PDF, PNG, SVG, and JPG — everything you need for print and digital.",
-      },
-      {
-        q: "Do I own the copyright?",
-        a: "Absolutely. Full commercial rights transfer to you upon final delivery and payment.",
-      },
+      { q: 'What do you need to get started?', a: 'Business name, industry, target audience, and any colour/style preferences. A brief questionnaire is sent after purchase.' },
+      { q: 'Can I request changes after delivery?', a: 'Yes — revisions are included in every package. Unlimited on the Premium package.' },
+      { q: 'Do I own the copyright?', a: 'Yes. Full commercial rights transfer to you upon delivery and payment.' },
     ],
-    tags: ["logo design", "brand identity", "minimalist logo", "startup branding", "business logo"],
+    tags: ['logo design', 'brand identity', 'startup branding'],
     reviews: [
-      {
-        id: "rev-1",
-        author: "Sarah K.",
-        avatar: "https://i.pravatar.cc/150?img=5",
-        country: "United States",
-        rating: 5,
-        date: "2024-05-12",
-        body: "Alex delivered exactly what I envisioned — and then some. The logo perfectly captures my brand, communication was excellent throughout, and revisions were quick. Highly recommend!",
-        helpful: 24,
-      },
-      {
-        id: "rev-2",
-        author: "James T.",
-        avatar: "https://i.pravatar.cc/150?img=8",
-        country: "Australia",
-        rating: 5,
-        date: "2024-04-28",
-        body: "Third time working with Alex and still blown away every time. Incredible attention to detail, fast turnaround, and really listens to the brief. Will be back for our next project.",
-        helpful: 17,
-      },
-      {
-        id: "rev-3",
-        author: "Mia R.",
-        avatar: null,
-        country: "Germany",
-        rating: 4,
-        date: "2024-04-15",
-        body: "Great work overall. Took a bit longer than the estimated delivery but the quality made it worth the wait. Very professional communication.",
-        helpful: 8,
-      },
+      { id: 'r1', author: 'Sarah K.', avatar: 'https://i.pravatar.cc/150?img=5', country: 'United States', rating: 5, date: '2024-05-12', body: 'Alex delivered exactly what I envisioned — and then some. Highly recommend!', helpful: 24 },
+      { id: 'r2', author: 'James T.', avatar: 'https://i.pravatar.cc/150?img=8', country: 'Australia', rating: 5, date: '2024-04-28', body: 'Third time working with Alex and still blown away every time.', helpful: 17 },
     ],
   },
-};
+}
 
-const FALLBACK_SERVICE: ServiceDetail = MOCK_SERVICES["svc-001"];
-
-function getMockService(id: string): ServiceDetail {
-  return MOCK_SERVICES[id] ?? { ...FALLBACK_SERVICE, id };
+function getMock(id: string): ServiceDetail {
+  return MOCK[id] ?? { ...MOCK['svc-001'], id }
 }
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { id: string };
-}): Promise<Metadata> {
-  const svc = getMockService(params.id);
-  return {
-    title: `${svc.title} | FreeTrust`,
-    description: svc.description.slice(0, 155),
-  };
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const svc = getMock(params.id)
+  return { title: `${svc.title} | FreeTrust`, description: svc.description.slice(0, 155) }
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function Stars({ rating, size = 4 }: { rating: number; size?: number }) {
+function Stars({ rating }: { rating: number }) {
   return (
-    <span className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <StarSolid
-          key={n}
-          className={`h-${size} w-${size} ${
-            n <= Math.round(rating) ? "text-amber-400" : "text-gray-200"
-          }`}
-        />
+    <span style={{ display: 'inline-flex', gap: '1px' }}>
+      {[1,2,3,4,5].map(n => (
+        <span key={n} style={{ color: n <= Math.round(rating) ? '#fbbf24' : '#334155', fontSize: '14px' }}>★</span>
       ))}
     </span>
-  );
+  )
 }
 
-function Badge({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-200">
-      {children}
-    </span>
-  );
+function Avatar({ url, name, size = 48 }: { url: string | null; name: string; size?: number }) {
+  const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  if (url) return <img src={url} alt={name} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+  return <div style={{ width: size, height: size, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: Math.round(size * 0.33) + 'px', color: '#0f172a', flexShrink: 0 }}>{initials}</div>
 }
 
-function SellerCard({ seller }: { seller: ServiceDetail["seller"] }) {
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-      <div className="flex items-start gap-4">
-        {seller.avatar ? (
-          <Image
-            src={seller.avatar}
-            alt={seller.name}
-            width={64}
-            height={64}
-            className="h-16 w-16 rounded-full object-cover ring-2 ring-indigo-100"
-          />
-        ) : (
-          <UserCircleIcon className="h-16 w-16 text-gray-300" />
-        )}
-        <div className="flex-1 min-w-0">
-          <Link
-            href={`/profile/${seller.username}`}
-            className="font-semibold text-gray-900 hover:text-indigo-600 transition-colors"
-          >
-            {seller.name}
-          </Link>
-          <p className="text-sm text-gray-500">@{seller.username}</p>
-          <div className="mt-1 flex flex-wrap gap-1.5">
-            <Badge>{seller.level}</Badge>
-          </div>
-        </div>
-      </div>
-
-      <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
-        {[
-          { label: "Location", value: seller.location, icon: MapPinIcon },
-          { label: "Member since", value: seller.memberSince, icon: BriefcaseIcon },
-          { label: "Response time", value: seller.responseTime, icon: ClockIcon },
-          { label: "Completion", value: `${seller.completionRate}%`, icon: CheckBadgeIcon },
-        ].map(({ label, value, icon: Icon }) => (
-          <div key={label} className="flex items-center gap-2">
-            <Icon className="h-4 w-4 flex-shrink-0 text-gray-400" />
-            <span className="text-gray-500 truncate">
-              {label}:{" "}
-              <span className="font-medium text-gray-800">{value}</span>
-            </span>
-          </div>
-        ))}
-      </dl>
-
-      <p className="mt-4 text-sm text-gray-600 leading-relaxed">{seller.bio}</p>
-
-      <div className="mt-4 flex flex-wrap gap-1.5">
-        {seller.skills.map((s) => (
-          <span
-            key={s}
-            className="rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
-          >
-            {s}
-          </span>
-        ))}
-      </div>
-
-      <Link
-        href={`/profile/${seller.username}`}
-        className="mt-5 flex w-full items-center justify-center rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-      >
-        View Profile
-      </Link>
-    </div>
-  );
-}
-
-// ─── Package Picker (client island placeholder rendered as static) ─────────────
-
-function PackageTabs({ packages }: { packages: Package[] }) {
-  // Note: full interactivity would require a client component;
-  // rendered statically showing all packages in a comparison grid.
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
-      {/* Tab headers */}
-      <div className="grid grid-cols-3 divide-x divide-gray-100 border-b border-gray-100">
-        {packages.map((pkg) => (
-          <div
-            key={pkg.id}
-            className={`py-3 text-center text-sm font-semibold cursor-pointer transition ${
-              pkg.id === "standard"
-                ? "bg-indigo-600 text-white"
-                : "bg-white text-gray-700 hover:bg-gray-50"
-            }`}
-          >
-            {pkg.label}
-          </div>
-        ))}
-      </div>
-
-      {/* Show standard package details by default */}
-      {packages.map((pkg) =>
-        pkg.id === "standard" ? (
-          <div key={pkg.id} className="p-6">
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="text-3xl font-bold text-gray-900">
-                  ₮{pkg.price.toLocaleString()}
-                </p>
-                <p className="mt-1 text-sm text-gray-500">{pkg.description}</p>
-              </div>
-              <div className="text-right text-sm text-gray-500">
-                <div className="flex items-center gap-1 justify-end">
-                  <ClockIcon className="h-4 w-4" />
-                  {pkg.delivery} delivery
-                </div>
-                <div className="flex items-center gap-1 justify-end mt-1">
-                  <ArrowPathIcon className="h-4 w-4" />
-                  {pkg.revisions === -1 ? "Unlimited" : pkg.revisions} revisions
-                </div>
-              </div>
-            </div>
-
-            <ul className="mt-5 space-y-2.5">
-              {pkg.features.map((f) => (
-                <li key={f} className="flex items-center gap-2 text-sm text-gray-700">
-                  <CheckBadgeIcon className="h-4 w-4 flex-shrink-0 text-indigo-500" />
-                  {f}
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-6 space-y-3">
-              <Link
-                href={`/checkout/service/${FALLBACK_SERVICE.id}?pkg=${pkg.id}`}
-                className="flex w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 active:scale-[.98] transition-all"
-              >
-                Continue — ₮{pkg.price}
-              </Link>
-              <Link
-                href={`/messages/new?to=${FALLBACK_SERVICE.seller.username}`}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
-              >
-                <ChatBubbleLeftRightIcon className="h-4 w-4" />
-                Contact Seller
-              </Link>
-            </div>
-
-            <div className="mt-5 flex items-center justify-center gap-2 text-xs text-gray-400">
-              <ShieldCheckIcon className="h-4 w-4 text-green-500" />
-              Escrow-protected · money held until you approve
-            </div>
-          </div>
-        ) : null
-      )}
-
-      {/* Package comparison footnote */}
-      <div className="border-t border-gray-100 px-6 py-3 bg-gray-50">
-        <p className="text-xs text-gray-500 text-center">
-          FreeTrust charges an 8% service fee on freelance services.{" "}
-          <Link href="/pricing" className="underline hover:text-gray-700">
-            Learn more
-          </Link>
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function PackageCompare({ packages }: { packages: Package[] }) {
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-gray-100">
-            <th className="py-3 text-left font-medium text-gray-500 pr-4">Feature</th>
-            {packages.map((p) => (
-              <th
-                key={p.id}
-                className={`py-3 text-center font-semibold ${
-                  p.id === "standard" ? "text-indigo-600" : "text-gray-700"
-                }`}
-              >
-                {p.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-50">
-          {[
-            { label: "Price", key: "price", fmt: (v: number) => `₮${v}` },
-            { label: "Delivery", key: "delivery", fmt: (v: string) => v },
-            {
-              label: "Revisions",
-              key: "revisions",
-              fmt: (v: number) => (v === -1 ? "Unlimited" : String(v)),
-            },
-          ].map(({ label, key, fmt }) => (
-            <tr key={label}>
-              <td className="py-3 text-gray-500 pr-4">{label}</td>
-              {packages.map((p) => (
-                <td key={p.id} className="py-3 text-center font-medium text-gray-800">
-                  {/* @ts-expect-error dynamic key */}
-                  {fmt(p[key])}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function ImageGallery({ images, title }: { images: string[]; title: string }) {
-  return (
-    <div className="space-y-3">
-      <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-gray-100">
-        <Image
-          src={images[0]}
-          alt={title}
-          fill
-          className="object-cover"
-          priority
-        />
-      </div>
-      {images.length > 1 && (
-        <div className="grid grid-cols-3 gap-3">
-          {images.slice(1).map((src, i) => (
-            <div
-              key={i}
-              className="relative aspect-video overflow-hidden rounded-xl bg-gray-100"
-            >
-              <Image
-                src={src}
-                alt={`${title} ${i + 2}`}
-                fill
-                className="object-cover"
-              />
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ReviewCard({ review }: { review: Review }) {
-  const d = new Date(review.date);
-  const dateStr = d.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-
-  return (
-    <div className="border-b border-gray-100 py-6 last:border-0">
-      <div className="flex items-start gap-3">
-        {review.avatar ? (
-          <Image
-            src={review.avatar}
-            alt={review.author}
-            width={40}
-            height={40}
-            className="h-10 w-10 rounded-full object-cover flex-shrink-0"
-          />
-        ) : (
-          <UserCircleIcon className="h-10 w-10 flex-shrink-0 text-gray-300" />
-        )}
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium text-gray-900">{review.author}</span>
-            <span className="text-xs text-gray-400">{review.country}</span>
-            <Stars rating={review.rating} size={3} />
-            <span className="ml-auto text-xs text-gray-400">{dateStr}</span>
-          </div>
-          <p className="mt-2 text-sm text-gray-600 leading-relaxed">{review.body}</p>
-          <p className="mt-2 text-xs text-gray-400">
-            {review.helpful} people found this helpful
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function RatingBar({ label, pct }: { label: string; pct: number }) {
-  return (
-    <div className="flex items-center gap-3 text-sm">
-      <span className="w-32 text-gray-600 truncate">{label}</span>
-      <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
-        <div
-          className="h-full rounded-full bg-amber-400"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <span className="w-8 text-right text-gray-500 text-xs">{pct}%</span>
-    </div>
-  );
-}
-
-function FAQItem({ q, a }: { q: string; a: string }) {
-  return (
-    <details className="group border-b border-gray-100 py-4">
-      <summary className="flex cursor-pointer items-center justify-between text-sm font-medium text-gray-900 list-none gap-3">
-        {q}
-        <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-gray-400 transition-transform group-open:rotate-90" />
-      </summary>
-      <p className="mt-3 text-sm text-gray-600 leading-relaxed">{a}</p>
-    </details>
-  );
-}
+const PKG_COLORS = { basic: '#3b82f6', standard: '#8b5cf6', premium: '#f59e0b' }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function ServiceDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  const svc = getMockService(params.id);
-  const { seller, packages, reviews } = svc;
+export default function ServiceDetailPage({ params }: { params: { id: string } }) {
+  const svc = getMock(params.id)
+  const catInfo = ALL_CATEGORIES.find(c => c.id === svc.categoryId)
+  const deliveryLabels = svc.deliveryTypes
+    ? svc.deliveryTypes.map(d => DELIVERY_OPTIONS.find(o => o.id === d)).filter(Boolean)
+    : []
+
+  const card: React.CSSProperties = { background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '20px' }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Breadcrumb */}
-      <div className="border-b border-gray-100 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
-          <nav className="flex items-center gap-1.5 text-xs text-gray-500">
-            <Link href="/" className="hover:text-indigo-600 transition-colors">
-              Home
-            </Link>
-            <ChevronRightIcon className="h-3 w-3" />
-            <Link
-              href={`/services?category=${encodeURIComponent(svc.category)}`}
-              className="hover:text-indigo-600 transition-colors"
-            >
-              {svc.category}
-            </Link>
-            <ChevronRightIcon className="h-3 w-3" />
-            <Link
-              href={`/services?subcategory=${encodeURIComponent(svc.subcategory)}`}
-              className="hover:text-indigo-600 transition-colors"
-            >
-              {svc.subcategory}
-            </Link>
-            <ChevronRightIcon className="h-3 w-3" />
-            <span className="truncate max-w-xs text-gray-800">{svc.title}</span>
-          </nav>
-        </div>
-      </div>
+    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif' }}>
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 16px 80px' }}>
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          {/* ── Left / Main ── */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Title & meta */}
+        {/* Breadcrumb */}
+        <nav style={{ fontSize: '12px', color: '#475569', marginBottom: '16px', display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <Link href="/services" style={{ color: '#64748b', textDecoration: 'none' }}>Services</Link>
+          <span>›</span>
+          {catInfo && <Link href={`/services?cat=${svc.categoryId}`} style={{ color: '#64748b', textDecoration: 'none' }}>{catInfo.label}</Link>}
+          {catInfo && <span>›</span>}
+          <span style={{ color: '#94a3b8' }}>{svc.title.slice(0, 50)}…</span>
+        </nav>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
+
+          {/* ── Left column ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+            {/* Title + rating */}
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 leading-snug">
-                {svc.title}
-              </h1>
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <Link href={`/profile/${seller.username}`} className="flex items-center gap-2">
-                  {seller.avatar ? (
-                    <Image
-                      src={seller.avatar}
-                      alt={seller.name}
-                      width={28}
-                      height={28}
-                      className="h-7 w-7 rounded-full object-cover"
-                    />
-                  ) : (
-                    <UserCircleIcon className="h-7 w-7 text-gray-300" />
-                  )}
-                  <span className="text-sm font-medium text-gray-800 hover:text-indigo-600 transition-colors">
-                    {seller.name}
-                  </span>
-                </Link>
-                <Badge>{seller.level}</Badge>
-                <div className="flex items-center gap-1">
-                  <StarSolid className="h-4 w-4 text-amber-400" />
-                  <span className="text-sm font-semibold text-gray-800">
-                    {svc.rating.toFixed(1)}
-                  </span>
-                  <span className="text-sm text-gray-500">
-                    ({svc.reviewCount.toLocaleString()})
-                  </span>
-                </div>
-                <span className="text-sm text-gray-400">
-                  {seller.totalOrders.toLocaleString()} orders
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, background: 'rgba(56,189,248,0.1)', color: '#38bdf8', padding: '3px 10px', borderRadius: '20px' }}>{catInfo?.icon} {catInfo?.label ?? svc.category}</span>
+                <span style={{ fontSize: '11px', fontWeight: 700, background: svc.mode === 'online' ? 'rgba(56,189,248,0.08)' : 'rgba(52,211,153,0.08)', color: svc.mode === 'online' ? '#38bdf8' : '#34d399', padding: '3px 10px', borderRadius: '20px' }}>
+                  {svc.mode === 'online' ? '💻 Online' : '📍 Local'}
                 </span>
+                {svc.location && <span style={{ fontSize: '11px', color: '#64748b', padding: '3px 10px', borderRadius: '20px', background: '#1e293b' }}>📍 {svc.location}{svc.distance ? ` · ${svc.distance}km` : ''}</span>}
+              </div>
+              <h1 style={{ fontSize: '22px', fontWeight: 800, lineHeight: 1.3, margin: '0 0 10px' }}>{svc.title}</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', fontSize: '13px', color: '#94a3b8' }}>
+                <Stars rating={svc.rating} />
+                <strong style={{ color: '#fbbf24' }}>{svc.rating.toFixed(1)}</strong>
+                <span>({svc.reviewCount} reviews)</span>
+                <span>·</span>
+                <span>{svc.seller.totalOrders.toLocaleString()} orders</span>
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition"
-              >
-                <HeartIcon className="h-4 w-4" />
-                Save
-              </button>
-              <button
-                type="button"
-                className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition"
-              >
-                <ShareIcon className="h-4 w-4" />
-                Share
-              </button>
-            </div>
+            {/* Cover image */}
+            {svc.images[0] && (
+              <div style={{ borderRadius: '14px', overflow: 'hidden', border: '1px solid #334155' }}>
+                <img src={svc.images[0]} alt={svc.title} style={{ width: '100%', maxHeight: '380px', objectFit: 'cover', display: 'block' }} />
+              </div>
+            )}
 
-            {/* Gallery */}
-            <ImageGallery images={svc.images} title={svc.title} />
-
-            {/* Mobile: Package card */}
-            <div className="lg:hidden">
-              <PackageTabs packages={packages} />
-            </div>
+            {/* Delivery types */}
+            {deliveryLabels.length > 0 && (
+              <div style={card}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>Delivery Options</div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {deliveryLabels.map(d => d && (
+                    <span key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', background: 'rgba(56,189,248,0.07)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: '20px', fontSize: '12px', color: '#94a3b8' }}>
+                      {d.icon} {d.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Description */}
-            <section>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                About This Service
-              </h2>
-              <div className="prose prose-sm prose-indigo max-w-none text-gray-600 leading-relaxed whitespace-pre-line">
-                {svc.description
-                  .replace(/##\s/g, "")
-                  .replace(/\*\*/g, "")}
-              </div>
-            </section>
-
-            {/* Package comparison */}
-            <section>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Compare Packages
-              </h2>
-              <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-                <PackageCompare packages={packages} />
-              </div>
-            </section>
-
-            {/* Seller card (mobile) */}
-            <div className="lg:hidden">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">About the Seller</h2>
-              <SellerCard seller={seller} />
+            <div style={card}>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', marginBottom: '10px' }}>About This Service</div>
+              <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0 }}>{svc.description}</p>
             </div>
 
-            {/* FAQ */}
-            <section>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">FAQ</h2>
-              <div className="rounded-2xl border border-gray-100 bg-white px-6 shadow-sm">
-                {svc.faq.map((item) => (
-                  <FAQItem key={item.q} q={item.q} a={item.a} />
+            {/* Tags */}
+            {svc.tags.length > 0 && (
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {svc.tags.map(t => (
+                  <span key={t} style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid #334155', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', color: '#64748b' }}>#{t}</span>
                 ))}
               </div>
-            </section>
+            )}
+
+            {/* FAQ */}
+            {svc.faq.length > 0 && (
+              <div style={card}>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', marginBottom: '14px' }}>FAQs</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {svc.faq.map((f, i) => (
+                    <div key={i}>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9', marginBottom: '4px' }}>Q: {f.q}</div>
+                      <div style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.6 }}>{f.a}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Reviews */}
-            <section>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Reviews{" "}
-                  <span className="text-gray-400 font-normal text-base">
-                    ({svc.reviewCount})
-                  </span>
-                </h2>
-                <div className="flex items-center gap-2">
-                  <StarSolid className="h-5 w-5 text-amber-400" />
-                  <span className="text-xl font-bold text-gray-900">
-                    {svc.rating.toFixed(1)}
-                  </span>
+            {svc.reviews.length > 0 && (
+              <div style={card}>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', marginBottom: '14px' }}>
+                  Reviews <span style={{ color: '#475569', fontWeight: 400 }}>({svc.reviewCount})</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {svc.reviews.map(r => (
+                    <div key={r.id} style={{ borderBottom: '1px solid #334155', paddingBottom: '16px' }}>
+                      <div style={{ display: 'flex', gap: '10px', marginBottom: '8px' }}>
+                        <Avatar url={r.avatar} name={r.author} size={36} />
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9' }}>{r.author}</div>
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>{r.country} · {new Date(r.date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}</div>
+                        </div>
+                        <div style={{ marginLeft: 'auto' }}><Stars rating={r.rating} /></div>
+                      </div>
+                      <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.6, margin: 0 }}>{r.body}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
-
-              {/* Rating breakdown */}
-              <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm mb-6 space-y-2">
-                <RatingBar label="Communication" pct={98} />
-                <RatingBar label="Service quality" pct={97} />
-                <RatingBar label="Value for money" pct={94} />
-                <RatingBar label="Recommend" pct={99} />
-              </div>
-
-              {/* Review list */}
-              <div className="rounded-2xl border border-gray-100 bg-white px-6 shadow-sm">
-                {reviews.map((r) => (
-                  <ReviewCard key={r.id} review={r} />
-                ))}
-              </div>
-
-              {svc.reviewCount > reviews.length && (
-                <div className="mt-4 text-center">
-                  <button
-                    type="button"
-                    className="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
-                  >
-                    Show all {svc.reviewCount} reviews
-                  </button>
-                </div>
-              )}
-            </section>
-
-            {/* Tags */}
-            <section>
-              <h2 className="text-sm font-semibold text-gray-700 mb-3">
-                Tags
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {svc.tags.map((tag) => (
-                  <Link
-                    key={tag}
-                    href={`/search?q=${encodeURIComponent(tag)}`}
-                    className="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-600 hover:border-indigo-300 hover:text-indigo-600 transition"
-                  >
-                    {tag}
-                  </Link>
-                ))}
-              </div>
-            </section>
+            )}
           </div>
 
-          {/* ── Right / Sidebar ── */}
-          <div className="hidden lg:block space-y-6">
-            <div className="sticky top-6 space-y-6">
-              <PackageTabs packages={packages} />
-              <SellerCard seller={seller} />
+          {/* ── Right column: Packages + Seller ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '110px' }}>
 
-              {/* Trust badges */}
-              <div className="rounded-2xl border border-green-100 bg-green-50 p-5 space-y-3">
-                <h3 className="text-sm font-semibold text-green-800">
-                  FreeTrust Guarantee
-                </h3>
-                {[
-                  "Funds held in escrow until you approve",
-                  "Full refund if order not delivered",
-                  "Dispute resolution within 48 hours",
-                  "Secure Stripe payment processing",
-                ].map((t) => (
-                  <div key={t} className="flex items-start gap-2">
-                    <ShieldCheckIcon className="h-4 w-4 flex-shrink-0 text-green-500 mt-0.5" />
-                    <span className="text-xs text-green-700">{t}</span>
+            {/* Packages */}
+            <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', overflow: 'hidden' }}>
+              {/* Tab headers */}
+              <div style={{ display: 'flex', borderBottom: '1px solid #334155' }}>
+                {svc.packages.map((pkg, i) => (
+                  <div key={pkg.id} style={{ flex: 1, padding: '10px 6px', textAlign: 'center', fontSize: '12px', fontWeight: 700, color: PKG_COLORS[pkg.id], borderBottom: i === 1 ? `2px solid ${PKG_COLORS[pkg.id]}` : 'none', cursor: 'pointer' }}>
+                    {pkg.label}
+                  </div>
+                ))}
+              </div>
+              {/* Default show Standard (index 1) */}
+              {svc.packages.slice(1, 2).map(pkg => (
+                <div key={pkg.id} style={{ padding: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '28px', fontWeight: 800, color: '#f1f5f9' }}>£{pkg.price}</span>
+                    <span style={{ fontSize: '13px', color: '#64748b' }}>/ project</span>
+                  </div>
+                  <p style={{ fontSize: '13px', color: '#94a3b8', margin: '0 0 12px', lineHeight: 1.5 }}>{pkg.description}</p>
+                  <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
+                    <span>⏱ {pkg.delivery}</span>
+                    <span>🔄 {pkg.revisions < 0 ? 'Unlimited' : pkg.revisions} revision{pkg.revisions !== 1 ? 's' : ''}</span>
+                  </div>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {pkg.features.map((f, i) => (
+                      <li key={i} style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
+                        <span style={{ color: '#34d399', flexShrink: 0 }}>✓</span> {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link href={`/checkout?service=${svc.id}&pkg=${pkg.id}`} style={{ display: 'block', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', borderRadius: '10px', padding: '12px', textAlign: 'center', fontWeight: 700, fontSize: '14px', color: '#fff', textDecoration: 'none' }}>
+                    Continue — £{pkg.price}
+                  </Link>
+                </div>
+              ))}
+              {/* All packages summary */}
+              <div style={{ padding: '12px 16px', borderTop: '1px solid #334155', display: 'flex', gap: '8px' }}>
+                {svc.packages.map(pkg => (
+                  <div key={pkg.id} style={{ flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: PKG_COLORS[pkg.id], textTransform: 'uppercase', letterSpacing: '0.04em' }}>{pkg.label}</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9' }}>£{pkg.price}</div>
+                    <div style={{ fontSize: '10px', color: '#475569' }}>{pkg.delivery}</div>
                   </div>
                 ))}
               </div>
             </div>
+
+            {/* Seller card */}
+            <div style={card}>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '12px' }}>
+                <Avatar url={svc.seller.avatar} name={svc.seller.name} size={52} />
+                <div>
+                  <Link href={`/profile/${svc.seller.username}`} style={{ fontSize: '15px', fontWeight: 700, color: '#f1f5f9', textDecoration: 'none' }}>{svc.seller.name}</Link>
+                  <div style={{ fontSize: '11px', color: '#38bdf8', fontWeight: 600 }}>{svc.seller.level}</div>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>📍 {svc.seller.location}</div>
+                </div>
+              </div>
+              <p style={{ fontSize: '12px', color: '#94a3b8', lineHeight: 1.6, margin: '0 0 12px' }}>{svc.seller.bio}</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', marginBottom: '12px' }}>
+                {[
+                  ['📦 Orders', svc.seller.totalOrders.toLocaleString()],
+                  ['✅ Completion', `${svc.seller.completionRate}%`],
+                  ['⚡ Response', svc.seller.responseTime],
+                  ['🌐 Languages', svc.seller.languages.join(', ')],
+                ].map(([label, val]) => (
+                  <div key={label} style={{ background: 'rgba(56,189,248,0.05)', borderRadius: '8px', padding: '8px 10px' }}>
+                    <div style={{ color: '#475569', marginBottom: '2px' }}>{label}</div>
+                    <div style={{ color: '#f1f5f9', fontWeight: 700 }}>{val}</div>
+                  </div>
+                ))}
+              </div>
+              {svc.seller.skills.length > 0 && (
+                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                  {svc.seller.skills.map(s => (
+                    <span key={s} style={{ fontSize: '10px', padding: '3px 8px', background: 'rgba(56,189,248,0.07)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: '20px', color: '#38bdf8' }}>{s}</span>
+                  ))}
+                </div>
+              )}
+              <Link href={`/profile/${svc.seller.username}`} style={{ display: 'block', marginTop: '14px', padding: '9px', textAlign: 'center', border: '1px solid #334155', borderRadius: '10px', fontSize: '12px', fontWeight: 600, color: '#94a3b8', textDecoration: 'none' }}>
+                View Profile
+              </Link>
+            </div>
+
+            {/* Trust badge */}
+            <div style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: '12px', padding: '12px 14px', fontSize: '12px', color: '#64748b', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '18px', flexShrink: 0 }}>🛡️</span>
+              <div>
+                <div style={{ fontWeight: 700, color: '#38bdf8', marginBottom: '2px' }}>FreeTrust Guarantee</div>
+                Your payment is held securely. Only released when you confirm delivery. If something goes wrong, we'll make it right.
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-}
 
+      {/* Mobile: sticky order bar */}
+      <style>{`
+        @media (max-width: 768px) {
+          .svc-detail-grid { grid-template-columns: 1fr !important; }
+          .svc-detail-right { position: static !important; }
+        }
+      `}</style>
+    </div>
+  )
+}

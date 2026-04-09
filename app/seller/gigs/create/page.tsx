@@ -26,6 +26,8 @@ type GigFormData = {
     premium: Package
   }
   location: string
+  serviceRadius: string
+  deliveryTypes: string[]
   images: File[]
   tags: string[]
   skills: string[]
@@ -39,29 +41,36 @@ const STEPS = [
 ]
 
 const ONLINE_CATEGORIES = [
-  'Web Development',
-  'Mobile Apps',
-  'UI/UX Design',
-  'Graphic Design',
-  'Writing & Translation',
+  'Design & Creative',
+  'Development & Tech',
+  'Marketing & Growth',
+  'Writing & Content',
   'Video & Animation',
-  'Digital Marketing',
-  'Data & AI',
-  'Cybersecurity',
-  'IT Support',
+  'Music & Audio',
+  'Business & Consulting',
+  'Finance & Accounting',
+  'Legal & Compliance',
+  'Coaching & Mentoring',
+  'Education & Tutoring',
+  'AI & Automation',
+  'Data & Analytics',
+  'Photography & Editing',
+  'Social Media Management',
+  'SEO & Digital Marketing',
 ]
 
 const OFFLINE_CATEGORIES = [
-  'Home Repair',
-  'Plumbing',
-  'Electrical',
-  'Cleaning',
-  'Tutoring',
-  'Photography',
-  'Event Planning',
-  'Personal Training',
-  'Catering',
-  'Moving & Delivery',
+  'Trades & Construction',
+  'Home & Garden',
+  'Health & Wellness',
+  'Beauty & Personal Care',
+  'Food & Catering',
+  'Events & Entertainment',
+  'Transport & Delivery',
+  'Childcare & Education',
+  'Pet Services',
+  'Elder Care',
+  'Community Services',
 ]
 
 const DELIVERY_OPTIONS = [
@@ -86,6 +95,19 @@ const defaultPackage = (name: string): Package => ({
   features: [''],
 })
 
+const DELIVERY_TYPE_OPTIONS = [
+  { id: 'digital',       label: '📧 Digital Delivery',      forOnline: true,  forOffline: false },
+  { id: 'download',      label: '⬇️ Instant Download',      forOnline: true,  forOffline: false },
+  { id: 'courier',       label: '🚚 Courier',               forOnline: false, forOffline: true  },
+  { id: 'collection',    label: '🏪 Collection',            forOnline: false, forOffline: true  },
+  { id: 'post',          label: '📬 Post / Royal Mail',     forOnline: false, forOffline: true  },
+  { id: 'sameday',       label: '⚡ Same Day',              forOnline: false, forOffline: true  },
+  { id: 'local',         label: '🏠 Local Delivery',        forOnline: false, forOffline: true  },
+  { id: 'international', label: '✈️ International',         forOnline: true,  forOffline: false },
+]
+
+const SERVICE_RADII = ['5km', '10km', '25km', '50km', '100km', 'National', 'International']
+
 const initialForm: GigFormData = {
   title: '',
   description: '',
@@ -96,6 +118,8 @@ const initialForm: GigFormData = {
     premium: defaultPackage('Premium'),
   },
   location: '',
+  serviceRadius: '25km',
+  deliveryTypes: [],
   images: [],
   tags: [],
   skills: [],
@@ -407,23 +431,61 @@ export default function CreateGigPage() {
 
               {/* Location (offline only) */}
               {form.category === 'offline' && (
-                <div style={styles.field}>
-                  <label style={styles.label}>Service Location</label>
-                  <div style={styles.inputIcon}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
-                      <circle cx="12" cy="10" r="3" />
-                    </svg>
-                    <input
-                      style={{ ...styles.inputWithIcon, ...(errors.location ? styles.inputError : {}) }}
-                      placeholder="City, State or specific area you serve"
-                      value={form.location}
-                      onChange={e => updateForm('location', e.target.value)}
-                    />
+                <>
+                  <div style={styles.field}>
+                    <label style={styles.label}>Service Location</label>
+                    <div style={styles.inputIcon}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                        <circle cx="12" cy="10" r="3" />
+                      </svg>
+                      <input
+                        style={{ ...styles.inputWithIcon, ...(errors.location ? styles.inputError : {}) }}
+                        placeholder="City, town or specific area you serve"
+                        value={form.location}
+                        onChange={e => updateForm('location', e.target.value)}
+                      />
+                    </div>
+                    {errors.location && <p style={styles.error}>{errors.location}</p>}
                   </div>
-                  {errors.location && <p style={styles.error}>{errors.location}</p>}
-                </div>
+                  <div style={styles.field}>
+                    <label style={styles.label}>Service Radius</label>
+                    <p style={styles.fieldHint}>How far will you travel to deliver this service?</p>
+                    <div style={styles.categoryGrid}>
+                      {SERVICE_RADII.map(r => (
+                        <button key={r} type="button"
+                          style={{ ...styles.catChip, ...(form.serviceRadius === r ? styles.catChipActive : {}) }}
+                          onClick={() => updateForm('serviceRadius', r)}>
+                          {r}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
               )}
+
+              {/* Delivery types */}
+              <div style={styles.field}>
+                <label style={styles.label}>Delivery Method</label>
+                <p style={styles.fieldHint}>How will you deliver this service / product?</p>
+                <div style={styles.categoryGrid}>
+                  {DELIVERY_TYPE_OPTIONS.filter(d => form.category === 'online' ? d.forOnline : d.forOffline).map(d => {
+                    const active = form.deliveryTypes.includes(d.id)
+                    return (
+                      <button key={d.id} type="button"
+                        style={{ ...styles.catChip, ...(active ? styles.catChipActive : {}) }}
+                        onClick={() => {
+                          const next = active
+                            ? form.deliveryTypes.filter(x => x !== d.id)
+                            : [...form.deliveryTypes, d.id]
+                          updateForm('deliveryTypes', next)
+                        }}>
+                        {d.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
           )}
 

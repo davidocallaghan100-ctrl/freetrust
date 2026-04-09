@@ -1,49 +1,10 @@
 'use client'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { ONLINE_CATEGORIES, OFFLINE_CATEGORIES, LOCATION_RADII, LOCATION_SCOPE } from '@/lib/service-categories'
 
-const CATEGORIES = [
-  { label: 'All Services', icon: '✦', count: 6241 },
-  { label: 'Design & Creative', icon: '🎨', count: 842 },
-  { label: 'Development', icon: '💻', count: 1203 },
-  { label: 'Marketing', icon: '📣', count: 674 },
-  { label: 'Consulting', icon: '🧠', count: 511 },
-  { label: 'Writing & Content', icon: '✍️', count: 429 },
-  { label: 'Finance', icon: '💰', count: 318 },
-  { label: 'Legal', icon: '⚖️', count: 214 },
-  { label: 'Coaching', icon: '🎯', count: 389 },
-  { label: 'Photography', icon: '📷', count: 251 },
-]
-
-const MOCK_SERVICES = [
-  { id: 1, title: 'Brand Identity Design', provider: 'Sarah Chen', avatar: 'SC', rating: 4.9, reviews: 127, price: 450, currency: '£', delivery: '5 days', tags: ['Logo', 'Brand', 'Figma'], category: 'Design & Creative', desc: 'Complete brand identity including logo, colour palette, typography and brand guidelines.', trust: 98, badge: 'Top Rated' },
-  { id: 2, title: 'Full-Stack Web App Development', provider: 'Priya Nair', avatar: 'PN', rating: 5.0, reviews: 89, price: 2800, currency: '£', delivery: '21 days', tags: ['Next.js', 'Supabase', 'TypeScript'], category: 'Development', desc: 'End-to-end web application development using modern tech stack. From MVP to production.', trust: 100, badge: 'Verified' },
-  { id: 3, title: 'SEO & Content Strategy', provider: 'Marcus Obi', avatar: 'MO', rating: 4.8, reviews: 64, price: 320, currency: '£', delivery: '7 days', tags: ['SEO', 'Content', 'Analytics'], category: 'Marketing', desc: 'Comprehensive SEO audit and content strategy to grow organic traffic by 40%+ in 90 days.', trust: 94, badge: null },
-  { id: 4, title: 'Startup Business Coaching', provider: 'Tom Walsh', avatar: 'TW', rating: 4.7, reviews: 43, price: 180, currency: '£', delivery: '1 day', tags: ['Startup', 'Pitch', 'Strategy'], category: 'Coaching', desc: '4-session coaching package covering product-market fit, fundraising, and growth strategy.', trust: 91, badge: null },
-  { id: 5, title: 'Impact Report & ESG Consulting', provider: 'Amara Diallo', avatar: 'AD', rating: 4.9, reviews: 38, price: 750, currency: '£', delivery: '10 days', tags: ['ESG', 'Sustainability', 'Reporting'], category: 'Consulting', desc: 'Professional ESG impact reports and sustainability strategy for SMEs and startups.', trust: 97, badge: 'Impact Verified' },
-  { id: 6, title: 'UX Research & Usability Testing', provider: 'Lena Fischer', avatar: 'LF', rating: 4.8, reviews: 52, price: 600, currency: '£', delivery: '14 days', tags: ['UX', 'Research', 'Testing'], category: 'Design & Creative', desc: '10-participant usability study with full analysis, recordings, and actionable recommendations.', trust: 96, badge: null },
-]
-
-const avatarGrad: Record<string, string> = {
-  SC: 'linear-gradient(135deg,#38bdf8,#0284c7)',
-  PN: 'linear-gradient(135deg,#a78bfa,#7c3aed)',
-  MO: 'linear-gradient(135deg,#34d399,#059669)',
-  TW: 'linear-gradient(135deg,#fb923c,#ea580c)',
-  AD: 'linear-gradient(135deg,#f472b6,#db2777)',
-  LF: 'linear-gradient(135deg,#fbbf24,#d97706)',
-}
-
-function getGrad(str: string): string {
-  const grads = [
-    'linear-gradient(135deg,#38bdf8,#0284c7)',
-    'linear-gradient(135deg,#a78bfa,#7c3aed)',
-    'linear-gradient(135deg,#34d399,#059669)',
-    'linear-gradient(135deg,#fb923c,#ea580c)',
-    'linear-gradient(135deg,#f472b6,#db2777)',
-  ]
-  return grads[str.charCodeAt(0) % grads.length]
-}
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Service {
   id: number | string
@@ -57,153 +18,392 @@ interface Service {
   delivery: string
   tags: string[]
   category: string
+  categoryId?: string
   desc: string
   trust: number
   badge: string | null
+  mode: 'online' | 'offline' | 'both'
+  location?: string | null
+  distance?: number | null
+  deliveryTypes?: string[]
 }
 
-export default function ServicesPage() {
-  const [active, setActive] = useState(0)
-  const [services, setServices] = useState<Service[]>(MOCK_SERVICES)
-  const [search, setSearch] = useState('')
+// ─── Constants ────────────────────────────────────────────────────────────────
 
+const SORT_OPTIONS = [
+  { value: 'best',     label: 'Best Match' },
+  { value: 'newest',   label: 'Newest' },
+  { value: 'price_asc',  label: 'Price: Low to High' },
+  { value: 'price_desc', label: 'Price: High to Low' },
+  { value: 'rating',   label: 'Top Rated' },
+]
+
+const MOCK_SERVICES: Service[] = [
+  { id: 'm1', title: 'Brand Identity Design', provider: 'Sarah Chen', avatar: 'SC', rating: 4.9, reviews: 127, price: 450, currency: '£', delivery: '5 days', tags: ['Logo', 'Brand', 'Figma'], category: 'Design & Creative', categoryId: 'design-creative', desc: 'Complete brand identity including logo, colour palette, typography and brand guidelines.', trust: 98, badge: 'Top Rated', mode: 'online' },
+  { id: 'm2', title: 'Full-Stack Web App Development', provider: 'Priya Nair', avatar: 'PN', rating: 5.0, reviews: 89, price: 2800, currency: '£', delivery: '21 days', tags: ['Next.js', 'Supabase', 'TypeScript'], category: 'Development & Tech', categoryId: 'development-tech', desc: 'End-to-end web application development using modern tech stack.', trust: 100, badge: 'Verified', mode: 'online' },
+  { id: 'm3', title: 'SEO & Content Strategy', provider: 'Marcus Obi', avatar: 'MO', rating: 4.8, reviews: 64, price: 320, currency: '£', delivery: '7 days', tags: ['SEO', 'Content', 'Analytics'], category: 'SEO & Digital Marketing', categoryId: 'seo-digital', desc: 'Comprehensive SEO audit and content strategy to grow organic traffic 40%+ in 90 days.', trust: 94, badge: null, mode: 'online' },
+  { id: 'm4', title: 'AI Automation Setup', provider: 'Tom Walsh', avatar: 'TW', rating: 4.7, reviews: 43, price: 380, currency: '£', delivery: '5 days', tags: ['Make', 'Zapier', 'GPT'], category: 'AI & Automation', categoryId: 'ai-automation', desc: 'Build automated workflows using Make, Zapier, and OpenAI integrations.', trust: 91, badge: null, mode: 'online' },
+  { id: 'm5', title: 'Business Coaching — 4 Sessions', provider: 'Amara Diallo', avatar: 'AD', rating: 4.9, reviews: 38, price: 480, currency: '£', delivery: '1 day', tags: ['Startup', 'Strategy', 'Growth'], category: 'Coaching & Mentoring', categoryId: 'coaching-mentoring', desc: '4-session coaching package covering product-market fit, fundraising, and growth.', trust: 97, badge: 'Verified', mode: 'online' },
+  { id: 'm6', title: 'Plumbing — Leaks & Repairs', provider: 'Dave Kelly', avatar: 'DK', rating: 4.8, reviews: 212, price: 85, currency: '£', delivery: 'Same day', tags: ['Emergency', 'Plumbing', 'Repairs'], category: 'Trades & Construction', categoryId: 'trades-construction', desc: 'Fast, reliable plumbing repairs. Leaks, blockages, boiler issues. Fully insured.', trust: 95, badge: 'Local Pro', mode: 'offline', location: 'Dublin 2', distance: 3 },
+  { id: 'm7', title: 'Dog Walking — Daily Walks', provider: 'Ciara Murphy', avatar: 'CM', rating: 5.0, reviews: 87, price: 15, currency: '£', delivery: 'Daily', tags: ['Dogs', 'Walking', 'Local'], category: 'Pet Services', categoryId: 'pet-services', desc: 'Professional daily dog walks. GPS tracked, photo updates, local to D4.', trust: 99, badge: null, mode: 'offline', location: 'Dublin 4', distance: 5 },
+  { id: 'm8', title: 'Private Chef — Dinner Parties', provider: 'Lucia Romano', avatar: 'LR', rating: 4.9, reviews: 56, price: 250, currency: '£', delivery: 'Same day', tags: ['Chef', 'Dining', 'Events'], category: 'Food & Catering', categoryId: 'food-catering', desc: 'Bespoke dinner party menus prepared in your home. Up to 12 guests.', trust: 96, badge: 'Top Rated', mode: 'offline', location: 'Dublin', distance: 8 },
+]
+
+function getGrad(str: string): string {
+  const grads = [
+    'linear-gradient(135deg,#38bdf8,#0284c7)',
+    'linear-gradient(135deg,#a78bfa,#7c3aed)',
+    'linear-gradient(135deg,#34d399,#059669)',
+    'linear-gradient(135deg,#fb923c,#ea580c)',
+    'linear-gradient(135deg,#f472b6,#db2777)',
+    'linear-gradient(135deg,#fbbf24,#d97706)',
+  ]
+  return grads[(str.charCodeAt(0) + str.charCodeAt(1 > str.length - 1 ? 0 : 1)) % grads.length]
+}
+
+// ─── Service Card ─────────────────────────────────────────────────────────────
+
+function ServiceCard({ svc }: { svc: Service }) {
+  return (
+    <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', transition: 'border-color 0.15s' }}
+      onMouseEnter={e => (e.currentTarget.style.borderColor = '#38bdf8')}
+      onMouseLeave={e => (e.currentTarget.style.borderColor = '#334155')}
+    >
+      {/* Provider row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px', color: '#0f172a', background: getGrad(svc.avatar), flexShrink: 0 }}>{svc.avatar}</div>
+          <div>
+            <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600 }}>{svc.provider}</div>
+            {svc.mode === 'offline' && svc.location && (
+              <div style={{ fontSize: '10px', color: '#64748b' }}>📍 {svc.location}{svc.distance != null ? ` · ${svc.distance}km away` : ''}</div>
+            )}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {svc.badge && <span style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 999, padding: '2px 8px', fontSize: '10px', color: '#38bdf8', fontWeight: 700 }}>{svc.badge}</span>}
+          <span style={{ background: svc.mode === 'online' ? 'rgba(56,189,248,0.08)' : 'rgba(52,211,153,0.08)', border: `1px solid ${svc.mode === 'online' ? 'rgba(56,189,248,0.2)' : 'rgba(52,211,153,0.2)'}`, borderRadius: 999, padding: '2px 8px', fontSize: '10px', color: svc.mode === 'online' ? '#38bdf8' : '#34d399', fontWeight: 700 }}>
+            {svc.mode === 'online' ? '💻 Online' : '📍 Local'}
+          </span>
+        </div>
+      </div>
+
+      <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', lineHeight: 1.35 }}>{svc.title}</div>
+      <p style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.5, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>{svc.desc}</p>
+
+      {svc.tags.length > 0 && (
+        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+          {svc.tags.slice(0, 3).map(t => (
+            <span key={t} style={{ background: 'rgba(148,163,184,0.07)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '2px 8px', fontSize: '10px', color: '#94a3b8' }}>{t}</span>
+          ))}
+        </div>
+      )}
+
+      {/* Rating + delivery */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+        <span style={{ color: '#fbbf24' }}>★ {svc.rating.toFixed(1)}</span>
+        <span style={{ color: '#475569' }}>({svc.reviews})</span>
+        <span style={{ color: '#475569', marginLeft: 'auto' }}>⏱ {svc.delivery}</span>
+      </div>
+
+      {/* Trust bar */}
+      <div style={{ fontSize: '11px', color: '#38bdf8' }}>
+        Trust {svc.trust}%
+        <div style={{ marginTop: '3px', height: 3, background: 'rgba(56,189,248,0.12)', borderRadius: 2 }}>
+          <div style={{ width: `${svc.trust}%`, height: '100%', background: '#38bdf8', borderRadius: 2 }} />
+        </div>
+      </div>
+
+      {/* Price + CTA */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #334155', paddingTop: '10px', marginTop: 'auto' }}>
+        <div>
+          <span style={{ fontSize: '20px', fontWeight: 800, color: '#38bdf8' }}>{svc.currency}{svc.price.toLocaleString()}</span>
+          <span style={{ fontSize: '11px', color: '#475569' }}> / project</span>
+        </div>
+        <Link href={`/services/${svc.id}`} style={{ background: '#38bdf8', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: 700, color: '#0f172a', cursor: 'pointer', textDecoration: 'none' }}>View</Link>
+      </div>
+    </div>
+  )
+}
+
+// ─── Main Page ─────────────────────────────────────────────────────────────────
+
+export default function ServicesPage() {
+  const [services, setServices] = useState<Service[]>(MOCK_SERVICES)
+  const [search, setSearch]       = useState('')
+  const [sort, setSort]           = useState('best')
+  const [modeFilter, setModeFilter] = useState<'all' | 'online' | 'offline'>('all')
+  const [activeCatId, setActiveCatId] = useState<string | null>(null)
+  const [locationScope, setLocationScope] = useState<string>('')
+  const [radiusKm, setRadiusKm]   = useState<number>(25)
+  const [locationInput, setLocationInput] = useState('')
+  const [showLocationPanel, setShowLocationPanel] = useState(false)
+  const [priceMin, setPriceMin]   = useState('')
+  const [priceMax, setPriceMax]   = useState('')
+  const locationPanelRef = useRef<HTMLDivElement>(null)
+
+  // Load real Supabase data
   useEffect(() => {
     const supabase = createClient();
     (async () => {
       try {
         const { data } = await supabase
-          .from('listings')
-          .select('*, seller:profiles(full_name, avatar_url)')
+          .from('services')
+          .select('*, seller:profiles!seller_id(full_name, avatar_url)')
           .eq('status', 'active')
           .order('created_at', { ascending: false })
-          .limit(24)
+          .limit(50)
         if (data && data.length > 0) {
-          const mapped: Service[] = data.map((l: Record<string, unknown>) => {
-            const seller = l.seller as { full_name?: string } | null
+          const mapped: Service[] = data.map((s: Record<string, unknown>) => {
+            const seller = s.seller as { full_name?: string } | null
             const name = seller?.full_name ?? 'Unknown'
             const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
             return {
-              id: l.id as string,
-              title: l.title as string,
+              id: s.id as string,
+              title: s.title as string,
               provider: name,
               avatar: initials,
               rating: 4.8,
               reviews: 0,
-              price: Number(l.price),
-              currency: (l.currency as string) ?? '£',
-              delivery: '7 days',
-              tags: (l.tags as string[]) ?? [],
-              category: 'Design & Creative',
-              desc: (l.description as string) ?? '',
+              price: Number(s.price ?? 0),
+              currency: '£',
+              delivery: (s.delivery_time as string) ?? '7 days',
+              tags: (s.tags as string[]) ?? [],
+              category: (s.category as string) ?? '',
+              categoryId: (s.category_id as string) ?? undefined,
+              desc: (s.description as string) ?? '',
               trust: 90,
               badge: null,
+              mode: ((s.service_mode as string) ?? 'online') as 'online' | 'offline' | 'both',
+              location: (s.location as string) ?? null,
+              distance: null,
             }
           })
           setServices(mapped)
         }
-      } catch {
-        /* keep mock */
-      }
+      } catch { /* keep mock */ }
     })()
   }, [])
 
-  const searchFiltered = search
-    ? services.filter(s => s.title.toLowerCase().includes(search.toLowerCase()) || s.desc.toLowerCase().includes(search.toLowerCase()))
-    : services
+  // Close location panel on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (locationPanelRef.current && !locationPanelRef.current.contains(e.target as Node)) {
+        setShowLocationPanel(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
-  const filtered = active === 0 ? searchFiltered : searchFiltered.filter(s => s.category === CATEGORIES[active].label)
+  // Filter & sort
+  const allOnlineCats = ONLINE_CATEGORIES
+  const allOfflineCats = OFFLINE_CATEGORIES
+  const visibleCats = modeFilter === 'online' ? allOnlineCats : modeFilter === 'offline' ? allOfflineCats : [...allOnlineCats, ...allOfflineCats]
+
+  const filtered = services
+    .filter(s => {
+      if (modeFilter !== 'all' && s.mode !== modeFilter && s.mode !== 'both') return false
+      if (activeCatId && s.categoryId !== activeCatId) return false
+      if (search && !s.title.toLowerCase().includes(search.toLowerCase()) && !s.desc.toLowerCase().includes(search.toLowerCase()) && !s.category.toLowerCase().includes(search.toLowerCase())) return false
+      if (priceMin && s.price < Number(priceMin)) return false
+      if (priceMax && s.price > Number(priceMax)) return false
+      if (locationScope === 'local' && s.mode !== 'offline') return false
+      if (locationScope === 'remote' && s.mode !== 'online') return false
+      return true
+    })
+    .sort((a, b) => {
+      if (sort === 'price_asc') return a.price - b.price
+      if (sort === 'price_desc') return b.price - a.price
+      if (sort === 'rating') return b.rating - a.rating
+      return 0
+    })
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif' }}>
       <style>{`
-        .svc-hero { background: linear-gradient(180deg,rgba(56,189,248,0.07) 0%,transparent 100%); padding: 2.5rem 1.5rem 2rem; border-bottom: 1px solid rgba(56,189,248,0.08); }
-        .svc-hero-inner { max-width: 1200px; margin: 0 auto; }
-        .svc-search-row { display: flex; gap: 0.75rem; margin-top: 1.25rem; max-width: 640px; }
-        .svc-search-input { flex: 1; background: #1e293b; border: 1px solid rgba(56,189,248,0.2); border-radius: 8px; padding: 0.7rem 1rem; font-size: 0.95rem; color: #f1f5f9; outline: none; }
-        .svc-layout { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; display: grid; grid-template-columns: 220px 1fr; gap: 2rem; align-items: start; }
-        .svc-sidebar { position: sticky; top: 78px; display: flex; flex-direction: column; gap: 0.25rem; }
-        .svc-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(300px,1fr)); gap: 1.25rem; }
-
+        .svc-layout { max-width: 1200px; margin: 0 auto; padding: 20px 16px 80px; display: grid; grid-template-columns: 240px 1fr; gap: 24px; align-items: start; }
+        .svc-sidebar { position: sticky; top: 110px; }
+        .svc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
         @media (max-width: 768px) {
-          .svc-hero { padding: 1.5rem 1rem 1.25rem; }
-          .svc-search-row { flex-direction: column; }
-          .svc-layout { grid-template-columns: 1fr; padding: 1rem; gap: 1rem; }
-          .svc-sidebar { position: static; display: flex; flex-direction: row; flex-wrap: wrap; gap: 0.4rem; }
+          .svc-layout { grid-template-columns: 1fr; padding: 12px 12px 80px; gap: 12px; }
+          .svc-sidebar { position: static; }
           .svc-grid { grid-template-columns: 1fr; }
         }
+        .cat-btn:hover { background: rgba(56,189,248,0.06) !important; }
       `}</style>
 
-      <div className="svc-hero">
-        <div className="svc-hero-inner">
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.5rem' }}>Service Marketplace</h1>
-          <p style={{ color: '#64748b', fontSize: '0.95rem' }}>{services.length.toLocaleString()}+ services from verified FreeTrust members</p>
-          <div className="svc-search-row">
-            <input className="svc-search-input" placeholder="Search services (e.g. logo design, web development…)" value={search} onChange={e => setSearch(e.target.value)} />
-            <button style={{ background: '#38bdf8', border: 'none', borderRadius: 8, padding: '0.7rem 1.5rem', fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer' }}>Search</button>
+      {/* Hero */}
+      <div style={{ background: 'linear-gradient(180deg,rgba(56,189,248,0.06) 0%,transparent 100%)', padding: '28px 16px 20px', borderBottom: '1px solid #1e293b' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <h1 style={{ fontSize: '26px', fontWeight: 800, margin: '0 0 4px' }}>Services Marketplace</h1>
+          <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 16px' }}>Online, local & global services from trusted FreeTrust members</p>
+
+          {/* Search + controls row */}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* Search */}
+            <div style={{ flex: '1 1 280px', minWidth: '220px', position: 'relative' }}>
+              <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '14px', pointerEvents: 'none' }}>🔍</span>
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search services…"
+                style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '10px 14px 10px 36px', fontSize: '14px', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box' }}
+                onFocus={e => (e.target.style.borderColor = '#38bdf8')}
+                onBlur={e => (e.target.style.borderColor = '#334155')}
+              />
+            </div>
+
+            {/* Mode toggle */}
+            <div style={{ display: 'flex', gap: '4px', background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '3px' }}>
+              {([['all','🌐 All'], ['online','💻 Online'], ['offline','📍 Local']] as [string, string][]).map(([val, lbl]) => (
+                <button key={val} onClick={() => { setModeFilter(val as 'all'|'online'|'offline'); setActiveCatId(null) }}
+                  style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: modeFilter === val ? 700 : 400, fontFamily: 'inherit', background: modeFilter === val ? '#38bdf8' : 'transparent', color: modeFilter === val ? '#0f172a' : '#64748b', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
+                  {lbl}
+                </button>
+              ))}
+            </div>
+
+            {/* Location filter */}
+            <div ref={locationPanelRef} style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowLocationPanel(v => !v)}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 14px', background: locationScope ? '#38bdf8' : '#1e293b', border: `1px solid ${locationScope ? '#38bdf8' : '#334155'}`, borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, color: locationScope ? '#0f172a' : '#94a3b8', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                📍 {locationScope ? LOCATION_SCOPE.find(l => l.value === locationScope)?.label : 'Location'} ▾
+              </button>
+              {showLocationPanel && (
+                <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 100, background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '12px', width: '260px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Scope</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+                    {LOCATION_SCOPE.map(s => (
+                      <button key={s.value} onClick={() => setLocationScope(locationScope === s.value ? '' : s.value)}
+                        style={{ padding: '5px 10px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit', fontWeight: locationScope === s.value ? 700 : 400, background: locationScope === s.value ? '#38bdf8' : 'rgba(56,189,248,0.07)', color: locationScope === s.value ? '#0f172a' : '#94a3b8', transition: 'all 0.15s' }}>
+                        {s.icon} {s.label}
+                      </button>
+                    ))}
+                  </div>
+                  {locationScope === 'local' && (
+                    <>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Radius</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+                        {LOCATION_RADII.map(r => (
+                          <button key={r.value} onClick={() => setRadiusKm(r.value)}
+                            style={{ padding: '5px 10px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit', fontWeight: radiusKm === r.value ? 700 : 400, background: radiusKm === r.value ? '#38bdf8' : 'rgba(56,189,248,0.07)', color: radiusKm === r.value ? '#0f172a' : '#94a3b8', transition: 'all 0.15s' }}>
+                            {r.label}
+                          </button>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Your Location</div>
+                      <input value={locationInput} onChange={e => setLocationInput(e.target.value)} placeholder="City, postcode…"
+                        style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', padding: '8px 12px', fontSize: '13px', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box' }} />
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Price filter */}
+            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+              <input value={priceMin} onChange={e => setPriceMin(e.target.value)} placeholder="£ min" type="number" min="0"
+                style={{ width: '70px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '9px 8px', fontSize: '12px', color: '#f1f5f9', outline: 'none', textAlign: 'center' }} />
+              <span style={{ color: '#475569', fontSize: '12px' }}>–</span>
+              <input value={priceMax} onChange={e => setPriceMax(e.target.value)} placeholder="£ max" type="number" min="0"
+                style={{ width: '70px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '9px 8px', fontSize: '12px', color: '#f1f5f9', outline: 'none', textAlign: 'center' }} />
+            </div>
+
+            {/* Sort */}
+            <select value={sort} onChange={e => setSort(e.target.value)}
+              style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '9px 12px', fontSize: '12px', color: '#94a3b8', outline: 'none', cursor: 'pointer' }}>
+              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
           </div>
         </div>
       </div>
 
       <div className="svc-layout">
-        {/* Categories */}
+        {/* Sidebar */}
         <aside className="svc-sidebar">
-          <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#475569', padding: '0.25rem 0.75rem', marginBottom: '0.25rem', letterSpacing: '0.05em' }}>CATEGORIES</div>
-          {CATEGORIES.map((cat, i) => (
-            <button key={cat.label} onClick={() => setActive(i)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.55rem 0.75rem', borderRadius: 8, fontSize: '0.85rem', cursor: 'pointer', background: active === i ? 'rgba(56,189,248,0.1)' : 'none', border: active === i ? '1px solid rgba(56,189,248,0.2)' : '1px solid transparent', color: active === i ? '#38bdf8' : '#94a3b8', width: '100%', textAlign: 'left' }}>
-              <span>{cat.icon} {cat.label}</span>
-              <span style={{ fontSize: '0.75rem', color: '#475569' }}>{cat.count.toLocaleString()}</span>
+          <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', overflow: 'hidden' }}>
+            <button className="cat-btn" onClick={() => setActiveCatId(null)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px', background: activeCatId === null ? 'rgba(56,189,248,0.1)' : 'transparent', border: 'none', borderLeft: activeCatId === null ? '3px solid #38bdf8' : '3px solid transparent', color: activeCatId === null ? '#38bdf8' : '#94a3b8', fontSize: '13px', fontWeight: activeCatId === null ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}>
+              <span>✦ All Services</span>
+              <span style={{ fontSize: '11px', color: '#475569' }}>{filtered.length}</span>
             </button>
-          ))}
+
+            {/* Online section */}
+            {(modeFilter === 'all' || modeFilter === 'online') && (
+              <>
+                <div style={{ padding: '8px 14px 4px', fontSize: '10px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', background: '#0f172a', borderTop: '1px solid #334155' }}>
+                  💻 Online Services
+                </div>
+                {ONLINE_CATEGORIES.map(cat => {
+                  const count = services.filter(s => s.categoryId === cat.id).length
+                  return (
+                    <button key={cat.id} className="cat-btn" onClick={() => setActiveCatId(activeCatId === cat.id ? null : cat.id)}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 14px', background: activeCatId === cat.id ? 'rgba(56,189,248,0.1)' : 'transparent', border: 'none', borderLeft: activeCatId === cat.id ? '3px solid #38bdf8' : '3px solid transparent', color: activeCatId === cat.id ? '#38bdf8' : '#94a3b8', fontSize: '12px', fontWeight: activeCatId === cat.id ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span>{cat.icon}</span>{cat.label}</span>
+                      {count > 0 && <span style={{ fontSize: '10px', color: '#475569' }}>{count}</span>}
+                    </button>
+                  )
+                })}
+              </>
+            )}
+
+            {/* Offline section */}
+            {(modeFilter === 'all' || modeFilter === 'offline') && (
+              <>
+                <div style={{ padding: '8px 14px 4px', fontSize: '10px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', background: '#0f172a', borderTop: '1px solid #334155' }}>
+                  📍 Local Services
+                </div>
+                {OFFLINE_CATEGORIES.map(cat => {
+                  const count = services.filter(s => s.categoryId === cat.id).length
+                  return (
+                    <button key={cat.id} className="cat-btn" onClick={() => setActiveCatId(activeCatId === cat.id ? null : cat.id)}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 14px', background: activeCatId === cat.id ? 'rgba(52,211,153,0.1)' : 'transparent', border: 'none', borderLeft: activeCatId === cat.id ? '3px solid #34d399' : '3px solid transparent', color: activeCatId === cat.id ? '#34d399' : '#94a3b8', fontSize: '12px', fontWeight: activeCatId === cat.id ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span>{cat.icon}</span>{cat.label}</span>
+                      {count > 0 && <span style={{ fontSize: '10px', color: '#475569' }}>{count}</span>}
+                    </button>
+                  )
+                })}
+              </>
+            )}
+          </div>
+
+          {/* Post a service CTA */}
+          <Link href="/seller/gigs/create" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '12px', padding: '12px', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', borderRadius: '12px', color: '#fff', fontWeight: 700, fontSize: '13px', textDecoration: 'none' }}>
+            ➕ List Your Service
+          </Link>
         </aside>
 
-        {/* Listings */}
+        {/* Results */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <div style={{ fontSize: '0.88rem', color: '#64748b' }}>{filtered.length} services</div>
-            <select style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 7, padding: '0.4rem 0.75rem', fontSize: '0.82rem', color: '#94a3b8', outline: 'none' }}>
-              <option>Best Match</option>
-              <option>Newest</option>
-              <option>Price: Low to High</option>
-              <option>Price: High to Low</option>
-              <option>Top Rated</option>
-            </select>
+          {/* Active filter summary */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ fontSize: '13px', color: '#64748b' }}>
+              {filtered.length} service{filtered.length !== 1 ? 's' : ''}
+              {activeCatId && ` in ${visibleCats.find(c => c.id === activeCatId)?.label}`}
+              {locationScope && ` · ${LOCATION_SCOPE.find(l => l.value === locationScope)?.label}`}
+              {locationScope === 'local' && locationInput && ` near ${locationInput}`}
+            </div>
+            {(activeCatId || locationScope || priceMin || priceMax || search) && (
+              <button onClick={() => { setActiveCatId(null); setLocationScope(''); setPriceMin(''); setPriceMax(''); setSearch('') }}
+                style={{ background: 'none', border: '1px solid #334155', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', color: '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}>
+                ✕ Clear filters
+              </button>
+            )}
           </div>
-          <div className="svc-grid">
-            {filtered.map(svc => (
-              <div key={svc.id} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.78rem', color: '#0f172a', background: avatarGrad[svc.avatar] ?? getGrad(svc.avatar) }}>{svc.avatar}</div>
-                    <span style={{ fontSize: '0.82rem', color: '#94a3b8' }}>{svc.provider}</span>
-                  </div>
-                  {svc.badge && <span style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.72rem', color: '#38bdf8' }}>{svc.badge}</span>}
-                </div>
-                <div style={{ fontSize: '1rem', fontWeight: 700, lineHeight: 1.3, color: '#f1f5f9' }}>{svc.title}</div>
-                <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.5 }}>{svc.desc}</p>
-                <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                  {svc.tags.map(t => <span key={t} style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.72rem', color: '#94a3b8' }}>{t}</span>)}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem' }}>
-                  <span style={{ color: '#fbbf24' }}>★ {svc.rating}</span>
-                  <span style={{ color: '#475569' }}>({svc.reviews} reviews)</span>
-                  <span style={{ marginLeft: 'auto', color: '#475569' }}>⏱ {svc.delivery}</span>
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#38bdf8' }}>
-                  Trust Score: {svc.trust}%
-                  <div style={{ marginTop: '0.25rem', height: 3, background: 'rgba(56,189,248,0.15)', borderRadius: 2 }}>
-                    <div style={{ width: `${svc.trust}%`, height: '100%', background: '#38bdf8', borderRadius: 2 }} />
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(56,189,248,0.06)', paddingTop: '0.75rem', marginTop: 'auto' }}>
-                  <div>
-                    <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#38bdf8' }}>{svc.currency}{svc.price.toLocaleString()}</span>
-                    <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 400 }}> / project</span>
-                  </div>
-                  <Link href={`/services/${svc.id}`} style={{ background: '#38bdf8', border: 'none', borderRadius: 7, padding: '0.5rem 1rem', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>View Service</Link>
-                </div>
-              </div>
-            ))}
-          </div>
+
+          {filtered.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+              <div style={{ fontSize: '40px', marginBottom: '12px' }}>😕</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8', marginBottom: '6px' }}>No services found</div>
+              <div style={{ fontSize: '13px' }}>Try adjusting your filters or search term</div>
+            </div>
+          ) : (
+            <div className="svc-grid">
+              {filtered.map(svc => <ServiceCard key={svc.id} svc={svc} />)}
+            </div>
+          )}
         </div>
       </div>
     </div>

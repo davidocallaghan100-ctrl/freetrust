@@ -11,6 +11,9 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') ?? '20')))
     const offset = (page - 1) * limit
     const category = searchParams.get('category')
+    const categoryId = searchParams.get('category_id')
+    const serviceMode = searchParams.get('mode') // online | offline | both
+    const location = searchParams.get('location')
     const search = searchParams.get('q')
     const mine = searchParams.get('mine') === 'true'
 
@@ -28,7 +31,10 @@ export async function GET(request: NextRequest) {
       query = query.eq('status', 'active')
     }
 
-    if (category) query = query.eq('category_id', category)
+    if (category) query = query.eq('category', category)
+    if (categoryId) query = query.eq('category_id', categoryId)
+    if (serviceMode) query = query.eq('service_mode', serviceMode)
+    if (location) query = query.ilike('location', `%${location}%`)
     if (search) query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`)
 
     const { data: listings, error, count } = await query
@@ -63,7 +69,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     // Validate required fields
-    const { title, description, price, currency = 'GBP', category_id, tags = [], images = [] } = body
+    const { title, description, price, currency = 'GBP', category_id, category, service_mode = 'online', location, service_radius, delivery_types = [], tags = [], images = [] } = body
 
     if (!title || typeof title !== 'string' || title.trim().length < 3) {
       return NextResponse.json({ error: 'Title must be at least 3 characters' }, { status: 400 })
@@ -84,6 +90,11 @@ export async function POST(request: NextRequest) {
         price,
         currency,
         category_id: category_id ?? null,
+        category: category ?? null,
+        service_mode: service_mode,
+        location: location ?? null,
+        service_radius: service_radius ?? null,
+        delivery_types: Array.isArray(delivery_types) ? delivery_types : [],
         tags: Array.isArray(tags) ? tags : [],
         images: Array.isArray(images) ? images : [],
         status: 'active',
