@@ -138,7 +138,7 @@ function ServiceCard({ svc }: { svc: Service }) {
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function ServicesPage() {
-  const [services, setServices] = useState<Service[]>(MOCK_SERVICES)
+  const [services, setServices] = useState<Service[]>([])
   const [search, setSearch]       = useState('')
   const [sort, setSort]           = useState('best')
   const [modeFilter, setModeFilter] = useState<'all' | 'online' | 'offline'>('all')
@@ -188,7 +188,7 @@ export default function ServicesPage() {
           .eq('status', 'active')
           .order('created_at', { ascending: false })
           .limit(50)
-        if (data && data.length > 0) {
+        if (data) {
           const mapped: Service[] = data.map((s: Record<string, unknown>) => {
             const seller = s.seller as { full_name?: string } | null
             const name = seller?.full_name ?? 'Unknown'
@@ -216,7 +216,7 @@ export default function ServicesPage() {
           })
           setServices(mapped)
         }
-      } catch { /* keep mock */ }
+      } catch { /* keep empty */ }
     })()
   }, [])
 
@@ -452,9 +452,20 @@ export default function ServicesPage() {
 
           {filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
-              <div style={{ fontSize: '40px', marginBottom: '12px' }}>😕</div>
-              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8', marginBottom: '6px' }}>No services found</div>
-              <div style={{ fontSize: '13px' }}>Try adjusting your filters or search term</div>
+              <div style={{ fontSize: '40px', marginBottom: '12px' }}>🛠️</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8', marginBottom: '6px' }}>
+                {services.length === 0 ? 'No services listed yet' : 'No services match your filters'}
+              </div>
+              <div style={{ fontSize: '13px', marginBottom: '20px' }}>
+                {services.length === 0
+                  ? 'Be the first founding member to list your service!'
+                  : 'Try adjusting your filters or search term'}
+              </div>
+              {services.length === 0 && (
+                <a href="/seller/gigs/create" style={{ display: 'inline-block', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '10px 24px', borderRadius: 10, fontWeight: 700, textDecoration: 'none', fontSize: '14px' }}>
+                  + List Your Service
+                </a>
+              )}
             </div>
           ) : (
             <div className="svc-grid">

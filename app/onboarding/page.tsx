@@ -255,21 +255,15 @@ export default function OnboardingPage() {
             <button
               className="ob-btn-primary"
               onClick={() => {
-                if (accountType === 'business') {
-                  window.location.href = '/create-business'
-                } else {
-                  window.location.href = '/feed'
-                }
+                window.location.href = '/dashboard'
               }}
             >
-              {accountType === 'business' ? 'Set up my business profile →' : 'Go to my feed →'}
+              Go to my dashboard →
             </button>
 
-            {accountType === 'business' && (
-              <button onClick={() => window.location.href = '/feed'} style={{ marginTop: '0.75rem', width: '100%', background: 'transparent', border: 'none', color: '#64748b', fontSize: '0.82rem', cursor: 'pointer' }}>
-                Skip for now — go to feed
-              </button>
-            )}
+            <button onClick={() => window.location.href = '/feed'} style={{ marginTop: '0.75rem', width: '100%', background: 'transparent', border: 'none', color: '#64748b', fontSize: '0.82rem', cursor: 'pointer' }}>
+              Go to feed instead
+            </button>
           </div>
         )}
       </div>

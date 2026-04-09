@@ -15,6 +15,7 @@ const TRUST_ACTIONS: Record<string, { amount: number; label: string; repeatable?
   get_50_followers:  { amount: 30,  label: 'Reached 50 followers' },
   get_100_followers: { amount: 50,  label: 'Reached 100 followers' },
   make_purchase:     { amount: 5,   label: 'Made a purchase', repeatable: true },
+  leave_review:      { amount: 10,  label: 'Left a review', repeatable: true },
   daily_login:       { amount: 1,   label: 'Daily check-in', repeatable: true },
 }
 

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCurrency } from '@/context/CurrencyContext'
+import { createClient } from '@/lib/supabase/client'
 
 const categories = ['All', 'Business', 'Technology', 'Sustainability', 'Creative', 'Finance', 'Health', 'Education', 'General']
 
@@ -49,14 +50,22 @@ const S: Record<string, React.CSSProperties> = {
   joinBtn: { border: 'none', borderRadius: 7, padding: '0.45rem 1.1rem', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' },
 }
 
+interface LeaderboardEntry {
+  user_id: string
+  balance: number
+  full_name: string | null
+  avatar_url: string | null
+}
+
 export default function CommunityPage() {
   const { format } = useCurrency()
   const router = useRouter()
   const [activeCat, setActiveCat] = useState('All')
   const [search, setSearch] = useState('')
-  const [communities, setCommunities] = useState<Community[]>(MOCK_COMMUNITIES)
+  const [communities, setCommunities] = useState<Community[]>([])
   const [loading, setLoading] = useState(true)
   const [joined, setJoined] = useState<Set<string>>(new Set())
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
 
   useEffect(() => {
     async function load() {
@@ -64,16 +73,37 @@ export default function CommunityPage() {
         const res = await fetch('/api/communities')
         if (!res.ok) return
         const json = await res.json()
-        if (Array.isArray(json.communities) && json.communities.length > 0) {
+        if (Array.isArray(json.communities)) {
           setCommunities(json.communities)
         }
       } catch {
-        // keep mock data
+        // leave as empty array
       } finally {
         setLoading(false)
       }
     }
     load()
+
+    // Fetch trust leaderboard
+    async function loadLeaderboard() {
+      try {
+        const supabase = createClient()
+        const { data } = await supabase
+          .from('trust_balances')
+          .select('user_id, balance, profiles!user_id(full_name, avatar_url)')
+          .order('balance', { ascending: false })
+          .limit(10)
+        if (data) {
+          setLeaderboard(data.map((entry: { user_id: string; balance: number; profiles: { full_name: string | null; avatar_url: string | null } | null }) => ({
+            user_id: entry.user_id,
+            balance: entry.balance,
+            full_name: entry.profiles?.full_name ?? null,
+            avatar_url: entry.profiles?.avatar_url ?? null,
+          })))
+        }
+      } catch { /* ignore */ }
+    }
+    loadLeaderboard()
   }, [])
 
   const filtered = communities.filter(c => {
@@ -152,7 +182,56 @@ export default function CommunityPage() {
         </div>
       </div>
 
+      {/* Trust Leaderboard */}
+      {leaderboard.length > 0 && (
+        <div style={{ maxWidth: 1200, margin: '1.5rem auto 0', padding: '0 1.5rem' }}>
+          <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '1.25rem 1.5rem' }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#f1f5f9', margin: '0 0 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              💎 Trust Leaderboard
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '0.75rem' }}>
+              {leaderboard.map((entry, i) => (
+                <div key={entry.user_id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.5rem 0.75rem', background: i < 3 ? 'rgba(56,189,248,0.06)' : 'transparent', borderRadius: 10, border: i < 3 ? '1px solid rgba(56,189,248,0.15)' : '1px solid transparent' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: i === 0 ? '#fbbf24' : i === 1 ? '#94a3b8' : i === 2 ? '#fb923c' : '#64748b', minWidth: 18, textAlign: 'center' }}>
+                    {i + 1}
+                  </span>
+                  {entry.avatar_url ? (
+                    <img src={entry.avatar_url} alt={entry.full_name ?? ''} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800, color: '#0f172a', flexShrink: 0 }}>
+                      {(entry.full_name ?? '?')[0].toUpperCase()}
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.full_name ?? 'Member'}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: 700 }}>₮{entry.balance.toLocaleString()}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="comm-grid" style={S.grid}>
+        {!loading && filtered.length === 0 && (
+          <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '4rem 1rem' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👥</div>
+            <h2 style={{ fontSize: '1.3rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem' }}>
+              {communities.length === 0 ? 'No communities yet — be the first to create one!' : 'No communities match your search'}
+            </h2>
+            <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+              {communities.length === 0
+                ? 'Create a community around your passion, profession, or purpose.'
+                : 'Try a different search term or category.'}
+            </p>
+            {communities.length === 0 && (
+              <Link href="/community/new" style={{ display: 'inline-block', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.75rem 1.75rem', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>
+                + Create Community
+              </Link>
+            )}
+          </div>
+        )}
         {filtered.map(c => (
           <div
             key={c.id}

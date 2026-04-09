@@ -12,8 +12,8 @@ function getResend(): Resend {
   return _resend
 }
 
-const FROM = 'FreeTrust <hello@freetrust.app>'
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://freetrust.vercel.app'
+const FROM = 'FreeTrust <hello@freetrust.co>'
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://freetrust.co'
 
 // ─── Shared template wrapper ──────────────────────────────────────────────────
 function wrap(title: string, body: string): string {

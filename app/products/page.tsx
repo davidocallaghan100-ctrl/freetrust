@@ -241,7 +241,7 @@ function ProductsInner() {
     load()
   }, [])
 
-  const products = dbProducts ?? MOCK_PRODUCTS
+  const products = dbProducts ?? []
 
   let filtered = products.filter(p => {
     if (typeFilter !== 'all' && p.type !== typeFilter) return false
