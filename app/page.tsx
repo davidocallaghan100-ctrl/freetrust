@@ -129,18 +129,26 @@ function AIVoiceBubble({ size = 220 }: { size?: number }) {
             transition: 'background 0.6s',
           }} />
         </div>
-        {/* Orbiting dot — centred, orbits via rotate+translateX */}
+        {/* Orbiting dot — wrapper rotates, dot translates out, then counter-rotates to stay round */}
         <div style={{
           position: 'absolute',
           top: '50%', left: '50%',
-          width: Math.round(s * 0.07), height: Math.round(s * 0.07),
-          marginTop: -Math.round(s * 0.035), marginLeft: -Math.round(s * 0.035),
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, #7dd3fc 0%, #0ea5e9 100%)',
-          boxShadow: '0 0 10px rgba(56,189,248,1), 0 0 20px rgba(56,189,248,0.5)',
-          animation: 'ai-orbit 4s linear infinite',
-          transformOrigin: 'center center',
-        }} />
+          width: 0, height: 0,
+          animation: 'ai-orbit-arm 4s linear infinite',
+          transformOrigin: '0 0',
+        }}>
+          <div style={{
+            position: 'absolute',
+            width: Math.round(s * 0.07), height: Math.round(s * 0.07),
+            marginTop: -Math.round(s * 0.035),
+            left: 72,
+            marginLeft: -Math.round(s * 0.035),
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, #7dd3fc 0%, #0ea5e9 100%)',
+            boxShadow: '0 0 10px rgba(56,189,248,1), 0 0 20px rgba(56,189,248,0.5)',
+            animation: 'ai-orbit-dot 4s linear infinite',
+          }} />
+        </div>
       </div>
 
       {/* Rotating message */}
@@ -157,8 +165,8 @@ function AIVoiceBubble({ size = 220 }: { size?: number }) {
         {speaking && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 3, height: 20 }}>
             {[0,1,2,3,4,5].map(i => (
-              <div key={i} className={`ai-wave-bar ai-wave-bar-${i}`} style={{
-                width: 3, borderRadius: 99,
+              <div key={i} style={{
+                width: 3, height: 4, borderRadius: 99, display: 'inline-block',
                 background: 'linear-gradient(to top, #38bdf8, #34d399)',
                 animation: `ai-wave 1.2s ease-in-out ${i * 0.15}s infinite`,
               }} />
@@ -244,11 +252,9 @@ export default function Home() {
         @keyframes ai-pulse    { 0%,100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.04); } }
         @keyframes ai-breathe  { 0%,100% { transform: scale(1); }    50% { transform: scale(1.025); } }
         @keyframes ai-core-pulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
-        /* Orbiting dot — rotate around centre then counter-rotate the dot so it stays upright */
-        @keyframes ai-orbit {
-          from { transform: rotate(0deg) translateX(72px) rotate(0deg); }
-          to   { transform: rotate(360deg) translateX(72px) rotate(-360deg); }
-        }
+        /* Orbiting dot — arm rotates, dot counter-rotates to stay round */
+        @keyframes ai-orbit-arm { from { transform: rotate(0deg);   } to { transform: rotate(360deg);  } }
+        @keyframes ai-orbit-dot { from { transform: rotate(0deg);   } to { transform: rotate(-360deg); } }
         .ai-bubble-wrap .ai-ripple-1 { inset: -8px; }
         .ai-bubble-wrap .ai-ripple-2 { inset: -18px; }
         .ai-bubble-wrap .ai-ripple-3 { inset: -30px; }
