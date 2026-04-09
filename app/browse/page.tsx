@@ -247,7 +247,7 @@ export default function DirectoryPage() {
     const loc: string | null = item.location ?? null
     const matchQ = !q || name?.toLowerCase().includes(q) || desc?.toLowerCase().includes(q) || tags.some((t: string) => t.toLowerCase().includes(q)) || loc?.toLowerCase().includes(q)
     const matchL = !location || loc?.toLowerCase().includes(location.toLowerCase())
-    const matchV = filter !== 'verified' || item.verified === true
+    const matchV = filter !== 'verified' || item.verified === true || item.type === 'individual'
     return Boolean(matchQ && matchL && matchV)
   }
 
@@ -269,7 +269,7 @@ export default function DirectoryPage() {
   const showOrgs    = tab === 'all' || tab === 'organisations'
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', paddingTop: 104 }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif' }}>
       <style>{`
         .dir-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
         .dir-tabs { display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
