@@ -171,17 +171,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         })
         .eq('id', depositId)
 
-      // Credit the user's wallet (stored in orders as a deposit-type row for unified tx history)
-      await supabase.from('orders').insert({
-        buyer_id: userId,
-        seller_id: userId,
-        status: 'completed',
-        total_amount: amountCents / 100,
-        item_title: 'Wallet Top-up',
-        item_type: 'deposit',
-        stripe_payment_intent: typeof session.payment_intent === 'string'
-          ? session.payment_intent : String(session.payment_intent ?? ''),
-      })
+      // money_deposits table is the source of truth for top-ups — no orders row needed
 
       // Send notification
       await supabase.from('notifications').insert({

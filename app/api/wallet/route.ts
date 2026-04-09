@@ -10,7 +10,7 @@ export async function GET() {
     }
 
     // ── Trust balance ────────────────────────────────────────────────────────
-    const [trustBalRes, trustLedgerRes, ordersEarnedRes, ordersSpentRes] = await Promise.all([
+    const [trustBalRes, trustLedgerRes, ordersEarnedRes, ordersSpentRes, depositsRes] = await Promise.all([
       supabase
         .from('trust_balances')
         .select('balance, lifetime, updated_at')
@@ -22,18 +22,28 @@ export async function GET() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(100),
-      // Money earned — orders where this user is the seller
+      // Money earned — orders where this user is the seller (not deposits)
       supabase
         .from('orders')
-        .select('id, total_amount, status, created_at, buyer_id')
+        .select('id, amount, status, created_at, buyer_id, title')
         .eq('seller_id', user.id)
+        .neq('delivery_type', 'deposit')
         .order('created_at', { ascending: false })
         .limit(100),
-      // Money spent — orders where this user is the buyer
+      // Money spent — orders where this user is the buyer (not deposits)
       supabase
         .from('orders')
-        .select('id, total_amount, status, created_at, seller_id')
+        .select('id, amount, status, created_at, seller_id, title')
         .eq('buyer_id', user.id)
+        .neq('delivery_type', 'deposit')
+        .order('created_at', { ascending: false })
+        .limit(100),
+      // Wallet top-ups from money_deposits
+      supabase
+        .from('money_deposits')
+        .select('id, amount_cents, currency, status, created_at')
+        .eq('user_id', user.id)
+        .eq('status', 'completed')
         .order('created_at', { ascending: false })
         .limit(100),
     ])
@@ -61,9 +71,9 @@ export async function GET() {
     // ── Build unified transaction list ────────────────────────────────────────
     type Tx = {
       id: string
-      category: 'earned' | 'spent' | 'pending' | 'withdrawn' | 'trust'
+      category: 'earned' | 'spent' | 'pending' | 'withdrawn' | 'trust' | 'deposit'
       amount: number
-      currency: 'GBP' | 'TRUST'
+      currency: 'EUR' | 'TRUST'
       description: string
       date: string
       status: string
@@ -76,10 +86,10 @@ export async function GET() {
       const buyerName = profileMap[o.buyer_id] ?? 'a buyer'
       txList.push({
         id: `order-earn-${o.id}`,
-        category: o.status === 'completed' ? 'earned' : o.status === 'pending' ? 'pending' : 'pending',
-        amount: o.total_amount ?? 0,
-        currency: 'GBP',
-        description: `Sale to ${buyerName}`,
+        category: o.status === 'completed' ? 'earned' : 'pending',
+        amount: o.amount ?? 0,
+        currency: 'EUR',
+        description: `Sale: ${o.title ?? 'Service'} to ${buyerName}`,
         date: o.created_at,
         status: o.status,
       })
@@ -91,11 +101,24 @@ export async function GET() {
       txList.push({
         id: `order-spend-${o.id}`,
         category: 'spent',
-        amount: -(o.total_amount ?? 0),
-        currency: 'GBP',
-        description: `Purchase from ${sellerName}`,
+        amount: -(o.amount ?? 0),
+        currency: 'EUR',
+        description: `Purchase: ${o.title ?? 'Service'} from ${sellerName}`,
         date: o.created_at,
         status: o.status,
+      })
+    }
+
+    // Wallet top-ups (money_deposits)
+    for (const d of depositsRes.data ?? []) {
+      txList.push({
+        id: `deposit-${d.id}`,
+        category: 'deposit',
+        amount: d.amount_cents / 100,
+        currency: 'EUR',
+        description: 'Wallet Top-up',
+        date: d.created_at,
+        status: d.status,
       })
     }
 
@@ -116,22 +139,27 @@ export async function GET() {
     txList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
     // ── Money stats ───────────────────────────────────────────────────────────
+    // Total deposited via Stripe top-ups
+    const totalDeposited = (depositsRes.data ?? [])
+      .reduce((s: number, d: { amount_cents: number }) => s + (d.amount_cents / 100), 0)
+
     const completedEarned = (ordersEarnedRes.data ?? [])
       .filter((o: { status: string }) => o.status === 'completed')
-      .reduce((s: number, o: { total_amount: number }) => s + (o.total_amount ?? 0), 0)
+      .reduce((s: number, o: { amount: number }) => s + (o.amount ?? 0), 0)
     const pendingEarned = (ordersEarnedRes.data ?? [])
       .filter((o: { status: string }) => o.status === 'pending' || o.status === 'processing')
-      .reduce((s: number, o: { total_amount: number }) => s + (o.total_amount ?? 0), 0)
+      .reduce((s: number, o: { amount: number }) => s + (o.amount ?? 0), 0)
     const totalSpent = (ordersSpentRes.data ?? [])
       .filter((o: { status: string }) => o.status === 'completed')
-      .reduce((s: number, o: { total_amount: number }) => s + (o.total_amount ?? 0), 0)
+      .reduce((s: number, o: { amount: number }) => s + (o.amount ?? 0), 0)
 
     return NextResponse.json({
       money: {
-        available: completedEarned - totalSpent,
+        available: totalDeposited + completedEarned - totalSpent,
         pendingPayout: pendingEarned,
         totalEarned: completedEarned,
         totalSpent,
+        totalDeposited,
       },
       trust: {
         balance: trustBalance,

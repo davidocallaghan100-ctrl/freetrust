@@ -6,8 +6,8 @@ import { useCurrency } from '@/context/CurrencyContext'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type TxCategory = 'earned' | 'spent' | 'pending' | 'withdrawn' | 'trust'
-type Currency   = 'GBP' | 'TRUST'
+type TxCategory = 'earned' | 'spent' | 'pending' | 'withdrawn' | 'trust' | 'deposit'
+type Currency   = 'EUR' | 'TRUST'
 
 interface Tx {
   id: string
@@ -25,6 +25,7 @@ interface WalletData {
     pendingPayout: number
     totalEarned: number
     totalSpent: number
+    totalDeposited: number
   }
   trust: {
     balance: number
@@ -55,7 +56,7 @@ function getTrustLevel(score: number) {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 // fmt is used internally — currency symbol injected at render via useCurrency
-function fmt(n: number, currency: Currency = 'GBP', sym = '€') {
+function fmt(n: number, currency: Currency = 'EUR', sym = '€') {
   if (currency === 'TRUST') return `₮${Math.abs(n).toLocaleString()}`
   return `${sym}${Math.abs(n).toFixed(2)}`
 }
@@ -65,18 +66,18 @@ function fmtDate(ts: string) {
 }
 
 const TX_ICONS: Record<TxCategory, string> = {
-  earned: '⬇', spent: '⬆', pending: '⏳', withdrawn: '🏦', trust: '💎',
+  earned: '⬇', spent: '⬆', pending: '⏳', withdrawn: '🏦', trust: '💎', deposit: '💳',
 }
 const TX_COLORS: Record<TxCategory, string> = {
-  earned: '#34d399', spent: '#f87171', pending: '#f59e0b', withdrawn: '#94a3b8', trust: '#38bdf8',
+  earned: '#34d399', spent: '#f87171', pending: '#f59e0b', withdrawn: '#94a3b8', trust: '#38bdf8', deposit: '#a78bfa',
 }
 const TX_BG: Record<TxCategory, string> = {
   earned: 'rgba(52,211,153,0.1)', spent: 'rgba(248,113,113,0.1)', pending: 'rgba(245,158,11,0.1)',
-  withdrawn: 'rgba(148,163,184,0.08)', trust: 'rgba(56,189,248,0.1)',
+  withdrawn: 'rgba(148,163,184,0.08)', trust: 'rgba(56,189,248,0.1)', deposit: 'rgba(167,139,250,0.1)',
 }
 
-type FilterKey = 'All' | 'Earned' | 'Spent' | 'Pending' | 'Withdrawn' | 'Trust'
-const FILTERS: FilterKey[] = ['All', 'Earned', 'Spent', 'Pending', 'Withdrawn', 'Trust']
+type FilterKey = 'All' | 'Earned' | 'Spent' | 'Pending' | 'Withdrawn' | 'Trust' | 'Deposits'
+const FILTERS: FilterKey[] = ['All', 'Deposits', 'Earned', 'Spent', 'Pending', 'Withdrawn', 'Trust']
 
 // ── Mini bar chart for trust history ─────────────────────────────────────────
 
@@ -474,9 +475,9 @@ function WalletPageInner() {
 
             {/* Stats grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+              <StatCard icon="💳" label="Deposited" value={`${sym}${(data?.money.totalDeposited ?? 0).toFixed(2)}`} color="#a78bfa" />
               <StatCard icon="⬇" label="Total Earned" value={`${sym}${(data?.money.totalEarned ?? 0).toFixed(2)}`} color="#34d399" />
               <StatCard icon="⬆" label="Total Spent" value={`${sym}${(data?.money.totalSpent ?? 0).toFixed(2)}`} color="#f87171" />
-              <StatCard icon="⏳" label="Pending" value={`${sym}${(data?.money.pendingPayout ?? 0).toFixed(2)}`} color="#f59e0b" sub="Awaiting completion" />
               <StatCard icon="💎" label="Trust Lifetime" value={`₮${(data?.trust.lifetime ?? 0).toLocaleString()}`} color="#818cf8" sub="All-time earned" />
             </div>
 
