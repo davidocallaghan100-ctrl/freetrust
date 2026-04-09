@@ -55,6 +55,12 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      case "account.updated": {
+        const account = event.data.object as Stripe.Account;
+        await handleAccountUpdated(account);
+        break;
+      }
+
       default:
         console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
     }
@@ -246,6 +252,28 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
     }
   } catch (err) {
     console.error('[Stripe Webhook] handlePaymentIntentFailed error:', err);
+  }
+}
+
+async function handleAccountUpdated(account: Stripe.Account) {
+  // Auto-mark seller as onboarded when Stripe confirms charges + payouts enabled
+  if (!account.charges_enabled || !account.payouts_enabled) return;
+
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from('profiles')
+      .update({ stripe_onboarded: true })
+      .eq('stripe_account_id', account.id)
+      .eq('stripe_onboarded', false); // only update if not already marked
+
+    if (error) {
+      console.error('[Webhook] handleAccountUpdated: failed to mark onboarded', error);
+    } else {
+      console.log(`[Webhook] Seller onboarded: stripe_account=${account.id}`);
+    }
+  } catch (err) {
+    console.error('[Webhook] handleAccountUpdated error:', err);
   }
 }
 
