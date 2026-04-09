@@ -21,26 +21,27 @@ type StatsData = {
 function Counter({ target, prefix = '', suffix = '' }: { target: number; prefix?: string; suffix?: string }) {
   const [count, setCount] = useState(0)
   const ref = useRef<HTMLSpanElement>(null)
-  const started = useRef(false)
+  const prevTarget = useRef(0)
+
   useEffect(() => {
+    if (target === prevTarget.current) return
+    prevTarget.current = target
     if (target === 0) { setCount(0); return }
-    started.current = false
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting || started.current) return
-      started.current = true
-      observer.disconnect()
-      const from = 0; const dur = 1000; const t0 = performance.now()
-      const tick = (now: number) => {
-        const p = Math.min((now - t0) / dur, 1)
-        const e = 1 - Math.pow(1 - p, 3)
-        setCount(Math.round(from + (target - from) * e))
-        if (p < 1) requestAnimationFrame(tick)
-      }
-      requestAnimationFrame(tick)
-    }, { threshold: 0.2 })
-    if (ref.current) observer.observe(ref.current)
-    return () => observer.disconnect()
+
+    // Animate from current displayed value to new target
+    const from = count
+    const dur = 900
+    const t0 = performance.now()
+    const tick = (now: number) => {
+      const p = Math.min((now - t0) / dur, 1)
+      const e = 1 - Math.pow(1 - p, 3)
+      setCount(Math.round(from + (target - from) * e))
+      if (p < 1) requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target])
+
   return <span ref={ref}>{prefix}{count.toLocaleString()}{suffix}</span>
 }
 
