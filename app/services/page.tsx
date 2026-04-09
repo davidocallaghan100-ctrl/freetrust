@@ -12,6 +12,7 @@ interface Service {
   provider: string
   avatar: string
   avatarImg?: string
+  coverImage?: string | null
   rating: number
   reviews: number
   price: number
@@ -57,10 +58,17 @@ function getGrad(str: string): string {
 function ServiceCard({ svc }: { svc: Service }) {
   return (
     <Link href={`/services/${svc.id}`} style={{ textDecoration: 'none', display: 'block' }}>
-      <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'border-color 0.15s', height: '100%', boxSizing: 'border-box' }}
+      <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0', transition: 'border-color 0.15s', height: '100%', boxSizing: 'border-box' }}
         onMouseEnter={e => (e.currentTarget.style.borderColor = '#38bdf8')}
         onMouseLeave={e => (e.currentTarget.style.borderColor = '#334155')}
       >
+        {/* Cover image */}
+        {svc.coverImage && (
+          <div style={{ height: 120, overflow: 'hidden', flexShrink: 0 }}>
+            <img src={svc.coverImage} alt={svc.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          </div>
+        )}
+        <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
         {/* Provider row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
           {svc.avatarImg
@@ -174,7 +182,7 @@ export default function ServicesPage() {
       try {
         const { data } = await supabase
           .from('listings')
-          .select('*, seller:profiles!seller_id(full_name, avatar_url)')
+          .select('id, title, description, price, currency, service_mode, tags, location, cover_image, avg_rating, review_count, seller:profiles!seller_id(full_name, avatar_url)')
           .eq('product_type', 'service')
           .eq('status', 'active')
           .order('created_at', { ascending: false })
@@ -191,6 +199,7 @@ export default function ServicesPage() {
               provider: name,
               avatar: initials,
               avatarImg: seller?.avatar_url ?? undefined,
+              coverImage: (s.cover_image as string | null) ?? null,
               rating: Number(s.avg_rating ?? 4.8),
               reviews: Number(s.review_count ?? 0),
               price: Number(s.price ?? 0),

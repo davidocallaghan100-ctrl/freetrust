@@ -201,7 +201,7 @@ function ProductsInner() {
       try {
         const { data } = await supabase
           .from('listings')
-          .select('id, title, description, price, product_type, tags, images, avg_rating, review_count, seller_id, profiles!seller_id(full_name, avatar_url, trust_balance)')
+          .select('id, title, description, price, product_type, tags, images, cover_image, avg_rating, review_count, seller_id, profiles!seller_id(full_name, avatar_url, trust_balance)')
           .eq('status', 'active')
           .order('created_at', { ascending: false })
           .limit(100)
@@ -210,6 +210,7 @@ function ProductsInner() {
             const profile = d.profiles as Record<string, unknown> | null
             const tags = Array.isArray(d.tags) ? (d.tags as string[]) : []
             const images = Array.isArray(d.images) ? (d.images as string[]) : []
+            const coverImage = (d.cover_image as string | null) ?? null
             // Derive category from tags — look for known category keywords
             const CAT_KEYWORDS: Record<string, string> = {
               'charger': 'technology', 'headphones': 'technology', 'mouse': 'technology',
@@ -233,7 +234,7 @@ function ProductsInner() {
               price: Number(d.price ?? 0),
               category,
               type: d.product_type === 'digital' ? 'digital' as const : 'physical' as const,
-              image: images[0] ?? undefined,
+              image: coverImage ?? images[0] ?? undefined,
               seller_name: String(profile?.full_name ?? 'FreeTrust Store'),
               seller_avatar: profile?.avatar_url ? String(profile.avatar_url) : undefined,
               seller_trust: Number(profile?.trust_balance ?? 0),
