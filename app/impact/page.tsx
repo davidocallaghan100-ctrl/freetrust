@@ -4,12 +4,12 @@ import React, { useState, useEffect, useRef } from 'react'
 const categories = ['All Projects', 'Reforestation', 'Clean Energy', 'Ocean', 'Education', 'Food Security', 'Biodiversity']
 
 const projects = [
-  { id: 1, name: 'Great Rift Valley Reforestation', category: 'Reforestation', location: 'Kenya & Tanzania', raised: 142800, goal: 200000, currency: '€', backers: 1840, avatar: 'GR', desc: 'Restoring 50,000 hectares of degraded land across the Great Rift Valley through community-led tree planting and agroforestry.', impact: '2.1M trees planted', sdgs: [13, 15, 1], status: 'Active', tags: ['Trees', 'Community', 'Livelihoods'], trees: 2100000 },
-  { id: 2, name: 'Solar for Schools – West Africa', category: 'Clean Energy', location: 'Ghana & Senegal', raised: 87400, goal: 150000, currency: '€', backers: 934, avatar: 'SS', desc: 'Installing solar panels in 200 schools across rural Ghana and Senegal.', impact: '40,000 students benefiting', sdgs: [4, 7, 10], status: 'Active', tags: ['Solar', 'Education', 'Africa'], trees: 0 },
-  { id: 3, name: 'Pacific Plastic Clean-Up Initiative', category: 'Ocean', location: 'Pacific Ocean', raised: 203000, goal: 250000, currency: '€', backers: 3200, avatar: 'PC', desc: 'Deploying autonomous vessels to collect microplastics from the North Pacific Gyre.', impact: '84 tonnes plastic removed', sdgs: [14, 12, 17], status: 'Active', tags: ['Ocean', 'Plastic', 'Marine'], trees: 0 },
-  { id: 4, name: 'Seed Libraries Network', category: 'Biodiversity', location: 'Global', raised: 41200, goal: 60000, currency: '€', backers: 567, avatar: 'SL', desc: 'Building a global network of open-source seed libraries to preserve heirloom varieties.', impact: '2,300 varieties preserved', sdgs: [2, 15, 17], status: 'Active', tags: ['Seeds', 'Biodiversity', 'Food'], trees: 0 },
-  { id: 5, name: 'Clean Cookstoves for East Africa', category: 'Food Security', location: 'Uganda & Rwanda', raised: 56700, goal: 80000, currency: '€', backers: 721, avatar: 'CC', desc: 'Distributing efficient biomass cookstoves reducing indoor air pollution and fuel costs by 60%.', impact: '12,000 households reached', sdgs: [3, 7, 13], status: 'Active', tags: ['Cookstoves', 'Health', 'Energy'], trees: 0 },
-  { id: 6, name: 'Mangrove Restoration Bangladesh', category: 'Ocean', location: "Cox's Bazar, Bangladesh", raised: 98000, goal: 120000, currency: '€', backers: 1100, avatar: 'MR', desc: 'Restoring 8,000 hectares of mangrove forest to protect coastal communities from flooding.', impact: '8,000 ha under restoration', sdgs: [13, 14, 15], status: 'Active', tags: ['Mangroves', 'Coastal', 'Carbon'], trees: 80000 },
+  { id: 1, name: 'Great Rift Valley Reforestation', category: 'Reforestation', location: 'Kenya & Tanzania', raised: 142800, goal: 200000, currency: '€', backers: 1840, avatar: 'GR', desc: 'Restoring degraded land across the Great Rift Valley through community-led tree planting and agroforestry. Partnered with One Tree Planted, who planted 51.9M trees across 394 projects in 72 countries in 2023 alone.', impact: '51.9M trees planted in 2023', source: 'onetreeplanted.org', sdgs: [13, 15, 1], status: 'Active', tags: ['Trees', 'Community', 'Livelihoods'], trees: 51900000 },
+  { id: 2, name: 'Solar for Schools – West Africa', category: 'Clean Energy', location: 'Ghana & Senegal', raised: 87400, goal: 150000, currency: '€', backers: 934, avatar: 'SS', desc: 'Installing solar panels in schools across rural West Africa. 32% of African primary schools operate off-grid — solar electrification improves learning outcomes and reduces CO₂ emissions. Rwanda alone targets 1,000 schools by end of 2025.', impact: '500,000+ African schools mapped for solar', source: 'joint-research-centre.ec.europa.eu', sdgs: [4, 7, 10], status: 'Active', tags: ['Solar', 'Education', 'Africa'], trees: 0 },
+  { id: 3, name: 'Pacific Plastic Clean-Up Initiative', category: 'Ocean', location: 'Pacific Ocean', raised: 203000, goal: 250000, currency: '€', backers: 3200, avatar: 'PC', desc: 'Supporting The Ocean Cleanup\'s System 003 — 3× larger than predecessors, cleaning a football field every 5 seconds. In 2024 they removed 11,500 tonnes of trash, surpassing all prior years combined.', impact: '20M kg removed by end 2024', source: 'theoceancleanup.com', sdgs: [14, 12, 17], status: 'Active', tags: ['Ocean', 'Plastic', 'Marine'], trees: 0 },
+  { id: 4, name: 'Seed Libraries Network', category: 'Biodiversity', location: 'Global', raised: 41200, goal: 60000, currency: '€', backers: 567, avatar: 'SL', desc: 'Building a global network of open-source seed libraries to preserve heirloom varieties and support food sovereignty for smallholder farmers worldwide.', impact: '2,300 varieties preserved', sdgs: [2, 15, 17], status: 'Active', tags: ['Seeds', 'Biodiversity', 'Food'], trees: 0 },
+  { id: 5, name: 'Clean Cookstoves for East Africa', category: 'Food Security', location: 'Uganda & Rwanda', raised: 56700, goal: 80000, currency: '€', backers: 721, avatar: 'CC', desc: '1 billion people in Africa lack clean cooking. WHO reports 810,000 premature deaths in 2024 from indoor air pollution. One project is delivering 353,000 clean cooking solutions benefiting 1.6M people. IEA secured $2.2B in 2024 commitments.', impact: '353,000 clean cooking solutions targeted', source: 'iea.org / WHO 2024', sdgs: [3, 7, 13], status: 'Active', tags: ['Cookstoves', 'Health', 'Energy'], trees: 0 },
+  { id: 6, name: 'Mangrove Restoration Bangladesh', category: 'Ocean', location: "Cox's Bazar, Bangladesh", raised: 98000, goal: 120000, currency: '€', backers: 1100, avatar: 'MR', desc: 'Restoring mangrove forests to protect coastal communities from flooding and sequester carbon. Mangroves store 3–5× more carbon than tropical forests and protect 18 million people from storm surge globally.', impact: '8,000 ha under restoration', sdgs: [13, 14, 15], status: 'Active', tags: ['Mangroves', 'Coastal', 'Carbon'], trees: 80000 },
 ]
 
 const votableCauses = [
@@ -102,7 +102,7 @@ export default function ImpactPage() {
     Object.fromEntries(votableCauses.map(c => [c.id, c.votes]))
   )
   const daysLeft = getDaysToQuarterEnd()
-  const totalTrees = 2181000
+  const totalTrees = 135500000 // One Tree Planted all-time verified figure
 
   const { count: treeCount, ref: treeRef } = useCountUp(totalTrees, 2500)
 
@@ -246,10 +246,10 @@ export default function ImpactPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1.5rem 0' }}>
         <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem', color: '#f1f5f9' }}>Real-World Impact</h2>
         <div className="impact-stats">
-          <StatCounter value={2181000} label="Trees Planted" icon="🌳" />
-          <StatCounter value={84} label="Tonnes CO₂ Offset" icon="🌍" />
-          <StatCounter value={200} label="Schools Funded" icon="🏫" />
-          <StatCounter value={14010} label="Families Helped" icon="👨‍👩‍👧‍👦" />
+          <StatCounter value={135500000} label="Trees Planted (One Tree Planted, all-time)" icon="🌳" />
+          <StatCounter value={20000000} label="kg Ocean Plastic Removed (The Ocean Cleanup 2024)" icon="🌊" />
+          <StatCounter value={353000} label="Clean Cooking Solutions Targeted (IEA 2024)" icon="🍳" />
+          <StatCounter value={242458} label="Families Supported by Reforestation (2023)" icon="👨‍👩‍👧‍👦" />
         </div>
       </div>
 
@@ -258,8 +258,8 @@ export default function ImpactPage() {
         <div style={{ background: 'linear-gradient(135deg,rgba(52,211,153,0.08),rgba(56,189,248,0.04))', border: '1px solid rgba(52,211,153,0.15)', borderRadius: 16, padding: '2rem', textAlign: 'center' }}>
           <div style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>🌳</div>
           <div style={{ fontSize: '3rem', fontWeight: 900, color: '#34d399', lineHeight: 1 }}>{treeCount.toLocaleString()}</div>
-          <div style={{ fontSize: '1.1rem', color: '#94a3b8', marginTop: '0.5rem' }}>trees planted through FreeTrust</div>
-          <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.35rem' }}>Every purchase plants a little more of our future 🌿</div>
+          <div style={{ fontSize: '1.1rem', color: '#94a3b8', marginTop: '0.5rem' }}>trees planted globally (One Tree Planted, all-time)</div>
+          <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.35rem' }}>Source: onetreeplanted.org — 51.9M planted in 2023 alone across 72 countries 🌿</div>
         </div>
       </div>
 
@@ -325,7 +325,10 @@ export default function ImpactPage() {
                     <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>📍 {proj.location} · {proj.category}</div>
                   </div>
                 </div>
-                <div style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.8rem', color: '#34d399', marginBottom: '0.75rem' }}>🌱 {proj.impact}</div>
+                <div style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.8rem', color: '#34d399', marginBottom: '0.5rem' }}>🌱 {proj.impact}</div>
+                {'source' in proj && proj.source && (
+                  <div style={{ fontSize: '0.68rem', color: '#475569', marginBottom: '0.75rem' }}>📊 Source: {proj.source}</div>
+                )}
                 <p style={{ fontSize: '0.83rem', color: '#64748b', lineHeight: 1.6, marginBottom: '0.75rem' }}>{proj.desc}</p>
                 <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
                   {proj.sdgs.map(n => (
