@@ -29,8 +29,8 @@ const TYPE_COLORS: Record<string, string> = { full_time: '#38bdf8', part_time: '
 const LOC_COLORS: Record<string, string> = { remote: '#34d399', hybrid: '#38bdf8', on_site: '#fb923c' }
 const LOC_LABELS: Record<string, string> = { remote: 'Remote', hybrid: 'Hybrid', on_site: 'On-Site' }
 const SALARY_FILTERS = [
-  { label: 'Any', min: 0 }, { label: '20k+', min: 20000 }, { label: '40k+', min: 40000 },
-  { label: '60k+', min: 60000 }, { label: '80k+', min: 80000 },
+  { label: 'Any', min: 0 }, { label: '₮50k+', min: 50000 }, { label: '₮75k+', min: 75000 },
+  { label: '₮100k+', min: 100000 }, { label: '₮130k+', min: 130000 },
 ]
 const CATEGORIES = ['All', 'Tech', 'Design', 'Marketing', 'Sales', 'Finance', 'Operations', 'Trades', 'Other']
 
@@ -41,8 +41,9 @@ function daysAgo(iso: string) {
 
 function formatSalary(min: number | null, max: number | null, currency: string, type: string) {
   if (!min && !max) return 'Competitive'
-  const sym = currency === 'GBP' ? '£' : currency === 'EUR' ? '€' : '$'
-  const isDaily = type === 'freelance' && (min ?? 0) < 2000
+  const isTrust = currency === 'TRUST'
+  const sym = isTrust ? '₮' : currency === 'GBP' ? '£' : currency === 'EUR' ? '€' : '$'
+  const isDaily = !isTrust && type === 'freelance' && (min ?? 0) < 2000
   const fmt = (n: number) => isDaily ? `${sym}${n}/day` : n >= 1000 ? `${sym}${(n / 1000).toFixed(0)}k` : `${sym}${n}`
   if (min && max) return `${fmt(min)} – ${fmt(max)}`
   if (min) return `From ${fmt(min)}`

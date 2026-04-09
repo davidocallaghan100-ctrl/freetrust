@@ -10,6 +10,7 @@ interface Service {
   id: number | string
   title: string
   provider: string
+  providerId?: string | null
   avatar: string
   avatarImg?: string
   coverImage?: string | null
@@ -71,12 +72,22 @@ function ServiceCard({ svc }: { svc: Service }) {
         <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
         {/* Provider row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-          {svc.avatarImg
-            ? <img src={svc.avatarImg} alt={svc.provider} width={32} height={32} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-            : <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '11px', color: '#0f172a', background: getGrad(svc.avatar), flexShrink: 0 }}>{svc.avatar}</div>
+          {svc.providerId
+            ? <Link href={`/profile?id=${svc.providerId}`} onClick={e => e.stopPropagation()} style={{ flexShrink: 0, display: 'block' }}>
+                {svc.avatarImg
+                  ? <img src={svc.avatarImg} alt={svc.provider} width={32} height={32} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', display: 'block' }} />
+                  : <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '11px', color: '#0f172a', background: getGrad(svc.avatar) }}>{svc.avatar}</div>
+                }
+              </Link>
+            : svc.avatarImg
+              ? <img src={svc.avatarImg} alt={svc.provider} width={32} height={32} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+              : <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '11px', color: '#0f172a', background: getGrad(svc.avatar), flexShrink: 0 }}>{svc.avatar}</div>
           }
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svc.provider}</div>
+            {svc.providerId
+              ? <Link href={`/profile?id=${svc.providerId}`} onClick={e => e.stopPropagation()} style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none' }}>{svc.provider}</Link>
+              : <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svc.provider}</div>
+            }
             {svc.mode === 'offline' && svc.location && (
               <div style={{ fontSize: '10px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📍 {svc.location}{svc.distance != null ? ` · ${svc.distance}km` : ''}</div>
             )}
@@ -183,14 +194,14 @@ export default function ServicesPage() {
       try {
         const { data } = await supabase
           .from('listings')
-          .select('id, title, description, price, currency, service_mode, tags, location, cover_image, avg_rating, review_count, seller:profiles!seller_id(full_name, avatar_url)')
+          .select('id, title, description, price, currency, service_mode, tags, location, cover_image, avg_rating, review_count, seller:profiles!seller_id(id, full_name, avatar_url)')
           .eq('product_type', 'service')
           .eq('status', 'active')
           .order('created_at', { ascending: false })
           .limit(100)
         if (data) {
           const mapped: Service[] = data.map((s: Record<string, unknown>) => {
-            const seller = s.seller as { full_name?: string; avatar_url?: string } | null
+            const seller = s.seller as { id?: string; full_name?: string; avatar_url?: string } | null
             const name = seller?.full_name ?? 'Unknown'
             const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
             const mode = (s.service_mode as string) ?? 'online'
@@ -198,6 +209,7 @@ export default function ServicesPage() {
               id: s.id as string,
               title: s.title as string,
               provider: name,
+              providerId: seller?.id ?? null,
               avatar: initials,
               avatarImg: seller?.avatar_url ?? undefined,
               coverImage: (s.cover_image as string | null) ?? null,

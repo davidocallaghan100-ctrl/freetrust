@@ -17,6 +17,7 @@ interface Product {
   imageGradient?: string
   seller_name: string
   seller_avatar?: string
+  seller_id?: string | null
   seller_trust: number
   seller_verified?: boolean
   rating: number
@@ -143,11 +144,21 @@ function ProductCard({ p, wishlist, onWishlist }: {
 
         {/* Seller row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', paddingTop: '0.25rem', borderTop: '1px solid rgba(56,189,248,0.06)' }}>
-          {p.seller_avatar
-            ? <img src={p.seller_avatar} alt={p.seller_name} style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-            : <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#334155', flexShrink: 0 }} />
+          {p.seller_id
+            ? <Link href={`/profile?id=${p.seller_id}`} onClick={e => e.stopPropagation()} style={{ flexShrink: 0, display: 'block' }}>
+                {p.seller_avatar
+                  ? <img src={p.seller_avatar} alt={p.seller_name} style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', display: 'block' }} />
+                  : <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#334155', display: 'block' }} />
+                }
+              </Link>
+            : p.seller_avatar
+              ? <img src={p.seller_avatar} alt={p.seller_name} style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+              : <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#334155', flexShrink: 0 }} />
           }
-          <span style={{ fontSize: '0.72rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{p.seller_name}</span>
+          {p.seller_id
+            ? <Link href={`/profile?id=${p.seller_id}`} onClick={e => e.stopPropagation()} style={{ fontSize: '0.72rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, textDecoration: 'none' }}>{p.seller_name}</Link>
+            : <span style={{ fontSize: '0.72rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{p.seller_name}</span>
+          }
           {p.seller_verified && <span style={{ fontSize: '0.62rem', color: '#38bdf8', flexShrink: 0 }}>✓</span>}
           {p.seller_trust > 0 && <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: 700, background: 'rgba(56,189,248,0.08)', padding: '1px 5px', borderRadius: 5, flexShrink: 0 }}>₮{p.seller_trust.toLocaleString()}</span>}
         </div>
@@ -161,7 +172,7 @@ function ProductCard({ p, wishlist, onWishlist }: {
 
         {/* Price + CTA */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
-          <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#f1f5f9' }}>{format(p.price, 'GBP')}</span>
+          <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#38bdf8' }}>₮{p.price.toLocaleString()}</span>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.35rem' }}>
             <Link
               href={`/products/${p.id}`}
@@ -201,7 +212,7 @@ function ProductsInner() {
       try {
         const { data } = await supabase
           .from('listings')
-          .select('id, title, description, price, product_type, tags, images, cover_image, avg_rating, review_count, seller_id, profiles!seller_id(full_name, avatar_url, trust_balance)')
+          .select('id, title, description, price, product_type, tags, images, cover_image, avg_rating, review_count, seller_id, profiles!seller_id(id, full_name, avatar_url, trust_balance)')
           .eq('status', 'active')
           .order('created_at', { ascending: false })
           .limit(100)
@@ -237,6 +248,7 @@ function ProductsInner() {
               image: coverImage ?? images[0] ?? undefined,
               seller_name: String(profile?.full_name ?? 'FreeTrust Store'),
               seller_avatar: profile?.avatar_url ? String(profile.avatar_url) : undefined,
+              seller_id: profile?.id ? String(profile.id) : (d.seller_id ? String(d.seller_id) : null),
               seller_trust: Number(profile?.trust_balance ?? 0),
               seller_verified: true,
               rating: Number(d.avg_rating ?? 0),
