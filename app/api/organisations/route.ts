@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET(request: NextRequest) {
   try {
@@ -60,12 +61,26 @@ export async function POST(request: NextRequest) {
       normWebsite = /^https?:\/\//i.test(w) ? w : `https://${w}`
     }
 
-    const orgSlug = slug ||
-      name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60)
+    // Generate a unique slug — auto-append -2, -3 etc if taken
+    const admin = createAdminClient()
+    const baseSlug = (slug || name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')).slice(0, 55)
+    let orgSlug = baseSlug
+    let attempt = 1
+    while (true) {
+      const { data: existing } = await admin
+        .from('organisations')
+        .select('id')
+        .eq('slug', orgSlug)
+        .maybeSingle()
+      if (!existing) break
+      attempt++
+      orgSlug = `${baseSlug}-${attempt}`
+    }
 
-    const { data: org, error: insertError } = await supabase
+    const { data: org, error: insertError } = await admin
       .from('organisations')
       .insert({
+        creator_id: user.id,
         name: name.trim(),
         slug: orgSlug,
         type,
@@ -75,7 +90,6 @@ export async function POST(request: NextRequest) {
         sector: sector || null,
         tags: Array.isArray(tags) ? tags : [],
         logo_url: logo_url || null,
-        creator_id: user.id,
         is_verified: false,
         members_count: 1,
         trust_score: 0,
