@@ -298,9 +298,13 @@ function ShareSheet({ postId, text, onClose }: { postId: string; text: string; o
 export default function PostCard({
   post,
   expanded = false,
+  currentUserId,
+  onDelete,
 }: {
   post: FeedPost
   expanded?: boolean
+  currentUserId?: string
+  onDelete?: (postId: string) => void
 }) {
   const authorId = post.user_id ?? post.author_id ?? ''
   const likeInitial    = post.likes_count    ?? post.like_count    ?? 0
@@ -318,6 +322,21 @@ export default function PostCard({
   const [submitting,        setSubmitting]        = useState(false)
   const [showShare,         setShowShare]         = useState(false)
   const [shareCount,        setShareCount]        = useState(post.share_count ?? 0)
+  const [showMenu,          setShowMenu]          = useState(false)
+  const [deleting,          setDeleting]          = useState(false)
+  const [deleted,           setDeleted]           = useState(false)
+
+  const isOwner = !!currentUserId && currentUserId === authorId
+
+  const handleDelete = async () => {
+    if (!confirm('Delete this post? This cannot be undone.')) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/feed/posts/${post.id}`, { method: 'DELETE' })
+      if (res.ok) { setDeleted(true); onDelete?.(post.id) }
+    } catch { /* silent */ }
+    finally { setDeleting(false); setShowMenu(false) }
+  }
 
   const typeInfo  = TYPE_META[post.type] ?? TYPE_META.text
   const name      = post.profiles?.full_name ?? post.profiles?.username ?? 'Unknown'
@@ -377,7 +396,18 @@ export default function PostCard({
 
   useEffect(() => { if (expanded) loadComments() }, [expanded, loadComments])
 
+  // Close owner menu on outside click
+  useEffect(() => {
+    if (!showMenu) return
+    const close = () => setShowMenu(false)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [showMenu])
+
   const shareText = post.title ?? post.content ?? ''
+
+  // If deleted, vanish from feed instantly
+  if (deleted) return null
 
   return (
     <article style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', marginBottom: '12px', overflow: 'hidden', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
@@ -405,6 +435,30 @@ export default function PostCard({
           <span style={{ padding: '3px 9px', borderRadius: '20px', fontSize: '11px', fontWeight: 600, color: typeInfo.color, background: typeInfo.bg, whiteSpace: 'nowrap', flexShrink: 0 }}>
             {typeInfo.label}
           </span>
+        )}
+        {/* ── Owner menu ── */}
+        {isOwner && (
+          <div style={{ position: 'relative', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => setShowMenu(v => !v)}
+              style={{ background: 'none', border: 'none', color: '#475569', fontSize: '20px', cursor: 'pointer', padding: '4px 8px', borderRadius: '8px', lineHeight: 1 }}
+              aria-label="Post options"
+            >⋯</button>
+            {showMenu && (
+              <div style={{ position: 'absolute', top: '100%', right: 0, background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', overflow: 'hidden', zIndex: 100, minWidth: '150px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '11px 14px', background: 'none', border: 'none', color: '#f87171', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.08)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                >
+                  <span>🗑️</span>
+                  <span>{deleting ? 'Deleting…' : 'Delete post'}</span>
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
 

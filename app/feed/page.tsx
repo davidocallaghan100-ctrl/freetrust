@@ -105,6 +105,7 @@ export default function FeedPage() {
   const [loading,      setLoading]      = useState(true)
   const [loadingMore,  setLoadingMore]  = useState(false)
   const [activeFilter, setActiveFilter] = useState<Filter>('all')
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined)
 
   const fetchPosts = useCallback(async (pageNum: number, append = false, filter: Filter = 'all') => {
     try {
@@ -119,6 +120,14 @@ export default function FeedPage() {
       setHasMore(data.hasMore ?? false)
     } catch { /* silent */ }
     finally { setLoading(false); setLoadingMore(false) }
+  }, [])
+
+  // Load current user ID once on mount for delete ownership check
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setCurrentUserId(data.user.id)
+    }).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -179,7 +188,14 @@ export default function FeedPage() {
             </div>
           ) : (
             <>
-              {posts.map(post => <PostCard key={post.id} post={post} />)}
+              {posts.map(post => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  currentUserId={currentUserId}
+                  onDelete={(id) => setPosts(prev => prev.filter(p => p.id !== id))}
+                />
+              ))}
               {hasMore && (
                 <button onClick={loadMore} disabled={loadingMore} style={{ display: 'block', width: '100%', padding: '0.85rem', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '10px', color: '#38bdf8', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', marginTop: '0.5rem', fontFamily: 'inherit' }}>
                   {loadingMore ? 'Loading…' : 'Load more posts'}
