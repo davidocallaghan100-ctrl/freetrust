@@ -151,6 +151,32 @@ export default function ServicesPage() {
   const [priceMax, setPriceMax]   = useState('')
   const locationPanelRef = useRef<HTMLDivElement>(null)
 
+  // Collapsible sidebar sections — persisted to localStorage
+  const [onlineOpen, setOnlineOpen] = useState(true)
+  const [offlineOpen, setOfflineOpen] = useState(true)
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('ft_sidebar_state')
+      if (saved) {
+        const { onlineOpen: o, offlineOpen: f } = JSON.parse(saved)
+        if (typeof o === 'boolean') setOnlineOpen(o)
+        if (typeof f === 'boolean') setOfflineOpen(f)
+      }
+    } catch { /* ignore */ }
+  }, [])
+
+  function toggleOnline() {
+    const next = !onlineOpen
+    setOnlineOpen(next)
+    try { localStorage.setItem('ft_sidebar_state', JSON.stringify({ onlineOpen: next, offlineOpen })) } catch { /* ignore */ }
+  }
+  function toggleOffline() {
+    const next = !offlineOpen
+    setOfflineOpen(next)
+    try { localStorage.setItem('ft_sidebar_state', JSON.stringify({ onlineOpen, offlineOpen: next })) } catch { /* ignore */ }
+  }
+
   // Load real Supabase data
   useEffect(() => {
     const supabase = createClient();
@@ -356,14 +382,18 @@ export default function ServicesPage() {
             {/* Online section */}
             {(modeFilter === 'all' || modeFilter === 'online') && (
               <>
-                <div style={{ padding: '8px 14px 4px', fontSize: '10px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', background: '#0f172a', borderTop: '1px solid #334155' }}>
-                  💻 Online Services
-                </div>
-                {ONLINE_CATEGORIES.map(cat => {
+                <button
+                  onClick={toggleOnline}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '9px 14px', background: '#0f172a', border: 'none', borderTop: '1px solid #334155', cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>💻 Online Services</span>
+                  <span style={{ fontSize: '13px', color: '#475569', transition: 'transform 0.2s', display: 'inline-block', transform: onlineOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▾</span>
+                </button>
+                {onlineOpen && ONLINE_CATEGORIES.map(cat => {
                   const count = services.filter(s => s.categoryId === cat.id).length
                   return (
                     <button key={cat.id} className="cat-btn" onClick={() => setActiveCatId(activeCatId === cat.id ? null : cat.id)}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 14px', background: activeCatId === cat.id ? 'rgba(56,189,248,0.1)' : 'transparent', border: 'none', borderLeft: activeCatId === cat.id ? '3px solid #38bdf8' : '3px solid transparent', color: activeCatId === cat.id ? '#38bdf8' : '#94a3b8', fontSize: '12px', fontWeight: activeCatId === cat.id ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}>
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 14px 8px 18px', background: activeCatId === cat.id ? 'rgba(56,189,248,0.1)' : 'transparent', border: 'none', borderLeft: activeCatId === cat.id ? '3px solid #38bdf8' : '3px solid transparent', color: activeCatId === cat.id ? '#38bdf8' : '#94a3b8', fontSize: '12px', fontWeight: activeCatId === cat.id ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span>{cat.icon}</span>{cat.label}</span>
                       {count > 0 && <span style={{ fontSize: '10px', color: '#475569' }}>{count}</span>}
                     </button>
@@ -375,14 +405,18 @@ export default function ServicesPage() {
             {/* Offline section */}
             {(modeFilter === 'all' || modeFilter === 'offline') && (
               <>
-                <div style={{ padding: '8px 14px 4px', fontSize: '10px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', background: '#0f172a', borderTop: '1px solid #334155' }}>
-                  📍 Local Services
-                </div>
-                {OFFLINE_CATEGORIES.map(cat => {
+                <button
+                  onClick={toggleOffline}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '9px 14px', background: '#0f172a', border: 'none', borderTop: '1px solid #334155', cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>📍 Local Services</span>
+                  <span style={{ fontSize: '13px', color: '#475569', transition: 'transform 0.2s', display: 'inline-block', transform: offlineOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▾</span>
+                </button>
+                {offlineOpen && OFFLINE_CATEGORIES.map(cat => {
                   const count = services.filter(s => s.categoryId === cat.id).length
                   return (
                     <button key={cat.id} className="cat-btn" onClick={() => setActiveCatId(activeCatId === cat.id ? null : cat.id)}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 14px', background: activeCatId === cat.id ? 'rgba(52,211,153,0.1)' : 'transparent', border: 'none', borderLeft: activeCatId === cat.id ? '3px solid #34d399' : '3px solid transparent', color: activeCatId === cat.id ? '#34d399' : '#94a3b8', fontSize: '12px', fontWeight: activeCatId === cat.id ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}>
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 14px 8px 18px', background: activeCatId === cat.id ? 'rgba(52,211,153,0.1)' : 'transparent', border: 'none', borderLeft: activeCatId === cat.id ? '3px solid #34d399' : '3px solid transparent', color: activeCatId === cat.id ? '#34d399' : '#94a3b8', fontSize: '12px', fontWeight: activeCatId === cat.id ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span>{cat.icon}</span>{cat.label}</span>
                       {count > 0 && <span style={{ fontSize: '10px', color: '#475569' }}>{count}</span>}
                     </button>
