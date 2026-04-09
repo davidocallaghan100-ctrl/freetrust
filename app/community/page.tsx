@@ -94,12 +94,16 @@ export default function CommunityPage() {
           .order('balance', { ascending: false })
           .limit(10)
         if (data) {
-          setLeaderboard(data.map((entry: { user_id: string; balance: number; profiles: { full_name: string | null; avatar_url: string | null } | null }) => ({
-            user_id: entry.user_id,
-            balance: entry.balance,
-            full_name: entry.profiles?.full_name ?? null,
-            avatar_url: entry.profiles?.avatar_url ?? null,
-          })))
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          setLeaderboard((data as any[]).map((entry: any) => {
+            const profile = Array.isArray(entry.profiles) ? entry.profiles[0] : entry.profiles
+            return {
+              user_id: entry.user_id,
+              balance: entry.balance,
+              full_name: profile?.full_name ?? null,
+              avatar_url: profile?.avatar_url ?? null,
+            }
+          }))
         }
       } catch { /* ignore */ }
     }
