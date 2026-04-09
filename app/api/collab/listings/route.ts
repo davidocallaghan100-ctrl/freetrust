@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+export const dynamic = 'force-dynamic'
+
 // GET /api/collab/listings?type=product|service&min_trust=0&category=&q=&page=1
 export async function GET(request: NextRequest) {
   try {

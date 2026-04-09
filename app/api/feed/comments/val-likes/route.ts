@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+export const dynamic = 'force-dynamic'
+
 // Kept at this path for backwards compat — now returns only the current user's liked comment IDs
 export async function GET(req: NextRequest) {
   try {
