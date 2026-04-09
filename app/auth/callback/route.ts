@@ -39,6 +39,21 @@ export async function GET(request: NextRequest) {
           const isNewUser = Date.now() - createdAt < 60_000
 
           if (isNewUser) {
+            // Sync Google OAuth metadata (name, avatar) into profiles
+            try {
+              const meta = user.user_metadata ?? {}
+              const fullName = meta.full_name ?? meta.name ?? null
+              const avatarUrl = meta.avatar_url ?? meta.picture ?? null
+              if (fullName || avatarUrl) {
+                await supabase.from('profiles').update({
+                  ...(fullName ? { full_name: fullName } : {}),
+                  ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
+                }).eq('id', user.id)
+              }
+            } catch (err) {
+              console.error('[auth/callback] Profile metadata sync error:', err)
+            }
+
             // Award ₮25 founding member signup bonus (idempotent)
             try {
               const { error: rpcError } = await supabase.rpc('issue_trust', {
