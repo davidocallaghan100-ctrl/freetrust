@@ -296,14 +296,18 @@ export default function ImpactPage() {
         </div>
       </div>
 
-      {/* Real-World Stats */}
+      {/* Real-World Impact */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1.5rem 0' }}>
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem' }}>Real-World Impact</h2>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.35rem' }}>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>Real-World Impact</h2>
+          <span style={{ fontSize: '0.72rem', color: '#475569' }}>Sources: One Tree Planted · The Ocean Cleanup · IEA · World Bank</span>
+        </div>
+        <p style={{ fontSize: '0.82rem', color: '#475569', marginBottom: '1rem', marginTop: '0.25rem' }}>The world problems our impact fund is helping to address.</p>
         <div className="impact-stats">
           <StatCounter value={135500000} label="Trees Planted (One Tree Planted, all-time)" icon="🌳" />
           <StatCounter value={20000000} label="kg Ocean Plastic Removed (The Ocean Cleanup 2024)" icon="🌊" />
-          <StatCounter value={353000} label="Clean Cooking Solutions Targeted (IEA 2024)" icon="🍳" />
-          <StatCounter value={242458} label="Families Supported by Reforestation (2023)" icon="👨‍👩‍👧‍👦" />
+          <StatCounter value={685000000} label="People Still Without Clean Cooking Fuel (IEA 2024)" icon="🔥" />
+          <StatCounter value={242458} label="Families Supported by Reforestation (World Bank 2023)" icon="👨‍👩‍👧‍👦" />
         </div>
       </div>
 
@@ -314,6 +318,68 @@ export default function ImpactPage() {
           <div style={{ fontSize: '3rem', fontWeight: 900, color: '#34d399', lineHeight: 1 }}>{treeCount.toLocaleString()}</div>
           <div style={{ fontSize: '1.1rem', color: '#94a3b8', marginTop: '0.5rem' }}>trees planted globally (One Tree Planted, all-time)</div>
           <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.35rem' }}>Source: onetreeplanted.org — 51.9M planted in 2023 alone across 72 countries 🌿</div>
+        </div>
+      </div>
+
+      {/* Trust Sustainability Reserve */}
+      <div style={{ maxWidth: 1200, margin: '1.5rem auto', padding: '0 1.5rem' }}>
+        <div style={{ background: 'linear-gradient(135deg,rgba(129,140,248,0.08),rgba(52,211,153,0.05))', border: '1px solid rgba(129,140,248,0.2)', borderRadius: 16, padding: '1.75rem 2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(129,140,248,0.12)', border: '1px solid rgba(129,140,248,0.3)', borderRadius: 999, padding: '0.25rem 0.75rem', fontSize: '0.72rem', color: '#818cf8', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+                🏛️ SPECULATIVE RESERVE FUND
+              </div>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f1f5f9', margin: '0 0 0.4rem' }}>Trust Sustainability Reserve</h3>
+              <p style={{ fontSize: '0.83rem', color: '#64748b', lineHeight: 1.65, margin: '0 0 1rem', maxWidth: 480 }}>
+                FreeTrust reserves <strong style={{ color: '#a5b4fc' }}>5% of all Trust ever issued</strong> as a Sustainability Reserve — a speculative fund held on behalf of the community for future high-impact projects that are not yet live. This reserve grows every time a member earns Trust, ensuring the platform always has capital ready to back transformational ideas.
+              </p>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', fontSize: '0.78rem', color: '#64748b' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ color: '#34d399' }}>✓</span> Grows with the Trust economy</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ color: '#34d399' }}>✓</span> Community-governed deployment</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ color: '#34d399' }}>✓</span> Never spent without a vote</span>
+              </div>
+            </div>
+            <div style={{ textAlign: 'center', flexShrink: 0 }}>
+              <div style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(129,140,248,0.25)', borderRadius: 14, padding: '1.25rem 1.75rem' }}>
+                <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>Reserve Balance</div>
+                <div style={{ fontSize: '2.2rem', fontWeight: 900, color: '#818cf8', lineHeight: 1 }}>
+                  ₮{Math.round((stats?.totalRaised ?? 1090) * 0.05).toLocaleString()}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '0.35rem' }}>5% of ₮{(stats?.totalRaised ?? 1090).toLocaleString()} lifetime issued</div>
+                <div style={{ background: 'rgba(129,140,248,0.08)', borderRadius: 4, height: 5, marginTop: '0.75rem', overflow: 'hidden' }}>
+                  <div style={{ background: 'linear-gradient(90deg,#818cf8,#a78bfa)', height: '100%', width: '5%', borderRadius: 4 }} />
+                </div>
+                <div style={{ fontSize: '0.68rem', color: '#475569', marginTop: '0.4rem' }}>grows automatically as Trust is earned</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* FreeTrust Vision */}
+      <div style={{ maxWidth: 1200, margin: '1.5rem auto', padding: '0 1.5rem' }}>
+        <div style={{ background: 'linear-gradient(135deg,rgba(56,189,248,0.06),rgba(52,211,153,0.04))', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 16, padding: '2rem' }}>
+          <div style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 999, padding: '0.25rem 0.75rem', fontSize: '0.72rem', color: '#38bdf8', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '1rem' }}>🔭 THE FREETRUST VISION</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: '1.25rem' }}>
+            {[
+              { icon: '🌐', title: 'A Commerce System That Cares', desc: 'We are building a world where every transaction has a second purpose — funding the reforestation projects, ocean clean-ups, and communities that need it most.' },
+              { icon: '⚖️', title: 'Trust as a Force for Good', desc: 'Trust is not just currency — it is accountability. When commerce is built on reputation, the incentives align: do good business, get rewarded, fund good in the world.' },
+              { icon: '🌱', title: 'Growing the Reserve Until It Matters', desc: 'The Sustainability Reserve starts small and grows every day. Our goal: ₮1,000,000 in reserve — enough to fund landmark projects voted on by the entire community.' },
+              { icon: '🔗', title: 'Transparent by Design', desc: 'Every Trust token issued, every donation made, every reserve movement is visible on-chain or on-ledger. No hidden allocations. No opaque funds. Just radical transparency.' },
+            ].map(v => (
+              <div key={v.title} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                <div style={{ fontSize: '1.5rem', flexShrink: 0, marginTop: '0.1rem' }}>{v.icon}</div>
+                <div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.35rem' }}>{v.title}</div>
+                  <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.65, margin: 0 }}>{v.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: '1.5rem', padding: '1rem 1.25rem', background: 'rgba(52,211,153,0.04)', border: '1px solid rgba(52,211,153,0.12)', borderRadius: 10, fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.6, fontStyle: 'italic', textAlign: 'center' }}>
+            &ldquo;We are not just building a marketplace. We are proving that trust-based commerce and planetary responsibility can coexist — and that together, they are more powerful than either alone.&rdquo;
+            <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: '#475569', fontStyle: 'normal' }}>— FreeTrust Founding Principle</div>
+          </div>
         </div>
       </div>
 

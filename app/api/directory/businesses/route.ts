@@ -5,10 +5,10 @@ export async function GET() {
   try {
     const supabase = await createClient()
 
+    // No separate 'businesses' table — use organisations table with business-type entries
     const { data, error } = await supabase
-      .from('businesses')
-      .select('id, name, slug, business_type, industry, description, logo_url, location, verified, follower_count, trust_score')
-      .eq('status', 'active')
+      .from('organisations')
+      .select('id, name, slug, type, sector, description, logo_url, location, is_verified, members_count, trust_score, tags')
       .order('trust_score', { ascending: false })
       .limit(100)
 
@@ -17,18 +17,23 @@ export async function GET() {
       return NextResponse.json({ businesses: [] })
     }
 
-    const businesses = (data ?? []).map(b => ({
+    const businesses = (data ?? []).map((b: {
+      id: string; name: string | null; slug: string | null; type: string | null
+      sector: string | null; description: string | null; logo_url: string | null
+      location: string | null; is_verified: boolean | null; members_count: number | null
+      trust_score: number | null; tags: string[] | null
+    }) => ({
       id: b.id,
       type: 'business' as const,
       name: b.name ?? 'Unknown',
       slug: b.slug ?? null,
-      business_type: b.business_type ?? null,
-      industry: b.industry ?? null,
+      business_type: b.type ?? null,
+      industry: b.sector ?? null,
       description: b.description ?? null,
       logo_url: b.logo_url ?? null,
       location: b.location ?? null,
-      verified: b.verified ?? false,
-      follower_count: b.follower_count ?? null,
+      verified: b.is_verified ?? false,
+      follower_count: b.members_count ?? 0,
       trust_score: b.trust_score ?? null,
     }))
 
