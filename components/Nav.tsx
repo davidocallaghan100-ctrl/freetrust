@@ -130,9 +130,9 @@ export default function Nav() {
         {/* Profile avatar — top left */}
         {!loading && user && (
           <div ref={profileRef} style={{ position: 'relative', flexShrink: 0 }}>
-            <button onClick={() => setProfileOpen(v => !v)} style={{ display: 'flex', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: '3px', borderRadius: '50%', outline: 'none' }} aria-label="Profile menu">
+            <Link href="/profile" style={{ display: 'flex', alignItems: 'center', padding: '3px', borderRadius: '50%', outline: 'none', textDecoration: 'none' }} aria-label="Your profile">
               <Avatar url={user.avatar} name={user.name} email={user.email} size={32} />
-            </button>
+            </Link>
             {profileOpen && (
               <div style={{ position: 'fixed', left: '12px', top: '62px', background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', minWidth: '220px', maxWidth: 'calc(100vw - 24px)', overflow: 'hidden', zIndex: 200 }}>
                 <div style={{ padding: '12px 16px', borderBottom: '1px solid #334155', display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -242,7 +242,9 @@ export default function Nav() {
         {/* User info strip (if logged in) */}
         {user && (
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Avatar url={user.avatar} name={user.name} email={user.email} size={40} />
+            <Link href="/profile" onClick={() => setDrawerOpen(false)} style={{ flexShrink: 0, textDecoration: 'none' }}>
+              <Avatar url={user.avatar} name={user.name} email={user.email} size={40} />
+            </Link>
             <div style={{ overflow: 'hidden', flex: 1 }}>
               <div style={{ fontSize: '14px', color: '#f1f5f9', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name ?? 'Your Profile'}</div>
               <Link href="/profile" onClick={() => setDrawerOpen(false)} style={{ fontSize: '12px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none' }}>{user.email}</Link>

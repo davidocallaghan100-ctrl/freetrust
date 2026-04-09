@@ -111,12 +111,17 @@ export default function ConnectionsPage() {
 
       setSuggestions(members)
 
-      // Connections/followers/following require the connections table which is not yet in DB
-      // These will show empty states until the follow system is built
+      // Load follow data from API
+      try {
+        const connRes = await fetch('/api/connections')
+        if (connRes.ok) {
+          const connData = await connRes.json() as { following?: MemberProfile[]; followers?: MemberProfile[]; followingIds?: string[] }
+          setFollowing(connData.following ?? [])
+          setFollowers(connData.followers ?? [])
+          setFollowingIds(new Set(connData.followingIds ?? []))
+        }
+      } catch { /* silent */ }
       setConnections([])
-      setFollowers([])
-      setFollowing([])
-      setFollowingIds(new Set())
 
     } catch (err) {
       console.error('[connections page]', err)
