@@ -39,14 +39,13 @@ export async function GET(
     if (user) {
       try {
         const { data: follow } = await supabase
-          .from('organisation_follows')
+          .from('organisation_followers')
           .select('id')
           .eq('organisation_id', data.id)
           .eq('user_id', user.id)
           .maybeSingle()
         isFollowing = !!follow
       } catch {
-        // organisation_follows table may not exist yet — silently ignore
         isFollowing = false
       }
     }
