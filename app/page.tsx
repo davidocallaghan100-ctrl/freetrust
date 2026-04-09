@@ -194,21 +194,40 @@ function AIVoiceBubble({ size = 220 }: { size?: number }) {
 }
 
 // ── Featured service card ─────────────────────────────────────────────────────
-const FEATURED_SERVICES = [
-  { id:'s1', title:'Brand Identity Design', provider:'Sarah Chen', avatar:'https://i.pravatar.cc/40?img=47', trust:1240, price:450, rating:4.9, reviews:127, tags:['Logo','Brand','Figma'], grad:'linear-gradient(135deg,#f472b6,#db2777)' },
-  { id:'s2', title:'Full-Stack Web Dev', provider:'Priya Nair', avatar:'https://i.pravatar.cc/40?img=44', trust:1580, price:2800, rating:5.0, reviews:89, tags:['Next.js','Supabase','TypeScript'], grad:'linear-gradient(135deg,#38bdf8,#0284c7)' },
-  { id:'s3', title:'SEO & Content Strategy', provider:'Marcus Obi', avatar:'https://i.pravatar.cc/40?img=12', trust:2100, price:320, rating:4.8, reviews:64, tags:['SEO','Content','Analytics'], grad:'linear-gradient(135deg,#34d399,#059669)' },
-  { id:'s4', title:'Business Coaching', provider:'Amara Diallo', avatar:'https://i.pravatar.cc/40?img=45', trust:890, price:480, rating:4.9, reviews:38, tags:['Startup','Strategy','Growth'], grad:'linear-gradient(135deg,#a78bfa,#7c3aed)' },
-  { id:'s5', title:'AI Automation Setup', provider:'Tom Walsh', avatar:'https://i.pravatar.cc/40?img=53', trust:780, price:380, rating:4.7, reviews:43, tags:['Make','Zapier','GPT'], grad:'linear-gradient(135deg,#fbbf24,#d97706)' },
+type FeaturedService = {
+  id: string
+  title: string
+  provider: string
+  avatarUrl: string | null
+  price: number
+  currency: string
+  rating: number
+  reviews: number
+  tags: string[]
+  grad: string
+}
+
+const GRADS = [
+  'linear-gradient(135deg,#f472b6,#db2777)',
+  'linear-gradient(135deg,#38bdf8,#0284c7)',
+  'linear-gradient(135deg,#34d399,#059669)',
+  'linear-gradient(135deg,#a78bfa,#7c3aed)',
+  'linear-gradient(135deg,#fbbf24,#d97706)',
+  'linear-gradient(135deg,#fb923c,#ea580c)',
 ]
 
-const FEATURED_PRODUCTS = [
-  { id:'p1', title:'Notion Business OS', seller:'Priya Nair', avatar:'https://i.pravatar.cc/40?img=44', price:29, rating:4.9, reviews:284, type:'digital', grad:'linear-gradient(135deg,#34d399,#059669)' },
-  { id:'p2', title:'Next.js SaaS Boilerplate', seller:'Marcus Obi', avatar:'https://i.pravatar.cc/40?img=12', price:129, rating:4.9, reviews:378, type:'digital', grad:'linear-gradient(135deg,#818cf8,#4338ca)' },
-  { id:'p3', title:'UI Component Library', seller:'Sarah Chen', avatar:'https://i.pravatar.cc/40?img=47', price:79, rating:5.0, reviews:512, type:'digital', grad:'linear-gradient(135deg,#f472b6,#db2777)' },
-  { id:'p4', title:'FreeTrust Merch Hoodie', seller:'Maja Eriksson', avatar:'https://i.pravatar.cc/40?img=25', price:65, rating:4.8, reviews:91, type:'physical', grad:'linear-gradient(135deg,#38bdf8,#0284c7)' },
-  { id:'p5', title:'Ambient Lo-Fi Music Pack', seller:'Lena Fischer', avatar:'https://i.pravatar.cc/40?img=41', price:24, rating:4.8, reviews:203, type:'digital', grad:'linear-gradient(135deg,#a78bfa,#7c3aed)' },
-]
+type FeaturedProduct = {
+  id: string
+  title: string
+  seller: string
+  avatarUrl: string | null
+  price: number
+  currency: string
+  rating: number
+  reviews: number
+  type: string
+  grad: string
+}
 
 // ── Value props ───────────────────────────────────────────────────────────────
 const VALUE_PROPS = [
@@ -221,6 +240,8 @@ const VALUE_PROPS = [
 export default function Home() {
   const { format } = useCurrency()
   const [stats, setStats] = useState<StatsData | null>(null)
+  const [featuredServices, setFeaturedServices] = useState<FeaturedService[]>([])
+  const [featuredProducts, setFeaturedProducts] = useState<FeaturedProduct[]>([])
 
   const fetchStats = useCallback(async () => {
     try {
@@ -234,6 +255,32 @@ export default function Home() {
     const iv = setInterval(fetchStats, 60_000)
     return () => clearInterval(iv)
   }, [fetchStats])
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch('/api/listings/featured')
+        if (res.ok) {
+          const data = await res.json() as FeaturedService[]
+          setFeaturedServices(data)
+        }
+      } catch { /* silent */ }
+    }
+    void load()
+  }, [])
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch('/api/listings/featured-products')
+        if (res.ok) {
+          const data = await res.json() as FeaturedProduct[]
+          setFeaturedProducts(data)
+        }
+      } catch { /* silent */ }
+    }
+    void load()
+  }, [])
 
   const tm = stats?.members.total ?? 0
   const tw = stats?.members.thisWeek ?? 0
@@ -392,26 +439,36 @@ export default function Home() {
             <Link href="/services" style={{ fontSize: '0.82rem', color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>View all →</Link>
           </div>
           <div className="hscroll">
-            {FEATURED_SERVICES.map(s => (
-              <Link key={s.id} href="/services" style={{ textDecoration: 'none', flexShrink: 0, width: 220 }}>
-                <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.15)' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
-                  <div style={{ height: 88, background: s.grad }} />
-                  <div style={{ padding: '0.85rem' }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.4rem', lineHeight: 1.25 }}>{s.title}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
-                      <img src={s.avatar} alt={s.provider} style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover' }} />
-                      <span style={{ fontSize: '0.72rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.provider}</span>
+            {featuredServices.length === 0
+              ? Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} style={{ flexShrink: 0, width: 220, height: 168, background: '#1e293b', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.1)', animation: 'shimmer 1.4s infinite', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%' }} />
+                ))
+              : featuredServices.map(s => (
+                  <Link key={s.id} href={`/services/${s.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 220 }}>
+                    <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.15)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
+                      {/* Banner / avatar */}
+                      <div style={{ height: 88, background: s.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                        {s.avatarUrl
+                          ? <img src={s.avatarUrl} alt={s.provider} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.3)' }} />
+                          : <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.1rem', color: '#fff' }}>
+                              {s.provider.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}
+                            </div>
+                        }
+                      </div>
+                      <div style={{ padding: '0.85rem' }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.3rem', lineHeight: 1.25, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{s.title}</div>
+                        <div style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: '0.4rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.provider}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#f1f5f9' }}>{format(s.price, s.currency as 'GBP' | 'EUR' | 'USD')}</span>
+                          {s.reviews > 0 && <span style={{ fontSize: '0.68rem', color: '#fbbf24' }}>★ {s.rating.toFixed(1)} ({s.reviews})</span>}
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#f1f5f9' }}>{format(s.price, 'GBP')}</span>
-                      <span style={{ fontSize: '0.68rem', color: '#fbbf24' }}>★ {s.rating} ({s.reviews})</span>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
+                  </Link>
+                ))
+            }
           </div>
         </div>
       </div>
@@ -424,30 +481,38 @@ export default function Home() {
             <Link href="/products" style={{ fontSize: '0.82rem', color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>View all →</Link>
           </div>
           <div className="hscroll">
-            {FEATURED_PRODUCTS.map(p => (
-              <Link key={p.id} href="/products" style={{ textDecoration: 'none', flexShrink: 0, width: 200 }}>
-                <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.15)' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
-                  <div style={{ height: 88, background: p.grad, position: 'relative' }}>
-                    <span style={{ position: 'absolute', top: 8, right: 8, background: p.type === 'digital' ? 'rgba(56,189,248,0.9)' : 'rgba(148,163,184,0.9)', color: '#0f172a', fontSize: '0.58rem', fontWeight: 800, padding: '2px 6px', borderRadius: 999 }}>
-                      {p.type === 'digital' ? 'DIGITAL' : 'PHYSICAL'}
-                    </span>
-                  </div>
-                  <div style={{ padding: '0.85rem' }}>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.35rem', lineHeight: 1.25 }}>{p.title}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
-                      <img src={p.avatar} alt={p.seller} style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover' }} />
-                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{p.seller}</span>
+            {featuredProducts.length === 0
+              ? Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} style={{ flexShrink: 0, width: 200, height: 168, background: '#1e293b', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.1)', animation: 'shimmer 1.4s infinite', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%' }} />
+                ))
+              : featuredProducts.map(p => (
+                <Link key={p.id} href={`/products/${p.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 200 }}>
+                  <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.15)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
+                    <div style={{ height: 88, background: p.grad, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {p.avatarUrl
+                        ? <img src={p.avatarUrl} alt={p.seller} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.3)' }} />
+                        : <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', color: '#fff' }}>
+                            {p.seller.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}
+                          </div>
+                      }
+                      <span style={{ position: 'absolute', top: 8, right: 8, background: p.type === 'digital' ? 'rgba(56,189,248,0.9)' : 'rgba(148,163,184,0.9)', color: '#0f172a', fontSize: '0.58rem', fontWeight: 800, padding: '2px 6px', borderRadius: 999 }}>
+                        {p.type === 'digital' ? 'DIGITAL' : 'PHYSICAL'}
+                      </span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#f1f5f9' }}>{format(p.price, 'GBP')}</span>
-                      <span style={{ fontSize: '0.65rem', color: '#fbbf24' }}>★ {p.rating}</span>
+                    <div style={{ padding: '0.85rem' }}>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.35rem', lineHeight: 1.25, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{p.title}</div>
+                      <div style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: '0.4rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.seller}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#f1f5f9' }}>{format(p.price, p.currency as 'GBP' | 'EUR' | 'USD')}</span>
+                        {p.reviews > 0 && <span style={{ fontSize: '0.65rem', color: '#fbbf24' }}>★ {p.rating.toFixed(1)}</span>}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              ))
+            }
           </div>
         </div>
       </div>
