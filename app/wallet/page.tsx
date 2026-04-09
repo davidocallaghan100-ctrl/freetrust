@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useCurrency } from '@/context/CurrencyContext'
@@ -232,7 +232,7 @@ function AddFundsModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
   )
 }
 
-export default function WalletPage() {
+function WalletPageInner() {
   const { currency: curr } = useCurrency()
   const sym = curr.symbol
   const [data,        setData]        = useState<WalletData | null>(null)
@@ -737,5 +737,13 @@ export default function WalletPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function WalletPage() {
+  return (
+    <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', color: '#64748b' }}>Loading wallet…</div>}>
+      <WalletPageInner />
+    </Suspense>
   )
 }
