@@ -396,7 +396,7 @@ function TabOverview({ org }: { org: Organisation }) {
           { icon: BuildingOffice2Icon, label: "Type",     value: org.type },
           { icon: UserGroupIcon,       label: "Size",     value: org.size },
           { icon: MapPinIcon,          label: "Location", value: org.location },
-          { icon: CalendarIcon,        label: "Founded",  value: format(parseISO(org.founded), "MMMM yyyy") },
+          { icon: CalendarIcon,        label: "Founded",  value: org.founded ? format(parseISO(org.founded), "MMMM yyyy") : "—" },
         ].map(({ icon: Icon, label, value }) => (
           <div key={label} className="flex items-center gap-3">
             <Icon className="w-4 h-4 text-gray-500 flex-shrink-0" />
@@ -404,18 +404,20 @@ function TabOverview({ org }: { org: Organisation }) {
             <span className="text-gray-200">{value}</span>
           </div>
         ))}
-        <div className="flex items-center gap-3">
-          <GlobeAltIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
-          <span className="text-gray-500">Website:</span>
-          <a
-            href={org.website}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-indigo-400 hover:underline truncate"
-          >
-            {org.website.replace(/^https?:\/\//, "")}
-          </a>
-        </div>
+        {org.website && (
+          <div className="flex items-center gap-3">
+            <GlobeAltIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+            <span className="text-gray-500">Website:</span>
+            <a
+              href={org.website}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-indigo-400 hover:underline truncate"
+            >
+              {org.website.replace(/^https?:\/\//, "")}
+            </a>
+          </div>
+        )}
         <div className="flex items-center gap-3">
           <LinkIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
           <span className="text-gray-500">Socials:</span>
@@ -731,8 +733,39 @@ export default function OrganisationPage() {
     try {
       const res = await fetch(`/api/organisations/${id}`);
       if (!res.ok) throw new Error("not found");
-      const data: Organisation = await res.json();
-      setOrg(data);
+      const raw = await res.json();
+
+      // Map Supabase snake_case fields to the Organisation interface shape.
+      // Fields not stored in the DB fall back to safe defaults.
+      const mapped: Organisation = {
+        id:            raw.id,
+        name:          raw.name ?? "",
+        tagline:       raw.tagline ?? "",
+        description:   raw.description ?? "",
+        logoUrl:       raw.logo_url ?? raw.logoUrl ?? "",
+        coverUrl:      raw.cover_url ?? raw.coverUrl ?? "",
+        location:      raw.location ?? "",
+        country:       raw.country ?? "",
+        website:       raw.website ?? "",
+        founded:       raw.founded_year ? `${raw.founded_year}-01-01` : (raw.founded ?? "2020-01-01"),
+        type:          raw.type ?? "",
+        size:          raw.size ?? "",
+        verified:      raw.is_verified ?? raw.verified ?? false,
+        followerCount: raw.members_count ?? raw.followerCount ?? 0,
+        reviewCount:   raw.reviewCount ?? 0,
+        avgRating:     raw.trust_score ?? raw.avgRating ?? 0,
+        sdgs:          Array.isArray(raw.sdgs) ? raw.sdgs : [],
+        tags:          Array.isArray(raw.tags) ? raw.tags : [],
+        projects:      Array.isArray(raw.projects) ? raw.projects : [],
+        reviews:       Array.isArray(raw.reviews) ? raw.reviews : [],
+        updates:       Array.isArray(raw.updates) ? raw.updates : [],
+        gallery:       Array.isArray(raw.gallery) ? raw.gallery : [],
+        stats:         Array.isArray(raw.stats) ? raw.stats : [],
+        socialLinks:   Array.isArray(raw.socialLinks) ? raw.socialLinks : [],
+      };
+
+      setOrg(mapped);
+      setFollowed(raw.isFollowing ?? false);
     } catch {
       setOrg(buildMockOrg(id));
     } finally {
@@ -901,17 +934,19 @@ export default function OrganisationPage() {
                   {org.avgRating.toFixed(1)}
                   <span className="text-gray-600">({org.reviewCount})</span>
                 </span>
-                <span className="flex items-center gap-1">
-                  <GlobeAltIcon className="w-3.5 h-3.5" />
-                  <a
-                    href={org.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-indigo-400 hover:underline"
-                  >
-                    {org.website.replace(/^https?:\/\//, "")}
-                  </a>
-                </span>
+                {org.website && (
+                  <span className="flex items-center gap-1">
+                    <GlobeAltIcon className="w-3.5 h-3.5" />
+                    <a
+                      href={org.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-400 hover:underline"
+                    >
+                      {org.website.replace(/^https?:\/\//, "")}
+                    </a>
+                  </span>
+                )}
               </div>
 
               {/* SDG strip */}

@@ -90,7 +90,7 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
   const { slug } = use(params)
   const { format } = useCurrency()
   const [tab, setTab] = useState<'feed' | 'classroom' | 'events' | 'members' | 'leaderboard' | 'admin'>('feed')
-  const [community] = useState<Community>(MOCK_COMMUNITY)
+  const [community, setCommunity] = useState<Community>(MOCK_COMMUNITY)
   const [posts, setPosts] = useState<Post[]>(MOCK_POSTS)
   const [members] = useState<Member[]>(MOCK_MEMBERS)
   const [courses] = useState<Course[]>(MOCK_COURSES)
@@ -104,10 +104,45 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
   const [memberSearch, setMemberSearch] = useState('')
   const [votedPosts, setVotedPosts] = useState<Set<string>>(new Set())
   const [rsvpEvents, setRsvpEvents] = useState<Set<string>>(new Set())
-  const [editName, setEditName] = useState(community.name)
-  const [editDesc, setEditDesc] = useState(community.description)
+  const [editName, setEditName] = useState('')
+  const [editDesc, setEditDesc] = useState('')
+
+  // Keep admin edit fields in sync with loaded community
+  useEffect(() => {
+    setEditName(community.name)
+    setEditDesc(community.description)
+  }, [community.name, community.description])
 
   const isOwner = true // mock: replace with auth check
+
+  // Load real community data from API
+  const loadCommunity = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/communities/${slug}`)
+      if (!res.ok) return
+      const json = await res.json()
+      if (json && json.id) {
+        setCommunity({
+          id: json.id,
+          name: json.name ?? MOCK_COMMUNITY.name,
+          slug: json.slug ?? slug,
+          description: json.description ?? MOCK_COMMUNITY.description,
+          avatar_initials: json.avatar_initials ?? (json.name ? json.name.slice(0, 2).toUpperCase() : MOCK_COMMUNITY.avatar_initials),
+          avatar_gradient: json.avatar_gradient ?? MOCK_COMMUNITY.avatar_gradient,
+          category: json.category ?? MOCK_COMMUNITY.category,
+          tags: Array.isArray(json.tags) ? json.tags : MOCK_COMMUNITY.tags,
+          is_paid: json.is_paid ?? false,
+          price_monthly: json.price_monthly ?? 0,
+          member_count: json.member_count ?? 0,
+          post_count: json.post_count ?? 0,
+          is_featured: json.is_featured ?? false,
+          owner_id: json.owner_id ?? '',
+        })
+      }
+    } catch {
+      // silently keep mock data
+    }
+  }, [slug])
 
   // Load real posts from API (falls back gracefully to mock if API fails / table not ready)
   const loadPosts = useCallback(async () => {
@@ -124,8 +159,9 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
   }, [slug])
 
   useEffect(() => {
+    loadCommunity()
     loadPosts()
-  }, [loadPosts])
+  }, [loadCommunity, loadPosts])
 
   // Sort: pinned first, then by date
   const sortedPosts = [...posts].sort((a, b) => {
@@ -201,7 +237,7 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
   ] as const
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', paddingTop: 104, background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
       <style>{`
         .comm-tab { transition: all 0.15s; white-space: nowrap; }
         .comm-tab:hover { color: #f1f5f9 !important; }
