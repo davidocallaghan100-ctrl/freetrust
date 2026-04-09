@@ -20,19 +20,9 @@ interface Job {
   tags: string[]
   created_at: string
   applicant_count: number
-  poster?: { full_name: string | null; trust_score?: number }
+  organisation?: { name: string | null; logo_url: string | null; is_verified: boolean } | null
+  poster?: { full_name: string | null } | null
 }
-
-const MOCK_JOBS: Job[] = [
-  { id: '1', title: 'Senior Full-Stack Engineer', description: 'Build core product features.', job_type: 'full_time', location_type: 'remote', location: null, salary_min: 70000, salary_max: 95000, salary_currency: 'GBP', category: 'Tech', tags: ['React', 'Node.js', 'TypeScript'], created_at: new Date(Date.now() - 1 * 86400000).toISOString(), applicant_count: 24, poster: { full_name: 'SaaS Builders Co', trust_score: 312 } },
-  { id: '2', title: 'UX/UI Designer', description: 'Design beautiful product experiences.', job_type: 'contract', location_type: 'hybrid', location: 'London, UK', salary_min: 45000, salary_max: 60000, salary_currency: 'GBP', category: 'Design', tags: ['Figma', 'User Research', 'Prototyping'], created_at: new Date(Date.now() - 2 * 86400000).toISOString(), applicant_count: 18, poster: { full_name: 'Design Collective', trust_score: 189 } },
-  { id: '3', title: 'Marketing Manager', description: 'Lead growth marketing initiatives.', job_type: 'full_time', location_type: 'on_site', location: 'Dublin, Ireland', salary_min: 50000, salary_max: 65000, salary_currency: 'GBP', category: 'Marketing', tags: ['SEO', 'Paid Ads', 'Content'], created_at: new Date(Date.now() - 3 * 86400000).toISOString(), applicant_count: 31, poster: { full_name: 'GrowthOps Ltd', trust_score: 247 } },
-  { id: '4', title: 'Freelance Copywriter', description: 'Write compelling brand and product copy.', job_type: 'freelance', location_type: 'remote', location: null, salary_min: 300, salary_max: 600, salary_currency: 'GBP', category: 'Marketing', tags: ['Copywriting', 'Brand', 'B2B'], created_at: new Date(Date.now() - 4 * 86400000).toISOString(), applicant_count: 12, poster: { full_name: 'Impact Agency', trust_score: 156 } },
-  { id: '5', title: 'Head of Sales', description: 'Scale revenue across EMEA.', job_type: 'full_time', location_type: 'hybrid', location: 'Manchester, UK', salary_min: 80000, salary_max: 110000, salary_currency: 'GBP', category: 'Sales', tags: ['B2B', 'SaaS', 'Enterprise'], created_at: new Date(Date.now() - 5 * 86400000).toISOString(), applicant_count: 9, poster: { full_name: 'Enterprise Scale', trust_score: 421 } },
-  { id: '6', title: 'Data Analyst', description: 'Turn data into business insights.', job_type: 'part_time', location_type: 'remote', location: null, salary_min: 30000, salary_max: 40000, salary_currency: 'GBP', category: 'Finance', tags: ['SQL', 'Python', 'Tableau'], created_at: new Date(Date.now() - 6 * 86400000).toISOString(), applicant_count: 7, poster: { full_name: 'DataDriven Ltd', trust_score: 203 } },
-  { id: '7', title: 'Sustainability Consultant', description: 'Help organisations measure ESG impact.', job_type: 'contract', location_type: 'hybrid', location: 'Bristol, UK', salary_min: 55000, salary_max: 75000, salary_currency: 'GBP', category: 'Operations', tags: ['ESG', 'Reporting', 'Strategy'], created_at: new Date(Date.now() - 8 * 86400000).toISOString(), applicant_count: 15, poster: { full_name: 'GreenWorks Advisory', trust_score: 378 } },
-  { id: '8', title: 'Electrician — Renewable Projects', description: 'Install solar and EV infrastructure.', job_type: 'full_time', location_type: 'on_site', location: 'Birmingham, UK', salary_min: 40000, salary_max: 52000, salary_currency: 'GBP', category: 'Trades', tags: ['Electrical', 'Solar', 'EV'], created_at: new Date(Date.now() - 10 * 86400000).toISOString(), applicant_count: 5, poster: { full_name: 'SolarTrades UK', trust_score: 94 } },
-]
 
 const TYPE_LABELS: Record<string, string> = { full_time: 'Full Time', part_time: 'Part Time', contract: 'Contract', freelance: 'Freelance' }
 const TYPE_COLORS: Record<string, string> = { full_time: '#38bdf8', part_time: '#a78bfa', contract: '#fbbf24', freelance: '#34d399' }
@@ -74,17 +64,13 @@ export default function JobsPage() {
         const supabase = createClient()
         const { data } = await supabase
           .from('jobs')
-          .select('*, poster:profiles!poster_id(full_name)')
+          .select('*, organisation:organisations!organisation_id(name, logo_url, is_verified), poster:profiles!poster_id(full_name)')
           .eq('status', 'active')
           .order('created_at', { ascending: false })
           .limit(50)
-        if (data && data.length > 0) {
-          setJobs(data as Job[])
-        } else {
-          setJobs(MOCK_JOBS) // only use mock if DB is empty
-        }
+        setJobs((data ?? []) as Job[])
       } catch {
-        setJobs(MOCK_JOBS)
+        setJobs([])
       } finally {
         setLoadingJobs(false)
       }
@@ -195,24 +181,31 @@ export default function JobsPage() {
           <div className="jobs-grid">
             {filtered.map(job => (
               <Link key={job.id} href={`/jobs/${job.id}`} className="job-card">
-                {/* Poster */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 8, background: 'linear-gradient(135deg,#38bdf8,#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.75rem', color: '#0f172a', flexShrink: 0 }}>
-                      {(job.poster?.full_name ?? 'FT').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#94a3b8' }}>{job.poster?.full_name ?? 'FreeTrust Member'}</div>
-                      {(job.poster?.trust_score ?? 0) > 0 && (
-                        <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                          ⭐ {job.poster?.trust_score}
-                          {(job.poster?.trust_score ?? 0) > 200 && <span style={{ marginLeft: '0.35rem', color: '#38bdf8', fontWeight: 600 }}>✓ Verified</span>}
+                {/* Org / Poster */}
+                {(() => {
+                  const orgName = job.organisation?.name ?? job.poster?.full_name ?? 'FreeTrust'
+                  const initials = orgName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
+                  const isVerified = job.organisation?.is_verified ?? false
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        {job.organisation?.logo_url
+                          ? <img src={job.organisation.logo_url} alt={orgName} style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                          : <div style={{ width: 36, height: 36, borderRadius: 8, background: 'linear-gradient(135deg,#38bdf8,#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.75rem', color: '#0f172a', flexShrink: 0 }}>
+                              {initials}
+                            </div>
+                        }
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#94a3b8' }}>{orgName}</span>
+                            {isVerified && <span style={{ fontSize: '0.68rem', color: '#38bdf8', fontWeight: 700 }}>✓</span>}
+                          </div>
                         </div>
-                      )}
+                      </div>
+                      <span style={{ fontSize: '0.72rem', color: '#475569' }}>{daysAgo(job.created_at)}</span>
                     </div>
-                  </div>
-                  <span style={{ fontSize: '0.72rem', color: '#475569' }}>{daysAgo(job.created_at)}</span>
-                </div>
+                  )
+                })()}
 
                 {/* Title + badges */}
                 <div>

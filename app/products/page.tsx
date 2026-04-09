@@ -101,38 +101,44 @@ function ProductCard({ p, wishlist, onWishlist }: {
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 8px 32px rgba(56,189,248,0.18)' }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
 
-      {/* Image / gradient */}
-      <div style={{ position: 'relative', height: 160, background: p.image ? undefined : gradient, flexShrink: 0 }}>
-        {p.image && <img src={p.image} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+      {/* Clickable image + title area */}
+      <Link href={`/products/${p.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+        {/* Image / gradient */}
+        <div style={{ position: 'relative', height: 160, background: p.image ? undefined : gradient, flexShrink: 0 }}>
+          {p.image && <img src={p.image} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
 
-        {/* Category badge — top left */}
-        <div style={{ position: 'absolute', top: 8, left: 8 }}>
-          <span style={{ background: 'rgba(15,23,42,0.85)', color: '#94a3b8', fontSize: '0.62rem', fontWeight: 700, padding: '2px 7px', borderRadius: 999 }}>{catLabel}</span>
+          {/* Category badge — top left */}
+          <div style={{ position: 'absolute', top: 8, left: 8 }}>
+            <span style={{ background: 'rgba(15,23,42,0.85)', color: '#94a3b8', fontSize: '0.62rem', fontWeight: 700, padding: '2px 7px', borderRadius: 999 }}>{catLabel}</span>
+          </div>
+
+          {/* Digital/Physical badge + wishlist — top right */}
+          <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+            {p.type === 'digital'
+              ? <span style={{ background: 'rgba(56,189,248,0.9)', color: '#0f172a', fontSize: '0.6rem', fontWeight: 800, padding: '2px 7px', borderRadius: 999 }}>DIGITAL</span>
+              : <span style={{ background: 'rgba(148,163,184,0.9)', color: '#0f172a', fontSize: '0.6rem', fontWeight: 800, padding: '2px 7px', borderRadius: 999 }}>PHYSICAL</span>
+            }
+            <button
+              onClick={e => { e.preventDefault(); e.stopPropagation(); onWishlist(p.id) }}
+              style={{ background: 'rgba(15,23,42,0.8)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.85rem', flexShrink: 0 }}>
+              {wishlist.has(p.id) ? '❤️' : '🤍'}
+            </button>
+          </div>
         </div>
 
-        {/* Digital/Physical badge + wishlist — top right */}
-        <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
-          {p.type === 'digital'
-            ? <span style={{ background: 'rgba(56,189,248,0.9)', color: '#0f172a', fontSize: '0.6rem', fontWeight: 800, padding: '2px 7px', borderRadius: 999 }}>DIGITAL</span>
-            : <span style={{ background: 'rgba(148,163,184,0.9)', color: '#0f172a', fontSize: '0.6rem', fontWeight: 800, padding: '2px 7px', borderRadius: 999 }}>PHYSICAL</span>
-          }
-          <button
-            onClick={() => onWishlist(p.id)}
-            style={{ background: 'rgba(15,23,42,0.8)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.85rem', flexShrink: 0 }}>
-            {wishlist.has(p.id) ? '❤️' : '🤍'}
-          </button>
+        {/* Title + description */}
+        <div style={{ padding: '0.85rem 0.85rem 0', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.25 }}>{p.title}</div>
+          <p style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.5, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.description}</p>
         </div>
-      </div>
+      </Link>
 
-      {/* Body */}
-      <div style={{ padding: '0.85rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-        <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.25 }}>{p.title}</div>
-        <p style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.5, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.description}</p>
-
+      {/* Body (non-link) */}
+      <div style={{ padding: '0.4rem 0.85rem 0.85rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
         {/* Rating */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
           <Stars rating={p.rating} />
-          <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{p.rating.toFixed(1)} ({p.review_count})</span>
+          <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{p.rating > 0 ? `${p.rating.toFixed(1)} (${p.review_count})` : 'No reviews yet'}</span>
         </div>
 
         {/* Seller row */}
@@ -143,7 +149,7 @@ function ProductCard({ p, wishlist, onWishlist }: {
           }
           <span style={{ fontSize: '0.72rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{p.seller_name}</span>
           {p.seller_verified && <span style={{ fontSize: '0.62rem', color: '#38bdf8', flexShrink: 0 }}>✓</span>}
-          <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: 700, background: 'rgba(56,189,248,0.08)', padding: '1px 5px', borderRadius: 5, flexShrink: 0 }}>₮{p.seller_trust.toLocaleString()}</span>
+          {p.seller_trust > 0 && <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: 700, background: 'rgba(56,189,248,0.08)', padding: '1px 5px', borderRadius: 5, flexShrink: 0 }}>₮{p.seller_trust.toLocaleString()}</span>}
         </div>
 
         {/* Delivery info */}
@@ -157,10 +163,14 @@ function ProductCard({ p, wishlist, onWishlist }: {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
           <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#f1f5f9' }}>{format(p.price, 'GBP')}</span>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.35rem' }}>
-            <button style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 8, padding: '0.45rem 0.9rem', fontSize: '0.75rem', fontWeight: 700, color: '#fff', cursor: 'pointer', minHeight: 36 }}>
-              Buy Now
-            </button>
-            <button style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.45rem 0.5rem', fontSize: '0.75rem', color: '#38bdf8', cursor: 'pointer', minHeight: 36 }}
+            <Link
+              href={`/products/${p.id}`}
+              style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 8, padding: '0.45rem 0.9rem', fontSize: '0.75rem', fontWeight: 700, color: '#fff', cursor: 'pointer', minHeight: 36, display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+              View
+            </Link>
+            <button
+              onClick={e => { e.stopPropagation(); if (navigator.share) { navigator.share({ title: p.title, url: `${window.location.origin}/products/${p.id}` }) } else { navigator.clipboard.writeText(`${window.location.origin}/products/${p.id}`) } }}
+              style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.45rem 0.5rem', fontSize: '0.75rem', color: '#38bdf8', cursor: 'pointer', minHeight: 36 }}
               title="Share">↗</button>
           </div>
         </div>
