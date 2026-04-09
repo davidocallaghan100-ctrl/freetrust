@@ -1,53 +1,74 @@
 'use client'
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 
-const categories = ['All Projects', 'Reforestation', 'Clean Energy', 'Ocean', 'Education', 'Food Security', 'Biodiversity']
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-const projects = [
-  { id: 1, name: 'Great Rift Valley Reforestation', category: 'Reforestation', location: 'Kenya & Tanzania', raised: 142800, goal: 200000, currency: '€', backers: 1840, avatar: 'GR', desc: 'Restoring degraded land across the Great Rift Valley through community-led tree planting and agroforestry. Partnered with One Tree Planted, who planted 51.9M trees across 394 projects in 72 countries in 2023 alone.', impact: '51.9M trees planted in 2023', source: 'onetreeplanted.org', sdgs: [13, 15, 1], status: 'Active', tags: ['Trees', 'Community', 'Livelihoods'], trees: 51900000 },
-  { id: 2, name: 'Solar for Schools – West Africa', category: 'Clean Energy', location: 'Ghana & Senegal', raised: 87400, goal: 150000, currency: '€', backers: 934, avatar: 'SS', desc: 'Installing solar panels in schools across rural West Africa. 32% of African primary schools operate off-grid — solar electrification improves learning outcomes and reduces CO₂ emissions. Rwanda alone targets 1,000 schools by end of 2025.', impact: '500,000+ African schools mapped for solar', source: 'joint-research-centre.ec.europa.eu', sdgs: [4, 7, 10], status: 'Active', tags: ['Solar', 'Education', 'Africa'], trees: 0 },
-  { id: 3, name: 'Pacific Plastic Clean-Up Initiative', category: 'Ocean', location: 'Pacific Ocean', raised: 203000, goal: 250000, currency: '€', backers: 3200, avatar: 'PC', desc: 'Supporting The Ocean Cleanup\'s System 003 — 3× larger than predecessors, cleaning a football field every 5 seconds. In 2024 they removed 11,500 tonnes of trash, surpassing all prior years combined.', impact: '20M kg removed by end 2024', source: 'theoceancleanup.com', sdgs: [14, 12, 17], status: 'Active', tags: ['Ocean', 'Plastic', 'Marine'], trees: 0 },
-  { id: 4, name: 'Seed Libraries Network', category: 'Biodiversity', location: 'Global', raised: 41200, goal: 60000, currency: '€', backers: 567, avatar: 'SL', desc: 'Building a global network of open-source seed libraries to preserve heirloom varieties and support food sovereignty for smallholder farmers worldwide.', impact: '2,300 varieties preserved', sdgs: [2, 15, 17], status: 'Active', tags: ['Seeds', 'Biodiversity', 'Food'], trees: 0 },
-  { id: 5, name: 'Clean Cookstoves for East Africa', category: 'Food Security', location: 'Uganda & Rwanda', raised: 56700, goal: 80000, currency: '€', backers: 721, avatar: 'CC', desc: '1 billion people in Africa lack clean cooking. WHO reports 810,000 premature deaths in 2024 from indoor air pollution. One project is delivering 353,000 clean cooking solutions benefiting 1.6M people. IEA secured $2.2B in 2024 commitments.', impact: '353,000 clean cooking solutions targeted', source: 'iea.org / WHO 2024', sdgs: [3, 7, 13], status: 'Active', tags: ['Cookstoves', 'Health', 'Energy'], trees: 0 },
-  { id: 6, name: 'Mangrove Restoration Bangladesh', category: 'Ocean', location: "Cox's Bazar, Bangladesh", raised: 98000, goal: 120000, currency: '€', backers: 1100, avatar: 'MR', desc: 'Restoring mangrove forests to protect coastal communities from flooding and sequester carbon. Mangroves store 3–5× more carbon than tropical forests and protect 18 million people from storm surge globally.', impact: '8,000 ha under restoration', sdgs: [13, 14, 15], status: 'Active', tags: ['Mangroves', 'Coastal', 'Carbon'], trees: 80000 },
-]
-
-const votableCauses = [
-  { id: 'c1', name: 'Amazon Rainforest Protection', votes: 1240, desc: 'Protect 100,000 hectares of primary Amazon rainforest', icon: '🌿' },
-  { id: 'c2', name: 'African Girls Education Fund', votes: 987, desc: 'Scholarships for 500 girls across Sub-Saharan Africa', icon: '📚' },
-  { id: 'c3', name: 'Ocean Plastic Recycling Hubs', votes: 834, desc: 'Build 10 coastal recycling hubs in developing nations', icon: '🌊' },
-  { id: 'c4', name: 'Regenerative Agriculture Grants', votes: 621, desc: 'Fund 200 farmers to transition to regenerative methods', icon: '🌾' },
-]
-
-const leaderboard = [
-  { rank: 1, name: 'David O\'Callaghan', avatar: 'DO', donated: 1200, grad: 'linear-gradient(135deg,#34d399,#38bdf8)', founder: true, impact: '1,000 trees · 10 families' },
-  { rank: 2, name: 'Amara Diallo', avatar: 'AD', donated: 850, grad: 'linear-gradient(135deg,#f472b6,#db2777)' },
-  { rank: 3, name: 'Tom Walsh', avatar: 'TW', donated: 620, grad: 'linear-gradient(135deg,#fb923c,#ea580c)' },
-  { rank: 4, name: 'Priya Nair', avatar: 'PN', donated: 540, grad: 'linear-gradient(135deg,#a78bfa,#7c3aed)' },
-  { rank: 5, name: 'Sarah Chen', avatar: 'SC', donated: 390, grad: 'linear-gradient(135deg,#38bdf8,#0284c7)' },
-  { rank: 6, name: 'James Okafor', avatar: 'JO', donated: 310, grad: 'linear-gradient(135deg,#34d399,#059669)' },
-  { rank: 7, name: 'Lena Fischer', avatar: 'LF', donated: 280, grad: 'linear-gradient(135deg,#fbbf24,#d97706)' },
-  { rank: 8, name: 'Marcus Obi', avatar: 'MO', donated: 210, grad: 'linear-gradient(135deg,#f472b6,#a78bfa)' },
-  { rank: 9, name: 'Yuki Tanaka', avatar: 'YT', donated: 175, grad: 'linear-gradient(135deg,#38bdf8,#34d399)' },
-  { rank: 10, name: 'Ahmed Ali', avatar: 'AA', donated: 120, grad: 'linear-gradient(135deg,#34d399,#38bdf8)' },
-]
-
-const avatarGrad: Record<string, string> = {
-  GR: 'linear-gradient(135deg,#34d399,#059669)', SS: 'linear-gradient(135deg,#fbbf24,#d97706)',
-  PC: 'linear-gradient(135deg,#38bdf8,#0284c7)', SL: 'linear-gradient(135deg,#34d399,#38bdf8)',
-  CC: 'linear-gradient(135deg,#fb923c,#ea580c)', MR: 'linear-gradient(135deg,#38bdf8,#34d399)',
+interface ImpactProject {
+  id: string
+  name: string
+  category: string
+  location: string
+  description: string
+  impact_headline: string
+  source?: string | null
+  sdgs: number[]
+  tags: string[]
+  avatar_initials: string
+  avatar_gradient: string
+  raised: number
+  goal: number
+  currency: string
+  backers: number
+  status: string
 }
 
-const sdgColors: Record<number, string> = {
+interface ImpactStats {
+  totalRaised: number
+  totalBackers: number
+  activeProjects: number
+  memberCount: number
+  fundBalance: number
+  quarterlyTotal: number
+  quarterlyGoal: number
+  quarterlyPct: number
+}
+
+interface LeaderboardEntry {
+  rank: number
+  user_id: string
+  full_name: string
+  avatar_url: string | null
+  donated: number
+  is_founder: boolean
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const CATEGORIES = ['All Projects', 'Reforestation', 'Clean Energy', 'Ocean', 'Education', 'Food Security', 'Biodiversity']
+
+const VOTABLE_CAUSES = [
+  { id: 'c1', name: 'Amazon Rainforest Protection', desc: 'Protect 100,000 hectares of primary Amazon rainforest', icon: '🌿' },
+  { id: 'c2', name: 'African Girls Education Fund', desc: 'Scholarships for 500 girls across Sub-Saharan Africa', icon: '📚' },
+  { id: 'c3', name: 'Ocean Plastic Recycling Hubs', desc: 'Build 10 coastal recycling hubs in developing nations', icon: '🌊' },
+  { id: 'c4', name: 'Regenerative Agriculture Grants', desc: 'Fund 200 farmers to transition to regenerative methods', icon: '🌾' },
+]
+
+const SDG_COLORS: Record<number, string> = {
   1: '#e5243b', 2: '#dda63a', 3: '#4c9f38', 4: '#c5192d', 7: '#fcc30b',
   10: '#dd1367', 12: '#bf8b2e', 13: '#3f7e44', 14: '#0a97d9', 15: '#56c02b', 17: '#19486a',
 }
+
+const QUARTER_END = new Date(2026, 5, 30)
+function getDaysToQuarterEnd() {
+  return Math.max(0, Math.ceil((QUARTER_END.getTime() - Date.now()) / 86400000))
+}
+
+// ── Animated Counter ──────────────────────────────────────────────────────────
 
 function useCountUp(target: number, duration = 2000) {
   const [count, setCount] = useState(0)
   const started = useRef(false)
   const ref = useRef<HTMLDivElement>(null)
-
   useEffect(() => {
     const el = ref.current
     if (!el) return
@@ -58,8 +79,7 @@ function useCountUp(target: number, duration = 2000) {
         const tick = () => {
           const elapsed = Date.now() - start
           const progress = Math.min(elapsed / duration, 1)
-          const ease = 1 - Math.pow(1 - progress, 3)
-          setCount(Math.round(target * ease))
+          setCount(Math.round(target * (1 - Math.pow(1 - progress, 3))))
           if (progress < 1) requestAnimationFrame(tick)
         }
         tick()
@@ -68,7 +88,6 @@ function useCountUp(target: number, duration = 2000) {
     observer.observe(el)
     return () => observer.disconnect()
   }, [target, duration])
-
   return { count, ref }
 }
 
@@ -83,85 +102,123 @@ function StatCounter({ value, label, icon }: { value: number; label: string; ico
   )
 }
 
-const QUARTER_END = new Date(2026, 5, 30) // June 30 2026
-function getDaysToQuarterEnd() {
-  const now = new Date()
-  const diff = QUARTER_END.getTime() - now.getTime()
-  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
+// ── User Avatar ───────────────────────────────────────────────────────────────
+
+function UserAvatar({ url, name, size = 36 }: { url: string | null; name: string; size?: number }) {
+  const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
+  const colors = ['#34d399', '#38bdf8', '#a78bfa', '#f472b6', '#fb923c', '#fbbf24']
+  const bg = colors[(name.charCodeAt(0) ?? 0) % colors.length]
+  if (url) return <img src={url} alt={name} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+  return (
+    <div style={{ width: size, height: size, borderRadius: '50%', background: `linear-gradient(135deg,${bg},${bg}99)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.32, fontWeight: 800, color: '#0f172a', flexShrink: 0 }}>
+      {initials}
+    </div>
+  )
 }
 
+// ── Main Page ─────────────────────────────────────────────────────────────────
+
 export default function ImpactPage() {
+  const [projects, setProjects] = useState<ImpactProject[]>([])
+  const [stats, setStats] = useState<ImpactStats | null>(null)
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [voteTallies, setVoteTallies] = useState<Record<string, number>>({})
+  const [myVote, setMyVote] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
   const [activeCat, setActiveCat] = useState('All Projects')
-  const [donateModal, setDonateModal] = useState<number | null>(null) // project id
-  const [donateAmount, setDonateAmount] = useState<number>(10)
+  const [donateModal, setDonateModal] = useState<ImpactProject | null>(null)
+  const [donateAmount, setDonateAmount] = useState(10)
   const [customAmount, setCustomAmount] = useState('')
   const [donating, setDonating] = useState(false)
   const [donateSuccess, setDonateSuccess] = useState<string | null>(null)
-  const [voted, setVoted] = useState<string | null>(null)
-  const [causeVotes, setCauseVotes] = useState<Record<string, number>>(
-    Object.fromEntries(votableCauses.map(c => [c.id, c.votes]))
-  )
+  const [voting, setVoting] = useState(false)
+  const [trustBalance, setTrustBalance] = useState(0)
+
+  const { count: treeCount, ref: treeRef } = useCountUp(135500000, 2500)
   const daysLeft = getDaysToQuarterEnd()
-  const totalTrees = 135500000 // One Tree Planted all-time verified figure
 
-  const { count: treeCount, ref: treeRef } = useCountUp(totalTrees, 2500)
-
-  useEffect(() => {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem('ft-impact-vote') : null
-    if (stored) setVoted(stored)
+  const loadAll = useCallback(async () => {
+    try {
+      const [projRes, statsRes, lbRes, voteRes, trustRes] = await Promise.all([
+        fetch('/api/impact/projects'),
+        fetch('/api/impact/stats'),
+        fetch('/api/impact/leaderboard'),
+        fetch('/api/impact/vote'),
+        fetch('/api/trust'),
+      ])
+      if (projRes.ok) { const d = await projRes.json() as { projects: ImpactProject[] }; setProjects(d.projects ?? []) }
+      if (statsRes.ok) { const d = await statsRes.json() as ImpactStats; setStats(d) }
+      if (lbRes.ok) { const d = await lbRes.json() as { leaderboard: LeaderboardEntry[] }; setLeaderboard(d.leaderboard ?? []) }
+      if (voteRes.ok) { const d = await voteRes.json() as { tallies: Record<string, number>; myVote: string | null }; setVoteTallies(d.tallies ?? {}); setMyVote(d.myVote ?? null) }
+      if (trustRes.ok) { const d = await trustRes.json() as { balance?: number }; setTrustBalance(d.balance ?? 0) }
+    } catch (err) {
+      console.error('Impact loadAll error:', err)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  const filtered = activeCat === 'All Projects' ? projects : projects.filter(p => p.category === activeCat)
+  useEffect(() => { loadAll() }, [loadAll])
 
-  const handleVote = (causeId: string) => {
-    if (voted) return
-    setCauseVotes(prev => ({ ...prev, [causeId]: prev[causeId] + 1 }))
-    setVoted(causeId)
-    if (typeof window !== 'undefined') localStorage.setItem('ft-impact-vote', causeId)
+  const filtered = activeCat === 'All Projects' ? projects : projects.filter(p => p.category === activeCat)
+  const totalVotes = Math.max(Object.values(voteTallies).reduce((a, b) => a + b, 0), 1)
+
+  const handleVote = async (causeId: string) => {
+    if (myVote || voting) return
+    setVoting(true)
+    try {
+      const res = await fetch('/api/impact/vote', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cause_id: causeId }) })
+      if (res.ok) { setMyVote(causeId); setVoteTallies(prev => ({ ...prev, [causeId]: (prev[causeId] ?? 0) + 1 })) }
+    } catch { /* silent */ } finally { setVoting(false) }
   }
 
   const handleDonate = async () => {
+    if (!donateModal) return
     const amount = customAmount ? parseInt(customAmount) : donateAmount
     if (!amount || amount <= 0) return
     setDonating(true)
     try {
-      await fetch('/api/impact/donate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project_id: donateModal, amount }),
-      })
-      setDonateSuccess(`₮${amount} donated successfully! 🌱`)
-      setTimeout(() => { setDonateModal(null); setDonateSuccess(null); setCustomAmount('') }, 2500)
-    } catch {
-      setDonateSuccess('Donation recorded!')
-      setTimeout(() => { setDonateModal(null); setDonateSuccess(null); setCustomAmount('') }, 2000)
-    } finally {
-      setDonating(false)
-    }
+      const res = await fetch('/api/impact/donate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project_id: donateModal.id, amount }) })
+      const data = await res.json() as { ok?: boolean; error?: string; trees_equivalent?: number }
+      if (res.ok) {
+        setDonateSuccess(`₮${amount} donated! 🌱${data.trees_equivalent ? ` ~${data.trees_equivalent} trees` : ''}`)
+        setTrustBalance(prev => prev - amount)
+        setProjects(prev => prev.map(p => p.id === donateModal.id ? { ...p, raised: p.raised + amount, backers: p.backers + 1 } : p))
+        setTimeout(() => { setDonateModal(null); setDonateSuccess(null); setCustomAmount('') }, 2500)
+      } else {
+        setDonateSuccess(data.error ?? 'Donation failed')
+        setTimeout(() => setDonateSuccess(null), 2500)
+      }
+    } catch { setDonateSuccess('Error. Please try again.'); setTimeout(() => setDonateSuccess(null), 2000) }
+    finally { setDonating(false) }
   }
 
-  const donatingProject = projects.find(p => p.id === donateModal)
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', background: '#0f172a' }}>
+        <div style={{ width: 32, height: 32, border: '3px solid rgba(52,211,153,0.2)', borderTopColor: '#34d399', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    )
+  }
 
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
       <style>{`
-        .impact-stats { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; margin: 1.5rem 0; }
-        .impact-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(360px,1fr)); gap: 1.25rem; padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
-        .impact-leaderboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-        .impact-causes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-        @media (max-width: 768px) {
-          .impact-stats > div { min-width: 130px !important; }
-          .impact-grid { grid-template-columns: 1fr !important; padding: 1rem !important; }
-          .impact-leaderboard-grid { grid-template-columns: 1fr !important; }
-          .impact-causes-grid { grid-template-columns: 1fr !important; }
-          .impact-hero-btns { flex-direction: column !important; align-items: stretch !important; }
-          .impact-hero-btns button { text-align: center !important; }
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .impact-stats{display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;margin:1.5rem 0}
+        .impact-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.25rem;padding:1.5rem;max-width:1200px;margin:0 auto}
+        .impact-causes-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+        @media(max-width:768px){
+          .impact-grid{grid-template-columns:1fr!important;padding:1rem!important}
+          .impact-causes-grid{grid-template-columns:1fr!important}
+          .impact-hero-btns{flex-direction:column!important;align-items:stretch!important}
         }
       `}</style>
 
       {/* Donate Modal */}
-      {donateModal !== null && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      {donateModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div style={{ background: '#1e293b', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 16, padding: '1.75rem', width: '100%', maxWidth: 440 }}>
             {donateSuccess ? (
               <div style={{ textAlign: 'center', padding: '1rem 0' }}>
@@ -171,36 +228,28 @@ export default function ImpactPage() {
             ) : (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700 }}>Donate Trust Tokens</h3>
-                  <button onClick={() => setDonateModal(null)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '1.25rem' }}>×</button>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>Donate Trust Tokens</h3>
+                  <button onClick={() => setDonateModal(null)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '1.4rem', lineHeight: 1, padding: 0 }}>×</button>
                 </div>
-                <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1.25rem' }}>Contributing to: <span style={{ color: '#34d399', fontWeight: 600 }}>{donatingProject?.name}</span></div>
-                <div style={{ marginBottom: '1rem' }}>
-                  <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.5rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Select Amount</div>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {[5, 10, 25, 50].map(amt => (
-                      <button key={amt} onClick={() => { setDonateAmount(amt); setCustomAmount('') }}
-                        style={{ padding: '0.5rem 1rem', borderRadius: 8, border: donateAmount === amt && !customAmount ? '1px solid #34d399' : '1px solid rgba(148,163,184,0.2)', background: donateAmount === amt && !customAmount ? 'rgba(52,211,153,0.1)' : 'transparent', color: donateAmount === amt && !customAmount ? '#34d399' : '#94a3b8', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>
-                        ₮{amt}
-                      </button>
-                    ))}
-                  </div>
+                <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.35rem' }}>Contributing to:</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#34d399', marginBottom: '0.75rem' }}>{donateModal.name}</div>
+                <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.75rem' }}>Your Trust Balance: <strong style={{ color: '#38bdf8' }}>₮{trustBalance.toLocaleString()}</strong></div>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                  {[5, 10, 25, 50].map(amt => (
+                    <button key={amt} onClick={() => { setDonateAmount(amt); setCustomAmount('') }}
+                      style={{ padding: '0.5rem 1rem', borderRadius: 8, border: donateAmount === amt && !customAmount ? '1px solid #34d399' : '1px solid rgba(148,163,184,0.2)', background: donateAmount === amt && !customAmount ? 'rgba(52,211,153,0.1)' : 'transparent', color: donateAmount === amt && !customAmount ? '#34d399' : '#94a3b8', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>
+                      ₮{amt}
+                    </button>
+                  ))}
                 </div>
-                <div style={{ marginBottom: '1.25rem' }}>
-                  <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.5rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Custom Amount</div>
-                  <input
-                    type="number" min="1" placeholder="Enter ₮ amount"
-                    value={customAmount}
-                    onChange={e => setCustomAmount(e.target.value)}
-                    style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 8, padding: '0.65rem 1rem', color: '#f1f5f9', fontSize: '0.9rem', outline: 'none' }}
-                  />
+                <input type="number" min="1" max={trustBalance} placeholder="Custom ₮ amount" value={customAmount} onChange={e => setCustomAmount(e.target.value)}
+                  style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 8, padding: '0.65rem 1rem', color: '#f1f5f9', fontSize: '0.9rem', outline: 'none', marginBottom: '1rem' }} />
+                <div style={{ background: 'rgba(52,211,153,0.05)', border: '1px solid rgba(52,211,153,0.12)', borderRadius: 8, padding: '0.65rem', marginBottom: '1rem', fontSize: '0.8rem', color: '#64748b' }}>
+                  🌳 Every ₮10 ≈ 1 tree planted (where applicable)
                 </div>
-                <div style={{ background: 'rgba(52,211,153,0.05)', border: '1px solid rgba(52,211,153,0.12)', borderRadius: 8, padding: '0.75rem', marginBottom: '1.25rem', fontSize: '0.82rem', color: '#64748b' }}>
-                  🌳 Every ₮10 = approximately 1 tree planted (where applicable)
-                </div>
-                <button onClick={handleDonate} disabled={donating}
+                <button onClick={handleDonate} disabled={donating || (customAmount ? parseInt(customAmount) > trustBalance : donateAmount > trustBalance)}
                   style={{ width: '100%', background: '#34d399', border: 'none', borderRadius: 8, padding: '0.75rem', fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', cursor: donating ? 'not-allowed' : 'pointer', opacity: donating ? 0.7 : 1 }}>
-                  {donating ? 'Processing…' : `Confirm Donation — ₮${customAmount || donateAmount}`}
+                  {donating ? 'Processing…' : `Donate ₮${customAmount || donateAmount}`}
                 </button>
               </>
             )}
@@ -214,37 +263,42 @@ export default function ImpactPage() {
           <div style={{ display: 'inline-block', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', borderRadius: 999, padding: '0.3rem 1rem', fontSize: '0.78rem', color: '#34d399', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '1rem' }}>🌱 SUSTAINABILITY FUND</div>
           <h1 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '0.75rem', lineHeight: 1.15 }}>Invest in a <span style={{ color: '#34d399' }}>Better World</span></h1>
           <p style={{ color: '#64748b', fontSize: '1rem', marginBottom: '1.5rem', lineHeight: 1.6 }}>Every transaction on FreeTrust contributes 1% to our Impact Fund. Together, we are funding real-world sustainability projects across the globe.</p>
-
-          {/* Fund Balance Card */}
           <div style={{ background: 'linear-gradient(135deg,rgba(52,211,153,0.1),rgba(56,189,248,0.06))', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 16, padding: '1.5rem 2rem', marginBottom: '1.5rem', display: 'inline-block', minWidth: 280, textAlign: 'left' }}>
             <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Sustainability Fund Balance</div>
-            <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#34d399', lineHeight: 1 }}>₮ 48,240</div>
-            <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.4rem' }}>₮12,400 donated this quarter · 62% to quarterly goal</div>
+            <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#34d399', lineHeight: 1 }}>₮{(stats?.fundBalance ?? 0).toLocaleString()}</div>
+            <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.4rem' }}>₮{(stats?.quarterlyTotal ?? 0).toLocaleString()} donated this quarter · {stats?.quarterlyPct ?? 0}% to goal</div>
             <div style={{ background: 'rgba(52,211,153,0.1)', borderRadius: 4, height: 6, marginTop: '0.75rem', overflow: 'hidden' }}>
-              <div style={{ background: 'linear-gradient(90deg,#34d399,#38bdf8)', height: '100%', width: '62%', borderRadius: 4 }} />
+              <div style={{ background: 'linear-gradient(90deg,#34d399,#38bdf8)', height: '100%', width: `${stats?.quarterlyPct ?? 0}%`, borderRadius: 4 }} />
             </div>
           </div>
-
           <div className="impact-stats">
-            {[{ value: 1240000, label: 'Total Funded', icon: '💰', display: '€1.24M' }, { value: 12400, label: 'Contributors', icon: '👥', display: '12,400' }, { value: 28, label: 'Active Projects', icon: '🌍', display: '28' }, { value: 14, label: 'SDGs Supported', icon: '🎯', display: '14' }].map(s => (
-              <div key={s.label} style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 12, padding: '1rem 1.25rem', textAlign: 'center', flex: '1', minWidth: 130 }}>
+            {[
+              { label: 'Total Raised', icon: '💰', val: `€${((stats?.totalRaised ?? 0) / 1000).toFixed(0)}k` },
+              { label: 'Contributors', icon: '👥', val: (stats?.totalBackers ?? 0).toLocaleString() },
+              { label: 'Active Projects', icon: '🌍', val: String(stats?.activeProjects ?? 0) },
+              { label: 'Members', icon: '🎯', val: (stats?.memberCount ?? 0).toLocaleString() },
+            ].map(s => (
+              <div key={s.label} style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 12, padding: '1rem 1.25rem', textAlign: 'center', flex: 1, minWidth: 130 }}>
                 <span style={{ fontSize: '1.25rem' }}>{s.icon}</span>
-                <span style={{ display: 'block', fontSize: '1.6rem', fontWeight: 800, color: '#38bdf8' }}>{s.display}</span>
+                <span style={{ display: 'block', fontSize: '1.6rem', fontWeight: 800, color: '#38bdf8' }}>{s.val}</span>
                 <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>{s.label}</div>
               </div>
             ))}
           </div>
-
           <div className="impact-hero-btns" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-            <button onClick={() => setDonateModal(1)} style={{ background: '#34d399', border: 'none', borderRadius: 8, padding: '0.75rem 2rem', fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer' }}>Donate Trust Tokens</button>
-            <button style={{ background: 'transparent', border: '1px solid rgba(52,211,153,0.3)', borderRadius: 8, padding: '0.75rem 2rem', fontSize: '0.95rem', fontWeight: 600, color: '#34d399', cursor: 'pointer' }}>How It Works</button>
+            {projects.length > 0 && (
+              <button onClick={() => { setDonateModal(projects[0]); setDonateAmount(10); setCustomAmount('') }}
+                style={{ background: '#34d399', border: 'none', borderRadius: 8, padding: '0.75rem 2rem', fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer' }}>
+                Donate Trust Tokens
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Animated Impact Stats */}
+      {/* Real-World Stats */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1.5rem 0' }}>
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem', color: '#f1f5f9' }}>Real-World Impact</h2>
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem' }}>Real-World Impact</h2>
         <div className="impact-stats">
           <StatCounter value={135500000} label="Trees Planted (One Tree Planted, all-time)" icon="🌳" />
           <StatCounter value={20000000} label="kg Ocean Plastic Removed (The Ocean Cleanup 2024)" icon="🌊" />
@@ -253,7 +307,7 @@ export default function ImpactPage() {
         </div>
       </div>
 
-      {/* Tree Planting Counter */}
+      {/* Tree Counter */}
       <div ref={treeRef} style={{ maxWidth: 1200, margin: '1rem auto', padding: '0 1.5rem' }}>
         <div style={{ background: 'linear-gradient(135deg,rgba(52,211,153,0.08),rgba(56,189,248,0.04))', border: '1px solid rgba(52,211,153,0.15)', borderRadius: 16, padding: '2rem', textAlign: 'center' }}>
           <div style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>🌳</div>
@@ -266,15 +320,15 @@ export default function ImpactPage() {
       {/* Community Voted Causes */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f1f5f9' }}>Community Voted Causes</h2>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Community Voted Causes</h2>
           <span style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.25rem 0.75rem', fontSize: '0.78rem', color: '#38bdf8' }}>⏳ Vote closes in {daysLeft} days</span>
         </div>
         <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1.25rem' }}>Vote once per quarter to decide where the Sustainability Fund goes next.</p>
         <div className="impact-causes-grid">
-          {votableCauses.map((cause) => {
-            const totalVotes = Object.values(causeVotes).reduce((a, b) => a + b, 0)
-            const pct = Math.round((causeVotes[cause.id] / totalVotes) * 100)
-            const isVoted = voted === cause.id
+          {VOTABLE_CAUSES.map(cause => {
+            const votes = voteTallies[cause.id] ?? 0
+            const pct = Math.round((votes / totalVotes) * 100)
+            const isVoted = myVote === cause.id
             return (
               <div key={cause.id} style={{ background: '#1e293b', border: `1px solid ${isVoted ? 'rgba(52,211,153,0.3)' : 'rgba(56,189,248,0.1)'}`, borderRadius: 12, padding: '1.25rem' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
@@ -283,8 +337,8 @@ export default function ImpactPage() {
                     <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f1f5f9' }}>{cause.name}</div>
                     <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.2rem' }}>{cause.desc}</div>
                   </div>
-                  <button onClick={() => handleVote(cause.id)} disabled={!!voted}
-                    style={{ marginLeft: '0.75rem', flexShrink: 0, padding: '0.4rem 0.85rem', borderRadius: 7, border: isVoted ? '1px solid rgba(52,211,153,0.4)' : '1px solid rgba(56,189,248,0.25)', background: isVoted ? 'rgba(52,211,153,0.1)' : 'transparent', color: isVoted ? '#34d399' : '#38bdf8', fontSize: '0.78rem', fontWeight: 700, cursor: voted ? 'not-allowed' : 'pointer', opacity: voted && !isVoted ? 0.5 : 1 }}>
+                  <button onClick={() => handleVote(cause.id)} disabled={!!myVote || voting}
+                    style={{ marginLeft: '0.75rem', flexShrink: 0, padding: '0.4rem 0.85rem', borderRadius: 7, border: isVoted ? '1px solid rgba(52,211,153,0.4)' : '1px solid rgba(56,189,248,0.25)', background: isVoted ? 'rgba(52,211,153,0.1)' : 'transparent', color: isVoted ? '#34d399' : '#38bdf8', fontSize: '0.78rem', fontWeight: 700, cursor: myVote ? 'not-allowed' : 'pointer', opacity: myVote && !isVoted ? 0.5 : 1 }}>
                     {isVoted ? '✓ Voted' : 'Vote'}
                   </button>
                 </div>
@@ -292,7 +346,7 @@ export default function ImpactPage() {
                   <div style={{ flex: 1, background: 'rgba(56,189,248,0.08)', borderRadius: 3, height: 5, overflow: 'hidden' }}>
                     <div style={{ background: isVoted ? '#34d399' : '#38bdf8', height: '100%', width: `${pct}%`, transition: 'width 0.5s ease', borderRadius: 3 }} />
                   </div>
-                  <span style={{ fontSize: '0.78rem', color: '#64748b', minWidth: 40, textAlign: 'right' }}>{causeVotes[cause.id].toLocaleString()} votes</span>
+                  <span style={{ fontSize: '0.78rem', color: '#64748b', minWidth: 40, textAlign: 'right' }}>{votes.toLocaleString()} votes</span>
                 </div>
               </div>
             )
@@ -300,10 +354,10 @@ export default function ImpactPage() {
         </div>
       </div>
 
-      {/* Projects */}
+      {/* Category Filter + Projects */}
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', padding: '0 1.5rem' }}>
-          {categories.map(c => (
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', padding: '0 1.5rem', marginBottom: '0.5rem' }}>
+          {CATEGORIES.map(c => (
             <button key={c} onClick={() => setActiveCat(c)}
               style={{ padding: '0.35rem 0.9rem', borderRadius: 999, fontSize: '0.82rem', cursor: 'pointer', border: activeCat === c ? '1px solid rgba(52,211,153,0.3)' : '1px solid rgba(148,163,184,0.2)', background: activeCat === c ? 'rgba(52,211,153,0.1)' : 'transparent', color: activeCat === c ? '#34d399' : '#94a3b8', fontWeight: activeCat === c ? 700 : 500 }}>
               {c}
@@ -313,45 +367,44 @@ export default function ImpactPage() {
       </div>
 
       <div className="impact-grid">
+        {filtered.length === 0 && (
+          <div style={{ gridColumn: '1/-1', textAlign: 'center', color: '#64748b', padding: '3rem' }}>No projects in this category yet.</div>
+        )}
         {filtered.map(proj => {
-          const pct = Math.round((proj.raised / proj.goal) * 100)
+          const pct = Math.min(Math.round((proj.raised / proj.goal) * 100), 100)
           return (
             <div key={proj.id} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <div style={{ padding: '1.25rem', flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.85rem', color: '#0f172a', flexShrink: 0, background: avatarGrad[proj.avatar] }}>{proj.avatar}</div>
+                  <div style={{ width: 48, height: 48, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.85rem', color: '#0f172a', flexShrink: 0, background: proj.avatar_gradient }}>{proj.avatar_initials}</div>
                   <div>
                     <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f1f5f9', lineHeight: 1.25 }}>{proj.name}</div>
                     <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>📍 {proj.location} · {proj.category}</div>
                   </div>
                 </div>
-                <div style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.8rem', color: '#34d399', marginBottom: '0.5rem' }}>🌱 {proj.impact}</div>
-                {'source' in proj && proj.source && (
-                  <div style={{ fontSize: '0.68rem', color: '#475569', marginBottom: '0.75rem' }}>📊 Source: {proj.source}</div>
-                )}
-                <p style={{ fontSize: '0.83rem', color: '#64748b', lineHeight: 1.6, marginBottom: '0.75rem' }}>{proj.desc}</p>
+                <div style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.8rem', color: '#34d399', marginBottom: '0.5rem' }}>🌱 {proj.impact_headline}</div>
+                {proj.source && <div style={{ fontSize: '0.68rem', color: '#475569', marginBottom: '0.75rem' }}>📊 Source: {proj.source}</div>}
+                <p style={{ fontSize: '0.83rem', color: '#64748b', lineHeight: 1.6, marginBottom: '0.75rem' }}>{proj.description}</p>
                 <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-                  {proj.sdgs.map(n => (
-                    <span key={n} style={{ borderRadius: 4, padding: '0.15rem 0.5rem', fontSize: '0.68rem', fontWeight: 700, color: '#fff', background: sdgColors[n] }}>SDG {n}</span>
-                  ))}
+                  {(proj.sdgs ?? []).map(n => <span key={n} style={{ borderRadius: 4, padding: '0.15rem 0.5rem', fontSize: '0.68rem', fontWeight: 700, color: '#fff', background: SDG_COLORS[n] ?? '#475569' }}>SDG {n}</span>)}
                 </div>
                 <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                  {proj.tags.map(t => <span key={t} style={{ background: 'rgba(148,163,184,0.08)', borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.72rem', color: '#94a3b8' }}>{t}</span>)}
+                  {(proj.tags ?? []).map(t => <span key={t} style={{ background: 'rgba(148,163,184,0.08)', borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.72rem', color: '#94a3b8' }}>{t}</span>)}
                 </div>
               </div>
               <div style={{ background: 'rgba(15,23,42,0.5)', borderTop: '1px solid rgba(56,189,248,0.06)', padding: '1rem 1.25rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.4rem' }}>
-                  <span style={{ fontWeight: 700, color: '#38bdf8' }}>{proj.currency}{proj.raised.toLocaleString()} raised</span>
-                  <span style={{ color: '#475569' }}>of {proj.currency}{proj.goal.toLocaleString()} · {pct}%</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.4rem' }}>
+                  <span style={{ fontWeight: 700, color: '#38bdf8' }}>{proj.currency}{Number(proj.raised).toLocaleString()} raised</span>
+                  <span style={{ color: '#475569' }}>of {proj.currency}{Number(proj.goal).toLocaleString()} · {pct}%</span>
                 </div>
                 <div style={{ height: 6, background: 'rgba(56,189,248,0.1)', borderRadius: 3, overflow: 'hidden', marginBottom: '0.75rem' }}>
                   <div style={{ height: '100%', background: 'linear-gradient(90deg,#34d399,#38bdf8)', borderRadius: 3, width: `${pct}%` }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.78rem', color: '#475569' }}>👥 {proj.backers.toLocaleString()} backers</span>
-                  <button onClick={() => { setDonateModal(proj.id); setDonateAmount(10); setCustomAmount('') }}
+                  <span style={{ fontSize: '0.78rem', color: '#475569' }}>👥 {Number(proj.backers).toLocaleString()} backers</span>
+                  <button onClick={() => { setDonateModal(proj); setDonateAmount(10); setCustomAmount('') }}
                     style={{ background: '#34d399', border: 'none', borderRadius: 7, padding: '0.45rem 1rem', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer' }}>
-                    Donate Trust ₮
+                    Donate ₮
                   </button>
                 </div>
               </div>
@@ -360,34 +413,37 @@ export default function ImpactPage() {
         })}
       </div>
 
-      {/* Member Impact Leaderboard */}
+      {/* Leaderboard */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem', color: '#f1f5f9' }}>🏆 Member Impact Leaderboard — Q2 2026</h2>
-        <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, overflow: 'hidden' }}>
-          {leaderboard.map((member, i) => (
-            <div key={member.name} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.85rem 1.25rem', borderBottom: i < leaderboard.length - 1 ? '1px solid rgba(56,189,248,0.06)' : 'none', background: i === 0 ? 'rgba(52,211,153,0.06)' : i < 3 ? `rgba(52,211,153,0.0${3 - i})` : 'transparent' }}>
-              <span style={{ fontSize: i === 0 ? '1.25rem' : '0.9rem', fontWeight: 800, color: i === 0 ? '#fbbf24' : i === 1 ? '#94a3b8' : i === 2 ? '#fb923c' : '#475569', minWidth: 28, textAlign: 'center' }}>
-                {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${member.rank}`}
-              </span>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.75rem', color: '#0f172a', background: member.grad, flexShrink: 0 }}>{member.avatar}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f1f5f9' }}>{member.name}</span>
-                  {'founder' in member && member.founder && (
-                    <span style={{ background: 'rgba(52,211,153,0.15)', border: '1px solid rgba(52,211,153,0.35)', borderRadius: 999, padding: '0.1rem 0.45rem', fontSize: '0.6rem', color: '#34d399', fontWeight: 700, letterSpacing: '0.04em' }}>FOUNDER</span>
-                  )}
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem' }}>🏆 Member Impact Leaderboard — Q2 2026</h2>
+        {leaderboard.length === 0 ? (
+          <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
+            No donations yet — be the first to donate to an impact project! 🌱
+          </div>
+        ) : (
+          <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, overflow: 'hidden' }}>
+            {leaderboard.map((member, i) => (
+              <div key={member.user_id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.85rem 1.25rem', borderBottom: i < leaderboard.length - 1 ? '1px solid rgba(56,189,248,0.06)' : 'none', background: i === 0 ? 'rgba(52,211,153,0.06)' : 'transparent' }}>
+                <span style={{ fontSize: i < 3 ? '1.25rem' : '0.9rem', fontWeight: 800, color: i === 0 ? '#fbbf24' : i === 1 ? '#94a3b8' : i === 2 ? '#fb923c' : '#475569', minWidth: 28, textAlign: 'center' }}>
+                  {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${member.rank}`}
+                </span>
+                <UserAvatar url={member.avatar_url} name={member.full_name} size={36} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f1f5f9' }}>{member.full_name}</span>
+                    {member.is_founder && (
+                      <span style={{ background: 'rgba(52,211,153,0.15)', border: '1px solid rgba(52,211,153,0.35)', borderRadius: 999, padding: '0.1rem 0.45rem', fontSize: '0.6rem', color: '#34d399', fontWeight: 700, letterSpacing: '0.04em' }}>FOUNDER</span>
+                    )}
+                  </div>
                 </div>
-                {'impact' in member && member.impact && (
-                  <div style={{ fontSize: '0.72rem', color: '#34d399', marginTop: '0.1rem' }}>🌱 {member.impact}</div>
-                )}
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#34d399' }}>₮{member.donated.toLocaleString()}</div>
+                  <div style={{ fontSize: '0.72rem', color: '#475569' }}>donated</div>
+                </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#34d399' }}>₮{member.donated}</div>
-                <div style={{ fontSize: '0.72rem', color: '#475569' }}>donated</div>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Bottom CTA */}
