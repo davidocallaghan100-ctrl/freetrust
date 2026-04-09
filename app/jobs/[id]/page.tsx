@@ -70,6 +70,10 @@ export default function JobDetailPage() {
   const [submitting, setSubmitting] = useState(false)
   const [appError, setAppError] = useState('')
   const [form, setForm] = useState({ cover_letter: '', cv_url: '', portfolio_url: '' })
+  const [cvMode, setCvMode] = useState<'upload' | 'link'>('upload')
+  const [cvFile, setCvFile] = useState<File | null>(null)
+  const [cvUploading, setCvUploading] = useState(false)
+  const [cvFileName, setCvFileName] = useState('')
 
   useEffect(() => {
     const load = async () => {
@@ -86,8 +90,38 @@ export default function JobDetailPage() {
     if (id) load()
   }, [id])
 
+  const handleCvFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const allowed = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+    if (!allowed.includes(file.type)) { setAppError('Please upload a PDF or Word document.'); return }
+    if (file.size > 5 * 1024 * 1024) { setAppError('File must be under 5MB.'); return }
+    setAppError('')
+    setCvFile(file)
+    setCvFileName(file.name)
+    // Upload immediately so we have the URL ready
+    setCvUploading(true)
+    try {
+      const supabase = createClient()
+      const ext = file.name.split('.').pop()
+      const path = `resumes/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error } = await supabase.storage.from('uploads').upload(path, file, { contentType: file.type, upsert: false })
+      if (error) throw error
+      const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(path)
+      setForm(f => ({ ...f, cv_url: publicUrl }))
+    } catch {
+      // If upload bucket doesn't exist yet, we'll submit without it and note it
+      setAppError('Resume upload failed — you can paste a link instead, or submit without one.')
+      setCvFile(null)
+      setCvFileName('')
+    } finally {
+      setCvUploading(false)
+    }
+  }
+
   const handleApply = async () => {
     if (!form.cover_letter.trim()) { setAppError('Cover letter is required.'); return }
+    if (cvUploading) { setAppError('Please wait for your resume to finish uploading.'); return }
     setSubmitting(true); setAppError('')
     try {
       const res = await fetch(`/api/jobs/${id}/apply`, {
@@ -287,8 +321,43 @@ export default function JobDetailPage() {
                   <textarea value={form.cover_letter} onChange={e => setForm(f => ({ ...f, cover_letter: e.target.value }))} placeholder="Why are you a great fit for this role?..." rows={5} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
                 </div>
                 <div style={{ marginBottom: '1.25rem' }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.4rem', display: 'block' }}>CV / Resume URL</label>
-                  <input value={form.cv_url} onChange={e => setForm(f => ({ ...f, cv_url: e.target.value }))} placeholder="https://..." style={inputStyle} />
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.5rem', display: 'block' }}>CV / Resume</label>
+                  {/* Toggle */}
+                  <div style={{ display: 'flex', gap: 4, background: '#0f172a', borderRadius: 8, padding: 4, marginBottom: '0.75rem' }}>
+                    {(['upload', 'link'] as const).map(mode => (
+                      <button key={mode} onClick={() => { setCvMode(mode); setForm(f => ({ ...f, cv_url: '' })); setCvFile(null); setCvFileName(''); setAppError('') }}
+                        style={{ flex: 1, padding: '0.4rem 0', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: cvMode === mode ? 700 : 500, fontFamily: 'inherit', background: cvMode === mode ? '#1e293b' : 'transparent', color: cvMode === mode ? '#38bdf8' : '#64748b', transition: 'all 0.15s' }}>
+                        {mode === 'upload' ? '📎 Upload File' : '🔗 Paste Link'}
+                      </button>
+                    ))}
+                  </div>
+                  {cvMode === 'upload' ? (
+                    <div>
+                      <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', border: `2px dashed ${cvFileName ? 'rgba(56,189,248,0.4)' : 'rgba(148,163,184,0.2)'}`, borderRadius: 10, padding: '1.25rem', cursor: 'pointer', background: cvFileName ? 'rgba(56,189,248,0.04)' : 'transparent', transition: 'all 0.15s' }}>
+                        <input type="file" accept=".pdf,.doc,.docx" onChange={handleCvFileChange} style={{ display: 'none' }} />
+                        {cvUploading ? (
+                          <>
+                            <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid #1e293b', borderTopColor: '#38bdf8', animation: 'spin 0.8s linear infinite' }} />
+                            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Uploading…</span>
+                          </>
+                        ) : cvFileName ? (
+                          <>
+                            <span style={{ fontSize: '1.25rem' }}>✅</span>
+                            <span style={{ fontSize: '0.82rem', color: '#34d399', fontWeight: 600, textAlign: 'center', wordBreak: 'break-all' }}>{cvFileName}</span>
+                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Tap to replace</span>
+                          </>
+                        ) : (
+                          <>
+                            <span style={{ fontSize: '1.5rem' }}>📄</span>
+                            <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>Tap to upload your CV</span>
+                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>PDF or Word · max 5MB</span>
+                          </>
+                        )}
+                      </label>
+                    </div>
+                  ) : (
+                    <input value={form.cv_url} onChange={e => setForm(f => ({ ...f, cv_url: e.target.value }))} placeholder="https://drive.google.com/... or LinkedIn URL" style={inputStyle} />
+                  )}
                 </div>
                 <div style={{ marginBottom: '1.5rem' }}>
                   <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.4rem', display: 'block' }}>Portfolio URL (optional)</label>
