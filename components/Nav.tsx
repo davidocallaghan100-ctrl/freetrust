@@ -121,7 +121,8 @@ export default function Nav() {
       <header style={{
         position: 'fixed', top: 0, left: 0, right: 0, height: '58px',
         background: '#0f172a', borderBottom: '1px solid #1e293b',
-        zIndex: 100, display: 'flex', alignItems: 'center', padding: '0 16px', gap: '12px',
+        zIndex: 100, display: 'flex', alignItems: 'center', padding: '0 12px', gap: '8px',
+        overflow: 'hidden',
       }}>
 
         {/* Profile avatar — top left */}
@@ -169,28 +170,28 @@ export default function Nav() {
 
         <div style={{ flex: 1 }} />
 
-        {/* Right side */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+        {/* Right side — hamburger always last and always visible */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, minWidth: 0 }}>
           {user && walletBalance !== null && (
-            <Link href="/wallet" style={{ display: 'flex', alignItems: 'center', padding: '5px 10px', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#38bdf8', textDecoration: 'none' }}>
+            <Link href="/wallet" style={{ display: 'flex', alignItems: 'center', padding: '5px 8px', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '8px', fontSize: '12px', fontWeight: 600, color: '#38bdf8', textDecoration: 'none', flexShrink: 0 }}>
               ₮{walletBalance.toFixed(0)}
             </Link>
           )}
           <CurrencySwitcher compact />
           {user && <NotificationBell />}
           {!loading && !user && (
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <Link href="/auth/signin" style={{ padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 500, color: '#94a3b8', textDecoration: 'none', border: '1px solid #334155' }}>Sign in</Link>
-              <Link href="/auth/signup" style={{ padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #38bdf8, #818cf8)' }}>Sign up</Link>
+            <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+              <Link href="/auth/signin" style={{ padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 500, color: '#94a3b8', textDecoration: 'none', border: '1px solid #334155' }}>Sign in</Link>
+              <Link href="/auth/signup" style={{ padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #38bdf8, #818cf8)' }}>Sign up</Link>
             </div>
           )}
-          {loading && <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#1e293b' }} />}
+          {loading && <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#1e293b', flexShrink: 0 }} />}
 
-          {/* ── Hamburger button ── */}
+          {/* ── Hamburger — always last, never squished ── */}
           <button
             onClick={() => setDrawerOpen(v => !v)}
             aria-label="Open menu"
-            style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '5px', width: '36px', height: '36px', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '8px', padding: '6px', flexShrink: 0 }}
+            style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '5px', width: '36px', height: '36px', minWidth: '36px', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '8px', padding: '6px', flexShrink: 0 }}
           >
             <span style={{ display: 'block', width: '20px', height: '2px', background: '#94a3b8', borderRadius: '2px', transition: 'all 0.25s ease', transform: drawerOpen ? 'translateY(7px) rotate(45deg)' : 'none' }} />
             <span style={{ display: 'block', width: '20px', height: '2px', background: '#94a3b8', borderRadius: '2px', transition: 'all 0.25s ease', opacity: drawerOpen ? 0 : 1, transform: drawerOpen ? 'scaleX(0)' : 'none' }} />
