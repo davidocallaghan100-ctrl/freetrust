@@ -27,6 +27,9 @@ interface Business {
   trust_score: number
   follower_count: number
   created_at: string
+  tagline?: string | null
+  tags?: string[]
+  size?: string | null
   owner: { id: string; full_name: string; avatar_url: string | null }
   members: Array<{ id: string; role: string; title: string; user: { id: string; full_name: string; avatar_url: string | null } }>
   reviews: Array<{ id: string; rating: number; content: string; created_at: string; reviewer: { id: string; full_name: string; avatar_url: string | null } }>
@@ -150,11 +153,24 @@ export default function BusinessProfilePage() {
                 </span>
               )}
             </div>
+            {business.tagline && (
+              <p style={{ fontSize: '0.9rem', color: '#94a3b8', margin: '0.25rem 0 0', fontStyle: 'italic' }}>{business.tagline}</p>
+            )}
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.3rem' }}>
               <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{business.business_type}</span>
               {business.industry && <span style={{ fontSize: '0.8rem', color: '#64748b' }}>· {business.industry}</span>}
               {business.location && <span style={{ fontSize: '0.8rem', color: '#64748b' }}>· 📍 {business.location}</span>}
+              {business.size && <span style={{ fontSize: '0.8rem', color: '#64748b' }}>· {business.size}</span>}
             </div>
+            {business.tags && business.tags.length > 0 && (
+              <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                {business.tags.map(tag => (
+                  <span key={tag} style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.7rem', color: '#7dd3fc' }}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           {/* Actions */}
           <div style={{ display: 'flex', gap: '0.5rem', paddingBottom: '0.25rem' }}>

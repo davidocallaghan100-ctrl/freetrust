@@ -8,7 +8,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const supabase = await createClient()
     const { id } = await params
 
-    const { data: business, error } = await supabase
+    // Try businesses table first
+    const { data: business } = await supabase
       .from('businesses')
       .select(`
         *,
@@ -23,13 +24,55 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         )
       `)
       .eq('id', id)
-      .single()
+      .maybeSingle()
 
-    if (error || !business) {
-      return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+    if (business) {
+      return NextResponse.json({ business })
     }
 
-    return NextResponse.json({ business })
+    // Fall back to organisations table — map fields to business shape
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+    const { data: org } = isUUID
+      ? await supabase.from('organisations').select('*, creator:profiles!creator_id(id, full_name, avatar_url, username)').eq('id', id).maybeSingle()
+      : await supabase.from('organisations').select('*, creator:profiles!creator_id(id, full_name, avatar_url, username)').eq('slug', id).maybeSingle()
+
+    if (!org) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+
+    // Map org fields to the business interface the page expects
+    const mapped = {
+      id: org.id,
+      name: org.name,
+      slug: org.slug,
+      business_type: org.type ?? 'Organisation',
+      industry: org.sector ?? '',
+      description: org.description ?? '',
+      mission: org.impact_statement ?? '',
+      logo_url: org.logo_url ?? null,
+      cover_url: org.cover_url ?? null,
+      website: org.website ?? null,
+      social_links: {},
+      location: org.location ?? null,
+      service_area: null,
+      contact_email: null,
+      contact_phone: null,
+      vat_number: null,
+      founded_date: org.founded_year ? `${org.founded_year}-01-01` : null,
+      verified: org.is_verified ?? false,
+      verification_status: org.is_verified ? 'verified' : 'unverified',
+      trust_score: org.trust_score ?? 0,
+      follower_count: 0,
+      created_at: org.created_at,
+      tagline: org.tagline ?? null,
+      tags: org.tags ?? [],
+      size: org.size ?? null,
+      owner: org.creator ?? null,
+      members: [],
+      reviews: [],
+    }
+
+    return NextResponse.json({ business: mapped })
   } catch (err) {
     console.error('[GET /api/businesses/[id]]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

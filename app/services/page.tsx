@@ -128,6 +128,7 @@ function ServiceCard({ svc }: { svc: Service }) {
           </div>
           <span style={{ background: '#38bdf8', borderRadius: '8px', padding: '7px 16px', fontSize: '12px', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', flexShrink: 0 }}>View</span>
         </div>
+        </div>
       </div>
     </Link>
   )
