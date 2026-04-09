@@ -1204,10 +1204,10 @@ input, textarea, select {
   display: block;
 }
 
-/* Main content: offset by sidebar width + topbar on desktop */
+/* Main content: offset by sidebar + topbar (58px) + search bar (46px) */
 .ft-page-content {
   margin-left: 220px;
-  padding-top: 58px;
+  padding-top: 104px; /* 58px nav + 46px search bar */
   min-height: 100vh;
   width: calc(100% - 220px);
 }
@@ -1219,6 +1219,7 @@ input, textarea, select {
   .ft-page-content {
     margin-left: 0 !important;
     width: 100% !important;
+    padding-top: 104px !important; /* same offset on mobile */
     padding-bottom: 72px; /* space for bottom nav */
   }
 }

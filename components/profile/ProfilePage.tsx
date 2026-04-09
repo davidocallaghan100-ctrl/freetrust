@@ -297,16 +297,19 @@ export default function ProfilePage() {
     const { pct } = calcCompleteness(profile, user?.email ?? null)
     if (pct === 100 && !bonusAwarded && user) {
       setBonusAwarded(true)
-      fetch('/api/trust/award', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: 10, reason: 'Profile 100% complete' }),
-      }).then(r => {
-        if (r.ok) {
-          showToast('🎉 +₮10 Trust awarded for completing your profile!')
-          setTrustBalance(prev => prev + 10)
-        }
-      }).catch(() => { /* silent */ })
+      ;(async () => {
+        try {
+          const r = await fetch('/api/trust/award', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: 10, reason: 'Profile 100% complete' }),
+          })
+          if (r.ok) {
+            showToast('🎉 +₮10 Trust awarded for completing your profile!')
+            setTrustBalance(prev => prev + 10)
+          }
+        } catch { /* silent */ }
+      })()
     }
   }, [profile, user, bonusAwarded])
 

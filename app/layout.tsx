@@ -4,6 +4,7 @@ import "./globals.css";
 import Nav from "@/components/Nav";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
+import SearchBar from "@/components/SearchBar";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -38,8 +39,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         style={{ background: '#0f172a', minHeight: '100vh', color: '#f1f5f9' }}
       >
-        {/* Top bar — sticky, full width */}
+        {/* Top bar — 58px fixed */}
         <Nav />
+
+        {/* Search bar — below top nav, fixed */}
+        <SearchBar />
 
         {/* Body: sidebar + main content */}
         <div style={{ display: 'flex' }}>
