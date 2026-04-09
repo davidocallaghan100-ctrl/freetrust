@@ -238,20 +238,25 @@ export default function EventsPage() {
       <style>{`
         .ev-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.25rem; }
         .ev-filter-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-        .ev-filter-row { display: flex; gap: 0.5rem; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+        .ev-filter-row { display: flex; gap: 0.5rem; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
         .ev-filter-row::-webkit-scrollbar { display: none; }
+        .ev-create-btn { background: linear-gradient(135deg,#38bdf8,#0284c7); color: #fff; padding: 0.6rem 1.25rem; border-radius: 10px; font-weight: 700; font-size: 0.88rem; text-decoration: none; flex-shrink: 0; min-height: 44px; display: flex; align-items: center; white-space: nowrap; }
         @media (max-width: 1024px) { .ev-grid { grid-template-columns: repeat(2,1fr) !important; } }
-        @media (max-width: 640px)  { .ev-grid { grid-template-columns: 1fr !important; } }
+        @media (max-width: 640px) {
+          .ev-grid { grid-template-columns: 1fr !important; }
+          .ev-header-row { flex-direction: column !important; align-items: flex-start !important; }
+          .ev-create-btn { width: 100%; justify-content: center; }
+        }
       `}</style>
 
       {/* Header */}
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 1.25rem 1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.5rem' }}>
+        <div className="ev-header-row" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.5rem' }}>
           <div>
             <h1 style={{ fontSize: 'clamp(1.6rem,4vw,2.2rem)', fontWeight: 900, margin: '0 0 0.25rem', letterSpacing: '-0.5px' }}>Events</h1>
             <p style={{ color: '#64748b', margin: 0, fontSize: '0.9rem' }}>{filtered.length} upcoming event{filtered.length !== 1 ? 's' : ''}</p>
           </div>
-          <Link href="/events/create" style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.6rem 1.25rem', borderRadius: 10, fontWeight: 700, fontSize: '0.88rem', textDecoration: 'none', flexShrink: 0, minHeight: 44, display: 'flex', alignItems: 'center' }}>
+          <Link href="/events/create" className="ev-create-btn">
             + Create Event
           </Link>
         </div>
