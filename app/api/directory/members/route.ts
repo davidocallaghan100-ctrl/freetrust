@@ -10,7 +10,6 @@ export async function GET() {
       .from('profiles')
       .select('id, full_name, username, avatar_url, bio, location')
       .not('full_name', 'is', null)
-      .neq('username', 'val')   // exclude Val bot
       .order('created_at', { ascending: false })
       .limit(100)
 

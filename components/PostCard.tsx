@@ -44,7 +44,6 @@ type Comment = {
   created_at: string
   like_count?: number
   profiles: { id?: string; full_name: string | null; avatar_url: string | null; username?: string | null } | null
-  val_liked?: boolean
   liked_by_me?: boolean
 }
 
@@ -381,10 +380,9 @@ export default function PostCard({
           const ids = rawComments.map(c => c.id).join(',')
           const likesRes = await fetch(`/api/feed/comments/val-likes?ids=${ids}`)
           if (likesRes.ok) {
-            const { likedIds, userLikedIds } = await likesRes.json() as { likedIds: string[]; userLikedIds: string[] }
-            const valSet = new Set(likedIds)
+            const { userLikedIds } = await likesRes.json() as { userLikedIds: string[] }
             const userSet = new Set(userLikedIds)
-            setComments(rawComments.map(c => ({ ...c, val_liked: valSet.has(c.id), liked_by_me: userSet.has(c.id) })))
+            setComments(rawComments.map(c => ({ ...c, liked_by_me: userSet.has(c.id) })))
             return
           }
         } catch { /* fall through */ }
@@ -686,12 +684,7 @@ function CommentRow({
             <span style={{ fontSize: '12px' }}>{liked ? '❤️' : '🤍'}</span>
             {likeCount > 0 && <span>{likeCount}</span>}
           </button>
-          {comment.val_liked && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.15)', borderRadius: '20px', padding: '2px 7px', fontSize: '11px', color: '#f87171', fontWeight: 600 }}>
-              <span>❤️</span>
-              <span>Val</span>
-            </div>
-          )}
+
         </div>
       </div>
     </div>

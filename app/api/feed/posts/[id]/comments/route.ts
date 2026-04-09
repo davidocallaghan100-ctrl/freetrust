@@ -78,15 +78,6 @@ export async function POST(
         .eq('id', id)
     }
 
-    // Val auto-likes the comment (insert into feed_comment_likes as Val bot)
-    const VAL_USER_ID = 'daaaf071-1625-4e49-a94b-3450a5834c0c'
-    if (comment && user.id !== VAL_USER_ID) {
-      const adminSupabase = (await import('@/lib/supabase/admin')).createAdminClient()
-      await adminSupabase
-        .from('feed_comment_likes')
-        .upsert({ comment_id: comment.id, user_id: VAL_USER_ID }, { onConflict: 'comment_id,user_id' })
-    }
-
     return NextResponse.json({ success: true, comment })
   } catch (err) {
     console.error('POST comment error:', err)
