@@ -22,6 +22,7 @@ export default function RegisterPage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [photoUploading, setPhotoUploading] = useState(false)
   const photoInputRef = useRef<HTMLInputElement>(null)
+  const [newUserId, setNewUserId] = useState<string | null>(null)
 
   // Password strength
   const pwStrength = (() => {
@@ -68,7 +69,7 @@ export default function RegisterPage() {
 
     setLoading(true)
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data: signUpData, error } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
         options: {
@@ -88,6 +89,9 @@ export default function RegisterPage() {
           throw new Error('We\'re setting things up — please try again in a moment.')
         }
         throw new Error(msg || 'Something went wrong. Please try again.')
+      }
+      if (signUpData.user) {
+        setNewUserId(signUpData.user.id)
       }
       setSuccess(true)
       setPhotoStep(true)
@@ -404,13 +408,24 @@ export default function RegisterPage() {
                         if (!file) return
                         setPhotoUploading(true)
                         try {
-                          const fd = new FormData()
-                          fd.append('file', file)
-                          const res = await fetch('/api/upload/avatar', { method: 'POST', body: fd })
-                          if (res.ok) {
-                            const data = await res.json() as { url: string }
-                            setAvatarUrl(data.url)
+                          // Upload directly via Supabase client — avoids auth cookie issue
+                          // after signUp() before email confirmation
+                          const userId = newUserId
+                          if (!userId) return
+                          const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+                          const path = `${userId}/${Date.now()}.${ext}`
+                          const { error: uploadError } = await supabase.storage
+                            .from('avatars')
+                            .upload(path, file, { contentType: file.type, upsert: true })
+                          if (uploadError) {
+                            console.error('[photo step] upload error:', uploadError)
+                            return
                           }
+                          const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
+                          const publicUrl = urlData.publicUrl
+                          setAvatarUrl(publicUrl)
+                          // Best-effort: update profile (may fail if RLS requires confirmed session)
+                          await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', userId)
                         } catch { /* silent */ }
                         setPhotoUploading(false)
                       }}
