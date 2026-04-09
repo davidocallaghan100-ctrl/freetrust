@@ -43,6 +43,7 @@ type Comment = {
   content: string
   created_at: string
   profiles: { full_name: string | null; avatar_url: string | null; username?: string | null } | null
+  val_liked?: boolean
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -371,7 +372,21 @@ export default function PostCard({
     try {
       const res = await fetch(`/api/feed/posts/${post.id}/comments`)
       const d = await res.json()
-      setComments(d.comments ?? [])
+      const rawComments: Comment[] = d.comments ?? []
+      // Fetch Val likes for these comments
+      if (rawComments.length > 0) {
+        try {
+          const ids = rawComments.map(c => c.id).join(',')
+          const likesRes = await fetch(`/api/feed/comments/val-likes?ids=${ids}`)
+          if (likesRes.ok) {
+            const { likedIds } = await likesRes.json() as { likedIds: string[] }
+            const likedSet = new Set(likedIds)
+            setComments(rawComments.map(c => ({ ...c, val_liked: likedSet.has(c.id) })))
+            return
+          }
+        } catch { /* fall through */ }
+      }
+      setComments(rawComments)
     } catch { /* silent */ }
   }, [post.id])
 
@@ -567,9 +582,17 @@ export default function PostCard({
               return (
                 <div key={c.id} style={{ display: 'flex', gap: '8px', marginBottom: '10px', alignItems: 'flex-start' }}>
                   <Avatar url={c.profiles?.avatar_url ?? null} name={cName} size={30} />
-                  <div style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: '10px', padding: '8px 12px', flex: 1 }}>
-                    <div style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', marginBottom: '2px' }}>{cName}</div>
-                    <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5 }}>{c.content}</div>
+                  <div style={{ flex: 1, position: 'relative' }}>
+                    <div style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: '10px', padding: '8px 12px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', marginBottom: '2px' }}>{cName}</div>
+                      <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5 }}>{c.content}</div>
+                    </div>
+                    {c.val_liked && (
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', marginTop: '4px', marginLeft: '8px', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: '20px', padding: '1px 7px', fontSize: '11px', color: '#f87171', fontWeight: 600 }}>
+                        <span>❤️</span>
+                        <span>Val</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )
