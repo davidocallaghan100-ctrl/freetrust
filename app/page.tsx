@@ -4,7 +4,6 @@ import Link from 'next/link'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type TickerItem = { id: string; type: string; text: string; time: string }
-type GrowthPoint = { date: string; count: number; cumulative: number }
 type StatsData = {
   members: { total: number; thisWeek: number; thisMonth: number }
   listings: { services: number; products: number }
@@ -13,646 +12,504 @@ type StatsData = {
   communities: { total: number }
   trust: { total: number; thisWeek: number }
   ticker: TickerItem[]
-  growth: GrowthPoint[]
+  growth: { date: string; count: number; cumulative: number }[]
   foundingGoal: number
 }
 
 // ── Animated counter ──────────────────────────────────────────────────────────
-function Counter({ target, prefix = '', suffix = '', decimals = 0 }: {
-  target: number; prefix?: string; suffix?: string; decimals?: number
-}) {
+function Counter({ target, prefix = '', suffix = '' }: { target: number; prefix?: string; suffix?: string }) {
   const [count, setCount] = useState(0)
   const ref = useRef<HTMLSpanElement>(null)
-  const prevTarget = useRef(0)
-
+  const started = useRef(false)
   useEffect(() => {
-    const from = prevTarget.current
-    prevTarget.current = target
     if (target === 0) { setCount(0); return }
-    let start = from
-    const duration = 900
-    const startTime = performance.now()
-    const tick = (now: number) => {
-      const elapsed = now - startTime
-      const progress = Math.min(elapsed / duration, 1)
-      const eased = 1 - Math.pow(1 - progress, 3)
-      start = from + (target - from) * eased
-      setCount(start)
-      if (progress < 1) requestAnimationFrame(tick)
-    }
+    started.current = false
     const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return
+      if (!entry.isIntersecting || started.current) return
+      started.current = true
       observer.disconnect()
+      const from = 0; const dur = 1000; const t0 = performance.now()
+      const tick = (now: number) => {
+        const p = Math.min((now - t0) / dur, 1)
+        const e = 1 - Math.pow(1 - p, 3)
+        setCount(Math.round(from + (target - from) * e))
+        if (p < 1) requestAnimationFrame(tick)
+      }
       requestAnimationFrame(tick)
     }, { threshold: 0.2 })
     if (ref.current) observer.observe(ref.current)
     return () => observer.disconnect()
   }, [target])
-
-  const display = decimals > 0 ? count.toFixed(decimals) : Math.round(count).toLocaleString()
-  return <span ref={ref}>{prefix}{display}{suffix}</span>
+  return <span ref={ref}>{prefix}{count.toLocaleString()}{suffix}</span>
 }
 
-// ── Sparkline chart ───────────────────────────────────────────────────────────
-function Sparkline({ data, color = '#38bdf8', height = 48 }: {
-  data: number[]; color?: string; height?: number
-}) {
-  if (data.length < 2) return null
-  const min = Math.min(...data)
-  const max = Math.max(...data)
-  const range = max - min || 1
-  const w = 200
-  const h = height
-  const pts = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * w
-    const y = h - ((v - min) / range) * (h - 4) - 2
-    return `${x},${y}`
-  }).join(' ')
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', height }} preserveAspectRatio="none">
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <polyline points={`0,${h} ${pts} ${w},${h}`} fill={`${color}18`} stroke="none" />
-    </svg>
-  )
-}
-
-// ── Live ticker ───────────────────────────────────────────────────────────────
-const FALLBACK_TICKS = [
-  { id: 'f1', type: 'join', text: 'Someone just joined FreeTrust — be the first in your city!', time: new Date().toISOString() },
-  { id: 'f2', type: 'trust', text: '₮25 Trust issued — new member signup bonus', time: new Date().toISOString() },
-  { id: 'f3', type: 'article', text: 'New article published: "The Trust Economy: Why Reputation Will Replace Resumes by 2030"', time: new Date().toISOString() },
+// ── AI Voice Bubble ───────────────────────────────────────────────────────────
+const VOICE_MESSAGES = [
+  'Welcome to FreeTrust — where trust is currency',
+  'Buy, sell and connect with trusted members',
+  'Earn Trust with every transaction you make',
+  'Join as a founding member today',
+  'Built for creators, freelancers and founders',
+  'The more you earn, the less you pay in fees',
 ]
 
-function LiveTicker({ items }: { items: TickerItem[] }) {
-  const [idx, setIdx] = useState(0)
+function AIVoiceBubble({ size = 220 }: { size?: number }) {
+  const [msgIdx, setMsgIdx] = useState(0)
   const [fade, setFade] = useState(true)
-  const ticks = items.length > 0 ? items : FALLBACK_TICKS
+  const [speaking, setSpeaking] = useState(true)
+  const s = size
 
   useEffect(() => {
     const t = setInterval(() => {
       setFade(false)
+      setSpeaking(false)
       setTimeout(() => {
-        setIdx(i => (i + 1) % ticks.length)
+        setMsgIdx(i => (i + 1) % VOICE_MESSAGES.length)
         setFade(true)
-      }, 300)
+        setSpeaking(true)
+      }, 500)
     }, 4000)
     return () => clearInterval(t)
-  }, [ticks.length])
-
-  const item = ticks[idx]
-  const icons: Record<string, string> = { join: '👋', trust: '₮', article: '✍️', service: '🛠️' }
+  }, [])
 
   return (
-    <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 10, padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: '0.6rem', overflow: 'hidden', maxWidth: 560, margin: '0 auto' }}>
-      <span style={{ fontSize: '1rem', flexShrink: 0 }}>{icons[item.type] ?? '🔔'}</span>
-      <span style={{ fontSize: '0.82rem', color: '#94a3b8', transition: 'opacity 0.3s', opacity: fade ? 1 : 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {item.text}
-      </span>
-      <span style={{ marginLeft: 'auto', flexShrink: 0, fontSize: '0.7rem', color: '#475569', background: 'rgba(56,189,248,0.08)', borderRadius: 999, padding: '1px 6px' }}>LIVE</span>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem', userSelect: 'none' }}>
+      {/* Bubble */}
+      <div style={{ position: 'relative', width: s, height: s, display: 'flex', alignItems: 'center', justifyContent: 'center' }} className="ai-bubble-wrap">
+        {/* Outer rotating dashed ring */}
+        <div className="ai-ring-outer" style={{
+          position: 'absolute', inset: 0, borderRadius: '50%',
+          border: '2px dashed rgba(56,189,248,0.35)',
+          animation: 'ai-spin-cw 12s linear infinite',
+        }} />
+        {/* Ripple rings */}
+        <div className="ai-ripple ai-ripple-1" style={{ position: 'absolute', borderRadius: '50%', border: '1px solid rgba(56,189,248,0.18)', animation: 'ai-ripple 3s ease-out infinite' }} />
+        <div className="ai-ripple ai-ripple-2" style={{ position: 'absolute', borderRadius: '50%', border: '1px solid rgba(52,211,153,0.12)', animation: 'ai-ripple 3s ease-out infinite 1s' }} />
+        <div className="ai-ripple ai-ripple-3" style={{ position: 'absolute', borderRadius: '50%', border: '1px solid rgba(56,189,248,0.08)', animation: 'ai-ripple 3s ease-out infinite 2s' }} />
+        {/* Mid counter-rotating dotted ring */}
+        <div style={{
+          position: 'absolute', inset: Math.round(s * 0.08), borderRadius: '50%',
+          border: '1.5px dotted rgba(52,211,153,0.4)',
+          animation: 'ai-spin-ccw 8s linear infinite',
+        }} />
+        {/* Outer glow */}
+        <div style={{
+          position: 'absolute', inset: Math.round(s * 0.12), borderRadius: '50%',
+          background: speaking
+            ? 'radial-gradient(circle, rgba(52,211,153,0.18) 0%, rgba(56,189,248,0.12) 50%, transparent 75%)'
+            : 'radial-gradient(circle, rgba(56,189,248,0.12) 0%, transparent 70%)',
+          animation: 'ai-pulse 2.2s ease-in-out infinite',
+          transition: 'background 0.6s',
+        }} />
+        {/* Core sphere */}
+        <div style={{
+          position: 'absolute', inset: Math.round(s * 0.18), borderRadius: '50%',
+          background: 'radial-gradient(circle at 35% 30%, rgba(96,165,250,0.55) 0%, rgba(30,41,59,0.97) 55%, rgba(15,23,42,1) 100%)',
+          boxShadow: speaking
+            ? `0 0 ${Math.round(s*0.14)}px rgba(56,189,248,0.55), 0 0 ${Math.round(s*0.06)}px rgba(52,211,153,0.4) inset`
+            : `0 0 ${Math.round(s*0.08)}px rgba(56,189,248,0.3)`,
+          animation: 'ai-breathe 3s ease-in-out infinite',
+          transition: 'box-shadow 0.6s',
+        }}>
+          {/* Shimmer highlight */}
+          <div style={{
+            position: 'absolute', top: '18%', left: '22%',
+            width: '35%', height: '25%',
+            background: 'radial-gradient(ellipse, rgba(255,255,255,0.22) 0%, transparent 70%)',
+            borderRadius: '50%',
+          }} />
+          {/* Inner glow core */}
+          <div style={{
+            position: 'absolute', inset: '25%',
+            borderRadius: '50%',
+            background: speaking
+              ? 'radial-gradient(circle, rgba(52,211,153,0.45) 0%, rgba(56,189,248,0.3) 50%, transparent 75%)'
+              : 'radial-gradient(circle, rgba(56,189,248,0.3) 0%, transparent 70%)',
+            animation: 'ai-core-pulse 1.8s ease-in-out infinite',
+            transition: 'background 0.6s',
+          }} />
+        </div>
+        {/* Orbiting dot */}
+        <div style={{
+          position: 'absolute',
+          width: Math.round(s * 0.065), height: Math.round(s * 0.065),
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, #7dd3fc 0%, #0ea5e9 100%)',
+          boxShadow: '0 0 8px rgba(56,189,248,0.9)',
+          animation: 'ai-orbit 4s linear infinite',
+          transformOrigin: `${Math.round(s * 0.5)}px ${Math.round(s * 0.5)}px`,
+          top: `calc(50% - ${Math.round(s * 0.032)}px)`,
+          left: `calc(50% - ${Math.round(s * 0.032)}px)`,
+        }} />
+      </div>
+
+      {/* Rotating message */}
+      <div style={{ minHeight: 52, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.6rem' }}>
+        <p style={{
+          fontSize: 'clamp(0.85rem, 2.5vw, 1rem)', color: '#94a3b8',
+          textAlign: 'center', margin: 0, maxWidth: 360, lineHeight: 1.5,
+          opacity: fade ? 1 : 0, transition: 'opacity 0.4s',
+          fontStyle: 'italic',
+        }}>
+          &ldquo;{VOICE_MESSAGES[msgIdx]}&rdquo;
+        </p>
+        {/* Speech wave bars */}
+        {speaking && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3, height: 20 }}>
+            {[0,1,2,3,4,5].map(i => (
+              <div key={i} className={`ai-wave-bar ai-wave-bar-${i}`} style={{
+                width: 3, borderRadius: 99,
+                background: 'linear-gradient(to top, #38bdf8, #34d399)',
+                animation: `ai-wave 1.2s ease-in-out ${i * 0.15}s infinite`,
+              }} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Talk to AI button */}
+      <Link href="/feed" style={{
+        display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+        background: 'linear-gradient(135deg, rgba(56,189,248,0.15), rgba(52,211,153,0.1))',
+        border: '1px solid rgba(56,189,248,0.35)',
+        borderRadius: 999, padding: '0.6rem 1.4rem',
+        color: '#38bdf8', fontSize: '0.85rem', fontWeight: 700,
+        textDecoration: 'none', transition: 'all 0.2s',
+        backdropFilter: 'blur(8px)',
+      }}>
+        <span style={{ fontSize: '1rem' }}>🎙</span>
+        Talk to FreeTrust AI
+      </Link>
     </div>
   )
 }
 
-// ── Static data ───────────────────────────────────────────────────────────────
-const TRUST_LEVELS = [
-  { level: 'Starter',   min: 0,    max: 99,   color: '#94a3b8', bg: 'rgba(148,163,184,0.1)',  perks: ['Access to marketplace', 'Post on feed', 'Join communities'] },
-  { level: 'Trusted',   min: 100,  max: 499,  color: '#38bdf8', bg: 'rgba(56,189,248,0.1)',   perks: ['Reduced platform fee (3%)', 'Verified badge', 'Priority search placement'] },
-  { level: 'Pro',       min: 500,  max: 999,  color: '#a78bfa', bg: 'rgba(167,139,250,0.1)',  perks: ['1.5% platform fee', 'Featured listings', 'Early access to features'] },
-  { level: 'Elite',     min: 1000, max: 4999, color: '#34d399', bg: 'rgba(52,211,153,0.1)',   perks: ['Zero platform fee', 'Top-tier search boost', 'Dedicated support'] },
-  { level: 'Legendary', min: 5000, max: null, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',   perks: ['Revenue share on referrals', 'Governance voting rights', 'Impact Fund allocation'] },
+// ── Featured service card ─────────────────────────────────────────────────────
+const FEATURED_SERVICES = [
+  { id:'s1', title:'Brand Identity Design', provider:'Sarah Chen', avatar:'https://i.pravatar.cc/40?img=47', trust:1240, price:450, rating:4.9, reviews:127, tags:['Logo','Brand','Figma'], grad:'linear-gradient(135deg,#f472b6,#db2777)' },
+  { id:'s2', title:'Full-Stack Web Dev', provider:'Priya Nair', avatar:'https://i.pravatar.cc/40?img=44', trust:1580, price:2800, rating:5.0, reviews:89, tags:['Next.js','Supabase','TypeScript'], grad:'linear-gradient(135deg,#38bdf8,#0284c7)' },
+  { id:'s3', title:'SEO & Content Strategy', provider:'Marcus Obi', avatar:'https://i.pravatar.cc/40?img=12', trust:2100, price:320, rating:4.8, reviews:64, tags:['SEO','Content','Analytics'], grad:'linear-gradient(135deg,#34d399,#059669)' },
+  { id:'s4', title:'Business Coaching', provider:'Amara Diallo', avatar:'https://i.pravatar.cc/40?img=45', trust:890, price:480, rating:4.9, reviews:38, tags:['Startup','Strategy','Growth'], grad:'linear-gradient(135deg,#a78bfa,#7c3aed)' },
+  { id:'s5', title:'AI Automation Setup', provider:'Tom Walsh', avatar:'https://i.pravatar.cc/40?img=53', trust:780, price:380, rating:4.7, reviews:43, tags:['Make','Zapier','GPT'], grad:'linear-gradient(135deg,#fbbf24,#d97706)' },
 ]
 
-const FEE_COMPARISON = [
-  { platform: 'Fiverr',      fee: '20%',    icon: '💸', color: '#ef4444' },
-  { platform: 'Upwork',      fee: '10–20%', icon: '💸', color: '#ef4444' },
-  { platform: 'Etsy',        fee: '6.5%',   icon: '🟡', color: '#f59e0b' },
-  { platform: 'FreeTrust ★', fee: '0–5%',   icon: '✅', color: '#34d399', highlight: true },
+const FEATURED_PRODUCTS = [
+  { id:'p1', title:'Notion Business OS', seller:'Priya Nair', avatar:'https://i.pravatar.cc/40?img=44', price:29, rating:4.9, reviews:284, type:'digital', grad:'linear-gradient(135deg,#34d399,#059669)' },
+  { id:'p2', title:'Next.js SaaS Boilerplate', seller:'Marcus Obi', avatar:'https://i.pravatar.cc/40?img=12', price:129, rating:4.9, reviews:378, type:'digital', grad:'linear-gradient(135deg,#818cf8,#4338ca)' },
+  { id:'p3', title:'UI Component Library', seller:'Sarah Chen', avatar:'https://i.pravatar.cc/40?img=47', price:79, rating:5.0, reviews:512, type:'digital', grad:'linear-gradient(135deg,#f472b6,#db2777)' },
+  { id:'p4', title:'FreeTrust Merch Hoodie', seller:'Maja Eriksson', avatar:'https://i.pravatar.cc/40?img=25', price:65, rating:4.8, reviews:91, type:'physical', grad:'linear-gradient(135deg,#38bdf8,#0284c7)' },
+  { id:'p5', title:'Ambient Lo-Fi Music Pack', seller:'Lena Fischer', avatar:'https://i.pravatar.cc/40?img=41', price:24, rating:4.8, reviews:203, type:'digital', grad:'linear-gradient(135deg,#a78bfa,#7c3aed)' },
 ]
 
-const HOW_IT_WORKS = [
-  { step: '01', icon: '🔑', title: 'Join free', desc: 'Create your account in 60 seconds. No credit card. Get ₮25 Trust on signup.' },
-  { step: '02', icon: '🛍️', title: 'Transact', desc: 'Buy or sell services, products, and jobs. Every verified transaction earns Trust.' },
-  { step: '03', icon: '⬆️', title: 'Level up', desc: 'As your Trust score grows, your fees drop — reaching zero at Elite level.' },
-  { step: '04', icon: '💰', title: 'Earn more', desc: 'Elite members earn referral revenue and gain governance influence.' },
+// ── Value props ───────────────────────────────────────────────────────────────
+const VALUE_PROPS = [
+  { icon: '₮', title: 'Trust is your currency', desc: 'Every transaction, review, and contribution earns Trust tokens. Higher Trust = lower fees and better visibility.' },
+  { icon: '0%', title: 'Fees that drop to zero', desc: 'Start at 5%, reach Elite level and pay nothing. The more you do, the less it costs — forever.' },
+  { icon: '🌍', title: 'Commerce with purpose', desc: '1% of every transaction funds community impact projects. Buy and sell knowing your money does more.' },
 ]
 
-const EARN_WAYS = [
-  { icon: '🛠️', action: 'Complete a service order',     earn: '+₮50–200' },
-  { icon: '⭐', action: 'Receive a 5-star review',       earn: '+₮10'     },
-  { icon: '🤝', action: 'Refer a new member',            earn: '+₮25'     },
-  { icon: '✍️', action: 'Publish a community article',  earn: '+₮20'     },
-  { icon: '📅', action: 'Host a community event',        earn: '+₮30'     },
-  { icon: '🏆', action: 'Hit a Trust milestone',         earn: '+₮50–500' },
-]
-
-const TESTIMONIALS = [
-  { name: 'Priya N.', role: 'Full-Stack Developer', quote: 'I cleared £8,400 in my first 3 months. With zero platform fee at Elite level, I keep almost everything I earn.', trust: 1240, avatarImg: 'https://i.pravatar.cc/150?img=44', grad: 'linear-gradient(135deg,#a78bfa,#7c3aed)', initials: 'PN' },
-  { name: 'Marcus O.', role: 'SEO Consultant', quote: 'Fiverr was taking 20% off every order. FreeTrust dropped that to 3% in my first month — real money back in my pocket.', trust: 420, avatarImg: 'https://i.pravatar.cc/150?img=12', grad: 'linear-gradient(135deg,#34d399,#059669)', initials: 'MO' },
-  { name: 'Amara D.', role: 'Business Coach', quote: 'The Trust economy is real. My Trust score opened doors that cold outreach never could. Clients come to me now.', trust: 890, avatarImg: 'https://i.pravatar.cc/150?img=45', grad: 'linear-gradient(135deg,#38bdf8,#0284c7)', initials: 'AD' },
-]
-
-const EMPTY_STATES: Record<string, { icon: string; msg: string; cta: string; href: string }> = {
-  services: { icon: '🛠️', msg: 'Be the first to list a service in your area', cta: 'List a service', href: '/seller/gigs/create' },
-  products: { icon: '📦', msg: 'No products yet — start selling to the community', cta: 'Add a product', href: '/seller/gigs/create' },
-  events:   { icon: '📅', msg: 'No upcoming events — why not create one?', cta: 'Create event', href: '/events/create' },
-  articles: { icon: '✍️', msg: 'No articles yet — share your expertise', cta: 'Write an article', href: '/articles/new' },
-  communities: { icon: '🏘️', msg: 'Start the conversation — create a community', cta: 'Create community', href: '/community/new' },
-}
-
-// ── Main page ─────────────────────────────────────────────────────────────────
+// ── Main component ────────────────────────────────────────────────────────────
 export default function Home() {
-  const [activeTrustLevel, setActiveTrustLevel] = useState(1)
   const [stats, setStats] = useState<StatsData | null>(null)
-  const [statsLoading, setStatsLoading] = useState(true)
 
   const fetchStats = useCallback(async () => {
     try {
       const res = await fetch('/api/stats', { cache: 'no-store' })
-      if (res.ok) {
-        const data = await res.json() as StatsData
-        setStats(data)
-      }
-    } catch { /* keep previous data */ }
-    finally { setStatsLoading(false) }
+      if (res.ok) setStats(await res.json() as StatsData)
+    } catch { /* silent */ }
   }, [])
 
   useEffect(() => {
     void fetchStats()
-    const interval = setInterval(fetchStats, 60_000) // refresh every 60s
-    return () => clearInterval(interval)
+    const iv = setInterval(fetchStats, 60_000)
+    return () => clearInterval(iv)
   }, [fetchStats])
 
-  // Derived values
-  const totalMembers = stats?.members.total ?? 0
-  const membersThisWeek = stats?.members.thisWeek ?? 0
-  const membersThisMonth = stats?.members.thisMonth ?? 0
-  const servicesListed = stats?.listings.services ?? 0
-  const productsListed = stats?.listings.products ?? 0
-  const articlesPublished = stats?.articles.published ?? 0
-  const communitiesCount = stats?.communities.total ?? 0
-  const trustTotal = stats?.trust.total ?? 0
-  const trustThisWeek = stats?.trust.thisWeek ?? 0
-  const upcomingEvents = stats?.events.upcoming ?? 0
-  const foundingGoal = stats?.foundingGoal ?? 1000
-  const foundingPct = Math.min((totalMembers / foundingGoal) * 100, 100)
-
-  // Growth sparkline data (cumulative member count)
-  const growthData = (stats?.growth ?? []).map(g => g.cumulative)
-
-  // Stats bar items — always show real values
-  const STAT_ITEMS = [
-    {
-      value: totalMembers, prefix: '', suffix: '', label: 'Members & growing',
-      empty: 'members', sub: membersThisWeek > 0 ? `+${membersThisWeek} this week` : 'Join as a founding member'
-    },
-    {
-      value: servicesListed, prefix: '', suffix: '', label: 'Services listed',
-      empty: 'services', sub: servicesListed === 0 ? 'Be the first!' : 'Browse the marketplace'
-    },
-    {
-      value: productsListed, prefix: '', suffix: '', label: 'Products listed',
-      empty: 'products', sub: productsListed === 0 ? 'Be the first!' : 'Shop the marketplace'
-    },
-    {
-      value: trustTotal, prefix: '₮', suffix: '', label: 'Trust issued',
-      empty: 'trust', sub: trustThisWeek > 0 ? `₮${trustThisWeek} issued this week` : 'Start earning Trust'
-    },
-  ]
+  const tm = stats?.members.total ?? 0
+  const tw = stats?.members.thisWeek ?? 0
+  const tt = stats?.trust.total ?? 0
+  const sl = stats?.listings.services ?? 0
+  const pl = stats?.listings.products ?? 0
+  const goal = stats?.foundingGoal ?? 1000
+  const pct = Math.min((tm / goal) * 100, 100)
 
   return (
     <main style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', overflowX: 'hidden' }}>
+
+      {/* ── GLOBAL STYLES ── */}
       <style>{`
-        .lp-section { max-width: 1100px; margin: 0 auto; padding: 4rem 1.25rem; }
-        .lp-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; }
-        .lp-grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; }
-        .lp-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: center; }
+        /* AI bubble animations */
+        @keyframes ai-spin-cw  { from { transform: rotate(0deg); }   to { transform: rotate(360deg); } }
+        @keyframes ai-spin-ccw { from { transform: rotate(0deg); }   to { transform: rotate(-360deg); } }
+        @keyframes ai-pulse    { 0%,100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.04); } }
+        @keyframes ai-breathe  { 0%,100% { transform: scale(1); }    50% { transform: scale(1.025); } }
+        @keyframes ai-core-pulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+        @keyframes ai-orbit {
+          0%   { transform: translateX(calc(var(--orbit-r, 38px))) rotate(0deg) translateX(calc(-1 * var(--orbit-r, 38px))); }
+          100% { transform: translateX(calc(var(--orbit-r, 38px))) rotate(360deg) translateX(calc(-1 * var(--orbit-r, 38px))); }
+        }
+        .ai-bubble-wrap .ai-ripple-1 { inset: -8px; }
+        .ai-bubble-wrap .ai-ripple-2 { inset: -18px; }
+        .ai-bubble-wrap .ai-ripple-3 { inset: -30px; }
+        @keyframes ai-ripple { 0% { opacity: 0.6; transform: scale(1); } 100% { opacity: 0; transform: scale(1.4); } }
+        @keyframes ai-wave   { 0%,100% { height: 4px; } 50% { height: 18px; } }
+        .ai-wave-bar { display: inline-block; }
+
+        /* Orbit helper (we inline the orbit but need a CSS var fallback) */
+        @keyframes ai-orbit-anim {
+          from { transform: rotate(0deg) translateX(90px) rotate(0deg); }
+          to   { transform: rotate(360deg) translateX(90px) rotate(-360deg); }
+        }
+
+        /* Founding bar shimmer */
+        @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+        .found-bar { background: linear-gradient(90deg,#38bdf8,#818cf8,#38bdf8); background-size: 200% auto; animation: shimmer 2.5s linear infinite; }
+        @keyframes pulse-dot { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.5); } }
+        .live-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #34d399; animation: pulse-dot 1.8s ease-in-out infinite; flex-shrink: 0; }
+
+        /* Layout helpers */
+        .lp { max-width: 1100px; margin: 0 auto; padding: 0 1.25rem; }
+        .lp-sec { padding: 3.5rem 1.25rem; max-width: 1100px; margin: 0 auto; }
+        .hscroll { display: flex; gap: 1rem; overflow-x: auto; scrollbar-width: none; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
+        .hscroll::-webkit-scrollbar { display: none; }
+
+        /* Mobile resets */
         @media (max-width: 768px) {
-          .lp-section { padding: 2.5rem 1rem; }
-          .lp-grid-3 { grid-template-columns: 1fr; }
-          .lp-grid-4 { grid-template-columns: repeat(2,1fr); }
-          .lp-grid-2 { grid-template-columns: 1fr; }
-          .hero-h1 { font-size: clamp(2rem,7vw,3.2rem) !important; }
-          .hero-cta-row { flex-direction: column; align-items: stretch !important; }
-          .hero-cta-row a { text-align: center; }
-          .stats-row { grid-template-columns: repeat(2,1fr) !important; gap: 0.75rem !important; }
-          .trust-tabs { overflow-x: auto; scrollbar-width: none; }
-          .trust-tabs::-webkit-scrollbar { display: none; }
-          .founding-inner { flex-direction: column !important; text-align: center; }
-          .growth-grid { grid-template-columns: 1fr !important; }
+          .hero-inner { flex-direction: column !important; text-align: center; }
+          .hero-text { align-items: center !important; }
+          .hero-cta { flex-direction: column !important; width: 100% !important; }
+          .hero-cta a, .hero-cta button { width: 100% !important; text-align: center; justify-content: center; }
+          .stats-grid { grid-template-columns: repeat(2,1fr) !important; }
+          .val-grid { grid-template-columns: 1fr !important; }
+          .found-inner { flex-direction: column !important; text-align: center; }
+          .footer-links { justify-content: center !important; }
+          .lp-sec { padding: 2.5rem 1rem; }
+          .lp { padding: 0 1rem; }
+          .section-h2 { font-size: clamp(1.4rem,5vw,2rem) !important; }
         }
         @media (max-width: 480px) {
-          .lp-grid-4 { grid-template-columns: 1fr; }
+          .stats-grid { grid-template-columns: repeat(2,1fr) !important; }
         }
-        .card-hover { transition: border-color 0.15s, transform 0.15s; }
-        .card-hover:hover { border-color: rgba(56,189,248,0.4) !important; transform: translateY(-2px); }
-        .trust-tab { cursor: pointer; padding: 0.5rem 1rem; border-radius: 999px; font-size: 0.78rem; font-weight: 600; white-space: nowrap; transition: all 0.15s; border: 1px solid transparent; }
-        @keyframes pulse-dot { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.4); } }
-        @keyframes founding-shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
-        @keyframes ticker-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-        .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #34d399; display: inline-block; animation: pulse-dot 1.8s ease-in-out infinite; flex-shrink: 0; }
-        .founding-bar-fill { background: linear-gradient(90deg, #38bdf8, #818cf8, #38bdf8); background-size: 200% auto; animation: founding-shimmer 2.5s linear infinite; }
-        .stat-pulse { animation: ticker-blink 2s ease-in-out 1; }
       `}</style>
 
-      {/* ── HERO ── */}
-      <div style={{ background: 'radial-gradient(ellipse 90% 70% at 50% -10%, rgba(56,189,248,0.14) 0%, transparent 70%), radial-gradient(ellipse 50% 40% at 80% 50%, rgba(129,140,248,0.08) 0%, transparent 60%)', padding: '4.5rem 1.25rem 3rem', textAlign: 'center', borderBottom: '1px solid rgba(56,189,248,0.08)' }}>
-        <div style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 999, padding: '0.3rem 1rem', fontSize: '0.78rem', color: '#38bdf8', marginBottom: '1.25rem', letterSpacing: '0.06em', fontWeight: 700 }}>
-          ✦ THE TRUST ECONOMY — EARN AS YOU BUILD
-        </div>
-        <h1 className="hero-h1" style={{ fontSize: 'clamp(2.4rem, 6vw, 4.6rem)', fontWeight: 900, lineHeight: 1.08, margin: '0 0 1.25rem', letterSpacing: '-2px' }}>
-          The platform where<br />
-          <span style={{ background: 'linear-gradient(135deg, #38bdf8 0%, #818cf8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>trust pays dividends</span>
-        </h1>
-        <p style={{ fontSize: '1.1rem', color: '#94a3b8', marginBottom: '1rem', maxWidth: '600px', margin: '0 auto 1rem', lineHeight: 1.6 }}>
-          FreeTrust is a social commerce platform where your reputation is your currency. The more you transact, the more you earn — and the less you pay in fees.
-        </p>
+      {/* ── 2. HERO ── */}
+      <div style={{ background: 'radial-gradient(ellipse 100% 80% at 50% -5%, rgba(56,189,248,0.13) 0%, transparent 65%), radial-gradient(ellipse 60% 50% at 85% 40%, rgba(129,140,248,0.08) 0%, transparent 60%)', borderBottom: '1px solid rgba(56,189,248,0.08)', paddingTop: '3rem', paddingBottom: '2.5rem' }}>
+        <div className="lp" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '3rem', flexWrap: 'wrap', justifyContent: 'center' }} >
+          <div className="hero-inner" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '3rem', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
 
-        {/* Live ticker below tagline */}
-        <div style={{ marginBottom: '1.5rem', marginTop: '1.25rem' }}>
-          {!statsLoading && <LiveTicker items={stats?.ticker ?? []} />}
-        </div>
-
-        <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '2rem', fontSize: '0.82rem', color: '#64748b' }}>
-          <span>✅ Free to join — ₮25 on signup</span>
-          <span>✅ Fees from 0% at Elite level</span>
-          <span>✅ No monthly subscription</span>
-        </div>
-
-        <div className="hero-cta-row" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '2.5rem' }}>
-          <Link href="/register" style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.9rem 2.2rem', borderRadius: 10, fontWeight: 800, fontSize: '1rem', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.35)' }}>
-            Claim Founding Member Spot →
-          </Link>
-          <Link href="/services" style={{ background: 'rgba(255,255,255,0.05)', color: '#cbd5e1', padding: '0.9rem 2rem', borderRadius: 10, fontWeight: 600, fontSize: '1rem', textDecoration: 'none', border: '1px solid rgba(148,163,184,0.2)' }}>
-            Browse Marketplace
-          </Link>
-        </div>
-
-        {/* Social proof row with real member count */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', fontSize: '0.82rem', color: '#64748b' }}>
-          <div style={{ display: 'flex' }}>
-            {['SC','PN','MO','AD','TW'].map((initials, idx) => (
-              <div key={initials} style={{ width: 30, height: 30, borderRadius: '50%', background: ['linear-gradient(135deg,#38bdf8,#0284c7)','linear-gradient(135deg,#a78bfa,#7c3aed)','linear-gradient(135deg,#34d399,#059669)','linear-gradient(135deg,#fb923c,#ea580c)','linear-gradient(135deg,#f472b6,#db2777)'][idx], border: '2px solid #0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, color: '#fff', marginLeft: idx > 0 ? '-8px' : 0 }}>{initials}</div>
-            ))}
-          </div>
-          <span>
-            {statsLoading
-              ? 'Growing daily…'
-              : totalMembers > 0
-                ? <>Joined by <strong style={{ color: '#f1f5f9' }}>{totalMembers.toLocaleString()}</strong> member{totalMembers !== 1 ? 's' : ''} earning Trust daily</>
-                : 'Be the first founding member — join now'}
-          </span>
-        </div>
-      </div>
-
-      {/* ── FOUNDING MEMBER COUNTER ── */}
-      <div style={{ background: 'linear-gradient(135deg, rgba(56,189,248,0.07) 0%, rgba(129,140,248,0.07) 100%)', borderBottom: '1px solid rgba(56,189,248,0.12)', padding: '1.75rem 1.25rem' }}>
-        <div style={{ maxWidth: 700, margin: '0 auto' }}>
-          <div className="founding-inner" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1rem' }}>
-            <div style={{ flexShrink: 0 }}>
-              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#38bdf8', letterSpacing: '0.1em', marginBottom: '2px' }}>🏅 FOUNDING MEMBERS</div>
-              <div style={{ fontSize: '2rem', fontWeight: 900, color: '#f1f5f9', lineHeight: 1 }}>
-                <Counter target={totalMembers} />
-                <span style={{ color: '#475569', fontWeight: 400, fontSize: '1.2rem' }}> / {foundingGoal.toLocaleString()}</span>
-              </div>
-              <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>spots taken — <span style={{ color: '#f59e0b', fontWeight: 700 }}>{Math.max(0, foundingGoal - totalMembers).toLocaleString()} remaining</span></div>
+            {/* Left: bubble */}
+            <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'center' }} className="bubble-col">
+              <style>{`
+                @media (max-width: 640px) { .bubble-col > div { transform: scale(0.78); transform-origin: center top; } }
+              `}</style>
+              <AIVoiceBubble size={220} />
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#475569', marginBottom: '4px' }}>
-                <span>Progress to 1,000 Founding Members</span>
-                <span style={{ color: '#38bdf8', fontWeight: 700 }}>{foundingPct.toFixed(1)}%</span>
+
+            {/* Right: headline + CTAs */}
+            <div className="hero-text" style={{ flex: 1, minWidth: 280, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '1.25rem', maxWidth: 560 }}>
+              <div style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 999, padding: '0.3rem 1rem', fontSize: '0.75rem', color: '#38bdf8', letterSpacing: '0.06em', fontWeight: 700 }}>
+                ✦ THE TRUST ECONOMY
               </div>
-              <div style={{ height: 10, background: 'rgba(56,189,248,0.1)', borderRadius: 999, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.15)' }}>
-                <div className="founding-bar-fill" style={{ height: '100%', width: `${Math.max(foundingPct, 2)}%`, borderRadius: 999, transition: 'width 1s ease' }} />
+
+              <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.8rem)', fontWeight: 900, lineHeight: 1.1, margin: 0, letterSpacing: '-1.5px' }}>
+                The platform where<br />
+                <span style={{ background: 'linear-gradient(135deg, #38bdf8 0%, #818cf8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>trust pays dividends</span>
+              </h1>
+
+              <p style={{ fontSize: '1.05rem', color: '#94a3b8', margin: 0, lineHeight: 1.65, maxWidth: 480 }}>
+                FreeTrust is a social commerce platform where your reputation is your currency. The more you transact, the more you earn — and the less you pay in fees.
+              </p>
+
+              <div className="hero-cta" style={{ display: 'flex', flexDirection: 'row', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <Link href="/register" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.9rem 2rem', borderRadius: 10, fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.35)' }}>
+                  Claim Founding Spot →
+                </Link>
+                <Link href="/services" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', color: '#cbd5e1', padding: '0.9rem 1.75rem', borderRadius: 10, fontWeight: 600, fontSize: '0.95rem', textDecoration: 'none', border: '1px solid rgba(148,163,184,0.2)' }}>
+                  Browse Marketplace
+                </Link>
               </div>
-              <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '5px' }}>
-                🏅 Founding members get a permanent badge, early feature access & priority trust bonuses
+
+              {/* Trust points */}
+              <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.8rem', color: '#64748b' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> Free to join — ₮25 on signup</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> Fees from 0% at Elite</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> No subscription</span>
               </div>
             </div>
           </div>
-          {membersThisWeek > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#94a3b8' }}>
-              <span className="live-dot" />
-              <span><strong style={{ color: '#34d399' }}>+{membersThisWeek}</strong> members joined this week · <strong style={{ color: '#38bdf8' }}>+{membersThisMonth}</strong> this month</span>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* ── LIVE STATS BAR ── */}
+      {/* ── 4. STATS BAR ── */}
       <div style={{ background: 'rgba(56,189,248,0.03)', borderBottom: '1px solid rgba(56,189,248,0.08)' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '1.25rem', fontSize: '0.75rem', color: '#475569' }}>
-            <span className="live-dot" />
-            <span>Live stats — updated every 60 seconds</span>
+        <div className="lp" style={{ padding: '1.75rem 1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', marginBottom: '1rem', fontSize: '0.72rem', color: '#475569' }}>
+            <span className="live-dot" /> Live stats — refreshes every 60s
           </div>
-          <div className="stats-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '1rem', textAlign: 'center' }}>
-            {STAT_ITEMS.map(s => (
-              <div key={s.label} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1.25rem 0.75rem' }}>
-                {s.value === 0 && !statsLoading ? (
-                  <>
-                    <div style={{ fontSize: '1.6rem', marginBottom: '0.25rem' }}>{EMPTY_STATES[s.empty]?.icon ?? '📊'}</div>
-                    <div style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: 700, lineHeight: 1.3, marginBottom: '4px' }}>{EMPTY_STATES[s.empty]?.msg ?? s.label}</div>
-                    <Link href={EMPTY_STATES[s.empty]?.href ?? '/register'} style={{ fontSize: '0.68rem', color: '#64748b', textDecoration: 'none', borderBottom: '1px solid #475569' }}>{EMPTY_STATES[s.empty]?.cta ?? 'Get started'}</Link>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ fontSize: '2rem', fontWeight: 900, color: '#38bdf8', letterSpacing: '-1px' }}>
-                      {statsLoading
-                        ? <span style={{ color: '#334155' }}>—</span>
-                        : <Counter target={s.value} prefix={s.prefix} suffix={s.suffix} />
-                      }
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px', fontWeight: 500 }}>{s.label}</div>
-                    {s.sub && <div style={{ fontSize: '0.68rem', color: '#38bdf8', marginTop: '4px', fontWeight: 600 }}>{s.sub}</div>}
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── GROWTH VISUALISATION ── */}
-      <div style={{ background: 'rgba(56,189,248,0.02)', borderBottom: '1px solid rgba(56,189,248,0.08)' }}>
-        <div className="lp-section" style={{ paddingTop: '3rem', paddingBottom: '3rem' }}>
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.25)', borderRadius: 999, padding: '0.25rem 0.85rem', fontSize: '0.75rem', color: '#34d399', marginBottom: '0.75rem', fontWeight: 700 }}>
-              <span className="live-dot" style={{ background: '#34d399' }} /> JOIN THE FREETRUST ECONOMY
-            </div>
-            <h2 style={{ fontSize: 'clamp(1.6rem,4vw,2.4rem)', fontWeight: 900, margin: '0 0 0.5rem', letterSpacing: '-0.5px' }}>A community growing in real time</h2>
-            <p style={{ color: '#64748b', fontSize: '1rem', maxWidth: 500, margin: '0 auto' }}>
-              Every day, more members join, more Trust is earned, and the economy grows.
-            </p>
-          </div>
-
-          <div className="growth-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
-            {/* Member growth card */}
-            <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.12)', borderRadius: 14, padding: '1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                <div>
-                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.08em' }}>MEMBER GROWTH</div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#38bdf8' }}>
-                    {statsLoading ? '—' : <Counter target={totalMembers} />}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  {membersThisWeek > 0 && <div style={{ fontSize: '0.8rem', color: '#34d399', fontWeight: 700 }}>+{membersThisWeek} this week</div>}
-                  {membersThisMonth > 0 && <div style={{ fontSize: '0.72rem', color: '#64748b' }}>+{membersThisMonth} this month</div>}
-                </div>
-              </div>
-              {growthData.length >= 2 ? (
-                <Sparkline data={growthData} color="#38bdf8" height={52} />
-              ) : (
-                <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', color: '#334155', border: '1px dashed #334155', borderRadius: 8 }}>
-                  📈 Chart populates as members join
-                </div>
-              )}
-            </div>
-
-            {/* Trust economy card */}
-            <div style={{ background: '#1e293b', border: '1px solid rgba(52,211,153,0.12)', borderRadius: 14, padding: '1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                <div>
-                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.08em' }}>TRUST ISSUED</div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#34d399' }}>
-                    {statsLoading ? '—' : <><Counter target={trustTotal} prefix="₮" /></>}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  {trustThisWeek > 0 && <div style={{ fontSize: '0.8rem', color: '#34d399', fontWeight: 700 }}>+₮{trustThisWeek} this week</div>}
-                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>to {totalMembers} member{totalMembers !== 1 ? 's' : ''}</div>
-                </div>
-              </div>
-              {trustTotal > 0 ? (
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1, background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.15)', borderRadius: 8, padding: '0.5rem', textAlign: 'center' }}>
-                    <div style={{ fontSize: '1rem', fontWeight: 900, color: '#34d399' }}>₮{Math.round(trustTotal / Math.max(totalMembers, 1))}</div>
-                    <div style={{ fontSize: '0.65rem', color: '#64748b' }}>avg per member</div>
-                  </div>
-                  <div style={{ flex: 1, background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, padding: '0.5rem', textAlign: 'center' }}>
-                    <div style={{ fontSize: '1rem', fontWeight: 900, color: '#38bdf8' }}>₮{trustThisWeek}</div>
-                    <div style={{ fontSize: '0.65rem', color: '#64748b' }}>this week</div>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', color: '#334155', border: '1px dashed #334155', borderRadius: 8 }}>
-                  ₮ Trust flows as members transact
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Platform snapshot - 4 mini stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.75rem' }}>
+          <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.85rem', textAlign: 'center' }}>
             {[
-              { label: 'Services', value: servicesListed, icon: '🛠️', empty: 'services', href: '/seller/gigs/create' },
-              { label: 'Products', value: productsListed, icon: '📦', empty: 'products', href: '/seller/gigs/create' },
-              { label: 'Events', value: upcomingEvents, icon: '📅', empty: 'events', href: '/events/create' },
-              { label: 'Articles', value: articlesPublished, icon: '✍️', empty: 'articles', href: '/articles/new' },
-            ].map(item => (
-              <div key={item.label} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 10, padding: '0.9rem', textAlign: 'center' }}>
-                <div style={{ fontSize: '1.4rem', marginBottom: '0.2rem' }}>{item.icon}</div>
-                <div style={{ fontSize: '1.3rem', fontWeight: 900, color: item.value > 0 ? '#f1f5f9' : '#475569' }}>
-                  {statsLoading ? '—' : item.value > 0 ? item.value.toLocaleString() : '0'}
+              { val: tm, prefix: '', suffix: '', label: 'Members & growing', sub: tw > 0 ? `+${tw} this week` : 'Join free' },
+              { val: sl, prefix: '', suffix: '', label: 'Services available', sub: sl === 0 ? 'Be the first!' : 'Browse now' },
+              { val: pl, prefix: '', suffix: '', label: 'Products listed', sub: pl === 0 ? 'List yours' : 'Shop now' },
+              { val: tt, prefix: '₮', suffix: '', label: 'Trust issued', sub: 'Earn yours today' },
+            ].map(s => (
+              <div key={s.label} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1rem 0.5rem' }}>
+                <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#38bdf8', letterSpacing: '-1px' }}>
+                  <Counter target={s.val} prefix={s.prefix} suffix={s.suffix} />
                 </div>
-                <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{item.label}</div>
-                {item.value === 0 && !statsLoading && (
-                  <Link href={item.href} style={{ fontSize: '0.62rem', color: '#38bdf8', textDecoration: 'none', display: 'block', marginTop: '3px', fontWeight: 600 }}>Be first →</Link>
+                <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
+                <div style={{ fontSize: '0.65rem', color: '#38bdf8', marginTop: 3, fontWeight: 600 }}>{s.sub}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── 5. WHY FREETRUST (3 value props) ── */}
+      <div style={{ borderBottom: '1px solid rgba(56,189,248,0.06)' }}>
+        <div className="lp-sec">
+          <h2 className="section-h2" style={{ fontSize: 'clamp(1.5rem,3.5vw,2.2rem)', fontWeight: 900, textAlign: 'center', margin: '0 0 2rem', letterSpacing: '-0.5px' }}>Why FreeTrust?</h2>
+          <div className="val-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1rem' }}>
+            {VALUE_PROPS.map(v => (
+              <div key={v.title} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '1.5rem' }}>
+                <div style={{ fontSize: '2rem', fontWeight: 900, color: '#38bdf8', marginBottom: '0.75rem', lineHeight: 1 }}>{v.icon}</div>
+                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.5rem' }}>{v.title}</div>
+                <p style={{ fontSize: '0.85rem', color: '#64748b', lineHeight: 1.6, margin: 0 }}>{v.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── 6. FEATURED SERVICES (horizontal scroll on mobile) ── */}
+      <div style={{ borderBottom: '1px solid rgba(56,189,248,0.06)', background: 'rgba(56,189,248,0.02)' }}>
+        <div className="lp-sec">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <h2 className="section-h2" style={{ fontSize: 'clamp(1.3rem,3vw,1.8rem)', fontWeight: 900, margin: 0 }}>Featured Services</h2>
+            <Link href="/services" style={{ fontSize: '0.82rem', color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>View all →</Link>
+          </div>
+          <div className="hscroll">
+            {FEATURED_SERVICES.map(s => (
+              <Link key={s.id} href="/services" style={{ textDecoration: 'none', flexShrink: 0, width: 220 }}>
+                <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.15)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
+                  <div style={{ height: 88, background: s.grad }} />
+                  <div style={{ padding: '0.85rem' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.4rem', lineHeight: 1.25 }}>{s.title}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
+                      <img src={s.avatar} alt={s.provider} style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover' }} />
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.provider}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#f1f5f9' }}>£{s.price}</span>
+                      <span style={{ fontSize: '0.68rem', color: '#fbbf24' }}>★ {s.rating} ({s.reviews})</span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── 7. FEATURED PRODUCTS (horizontal scroll on mobile) ── */}
+      <div style={{ borderBottom: '1px solid rgba(56,189,248,0.06)' }}>
+        <div className="lp-sec">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <h2 className="section-h2" style={{ fontSize: 'clamp(1.3rem,3vw,1.8rem)', fontWeight: 900, margin: 0 }}>Featured Products</h2>
+            <Link href="/products" style={{ fontSize: '0.82rem', color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>View all →</Link>
+          </div>
+          <div className="hscroll">
+            {FEATURED_PRODUCTS.map(p => (
+              <Link key={p.id} href="/products" style={{ textDecoration: 'none', flexShrink: 0, width: 200 }}>
+                <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.15)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
+                  <div style={{ height: 88, background: p.grad, position: 'relative' }}>
+                    <span style={{ position: 'absolute', top: 8, right: 8, background: p.type === 'digital' ? 'rgba(56,189,248,0.9)' : 'rgba(148,163,184,0.9)', color: '#0f172a', fontSize: '0.58rem', fontWeight: 800, padding: '2px 6px', borderRadius: 999 }}>
+                      {p.type === 'digital' ? 'DIGITAL' : 'PHYSICAL'}
+                    </span>
+                  </div>
+                  <div style={{ padding: '0.85rem' }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.35rem', lineHeight: 1.25 }}>{p.title}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
+                      <img src={p.avatar} alt={p.seller} style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover' }} />
+                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{p.seller}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#f1f5f9' }}>£{p.price}</span>
+                      <span style={{ fontSize: '0.65rem', color: '#fbbf24' }}>★ {p.rating}</span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── 8. FOUNDING MEMBER CTA ── */}
+      <div style={{ background: 'linear-gradient(135deg, rgba(56,189,248,0.06) 0%, rgba(129,140,248,0.06) 100%)', borderBottom: '1px solid rgba(56,189,248,0.1)' }}>
+        <div className="lp-sec">
+          <div className="found-inner" style={{ display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 240 }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#38bdf8', letterSpacing: '0.1em', marginBottom: 6 }}>🏅 FOUNDING MEMBERS</div>
+              <h2 style={{ fontSize: 'clamp(1.4rem,3vw,2rem)', fontWeight: 900, margin: '0 0 0.5rem', letterSpacing: '-0.5px' }}>
+                {Math.max(0, goal - tm).toLocaleString()} spots remaining
+              </h2>
+              <p style={{ color: '#64748b', margin: '0 0 1.25rem', fontSize: '0.9rem', lineHeight: 1.6, maxWidth: 480 }}>
+                Founding members get a permanent badge, early feature access, zero fees for 3 months, and priority Trust bonuses. Once all 1,000 spots are gone, they&apos;re gone.
+              </p>
+              {/* Progress bar */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#475569', marginBottom: 5 }}>
+                  <span><Counter target={tm} /> / {goal.toLocaleString()} founding spots taken</span>
+                  <span style={{ color: '#38bdf8', fontWeight: 700 }}>{pct.toFixed(1)}%</span>
+                </div>
+                <div style={{ height: 10, background: 'rgba(56,189,248,0.1)', borderRadius: 999, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.12)' }}>
+                  <div className="found-bar" style={{ height: '100%', width: `${Math.max(pct, 2)}%`, borderRadius: 999, transition: 'width 1s' }} />
+                </div>
+                {tw > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: '0.75rem', color: '#94a3b8' }}>
+                    <span className="live-dot" />
+                    <span>+{tw} joined this week</span>
+                  </div>
                 )}
               </div>
-            ))}
-          </div>
-
-          {/* Social proof / week stats */}
-          {!statsLoading && (membersThisWeek > 0 || membersThisMonth > 0) && (
-            <div style={{ marginTop: '1.25rem', background: 'rgba(56,189,248,0.04)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
-              <span className="live-dot" />
-              {membersThisWeek > 0 && <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}><strong style={{ color: '#34d399' }}>{membersThisWeek}</strong> people joined this week</span>}
-              {membersThisMonth > 0 && <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}><strong style={{ color: '#38bdf8' }}>{membersThisMonth}</strong> this month</span>}
-              {articlesPublished > 0 && <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}><strong style={{ color: '#a78bfa' }}>{articlesPublished}</strong> articles published</span>}
-              {communitiesCount > 0 && <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}><strong style={{ color: '#f59e0b' }}>{communitiesCount}</strong> communities</span>}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── FEE COMPARISON ── */}
-      <div className="lp-section">
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <div style={{ display: 'inline-block', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 999, padding: '0.25rem 0.85rem', fontSize: '0.75rem', color: '#fca5a5', marginBottom: '0.75rem', fontWeight: 700 }}>
-            💸 THE INDUSTRY IS TAKING TOO MUCH
-          </div>
-          <h2 style={{ fontSize: 'clamp(1.6rem, 4vw, 2.4rem)', fontWeight: 900, margin: '0 0 0.5rem', letterSpacing: '-0.5px' }}>Stop giving away your earnings</h2>
-          <p style={{ color: '#64748b', fontSize: '1rem', maxWidth: 520, margin: '0 auto' }}>Traditional platforms take 10–20% of every transaction. FreeTrust rewards loyalty with fees that drop to zero.</p>
-        </div>
-        <div style={{ maxWidth: 600, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {FEE_COMPARISON.map(f => (
-            <div key={f.platform} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: f.highlight ? 'rgba(52,211,153,0.06)' : '#1e293b', border: `1px solid ${f.highlight ? 'rgba(52,211,153,0.3)' : '#334155'}`, borderRadius: '12px', padding: '14px 18px' }}>
-              <span style={{ fontSize: '18px', flexShrink: 0 }}>{f.icon}</span>
-              <span style={{ flex: 1, fontSize: '14px', fontWeight: f.highlight ? 800 : 500, color: f.highlight ? '#f1f5f9' : '#94a3b8' }}>{f.platform}</span>
-              <span style={{ fontSize: '18px', fontWeight: 900, color: f.color }}>{f.fee}</span>
-              <span style={{ fontSize: '11px', color: '#475569' }}>fee</span>
-              {f.highlight && <span style={{ background: 'rgba(52,211,153,0.15)', color: '#34d399', fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: 999 }}>BEST</span>}
-            </div>
-          ))}
-        </div>
-        <p style={{ textAlign: 'center', fontSize: '0.8rem', color: '#475569', marginTop: '1rem' }}>
-          *FreeTrust fee drops from 5% → 3% → 1.5% → 0% as your Trust level increases
-        </p>
-      </div>
-
-      {/* ── TRUST ECONOMY ── */}
-      <div style={{ background: 'rgba(56,189,248,0.03)', borderTop: '1px solid rgba(56,189,248,0.08)', borderBottom: '1px solid rgba(56,189,248,0.08)' }}>
-        <div className="lp-section">
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 999, padding: '0.25rem 0.85rem', fontSize: '0.75rem', color: '#38bdf8', marginBottom: '0.75rem', fontWeight: 700 }}>
-              ₮ THE TRUST CURRENCY
-            </div>
-            <h2 style={{ fontSize: 'clamp(1.6rem,4vw,2.4rem)', fontWeight: 900, margin: '0 0 0.5rem', letterSpacing: '-0.5px' }}>Your reputation, quantified</h2>
-            <p style={{ color: '#64748b', fontSize: '1rem', maxWidth: 520, margin: '0 auto' }}>Trust (₮) is earned through every positive interaction. Higher Trust = lower fees, better visibility, and real earning power.</p>
-          </div>
-          <div className="trust-tabs" style={{ display: 'flex', gap: '6px', justifyContent: 'center', marginBottom: '1.5rem', flexWrap: 'nowrap' }}>
-            {TRUST_LEVELS.map((lvl, i) => (
-              <button key={lvl.level} className="trust-tab"
-                onClick={() => setActiveTrustLevel(i)}
-                style={{ background: activeTrustLevel === i ? lvl.color : 'transparent', color: activeTrustLevel === i ? '#0f172a' : lvl.color, border: `1px solid ${lvl.color}50` }}>
-                {lvl.level}
-              </button>
-            ))}
-          </div>
-          {(() => {
-            const lvl = TRUST_LEVELS[activeTrustLevel]
-            return (
-              <div style={{ maxWidth: 600, margin: '0 auto', background: lvl.bg, border: `1px solid ${lvl.color}40`, borderRadius: '16px', padding: '1.5rem 1.75rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <div>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 900, color: lvl.color }}>{lvl.level}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>₮{lvl.min.toLocaleString()}{lvl.max ? ` – ₮${lvl.max.toLocaleString()}` : '+'}</div>
-                  </div>
-                  <div style={{ background: `${lvl.color}20`, border: `1px solid ${lvl.color}40`, borderRadius: '10px', padding: '0.5rem 1rem', textAlign: 'center' }}>
-                    <div style={{ fontSize: '1.3rem', fontWeight: 900, color: lvl.color }}>{['5%','3%','1.5%','0%','0% + Rev'][activeTrustLevel]}</div>
-                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 600 }}>PLATFORM FEE</div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {lvl.perks.map(p => (
-                    <div key={p} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', color: '#cbd5e1' }}>
-                      <span style={{ color: lvl.color, fontSize: '14px', flexShrink: 0 }}>✓</span>{p}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )
-          })()}
-        </div>
-      </div>
-
-      {/* ── HOW TO EARN ── */}
-      <div className="lp-section">
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h2 style={{ fontSize: 'clamp(1.6rem,4vw,2.4rem)', fontWeight: 900, margin: '0 0 0.5rem', letterSpacing: '-0.5px' }}>6 ways to earn Trust today</h2>
-          <p style={{ color: '#64748b', fontSize: '1rem' }}>Every action on FreeTrust moves you closer to Elite — and zero fees.</p>
-        </div>
-        <div className="lp-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.85rem' }}>
-          {EARN_WAYS.map(w => (
-            <div key={w.action} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '1rem 1.1rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '22px', flexShrink: 0 }}>{w.icon}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '12px', color: '#94a3b8', lineHeight: 1.4 }}>{w.action}</div>
-              </div>
-              <span style={{ fontSize: '12px', fontWeight: 800, color: '#38bdf8', whiteSpace: 'nowrap', flexShrink: 0 }}>{w.earn}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── HOW IT WORKS ── */}
-      <div style={{ background: 'rgba(56,189,248,0.03)', borderTop: '1px solid rgba(56,189,248,0.08)', borderBottom: '1px solid rgba(56,189,248,0.08)' }}>
-        <div className="lp-section">
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <h2 style={{ fontSize: 'clamp(1.6rem,4vw,2.4rem)', fontWeight: 900, margin: '0 0 0.5rem', letterSpacing: '-0.5px' }}>How it works</h2>
-            <p style={{ color: '#64748b', fontSize: '1rem' }}>From signup to zero fees in four steps.</p>
-          </div>
-          <div className="lp-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '1rem' }}>
-            {HOW_IT_WORKS.map(s => (
-              <div key={s.step} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '1.25rem', height: '100%', boxSizing: 'border-box' }}>
-                <div style={{ fontSize: '10px', fontWeight: 800, color: '#38bdf8', letterSpacing: '0.1em', marginBottom: '0.5rem' }}>STEP {s.step}</div>
-                <div style={{ fontSize: '28px', marginBottom: '0.5rem' }}>{s.icon}</div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.35rem' }}>{s.title}</div>
-                <p style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.55, margin: 0 }}>{s.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── TESTIMONIALS ── */}
-      <div className="lp-section">
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h2 style={{ fontSize: 'clamp(1.6rem,4vw,2.4rem)', fontWeight: 900, margin: '0 0 0.5rem', letterSpacing: '-0.5px' }}>Real earnings, real stories</h2>
-          <p style={{ color: '#64748b', fontSize: '1rem' }}>Members who put the Trust economy to work.</p>
-        </div>
-        <div className="lp-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1rem' }}>
-          {TESTIMONIALS.map(t => (
-            <div key={t.name} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              <p style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.65, margin: 0, flex: 1 }}>&ldquo;{t.quote}&rdquo;</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', borderTop: '1px solid #334155', paddingTop: '0.75rem' }}>
-                <img src={t.avatarImg} alt={t.name} width={36} height={36} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                <div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9' }}>{t.name}</div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>{t.role}</div>
-                </div>
-                <div style={{ marginLeft: 'auto', background: 'rgba(56,189,248,0.1)', borderRadius: '8px', padding: '3px 9px', fontSize: '11px', fontWeight: 700, color: '#38bdf8', flexShrink: 0 }}>
-                  ₮{t.trust.toLocaleString()}
-                </div>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <Link href="/register" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.85rem 2rem', borderRadius: 10, fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.35)' }}>
+                  Claim My Spot Free →
+                </Link>
+                <Link href="/browse" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', color: '#94a3b8', padding: '0.85rem 1.5rem', borderRadius: 10, fontWeight: 600, fontSize: '0.9rem', textDecoration: 'none', border: '1px solid rgba(148,163,184,0.2)' }}>
+                  Browse Members
+                </Link>
               </div>
             </div>
-          ))}
+            {/* Badge visual */}
+            <div style={{ flexShrink: 0, textAlign: 'center' }}>
+              <div style={{ width: 140, height: 140, borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%, rgba(56,189,248,0.6) 0%, rgba(30,41,59,0.98) 60%)', border: '3px solid rgba(56,189,248,0.4)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 40px rgba(56,189,248,0.25)', margin: '0 auto' }}>
+                <span style={{ fontSize: '2.5rem' }}>🏅</span>
+                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#38bdf8', letterSpacing: '0.08em', marginTop: 4 }}>FOUNDER</span>
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 8 }}>Permanent badge</div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* ── IMPACT ── */}
-      <div style={{ background: 'linear-gradient(135deg, rgba(52,211,153,0.06) 0%, rgba(56,189,248,0.06) 100%)', border: '1px solid rgba(52,211,153,0.12)', margin: '0 1.25rem 3rem', borderRadius: '20px', padding: '2.5rem', textAlign: 'center' }}>
-        <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🌍</div>
-        <h2 style={{ fontSize: 'clamp(1.4rem,3vw,2rem)', fontWeight: 900, margin: '0 0 0.5rem' }}>Commerce with a conscience</h2>
-        <p style={{ color: '#64748b', marginBottom: '1.5rem', maxWidth: '520px', margin: '0 auto 1.5rem', fontSize: '0.95rem', lineHeight: 1.6 }}>
-          1% of every transaction on FreeTrust flows into the community Impact Fund — financing sustainability and social good projects voted on by members.
-        </p>
-        <Link href="/impact" style={{ display: 'inline-block', padding: '0.7rem 1.8rem', borderRadius: '10px', background: 'rgba(52,211,153,0.15)', border: '1px solid rgba(52,211,153,0.3)', color: '#34d399', fontWeight: 700, textDecoration: 'none', fontSize: '0.9rem' }}>
-          See the Impact Fund →
-        </Link>
-      </div>
-
-      {/* ── FINAL CTA ── */}
-      <div style={{ textAlign: 'center', padding: '3rem 1.25rem 4rem' }}>
-        <div style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 999, padding: '0.25rem 0.85rem', fontSize: '0.75rem', color: '#38bdf8', marginBottom: '1rem', fontWeight: 700 }}>
-          🏅 FOUNDING MEMBER SPOTS FILLING FAST
+      {/* ── 9. FOOTER ── */}
+      <footer style={{ borderTop: '1px solid rgba(56,189,248,0.08)', padding: '1.5rem 1.25rem', textAlign: 'center', color: '#475569', fontSize: '0.8rem' }}>
+        <div className="footer-links" style={{ display: 'flex', gap: '1.25rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+          <span>© 2026 FreeTrust</span>
+          <Link href="/services"  style={{ color: '#475569', textDecoration: 'none' }}>Services</Link>
+          <Link href="/products"  style={{ color: '#475569', textDecoration: 'none' }}>Products</Link>
+          <Link href="/events"    style={{ color: '#475569', textDecoration: 'none' }}>Events</Link>
+          <Link href="/articles"  style={{ color: '#475569', textDecoration: 'none' }}>Articles</Link>
+          <Link href="/impact"    style={{ color: '#475569', textDecoration: 'none' }}>Impact</Link>
+          <Link href="/register"  style={{ color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>Join free →</Link>
         </div>
-        <h2 style={{ fontSize: 'clamp(1.8rem,5vw,3rem)', fontWeight: 900, margin: '0 0 0.75rem', letterSpacing: '-1px' }}>
-          Your trust is worth more<br />
-          <span style={{ background: 'linear-gradient(135deg,#38bdf8,#818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>than you think</span>
-        </h2>
-        <p style={{ color: '#64748b', marginBottom: '2rem', fontSize: '1rem', maxWidth: '460px', margin: '0 auto 2rem', lineHeight: 1.6 }}>
-          Join as a founding member. Start with ₮25 free. Reach Elite and pay zero platform fees — forever.
-          {totalMembers > 0 && <><br /><strong style={{ color: '#f59e0b' }}>{Math.max(0, foundingGoal - totalMembers).toLocaleString()} founding spots remaining.</strong></>}
-        </p>
-        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Link href="/register" style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '1rem 2.5rem', borderRadius: 12, fontWeight: 800, fontSize: '1.05rem', textDecoration: 'none', boxShadow: '0 4px 24px rgba(56,189,248,0.4)' }}>
-            Claim My Founding Spot
-          </Link>
-          <Link href="/browse" style={{ background: 'rgba(255,255,255,0.04)', color: '#cbd5e1', padding: '1rem 2rem', borderRadius: 12, fontWeight: 600, fontSize: '1rem', textDecoration: 'none', border: '1px solid rgba(148,163,184,0.2)' }}>
-            Browse the Directory
-          </Link>
-        </div>
-      </div>
-
-      <footer style={{ borderTop: '1px solid rgba(56,189,248,0.08)', padding: '1.5rem 1.25rem', textAlign: 'center', color: '#475569', fontSize: '0.8rem', display: 'flex', gap: '1.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-        <span>© 2026 FreeTrust</span>
-        <Link href="/services" style={{ color: '#475569', textDecoration: 'none' }}>Services</Link>
-        <Link href="/products" style={{ color: '#475569', textDecoration: 'none' }}>Products</Link>
-        <Link href="/jobs" style={{ color: '#475569', textDecoration: 'none' }}>Jobs</Link>
-        <Link href="/impact" style={{ color: '#475569', textDecoration: 'none' }}>Impact</Link>
-        <Link href="/register" style={{ color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>Join free →</Link>
+        <div style={{ fontSize: '0.72rem', color: '#334155' }}>Trust-based commerce for a better internet.</div>
       </footer>
     </main>
   )
