@@ -183,9 +183,11 @@ export default function OnboardingPage() {
                   onClick={() => photoInputRef.current?.click()}
                   style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.82rem', color: '#38bdf8', cursor: 'pointer', fontFamily: 'inherit', marginBottom: '0.35rem', display: 'block' }}
                 >
-                  {photoUploading ? 'Uploading…' : avatarUrl ? 'Change photo' : 'Upload photo'}
+                  {photoUploading ? 'Uploading…' : avatarUrl ? '✓ Change photo' : 'Upload photo'}
                 </button>
-                <div style={{ fontSize: '0.72rem', color: '#475569' }}>Optional — you can add one later</div>
+                <div style={{ fontSize: '0.72rem', color: avatarUrl ? '#34d399' : '#f87171', fontWeight: 600 }}>
+                  {avatarUrl ? '✓ Photo set' : '* Required — helps build trust'}
+                </div>
               </div>
               <input
                 ref={photoInputRef}
@@ -220,9 +222,16 @@ export default function OnboardingPage() {
               </div>
             </div>
 
+            {!avatarUrl && displayName.trim() && (
+              <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 10, padding: '0.6rem 0.85rem', fontSize: '0.8rem', color: '#fca5a5', marginBottom: '0.75rem' }}>
+                📷 Please upload a profile photo — it builds trust with other members.
+              </div>
+            )}
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button className="ob-btn-secondary" onClick={back}>Back</button>
-              <button className="ob-btn-primary" onClick={next} disabled={!displayName.trim()}>Continue →</button>
+              <button className="ob-btn-primary" onClick={next} disabled={!displayName.trim() || !avatarUrl || photoUploading}>
+                {photoUploading ? 'Uploading…' : 'Continue →'}
+              </button>
             </div>
           </div>
         )}

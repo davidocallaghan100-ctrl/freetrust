@@ -50,23 +50,12 @@ function timeAgo(ts: string | null) {
   return `${Math.floor(hrs / 24)}d ago`
 }
 
-// ── Mock data (fallback) ──────────────────────────────────────────────────────
-
-const MOCK_MEMBERS: MemberProfile[] = [
-  { id: 'mock-1', full_name: 'Amara Diallo', bio: 'Founder & ESG consultant. Building sustainable businesses.', avatar_url: null, location: 'Lagos, Nigeria', follower_count: 1240, following_count: 340, last_seen_at: new Date(Date.now() - 3600000).toISOString(), trust_balance: 820 },
-  { id: 'mock-2', full_name: 'Tom Walsh', bio: 'SaaS entrepreneur. 3x founder. Writing about trust-based commerce.', avatar_url: null, location: 'Dublin, Ireland', follower_count: 893, following_count: 210, last_seen_at: new Date(Date.now() - 7200000).toISOString(), trust_balance: 650 },
-  { id: 'mock-3', full_name: 'Priya Nair', bio: 'Full-stack engineer & technical writer. Next.js enthusiast.', avatar_url: null, location: 'Bangalore, India', follower_count: 2100, following_count: 560, last_seen_at: new Date(Date.now() - 1800000).toISOString(), trust_balance: 1100 },
-  { id: 'mock-4', full_name: 'Sarah Chen', bio: 'UX designer with 8 years experience. Design systems & accessibility.', avatar_url: null, location: 'Singapore', follower_count: 712, following_count: 190, last_seen_at: new Date(Date.now() - 86400000).toISOString(), trust_balance: 480 },
-  { id: 'mock-5', full_name: 'James Okafor', bio: 'Impact investor. Clean energy & education projects.', avatar_url: null, location: 'Abuja, Nigeria', follower_count: 445, following_count: 130, last_seen_at: new Date(Date.now() - 172800000).toISOString(), trust_balance: 320 },
-  { id: 'mock-6', full_name: 'Lena Fischer', bio: 'Community builder. Building online communities that thrive.', avatar_url: null, location: 'Berlin, Germany', follower_count: 623, following_count: 280, last_seen_at: new Date(Date.now() - 3600000).toISOString(), trust_balance: 540 },
-]
-
 // ── Main Component ────────────────────────────────────────────────────────────
 
 type Tab = 'connections' | 'followers' | 'following' | 'suggestions' | 'requests'
 
 export default function ConnectionsPage() {
-  const [tab, setTab] = useState<Tab>('connections')
+  const [tab, setTab] = useState<Tab>('suggestions')
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
@@ -76,6 +65,7 @@ export default function ConnectionsPage() {
   const [following, setFollowing] = useState<MemberProfile[]>([])
   const [suggestions, setSuggestions] = useState<MemberProfile[]>([])
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set())
+  const [trustBalances, setTrustBalances] = useState<Record<string, number>>({})
 
   const supabase = createClient()
 
@@ -86,67 +76,50 @@ export default function ConnectionsPage() {
       if (!user) { setLoading(false); return }
       setUserId(user.id)
 
-      // Load following IDs for mutual detection
-      const { data: myFollowing } = await supabase
-        .from('connections')
-        .select('following_id')
-        .eq('follower_id', user.id)
-        .eq('status', 'following')
-      const myFollowingSet = new Set((myFollowing ?? []).map((r: { following_id: string }) => r.following_id))
-      setFollowingIds(myFollowingSet)
+      // Load real members from profiles for suggestions (exclude self)
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, full_name, bio, avatar_url, location, follower_count, following_count, last_seen_at')
+        .neq('id', user.id)
+        .order('follower_count', { ascending: false })
+        .limit(24)
 
-      // My connections (people I follow)
-      const { data: connData } = await supabase
-        .from('connections')
-        .select('following_id, profiles!connections_following_id_fkey(id, full_name, bio, avatar_url, location, follower_count, following_count, last_seen_at)')
-        .eq('follower_id', user.id)
-        .eq('status', 'following')
+      const members: MemberProfile[] = (profilesData ?? []).map((p: Record<string, unknown>) => ({
+        id: p.id as string,
+        full_name: p.full_name as string | null,
+        bio: p.bio as string | null,
+        avatar_url: p.avatar_url as string | null,
+        location: p.location as string | null,
+        follower_count: (p.follower_count as number) || 0,
+        following_count: (p.following_count as number) || 0,
+        last_seen_at: p.last_seen_at as string | null,
+      }))
 
-      if (connData && connData.length > 0) {
-        const mapped = connData.map((r: Record<string, unknown>) => {
-          const p = r.profiles as Record<string, unknown>
-          return { ...p, trust_balance: Math.floor(Math.random() * 1000) } as MemberProfile
-        })
-        setConnections(mapped)
-        setFollowing(mapped)
-      } else {
-        setConnections(MOCK_MEMBERS.slice(0, 3))
-        setFollowing(MOCK_MEMBERS.slice(0, 3))
-      }
-
-      // Followers (people following me)
-      const { data: follData } = await supabase
-        .from('connections')
-        .select('follower_id, profiles!connections_follower_id_fkey(id, full_name, bio, avatar_url, location, follower_count, following_count, last_seen_at)')
-        .eq('following_id', user.id)
-        .eq('status', 'following')
-
-      if (follData && follData.length > 0) {
-        setFollowers(follData.map((r: Record<string, unknown>) => {
-          const p = r.profiles as Record<string, unknown>
-          return { ...p, trust_balance: Math.floor(Math.random() * 1000) } as MemberProfile
-        }))
-      } else {
-        setFollowers(MOCK_MEMBERS.slice(3))
-      }
-
-      // Suggestions via API
-      try {
-        const res = await fetch('/api/connections/suggestions')
-        if (res.ok) {
-          const { suggestions: sugg } = await res.json() as { suggestions: MemberProfile[] }
-          setSuggestions(sugg.length > 0 ? sugg : MOCK_MEMBERS)
-        } else {
-          setSuggestions(MOCK_MEMBERS)
+      // Fetch trust balances for suggestions
+      if (members.length > 0) {
+        const ids = members.map(m => m.id)
+        const { data: balances } = await supabase
+          .from('trust_balances')
+          .select('user_id, balance')
+          .in('user_id', ids)
+        const balMap: Record<string, number> = {}
+        for (const b of balances ?? []) {
+          balMap[(b as Record<string, unknown>).user_id as string] = (b as Record<string, unknown>).balance as number
         }
-      } catch {
-        setSuggestions(MOCK_MEMBERS)
+        setTrustBalances(balMap)
       }
-    } catch {
-      setConnections(MOCK_MEMBERS.slice(0, 3))
-      setFollowers(MOCK_MEMBERS.slice(3))
-      setFollowing(MOCK_MEMBERS.slice(0, 3))
-      setSuggestions(MOCK_MEMBERS)
+
+      setSuggestions(members)
+
+      // Connections/followers/following require the connections table which is not yet in DB
+      // These will show empty states until the follow system is built
+      setConnections([])
+      setFollowers([])
+      setFollowing([])
+      setFollowingIds(new Set())
+
+    } catch (err) {
+      console.error('[connections page]', err)
     } finally {
       setLoading(false)
     }
@@ -179,10 +152,10 @@ export default function ConnectionsPage() {
   }
 
   const TABS: { key: Tab; label: string; count?: number }[] = [
+    { key: 'suggestions', label: 'Discover Members' },
     { key: 'connections', label: 'My Connections', count: connections.length },
     { key: 'followers', label: 'Followers', count: followers.length },
     { key: 'following', label: 'Following', count: following.length },
-    { key: 'suggestions', label: 'Suggestions' },
     { key: 'requests', label: 'Requests' },
   ]
 
@@ -190,7 +163,7 @@ export default function ConnectionsPage() {
     search ? list.filter(m => m.full_name?.toLowerCase().includes(search.toLowerCase()) || m.bio?.toLowerCase().includes(search.toLowerCase())) : list
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64 }}>
       <style>{`
         .conn-tabs { display: flex; gap: 0.25rem; overflow-x: auto; padding-bottom: 0.25rem; scrollbar-width: none; }
         .conn-tabs::-webkit-scrollbar { display: none; }
@@ -199,7 +172,7 @@ export default function ConnectionsPage() {
         .conn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
         .conn-card { background: #1e293b; border: 1px solid rgba(56,189,248,0.1); border-radius: 14px; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; transition: border-color 0.15s; }
         .conn-card:hover { border-color: rgba(56,189,248,0.25); }
-        .conn-avatar { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; color: #0f172a; flex-shrink: 0; }
+        .conn-avatar { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; color: #0f172a; flex-shrink: 0; overflow: hidden; }
         .conn-btn { padding: 0.4rem 0.9rem; border-radius: 7px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s; border: none; }
         .conn-btn-primary { background: #38bdf8; color: #0f172a; }
         .conn-btn-primary:hover { opacity: 0.88; }
@@ -224,7 +197,7 @@ export default function ConnectionsPage() {
           <div className="conn-tabs">
             {TABS.map(t => (
               <button key={t.key} className={`conn-tab${tab === t.key ? ' active' : ''}`} onClick={() => setTab(t.key)}>
-                {t.label}{t.count !== undefined ? ` (${t.count})` : ''}
+                {t.label}{t.count !== undefined && t.count > 0 ? ` (${t.count})` : ''}
               </button>
             ))}
           </div>
@@ -240,17 +213,42 @@ export default function ConnectionsPage() {
           </div>
         )}
 
+        {/* Discover / Suggestions Tab */}
+        {tab === 'suggestions' && (
+          <>
+            {loading ? (
+              <SkeletonGrid />
+            ) : filterMembers(suggestions).length === 0 ? (
+              <EmptyState icon="🌍" message="No members to discover yet." subtext="Be one of the first to join FreeTrust." />
+            ) : (
+              <div className="conn-grid">
+                {filterMembers(suggestions).filter(m => m.id !== userId).map(m => (
+                  <MemberCard
+                    key={m.id}
+                    member={{ ...m, trust_balance: trustBalances[m.id] }}
+                    isFollowing={followingIds.has(m.id)}
+                    isMutual={false}
+                    onFollow={() => handleFollow(m.id)}
+                    onUnfollow={() => handleUnfollow(m.id)}
+                    isSuggestion
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
         {/* My Connections Tab */}
         {tab === 'connections' && (
           <>
             {loading ? (
               <SkeletonGrid />
             ) : filterMembers(connections).length === 0 ? (
-              <EmptyState message="You haven't connected with anyone yet." cta="Check out Suggestions" onCta={() => setTab('suggestions')} />
+              <EmptyState icon="🤝" message="You haven't connected with anyone yet." subtext="Discover members and start building your network." cta="Discover Members" onCta={() => setTab('suggestions')} />
             ) : (
               <div className="conn-grid">
                 {filterMembers(connections).map(m => (
-                  <MemberCard key={m.id} member={m} isFollowing={true} isMutual={followers.some(f => f.id === m.id)}
+                  <MemberCard key={m.id} member={{ ...m, trust_balance: trustBalances[m.id] }} isFollowing={true} isMutual={followers.some(f => f.id === m.id)}
                     onFollow={() => handleFollow(m.id)} onUnfollow={() => handleUnfollow(m.id)} />
                 ))}
               </div>
@@ -262,11 +260,11 @@ export default function ConnectionsPage() {
         {tab === 'followers' && (
           <>
             {loading ? <SkeletonGrid /> : filterMembers(followers).length === 0 ? (
-              <EmptyState message="No one is following you yet." cta="Share your profile" onCta={() => {}} />
+              <EmptyState icon="👥" message="No one is following you yet." subtext="Share your profile to grow your audience." />
             ) : (
               <div className="conn-grid">
                 {filterMembers(followers).map(m => (
-                  <MemberCard key={m.id} member={m} isFollowing={followingIds.has(m.id)} isMutual={followingIds.has(m.id)}
+                  <MemberCard key={m.id} member={{ ...m, trust_balance: trustBalances[m.id] }} isFollowing={followingIds.has(m.id)} isMutual={followingIds.has(m.id)}
                     onFollow={() => handleFollow(m.id)} onUnfollow={() => handleUnfollow(m.id)} showFollowBack />
                 ))}
               </div>
@@ -278,26 +276,12 @@ export default function ConnectionsPage() {
         {tab === 'following' && (
           <>
             {loading ? <SkeletonGrid /> : filterMembers(following).length === 0 ? (
-              <EmptyState message="You're not following anyone yet." cta="Discover members" onCta={() => setTab('suggestions')} />
+              <EmptyState icon="🔭" message="You're not following anyone yet." subtext="Discover members and follow the ones you trust." cta="Discover Members" onCta={() => setTab('suggestions')} />
             ) : (
               <div className="conn-grid">
                 {filterMembers(following).map(m => (
-                  <MemberCard key={m.id} member={m} isFollowing={true} isMutual={followers.some(f => f.id === m.id)}
+                  <MemberCard key={m.id} member={{ ...m, trust_balance: trustBalances[m.id] }} isFollowing={true} isMutual={followers.some(f => f.id === m.id)}
                     onFollow={() => handleFollow(m.id)} onUnfollow={() => handleUnfollow(m.id)} showLastSeen />
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Suggestions Tab */}
-        {tab === 'suggestions' && (
-          <>
-            {loading ? <SkeletonGrid /> : (
-              <div className="conn-grid">
-                {filterMembers(suggestions).filter(m => m.id !== userId).map(m => (
-                  <MemberCard key={m.id} member={m} isFollowing={followingIds.has(m.id)} isMutual={false}
-                    onFollow={() => handleFollow(m.id)} onUnfollow={() => handleUnfollow(m.id)} isSuggestion />
                 ))}
               </div>
             )}
@@ -306,7 +290,7 @@ export default function ConnectionsPage() {
 
         {/* Requests Tab */}
         {tab === 'requests' && (
-          <EmptyState message="No pending connection requests." cta="Browse Suggestions" onCta={() => setTab('suggestions')} />
+          <EmptyState icon="📬" message="No pending connection requests." subtext="Connection requests will appear here." cta="Discover Members" onCta={() => setTab('suggestions')} />
         )}
       </div>
     </div>
@@ -335,17 +319,20 @@ function MemberCard({ member, isFollowing, isMutual, onFollow, onUnfollow, showF
   return (
     <div className="conn-card">
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-        <Link href={`/connections/${member.id}`}>
-          <div className="conn-avatar" style={{ background: avatarGrad(member.id) }}>
-            {initials(member.full_name)}
+        <Link href={`/profile/${member.id}`}>
+          <div className="conn-avatar" style={{ background: member.avatar_url ? undefined : avatarGrad(member.id) }}>
+            {member.avatar_url
+              ? <img src={member.avatar_url} alt={member.full_name ?? ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : initials(member.full_name)
+            }
           </div>
         </Link>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <Link href={`/connections/${member.id}`} style={{ textDecoration: 'none' }}>
-            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f1f5f9', marginBottom: '0.15rem' }}>{member.full_name ?? 'Unknown'}</div>
+          <Link href={`/profile/${member.id}`} style={{ textDecoration: 'none' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f1f5f9', marginBottom: '0.15rem' }}>{member.full_name ?? 'FreeTrust Member'}</div>
           </Link>
           {member.location && <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.3rem' }}>📍 {member.location}</div>}
-          {member.trust_balance !== undefined && (
+          {member.trust_balance !== undefined && member.trust_balance > 0 && (
             <span className="trust-badge">₮{member.trust_balance.toLocaleString()}</span>
           )}
         </div>
@@ -353,14 +340,14 @@ function MemberCard({ member, isFollowing, isMutual, onFollow, onUnfollow, showF
       </div>
 
       {member.bio && (
-        <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: 0 }}>
           {member.bio}
         </p>
       )}
 
       <div style={{ fontSize: '0.75rem', color: '#475569', display: 'flex', gap: '1rem' }}>
-        <span><strong style={{ color: '#94a3b8' }}>{member.follower_count.toLocaleString()}</strong> followers</span>
-        <span><strong style={{ color: '#94a3b8' }}>{member.following_count.toLocaleString()}</strong> following</span>
+        {member.follower_count > 0 && <span><strong style={{ color: '#94a3b8' }}>{member.follower_count.toLocaleString()}</strong> followers</span>}
+        {member.following_count > 0 && <span><strong style={{ color: '#94a3b8' }}>{member.following_count.toLocaleString()}</strong> following</span>}
       </div>
 
       {showLastSeen && member.last_seen_at && (
@@ -409,14 +396,23 @@ function SkeletonGrid() {
   )
 }
 
-function EmptyState({ message, cta, onCta }: { message: string; cta: string; onCta: () => void }) {
+function EmptyState({ icon, message, subtext, cta, onCta }: {
+  icon: string
+  message: string
+  subtext: string
+  cta?: string
+  onCta?: () => void
+}) {
   return (
     <div style={{ textAlign: 'center', padding: '4rem 1.5rem' }}>
-      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👥</div>
-      <div style={{ fontSize: '1rem', color: '#94a3b8', marginBottom: '0.5rem' }}>{message}</div>
-      <button onClick={onCta} style={{ background: '#38bdf8', border: 'none', borderRadius: 8, padding: '0.6rem 1.5rem', fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer', marginTop: '0.75rem' }}>
-        {cta} →
-      </button>
+      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{icon}</div>
+      <div style={{ fontSize: '1rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.4rem' }}>{message}</div>
+      <div style={{ fontSize: '0.85rem', color: '#475569', marginBottom: cta ? '1rem' : 0 }}>{subtext}</div>
+      {cta && onCta && (
+        <button onClick={onCta} style={{ background: '#38bdf8', border: 'none', borderRadius: 8, padding: '0.6rem 1.5rem', fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer' }}>
+          {cta} →
+        </button>
+      )}
     </div>
   )
 }

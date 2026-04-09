@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ALL_CATEGORIES } from '@/lib/service-categories'
 import { useCurrency, type CurrencyCode } from '@/context/CurrencyContext'
+import { formatDistanceToNow } from 'date-fns'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,8 +19,6 @@ type ServiceListing = {
   service_mode: 'online' | 'offline' | 'both' | null
   tags: string[] | null
   location: string | null
-  avg_rating: number | null
-  review_count: number | null
   images: string[] | null
   category_id: string | null
   delivery_types: string[] | null
@@ -29,6 +28,19 @@ type ServiceListing = {
     avatar_url: string | null
     bio: string | null
     location: string | null
+  }
+}
+
+type VerifiedReview = {
+  id: string
+  rating: number
+  comment: string | null
+  created_at: string
+  verified_buyer: boolean
+  reviewer: {
+    id: string
+    full_name: string
+    avatar_url: string | null
   }
 }
 
@@ -163,6 +175,9 @@ export default function ServiceDetailPage() {
   const [svc, setSvc] = useState<ServiceListing | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [reviews, setReviews] = useState<VerifiedReview[]>([])
+  const [reviewsAvg, setReviewsAvg] = useState(0)
+  const [reviewsLoading, setReviewsLoading] = useState(true)
 
   useEffect(() => {
     if (!id) { setNotFound(true); setLoading(false); return }
@@ -174,7 +189,7 @@ export default function ServiceDetailPage() {
           .from('listings')
           .select(`
             id, title, description, price, currency,
-            service_mode, tags, location, avg_rating, review_count,
+            service_mode, tags, location,
             images, category_id, delivery_types,
             seller:profiles!seller_id (
               id, full_name, avatar_url, bio, location
@@ -199,8 +214,6 @@ export default function ServiceDetailPage() {
             service_mode: raw.service_mode as ServiceListing['service_mode'],
             tags: raw.tags as string[] | null,
             location: raw.location as string | null,
-            avg_rating: raw.avg_rating as number | null,
-            review_count: raw.review_count as number | null,
             images: raw.images as string[] | null,
             category_id: raw.category_id as string | null,
             delivery_types: raw.delivery_types as string[] | null,
@@ -219,15 +232,30 @@ export default function ServiceDetailPage() {
         setLoading(false)
       }
     }
+
+    const loadReviews = async () => {
+      try {
+        const res = await fetch(`/api/listings/${id}/reviews`)
+        if (res.ok) {
+          const json = await res.json()
+          setReviews(json.reviews ?? [])
+          setReviewsAvg(json.avgRating ?? 0)
+        }
+      } catch { /* ignore */ } finally {
+        setReviewsLoading(false)
+      }
+    }
+
     load()
+    loadReviews()
   }, [id])
 
   if (loading) return <LoadingSkeleton />
   if (notFound || !svc) return <NotFound />
 
   const catInfo = ALL_CATEGORIES.find(c => c.id === svc.category_id)
-  const rating = svc.avg_rating ?? 0
-  const reviewCount = svc.review_count ?? 0
+  const rating = reviewsAvg
+  const reviewCount = reviews.length
   const images = svc.images ?? []
   const tags = svc.tags ?? []
   const mode = svc.service_mode
@@ -250,6 +278,7 @@ export default function ServiceDetailPage() {
           .sd-mobile-pkg { display: none !important; }
           .sd-mobile-bar { display: none !important; }
         }
+        @keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
       `}</style>
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '16px 16px 80px' }} className="sd-main">
@@ -292,15 +321,16 @@ export default function ServiceDetailPage() {
                 )}
               </div>
               <h1 style={{ fontSize: 'clamp(17px,4vw,22px)', fontWeight: 800, lineHeight: 1.3, margin: '0 0 10px' }}>{svc.title}</h1>
-              {rating > 0 ? (
+              {!reviewsLoading && rating > 0 ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '13px', color: '#94a3b8' }}>
                   <Stars rating={rating} />
                   <strong style={{ color: '#fbbf24' }}>{rating.toFixed(1)}</strong>
-                  <span>({reviewCount} review{reviewCount !== 1 ? 's' : ''})</span>
+                  <span>({reviewCount} verified review{reviewCount !== 1 ? 's' : ''})</span>
+                  <span style={{ fontSize: '10px', color: '#38bdf8', fontWeight: 700, background: 'rgba(56,189,248,0.08)', padding: '2px 6px', borderRadius: 999 }}>✓ Buyer Reviews Only</span>
                 </div>
-              ) : (
-                <div style={{ fontSize: '13px', color: '#475569' }}>No reviews yet — be the first!</div>
-              )}
+              ) : !reviewsLoading ? (
+                <div style={{ fontSize: '13px', color: '#475569' }}>No verified reviews yet — be the first!</div>
+              ) : null}
             </div>
 
             {/* Seller mini row */}
@@ -372,6 +402,66 @@ export default function ServiceDetailPage() {
               <Link href={`/profile/${svc.seller.id}`} style={{ display: 'block', padding: '9px', textAlign: 'center', border: '1px solid #334155', borderRadius: '10px', fontSize: '12px', fontWeight: 600, color: '#94a3b8', textDecoration: 'none' }}>
                 View Full Profile
               </Link>
+            </div>
+
+            {/* Verified Reviews Section */}
+            <div style={card}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: 8 }}>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9' }}>
+                  Reviews {reviewCount > 0 ? `(${reviewCount})` : ''}
+                </div>
+                <span style={{ fontSize: '10px', fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', padding: '2px 8px', borderRadius: 999 }}>
+                  ✓ Verified Buyers Only
+                </span>
+              </div>
+
+              {reviewsLoading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {[1,2].map(i => (
+                    <div key={i} style={{ background: '#0f172a', borderRadius: '10px', padding: '12px', display: 'flex', gap: '10px' }}>
+                      <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite', flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ height: 12, width: '40%', background: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite', borderRadius: 4, marginBottom: 8 }} />
+                        <div style={{ height: 10, background: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite', borderRadius: 4 }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : reviews.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '20px 0', color: '#475569', fontSize: '13px' }}>
+                  <div style={{ fontSize: '28px', marginBottom: '8px' }}>💬</div>
+                  <div style={{ fontWeight: 600, color: '#64748b', marginBottom: '4px' }}>No reviews yet</div>
+                  <div>Reviews appear here after verified buyers complete their purchase.</div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {reviews.map(rev => (
+                    <div key={rev.id} style={{ background: '#0f172a', borderRadius: '10px', padding: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      {rev.reviewer.avatar_url
+                        ? <img src={rev.reviewer.avatar_url} alt={rev.reviewer.full_name} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                        : <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '13px', color: '#0f172a', flexShrink: 0 }}>
+                            {rev.reviewer.full_name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}
+                          </div>
+                      }
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4, marginBottom: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontWeight: 700, fontSize: '13px', color: '#f1f5f9' }}>{rev.reviewer.full_name}</span>
+                            <span style={{ fontSize: '10px', color: '#34d399', fontWeight: 600 }}>✓ Verified Buyer</span>
+                          </div>
+                          <span style={{ fontSize: '11px', color: '#475569' }}>
+                            {formatDistanceToNow(new Date(rev.created_at), { addSuffix: true })}
+                          </span>
+                        </div>
+                        <Stars rating={rev.rating} size={12} />
+                        {rev.comment && (
+                          <p style={{ fontSize: '12px', color: '#94a3b8', lineHeight: 1.6, margin: '6px 0 0' }}>{rev.comment}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Trust guarantee */}

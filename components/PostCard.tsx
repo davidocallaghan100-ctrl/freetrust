@@ -563,7 +563,7 @@ export default function PostCard({
               <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 10px' }}>No comments yet — be first!</p>
             )}
             {comments.map(c => {
-              const cName = c.profiles?.full_name ?? c.profiles?.username ?? 'User'
+              const cName = c.profiles?.full_name ?? c.profiles?.username ?? 'FreeTrust Member'
               return (
                 <div key={c.id} style={{ display: 'flex', gap: '8px', marginBottom: '10px', alignItems: 'flex-start' }}>
                   <Avatar url={c.profiles?.avatar_url ?? null} name={cName} size={30} />
