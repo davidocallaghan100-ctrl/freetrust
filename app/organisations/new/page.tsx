@@ -79,14 +79,26 @@ export default function CreateOrganisationPage() {
     setLogoUploading(true)
     try {
       const supabase = createClient()
-      const ext = file.name.split('.').pop()
-      const path = `org-logos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-      const { error: uploadErr } = await supabase.storage.from('uploads').upload(path, file, { contentType: file.type, upsert: false })
+      const ext = file.name.split('.').pop() || 'jpg'
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+
+      // 15-second timeout so it never hangs indefinitely
+      const uploadPromise = supabase.storage
+        .from('org-logos')
+        .upload(path, file, { contentType: file.type, upsert: false })
+
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Upload timed out')), 15000)
+      )
+
+      const { error: uploadErr } = await Promise.race([uploadPromise, timeoutPromise])
       if (uploadErr) throw uploadErr
-      const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(path)
+
+      const { data: { publicUrl } } = supabase.storage.from('org-logos').getPublicUrl(path)
       setLogoUrl(publicUrl)
-    } catch {
-      setError('Logo upload failed — you can still create the organisation without a logo.')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Upload failed'
+      setError(`Logo upload failed (${msg}) — you can still create the organisation without a logo.`)
       setLogoPreview('')
     } finally {
       setLogoUploading(false)
