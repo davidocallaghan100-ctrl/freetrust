@@ -142,22 +142,29 @@ function CollabPeopleInner() {
     const supabase = createClient()
     async function load() {
       try {
-        const { data } = await supabase
+        const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, full_name, avatar_url, bio, location, role, trust_balance')
+          .select('id, full_name, avatar_url, bio, location, role, created_at')
           .is('deleted_at', null)
-          .order('trust_balance', { ascending: false })
+          .order('created_at', { ascending: false })
           .limit(100)
-        if (data && data.length > 0) {
-          setDbMembers(data.map((m: Record<string, unknown>) => ({
+        if (profiles && profiles.length > 0) {
+          const ids = profiles.map((p: Record<string, unknown>) => p.id as string)
+          const { data: balances } = await supabase
+            .from('trust_balances')
+            .select('user_id, balance')
+            .in('user_id', ids)
+          const balanceMap: Record<string, number> = {}
+          for (const b of balances ?? []) balanceMap[(b as Record<string, unknown>).user_id as string] = Number((b as Record<string, unknown>).balance ?? 0)
+          setDbMembers(profiles.map((m: Record<string, unknown>) => ({
             id: String(m.id),
             full_name: m.full_name as string | null,
             avatar_url: m.avatar_url as string | null,
             bio: m.bio as string | null,
             location: m.location as string | null,
             role: m.role as string | null,
-            trust_balance: Number(m.trust_balance ?? 0),
-          })))
+            trust_balance: balanceMap[String(m.id)] ?? 0,
+          })).sort((a, b) => b.trust_balance - a.trust_balance))
         }
       } catch { /* use mock */ }
       finally { setLoading(false) }

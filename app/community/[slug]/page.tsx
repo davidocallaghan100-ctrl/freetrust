@@ -1,8 +1,8 @@
 'use client'
-import React, { useState, useEffect, use, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
-import { useCurrency } from '@/context/CurrencyContext'
 import { createClient } from '@/lib/supabase/client'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -58,9 +58,9 @@ function Empty({ icon, title, sub }: { icon: string; title: string; sub?: string
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
-export default function CommunityDetailPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params)
-  const { format } = useCurrency()
+export default function CommunityDetailPage() {
+  const params = useParams()
+  const slug = params?.slug as string
 
   const [community, setCommunity] = useState<Community | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
@@ -258,7 +258,7 @@ export default function CommunityDetailPage({ params }: { params: Promise<{ slug
                 <span>👥 {community.member_count.toLocaleString()} members</span>
                 <span>💬 {community.post_count.toLocaleString()} posts</span>
                 <span>📁 {community.category}</span>
-                {community.is_paid && <span style={{ color: '#fbbf24' }}>🔒 {format(community.price_monthly, 'GBP')}/mo</span>}
+                {community.is_paid && <span style={{ color: '#fbbf24' }}>🔒 £{community.price_monthly}/mo</span>}
                 {(community.tags ?? []).map(t => (
                   <span key={t} style={{ background: 'rgba(148,163,184,.08)', border: '1px solid rgba(148,163,184,.12)', borderRadius: 999, padding: '0.1rem 0.5rem', fontSize: '0.72rem', color: '#94a3b8' }}>{t}</span>
                 ))}
@@ -267,7 +267,7 @@ export default function CommunityDetailPage({ params }: { params: Promise<{ slug
             <div className="cjb" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
               {!joined
                 ? <button onClick={handleJoin} disabled={joinLoading} style={{ background: '#38bdf8', border: 'none', borderRadius: 8, padding: '0.55rem 1.25rem', fontSize: '0.88rem', fontWeight: 700, color: '#0f172a', cursor: joinLoading ? 'not-allowed' : 'pointer', opacity: joinLoading ? 0.7 : 1 }}>
-                    {joinLoading ? 'Joining…' : community.is_paid ? `Join ${format(community.price_monthly, 'GBP')}/mo` : 'Join Community'}
+                    {joinLoading ? 'Joining…' : community.is_paid ? `Join £${community.price_monthly}/mo` : 'Join Community'}
                   </button>
                 : <span style={{ background: 'rgba(56,189,248,.1)', border: '1px solid rgba(56,189,248,.3)', borderRadius: 8, padding: '0.55rem 1.25rem', fontSize: '0.88rem', fontWeight: 700, color: '#38bdf8' }}>✓ Joined</span>
               }

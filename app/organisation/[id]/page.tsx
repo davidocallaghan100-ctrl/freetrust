@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   BuildingOffice2Icon,
   GlobeAltIcon,
@@ -722,6 +723,7 @@ export default function OrganisationPage() {
 
   const [org, setOrg] = useState<Organisation | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [followed, setFollowed] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
@@ -767,7 +769,7 @@ export default function OrganisationPage() {
       setOrg(mapped);
       setFollowed(raw.isFollowing ?? false);
     } catch {
-      setOrg(buildMockOrg(id));
+      setNotFound(true);
     } finally {
       setLoading(false);
     }
@@ -807,27 +809,24 @@ export default function OrganisationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center" style={{ paddingTop: 64 }}>
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
-          <span className="text-gray-500 text-sm">Loading organisation…</span>
+      <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 64 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid rgba(56,189,248,0.2)', borderTopColor: '#38bdf8', animation: 'spin 0.7s linear infinite' }} />
+          <span style={{ color: '#64748b', fontSize: 14 }}>Loading organisation…</span>
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
       </div>
     );
   }
 
-  if (!org) {
+  if (notFound || !org) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center" style={{ paddingTop: 64 }}>
-        <div className="text-center space-y-4">
-          <p className="text-white text-xl font-semibold">Organisation not found</p>
-          <button
-            onClick={() => router.back()}
-            className="text-indigo-400 hover:underline text-sm"
-          >
-            ← Go back
-          </button>
-        </div>
+      <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: 64, gap: 16, color: '#f1f5f9' }}>
+        <div style={{ fontSize: '3rem' }}>🏢</div>
+        <h1 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0 }}>Organisation not found</h1>
+        <p style={{ color: '#64748b', margin: 0 }}>This organisation may have been removed or the link is invalid.</p>
+        <button onClick={() => router.back()} style={{ color: '#38bdf8', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem' }}>← Go back</button>
+        <Link href="/organisations" style={{ color: '#38bdf8', textDecoration: 'none', fontSize: '0.85rem' }}>Browse Organisations</Link>
       </div>
     );
   }
