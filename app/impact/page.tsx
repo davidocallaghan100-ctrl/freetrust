@@ -134,7 +134,6 @@ export default function ImpactPage() {
   const [voting, setVoting] = useState(false)
   const [trustBalance, setTrustBalance] = useState(0)
 
-  const { count: treeCount, ref: treeRef } = useCountUp(135500000, 2500)
   const daysLeft = getDaysToQuarterEnd()
 
   const loadAll = useCallback(async () => {
@@ -266,9 +265,12 @@ export default function ImpactPage() {
           <div style={{ background: 'linear-gradient(135deg,rgba(52,211,153,0.1),rgba(56,189,248,0.06))', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 16, padding: '1.5rem 2rem', marginBottom: '1.5rem', display: 'inline-block', minWidth: 280, textAlign: 'left' }}>
             <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Sustainability Fund Balance</div>
             <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#34d399', lineHeight: 1 }}>₮{(stats?.fundBalance ?? 0).toLocaleString()}</div>
-            <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.4rem' }}>₮{(stats?.quarterlyTotal ?? 0).toLocaleString()} donated this quarter · {stats?.quarterlyPct ?? 0}% to goal</div>
+            {(stats?.fundBalance ?? 0) === 0
+              ? <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.4rem' }}>Grows with every transaction — be the first to contribute 🌱</div>
+              : <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.4rem' }}>₮{(stats?.quarterlyTotal ?? 0).toLocaleString()} donated this quarter · {stats?.quarterlyPct ?? 0}% to goal</div>
+            }
             <div style={{ background: 'rgba(52,211,153,0.1)', borderRadius: 4, height: 6, marginTop: '0.75rem', overflow: 'hidden' }}>
-              <div style={{ background: 'linear-gradient(90deg,#34d399,#38bdf8)', height: '100%', width: `${stats?.quarterlyPct ?? 0}%`, borderRadius: 4 }} />
+              <div style={{ background: 'linear-gradient(90deg,#34d399,#38bdf8)', height: '100%', width: `${Math.max(stats?.quarterlyPct ?? 0, (stats?.fundBalance ?? 0) > 0 ? 2 : 0)}%`, borderRadius: 4 }} />
             </div>
           </div>
           <div className="impact-stats">
@@ -296,28 +298,25 @@ export default function ImpactPage() {
         </div>
       </div>
 
-      {/* Real-World Impact */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1.5rem 0' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.35rem' }}>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>Real-World Impact</h2>
-          <span style={{ fontSize: '0.72rem', color: '#475569' }}>Sources: One Tree Planted · The Ocean Cleanup · IEA · World Bank</span>
-        </div>
-        <p style={{ fontSize: '0.82rem', color: '#475569', marginBottom: '1rem', marginTop: '0.25rem' }}>The world problems our impact fund is helping to address.</p>
-        <div className="impact-stats">
-          <StatCounter value={135500000} label="Trees Planted (One Tree Planted, all-time)" icon="🌳" />
-          <StatCounter value={20000000} label="kg Ocean Plastic Removed (The Ocean Cleanup 2024)" icon="🌊" />
-          <StatCounter value={685000000} label="People Still Without Clean Cooking Fuel (IEA 2024)" icon="🔥" />
-          <StatCounter value={242458} label="Families Supported by Reforestation (World Bank 2023)" icon="👨‍👩‍👧‍👦" />
-        </div>
-      </div>
-
-      {/* Tree Counter */}
-      <div ref={treeRef} style={{ maxWidth: 1200, margin: '1rem auto', padding: '0 1.5rem' }}>
-        <div style={{ background: 'linear-gradient(135deg,rgba(52,211,153,0.08),rgba(56,189,248,0.04))', border: '1px solid rgba(52,211,153,0.15)', borderRadius: 16, padding: '2rem', textAlign: 'center' }}>
-          <div style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>🌳</div>
-          <div style={{ fontSize: '3rem', fontWeight: 900, color: '#34d399', lineHeight: 1 }}>{treeCount.toLocaleString()}</div>
-          <div style={{ fontSize: '1.1rem', color: '#94a3b8', marginTop: '0.5rem' }}>trees planted globally (One Tree Planted, all-time)</div>
-          <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.35rem' }}>Source: onetreeplanted.org — 51.9M planted in 2023 alone across 72 countries 🌿</div>
+      {/* How the fund works */}
+      <div style={{ maxWidth: 1200, margin: '2rem auto 0', padding: '0 1.5rem' }}>
+        <div style={{ background: 'rgba(52,211,153,0.05)', border: '1px solid rgba(52,211,153,0.15)', borderRadius: 16, padding: '1.75rem 2rem' }}>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.75rem', color: '#f1f5f9' }}>How the Sustainability Fund works</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            {[
+              { icon: '🛒', title: '1% per transaction', desc: 'Every sale on FreeTrust automatically contributes 1% of the transaction value to this fund.' },
+              { icon: '🗳️', title: 'Community votes', desc: 'Members vote on which causes to fund each quarter. The highest-voted project receives the allocation.' },
+              { icon: '✅', title: 'Verified disbursement', desc: 'Funds are sent directly to verified non-profit partners. All transactions will be published publicly.' },
+            ].map(item => (
+              <div key={item.title} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>{item.icon}</span>
+                <div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.2rem' }}>{item.title}</div>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>{item.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
