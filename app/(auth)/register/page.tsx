@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import Avatar from '@/components/Avatar'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -17,6 +18,10 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [trustToast, setTrustToast] = useState(false)
+  const [photoStep, setPhotoStep] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [photoUploading, setPhotoUploading] = useState(false)
+  const photoInputRef = useRef<HTMLInputElement>(null)
 
   // Password strength
   const pwStrength = (() => {
@@ -82,6 +87,7 @@ export default function RegisterPage() {
         throw new Error(msg || 'Something went wrong. Please try again.')
       }
       setSuccess(true)
+      setPhotoStep(true)
       // Issue ₮25 signup bonus
       void issueSignupBonus()
     } catch (err: unknown) {
@@ -360,16 +366,86 @@ export default function RegisterPage() {
 
           {success ? (
             <div className="success-box">
-              <div className="success-icon">📬</div>
-              <div className="success-heading">Check your inbox</div>
-              <p className="success-sub">
-                We sent a confirmation link to{' '}
-                <span className="success-email">{form.email}</span>.<br />
-                Click it to activate your account and claim your ₮25 Trust tokens.
-              </p>
-              <div className="success-next">
-                💡 Can&apos;t find it? Check your spam or junk folder — it sometimes lands there.
-              </div>
+              {photoStep ? (
+                <>
+                  <div className="success-icon">🎉</div>
+                  <div className="success-heading">Account created!</div>
+                  <p className="success-sub" style={{ marginBottom: '1.5rem' }}>
+                    Add a profile photo so your community can recognise you.
+                  </p>
+
+                  {/* Avatar preview */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <div
+                      style={{ cursor: 'pointer', position: 'relative' }}
+                      onClick={() => photoInputRef.current?.click()}
+                    >
+                      <Avatar url={avatarUrl} name={form.name} email={form.email} size={80} />
+                      <div style={{
+                        position: 'absolute', inset: 0, borderRadius: '50%',
+                        background: 'rgba(15,23,42,0.5)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '1.4rem',
+                        opacity: photoUploading ? 1 : undefined,
+                      }}>
+                        {photoUploading ? '⏳' : '📷'}
+                      </div>
+                    </div>
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        setPhotoUploading(true)
+                        try {
+                          const fd = new FormData()
+                          fd.append('file', file)
+                          const res = await fetch('/api/upload/avatar', { method: 'POST', body: fd })
+                          if (res.ok) {
+                            const data = await res.json() as { url: string }
+                            setAvatarUrl(data.url)
+                          }
+                        } catch { /* silent */ }
+                        setPhotoUploading(false)
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => photoInputRef.current?.click()}
+                      style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 8, padding: '0.5rem 1rem', fontSize: '0.85rem', color: '#38bdf8', cursor: 'pointer' }}
+                    >
+                      {avatarUrl ? 'Change photo' : 'Upload photo'}
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => router.push('/feed')}
+                    style={{ width: '100%', background: '#38bdf8', border: 'none', borderRadius: 10, padding: '0.75rem', fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer', marginBottom: '0.75rem' }}
+                  >
+                    {avatarUrl ? 'Continue to FreeTrust →' : 'Skip for now →'}
+                  </button>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', textAlign: 'center' }}>
+                    📬 Check your inbox to verify your email address.
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="success-icon">📬</div>
+                  <div className="success-heading">Check your inbox</div>
+                  <p className="success-sub">
+                    We sent a confirmation link to{' '}
+                    <span className="success-email">{form.email}</span>.<br />
+                    Click it to activate your account and claim your ₮25 Trust tokens.
+                  </p>
+                  <div className="success-next">
+                    💡 Can&apos;t find it? Check your spam or junk folder — it sometimes lands there.
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             <>

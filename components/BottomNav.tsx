@@ -1,18 +1,19 @@
 'use client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import CreateMenu from '@/components/CreateMenu'
+import { usePathname, useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 const tabs = [
   { href: '/', icon: '🏠', label: 'Home' },
   { href: '/connections', icon: '🔗', label: 'Connect' },
-  null, // placeholder for center Create button
+  null, // center Create button
   { href: '/collab', icon: '🤝', label: 'Collab' },
   { href: '/profile', icon: '👤', label: 'Profile' },
 ]
 
 export default function BottomNav() {
   const pathname = usePathname()
+  const router = useRouter()
 
   const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href + '/'))
 
@@ -37,11 +38,32 @@ export default function BottomNav() {
       }}>
         {tabs.map((tab, i) => {
           if (tab === null) {
-            // Center Create button
+            // Centre floating + button → /create
             return (
-              <div key="create" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <CreateMenu asCenterButton />
-              </div>
+              <button
+                key="create"
+                onClick={() => router.push('/create')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #38bdf8, #818cf8)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 16px rgba(56,189,248,0.4)',
+                  flexShrink: 0,
+                  fontSize: '22px',
+                  color: '#fff',
+                  fontWeight: 700,
+                  lineHeight: 1,
+                }}
+                aria-label="Create"
+              >
+                +
+              </button>
             )
           }
           const active = isActive(tab.href)
@@ -57,6 +79,7 @@ export default function BottomNav() {
                 textDecoration: 'none',
                 flex: 1,
                 padding: '4px 0',
+                position: 'relative',
               }}
             >
               <span style={{ fontSize: '20px', lineHeight: 1 }}>{tab.icon}</span>

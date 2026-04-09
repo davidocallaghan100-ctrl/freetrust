@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import Avatar from '@/components/Avatar'
 
 type Profile = {
   id: string
@@ -181,13 +182,9 @@ function PostCard({ post }: { post: FeedPost }) {
   }
 
   return (
-    <div style={S.postCard}>
+      <div style={S.postCard}>
       <div style={S.postHeader}>
-        <div style={{ ...S.avatar, background: avatarUrl ? 'transparent' : getGradient(initials) }}>
-          {avatarUrl
-            ? <img src={avatarUrl} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-            : initials.toUpperCase()}
-        </div>
+        <Avatar url={avatarUrl} name={name} size={40} />
         <div style={S.postMeta}>
           <div style={S.authorName}>{name}</div>
           {post.profiles?.username && (
