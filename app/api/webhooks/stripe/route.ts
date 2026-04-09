@@ -146,6 +146,59 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return;
   }
 
+  // ── Wallet top-up ─────────────────────────────────────────────────────────
+  if (type === 'wallet_topup') {
+    const userId = session.metadata?.user_id
+    const depositId = session.metadata?.deposit_id
+    const amountCents = parseInt(session.metadata?.amount_cents ?? '0', 10)
+
+    if (!userId || !depositId || !amountCents) {
+      console.error('[Webhook] wallet_topup missing metadata', session.metadata)
+      return
+    }
+
+    try {
+      const supabase = await createClient()
+
+      // Mark deposit as completed
+      await supabase
+        .from('money_deposits')
+        .update({
+          status: 'completed',
+          stripe_payment_intent: typeof session.payment_intent === 'string'
+            ? session.payment_intent : String(session.payment_intent ?? ''),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', depositId)
+
+      // Credit the user's wallet (stored in orders as a deposit-type row for unified tx history)
+      await supabase.from('orders').insert({
+        buyer_id: userId,
+        seller_id: userId,
+        status: 'completed',
+        total_amount: amountCents / 100,
+        item_title: 'Wallet Top-up',
+        item_type: 'deposit',
+        stripe_payment_intent: typeof session.payment_intent === 'string'
+          ? session.payment_intent : String(session.payment_intent ?? ''),
+      })
+
+      // Send notification
+      await supabase.from('notifications').insert({
+        user_id: userId,
+        type: 'wallet',
+        title: '💰 Funds added!',
+        body: `€${(amountCents / 100).toFixed(2)} has been added to your FreeTrust wallet.`,
+        link: '/wallet',
+      })
+
+      console.log(`[Webhook] Wallet top-up complete: user=${userId} amount=€${amountCents / 100}`)
+    } catch (err) {
+      console.error('[Webhook] wallet_topup handler error:', err)
+    }
+    return
+  }
+
   // ── Standard escrow checkout (services / products) ────────────────────────
   const orderId = session.metadata?.order_id;
   if (!orderId) {

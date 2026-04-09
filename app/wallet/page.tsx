@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useCurrency } from '@/context/CurrencyContext'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -120,6 +121,117 @@ function StatCard({ label, value, sub, color = '#38bdf8', icon }: {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
+const TOPUP_AMOUNTS = [1000, 2500, 5000, 10000, 25000] // cents
+
+function AddFundsModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (msg: string) => void }) {
+  const [selected, setSelected] = useState<number | null>(null)
+  const [custom,   setCustom]   = useState('')
+  const [loading,  setLoading]  = useState(false)
+  const [error,    setError]    = useState<string | null>(null)
+
+  const amountCents = selected ?? (custom ? Math.round(parseFloat(custom) * 100) : null)
+
+  const handlePay = async () => {
+    if (!amountCents || amountCents < 100) { setError('Minimum top-up is €1'); return }
+    if (amountCents > 1000000) { setError('Maximum top-up is €10,000'); return }
+    setLoading(true); setError(null)
+    try {
+      const res = await fetch('/api/stripe/topup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount_cents: amountCents }),
+      })
+      const data = await res.json() as { url?: string; error?: string }
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        setError(data.error ?? 'Something went wrong')
+        setLoading(false)
+      }
+    } catch {
+      setError('Network error — please try again')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: '480px', boxShadow: '0 -8px 40px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <div>
+            <div style={{ fontSize: '17px', fontWeight: 800, color: '#f1f5f9' }}>➕ Add Funds</div>
+            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>Secure payment via Stripe</div>
+          </div>
+          <button onClick={onClose} style={{ background: '#0f172a', border: 'none', borderRadius: '50%', width: '32px', height: '32px', color: '#64748b', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+        </div>
+
+        {/* Preset amounts */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '14px' }}>
+          {TOPUP_AMOUNTS.map(amt => (
+            <button
+              key={amt}
+              onClick={() => { setSelected(amt); setCustom('') }}
+              style={{
+                padding: '12px 8px', borderRadius: '10px', border: `1.5px solid ${selected === amt ? '#38bdf8' : '#334155'}`,
+                background: selected === amt ? 'rgba(56,189,248,0.12)' : '#0f172a',
+                color: selected === amt ? '#38bdf8' : '#f1f5f9', fontWeight: 700, fontSize: '15px',
+                cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+              }}
+            >
+              €{(amt / 100).toFixed(0)}
+            </button>
+          ))}
+        </div>
+
+        {/* Custom amount */}
+        <div style={{ marginBottom: '18px' }}>
+          <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Or enter custom amount</label>
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '15px', fontWeight: 600 }}>€</span>
+            <input
+              type="number"
+              min="1"
+              max="10000"
+              step="0.01"
+              placeholder="0.00"
+              value={custom}
+              onChange={e => { setCustom(e.target.value); setSelected(null) }}
+              style={{ width: '100%', background: '#0f172a', border: `1.5px solid ${custom ? '#38bdf8' : '#334155'}`, borderRadius: '10px', padding: '12px 12px 12px 28px', fontSize: '15px', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+            />
+          </div>
+        </div>
+
+        {error && <div style={{ fontSize: '13px', color: '#f87171', marginBottom: '12px', padding: '10px 14px', background: 'rgba(248,113,113,0.08)', borderRadius: '8px' }}>{error}</div>}
+
+        {/* Summary */}
+        {amountCents && amountCents >= 100 && (
+          <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '14px', padding: '10px 14px', background: 'rgba(56,189,248,0.06)', borderRadius: '8px', border: '1px solid rgba(56,189,248,0.12)' }}>
+            Adding <span style={{ color: '#38bdf8', fontWeight: 700 }}>€{(amountCents / 100).toFixed(2)}</span> to your wallet · Secure card payment
+          </div>
+        )}
+
+        <button
+          onClick={handlePay}
+          disabled={loading || !amountCents || amountCents < 100}
+          style={{
+            width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
+            background: (!amountCents || amountCents < 100) ? '#1e293b' : 'linear-gradient(135deg, #38bdf8, #818cf8)',
+            color: (!amountCents || amountCents < 100) ? '#475569' : '#0f172a',
+            fontSize: '15px', fontWeight: 800, cursor: (!amountCents || amountCents < 100) ? 'not-allowed' : 'pointer',
+            fontFamily: 'inherit', transition: 'all 0.15s', opacity: loading ? 0.7 : 1,
+          }}
+        >
+          {loading ? '⏳ Redirecting to payment…' : `Pay €${amountCents && amountCents >= 100 ? (amountCents / 100).toFixed(2) : '0.00'} securely`}
+        </button>
+
+        <div style={{ textAlign: 'center', fontSize: '11px', color: '#334155', marginTop: '12px' }}>
+          🔒 Powered by Stripe · SSL encrypted · No card data stored
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function WalletPage() {
   const { currency: curr } = useCurrency()
   const sym = curr.symbol
@@ -131,8 +243,24 @@ export default function WalletPage() {
   const [exporting,   setExporting]   = useState(false)
   const [spendLoading,setSpendLoading]= useState<string | null>(null)
   const [toast,       setToast]       = useState<string | null>(null)
+  const [showAddFunds, setShowAddFunds] = useState(false)
 
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000) }
+  const searchParams = useSearchParams()
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000) }
+
+  // Handle Stripe redirect back after top-up
+  useEffect(() => {
+    const topup = searchParams.get('topup')
+    const amount = searchParams.get('amount')
+    if (topup === 'success' && amount) {
+      showToast(`✅ €${(parseInt(amount) / 100).toFixed(2)} added to your wallet!`)
+      // Clean URL
+      window.history.replaceState({}, '', '/wallet')
+    } else if (topup === 'cancelled') {
+      showToast('Payment cancelled — no charge was made')
+      window.history.replaceState({}, '', '/wallet')
+    }
+  }, [searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const load = useCallback(async () => {
     try {
@@ -254,6 +382,14 @@ export default function WalletPage() {
         .spend-card:hover { border-color: rgba(56,189,248,0.4) !important; }
       `}</style>
 
+      {/* Add Funds Modal */}
+      {showAddFunds && (
+        <AddFundsModal
+          onClose={() => setShowAddFunds(false)}
+          onSuccess={(msg) => { setShowAddFunds(false); showToast(msg) }}
+        />
+      )}
+
       {/* Toast */}
       {toast && (
         <div style={{ position: 'fixed', bottom: '80px', left: '50%', transform: 'translateX(-50%)', background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '12px 20px', fontSize: '13px', color: '#f1f5f9', zIndex: 9999, animation: 'slideUp 0.2s ease', boxShadow: '0 8px 30px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
@@ -328,7 +464,7 @@ export default function WalletPage() {
                   💸 Withdraw Earnings
                 </button>
                 <button
-                  onClick={() => showToast('Stripe payment link coming soon')}
+                  onClick={() => setShowAddFunds(true)}
                   style={{ flex: 1, minWidth: '100px', padding: '11px 18px', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#38bdf8', cursor: 'pointer', fontFamily: 'inherit' }}
                 >
                   ➕ Add Funds
