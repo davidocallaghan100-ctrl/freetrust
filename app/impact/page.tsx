@@ -359,7 +359,8 @@ export default function ImpactPage() {
       {/* FreeTrust Vision */}
       <div style={{ maxWidth: 1200, margin: '1.5rem auto', padding: '0 1.5rem' }}>
         <div style={{ background: 'linear-gradient(135deg,rgba(56,189,248,0.06),rgba(52,211,153,0.04))', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 16, padding: '2rem' }}>
-          <div style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 999, padding: '0.25rem 0.75rem', fontSize: '0.72rem', color: '#38bdf8', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '1rem' }}>🔭 THE FREETRUST VISION</div>
+          <div style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 999, padding: '0.25rem 0.75rem', fontSize: '0.72rem', color: '#38bdf8', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '0.75rem' }}>🔭 THE FREETRUST VISION</div>
+          <h2 style={{ fontSize: '1.7rem', fontWeight: 900, color: '#f1f5f9', margin: '0 0 1.25rem', lineHeight: 1.2 }}>Our <span style={{ color: '#38bdf8' }}>Vision</span></h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: '1.25rem' }}>
             {[
               { icon: '🌐', title: 'A Commerce System That Cares', desc: 'We are building a world where every transaction has a second purpose — funding the reforestation projects, ocean clean-ups, and communities that need it most.' },

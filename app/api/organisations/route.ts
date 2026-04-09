@@ -21,7 +21,6 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query
 
     if (error) {
-      // Table may not exist yet — return empty gracefully
       return NextResponse.json({ organisations: [] })
     }
 
@@ -42,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, type, description, location, website, sector, tags } = body
+    const { name, slug, type, description, location, website, sector, tags, logo_url } = body
 
     if (!name?.trim()) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -54,16 +53,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Description must be at least 20 characters' }, { status: 400 })
     }
 
+    // Normalise website — accept "www.example.com" without https://
+    let normWebsite: string | null = null
+    if (website?.trim()) {
+      const w = website.trim()
+      normWebsite = /^https?:\/\//i.test(w) ? w : `https://${w}`
+    }
+
+    const orgSlug = slug ||
+      name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60)
+
     const { data: org, error: insertError } = await supabase
       .from('organisations')
       .insert({
         name: name.trim(),
+        slug: orgSlug,
         type,
         description: description.trim(),
         location: location?.trim() || null,
-        website: website?.trim() || null,
+        website: normWebsite,
         sector: sector || null,
         tags: Array.isArray(tags) ? tags : [],
+        logo_url: logo_url || null,
         creator_id: user.id,
         is_verified: false,
         members_count: 1,
@@ -75,27 +86,7 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error('[POST /api/organisations] insert error:', insertError)
-      // Graceful fallback if table doesn't exist yet
-      return NextResponse.json({
-        organisation: {
-          id: crypto.randomUUID(),
-          name: name.trim(),
-          type,
-          description: description.trim(),
-          location: location?.trim() || null,
-          website: website?.trim() || null,
-          sector: sector || null,
-          tags: Array.isArray(tags) ? tags : [],
-          creator_id: user.id,
-          is_verified: false,
-          members_count: 1,
-          trust_score: 0,
-          status: 'active',
-          created_at: new Date().toISOString(),
-        },
-        created: true,
-        _mock: true,
-      })
+      return NextResponse.json({ error: insertError.message }, { status: 500 })
     }
 
     return NextResponse.json({ organisation: org, created: true }, { status: 201 })

@@ -1,7 +1,6 @@
 'use client'
 import React, { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 
 const ORG_TYPES = [
   'Social Enterprise', 'NGO / Charity', 'B Corp',
@@ -75,27 +74,25 @@ export default function CreateOrganisationPage() {
     reader.onload = e => setLogoPreview(e.target?.result as string)
     reader.readAsDataURL(file)
 
-    // Upload to Supabase storage
+    // Upload via server API route (handles auth correctly on mobile)
     setLogoUploading(true)
     try {
-      const supabase = createClient()
-      const ext = file.name.split('.').pop() || 'jpg'
-      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const fd = new FormData()
+      fd.append('file', file)
 
-      // 15-second timeout so it never hangs indefinitely
-      const uploadPromise = supabase.storage
-        .from('org-logos')
-        .upload(path, file, { contentType: file.type, upsert: false })
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 20000)
 
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Upload timed out')), 15000)
-      )
+      const res = await fetch('/api/organisations/upload-logo', {
+        method: 'POST',
+        body: fd,
+        signal: controller.signal,
+      })
+      clearTimeout(timeout)
 
-      const { error: uploadErr } = await Promise.race([uploadPromise, timeoutPromise])
-      if (uploadErr) throw uploadErr
-
-      const { data: { publicUrl } } = supabase.storage.from('org-logos').getPublicUrl(path)
-      setLogoUrl(publicUrl)
+      const data = await res.json() as { url?: string; error?: string }
+      if (!res.ok || !data.url) throw new Error(data.error || 'Upload failed')
+      setLogoUrl(data.url)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Upload failed'
       setError(`Logo upload failed (${msg}) — you can still create the organisation without a logo.`)
@@ -248,7 +245,10 @@ export default function CreateOrganisationPage() {
 
             <div style={S.fieldRow}>
               <label style={S.label}>Website</label>
-              <input className="nc-input" style={S.input} placeholder="https://yourorganisation.org" value={website} onChange={e => setWebsite(e.target.value)} type="url" maxLength={300} />
+              <input className="nc-input" style={S.input} placeholder="e.g. www.yourorg.com or https://yourorg.com" value={website} onChange={e => setWebsite(e.target.value)} maxLength={300} inputMode="url" autoCapitalize="none" autoCorrect="off" />
+              {website.trim() && !/^https?:\/\//i.test(website.trim()) && (
+                <p style={{ ...S.hint, color: '#38bdf8' }}>Will be saved as: https://{website.trim()}</p>
+              )}
             </div>
 
             <div style={S.fieldRow}>

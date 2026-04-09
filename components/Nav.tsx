@@ -139,7 +139,7 @@ export default function Nav() {
                   <Avatar url={user.avatar} name={user.name} email={user.email} size={38} />
                   <div style={{ overflow: 'hidden', flex: 1 }}>
                     <div style={{ fontSize: '13px', color: '#f1f5f9', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name ?? 'Your Profile'}</div>
-                    <div style={{ fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
+                    <Link href="/profile" onClick={() => setProfileOpen(false)} style={{ fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none' }}>{user.email}</Link>
                   </div>
                 </div>
                 {[
@@ -245,7 +245,7 @@ export default function Nav() {
             <Avatar url={user.avatar} name={user.name} email={user.email} size={40} />
             <div style={{ overflow: 'hidden', flex: 1 }}>
               <div style={{ fontSize: '14px', color: '#f1f5f9', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name ?? 'Your Profile'}</div>
-              <div style={{ fontSize: '12px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
+              <Link href="/profile" onClick={() => setDrawerOpen(false)} style={{ fontSize: '12px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none' }}>{user.email}</Link>
             </div>
           </div>
         )}
