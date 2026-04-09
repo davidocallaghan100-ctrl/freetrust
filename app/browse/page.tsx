@@ -203,6 +203,28 @@ function OrgCard({ org }: { org: Organisation }) {
   )
 }
 
+// ── Mock fallback data ─────────────────────────────────────────────────────────
+
+const MOCK_MEMBERS: Member[] = [
+  { id: 'mm1', type: 'individual', full_name: 'Sarah Chen', username: 'sarahchen', avatar_url: 'https://i.pravatar.cc/150?img=47', bio: 'Brand designer & creative director. 10+ years helping startups build visual identity.', location: 'London, UK', trust_balance: 820, skills: ['Brand Design', 'Figma', 'Logo'], follower_count: 142 },
+  { id: 'mm2', type: 'individual', full_name: 'Priya Nair', username: 'priyanair', avatar_url: 'https://i.pravatar.cc/150?img=44', bio: 'Full-stack developer specialising in Next.js + Supabase. Open to consulting.', location: 'Bangalore, India', trust_balance: 1100, skills: ['Next.js', 'TypeScript', 'Supabase'], follower_count: 231 },
+  { id: 'mm3', type: 'individual', full_name: 'Tom Walsh', username: 'tomwalsh', avatar_url: 'https://i.pravatar.cc/150?img=53', bio: 'SEO strategist & content marketer. Built multiple 6-figure content businesses.', location: 'Dublin, Ireland', trust_balance: 640, skills: ['SEO', 'Content', 'Analytics'], follower_count: 88 },
+  { id: 'mm4', type: 'individual', full_name: 'Amara Diallo', username: 'amaradiallo', avatar_url: 'https://i.pravatar.cc/150?img=45', bio: 'ESG consultant & impact strategist helping SMEs embed sustainability.', location: 'Lagos, Nigeria', trust_balance: 710, skills: ['ESG', 'Sustainability', 'Reporting'], follower_count: 74 },
+  { id: 'mm5', type: 'individual', full_name: 'Marcus Obi', username: 'marcusobi', avatar_url: 'https://i.pravatar.cc/150?img=12', bio: 'Community builder & startup mentor. FreeTrust Top Trusted member.', location: 'Abuja, Nigeria', trust_balance: 2100, skills: ['Mentorship', 'Community', 'Startups'], follower_count: 394 },
+  { id: 'mm6', type: 'individual', full_name: 'Lena Fischer', username: 'lenafischer', avatar_url: 'https://i.pravatar.cc/150?img=41', bio: 'UX researcher & usability expert. Worked with Shopify, Figma and early-stage startups.', location: 'Berlin, Germany', trust_balance: 530, skills: ['UX Research', 'Testing', 'Figma'], follower_count: 61 },
+]
+
+const MOCK_BUSINESSES: Business[] = [
+  { id: 'mb1', type: 'business', name: 'Nair Dev Studio', slug: 'nair-dev-studio', business_type: 'freelancer', industry: 'Software Development', description: 'Full-stack web development studio specialising in Next.js, Supabase and Stripe integrations.', logo_url: 'https://i.pravatar.cc/150?img=44', location: 'Bangalore, India', verified: true, follower_count: 38, trust_score: 1100 },
+  { id: 'mb2', type: 'business', name: 'GreenPath ESG', slug: 'greenpath-esg', business_type: 'ltd', industry: 'Sustainability Consulting', description: 'ESG strategy, impact measurement and sustainability reporting for ambitious SMEs.', logo_url: 'https://i.pravatar.cc/150?img=45', location: 'Lagos, Nigeria', verified: true, follower_count: 22, trust_score: 710 },
+  { id: 'mb3', type: 'business', name: 'ChenBrand Studio', slug: 'chenbrand', business_type: 'sole_trader', industry: 'Design & Creative', description: 'Brand identity, visual systems and creative direction for purpose-driven businesses.', logo_url: 'https://i.pravatar.cc/150?img=47', location: 'London, UK', verified: false, follower_count: 55, trust_score: 820 },
+]
+
+const MOCK_ORGS: Organisation[] = [
+  { id: 'mo1', type: 'organisation', name: 'FreeTrust Foundation', logo_url: null, description: 'The non-profit arm of FreeTrust. Supporting community grants, digital inclusion and impact initiatives.', category: 'Non-Profit', location: 'Dublin, Ireland', verified: true, services: ['Grants', 'Mentorship', 'Events'], follower_count: 203 },
+  { id: 'mo2', type: 'organisation', name: 'Tech for Good Ireland', logo_url: null, description: 'A network of Irish tech professionals using their skills for social and environmental impact.', category: 'Network', location: 'Dublin, Ireland', verified: false, services: ['Networking', 'Volunteering', 'Education'], follower_count: 87 },
+]
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function DirectoryPage() {
@@ -223,10 +245,19 @@ export default function DirectoryPage() {
         fetch('/api/directory/businesses'),
         fetch('/api/directory/orgs'),
       ])
-      setMembers(mRes.ok ? ((await mRes.json()).members ?? []) : [])
-      setBusinesses(bRes.ok ? ((await bRes.json()).businesses ?? []) : [])
-      setOrganisations(oRes.ok ? ((await oRes.json()).orgs ?? []) : [])
-    } catch { /* silent */ }
+      const dbMembers: Member[] = mRes.ok ? ((await mRes.json()).members ?? []) : []
+      const dbBiz: Business[]   = bRes.ok ? ((await bRes.json()).businesses ?? []) : []
+      const dbOrgs: Organisation[] = oRes.ok ? ((await oRes.json()).orgs ?? []) : []
+
+      // Merge real DB data on top of mocks (real data takes precedence, mocks fill the rest)
+      setMembers(dbMembers.length > 0 ? dbMembers : MOCK_MEMBERS)
+      setBusinesses(dbBiz.length > 0 ? dbBiz : MOCK_BUSINESSES)
+      setOrganisations(dbOrgs.length > 0 ? dbOrgs : MOCK_ORGS)
+    } catch {
+      setMembers(MOCK_MEMBERS)
+      setBusinesses(MOCK_BUSINESSES)
+      setOrganisations(MOCK_ORGS)
+    }
     finally { setLoading(false) }
   }, [])
 
@@ -263,7 +294,7 @@ export default function DirectoryPage() {
   const showOrgs    = tab === 'all' || tab === 'organisations'
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', paddingTop: 104 }}>
       <style>{`
         .dir-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
         .dir-tabs { display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }

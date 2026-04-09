@@ -7,7 +7,7 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, username, avatar_url, bio, location, trust_balance, follower_count, skills')
+      .select('id, full_name, username, avatar_url, bio, location, trust_balance, follower_count')
       .order('trust_balance', { ascending: false })
       .limit(100)
 
@@ -16,18 +16,20 @@ export async function GET() {
       return NextResponse.json({ members: [] })
     }
 
-    const members = (data ?? []).map(p => ({
-      id: p.id,
-      type: 'individual' as const,
-      full_name: p.full_name ?? null,
-      username: p.username ?? null,
-      avatar_url: p.avatar_url ?? null,
-      bio: p.bio ?? null,
-      location: p.location ?? null,
-      trust_balance: p.trust_balance ?? null,
-      follower_count: p.follower_count ?? null,
-      skills: Array.isArray(p.skills) ? p.skills : [],
-    }))
+    const members = (data ?? [])
+      .filter(p => p.full_name) // only show profiles with a name
+      .map(p => ({
+        id: p.id,
+        type: 'individual' as const,
+        full_name: p.full_name ?? null,
+        username: p.username ?? null,
+        avatar_url: p.avatar_url ?? null,
+        bio: p.bio ?? null,
+        location: p.location ?? null,
+        trust_balance: p.trust_balance ?? null,
+        follower_count: p.follower_count ?? null,
+        skills: [] as string[],
+      }))
 
     return NextResponse.json({ members })
   } catch (err) {
