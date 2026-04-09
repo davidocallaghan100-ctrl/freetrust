@@ -180,7 +180,7 @@ export default function AIPage() {
       {/* Header */}
       <div style={{ background: '#1e293b', borderBottom: '1px solid rgba(56,189,248,0.1)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, position: 'fixed', top: 104, left: 0, right: 0, zIndex: 50 }}>
         <Link href="/" style={{ color: '#64748b', textDecoration: 'none', fontSize: 20, lineHeight: 1 }}>←</Link>
-        <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#34d399)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🪙</div>
+        <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#34d399)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><span style={{ fontWeight: 900, fontSize: 20, color: '#fff', letterSpacing: '-0.5px', fontFamily: 'system-ui, sans-serif', lineHeight: 1 }}>₮</span></div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: '#f1f5f9' }}>FreeTrust AI</div>
           <div style={{ fontSize: 11, color: '#34d399', display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -204,7 +204,7 @@ export default function AIPage() {
           <div key={i} className={msg.role === 'user' ? 'ai-msg-user' : 'ai-msg-ai'} style={{ padding: '12px 16px', fontSize: 14, lineHeight: 1.65 }}>
             {msg.role === 'ai' && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                <span style={{ fontSize: 14 }}>🪙</span>
+                <span style={{ fontWeight: 900, fontSize: 14, color: '#38bdf8', fontFamily: 'system-ui, sans-serif' }}>₮</span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8' }}>FreeTrust AI</span>
               </div>
             )}

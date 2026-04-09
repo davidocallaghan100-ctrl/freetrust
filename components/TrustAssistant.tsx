@@ -263,7 +263,7 @@ export default function TrustAssistant() {
           animation: 'ta-hint-in 0.3s ease',
           cursor: 'pointer',
         }} onClick={handleOpen}>
-          <div style={{ fontSize: '0.72rem', color: accent, fontWeight: 700, marginBottom: 3 }}>Trust Assistant 🪙</div>
+          <div style={{ fontSize: '0.72rem', color: accent, fontWeight: 700, marginBottom: 3 }}>Trust Assistant <span style={{ fontWeight: 900 }}>₮</span></div>
           {hintShown}
           <div style={{ position: 'absolute', bottom: -6, right: 20, width: 12, height: 12, background: '#1e293b', border: `1px solid ${accent}`, borderTop: 'none', borderLeft: 'none', transform: 'rotate(45deg)' }} />
         </div>
@@ -285,7 +285,7 @@ export default function TrustAssistant() {
           boxShadow: '0 4px 20px rgba(56,189,248,0.4)',
         }}
       >
-        {open ? '✕' : '🪙'}
+        {open ? '✕' : <span style={{ fontWeight: 900, fontSize: 26, letterSpacing: '-1px', fontFamily: 'system-ui, sans-serif' }}>₮</span>}
       </button>
 
       {/* ── Chat window ── */}
@@ -305,7 +305,7 @@ export default function TrustAssistant() {
 
           {/* Header */}
           <div style={{ background: 'linear-gradient(135deg,rgba(56,189,248,0.15),rgba(2,132,199,0.1))', borderBottom: '1px solid rgba(56,189,248,0.15)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🪙</div>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><span style={{ fontWeight: 900, fontSize: 20, color: '#fff', letterSpacing: '-0.5px', fontFamily: 'system-ui, sans-serif', lineHeight: 1 }}>₮</span></div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f1f5f9' }}>Trust Assistant</div>
               <div style={{ fontSize: '0.7rem', color: '#34d399', display: 'flex', alignItems: 'center', gap: 4 }}>
