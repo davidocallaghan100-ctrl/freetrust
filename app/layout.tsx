@@ -7,6 +7,7 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import SearchBar from "@/components/SearchBar";
 import { CurrencyProvider } from "@/context/CurrencyContext";
+import TrustAssistant from "@/components/TrustAssistant";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -19,7 +20,7 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
-const BASE_URL = 'https://freetrust.vercel.app'
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://freetrust.co'
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
@@ -104,6 +105,9 @@ export default function RootLayout({
 
         {/* Mobile bottom nav — shown only on mobile via CSS */}
         <BottomNav />
+
+        {/* Trust Assistant — floating chat bubble, all pages */}
+        <TrustAssistant />
         </CurrencyProvider>
 
         {/* Floating + button — desktop only, bottom right */}
