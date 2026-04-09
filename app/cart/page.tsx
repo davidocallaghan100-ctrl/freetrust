@@ -106,13 +106,13 @@ export default function CartPage() {
   const muted = '#64748b'
 
   if (!mounted) return (
-    <main style={{ minHeight: '100vh', background: bg, paddingTop: 104, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <main style={{ minHeight: '100vh', background: bg, paddingTop: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ color: muted, fontSize: '0.9rem' }}>Loading cart…</div>
     </main>
   )
 
   if (cart.length === 0) return (
-    <main style={{ minHeight: '100vh', background: bg, color: text, fontFamily: 'system-ui, sans-serif', paddingTop: 104, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.25rem' }}>
+    <main style={{ minHeight: '100vh', background: bg, color: text, fontFamily: 'system-ui, sans-serif', paddingTop: 64, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.25rem' }}>
       <div style={{ fontSize: '4rem' }}>🛒</div>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 900, margin: 0 }}>Your cart is empty</h1>
       <p style={{ color: muted, margin: 0 }}>Add some products to get started.</p>
@@ -123,7 +123,7 @@ export default function CartPage() {
   )
 
   return (
-    <main style={{ minHeight: '100vh', background: bg, color: text, fontFamily: 'system-ui, sans-serif', paddingTop: 104, paddingBottom: 80 }}>
+    <main style={{ minHeight: '100vh', background: bg, color: text, fontFamily: 'system-ui, sans-serif', paddingTop: 64, paddingBottom: 80 }}>
       <style>{`
         @media (max-width: 900px) { .cart-grid { grid-template-columns: 1fr !important; } }
         .cart-remove:hover { color: #f87171 !important; }

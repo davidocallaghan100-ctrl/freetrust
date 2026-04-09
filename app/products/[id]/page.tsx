@@ -231,7 +231,7 @@ export default function ProductDetailPage() {
   const subtle = '#334155'
 
   return (
-    <main style={{ minHeight: '100vh', background: bg, color: text, fontFamily: 'system-ui, sans-serif', paddingTop: 104, paddingBottom: 80 }}>
+    <main style={{ minHeight: '100vh', background: bg, color: text, fontFamily: 'system-ui, sans-serif', paddingTop: 64, paddingBottom: 80 }}>
       <style>{`
         @media (max-width: 1024px) { .pd-grid { grid-template-columns: 1fr !important; } }
         @media (max-width: 768px)  { .pd-ctas { flex-direction: column !important; } .pd-ship { grid-template-columns: 1fr !important; } }

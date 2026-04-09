@@ -162,7 +162,7 @@ export default function AIPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', paddingTop: 104 }}>
+    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', paddingTop: 64 }}>
       <style>{`
         .ai-msg-user { background: linear-gradient(135deg,#38bdf8,#0284c7); color: #0f172a; border-radius: 18px 18px 4px 18px; align-self: flex-end; max-width: 78%; }
         .ai-msg-ai { background: #1e293b; border: 1px solid #334155; border-radius: 18px 18px 18px 4px; align-self: flex-start; max-width: 88%; }

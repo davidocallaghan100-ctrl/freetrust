@@ -237,7 +237,7 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
   ] as const
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', paddingTop: 104, background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', paddingTop: 64, background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
       <style>{`
         .comm-tab { transition: all 0.15s; white-space: nowrap; }
         .comm-tab:hover { color: #f1f5f9 !important; }

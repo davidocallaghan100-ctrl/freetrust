@@ -82,7 +82,7 @@ export default function CreateBusinessPage() {
   const fieldStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '0.35rem' }
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 104px)', background: '#0f172a', paddingTop: 104, fontFamily: 'system-ui', color: '#f1f5f9' }}>
+    <div style={{ minHeight: 'calc(100vh - 104px)', background: '#0f172a', paddingTop: 64, fontFamily: 'system-ui', color: '#f1f5f9' }}>
       <style>{`
         .cb-type-btn { padding: 0.7rem 1rem; border-radius: 10px; border: 1px solid rgba(148,163,184,0.2); background: transparent; cursor: pointer; font-size: 0.85rem; color: #94a3b8; transition: all 0.12s; text-align: left; }
         .cb-type-btn.active { border-color: #38bdf8; background: rgba(56,189,248,0.1); color: #38bdf8; font-weight: 600; }

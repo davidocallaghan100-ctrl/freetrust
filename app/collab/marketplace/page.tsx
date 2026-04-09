@@ -107,7 +107,7 @@ function MarketplaceContent() {
   const resetFilters = () => { setSearch(''); setMinTrust(0); setMinPrice(0); setMaxPrice(5000); setPage(1) }
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 104px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', paddingTop: 104 }}>
+    <div style={{ minHeight: 'calc(100vh - 104px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', paddingTop: 64 }}>
       <style>{`
         /* ── Hero ── */
         .mk-hero { background: linear-gradient(180deg,rgba(56,189,248,0.07) 0%,transparent 100%); padding: 24px 20px 18px; border-bottom: 1px solid rgba(56,189,248,0.08); }

@@ -105,7 +105,7 @@ export default function JobsPage() {
   const btnActive: React.CSSProperties = { background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', color: '#38bdf8', fontWeight: 700 }
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 104 }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64 }}>
       <style>{`
         .jobs-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
         .jobs-filters { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem; align-items: center; }

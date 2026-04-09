@@ -47,7 +47,7 @@ export default function SellerConnectPage() {
   }
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 104, display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64, display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
       <div style={{ width: '100%', maxWidth: 520, padding: '2rem 1.5rem' }}>
 
         {/* Header */}

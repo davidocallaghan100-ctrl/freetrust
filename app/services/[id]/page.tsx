@@ -120,7 +120,7 @@ function MobileStickyBar({ svc }: { svc: ServiceListing }) {
 function LoadingSkeleton() {
   const pulse: React.CSSProperties = { background: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite', borderRadius: '8px' }
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', paddingTop: 104 }}>
+    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', paddingTop: 64 }}>
       <style>{`@keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }`}</style>
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '16px' }}>
         <div style={{ ...pulse, height: 12, width: 200, marginBottom: 24 }} />
@@ -142,7 +142,7 @@ function LoadingSkeleton() {
 
 function NotFound() {
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', paddingTop: 104, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, padding: '104px 24px 0' }}>
+    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', paddingTop: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, padding: '104px 24px 0' }}>
       <div style={{ fontSize: 64 }}>🔍</div>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Service Not Found</h1>
       <p style={{ color: '#64748b', margin: 0 }}>This listing doesn't exist or has been removed.</p>
@@ -235,7 +235,7 @@ export default function ServiceDetailPage() {
   const card: React.CSSProperties = { background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '20px' }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', paddingTop: 104 }}>
+    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', paddingTop: 64 }}>
       <style>{`
         .sd-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
         .sd-right { position: sticky; top: 112px; }

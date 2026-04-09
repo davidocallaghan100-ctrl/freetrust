@@ -234,7 +234,7 @@ export default function EventsPage() {
   })
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 104, paddingBottom: 80 }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
       <style>{`
         .ev-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.25rem; }
         .ev-filter-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; }

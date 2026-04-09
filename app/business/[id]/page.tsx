@@ -99,12 +99,12 @@ export default function BusinessProfilePage() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 104, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 64, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
       Loading…
     </div>
   )
   if (!business) return (
-    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 104, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 64, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
       Business not found
     </div>
   )
@@ -116,7 +116,7 @@ export default function BusinessProfilePage() {
   const TABS = ['about', 'services', 'team', 'reviews']
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 104, background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 64, background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
       <style>{`
         .biz-tab { padding: 0.6rem 1.1rem; border-radius: 8px; background: transparent; border: none; cursor: pointer; font-size: 0.85rem; color: #64748b; transition: all 0.12s; }
         .biz-tab.active { background: rgba(56,189,248,0.1); color: #38bdf8; font-weight: 600; }

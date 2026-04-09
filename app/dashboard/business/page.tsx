@@ -78,13 +78,13 @@ export default function BusinessDashboardPage() {
   const TABS = ['overview', 'listings', 'team', 'analytics', 'verification']
 
   if (loading) return (
-    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 104, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 64, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
       Loading…
     </div>
   )
 
   if (businesses.length === 0) return (
-    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 104, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 64, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui' }}>
       <div style={{ textAlign: 'center', padding: '2rem' }}>
         <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏢</div>
         <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.5rem' }}>No Business Profiles</h2>
@@ -97,7 +97,7 @@ export default function BusinessDashboardPage() {
   )
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 104, background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 64, background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
       <style>{`
         .bd-tab { padding: 0.55rem 1rem; border-radius: 8px; background: transparent; border: none; cursor: pointer; font-size: 0.83rem; color: #64748b; transition: all 0.12s; }
         .bd-tab.active { background: rgba(56,189,248,0.1); color: #38bdf8; font-weight: 600; }

@@ -271,7 +271,7 @@ function ProductsInner() {
   })
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 104, paddingBottom: 80 }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
       <style>{`
         .prod-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1.1rem; }
         .prod-filter-row { display: flex; gap: 0.5rem; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
@@ -372,7 +372,7 @@ function ProductsInner() {
 
 export default function ProductsPage() {
   return (
-    <Suspense fallback={<div style={{ paddingTop: 104, textAlign: 'center', color: '#64748b' }}>Loading…</div>}>
+    <Suspense fallback={<div style={{ paddingTop: 64, textAlign: 'center', color: '#64748b' }}>Loading…</div>}>
       <ProductsInner />
     </Suspense>
   )

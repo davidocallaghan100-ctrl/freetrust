@@ -158,7 +158,7 @@ function ServicesContent() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', paddingTop: 104 }}>
+    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', paddingTop: 64 }}>
       <style>{`
         /* Card */
         .cs-card { background:#1e293b; border:1px solid #334155; border-radius:14px; overflow:hidden; text-decoration:none; display:flex; flex-direction:column; transition:border-color 0.15s, transform 0.15s; }

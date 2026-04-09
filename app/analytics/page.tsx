@@ -298,7 +298,7 @@ export default function AnalyticsDashboard() {
   ] as const
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', paddingTop: 104 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', paddingTop: 64 }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '3px solid #1e293b', borderTopColor: '#38bdf8', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
         <div style={{ fontSize: '14px', color: '#64748b' }}>Loading analytics…</div>

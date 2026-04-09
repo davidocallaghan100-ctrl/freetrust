@@ -807,7 +807,7 @@ export default function OrganisationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center" style={{ paddingTop: 104 }}>
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center" style={{ paddingTop: 64 }}>
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
           <span className="text-gray-500 text-sm">Loading organisation…</span>
@@ -818,7 +818,7 @@ export default function OrganisationPage() {
 
   if (!org) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center" style={{ paddingTop: 104 }}>
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center" style={{ paddingTop: 64 }}>
         <div className="text-center space-y-4">
           <p className="text-white text-xl font-semibold">Organisation not found</p>
           <button
@@ -835,7 +835,7 @@ export default function OrganisationPage() {
   const initials = org.name.split(' ').filter(Boolean).slice(0, 2).map((w: string) => w[0].toUpperCase()).join('')
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 104, paddingBottom: 80 }}>
+    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
       <style>{`
         .org-tab { transition: all 0.15s; white-space: nowrap; }
         .org-sdg { display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 10px; font-size: 0.7rem; font-weight: 700; color: #fff; margin: 2px; }

@@ -178,20 +178,20 @@ export default function JobDetailPage() {
   }
 
   if (jobLoading) return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 104 }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 64 }}>
       <div style={{ color: '#38bdf8', fontSize: '1rem' }}>Loading job…</div>
     </div>
   )
 
   if (!job) return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem', paddingTop: 104 }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem', paddingTop: 64 }}>
       <div style={{ color: '#94a3b8', fontSize: '1.1rem' }}>Job not found</div>
       <Link href="/jobs" style={{ color: '#38bdf8', textDecoration: 'none' }}>← Back to Jobs</Link>
     </div>
   )
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 104 }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64 }}>
       <style>{`
         .job-detail-layout { display: grid; grid-template-columns: 1fr 320px; gap: 2rem; max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; align-items: start; }
         .job-apply-sticky { position: sticky; top: 78px; }

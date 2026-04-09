@@ -79,13 +79,13 @@ export default function RaiseDisputePage() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 104, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 64, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
       Loading…
     </div>
   )
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 104, background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 64, background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
       <div style={{ maxWidth: 600, margin: '0 auto', padding: '2rem 1rem' }}>
 
         <div style={{ marginBottom: '1.5rem' }}>

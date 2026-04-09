@@ -26,7 +26,7 @@ export default function ConnectCompletePage() {
   }, [])
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 104, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ maxWidth: 440, width: '100%', padding: '2rem', textAlign: 'center' }}>
         {checking ? (
           <div style={{ color: '#64748b' }}>Verifying your account…</div>
