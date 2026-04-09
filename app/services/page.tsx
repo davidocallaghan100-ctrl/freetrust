@@ -11,6 +11,7 @@ interface Service {
   title: string
   provider: string
   avatar: string
+  avatarImg?: string
   rating: number
   reviews: number
   price: number
@@ -39,14 +40,14 @@ const SORT_OPTIONS = [
 ]
 
 const MOCK_SERVICES: Service[] = [
-  { id: 'm1', title: 'Brand Identity Design', provider: 'Sarah Chen', avatar: 'SC', rating: 4.9, reviews: 127, price: 450, currency: '£', delivery: '5 days', tags: ['Logo', 'Brand', 'Figma'], category: 'Design & Creative', categoryId: 'design-creative', desc: 'Complete brand identity including logo, colour palette, typography and brand guidelines.', trust: 98, badge: 'Top Rated', mode: 'online' },
-  { id: 'm2', title: 'Full-Stack Web App Development', provider: 'Priya Nair', avatar: 'PN', rating: 5.0, reviews: 89, price: 2800, currency: '£', delivery: '21 days', tags: ['Next.js', 'Supabase', 'TypeScript'], category: 'Development & Tech', categoryId: 'development-tech', desc: 'End-to-end web application development using modern tech stack.', trust: 100, badge: 'Verified', mode: 'online' },
-  { id: 'm3', title: 'SEO & Content Strategy', provider: 'Marcus Obi', avatar: 'MO', rating: 4.8, reviews: 64, price: 320, currency: '£', delivery: '7 days', tags: ['SEO', 'Content', 'Analytics'], category: 'SEO & Digital Marketing', categoryId: 'seo-digital', desc: 'Comprehensive SEO audit and content strategy to grow organic traffic 40%+ in 90 days.', trust: 94, badge: null, mode: 'online' },
-  { id: 'm4', title: 'AI Automation Setup', provider: 'Tom Walsh', avatar: 'TW', rating: 4.7, reviews: 43, price: 380, currency: '£', delivery: '5 days', tags: ['Make', 'Zapier', 'GPT'], category: 'AI & Automation', categoryId: 'ai-automation', desc: 'Build automated workflows using Make, Zapier, and OpenAI integrations.', trust: 91, badge: null, mode: 'online' },
-  { id: 'm5', title: 'Business Coaching — 4 Sessions', provider: 'Amara Diallo', avatar: 'AD', rating: 4.9, reviews: 38, price: 480, currency: '£', delivery: '1 day', tags: ['Startup', 'Strategy', 'Growth'], category: 'Coaching & Mentoring', categoryId: 'coaching-mentoring', desc: '4-session coaching package covering product-market fit, fundraising, and growth.', trust: 97, badge: 'Verified', mode: 'online' },
-  { id: 'm6', title: 'Plumbing — Leaks & Repairs', provider: 'Dave Kelly', avatar: 'DK', rating: 4.8, reviews: 212, price: 85, currency: '£', delivery: 'Same day', tags: ['Emergency', 'Plumbing', 'Repairs'], category: 'Trades & Construction', categoryId: 'trades-construction', desc: 'Fast, reliable plumbing repairs. Leaks, blockages, boiler issues. Fully insured.', trust: 95, badge: 'Local Pro', mode: 'offline', location: 'Dublin 2', distance: 3 },
-  { id: 'm7', title: 'Dog Walking — Daily Walks', provider: 'Ciara Murphy', avatar: 'CM', rating: 5.0, reviews: 87, price: 15, currency: '£', delivery: 'Daily', tags: ['Dogs', 'Walking', 'Local'], category: 'Pet Services', categoryId: 'pet-services', desc: 'Professional daily dog walks. GPS tracked, photo updates, local to D4.', trust: 99, badge: null, mode: 'offline', location: 'Dublin 4', distance: 5 },
-  { id: 'm8', title: 'Private Chef — Dinner Parties', provider: 'Lucia Romano', avatar: 'LR', rating: 4.9, reviews: 56, price: 250, currency: '£', delivery: 'Same day', tags: ['Chef', 'Dining', 'Events'], category: 'Food & Catering', categoryId: 'food-catering', desc: 'Bespoke dinner party menus prepared in your home. Up to 12 guests.', trust: 96, badge: 'Top Rated', mode: 'offline', location: 'Dublin', distance: 8 },
+  { id: 'm1', title: 'Brand Identity Design', provider: 'Sarah Chen', avatar: 'SC', avatarImg: 'https://i.pravatar.cc/150?img=47', rating: 4.9, reviews: 127, price: 450, currency: '£', delivery: '5 days', tags: ['Logo', 'Brand', 'Figma'], category: 'Design & Creative', categoryId: 'design-creative', desc: 'Complete brand identity including logo, colour palette, typography and brand guidelines.', trust: 98, badge: 'Top Rated', mode: 'online' },
+  { id: 'm2', title: 'Full-Stack Web App Development', provider: 'Priya Nair', avatar: 'PN', avatarImg: 'https://i.pravatar.cc/150?img=44', rating: 5.0, reviews: 89, price: 2800, currency: '£', delivery: '21 days', tags: ['Next.js', 'Supabase', 'TypeScript'], category: 'Development & Tech', categoryId: 'development-tech', desc: 'End-to-end web application development using modern tech stack.', trust: 100, badge: 'Verified', mode: 'online' },
+  { id: 'm3', title: 'SEO & Content Strategy', provider: 'Marcus Obi', avatar: 'MO', avatarImg: 'https://i.pravatar.cc/150?img=12', rating: 4.8, reviews: 64, price: 320, currency: '£', delivery: '7 days', tags: ['SEO', 'Content', 'Analytics'], category: 'SEO & Digital Marketing', categoryId: 'seo-digital', desc: 'Comprehensive SEO audit and content strategy to grow organic traffic 40%+ in 90 days.', trust: 94, badge: null, mode: 'online' },
+  { id: 'm4', title: 'AI Automation Setup', provider: 'Tom Walsh', avatar: 'TW', avatarImg: 'https://i.pravatar.cc/150?img=53', rating: 4.7, reviews: 43, price: 380, currency: '£', delivery: '5 days', tags: ['Make', 'Zapier', 'GPT'], category: 'AI & Automation', categoryId: 'ai-automation', desc: 'Build automated workflows using Make, Zapier, and OpenAI integrations.', trust: 91, badge: null, mode: 'online' },
+  { id: 'm5', title: 'Business Coaching — 4 Sessions', provider: 'Amara Diallo', avatar: 'AD', avatarImg: 'https://i.pravatar.cc/150?img=45', rating: 4.9, reviews: 38, price: 480, currency: '£', delivery: '1 day', tags: ['Startup', 'Strategy', 'Growth'], category: 'Coaching & Mentoring', categoryId: 'coaching-mentoring', desc: '4-session coaching package covering product-market fit, fundraising, and growth.', trust: 97, badge: 'Verified', mode: 'online' },
+  { id: 'm6', title: 'Plumbing — Leaks & Repairs', provider: 'Dave Kelly', avatar: 'DK', avatarImg: 'https://i.pravatar.cc/150?img=15', rating: 4.8, reviews: 212, price: 85, currency: '£', delivery: 'Same day', tags: ['Emergency', 'Plumbing', 'Repairs'], category: 'Trades & Construction', categoryId: 'trades-construction', desc: 'Fast, reliable plumbing repairs. Leaks, blockages, boiler issues. Fully insured.', trust: 95, badge: 'Local Pro', mode: 'offline', location: 'Dublin 2', distance: 3 },
+  { id: 'm7', title: 'Dog Walking — Daily Walks', provider: 'Ciara Murphy', avatar: 'CM', avatarImg: 'https://i.pravatar.cc/150?img=39', rating: 5.0, reviews: 87, price: 15, currency: '£', delivery: 'Daily', tags: ['Dogs', 'Walking', 'Local'], category: 'Pet Services', categoryId: 'pet-services', desc: 'Professional daily dog walks. GPS tracked, photo updates, local to D4.', trust: 99, badge: null, mode: 'offline', location: 'Dublin 4', distance: 5 },
+  { id: 'm8', title: 'Private Chef — Dinner Parties', provider: 'Lucia Romano', avatar: 'LR', avatarImg: 'https://i.pravatar.cc/150?img=49', rating: 4.9, reviews: 56, price: 250, currency: '£', delivery: 'Same day', tags: ['Chef', 'Dining', 'Events'], category: 'Food & Catering', categoryId: 'food-catering', desc: 'Bespoke dinner party menus prepared in your home. Up to 12 guests.', trust: 96, badge: 'Top Rated', mode: 'offline', location: 'Dublin', distance: 8 },
 ]
 
 function getGrad(str: string): string {
@@ -65,64 +66,72 @@ function getGrad(str: string): string {
 
 function ServiceCard({ svc }: { svc: Service }) {
   return (
-    <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', transition: 'border-color 0.15s' }}
-      onMouseEnter={e => (e.currentTarget.style.borderColor = '#38bdf8')}
-      onMouseLeave={e => (e.currentTarget.style.borderColor = '#334155')}
-    >
-      {/* Provider row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px', color: '#0f172a', background: getGrad(svc.avatar), flexShrink: 0 }}>{svc.avatar}</div>
-          <div>
-            <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600 }}>{svc.provider}</div>
+    <Link href={`/services/${svc.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+      <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'border-color 0.15s', height: '100%', boxSizing: 'border-box' }}
+        onMouseEnter={e => (e.currentTarget.style.borderColor = '#38bdf8')}
+        onMouseLeave={e => (e.currentTarget.style.borderColor = '#334155')}
+      >
+        {/* Provider row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+          {svc.avatarImg
+            ? <img src={svc.avatarImg} alt={svc.provider} width={32} height={32} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+            : <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '11px', color: '#0f172a', background: getGrad(svc.avatar), flexShrink: 0 }}>{svc.avatar}</div>
+          }
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svc.provider}</div>
             {svc.mode === 'offline' && svc.location && (
-              <div style={{ fontSize: '10px', color: '#64748b' }}>📍 {svc.location}{svc.distance != null ? ` · ${svc.distance}km away` : ''}</div>
+              <div style={{ fontSize: '10px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📍 {svc.location}{svc.distance != null ? ` · ${svc.distance}km` : ''}</div>
             )}
           </div>
+          {/* Mode + badge — right-aligned, shrinkable */}
+          <div className="svc-card-badges">
+            <span style={{ background: svc.mode === 'online' ? 'rgba(56,189,248,0.08)' : 'rgba(52,211,153,0.08)', border: `1px solid ${svc.mode === 'online' ? 'rgba(56,189,248,0.2)' : 'rgba(52,211,153,0.2)'}`, borderRadius: 999, padding: '2px 6px', fontSize: '9px', color: svc.mode === 'online' ? '#38bdf8' : '#34d399', fontWeight: 700, whiteSpace: 'nowrap' }}>
+              {svc.mode === 'online' ? '💻 Online' : '📍 Local'}
+            </span>
+            {svc.badge && <span style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 999, padding: '2px 6px', fontSize: '9px', color: '#38bdf8', fontWeight: 700, whiteSpace: 'nowrap' }}>{svc.badge}</span>}
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          {svc.badge && <span style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 999, padding: '2px 8px', fontSize: '10px', color: '#38bdf8', fontWeight: 700 }}>{svc.badge}</span>}
-          <span style={{ background: svc.mode === 'online' ? 'rgba(56,189,248,0.08)' : 'rgba(52,211,153,0.08)', border: `1px solid ${svc.mode === 'online' ? 'rgba(56,189,248,0.2)' : 'rgba(52,211,153,0.2)'}`, borderRadius: 999, padding: '2px 8px', fontSize: '10px', color: svc.mode === 'online' ? '#38bdf8' : '#34d399', fontWeight: 700 }}>
-            {svc.mode === 'online' ? '💻 Online' : '📍 Local'}
-          </span>
+
+        {/* Title */}
+        <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', lineHeight: 1.35, wordBreak: 'break-word' }}>{svc.title}</div>
+
+        {/* Description */}
+        <p style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.5, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>{svc.desc}</p>
+
+        {/* Tags */}
+        {svc.tags.length > 0 && (
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            {svc.tags.slice(0, 3).map(t => (
+              <span key={t} style={{ background: 'rgba(148,163,184,0.07)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '2px 7px', fontSize: '10px', color: '#94a3b8', whiteSpace: 'nowrap' }}>{t}</span>
+            ))}
+          </div>
+        )}
+
+        {/* Rating + delivery */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
+          <span style={{ color: '#fbbf24' }}>★ {svc.rating.toFixed(1)}</span>
+          <span style={{ color: '#475569' }}>({svc.reviews})</span>
+          <span style={{ color: '#475569', marginLeft: 'auto', whiteSpace: 'nowrap' }}>⏱ {svc.delivery}</span>
+        </div>
+
+        {/* Trust bar */}
+        <div style={{ fontSize: '11px', color: '#38bdf8' }}>
+          Trust {svc.trust}%
+          <div style={{ marginTop: '3px', height: 3, background: 'rgba(56,189,248,0.12)', borderRadius: 2 }}>
+            <div style={{ width: `${svc.trust}%`, height: '100%', background: '#38bdf8', borderRadius: 2 }} />
+          </div>
+        </div>
+
+        {/* Price + CTA */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #334155', paddingTop: '10px', marginTop: 'auto', gap: '8px' }}>
+          <div style={{ minWidth: 0 }}>
+            <span style={{ fontSize: '18px', fontWeight: 800, color: '#38bdf8' }}>{svc.currency}{svc.price.toLocaleString()}</span>
+            <span style={{ fontSize: '11px', color: '#475569' }}> / project</span>
+          </div>
+          <span style={{ background: '#38bdf8', borderRadius: '8px', padding: '7px 16px', fontSize: '12px', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', flexShrink: 0 }}>View</span>
         </div>
       </div>
-
-      <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', lineHeight: 1.35 }}>{svc.title}</div>
-      <p style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.5, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>{svc.desc}</p>
-
-      {svc.tags.length > 0 && (
-        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-          {svc.tags.slice(0, 3).map(t => (
-            <span key={t} style={{ background: 'rgba(148,163,184,0.07)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '2px 8px', fontSize: '10px', color: '#94a3b8' }}>{t}</span>
-          ))}
-        </div>
-      )}
-
-      {/* Rating + delivery */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
-        <span style={{ color: '#fbbf24' }}>★ {svc.rating.toFixed(1)}</span>
-        <span style={{ color: '#475569' }}>({svc.reviews})</span>
-        <span style={{ color: '#475569', marginLeft: 'auto' }}>⏱ {svc.delivery}</span>
-      </div>
-
-      {/* Trust bar */}
-      <div style={{ fontSize: '11px', color: '#38bdf8' }}>
-        Trust {svc.trust}%
-        <div style={{ marginTop: '3px', height: 3, background: 'rgba(56,189,248,0.12)', borderRadius: 2 }}>
-          <div style={{ width: `${svc.trust}%`, height: '100%', background: '#38bdf8', borderRadius: 2 }} />
-        </div>
-      </div>
-
-      {/* Price + CTA */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #334155', paddingTop: '10px', marginTop: 'auto' }}>
-        <div>
-          <span style={{ fontSize: '20px', fontWeight: 800, color: '#38bdf8' }}>{svc.currency}{svc.price.toLocaleString()}</span>
-          <span style={{ fontSize: '11px', color: '#475569' }}> / project</span>
-        </div>
-        <Link href={`/services/${svc.id}`} style={{ background: '#38bdf8', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: 700, color: '#0f172a', cursor: 'pointer', textDecoration: 'none' }}>View</Link>
-      </div>
-    </div>
+    </Link>
   )
 }
 
@@ -225,12 +234,26 @@ export default function ServicesPage() {
         .svc-layout { max-width: 1200px; margin: 0 auto; padding: 20px 16px 80px; display: grid; grid-template-columns: 240px 1fr; gap: 24px; align-items: start; }
         .svc-sidebar { position: sticky; top: 110px; }
         .svc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+        .svc-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .svc-controls-row2 { display: none; }
         @media (max-width: 768px) {
-          .svc-layout { grid-template-columns: 1fr; padding: 12px 12px 80px; gap: 12px; }
+          .svc-layout { grid-template-columns: 1fr; padding: 12px 10px 80px; gap: 12px; }
           .svc-sidebar { position: static; }
-          .svc-grid { grid-template-columns: 1fr; }
+          .svc-grid { grid-template-columns: 1fr; gap: 10px; }
+          .svc-controls { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
+          .svc-controls::-webkit-scrollbar { display: none; }
+          .svc-controls > * { flex-shrink: 0; }
+          .svc-price-inputs { display: none !important; }
+          .svc-sort { display: none !important; }
+          .svc-controls-row2 { display: flex; gap: 6px; margin-top: 8px; }
+        }
+        .svc-card-badges { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; max-width: 120px; }
+        @media (max-width: 480px) {
+          .svc-card-badges { max-width: 90px; }
         }
         .cat-btn:hover { background: rgba(56,189,248,0.06) !important; }
+        .svc-sidebar-mobile-toggle { display: none; }
+        @media (max-width: 768px) { .svc-sidebar-mobile-toggle { display: flex; } }
       `}</style>
 
       {/* Hero */}

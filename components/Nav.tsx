@@ -130,7 +130,7 @@ export default function Nav() {
               <Avatar url={user.avatar} name={user.name} email={user.email} size={32} />
             </button>
             {profileOpen && (
-              <div style={{ position: 'absolute', left: 0, top: '44px', background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', minWidth: '220px', overflow: 'hidden', zIndex: 200 }}>
+              <div style={{ position: 'fixed', left: '12px', top: '62px', background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', minWidth: '220px', maxWidth: 'calc(100vw - 24px)', overflow: 'hidden', zIndex: 200 }}>
                 <div style={{ padding: '12px 16px', borderBottom: '1px solid #334155', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <Avatar url={user.avatar} name={user.name} email={user.email} size={38} />
                   <div style={{ overflow: 'hidden', flex: 1 }}>

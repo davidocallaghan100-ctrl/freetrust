@@ -16,55 +16,47 @@ export async function GET(req: NextRequest) {
     const q = (searchParams.get('q') ?? '').trim()
     const limitParam = parseInt(searchParams.get('limit') ?? '20', 10)
     const limit = Math.min(isNaN(limitParam) ? 20 : limitParam, 50)
+    const browseMode = !q  // empty query = browse all
 
-    if (!q) {
-      return NextResponse.json({ hits: [], total: 0, query: '' })
-    }
-
-    const pattern = `%${q}%`
     const perType = Math.max(3, Math.floor(limit / 5))
 
     // Parallel queries across all tables
     const [membersRes, servicesRes, productsRes, eventsRes, articlesRes, orgsRes] = await Promise.allSettled([
-      supabase
-        .from('profiles')
-        .select('id, full_name, username, location')
-        .or(`full_name.ilike.${pattern},username.ilike.${pattern},bio.ilike.${pattern}`)
-        .limit(perType),
+      (() => {
+        let qb = supabase.from('profiles').select('id, full_name, username, location').limit(browseMode ? 12 : perType)
+        if (q) qb = qb.or(`full_name.ilike.%${q}%,username.ilike.%${q}%`)
+        return qb
+      })(),
 
-      supabase
-        .from('services')
-        .select('id, title, category')
-        .or(`title.ilike.${pattern},description.ilike.${pattern}`)
-        .eq('status', 'active')
-        .limit(perType),
+      (() => {
+        let qb = supabase.from('services').select('id, title, category').eq('status', 'active').limit(browseMode ? 12 : perType)
+        if (q) qb = qb.or(`title.ilike.%${q}%,description.ilike.%${q}%`)
+        return qb
+      })(),
 
-      supabase
-        .from('products')
-        .select('id, title, category')
-        .or(`title.ilike.${pattern},description.ilike.${pattern}`)
-        .eq('status', 'active')
-        .limit(perType),
+      (() => {
+        let qb = supabase.from('products').select('id, title, category').eq('status', 'active').limit(browseMode ? 12 : perType)
+        if (q) qb = qb.or(`title.ilike.%${q}%,description.ilike.%${q}%`)
+        return qb
+      })(),
 
-      supabase
-        .from('events')
-        .select('id, title, starts_at, category')
-        .or(`title.ilike.${pattern},description.ilike.${pattern}`)
-        .eq('status', 'published')
-        .gte('starts_at', new Date().toISOString())
-        .limit(perType),
+      (() => {
+        let qb = supabase.from('events').select('id, title, starts_at, category').eq('status', 'published').gte('starts_at', new Date().toISOString()).limit(browseMode ? 8 : perType)
+        if (q) qb = qb.or(`title.ilike.%${q}%,description.ilike.%${q}%`)
+        return qb
+      })(),
 
-      supabase
-        .from('articles')
-        .select('id, title, slug')
-        .or(`title.ilike.${pattern},content.ilike.${pattern}`)
-        .limit(perType),
+      (() => {
+        let qb = supabase.from('articles').select('id, title, slug').limit(browseMode ? 8 : perType)
+        if (q) qb = qb.or(`title.ilike.%${q}%`)
+        return qb
+      })(),
 
-      supabase
-        .from('organisations')
-        .select('id, name, category, location')
-        .or(`name.ilike.${pattern},description.ilike.${pattern}`)
-        .limit(perType),
+      (() => {
+        let qb = supabase.from('organisations').select('id, name, category, location').limit(browseMode ? 10 : perType)
+        if (q) qb = qb.or(`name.ilike.%${q}%,description.ilike.%${q}%`)
+        return qb
+      })(),
     ])
 
     const hits: SearchHit[] = []

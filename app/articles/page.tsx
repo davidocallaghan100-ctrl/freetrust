@@ -29,6 +29,19 @@ const AVATAR_GRAD: Record<string, string> = {
   JO: 'linear-gradient(135deg,#34d399,#059669)', LF: 'linear-gradient(135deg,#fbbf24,#d97706)',
 }
 
+// Pravatar seeds for mock authors
+const AUTHOR_AVATAR: Record<string, string> = {
+  'Amara Diallo':  'https://i.pravatar.cc/150?img=45',
+  'Tom Walsh':     'https://i.pravatar.cc/150?img=53',
+  'Priya Nair':    'https://i.pravatar.cc/150?img=44',
+  'Sarah Chen':    'https://i.pravatar.cc/150?img=47',
+  'James Okafor':  'https://i.pravatar.cc/150?img=13',
+  'Lena Fischer':  'https://i.pravatar.cc/150?img=41',
+  'Marcus Obi':    'https://i.pravatar.cc/150?img=12',
+  'Ciara Murphy':  'https://i.pravatar.cc/150?img=39',
+  'Maja Eriksson': 'https://i.pravatar.cc/150?img=25',
+}
+
 const CAT_COLOR: Record<string, string> = {
   Business: '#38bdf8', Technology: '#a78bfa', Sustainability: '#34d399',
   Design: '#f472b6', Finance: '#fbbf24', Community: '#fb923c',
@@ -133,7 +146,10 @@ export default function ArticlesPage() {
                 <span style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 999, padding: '0.2rem 0.7rem', fontSize: '0.72rem', color: '#38bdf8', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '0.75rem' }}>EDITOR&apos;S PICK</span>
                 <h2 style={{ fontSize: '1.6rem', fontWeight: 800, lineHeight: 1.25, marginBottom: '0.75rem', color: '#f1f5f9' }}>{featured.title}</h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: '#94a3b8', marginBottom: '1rem' }}>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.72rem', color: '#0f172a', background: getAvatarGrad(featInitials), flexShrink: 0 }}>{featInitials}</div>
+                  {AUTHOR_AVATAR[featured.author?.full_name ?? '']
+                    ? <img src={AUTHOR_AVATAR[featured.author?.full_name ?? '']} alt={featured.author?.full_name ?? ''} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                    : <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.72rem', color: '#0f172a', background: getAvatarGrad(featInitials), flexShrink: 0 }}>{featInitials}</div>
+                  }
                   <span>{featured.author?.full_name ?? 'FreeTrust Editor'}</span>
                   <span>·</span>
                   <span>{formatDate(featured.published_at ?? '')}</span>
@@ -187,7 +203,10 @@ export default function ArticlesPage() {
                     <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f1f5f9', lineHeight: 1.3, marginBottom: '0.5rem' }}>{a.title}</div>
                     <p style={{ fontSize: '0.83rem', color: '#64748b', lineHeight: 1.6, marginBottom: '0.75rem' }}>{a.excerpt}</p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.78rem', color: '#475569' }}>
-                      <div style={{ width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.65rem', color: '#0f172a', background: getAvatarGrad(initials), flexShrink: 0 }}>{initials}</div>
+                      {AUTHOR_AVATAR[a.author?.full_name ?? '']
+                        ? <img src={AUTHOR_AVATAR[a.author?.full_name ?? '']} alt={a.author?.full_name ?? ''} style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                        : <div style={{ width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.65rem', color: '#0f172a', background: getAvatarGrad(initials), flexShrink: 0 }}>{initials}</div>
+                      }
                       <span>{a.author?.full_name ?? 'Author'}</span>
                       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                         <span>👏 {a.clap_count.toLocaleString()}</span>
@@ -207,7 +226,10 @@ export default function ArticlesPage() {
             <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem', color: '#f1f5f9' }}>Top Writers</div>
             {[{ name: 'Amara Diallo', count: 24, initials: 'AD' }, { name: 'Priya Nair', count: 18, initials: 'PN' }, { name: 'Tom Walsh', count: 15, initials: 'TW' }].map(w => (
               <div key={w.name} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.72rem', color: '#0f172a', background: getAvatarGrad(w.initials), flexShrink: 0 }}>{w.initials}</div>
+                {AUTHOR_AVATAR[w.name]
+                  ? <img src={AUTHOR_AVATAR[w.name]} alt={w.name} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                  : <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.72rem', color: '#0f172a', background: getAvatarGrad(w.initials), flexShrink: 0 }}>{w.initials}</div>
+                }
                 <div>
                   <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f1f5f9' }}>{w.name}</div>
                   <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{w.count} articles</div>
