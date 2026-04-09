@@ -40,41 +40,51 @@ export async function GET(request: NextRequest) {
 
           if (isNewUser) {
             // Award ₮25 founding member signup bonus (idempotent)
-            await supabase.rpc('issue_trust', {
-              p_user_id: user.id,
-              p_amount: 25,
-              p_type: 'signup_bonus',
-              p_ref: null,
-              p_desc: 'Welcome to FreeTrust! Founding Member bonus.',
-            }).catch(() => {
-              // Fallback: direct upsert if RPC not available
-              return supabase.from('trust_ledger').insert({
-                user_id: user.id,
-                amount: 25,
-                type: 'signup_bonus',
-                description: 'Welcome to FreeTrust! Founding Member bonus.',
-              }).then(() =>
-                supabase.from('trust_balances').upsert(
+            try {
+              const { error: rpcError } = await supabase.rpc('issue_trust', {
+                p_user_id: user.id,
+                p_amount: 25,
+                p_type: 'signup_bonus',
+                p_ref: null,
+                p_desc: 'Welcome to FreeTrust! Founding Member bonus.',
+              })
+              if (rpcError) {
+                // Fallback: direct insert if RPC not available
+                await supabase.from('trust_ledger').insert({
+                  user_id: user.id,
+                  amount: 25,
+                  type: 'signup_bonus',
+                  description: 'Welcome to FreeTrust! Founding Member bonus.',
+                })
+                await supabase.from('trust_balances').upsert(
                   { user_id: user.id, balance: 25, lifetime: 25 },
                   { onConflict: 'user_id' }
                 )
-              )
-            })
+              }
+            } catch {
+              console.error('[auth/callback] Trust bonus error — continuing')
+            }
 
             // Award founding member badge
-            await supabase.from('user_badges').insert({
-              user_id: user.id,
-              badge_slug: 'founding_member',
-              awarded_at: new Date().toISOString(),
-            }).catch(() => { /* table may not exist yet — ignore */ })
+            try {
+              await supabase.from('user_badges').insert({
+                user_id: user.id,
+                badge_slug: 'founding_member',
+                awarded_at: new Date().toISOString(),
+              })
+            } catch {
+              // table may not exist yet — ignore
+            }
 
             // Send welcome email via Resend
-            const name = user.user_metadata?.full_name || user.user_metadata?.name || 'there'
-            const email = user.email
-            if (email) {
-              await sendWelcomeEmail(email, name).catch((err) => {
-                console.error('[auth/callback] Failed to send welcome email:', err)
-              })
+            try {
+              const name = user.user_metadata?.full_name || user.user_metadata?.name || 'there'
+              const email = user.email
+              if (email) {
+                await sendWelcomeEmail(email, name)
+              }
+            } catch (err) {
+              console.error('[auth/callback] Failed to send welcome email:', err)
             }
 
             // Redirect new users to onboarding
