@@ -96,17 +96,21 @@ export default function JobsPage() {
   const btnActive: React.CSSProperties = { background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', color: '#38bdf8', fontWeight: 700 }
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 104 }}>
       <style>{`
         .jobs-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
         .jobs-filters { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem; align-items: center; }
         .jobs-filter-label { font-size: 0.75rem; color: #64748b; font-weight: 600; margin-right: 0.25rem; white-space: nowrap; }
+        .job-card { background: #1e293b; border: 1px solid rgba(56,189,248,0.08); border-radius: 14px; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.85rem; transition: border-color 0.15s, transform 0.15s; text-decoration: none; color: inherit; cursor: pointer; }
+        .job-card:hover { border-color: rgba(56,189,248,0.3); transform: translateY(-2px); }
+        .job-card:active { transform: scale(0.99); }
         @media (max-width: 768px) {
           .jobs-grid { grid-template-columns: 1fr; }
           .jobs-hero-inner { flex-direction: column !important; align-items: stretch !important; }
           .jobs-hero-inner input { width: 100% !important; }
           .jobs-hero-inner button { width: 100% !important; margin-top: 0.5rem; }
           .jobs-filters { gap: 0.3rem; }
+          .job-card { padding: 1rem; }
         }
       `}</style>
 
@@ -177,7 +181,7 @@ export default function JobsPage() {
         ) : (
           <div className="jobs-grid">
             {filtered.map(job => (
-              <div key={job.id} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 14, padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.85rem', transition: 'border-color 0.15s' }}>
+              <Link key={job.id} href={`/jobs/${job.id}`} className="job-card">
                 {/* Poster */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -232,11 +236,11 @@ export default function JobsPage() {
                 {/* Footer */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', borderTop: '1px solid rgba(56,189,248,0.06)', paddingTop: '0.75rem' }}>
                   <span style={{ fontSize: '0.78rem', color: '#475569' }}>{job.applicant_count} applicant{job.applicant_count !== 1 ? 's' : ''}</span>
-                  <Link href={`/jobs/${job.id}`} style={{ background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 7, padding: '0.4rem 1rem', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+                  <span style={{ background: '#38bdf8', color: '#0f172a', borderRadius: 7, padding: '0.4rem 1rem', fontSize: '0.82rem', fontWeight: 700 }}>
                     Apply Now →
-                  </Link>
+                  </span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
