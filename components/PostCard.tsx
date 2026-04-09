@@ -396,12 +396,18 @@ export default function PostCard({
 
   useEffect(() => { if (expanded) loadComments() }, [expanded, loadComments])
 
-  // Close owner menu on outside click
+  // Close owner menu on outside click — defer listener to next tick so
+  // the opening click doesn't immediately trigger it
   useEffect(() => {
     if (!showMenu) return
     const close = () => setShowMenu(false)
-    document.addEventListener('click', close)
-    return () => document.removeEventListener('click', close)
+    const timer = setTimeout(() => {
+      document.addEventListener('click', close)
+    }, 0)
+    return () => {
+      clearTimeout(timer)
+      document.removeEventListener('click', close)
+    }
   }, [showMenu])
 
   const shareText = post.title ?? post.content ?? ''
