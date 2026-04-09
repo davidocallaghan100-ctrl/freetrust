@@ -64,7 +64,8 @@ function daysUntil(iso: string) {
 export default function JobDetailPage() {
   const params = useParams()
   const id = params?.id as string
-  const [job, setJob] = useState<Job>(MOCK_JOB)
+  const [job, setJob] = useState<Job | null>(null)
+  const [jobLoading, setJobLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [applied, setApplied] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -84,8 +85,16 @@ export default function JobDetailPage() {
           .select('*, poster:profiles!poster_id(id, full_name, bio, created_at)')
           .eq('id', id)
           .single()
-        if (data) setJob(data as Job)
-      } catch { /* use mock */ }
+        if (data) {
+          setJob(data as Job)
+        } else {
+          setJob(MOCK_JOB)
+        }
+      } catch {
+        setJob(MOCK_JOB)
+      } finally {
+        setJobLoading(false)
+      }
     }
     if (id) load()
   }, [id])
@@ -144,6 +153,19 @@ export default function JobDetailPage() {
     borderRadius: 8, padding: '0.65rem 1rem', color: '#f1f5f9', fontSize: '0.9rem',
     outline: 'none', fontFamily: 'system-ui', boxSizing: 'border-box',
   }
+
+  if (jobLoading) return (
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 104 }}>
+      <div style={{ color: '#38bdf8', fontSize: '1rem' }}>Loading job…</div>
+    </div>
+  )
+
+  if (!job) return (
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem', paddingTop: 104 }}>
+      <div style={{ color: '#94a3b8', fontSize: '1.1rem' }}>Job not found</div>
+      <Link href="/jobs" style={{ color: '#38bdf8', textDecoration: 'none' }}>← Back to Jobs</Link>
+    </div>
+  )
 
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
@@ -212,7 +234,7 @@ export default function JobDetailPage() {
           {/* Description */}
           <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 14, padding: '1.75rem', marginBottom: '1.5rem' }}>
             <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', color: '#f1f5f9' }}>About the Role</h2>
-            <div style={{ fontSize: '0.9rem', color: '#94a3b8', lineHeight: 1.8, whiteSpace: 'pre-line' }}>{job.description}</div>
+            <div style={{ fontSize: '0.9rem', color: '#94a3b8', lineHeight: 1.85, whiteSpace: 'pre-wrap' }}>{job.description}</div>
           </div>
 
           {/* Requirements */}

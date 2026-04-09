@@ -60,7 +60,8 @@ function formatSalary(min: number | null, max: number | null, currency: string, 
 }
 
 export default function JobsPage() {
-  const [jobs, setJobs] = useState<Job[]>(MOCK_JOBS)
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [loadingJobs, setLoadingJobs] = useState(true)
   const [search, setSearch] = useState('')
   const [jobType, setJobType] = useState<JobType>('all')
   const [locType, setLocType] = useState<LocationType>('all')
@@ -77,8 +78,16 @@ export default function JobsPage() {
           .eq('status', 'active')
           .order('created_at', { ascending: false })
           .limit(50)
-        if (data && data.length > 0) setJobs(data as Job[])
-      } catch { /* fall back to mock */ }
+        if (data && data.length > 0) {
+          setJobs(data as Job[])
+        } else {
+          setJobs(MOCK_JOBS) // only use mock if DB is empty
+        }
+      } catch {
+        setJobs(MOCK_JOBS)
+      } finally {
+        setLoadingJobs(false)
+      }
     }
     load()
   }, [])
@@ -172,7 +181,11 @@ export default function JobsPage() {
         </div>
 
         {/* Grid */}
-        {filtered.length === 0 ? (
+        {loadingJobs ? (
+          <div style={{ textAlign: 'center', padding: '4rem 1rem', color: '#64748b' }}>
+            <div style={{ fontSize: '1rem', color: '#38bdf8' }}>Loading jobs…</div>
+          </div>
+        ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '4rem 1rem', color: '#64748b' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem', color: '#94a3b8' }}>No jobs match your filters</div>
