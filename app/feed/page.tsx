@@ -3,37 +3,10 @@ import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Avatar from '@/components/Avatar'
+import PostCard, { FeedPost } from '@/components/PostCard'
 import { createClient } from '@/lib/supabase/client'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-
-type Profile = {
-  id: string
-  full_name: string | null
-  avatar_url: string | null
-  username: string | null
-}
-
-type FeedPost = {
-  id: string
-  author_id: string
-  content: string | null
-  type: string
-  media_url: string | null
-  metadata: Record<string, unknown>
-  created_at: string
-  like_count: number
-  comment_count: number
-  save_count: number
-  profiles: Profile | null
-}
-
-type Comment = {
-  id: string
-  content: string
-  created_at: string
-  profiles: Profile | null
-}
 
 type Filter = 'all' | 'videos' | 'articles' | 'services' | 'jobs' | 'events' | 'trending'
 
@@ -59,35 +32,7 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: 'trending', label: 'Trending' },
 ]
 
-const TYPE_META: Record<string, { label: string; color: string; bg: string }> = {
-  text:      { label: '✏️ Post',      color: '#94a3b8', bg: 'rgba(148,163,184,0.1)' },
-  video:     { label: '🎬 Video',     color: '#f472b6', bg: 'rgba(244,114,182,0.1)' },
-  short:     { label: '📱 Short',     color: '#f472b6', bg: 'rgba(244,114,182,0.1)' },
-  photo:     { label: '📷 Photo',     color: '#34d399', bg: 'rgba(52,211,153,0.1)'  },
-  article:   { label: '📰 Article',   color: '#38bdf8', bg: 'rgba(56,189,248,0.1)'  },
-  listing:   { label: '🛍️ Listing',  color: '#34d399', bg: 'rgba(52,211,153,0.1)'  },
-  service:   { label: '🛠 Service',   color: '#34d399', bg: 'rgba(52,211,153,0.1)'  },
-  product:   { label: '📦 Product',   color: '#34d399', bg: 'rgba(52,211,153,0.1)'  },
-  job:       { label: '💼 Job',       color: '#a78bfa', bg: 'rgba(167,139,250,0.1)' },
-  event:     { label: '📅 Event',     color: '#fb923c', bg: 'rgba(251,146,60,0.1)'  },
-  poll:      { label: '📊 Poll',      color: '#fbbf24', bg: 'rgba(251,191,36,0.1)'  },
-  link:      { label: '🔗 Link',      color: '#38bdf8', bg: 'rgba(56,189,248,0.1)'  },
-  milestone: { label: '🏆 Milestone', color: '#fbbf24', bg: 'rgba(251,191,36,0.1)'  },
-}
-
 const TRENDING_TAGS = ['#TrustEconomy', '#FreelanceLife', '#ImpactInvesting', '#BuildInPublic', '#SustainableBusiness', '#CreatorEconomy']
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatTime(ts: string) {
-  const diff = Date.now() - new Date(ts).getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h`
-  return `${Math.floor(hrs / 24)}d`
-}
 
 // ── Composer ──────────────────────────────────────────────────────────────────
 
@@ -151,122 +96,6 @@ function ComposerCard() {
   )
 }
 
-// ── Post Card ─────────────────────────────────────────────────────────────────
-
-function PostCard({ post }: { post: FeedPost }) {
-  const [liked,             setLiked]             = useState(false)
-  const [likeCount,         setLikeCount]         = useState(post.like_count)
-  const [saved,             setSaved]             = useState(false)
-  const [saveCount,         setSaveCount]         = useState(post.save_count)
-  const [showComments,      setShowComments]      = useState(false)
-  const [comments,          setComments]          = useState<Comment[]>([])
-  const [commentCount,      setCommentCount]      = useState(post.comment_count)
-  const [newComment,        setNewComment]        = useState('')
-  const [submittingComment, setSubmittingComment] = useState(false)
-
-  const typeInfo  = TYPE_META[post.type] ?? TYPE_META.text
-  const name      = post.profiles?.full_name ?? post.profiles?.username ?? 'Unknown'
-  const avatarUrl = post.profiles?.avatar_url
-
-  const handleLike = async () => {
-    const prev = liked; setLiked(!prev); setLikeCount(c => prev ? c - 1 : c + 1)
-    try { await fetch(`/api/feed/posts/${post.id}/like`, { method: 'POST' }) }
-    catch { setLiked(prev); setLikeCount(c => prev ? c + 1 : c - 1) }
-  }
-  const handleSave = async () => {
-    const prev = saved; setSaved(!prev); setSaveCount(c => prev ? c - 1 : c + 1)
-    try { await fetch(`/api/feed/posts/${post.id}/save`, { method: 'POST' }) }
-    catch { setSaved(prev); setSaveCount(c => prev ? c + 1 : c - 1) }
-  }
-  const loadComments = async () => {
-    try { const res = await fetch(`/api/feed/posts/${post.id}/comments`); const d = await res.json(); setComments(d.comments ?? []) }
-    catch { /* silent */ }
-  }
-  const toggleComments = async () => {
-    if (!showComments && comments.length === 0) await loadComments()
-    setShowComments(v => !v)
-  }
-  const submitComment = async () => {
-    if (!newComment.trim()) return
-    setSubmittingComment(true)
-    try {
-      const res = await fetch(`/api/feed/posts/${post.id}/comments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: newComment.trim() }) })
-      if (res.ok) { setNewComment(''); setCommentCount(c => c + 1); await loadComments() }
-    } catch { /* silent */ }
-    finally { setSubmittingComment(false) }
-  }
-
-  return (
-    <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '1.25rem', marginBottom: '0.75rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-        <Avatar url={avatarUrl} name={name} size={40} />
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f1f5f9' }}>{name}</div>
-          {post.profiles?.username && <div style={{ fontSize: '0.78rem', color: '#64748b' }}>@{post.profiles.username}</div>}
-        </div>
-        <span style={{ fontSize: '0.78rem', color: '#475569', whiteSpace: 'nowrap' }}>{formatTime(post.created_at)}</span>
-      </div>
-
-      {post.type !== 'text' && (
-        <span style={{ display: 'inline-block', padding: '0.15rem 0.6rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 600, marginBottom: '0.5rem', color: typeInfo.color, background: typeInfo.bg }}>
-          {typeInfo.label}
-        </span>
-      )}
-
-      {post.content && <p style={{ fontSize: '0.92rem', lineHeight: 1.65, color: '#cbd5e1', marginBottom: '0.75rem', whiteSpace: 'pre-wrap' }}>{post.content}</p>}
-
-      {(post.type === 'video' || post.type === 'short') && post.media_url && (
-        <video src={post.media_url} controls muted loop playsInline style={{ width: '100%', borderRadius: '8px', marginBottom: '0.75rem', maxHeight: '400px' }} />
-      )}
-      {post.type !== 'video' && post.type !== 'short' && post.media_url && (
-        <img src={post.media_url} alt="" style={{ width: '100%', borderRadius: '8px', marginBottom: '0.75rem', maxHeight: '400px', objectFit: 'cover' }} />
-      )}
-
-      <div style={{ display: 'flex', gap: '1.5rem', borderTop: '1px solid #334155', paddingTop: '0.75rem' }}>
-        <button onClick={handleLike} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', color: liked ? '#38bdf8' : '#64748b', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
-          {liked ? '❤️' : '🤍'} {likeCount}
-        </button>
-        <button onClick={toggleComments} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', color: showComments ? '#38bdf8' : '#64748b', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
-          💬 {commentCount}
-        </button>
-        <button onClick={handleSave} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', color: saved ? '#38bdf8' : '#64748b', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
-          {saved ? '🔖' : '🏷️'} {saveCount > 0 ? saveCount : 'Save'}
-        </button>
-      </div>
-
-      {showComments && (
-        <div style={{ marginTop: '1rem', borderTop: '1px solid #334155', paddingTop: '0.75rem' }}>
-          {comments.map(c => {
-            const cName = c.profiles?.full_name ?? c.profiles?.username ?? 'User'
-            return (
-              <div key={c.id} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.6rem', alignItems: 'flex-start' }}>
-                <Avatar url={c.profiles?.avatar_url} name={cName} size={30} />
-                <div style={{ background: 'rgba(56,189,248,0.05)', borderRadius: '8px', padding: '0.5rem 0.75rem', flex: 1 }}>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.2rem' }}>{cName}</div>
-                  <div style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>{c.content}</div>
-                </div>
-              </div>
-            )
-          })}
-          {comments.length === 0 && <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0 0 0.5rem' }}>No comments yet. Be first!</p>}
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-            <input
-              style={{ flex: 1, background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: '8px', padding: '0.5rem 0.75rem', color: '#f1f5f9', fontSize: '0.85rem', outline: 'none', fontFamily: 'inherit' }}
-              placeholder="Write a comment…"
-              value={newComment}
-              onChange={e => setNewComment(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitComment() } }}
-            />
-            <button onClick={submitComment} disabled={submittingComment} style={{ background: '#38bdf8', border: 'none', borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer', fontFamily: 'inherit' }}>
-              {submittingComment ? '…' : 'Send'}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function FeedPage() {
@@ -281,7 +110,11 @@ export default function FeedPage() {
     try {
       const res  = await fetch(`/api/feed/posts?page=${pageNum}&filter=${filter}`)
       const data = await res.json()
-      const newPosts: FeedPost[] = data.posts ?? []
+      // normalise profiles array → single object (Supabase join returns array)
+      const newPosts: FeedPost[] = (data.posts ?? []).map((p: Record<string, unknown>) => ({
+        ...p,
+        profiles: Array.isArray(p.profiles) ? (p.profiles[0] ?? null) : (p.profiles ?? null),
+      }))
       setPosts(prev => append ? [...prev, ...newPosts] : newPosts)
       setHasMore(data.hasMore ?? false)
     } catch { /* silent */ }
