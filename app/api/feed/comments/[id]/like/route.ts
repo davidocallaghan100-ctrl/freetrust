@@ -30,12 +30,22 @@ export async function POST(
       await admin.from('feed_comment_likes').delete()
         .eq('comment_id', commentId)
         .eq('user_id', user.id)
+      // Decrement like_count
+      const { data: cur } = await admin.from('feed_comments').select('like_count').eq('id', commentId).maybeSingle()
+      if (cur) {
+        await admin.from('feed_comments').update({ like_count: Math.max(0, (cur.like_count ?? 1) - 1) }).eq('id', commentId)
+      }
       return NextResponse.json({ liked: false })
     }
 
     // Like
     await admin.from('feed_comment_likes')
       .insert({ comment_id: commentId, user_id: user.id })
+    // Increment like_count
+    const { data: cur } = await admin.from('feed_comments').select('like_count').eq('id', commentId).maybeSingle()
+    if (cur) {
+      await admin.from('feed_comments').update({ like_count: (cur.like_count ?? 0) + 1 }).eq('id', commentId)
+    }
 
     // Get comment to find its author & post_id for notification
     const { data: comment } = await admin

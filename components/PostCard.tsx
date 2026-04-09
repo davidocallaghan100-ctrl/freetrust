@@ -42,8 +42,10 @@ type Comment = {
   id: string
   content: string
   created_at: string
+  like_count?: number
   profiles: { full_name: string | null; avatar_url: string | null; username?: string | null } | null
   val_liked?: boolean
+  liked_by_me?: boolean
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -379,9 +381,10 @@ export default function PostCard({
           const ids = rawComments.map(c => c.id).join(',')
           const likesRes = await fetch(`/api/feed/comments/val-likes?ids=${ids}`)
           if (likesRes.ok) {
-            const { likedIds } = await likesRes.json() as { likedIds: string[] }
-            const likedSet = new Set(likedIds)
-            setComments(rawComments.map(c => ({ ...c, val_liked: likedSet.has(c.id) })))
+            const { likedIds, userLikedIds } = await likesRes.json() as { likedIds: string[]; userLikedIds: string[] }
+            const valSet = new Set(likedIds)
+            const userSet = new Set(userLikedIds)
+            setComments(rawComments.map(c => ({ ...c, val_liked: valSet.has(c.id), liked_by_me: userSet.has(c.id) })))
             return
           }
         } catch { /* fall through */ }
@@ -537,7 +540,7 @@ export default function PostCard({
         />
         <ActionBtn
           icon="💬"
-          label={commentCount > 0 ? commentCount.toString() : 'Comment'}
+          label={commentCount > 0 ? `${commentCount}` : 'Comment'}
           active={showComments}
           onClick={toggleComments}
         />
@@ -577,26 +580,19 @@ export default function PostCard({
             {comments.length === 0 && (
               <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 10px' }}>No comments yet — be first!</p>
             )}
-            {comments.map(c => {
-              const cName = c.profiles?.full_name ?? c.profiles?.username ?? 'FreeTrust Member'
-              return (
-                <div key={c.id} style={{ display: 'flex', gap: '8px', marginBottom: '10px', alignItems: 'flex-start' }}>
-                  <Avatar url={c.profiles?.avatar_url ?? null} name={cName} size={30} />
-                  <div style={{ flex: 1, position: 'relative' }}>
-                    <div style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: '10px', padding: '8px 12px' }}>
-                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', marginBottom: '2px' }}>{cName}</div>
-                      <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5 }}>{c.content}</div>
-                    </div>
-                    {c.val_liked && (
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', marginTop: '4px', marginLeft: '8px', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: '20px', padding: '1px 7px', fontSize: '11px', color: '#f87171', fontWeight: 600 }}>
-                        <span>❤️</span>
-                        <span>Val</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
+            {comments.map(c => (
+              <CommentRow
+                key={c.id}
+                comment={c}
+                onLikeToggle={(commentId, liked, delta) => {
+                  setComments(prev => prev.map(x =>
+                    x.id === commentId
+                      ? { ...x, liked_by_me: liked, like_count: Math.max(0, (x.like_count ?? 0) + delta) }
+                      : x
+                  ))
+                }}
+              />
+            ))}
             <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
               <input
                 style={{ flex: 1, background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: '10px', padding: '8px 12px', color: '#f1f5f9', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }}
@@ -617,6 +613,76 @@ export default function PostCard({
         </div>
       )}
     </article>
+  )
+}
+
+// ── Comment Row ───────────────────────────────────────────────────────────────
+
+function CommentRow({
+  comment,
+  onLikeToggle,
+}: {
+  comment: Comment
+  onLikeToggle: (id: string, liked: boolean, delta: number) => void
+}) {
+  const [liking, setLiking] = useState(false)
+  const cName = comment.profiles?.full_name ?? comment.profiles?.username ?? 'FreeTrust Member'
+
+  const handleLike = async () => {
+    if (liking) return
+    setLiking(true)
+    const wasLiked = comment.liked_by_me ?? false
+    onLikeToggle(comment.id, !wasLiked, wasLiked ? -1 : 1)
+    try {
+      await fetch(`/api/feed/comments/${comment.id}/like`, { method: 'POST' })
+    } catch {
+      // revert on error
+      onLikeToggle(comment.id, wasLiked, wasLiked ? 1 : -1)
+    } finally {
+      setLiking(false)
+    }
+  }
+
+  const likeCount = comment.like_count ?? 0
+  const liked = comment.liked_by_me ?? false
+
+  return (
+    <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', alignItems: 'flex-start' }}>
+      <Avatar url={comment.profiles?.avatar_url ?? null} name={cName} size={30} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: '10px', padding: '8px 12px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', marginBottom: '2px' }}>{cName}</div>
+          <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5 }}>{comment.content}</div>
+        </div>
+        {/* Like row + Val badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', marginLeft: '4px' }}>
+          <button
+            onClick={handleLike}
+            disabled={liking}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '3px',
+              background: liked ? 'rgba(248,113,113,0.12)' : 'transparent',
+              border: liked ? '1px solid rgba(248,113,113,0.25)' : '1px solid transparent',
+              borderRadius: '20px', padding: '2px 8px',
+              fontSize: '11px', fontWeight: 600,
+              color: liked ? '#f87171' : '#64748b',
+              cursor: 'pointer', transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { if (!liked) (e.currentTarget as HTMLButtonElement).style.color = '#f87171' }}
+            onMouseLeave={e => { if (!liked) (e.currentTarget as HTMLButtonElement).style.color = '#64748b' }}
+          >
+            <span style={{ fontSize: '12px' }}>{liked ? '❤️' : '🤍'}</span>
+            {likeCount > 0 && <span>{likeCount}</span>}
+          </button>
+          {comment.val_liked && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.15)', borderRadius: '20px', padding: '2px 7px', fontSize: '11px', color: '#f87171', fontWeight: 600 }}>
+              <span>❤️</span>
+              <span>Val</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 
