@@ -1,5 +1,5 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -31,14 +31,18 @@ function ProgressBar({ step, total }: { step: number; total: number }) {
 
 export default function OnboardingPage() {
   const router = useRouter()
+  const supabase = createClient()
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
+  const photoInputRef = useRef<HTMLInputElement>(null)
 
   // Form state
   const [accountType, setAccountType] = useState<'individual' | 'business'>('individual')
   const [displayName, setDisplayName] = useState('')
   const [bio, setBio] = useState('')
   const [location, setLocation] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [photoUploading, setPhotoUploading] = useState(false)
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
   const [selectedInterests, setSelectedInterests] = useState<string[]>([])
   const [selectedPurposes, setSelectedPurposes] = useState<string[]>([])
@@ -50,6 +54,25 @@ export default function OnboardingPage() {
 
   const next = () => setStep(s => Math.min(s + 1, 5))
   const back = () => setStep(s => Math.max(s - 1, 1))
+
+  const handlePhotoUpload = async (file: File) => {
+    setPhotoUploading(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+      const path = `${user.id}/${Date.now()}.${ext}`
+      const { error } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { contentType: file.type, upsert: true })
+      if (!error) {
+        const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+        setAvatarUrl(data.publicUrl)
+        await supabase.from('profiles').update({ avatar_url: data.publicUrl }).eq('id', user.id)
+      }
+    } catch { /* silent */ }
+    finally { setPhotoUploading(false) }
+  }
 
   const complete = async (firstActionHref: string) => {
     setSaving(true)
@@ -87,17 +110,20 @@ export default function OnboardingPage() {
         .ob-chip { padding: 0.4rem 0.85rem; border-radius: 999px; font-size: 0.8rem; cursor: pointer; border: 1px solid rgba(148,163,184,0.2); background: transparent; color: #94a3b8; transition: all 0.12s; }
         .ob-chip.active { background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.35); color: #38bdf8; font-weight: 600; }
         .ob-chip:hover { border-color: rgba(56,189,248,0.3); color: #cbd5e1; }
-        .ob-input { width: 100%; background: #0f172a; border: 1px solid rgba(56,189,248,0.15); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.92rem; color: #f1f5f9; outline: none; box-sizing: border-box; }
+        .ob-input { width: 100%; background: #0f172a; border: 1px solid rgba(56,189,248,0.15); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.92rem; color: #f1f5f9; outline: none; box-sizing: border-box; font-family: inherit; }
         .ob-input:focus { border-color: rgba(56,189,248,0.4); }
         .ob-label { font-size: 0.8rem; font-weight: 600; color: #64748b; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.06em; display: block; }
-        .ob-btn-primary { width: 100%; padding: 0.85rem; background: linear-gradient(135deg,#38bdf8,#0284c7); border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; color: #0f172a; cursor: pointer; transition: opacity 0.15s; }
-        .ob-btn-primary:hover { opacity: 0.9; }
-        .ob-btn-secondary { background: transparent; border: 1px solid rgba(148,163,184,0.2); border-radius: 10px; padding: 0.75rem 1.5rem; font-size: 0.88rem; color: #64748b; cursor: pointer; }
-        .ob-purpose-btn { display: flex; align-items: center; gap: 0.75rem; width: 100%; padding: 0.9rem 1rem; border-radius: 12px; border: 1px solid rgba(148,163,184,0.15); background: transparent; cursor: pointer; text-align: left; transition: all 0.12s; }
+        .ob-btn-primary { width: 100%; padding: 0.85rem; background: linear-gradient(135deg,#38bdf8,#0284c7); border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; color: #0f172a; cursor: pointer; transition: opacity 0.15s; font-family: inherit; }
+        .ob-btn-primary:hover:not(:disabled) { opacity: 0.9; }
+        .ob-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .ob-btn-secondary { background: transparent; border: 1px solid rgba(148,163,184,0.2); border-radius: 10px; padding: 0.75rem 1.5rem; font-size: 0.88rem; color: #64748b; cursor: pointer; font-family: inherit; }
+        .ob-purpose-btn { display: flex; align-items: center; gap: 0.75rem; width: 100%; padding: 0.9rem 1rem; border-radius: 12px; border: 1px solid rgba(148,163,184,0.15); background: transparent; cursor: pointer; text-align: left; transition: all 0.12s; font-family: inherit; }
         .ob-purpose-btn.active { border-color: #38bdf8; background: rgba(56,189,248,0.08); }
         .ob-purpose-btn:hover { border-color: rgba(56,189,248,0.3); }
-        .ob-action-btn { display: flex; align-items: center; gap: 0.75rem; width: 100%; padding: 0.9rem 1rem; border-radius: 12px; border: 1px solid rgba(148,163,184,0.15); background: transparent; cursor: pointer; text-align: left; transition: all 0.12s; color: #f1f5f9; }
+        .ob-action-btn { display: flex; align-items: center; gap: 0.75rem; width: 100%; padding: 0.9rem 1rem; border-radius: 12px; border: 1px solid rgba(148,163,184,0.15); background: transparent; cursor: pointer; text-align: left; transition: all 0.12s; color: #f1f5f9; font-family: inherit; }
         .ob-action-btn:hover { border-color: rgba(56,189,248,0.35); background: rgba(56,189,248,0.05); }
+        .ob-avatar-ring { width: 88px; height: 88px; border-radius: 50%; border: 2px dashed rgba(56,189,248,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; position: relative; transition: border-color 0.2s; background: rgba(56,189,248,0.05); flex-shrink: 0; }
+        .ob-avatar-ring:hover { border-color: #38bdf8; }
         @media (max-width: 600px) { .ob-card { padding: 1.75rem 1.25rem; } }
       `}</style>
 
@@ -110,7 +136,7 @@ export default function OnboardingPage() {
             <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>👋</div>
               <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#f1f5f9', margin: '0 0 0.4rem' }}>Welcome to FreeTrust</h1>
-              <p style={{ color: '#64748b', fontSize: '0.92rem', margin: 0 }}>Let's get you set up. How are you joining?</p>
+              <p style={{ color: '#64748b', fontSize: '0.92rem', margin: 0 }}>Let&apos;s get you set up. How are you joining?</p>
             </div>
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
               <button className={`ob-type-btn${accountType === 'individual' ? ' active' : ''}`} onClick={() => setAccountType('individual')}>
@@ -136,6 +162,40 @@ export default function OnboardingPage() {
               <p style={{ color: '#64748b', fontSize: '0.88rem', margin: 0 }}>This is how others will find and know you</p>
             </div>
 
+            {/* Photo upload */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.5rem' }}>
+              <div
+                className="ob-avatar-ring"
+                onClick={() => photoInputRef.current?.click()}
+                title="Upload profile photo"
+              >
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.6rem' }}>{photoUploading ? '⏳' : '📷'}</div>
+                  </div>
+                )}
+              </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.82rem', color: '#38bdf8', cursor: 'pointer', fontFamily: 'inherit', marginBottom: '0.35rem', display: 'block' }}
+                >
+                  {photoUploading ? 'Uploading…' : avatarUrl ? 'Change photo' : 'Upload photo'}
+                </button>
+                <div style={{ fontSize: '0.72rem', color: '#475569' }}>Optional — you can add one later</div>
+              </div>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(f) }}
+              />
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
               <div>
                 <label className="ob-label">Display Name *</label>
@@ -143,7 +203,7 @@ export default function OnboardingPage() {
               </div>
               <div>
                 <label className="ob-label">Bio</label>
-                <textarea className="ob-input" value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell the community a bit about yourself…" rows={3} style={{ resize: 'vertical', fontFamily: 'inherit' }} maxLength={300} />
+                <textarea className="ob-input" value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell the community a bit about yourself…" rows={3} style={{ resize: 'vertical' }} maxLength={300} />
                 <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '0.25rem', textAlign: 'right' }}>{bio.length}/300</div>
               </div>
               <div>
@@ -172,11 +232,11 @@ export default function OnboardingPage() {
           <div>
             <div style={{ marginBottom: '1.75rem' }}>
               <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f1f5f9', margin: '0 0 0.3rem' }}>What are you here for?</h2>
-              <p style={{ color: '#64748b', fontSize: '0.88rem', margin: 0 }}>We'll personalise your experience based on your answers</p>
+              <p style={{ color: '#64748b', fontSize: '0.88rem', margin: 0 }}>We&apos;ll personalise your experience based on your answers</p>
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label className="ob-label">I'm here to… (select all that apply)</label>
+              <label className="ob-label">I&apos;m here to… (select all that apply)</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
                 {PURPOSES.map(p => (
                   <button key={p.id} className={`ob-purpose-btn${selectedPurposes.includes(p.id) ? ' active' : ''}`} onClick={() => toggleArr(selectedPurposes, setSelectedPurposes, p.id)}>
@@ -217,10 +277,10 @@ export default function OnboardingPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.75rem' }}>
               {FIRST_ACTIONS.map(a => (
-                <button key={a.id} className="ob-action-btn" onClick={() => complete(a.href)}>
+                <button key={a.id} className="ob-action-btn" onClick={() => complete(a.href)} disabled={saving}>
                   <span style={{ fontSize: '1.5rem' }}>{a.icon}</span>
                   <span style={{ fontWeight: 600, fontSize: '0.92rem' }}>{a.label}</span>
-                  <span style={{ marginLeft: 'auto', color: '#38bdf8', fontSize: '0.8rem' }}>→</span>
+                  <span style={{ marginLeft: 'auto', color: '#38bdf8', fontSize: '0.8rem' }}>{saving ? '…' : '→'}</span>
                 </button>
               ))}
             </div>
@@ -233,13 +293,13 @@ export default function OnboardingPage() {
         {step === 5 && (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
-            <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#f1f5f9', margin: '0 0 0.5rem' }}>You're all set!</h2>
+            <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#f1f5f9', margin: '0 0 0.5rem' }}>You&apos;re all set!</h2>
             <p style={{ color: '#64748b', fontSize: '0.92rem', margin: '0 0 1.5rem' }}>Welcome to the FreeTrust community.</p>
 
             {/* Trust bonus */}
-            <div style={{ background: 'linear-gradient(135deg,rgba(56,189,248,0.1),rgba(129,140,248,0.08))', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 14, padding: '1.25rem', marginBottom: '1.25rem' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 900, color: '#38bdf8' }}>₮25</div>
-              <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#f1f5f9', marginTop: '0.25rem' }}>Trust Bonus Awarded!</div>
+            <div style={{ background: 'linear-gradient(135deg,rgba(56,189,248,0.1),rgba(129,140,248,0.08))', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 14, padding: '1.25rem', marginBottom: '1rem' }}>
+              <div style={{ fontSize: '2rem', fontWeight: 900, color: '#38bdf8' }}>₮{trustAwarded > 0 ? trustAwarded : 25}</div>
+              <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#f1f5f9', marginTop: '0.25rem' }}>Trust Bonus Awarded! ✅</div>
               <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.2rem' }}>Added to your wallet as a founding member</div>
             </div>
 
@@ -247,21 +307,30 @@ export default function OnboardingPage() {
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 10, padding: '0.6rem 1.2rem', marginBottom: '1.75rem' }}>
               <span style={{ fontSize: '1.2rem' }}>🏅</span>
               <div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fbbf24' }}>Founding Member</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fbbf24' }}>Founding Member ✅</div>
                 <div style={{ fontSize: '0.72rem', color: '#92400e' }}>Badge awarded to your profile</div>
               </div>
             </div>
 
+            {/* First action buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1rem' }}>
+              {FIRST_ACTIONS.map(a => (
+                <button key={a.id} className="ob-action-btn" onClick={() => { window.location.href = a.href }}>
+                  <span style={{ fontSize: '1.3rem' }}>{a.icon}</span>
+                  <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{a.label}</span>
+                  <span style={{ marginLeft: 'auto', color: '#38bdf8', fontSize: '0.8rem' }}>→</span>
+                </button>
+              ))}
+            </div>
+
             <button
               className="ob-btn-primary"
-              onClick={() => {
-                window.location.href = '/dashboard'
-              }}
+              onClick={() => { window.location.href = '/dashboard' }}
             >
               Go to my dashboard →
             </button>
 
-            <button onClick={() => window.location.href = '/feed'} style={{ marginTop: '0.75rem', width: '100%', background: 'transparent', border: 'none', color: '#64748b', fontSize: '0.82rem', cursor: 'pointer' }}>
+            <button onClick={() => router.push('/feed')} style={{ marginTop: '0.75rem', width: '100%', background: 'transparent', border: 'none', color: '#64748b', fontSize: '0.82rem', cursor: 'pointer', fontFamily: 'inherit' }}>
               Go to feed instead
             </button>
           </div>
