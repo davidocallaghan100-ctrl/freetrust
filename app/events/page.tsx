@@ -186,7 +186,7 @@ export default function EventsPage() {
       try {
         const { data } = await supabase
           .from('community_events')
-          .select('id, title, description, starts_at, ends_at, location, is_online, price, attendee_count, category')
+          .select('id, title, description, starts_at, ends_at, is_online, meeting_url, attendee_count')
           .gte('starts_at', new Date().toISOString())
           .order('starts_at', { ascending: true })
           .limit(50)
@@ -196,12 +196,12 @@ export default function EventsPage() {
             title: String(e.title ?? ''),
             date: new Date(String(e.starts_at ?? Date.now())),
             time: e.starts_at ? new Date(String(e.starts_at)).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : undefined,
-            location: String(e.location ?? (e.is_online ? 'Online' : 'TBC')),
+            location: e.is_online ? 'Online' : 'In Person',
             mode: e.is_online ? 'online' : 'in-person',
-            price: e.price as number | null,
+            price: null,
             rsvpCount: Number(e.attendee_count ?? 0),
             description: String(e.description ?? ''),
-            category: String(e.category ?? 'Community'),
+            category: 'Community',
           })))
         }
       } catch { /* use mock */ }
