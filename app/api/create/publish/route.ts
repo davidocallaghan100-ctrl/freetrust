@@ -105,15 +105,17 @@ export async function POST(req: NextRequest) {
       redirectUrl = '/products'
     } else {
       // photo, video, short, link, poll → feed_posts
-      const typeContentMap: Record<string, { content: string; media_url?: string; title?: string; link_url?: string }> = {
-        photo: { content: String(data.caption ?? ''), media_url: undefined, title: undefined },
-        video: { content: String(data.description ?? ''), title: String(data.title ?? ''), media_url: undefined },
-        short: { content: String(data.caption ?? ''), media_url: undefined },
+      const mediaUrl = (data.media_url as string | null | undefined) ?? null
+
+      const typeContentMap: Record<string, { content: string; media_url?: string | null; title?: string; link_url?: string }> = {
+        photo: { content: String(data.caption ?? ''), media_url: mediaUrl, title: undefined },
+        video: { content: String(data.description ?? ''), title: String(data.title ?? ''), media_url: mediaUrl },
+        short: { content: String(data.caption ?? ''), media_url: mediaUrl },
         link: { content: String(data.description ?? ''), link_url: String(data.url ?? ''), title: String(data.link_title ?? '') },
         poll: { content: JSON.stringify({ question: data.question, options: data.options, duration: data.duration }), title: String(data.question ?? '') },
       }
 
-      const mapped = typeContentMap[type] ?? { content: String(data.content ?? '') }
+      const mapped = typeContentMap[type] ?? { content: String(data.content ?? ''), media_url: mediaUrl }
 
       const { error } = await supabase.from('feed_posts').insert({
         user_id: user.id,

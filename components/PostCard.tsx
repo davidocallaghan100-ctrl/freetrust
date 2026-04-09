@@ -540,11 +540,11 @@ export default function PostCard({
         />
         <div style={{ flex: 1 }} />
         <Link
-          href={`/feed/${post.id}`}
-          style={{ fontSize: '11px', color: '#334155', textDecoration: 'none', padding: '4px 8px' }}
-          title="Open post"
+          href={`/profile?id=${authorId}`}
+          style={{ flexShrink: 0, textDecoration: 'none', padding: '4px 4px 4px 8px' }}
+          title={`View ${name}'s profile`}
         >
-          🔗
+          <Avatar url={avatarUrl} name={name} size={28} />
         </Link>
       </div>
 

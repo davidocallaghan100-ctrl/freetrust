@@ -123,10 +123,16 @@ export default function FeedPage() {
   }, [])
 
   // Load current user ID once on mount for delete ownership check
+  // Use cached value from sessionStorage to avoid flash of missing delete button
   useEffect(() => {
+    const cached = sessionStorage.getItem('ft_uid')
+    if (cached) setCurrentUserId(cached)
     const supabase = createClient()
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setCurrentUserId(data.user.id)
+      if (data.user) {
+        setCurrentUserId(data.user.id)
+        sessionStorage.setItem('ft_uid', data.user.id)
+      }
     }).catch(() => {})
   }, [])
 
