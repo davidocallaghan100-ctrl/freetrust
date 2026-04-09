@@ -169,9 +169,37 @@ export default function CreatePage() {
   // Poll-specific
   const [pollOptions, setPollOptions] = useState(['', ''])
 
+  // Media upload state
+  const [uploadingMedia, setUploadingMedia] = useState(false)
+  const [uploadedMediaUrl, setUploadedMediaUrl] = useState<string | null>(null)
+  const [uploadProgress, setUploadProgress] = useState<string>('')
+
   // Link preview
   const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null)
   const [linkLoading, setLinkLoading] = useState(false)
+
+  const handleFileUpload = async (file: File, type: 'photo' | 'video' | 'short') => {
+    setUploadingMedia(true)
+    setUploadProgress('Uploading...')
+    setUploadedMediaUrl(null)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('type', type)
+      const res = await fetch('/api/upload/media', { method: 'POST', body: fd })
+      const data = await res.json() as { url?: string; error?: string }
+      if (data.url) {
+        setUploadedMediaUrl(data.url)
+        setUploadProgress('✓ Upload complete')
+      } else {
+        setUploadProgress('Upload failed — ' + (data.error ?? 'unknown error'))
+      }
+    } catch {
+      setUploadProgress('Upload failed')
+    } finally {
+      setUploadingMedia(false)
+    }
+  }
 
   const showToastMsg = (msg: string) => {
     setToast(msg)
@@ -204,6 +232,8 @@ export default function CreatePage() {
         setPollOptions(['', ''])
       }
     } catch { /* ignore */ }
+    setUploadedMediaUrl(null)
+    setUploadProgress('')
   }, [selectedType])
 
   // Auto-save draft every 10s
@@ -254,6 +284,9 @@ export default function CreatePage() {
     let data: Record<string, unknown> = { ...formData }
     if (selectedType === 'poll') {
       data = { ...data, options: pollOptions.filter(o => o.trim()), question: f('question') }
+    }
+    if (['photo', 'video', 'short'].includes(selectedType) && uploadedMediaUrl) {
+      data = { ...data, media_url: uploadedMediaUrl }
     }
     return { type: selectedType, data, visibility, location, taggedUsers, category }
   }
@@ -309,8 +342,8 @@ export default function CreatePage() {
               visibility={visibility} setVisibility={setVisibility}
             />
             <div style={s.actions}>
-              <button style={s.btnPrimary} onClick={handlePublish} disabled={publishing}>
-                {publishing ? 'Publishing…' : '🚀 Publish'}
+              <button style={{ ...s.btnPrimary, opacity: (publishing || uploadingMedia) ? 0.6 : 1 }} onClick={handlePublish} disabled={publishing || uploadingMedia}>
+                {publishing ? 'Publishing…' : uploadingMedia ? 'Uploading…' : '🚀 Publish'}
               </button>
               <button style={s.btnSecondary} onClick={() => setPreview(true)}>👁 Preview</button>
               <button style={s.btnDanger} onClick={discardDraft}>🗑 Discard</button>
@@ -345,12 +378,22 @@ export default function CreatePage() {
         return (
           <>
             <div style={s.fieldGroup}>
-              <label style={s.label}>Photos</label>
-              <input type="file" accept="image/*" multiple style={{ ...s.input, padding: '0.5rem' }} onChange={e => {
-                const files = Array.from(e.target.files ?? [])
-                setField('file_names', files.map(f => f.name).join(', '))
+              <label style={s.label}>Photo</label>
+              <input type="file" accept="image/*" style={{ ...s.input, padding: '0.5rem' }} onChange={e => {
+                const file = e.target.files?.[0]
+                if (file) {
+                  setField('file_names', file.name)
+                  handleFileUpload(file, 'photo')
+                }
               }} />
-              {f('file_names') && <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '0.4rem' }}>📎 {f('file_names')}</p>}
+              {uploadProgress && (
+                <div style={{ marginTop: '0.5rem', fontSize: '0.82rem', color: uploadProgress.startsWith('✓') ? '#34d399' : uploadProgress.startsWith('Upload') ? '#f87171' : '#64748b' }}>
+                  {uploadingMedia ? '⏳ ' : ''}{uploadProgress}
+                </div>
+              )}
+              {uploadedMediaUrl && selectedType === 'photo' && (
+                <img src={uploadedMediaUrl} alt="preview" style={{ marginTop: '0.75rem', maxWidth: '100%', maxHeight: '300px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #334155' }} />
+              )}
             </div>
             <div style={s.fieldGroup}>
               <label style={s.label}>Caption</label>
@@ -370,9 +413,19 @@ export default function CreatePage() {
               <label style={s.label}>Video File</label>
               <input type="file" accept="video/*" style={{ ...s.input, padding: '0.5rem' }} onChange={e => {
                 const file = e.target.files?.[0]
-                if (file) setField('file_name', file.name)
+                if (file) {
+                  setField('file_name', file.name)
+                  handleFileUpload(file, 'video')
+                }
               }} />
-              {f('file_name') && <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '0.4rem' }}>🎬 {f('file_name')}</p>}
+              {uploadProgress && (
+                <div style={{ marginTop: '0.5rem', fontSize: '0.82rem', color: uploadProgress.startsWith('✓') ? '#34d399' : uploadProgress.startsWith('Upload') ? '#f87171' : '#64748b' }}>
+                  {uploadingMedia ? '⏳ ' : ''}{uploadProgress}
+                </div>
+              )}
+              {uploadedMediaUrl && selectedType === 'video' && (
+                <video src={uploadedMediaUrl} controls style={{ marginTop: '0.75rem', maxWidth: '100%', maxHeight: '300px', borderRadius: '8px' }} />
+              )}
             </div>
             <div style={s.fieldGroup}>
               <label style={s.label}>Title</label>
@@ -392,9 +445,19 @@ export default function CreatePage() {
               <label style={s.label}>Short Video (vertical)</label>
               <input type="file" accept="video/*" style={{ ...s.input, padding: '0.5rem' }} onChange={e => {
                 const file = e.target.files?.[0]
-                if (file) setField('file_name', file.name)
+                if (file) {
+                  setField('file_name', file.name)
+                  handleFileUpload(file, 'short')
+                }
               }} />
-              {f('file_name') && <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '0.4rem' }}>📱 {f('file_name')}</p>}
+              {uploadProgress && (
+                <div style={{ marginTop: '0.5rem', fontSize: '0.82rem', color: uploadProgress.startsWith('✓') ? '#34d399' : uploadProgress.startsWith('Upload') ? '#f87171' : '#64748b' }}>
+                  {uploadingMedia ? '⏳ ' : ''}{uploadProgress}
+                </div>
+              )}
+              {uploadedMediaUrl && selectedType === 'short' && (
+                <video src={uploadedMediaUrl} controls style={{ marginTop: '0.75rem', maxWidth: '100%', maxHeight: '400px', borderRadius: '8px', aspectRatio: '9/16', background: '#000' }} />
+              )}
             </div>
             <div style={s.fieldGroup}>
               <label style={s.label}>Caption <span style={{ fontWeight: 400, color: '#64748b' }}>({(f('caption') ?? '').length}/100)</span></label>
