@@ -31,6 +31,19 @@ interface ActivityItem {
   meta?: string
 }
 
+interface ServiceListing {
+  id: string
+  title: string
+  description?: string | null
+  price: number
+  currency?: string | null
+  service_mode?: string | null
+  tags?: string[] | null
+  avg_rating?: number | null
+  review_count?: number | null
+  created_at: string
+}
+
 function getTrustLevel(balance: number) {
   if (balance >= 5000) return { label: 'FreeTrust Ambassador', icon: '👑', color: '#f59e0b', nextAt: null,  next: 'Max level reached' }
   if (balance >= 1000) return { label: 'Community Leader',    icon: '🏆', color: '#a78bfa', nextAt: 5000, next: 'Ambassador at ₮5000' }
@@ -82,6 +95,8 @@ export default function ProfilePage() {
   const [avatarHover, setAvatarHover] = useState(false)
   const [activity, setActivity] = useState<ActivityItem[]>([])
   const [loadingActivity, setLoadingActivity] = useState(false)
+  const [services, setServices] = useState<ServiceListing[]>([])
+  const [showAllServices, setShowAllServices] = useState(false)
   const [bonusAwarded, setBonusAwarded] = useState(false)
   const [toast, setToast] = useState('')
 
@@ -123,6 +138,21 @@ export default function ProfilePage() {
       }
     } catch { /* silent */ }
   }, [])
+
+  const loadServices = useCallback(async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from('listings')
+        .select('id, title, description, price, currency, service_mode, tags, avg_rating, review_count, created_at')
+        .eq('seller_id', userId)
+        .eq('product_type', 'service')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+      setServices(data ?? [])
+    } catch (err) {
+      console.error('loadServices error:', err)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadActivity = useCallback(async (userId: string) => {
     setLoadingActivity(true)
@@ -168,41 +198,41 @@ export default function ProfilePage() {
         }
       }
 
-      // Services
-      const { data: services } = await supabase
+      // Services (product_type = 'service')
+      const { data: serviceItems } = await supabase
         .from('listings')
         .select('id, title, created_at')
         .eq('seller_id', userId)
-        .eq('type', 'service')
+        .eq('product_type', 'service')
         .order('created_at', { ascending: false })
         .limit(2)
-      if (services) {
-        for (const s of services) {
+      if (serviceItems) {
+        for (const s of serviceItems) {
           items.push({
             id: `service-${s.id}`,
             type: 'service',
             title: s.title ?? 'Service listing',
-            href: `/listing/${s.id}`,
+            href: `/services/${s.id}`,
             created_at: s.created_at,
           })
         }
       }
 
-      // Products
-      const { data: products } = await supabase
+      // Products (product_type != 'service')
+      const { data: productItems } = await supabase
         .from('listings')
         .select('id, title, created_at')
         .eq('seller_id', userId)
-        .eq('type', 'product')
+        .neq('product_type', 'service')
         .order('created_at', { ascending: false })
         .limit(2)
-      if (products) {
-        for (const p of products) {
+      if (productItems) {
+        for (const p of productItems) {
           items.push({
             id: `product-${p.id}`,
             type: 'product',
             title: p.title ?? 'Product listing',
-            href: `/listing/${p.id}`,
+            href: `/services/${p.id}`,
             created_at: p.created_at,
           })
         }
@@ -282,7 +312,7 @@ export default function ProfilePage() {
         const { data: { user: u } } = await supabase.auth.getUser()
         setUser(u)
         if (u) {
-          await Promise.all([loadProfile(u.id), loadTrust(), loadActivity(u.id)])
+          await Promise.all([loadProfile(u.id), loadTrust(), loadActivity(u.id), loadServices(u.id)])
         }
       } catch (err) {
         console.error('init error:', err)
@@ -631,6 +661,61 @@ export default function ProfilePage() {
             <p style={{ color: '#94a3b8', lineHeight: 1.7, fontSize: '0.9rem' }}>{profile.bio}</p>
           </div>
         ) : null}
+
+        {/* Services Section */}
+        {services.length > 0 && (
+          <div className="profile-card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.06em' }}>SERVICES ({services.length})</div>
+              <Link href="/seller/gigs/create" style={{ fontSize: '0.75rem', color: '#38bdf8', textDecoration: 'none', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 6, padding: '0.25rem 0.6rem' }}>
+                + Add Service
+              </Link>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {(showAllServices ? services : services.slice(0, 4)).map(svc => (
+                <Link
+                  key={svc.id}
+                  href={`/services/${svc.id}`}
+                  style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', textDecoration: 'none', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.1)', borderRadius: 10, padding: '0.85rem 1rem', transition: 'border-color 0.15s' }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ color: '#f1f5f9', fontWeight: 600, fontSize: '0.88rem', lineHeight: 1.4, marginBottom: '0.3rem' }}>
+                      {svc.title}
+                    </div>
+                    {svc.description && (
+                      <div style={{ color: '#64748b', fontSize: '0.75rem', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                        {svc.description}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                      {svc.service_mode && (
+                        <span style={{ fontSize: '0.68rem', color: '#38bdf8', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 4, padding: '0.1rem 0.4rem' }}>
+                          {svc.service_mode === 'online' ? '🌐 Online' : svc.service_mode === 'in-person' ? '📍 In-person' : '🔄 Hybrid'}
+                        </span>
+                      )}
+                      {svc.avg_rating && svc.review_count ? (
+                        <span style={{ fontSize: '0.68rem', color: '#f59e0b' }}>⭐ {Number(svc.avg_rating).toFixed(1)} ({svc.review_count})</span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#34d399' }}>
+                      €{Number(svc.price).toLocaleString('en-IE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            {services.length > 4 && (
+              <button
+                onClick={() => setShowAllServices(s => !s)}
+                style={{ marginTop: '0.75rem', width: '100%', background: 'transparent', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.5rem', fontSize: '0.82rem', color: '#38bdf8', cursor: 'pointer' }}
+              >
+                {showAllServices ? 'Show less' : `Show all ${services.length} services`}
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Activity Section */}
         <div className="profile-card">
