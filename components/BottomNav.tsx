@@ -4,7 +4,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 const tabs = [
-  { href: '/', icon: '🏠', label: 'Home' },
+  { href: '/feed', icon: '🏠', label: 'Home' },
   { href: '/connections', icon: '🔗', label: 'Connect' },
   null, // center Create button
   { href: '/collab', icon: '🤝', label: 'Collab' },
@@ -15,7 +15,7 @@ export default function BottomNav() {
   const pathname = usePathname()
   const router = useRouter()
 
-  const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href + '/'))
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
   return (
     <>

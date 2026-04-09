@@ -39,6 +39,13 @@ export async function middleware(request: NextRequest) {
     // Auth check failed — allow through, page-level will handle
   }
 
+  // Redirect logged-in users from landing page → /feed
+  if (user && request.nextUrl.pathname === '/') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/feed'
+    return NextResponse.redirect(url)
+  }
+
   const protectedPaths = [
     '/dashboard',
     '/wallet',
