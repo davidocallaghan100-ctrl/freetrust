@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { sendWelcomeEmail } from '@/lib/resend'
 
-// POST /api/onboarding — complete onboarding, award ₮25 welcome trust
+// POST /api/onboarding — save onboarding profile data
+// NOTE: ₮25 trust is awarded exclusively in /auth/callback on signup.
+//       Do NOT award trust here — it would double-count for email signups.
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -23,8 +24,6 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    const alreadyDone = profile?.onboarding_complete
-
     // Update profile
     await supabase.from('profiles').upsert({
       id: user.id,
@@ -40,41 +39,16 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString(),
     })
 
-    // Award ₮25 welcome trust — only once
-    if (!alreadyDone) {
-      await supabase.from('trust_ledger').insert({
-        user_id: user.id,
-        amount: 25,
-        type: 'welcome_bonus',
-        description: 'Welcome to FreeTrust! Founding member bonus.',
-      })
-      // Upsert trust_balances
-      const { data: tb } = await supabase
-        .from('trust_balances')
-        .select('balance, lifetime')
-        .eq('user_id', user.id)
-        .single()
+    // Read trust balance to confirm ₮25 was already issued at signup
+    const { data: tb } = await supabase
+      .from('trust_balances')
+      .select('balance')
+      .eq('user_id', user.id)
+      .maybeSingle()
 
-      if (tb) {
-        await supabase.from('trust_balances').update({
-          balance: (tb.balance ?? 0) + 25,
-          lifetime: (tb.lifetime ?? 0) + 25,
-        }).eq('user_id', user.id)
-      } else {
-        await supabase.from('trust_balances').insert({
-          user_id: user.id,
-          balance: 25,
-          lifetime: 25,
-        })
-      }
+    const trustBalance = tb?.balance ?? 0
 
-      // Send welcome email
-      try {
-        await sendWelcomeEmail(user.email!, full_name ?? 'there')
-      } catch { /* non-fatal */ }
-    }
-
-    return NextResponse.json({ ok: true, trust_awarded: !alreadyDone ? 25 : 0 })
+    return NextResponse.json({ ok: true, trust_awarded: trustBalance })
   } catch (err) {
     console.error('[POST /api/onboarding]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
