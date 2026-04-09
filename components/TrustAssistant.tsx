@@ -64,6 +64,7 @@ export default function TrustAssistant() {
   const supabase = createClient()
 
   const [open, setOpen] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -254,9 +255,9 @@ export default function TrustAssistant() {
       `}</style>
 
       {/* ── Hint badge ── */}
-      {showHintBadge && !open && hintShown && (
+      {showHintBadge && !open && hintShown && !dismissed && (
         <div style={{
-          position: 'fixed', bottom: 88, right: 20, zIndex: 9998,
+          position: 'fixed', bottom: 142, right: 20, zIndex: 9998,
           background: '#1e293b', border: `1px solid ${accent}`, borderRadius: 12,
           padding: '10px 14px', maxWidth: 240, fontSize: '0.8rem', color: '#f1f5f9',
           boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
@@ -269,29 +270,47 @@ export default function TrustAssistant() {
         </div>
       )}
 
-      {/* ── Floating bubble ── */}
-      <button
-        className="ta-bubble"
-        onClick={open ? () => setOpen(false) : handleOpen}
-        aria-label="Trust Assistant"
-        style={{
-          position: 'fixed', bottom: 20, right: 20, zIndex: 9999,
-          width: 56, height: 56, borderRadius: '50%',
-          background: 'linear-gradient(135deg,#38bdf8,#0284c7)',
-          border: 'none', cursor: 'pointer', color: '#fff', fontSize: '24px',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          animation: !open ? 'ta-pulse 2.5s ease-in-out infinite' : 'none',
-          transition: 'transform 0.2s ease',
-          boxShadow: '0 4px 20px rgba(56,189,248,0.4)',
-        }}
-      >
-        {open ? '✕' : <span style={{ fontWeight: 900, fontSize: 26, letterSpacing: '-1px', fontFamily: 'system-ui, sans-serif' }}>₮</span>}
-      </button>
+      {/* ── Floating bubble + dismiss ── */}
+      {!dismissed && (
+        <div style={{ position: 'fixed', bottom: 80, right: 16, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+          {/* Dismiss ✕ button */}
+          {!open && (
+            <button
+              onClick={() => setDismissed(true)}
+              aria-label="Hide Trust Assistant"
+              style={{
+                width: 18, height: 18, borderRadius: '50%',
+                background: '#334155', border: '1px solid #475569',
+                color: '#94a3b8', fontSize: 9, fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', lineHeight: 1, padding: 0,
+              }}
+            >✕</button>
+          )}
+          {/* Main bubble */}
+          <button
+            className="ta-bubble"
+            onClick={open ? () => setOpen(false) : handleOpen}
+            aria-label="Trust Assistant"
+            style={{
+              width: 44, height: 44, borderRadius: '50%',
+              background: 'linear-gradient(135deg,#38bdf8,#0284c7)',
+              border: 'none', cursor: 'pointer', color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              animation: !open ? 'ta-pulse 2.5s ease-in-out infinite' : 'none',
+              transition: 'transform 0.2s ease',
+              boxShadow: '0 4px 16px rgba(56,189,248,0.35)',
+            }}
+          >
+            {open ? <span style={{ fontSize: 14, fontWeight: 700 }}>✕</span> : <span style={{ fontWeight: 900, fontSize: 20, letterSpacing: '-1px', fontFamily: 'system-ui, sans-serif' }}>₮</span>}
+          </button>
+        </div>
+      )}
 
       {/* ── Chat window ── */}
       {open && (
         <div style={{
-          position: 'fixed', bottom: 88, right: 20, zIndex: 9998,
+          position: 'fixed', bottom: 136, right: 16, zIndex: 9998,
           width: 'min(380px, calc(100vw - 32px))',
           height: 'min(560px, calc(100vh - 120px))',
           background: '#0d1627',
