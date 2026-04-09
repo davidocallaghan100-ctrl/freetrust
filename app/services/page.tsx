@@ -183,40 +183,43 @@ export default function ServicesPage() {
     (async () => {
       try {
         const { data } = await supabase
-          .from('services')
+          .from('listings')
           .select('*, seller:profiles!seller_id(full_name, avatar_url)')
+          .eq('product_type', 'service')
           .eq('status', 'active')
           .order('created_at', { ascending: false })
-          .limit(50)
+          .limit(100)
         if (data) {
           const mapped: Service[] = data.map((s: Record<string, unknown>) => {
-            const seller = s.seller as { full_name?: string } | null
+            const seller = s.seller as { full_name?: string; avatar_url?: string } | null
             const name = seller?.full_name ?? 'Unknown'
             const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
+            const mode = (s.service_mode as string) ?? 'online'
             return {
               id: s.id as string,
               title: s.title as string,
               provider: name,
               avatar: initials,
-              rating: 4.8,
-              reviews: 0,
+              avatarImg: seller?.avatar_url ?? undefined,
+              rating: Number(s.avg_rating ?? 4.8),
+              reviews: Number(s.review_count ?? 0),
               price: Number(s.price ?? 0),
               currency: '€',
-              delivery: (s.delivery_time as string) ?? '7 days',
+              delivery: mode === 'online' ? 'Online' : 'In-person',
               tags: (s.tags as string[]) ?? [],
-              category: (s.category as string) ?? '',
-              categoryId: (s.category_id as string) ?? undefined,
+              category: '',
+              categoryId: undefined,
               desc: (s.description as string) ?? '',
               trust: 90,
-              badge: null,
-              mode: ((s.service_mode as string) ?? 'online') as 'online' | 'offline' | 'both',
+              badge: Number(s.review_count ?? 0) > 50 ? 'Top Rated' : null,
+              mode: mode as 'online' | 'offline' | 'both',
               location: (s.location as string) ?? null,
               distance: null,
             }
           })
           setServices(mapped)
         }
-      } catch { /* keep empty */ }
+      } catch (err) { console.error('[services page]', err) }
     })()
   }, [])
 
