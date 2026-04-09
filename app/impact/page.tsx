@@ -20,15 +20,15 @@ const votableCauses = [
 ]
 
 const leaderboard = [
-  { rank: 1, name: 'Amara Diallo', avatar: 'AD', donated: 850, grad: 'linear-gradient(135deg,#f472b6,#db2777)' },
-  { rank: 2, name: 'Tom Walsh', avatar: 'TW', donated: 620, grad: 'linear-gradient(135deg,#fb923c,#ea580c)' },
-  { rank: 3, name: 'Priya Nair', avatar: 'PN', donated: 540, grad: 'linear-gradient(135deg,#a78bfa,#7c3aed)' },
-  { rank: 4, name: 'Sarah Chen', avatar: 'SC', donated: 390, grad: 'linear-gradient(135deg,#38bdf8,#0284c7)' },
-  { rank: 5, name: 'James Okafor', avatar: 'JO', donated: 310, grad: 'linear-gradient(135deg,#34d399,#059669)' },
-  { rank: 6, name: 'Lena Fischer', avatar: 'LF', donated: 280, grad: 'linear-gradient(135deg,#fbbf24,#d97706)' },
-  { rank: 7, name: 'Marcus Obi', avatar: 'MO', donated: 210, grad: 'linear-gradient(135deg,#f472b6,#a78bfa)' },
-  { rank: 8, name: 'Yuki Tanaka', avatar: 'YT', donated: 175, grad: 'linear-gradient(135deg,#38bdf8,#34d399)' },
-  { rank: 9, name: 'Diana Ross', avatar: 'DR', donated: 150, grad: 'linear-gradient(135deg,#fb923c,#f472b6)' },
+  { rank: 1, name: 'David O\'Callaghan', avatar: 'DO', donated: 1200, grad: 'linear-gradient(135deg,#34d399,#38bdf8)', founder: true, impact: '1,000 trees · 10 families' },
+  { rank: 2, name: 'Amara Diallo', avatar: 'AD', donated: 850, grad: 'linear-gradient(135deg,#f472b6,#db2777)' },
+  { rank: 3, name: 'Tom Walsh', avatar: 'TW', donated: 620, grad: 'linear-gradient(135deg,#fb923c,#ea580c)' },
+  { rank: 4, name: 'Priya Nair', avatar: 'PN', donated: 540, grad: 'linear-gradient(135deg,#a78bfa,#7c3aed)' },
+  { rank: 5, name: 'Sarah Chen', avatar: 'SC', donated: 390, grad: 'linear-gradient(135deg,#38bdf8,#0284c7)' },
+  { rank: 6, name: 'James Okafor', avatar: 'JO', donated: 310, grad: 'linear-gradient(135deg,#34d399,#059669)' },
+  { rank: 7, name: 'Lena Fischer', avatar: 'LF', donated: 280, grad: 'linear-gradient(135deg,#fbbf24,#d97706)' },
+  { rank: 8, name: 'Marcus Obi', avatar: 'MO', donated: 210, grad: 'linear-gradient(135deg,#f472b6,#a78bfa)' },
+  { rank: 9, name: 'Yuki Tanaka', avatar: 'YT', donated: 175, grad: 'linear-gradient(135deg,#38bdf8,#34d399)' },
   { rank: 10, name: 'Ahmed Ali', avatar: 'AA', donated: 120, grad: 'linear-gradient(135deg,#34d399,#38bdf8)' },
 ]
 
@@ -102,7 +102,7 @@ export default function ImpactPage() {
     Object.fromEntries(votableCauses.map(c => [c.id, c.votes]))
   )
   const daysLeft = getDaysToQuarterEnd()
-  const totalTrees = 2180000
+  const totalTrees = 2181000
 
   const { count: treeCount, ref: treeRef } = useCountUp(totalTrees, 2500)
 
@@ -246,10 +246,10 @@ export default function ImpactPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1.5rem 0' }}>
         <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem', color: '#f1f5f9' }}>Real-World Impact</h2>
         <div className="impact-stats">
-          <StatCounter value={2180000} label="Trees Planted" icon="🌳" />
+          <StatCounter value={2181000} label="Trees Planted" icon="🌳" />
           <StatCounter value={84} label="Tonnes CO₂ Offset" icon="🌍" />
           <StatCounter value={200} label="Schools Funded" icon="🏫" />
-          <StatCounter value={14000} label="Families Helped" icon="👨‍👩‍👧‍👦" />
+          <StatCounter value={14010} label="Families Helped" icon="👨‍👩‍👧‍👦" />
         </div>
       </div>
 
@@ -362,13 +362,21 @@ export default function ImpactPage() {
         <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem', color: '#f1f5f9' }}>🏆 Member Impact Leaderboard — Q2 2026</h2>
         <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, overflow: 'hidden' }}>
           {leaderboard.map((member, i) => (
-            <div key={member.name} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.85rem 1.25rem', borderBottom: i < leaderboard.length - 1 ? '1px solid rgba(56,189,248,0.06)' : 'none', background: i < 3 ? `rgba(52,211,153,0.0${3 - i})` : 'transparent' }}>
+            <div key={member.name} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.85rem 1.25rem', borderBottom: i < leaderboard.length - 1 ? '1px solid rgba(56,189,248,0.06)' : 'none', background: i === 0 ? 'rgba(52,211,153,0.06)' : i < 3 ? `rgba(52,211,153,0.0${3 - i})` : 'transparent' }}>
               <span style={{ fontSize: i === 0 ? '1.25rem' : '0.9rem', fontWeight: 800, color: i === 0 ? '#fbbf24' : i === 1 ? '#94a3b8' : i === 2 ? '#fb923c' : '#475569', minWidth: 28, textAlign: 'center' }}>
                 {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${member.rank}`}
               </span>
               <div style={{ width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.75rem', color: '#0f172a', background: member.grad, flexShrink: 0 }}>{member.avatar}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f1f5f9' }}>{member.name}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f1f5f9' }}>{member.name}</span>
+                  {'founder' in member && member.founder && (
+                    <span style={{ background: 'rgba(52,211,153,0.15)', border: '1px solid rgba(52,211,153,0.35)', borderRadius: 999, padding: '0.1rem 0.45rem', fontSize: '0.6rem', color: '#34d399', fontWeight: 700, letterSpacing: '0.04em' }}>FOUNDER</span>
+                  )}
+                </div>
+                {'impact' in member && member.impact && (
+                  <div style={{ fontSize: '0.72rem', color: '#34d399', marginTop: '0.1rem' }}>🌱 {member.impact}</div>
+                )}
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#34d399' }}>₮{member.donated}</div>
