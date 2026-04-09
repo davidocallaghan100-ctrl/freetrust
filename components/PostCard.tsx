@@ -43,7 +43,7 @@ type Comment = {
   content: string
   created_at: string
   like_count?: number
-  profiles: { full_name: string | null; avatar_url: string | null; username?: string | null } | null
+  profiles: { id?: string; full_name: string | null; avatar_url: string | null; username?: string | null } | null
   val_liked?: boolean
   liked_by_me?: boolean
 }
@@ -646,12 +646,24 @@ function CommentRow({
   const likeCount = comment.like_count ?? 0
   const liked = comment.liked_by_me ?? false
 
+  const profileHref = comment.profiles?.id ? `/profile?id=${comment.profiles.id}` : null
+
   return (
     <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', alignItems: 'flex-start' }}>
-      <Avatar url={comment.profiles?.avatar_url ?? null} name={cName} size={30} />
+      {profileHref ? (
+        <Link href={profileHref} style={{ flexShrink: 0, textDecoration: 'none' }}>
+          <Avatar url={comment.profiles?.avatar_url ?? null} name={cName} size={30} />
+        </Link>
+      ) : (
+        <Avatar url={comment.profiles?.avatar_url ?? null} name={cName} size={30} />
+      )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: '10px', padding: '8px 12px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', marginBottom: '2px' }}>{cName}</div>
+          {profileHref ? (
+            <Link href={profileHref} style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', marginBottom: '2px', display: 'block', textDecoration: 'none' }}>{cName}</Link>
+          ) : (
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', marginBottom: '2px' }}>{cName}</div>
+          )}
           <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5 }}>{comment.content}</div>
         </div>
         {/* Like row + Val badge */}

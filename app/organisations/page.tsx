@@ -159,7 +159,7 @@ export default function MemberDirectoryPage() {
           return (
             <Link
               key={member.id}
-              href={`/profile`}
+              href={`/profile?id=${member.id}`}
               className="member-card"
               style={S.card}
             >
