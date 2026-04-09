@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
         customer_email: user.email,
         line_items: [{
           price_data: {
-            currency: 'gbp',
+            currency: 'eur',
             product_data: { name: `Product ${product_id}` },
             unit_amount: mockPrice,
           },
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
       customer_email: user.email,
       line_items: [{
         price_data: {
-          currency: 'gbp',
+          currency: 'eur',
           product_data: {
             name: product.title,
             description: (product.description || '').slice(0, 500),
