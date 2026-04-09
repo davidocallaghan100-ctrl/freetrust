@@ -15,7 +15,7 @@ const DRAWER_SECTIONS = [
       { href: '/feed',      label: 'Newsfeed',               icon: '📰' },
       { href: '/products',  label: 'Product Marketplace',    icon: '📦' },
       { href: '/services',  label: 'Services Marketplace',   icon: '🛠' },
-      { href: '/organisations', label: 'Member Directory',     icon: '🔍' },
+      { href: '/members', label: 'Member Directory',     icon: '🔍' },
     ],
   },
   {
