@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-04-10" })
@@ -93,7 +93,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
 
     try {
-      const supabase = await createClient();
+      const supabase = createAdminClient();
 
       // 1. Upsert community_members row (idempotent — safe on retry)
       const { error: memberError } = await supabase
@@ -159,7 +159,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
 
     try {
-      const supabase = await createClient()
+      const supabase = createAdminClient()
 
       // Mark deposit as completed
       await supabase
@@ -198,7 +198,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // Update order status to in_progress and store payment intent
     const { error: updateError } = await supabase
@@ -273,7 +273,7 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
   if (!orderId) return;
 
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     await supabase
       .from('orders')
       .update({ status: 'refunded', updated_at: new Date().toISOString() })
@@ -304,7 +304,7 @@ async function handleAccountUpdated(account: Stripe.Account) {
   if (!account.charges_enabled || !account.payouts_enabled) return;
 
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const { error } = await supabase
       .from('profiles')
       .update({ stripe_onboarded: true })

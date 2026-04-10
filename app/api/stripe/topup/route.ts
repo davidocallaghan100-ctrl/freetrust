@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' })
@@ -14,8 +15,9 @@ export async function POST(req: NextRequest) {
   if (!stripe) return NextResponse.json({ error: 'Payments not configured' }, { status: 503 })
 
   try {
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Use auth client only for user verification
+    const authClient = await createClient()
+    const { data: { user }, error: authError } = await authClient.auth.getUser()
     if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await req.json()
@@ -25,15 +27,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid amount (min €1, max €10,000)' }, { status: 400 })
     }
 
+    // Use admin client (service role) for all DB operations — bypasses RLS safely
+    const admin = createAdminClient()
+
     // Get profile for name
-    const { data: profile } = await supabase
+    const { data: profile } = await admin
       .from('profiles')
       .select('full_name')
       .eq('id', user.id)
       .maybeSingle()
 
     // Create a pending deposit record
-    const { data: deposit, error: dbError } = await supabase
+    const { data: deposit, error: dbError } = await admin
       .from('money_deposits')
       .insert({
         user_id: user.id,
@@ -60,7 +65,6 @@ export async function POST(req: NextRequest) {
             product_data: {
               name: 'FreeTrust Wallet Top-up',
               description: `Add funds to your FreeTrust wallet (${profile?.full_name ?? user.email})`,
-              images: ['https://davidocallaghan100829028694.adaptive.ai/cdn/freetrust-logo-v1.png'],
             },
             unit_amount: amountCents,
           },
@@ -79,7 +83,7 @@ export async function POST(req: NextRequest) {
     })
 
     // Save session ID to deposit record
-    await supabase
+    await admin
       .from('money_deposits')
       .update({ stripe_session_id: session.id })
       .eq('id', deposit.id)
