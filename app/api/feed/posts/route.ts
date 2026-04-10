@@ -55,19 +55,29 @@ export async function GET(req: NextRequest) {
 
     let likedIds: string[] = []
     let savedIds: string[] = []
+    const commentCountMap: Record<string, number> = {}
 
-    if (user && posts && posts.length > 0) {
+    if (posts && posts.length > 0) {
       const postIds = posts.map((p: { id: string }) => p.id)
-      const [likesRes, savesRes] = await Promise.all([
-        supabase.from('feed_likes').select('post_id').eq('user_id', user.id).in('post_id', postIds),
-        supabase.from('feed_saves').select('post_id').eq('user_id', user.id).in('post_id', postIds),
+
+      const [likesRes, savesRes, commentsRes] = await Promise.all([
+        user ? supabase.from('feed_likes').select('post_id').eq('user_id', user.id).in('post_id', postIds) : Promise.resolve({ data: [] }),
+        user ? supabase.from('feed_saves').select('post_id').eq('user_id', user.id).in('post_id', postIds) : Promise.resolve({ data: [] }),
+        supabase.from('feed_comments').select('post_id').in('post_id', postIds),
       ])
-      likedIds = (likesRes.data ?? []).map((l: { post_id: string }) => l.post_id)
-      savedIds = (savesRes.data ?? []).map((s: { post_id: string }) => s.post_id)
+
+      likedIds = ((likesRes as { data: { post_id: string }[] | null }).data ?? []).map((l) => l.post_id)
+      savedIds = ((savesRes as { data: { post_id: string }[] | null }).data ?? []).map((s) => s.post_id)
+
+      // Build real-time comment count from actual rows
+      ;((commentsRes.data ?? []) as { post_id: string }[]).forEach((c) => {
+        commentCountMap[c.post_id] = (commentCountMap[c.post_id] ?? 0) + 1
+      })
     }
 
     const enriched = (posts ?? []).map((p: Record<string, unknown>) => ({
       ...p,
+      comments_count: commentCountMap[p.id as string] ?? 0,
       liked: likedIds.includes(p.id as string),
       saved: savedIds.includes(p.id as string),
     }))

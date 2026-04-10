@@ -374,6 +374,8 @@ export default function PostCard({
       const res = await fetch(`/api/feed/posts/${post.id}/comments`)
       const d = await res.json()
       const rawComments: Comment[] = d.comments ?? []
+      // Sync comment count to the real fetched count
+      setCommentCount(rawComments.length)
       // Fetch Val likes for these comments
       if (rawComments.length > 0) {
         try {
