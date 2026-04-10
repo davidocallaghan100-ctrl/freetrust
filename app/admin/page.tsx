@@ -293,8 +293,13 @@ export default function AdminPage() {
               </div>
               <p style={{ color: '#64748b', fontSize: '0.85rem', margin: 0 }}>FreeTrust platform control centre</p>
             </div>
-            <div style={{ fontSize: '0.8rem', color: '#475569' }}>
-              Last updated: {new Date().toLocaleTimeString()}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <a href="/admin/analytics" style={{ fontSize: '0.8rem', color: '#38bdf8', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 7, padding: '0.35rem 0.8rem', textDecoration: 'none', fontWeight: 600 }}>
+                📈 Analytics →
+              </a>
+              <div style={{ fontSize: '0.8rem', color: '#475569' }}>
+                Last updated: {new Date().toLocaleTimeString()}
+              </div>
             </div>
           </div>
 
