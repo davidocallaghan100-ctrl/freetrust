@@ -126,6 +126,24 @@ export default function ProductDetailPage() {
   const [buyLoading, setBuyLoading] = useState(false)
   const [cartCount, setCartCount] = useState(0)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [msgLoading, setMsgLoading] = useState(false)
+
+  const messageSeller = async (sellerId: string, listingTitle: string) => {
+    setMsgLoading(true)
+    try {
+      const sb = createClient()
+      const { data: { user } } = await sb.auth.getUser()
+      if (!user) { router.push('/login'); return }
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipientId: sellerId, content: `Hi, I'm interested in your listing: ${listingTitle}` }),
+      })
+      if (res.ok) router.push('/messages')
+    } catch { /* silent */ } finally {
+      setMsgLoading(false)
+    }
+  }
 
   // Load cart count
   useEffect(() => {
@@ -545,8 +563,13 @@ export default function ProductDetailPage() {
                         )}
                       </div>
                     </div>
-                    <button className="pd-seller-msg" style={{ background: 'rgba(139,92,246,0.08)', border: `1px solid rgba(139,92,246,0.2)`, color: accent, padding: '0.4rem 0.85rem', borderRadius: 8, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', transition: 'background 0.15s' }}>
-                      💬 Message
+                    <button
+                      className="pd-seller-msg"
+                      onClick={() => listing.seller && messageSeller(listing.seller.id, listing.title)}
+                      disabled={msgLoading}
+                      style={{ background: 'rgba(139,92,246,0.08)', border: `1px solid rgba(139,92,246,0.2)`, color: accent, padding: '0.4rem 0.85rem', borderRadius: 8, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', transition: 'background 0.15s', opacity: msgLoading ? 0.6 : 1, fontFamily: 'inherit' }}
+                    >
+                      {msgLoading ? '...' : '💬 Message'}
                     </button>
                   </div>
                 </div>

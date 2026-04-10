@@ -418,6 +418,38 @@ export default function Home() {
         </div>
       </div>
 
+      {/* ── 4b. LIVE TICKER ── */}
+      {stats?.ticker && stats.ticker.length > 0 && (
+        <div style={{ background: 'rgba(56,189,248,0.04)', borderBottom: '1px solid rgba(56,189,248,0.06)', overflow: 'hidden', position: 'relative' }}>
+          <style>{`
+            @keyframes ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+            .ticker-track { display: flex; animation: ticker-scroll 40s linear infinite; white-space: nowrap; width: max-content; }
+            .ticker-track:hover { animation-play-state: paused; }
+          `}</style>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 0, padding: '0.55rem 0' }}>
+            {/* Live label */}
+            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0 1rem', borderRight: '1px solid rgba(56,189,248,0.12)', background: 'rgba(56,189,248,0.06)', height: '100%', zIndex: 1 }}>
+              <span className="live-dot" />
+              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#38bdf8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Live</span>
+            </div>
+            {/* Scrolling track — doubled for seamless loop */}
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+              <div className="ticker-track">
+                {[...stats.ticker, ...stats.ticker].map((item, i) => {
+                  const icon = item.type === 'join' ? '👋' : item.type === 'trust' ? '₮' : item.type === 'article' ? '📝' : '✨'
+                  return (
+                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0 1.25rem', fontSize: '0.75rem', color: '#94a3b8', borderRight: '1px solid rgba(56,189,248,0.06)', flexShrink: 0 }}>
+                      <span style={{ fontSize: '0.8rem' }}>{icon}</span>
+                      {item.text}
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── 5. WHY FREETRUST (3 value props) ── */}
       <div style={{ borderBottom: '1px solid rgba(56,189,248,0.06)' }}>
         <div className="lp-sec">
@@ -444,20 +476,20 @@ export default function Home() {
           <div className="hscroll">
             {featuredServices.length === 0
               ? Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} style={{ flexShrink: 0, width: 220, height: 168, background: '#1e293b', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.1)', animation: 'shimmer 1.4s infinite', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%' }} />
+                  <div key={i} style={{ flexShrink: 0, width: 240, height: 210, background: '#1e293b', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.1)', animation: 'shimmer 1.4s infinite', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%' }} />
                 ))
               : featuredServices.map(s => (
-                  <Link key={s.id} href={`/services/${s.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 220 }}>
+                  <Link key={s.id} href={`/services/${s.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 240 }}>
                     <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s' }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.15)' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
                       {/* Banner / cover image */}
-                      <div style={{ height: 88, background: s.coverImage ? '#0f172a' : s.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
+                      <div style={{ height: 140, background: s.coverImage ? '#0f172a' : s.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
                         {s.coverImage
                           ? <img src={s.coverImage} alt={s.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                           : s.avatarUrl
-                            ? <img src={s.avatarUrl} alt={s.provider} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.3)' }} />
-                            : <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.1rem', color: '#fff' }}>
+                            ? <img src={s.avatarUrl} alt={s.provider} style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.3)' }} />
+                            : <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.2rem', color: '#fff' }}>
                                 {s.provider.split(' ').map((w: string) => w[0]).join('').slice(0,2).toUpperCase()}
                               </div>
                         }
@@ -488,19 +520,19 @@ export default function Home() {
           <div className="hscroll">
             {featuredProducts.length === 0
               ? Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} style={{ flexShrink: 0, width: 200, height: 168, background: '#1e293b', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.1)', animation: 'shimmer 1.4s infinite', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%' }} />
+                  <div key={i} style={{ flexShrink: 0, width: 220, height: 210, background: '#1e293b', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.1)', animation: 'shimmer 1.4s infinite', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%' }} />
                 ))
               : featuredProducts.map(p => (
-                <Link key={p.id} href={`/products/${p.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 200 }}>
+                <Link key={p.id} href={`/products/${p.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 220 }}>
                   <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s' }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.15)' }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
-                    <div style={{ height: 88, background: p.coverImage ? '#0f172a' : p.grad, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ height: 140, background: p.coverImage ? '#0f172a' : p.grad, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {p.coverImage
                         ? <img src={p.coverImage} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                         : p.avatarUrl
-                          ? <img src={p.avatarUrl} alt={p.seller} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.3)' }} />
-                          : <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', color: '#fff' }}>
+                          ? <img src={p.avatarUrl} alt={p.seller} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.3)' }} />
+                          : <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', color: '#fff' }}>
                               {p.seller.split(' ').map((w: string) => w[0]).join('').slice(0,2).toUpperCase()}
                             </div>
                       }

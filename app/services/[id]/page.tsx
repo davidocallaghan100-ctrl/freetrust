@@ -8,6 +8,32 @@ import { ALL_CATEGORIES } from '@/lib/service-categories'
 import { useCurrency, type CurrencyCode } from '@/context/CurrencyContext'
 import { formatDistanceToNow } from 'date-fns'
 
+// ─── Message Seller Hook ──────────────────────────────────────────────────────
+
+function useMessageSeller() {
+  const router = useRouter()
+  const [msgLoading, setMsgLoading] = useState(false)
+
+  const messageSeller = async (sellerId: string, listingTitle: string) => {
+    setMsgLoading(true)
+    try {
+      const sb = createClient()
+      const { data: { user } } = await sb.auth.getUser()
+      if (!user) { router.push('/login'); return }
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipientId: sellerId, content: `Hi, I'm interested in your listing: ${listingTitle}` }),
+      })
+      if (res.ok) router.push('/messages')
+    } catch { /* silent */ } finally {
+      setMsgLoading(false)
+    }
+  }
+
+  return { messageSeller, msgLoading }
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type ServiceListing = {
@@ -171,6 +197,7 @@ export default function ServiceDetailPage() {
   const params = useParams()
   const router = useRouter()
   const id = typeof params.id === 'string' ? params.id : ''
+  const { messageSeller, msgLoading } = useMessageSeller()
 
   const [svc, setSvc] = useState<ServiceListing | null>(null)
   const [loading, setLoading] = useState(true)
@@ -410,9 +437,20 @@ export default function ServiceDetailPage() {
               {svc.seller.bio && (
                 <p style={{ fontSize: '12px', color: '#94a3b8', lineHeight: 1.65, margin: '0 0 14px' }}>{svc.seller.bio}</p>
               )}
-              <Link href={`/profile?id=${svc.seller.id}`} style={{ display: 'block', padding: '9px', textAlign: 'center', border: '1px solid #334155', borderRadius: '10px', fontSize: '12px', fontWeight: 600, color: '#94a3b8', textDecoration: 'none' }}>
-                View Full Profile
-              </Link>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <Link href={`/profile?id=${svc.seller.id}`} style={{ flex: 1, display: 'block', padding: '9px', textAlign: 'center', border: '1px solid #334155', borderRadius: '10px', fontSize: '12px', fontWeight: 600, color: '#94a3b8', textDecoration: 'none' }}>
+                  View Profile
+                </Link>
+                {currentUserId !== svc.seller.id && (
+                  <button
+                    onClick={() => messageSeller(svc.seller.id, svc.title)}
+                    disabled={msgLoading}
+                    style={{ flex: 1, padding: '9px', textAlign: 'center', border: '1px solid rgba(56,189,248,0.3)', borderRadius: '10px', fontSize: '12px', fontWeight: 700, color: '#38bdf8', background: 'rgba(56,189,248,0.07)', cursor: 'pointer', fontFamily: 'inherit', opacity: msgLoading ? 0.6 : 1 }}
+                  >
+                    {msgLoading ? '...' : '💬 Message'}
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Verified Reviews Section */}

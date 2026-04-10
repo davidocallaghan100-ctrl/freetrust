@@ -40,6 +40,13 @@ const NAV_SECTIONS = [
       { href: '/collab', label: 'Collab', icon: '🤝' },
     ],
   },
+  {
+    label: 'EARN',
+    links: [
+      { href: '/gig-economy', label: 'Gig Economy', icon: '💰' },
+      { href: '/seller/gigs/create', label: 'Create Gig', icon: '➕' },
+    ],
+  },
 ]
 
 export default function Sidebar() {
