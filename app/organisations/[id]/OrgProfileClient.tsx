@@ -311,24 +311,24 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
   return (
     <div style={{ minHeight: "100vh", background: "#020617" }}>
 
-      {/* ── COVER ── */}
-      <div style={{ position: "relative", height: 200, background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%)", overflow: "hidden" }}>
+      {/* ── COVER ── pulls up to sit flush against the fixed nav bar ── */}
+      <div style={{ position: "relative", height: 260, marginTop: -104, background: "linear-gradient(135deg, #0d0221 0%, #1e1b4b 40%, #1a1040 100%)", overflow: "hidden" }}>
         {org.cover_url && !coverError && (
           <img src={org.cover_url} alt="cover" onError={() => setCoverError(true)}
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }} />
         )}
-        {/* gradient overlay — fades to page bg at bottom */}
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(2,6,23,0.2) 0%, rgba(2,6,23,0.85) 100%)" }} />
+        {/* Dark overlay — heavier at top (behind nav) and bottom (into page bg) */}
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(2,6,23,0.55) 0%, rgba(2,6,23,0.1) 50%, rgba(2,6,23,0.92) 100%)" }} />
 
-        {/* Back button */}
+        {/* Back button — sits in the visible zone below the 104px nav area */}
         <button onClick={() => router.back()}
-          style={{ position: "absolute", top: 12, left: 12, display: "flex", alignItems: "center", gap: 6, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "6px 12px", color: "#f1f5f9", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+          style={{ position: "absolute", top: 116, left: 12, display: "flex", alignItems: "center", gap: 6, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "6px 12px", color: "#f1f5f9", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
           <ArrowLeftIcon style={{ width: 14, height: 14 }} />
           Back
         </button>
 
         {/* Share + Report */}
-        <div style={{ position: "absolute", top: 12, right: 12, display: "flex", gap: 8 }}>
+        <div style={{ position: "absolute", top: 116, right: 12, display: "flex", gap: 8 }}>
           <button onClick={handleShare}
             style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "6px 12px", color: "#f1f5f9", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
             <ShareIcon style={{ width: 13, height: 13 }} />
@@ -345,9 +345,9 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
       {/* ── PROFILE HEADER ── */}
       <div style={{ padding: "0 16px" }}>
 
-        {/* Logo — overlaps cover */}
-        <div style={{ marginTop: -44, marginBottom: 12 }}>
-          <div style={{ width: 88, height: 88, borderRadius: 20, overflow: "hidden", background: "#0f172a", border: "4px solid #020617", boxShadow: "0 8px 32px rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {/* Logo — overlaps cover bottom */}
+        <div style={{ marginTop: -50, marginBottom: 12 }}>
+          <div style={{ width: 96, height: 96, borderRadius: 22, overflow: "hidden", background: "#0f172a", border: "4px solid #020617", boxShadow: "0 8px 40px rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {org.logo_url && !logoError
               ? <img src={org.logo_url} alt={org.name} onError={() => setLogoError(true)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               : <BuildingOfficeIcon style={{ width: 36, height: 36, color: "#475569" }} />}
