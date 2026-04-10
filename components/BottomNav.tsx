@@ -7,7 +7,7 @@ const tabs = [
   { href: '/feed', icon: '🏠', label: 'Home' },
   { href: '/connections', icon: '🔗', label: 'Connect' },
   null, // center Create button
-  { href: '/collab', icon: '🤝', label: 'Collab' },
+  { href: '/gig-economy', icon: '💼', label: 'Earn' },
   { href: '/profile', icon: '👤', label: 'Profile' },
 ]
 

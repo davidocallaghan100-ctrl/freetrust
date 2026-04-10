@@ -285,7 +285,7 @@ function ManagementTab({ userId }: { userId: string }) {
     const next = gig.status === 'active' ? 'paused' : 'active'
     setToggling(gig.id)
     try {
-      await fetch(`/api/listings/${gig.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) })
+      await fetch(`/api/listings/${gig.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) })
       setGigs(prev => prev.map(g => g.id === gig.id ? { ...g, status: next } : g))
     } catch { /* silent */ } finally { setToggling(null) }
   }

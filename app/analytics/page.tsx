@@ -161,24 +161,33 @@ export default function AnalyticsDashboard() {
         const following = profile?.following_count ?? 0
         const trustBal  = profile?.trust_balance ?? 0
 
-        // ── Posts ────────────────────────────────────────────────────────
-        const { data: posts } = await supabase
-          .from('posts')
-          .select('id, title, content, type, view_count, like_count, comment_count, share_count, created_at')
-          .eq('user_id', uid)
+        // ── Articles (real table: articles, not posts) ───────────────────
+        const { data: articles_data } = await supabase
+          .from('articles')
+          .select('id, title, clap_count, comment_count, published_at, status, created_at')
+          .eq('author_id', uid)
           .eq('status', 'published')
-          .order('view_count', { ascending: false })
+          .order('clap_count', { ascending: false })
           .limit(50)
 
-        const allPosts = posts ?? []
+        const allPosts = (articles_data ?? []).map(a => ({
+          id: a.id as string,
+          title: (a.title ?? '') as string,
+          type: 'article',
+          view_count: 0,
+          like_count: (a.clap_count ?? 0) as number,
+          comment_count: (a.comment_count ?? 0) as number,
+          share_count: 0,
+          created_at: (a.published_at ?? a.created_at) as string,
+        }))
         const top5 = allPosts.slice(0, 5).map(p => ({
           id: p.id,
-          title: p.title ?? (p.content?.slice(0, 60) ?? ''),
-          type: p.type ?? 'post',
-          views: p.view_count ?? 0,
-          likes: p.like_count ?? 0,
-          comments: p.comment_count ?? 0,
-          shares: p.share_count ?? 0,
+          title: p.title,
+          type: p.type,
+          views: p.view_count,
+          likes: p.like_count,
+          comments: p.comment_count,
+          shares: p.share_count,
           created_at: p.created_at,
         }))
         setTopPosts(top5)
@@ -186,12 +195,12 @@ export default function AnalyticsDashboard() {
         const totalViews    = allPosts.reduce((s, p) => s + (p.view_count    ?? 0), 0)
         const totalLikes    = allPosts.reduce((s, p) => s + (p.like_count    ?? 0), 0)
         const totalComments = allPosts.reduce((s, p) => s + (p.comment_count ?? 0), 0)
-        const totalShares   = allPosts.reduce((s, p) => s + (p.share_count   ?? 0), 0)
-        const articles      = allPosts.filter(p => p.type === 'article').length
-        const videos        = allPosts.filter(p => p.type === 'video' || p.type === 'short').length
+        const totalShares   = 0
+        const articles      = allPosts.length
+        const videos        = 0
         setContentStats({ totalViews, totalLikes, totalComments, totalShares, articles, videos })
 
-        // Best posting times (day of week based on posts)
+        // Best posting times (day of week based on articles)
         const dayCounts: Record<string, number> = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 }
         const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
         allPosts.forEach(p => {
@@ -202,14 +211,14 @@ export default function AnalyticsDashboard() {
         })
         setBestTimes(Object.entries(dayCounts).map(([label, value]) => ({ label, value })))
 
-        // ── Listings (services + products) ──────────────────────────────
-        const [{ data: services }, { data: products }] = await Promise.all([
-          supabase.from('services').select('id, views, status').eq('seller_id', uid),
-          supabase.from('products').select('id, views, status').eq('seller_id', uid),
-        ])
-        const allListings = [...(services ?? []), ...(products ?? [])]
+        // ── Listings (correct table: listings with product_type filter) ──
+        const { data: listingsData } = await supabase
+          .from('listings')
+          .select('id, views, status')
+          .eq('seller_id', uid)
+        const allListings = listingsData ?? []
         const activeListings = allListings.filter(l => l.status === 'active').length
-        const listingViews   = allListings.reduce((s, l) => s + (l.views ?? 0), 0)
+        const listingViews   = allListings.reduce((s: number, l: { views?: number }) => s + (l.views ?? 0), 0)
 
         // ── Orders ──────────────────────────────────────────────────────
         const { data: orders } = await supabase
@@ -225,22 +234,22 @@ export default function AnalyticsDashboard() {
         const uniqueBuyers  = new Set<string>()
         const repeatBuyers  = new Set<string>()
         buyerIds.forEach(id => { if (uniqueBuyers.has(id)) { repeatBuyers.add(id) } else { uniqueBuyers.add(id) } })
-        const convRate = listingViews > 0 ? ((completedOrders.length / listingViews) * 100) : 0
+        // convRate available if needed: listingViews > 0 ? completedOrders.length / listingViews * 100 : 0
 
         setMarketStats({
           listingViews, orders: completedOrders.length, revenue: totalRevenue,
           avgOrder, repeatBuyers: repeatBuyers.size, listings: allListings.length,
         })
 
-        // ── Trust score this month ───────────────────────────────────────
+        // ── Trust score this month (correct table: trust_ledger) ────────
         const now = new Date()
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
         const { data: trustLedger } = await supabase
-          .from('trust_transactions')
+          .from('trust_ledger')
           .select('amount, created_at')
           .eq('user_id', uid)
           .gte('created_at', monthStart)
-        const trustEarnedMonth = (trustLedger ?? []).reduce((s, t) => s + (t.amount > 0 ? t.amount : 0), 0)
+        const trustEarnedMonth = (trustLedger ?? []).reduce((s: number, t: { amount: number }) => s + (t.amount > 0 ? t.amount : 0), 0)
 
         // Trust history: last 6 months
         const months: TrustPoint[] = []
@@ -265,17 +274,21 @@ export default function AnalyticsDashboard() {
 
         setCommunityStats({ profileVisits: totalViews, followers, following, connections: uniqueBuyers.size })
 
-        // ── Week profile views ────────────────────────────────────────────
-        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-        const { count: pvCount } = await supabase
-          .from('profile_views')
-          .select('id', { count: 'exact', head: true })
-          .eq('profile_id', uid)
-          .gte('viewed_at', weekAgo)
+        // ── Week profile views (graceful — table may not exist) ──────────
+        let pvCount: number | null = null
+        try {
+          const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+          const { count } = await supabase
+            .from('profile_views')
+            .select('id', { count: 'exact', head: true })
+            .eq('profile_id', uid)
+            .gte('viewed_at', weekAgo)
+          pvCount = count
+        } catch { /* table may not exist — ignore */ }
 
         setOverview({
           trustEarnedMonth,
-          profileViewsWeek: pvCount ?? totalViews,
+          profileViewsWeek: pvCount ?? 0,
           totalRevenue,
           activeListings,
         })

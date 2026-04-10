@@ -1,4 +1,7 @@
+'use client'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 const LISTINGS: Record<string, {
   name: string; tagline: string; category: string; pricing: string; logo: string;
@@ -17,6 +20,34 @@ interface Props {
 
 export default function ListingDetailPage({ params }: Props) {
   const listing = LISTINGS[params.id]
+  const router = useRouter()
+  const [msgLoading, setMsgLoading] = useState(false)
+  const [msgSent, setMsgSent] = useState(false)
+
+  const contactAuthor = async () => {
+    setMsgLoading(true)
+    try {
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: `Hi, I'm interested in your listing: ${listing?.name}`,
+        }),
+      })
+      if (res.status === 401) {
+        router.push('/login')
+        return
+      }
+      if (res.ok) {
+        setMsgSent(true)
+        setTimeout(() => router.push('/messages'), 800)
+      }
+    } catch {
+      // silent fail
+    } finally {
+      setMsgLoading(false)
+    }
+  }
 
   if (!listing) {
     return (
@@ -96,7 +127,9 @@ export default function ListingDetailPage({ params }: Props) {
         .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 13px; border: none; border-radius: 11px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; transition: opacity 0.2s, transform 0.15s; text-decoration: none; margin-bottom: 10px; }
         .btn:hover { opacity: 0.9; transform: translateY(-1px); }
         .btn-green { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+        .btn-blue { background: linear-gradient(135deg, #38bdf8, #818cf8); color: #fff; }
         .btn-outline { background: rgba(30,41,59,0.8); border: 1px solid rgba(100,116,139,0.3); color: #cbd5e1; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
         .trust-row { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.06); }
         .trust-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #64748b; }
       `}</style>
@@ -190,6 +223,14 @@ export default function ListingDetailPage({ params }: Props) {
             <Link href={listing.docs} target="_blank" className="btn btn-outline">
               📄 View documentation
             </Link>
+            <button
+              className="btn btn-blue"
+              onClick={contactAuthor}
+              disabled={msgLoading || msgSent}
+              style={{ marginTop: 2 }}
+            >
+              {msgSent ? '✅ Message sent!' : msgLoading ? '...' : '💬 Message author'}
+            </button>
 
             <div className="trust-row">
               <div className="trust-item">✅ Verified by FreeTrust</div>

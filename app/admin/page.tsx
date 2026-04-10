@@ -45,6 +45,28 @@ interface TopEarner {
   email?: string
 }
 
+interface AnalyticsData {
+  summary: {
+    totalMembers: number
+    activeListings: number
+    totalListingViews: number
+    totalTrustIssued: number
+    totalOrders: number
+    completedOrders: number
+    totalRevenue: number
+    totalCommunities: number
+    totalArticles: number
+    totalClaps: number
+    totalArticleComments: number
+  }
+  memberGrowth: Record<string, number>
+  roleCounts: Record<string, number>
+  trustByType: Record<string, number>
+  topListings: { id: string; title: string; views: number; status: string; product_type: string; price: number }[]
+  recentLedger: TrustLedgerRow[]
+  profiles: UserRow[]
+}
+
 // ── Mock fallback data ─────────────────────────────────────────────────────────
 const MOCK_STATS: StatsData = {
   totalMembers: 24187,
@@ -158,8 +180,10 @@ export default function AdminPage() {
   const [users, setUsers] = useState<UserRow[]>(MOCK_USERS)
   const [topEarners, setTopEarners] = useState<TopEarner[]>(MOCK_TOP_EARNERS)
   const [typeBreakdown, setTypeBreakdown] = useState<TrustTypeBreakdown[]>(MOCK_TYPE_BREAKDOWN)
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null)
+  const [analyticsLoading, setAnalyticsLoading] = useState(false)
   const [userSearch, setUserSearch] = useState('')
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'trust' | 'disputes' | 'fees'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'trust' | 'disputes' | 'fees' | 'growth'>('overview')
   const [confirmModal, setConfirmModal] = useState<{ userId: string; action: string; value?: string } | null>(null)
 
   useEffect(() => {
@@ -197,6 +221,14 @@ export default function AdminPage() {
         }
       } catch { /* use mock */ }
 
+      // Load growth analytics in background
+      setAnalyticsLoading(true)
+      fetch('/api/admin/analytics')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) setAnalyticsData(data) })
+        .catch(() => {})
+        .finally(() => setAnalyticsLoading(false))
+
       setLoading(false)
     }
     init()
@@ -227,6 +259,7 @@ export default function AdminPage() {
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
+    { id: 'growth', label: '📈 Sales & Growth' },
     { id: 'users', label: 'Users' },
     { id: 'trust', label: 'Trust Economy' },
     { id: 'disputes', label: 'Disputes' },
