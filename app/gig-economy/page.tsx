@@ -142,9 +142,17 @@ function AnalyticsTab({ userId }: { userId: string }) {
         const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString()
         const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
 
+        // Only fetch orders from the last 12 months to avoid pulling every
+        // historical row for analytics that only displays 6-month windows.
+        const twelveMonthsAgo = new Date(now.getFullYear() - 1, now.getMonth(), 1).toISOString()
+
         const [gigsRes, ordersRes] = await Promise.allSettled([
           sb.from('listings').select('id', { count: 'exact', head: true }).eq('seller_id', userId),
-          sb.from('orders').select('id, amount, status, created_at, title, listing_id').eq('seller_id', userId),
+          sb.from('orders')
+            .select('id, amount, status, created_at, title, listing_id')
+            .eq('seller_id', userId)
+            .gte('created_at', twelveMonthsAgo)
+            .limit(500),
         ])
 
         if (gigsRes.status === 'fulfilled') setGigCount(gigsRes.value.count ?? 0)
@@ -355,9 +363,9 @@ function PerformanceTab({ userId }: { userId: string }) {
           .select('id, listing_id, title, amount, currency, status, created_at, buyer:profiles!buyer_id(id, full_name, avatar_url)')
           .eq('seller_id', userId)
           .order('created_at', { ascending: false })
-          .limit(50)
+          .limit(100)
         setOrders((data as unknown as Order[]) ?? [])
-      } catch { /* mock */ } finally { setLoading(false) }
+      } catch { /* silent */ } finally { setLoading(false) }
     }
     load()
   }, [userId])
@@ -521,13 +529,6 @@ function DisputesTab({ userId }: { userId: string }) {
 
 // ── Payments Tab ──────────────────────────────────────────────────────────────
 
-const MOCK_TXS: WalletTx[] = [
-  { id: '1', amount: 85.00, type: 'credit', description: 'Payment for SEO & Content Strategy', created_at: new Date(Date.now() - 86400000).toISOString(), reference_id: null },
-  { id: '2', amount: 12.50, type: 'debit', description: 'Platform fee — Order #1234', created_at: new Date(Date.now() - 172800000).toISOString(), reference_id: null },
-  { id: '3', amount: 200.00, type: 'credit', description: 'Payment for B2B Sales Outreach System', created_at: new Date(Date.now() - 345600000).toISOString(), reference_id: null },
-  { id: '4', amount: 35.00, type: 'credit', description: 'Signup bonus', created_at: new Date(Date.now() - 432000000).toISOString(), reference_id: null },
-]
-
 function PaymentsTab({ userId }: { userId: string }) {
   const router = useRouter()
   const [wallet, setWallet] = useState<WalletData | null>(null)
@@ -554,14 +555,11 @@ function PaymentsTab({ userId }: { userId: string }) {
           setWallet({ balance: 0, currency: 'EUR', pending_balance: 0 })
         }
 
-        if (txRes.status === 'fulfilled' && txRes.value && txRes.value.length > 0) {
+        if (txRes.status === 'fulfilled' && txRes.value) {
           setTxs(txRes.value as WalletTx[])
-        } else {
-          setTxs(MOCK_TXS)
         }
       } catch {
         setWallet({ balance: 0, currency: 'EUR', pending_balance: 0 })
-        setTxs(MOCK_TXS)
       } finally { setLoading(false) }
     }
     load()
@@ -652,6 +650,51 @@ function PaymentsTab({ userId }: { userId: string }) {
   )
 }
 
+// ── Page-level skeleton shown while auth resolves ────────────────────────────
+
+function PageSkeleton() {
+  return (
+    <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: 'system-ui' }}>
+      <style>{`@keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }`}</style>
+      <div style={{ background: 'linear-gradient(135deg,rgba(56,189,248,0.08),rgba(129,140,248,0.05))', borderBottom: `1px solid ${C.border}`, padding: '1.5rem 1.25rem 0' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+            <Skeleton h={40} w={40} />
+            <div style={{ flex: 1 }}>
+              <Skeleton h={22} w="35%" />
+              <div style={{ marginTop: 6 }}><Skeleton h={13} w="50%" /></div>
+            </div>
+            <Skeleton h={36} w={110} />
+          </div>
+          <div style={{ display: 'flex', gap: 0 }}>
+            {TABS.map(t => <div key={t.id} style={{ padding: '0.85rem 1.1rem', flexShrink: 0 }}><Skeleton h={13} w={70} /></div>)}
+          </div>
+        </div>
+      </div>
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '1.5rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '1rem' }}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: '1rem' }}>
+              <Skeleton h={10} w="60%" />
+              <div style={{ marginTop: 10 }}><Skeleton h={28} w="80%" /></div>
+            </div>
+          ))}
+        </div>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '1.25rem' }}>
+          <Skeleton h={14} w="30%" />
+          <div style={{ marginTop: 16 }}><Skeleton h={80} /></div>
+        </div>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '1.25rem' }}>
+          <Skeleton h={14} w="25%" />
+          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} h={18} />)}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function GigEconomyPage() {
@@ -659,6 +702,9 @@ export default function GigEconomyPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('analytics')
+  // Track which tabs have been visited so they stay mounted (avoids re-fetching
+  // data when switching back to a previously loaded tab).
+  const [mountedTabs, setMountedTabs] = useState<Set<string>>(new Set(['analytics']))
 
   useEffect(() => {
     const sb = createClient()
@@ -669,14 +715,12 @@ export default function GigEconomyPage() {
     })
   }, [router])
 
-  if (authLoading) {
-    return (
-      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <style>{`@keyframes spin { to { transform: rotate(360deg) } } @keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }`}</style>
-        <div style={{ width: 40, height: 40, border: '3px solid rgba(56,189,248,0.2)', borderTopColor: C.accent, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-      </div>
-    )
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId)
+    setMountedTabs(prev => { const next = new Set(prev); next.add(tabId); return next })
   }
+
+  if (authLoading) return <PageSkeleton />
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: 'system-ui, sans-serif', paddingBottom: 80 }}>
@@ -706,7 +750,7 @@ export default function GigEconomyPage() {
               <button
                 key={tab.id}
                 className="ge-tab-btn"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 style={{ padding: '0.85rem 1.1rem', background: 'none', border: 'none', borderBottom: activeTab === tab.id ? `2px solid ${C.accent}` : '2px solid transparent', color: activeTab === tab.id ? C.accent : C.muted, fontWeight: activeTab === tab.id ? 700 : 500, fontSize: '0.82rem', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0, transition: 'color 0.15s', marginBottom: -1 }}
               >
                 {tab.label}
@@ -716,13 +760,17 @@ export default function GigEconomyPage() {
         </div>
       </div>
 
-      {/* Tab content */}
+      {/* Tab content — tabs stay mounted after first visit to avoid re-fetching */}
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '1.5rem 1.25rem' }}>
-        {userId && activeTab === 'analytics'   && <AnalyticsTab userId={userId} />}
-        {userId && activeTab === 'management'  && <ManagementTab userId={userId} />}
-        {userId && activeTab === 'performance' && <PerformanceTab userId={userId} />}
-        {userId && activeTab === 'disputes'    && <DisputesTab userId={userId} />}
-        {userId && activeTab === 'payments'    && <PaymentsTab userId={userId} />}
+        {userId && (
+          <>
+            <div style={{ display: activeTab === 'analytics'   ? 'block' : 'none' }}>{mountedTabs.has('analytics')   && <AnalyticsTab   userId={userId} />}</div>
+            <div style={{ display: activeTab === 'management'  ? 'block' : 'none' }}>{mountedTabs.has('management')  && <ManagementTab  userId={userId} />}</div>
+            <div style={{ display: activeTab === 'performance' ? 'block' : 'none' }}>{mountedTabs.has('performance') && <PerformanceTab userId={userId} />}</div>
+            <div style={{ display: activeTab === 'disputes'    ? 'block' : 'none' }}>{mountedTabs.has('disputes')    && <DisputesTab   userId={userId} />}</div>
+            <div style={{ display: activeTab === 'payments'    ? 'block' : 'none' }}>{mountedTabs.has('payments')    && <PaymentsTab   userId={userId} />}</div>
+          </>
+        )}
       </div>
     </div>
   )
