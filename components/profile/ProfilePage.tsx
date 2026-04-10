@@ -103,6 +103,9 @@ export default function ProfilePage() {
   const [bonusAwarded, setBonusAwarded] = useState(false)
   const [toast, setToast] = useState('')
   const [isOwnProfile, setIsOwnProfile] = useState(true)
+  const [isFollowing, setIsFollowing] = useState(false)
+  const [followLoading, setFollowLoading] = useState(false)
+  const [followerCount, setFollowerCount] = useState(0)
 
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
@@ -136,19 +139,31 @@ export default function ProfilePage() {
   const loadTrust = useCallback(async (userId?: string) => {
     try {
       if (userId) {
-        // Loading another user's trust balance directly from DB
+        // Another user's balance — read directly from trust_balances
         const { data } = await supabase
           .from('trust_balances')
           .select('balance')
           .eq('user_id', userId)
-          .single()
+          .maybeSingle()
         setTrustBalance(data?.balance ?? 0)
       } else {
         // Own trust balance via API
         const res = await fetch('/api/trust')
         if (res.ok) {
           const data = await res.json() as { balance?: number }
-          setTrustBalance(data.balance ?? 0)
+          const bal = data.balance ?? 0
+          setTrustBalance(bal)
+          // If balance is still 0, the signup bonus may not have been awarded yet
+          // (users who registered before the auth/callback fix). Claim it now.
+          if (bal === 0) {
+            try {
+              const bonusRes = await fetch('/api/auth/signup-bonus', { method: 'POST' })
+              if (bonusRes.ok) {
+                const bonusData = await bonusRes.json() as { balance?: number }
+                if ((bonusData.balance ?? 0) > 0) setTrustBalance(bonusData.balance!)
+              }
+            } catch { /* non-critical */ }
+          }
         }
       }
     } catch { /* silent */ }
@@ -328,7 +343,7 @@ export default function ProfilePage() {
         setUser(u)
 
         if (viewingId && (!u || viewingId !== u.id)) {
-          // Viewing someone else's profile — read-only
+          // Viewing someone else's profile
           setIsOwnProfile(false)
           await Promise.all([
             loadProfile(viewingId),
@@ -336,10 +351,35 @@ export default function ProfilePage() {
             loadActivity(viewingId),
             loadServices(viewingId),
           ])
+
+          // Get real follower count and check if current user follows them
+          const [countRes, followCheckRes] = await Promise.all([
+            supabase
+              .from('user_follows')
+              .select('*', { count: 'exact', head: true })
+              .eq('following_id', viewingId),
+            u
+              ? supabase
+                  .from('user_follows')
+                  .select('id')
+                  .eq('follower_id', u.id)
+                  .eq('following_id', viewingId)
+                  .maybeSingle()
+              : Promise.resolve({ data: null }),
+          ])
+          setFollowerCount(countRes.count ?? 0)
+          setIsFollowing(!!followCheckRes.data)
         } else if (u) {
           // Own profile
           setIsOwnProfile(true)
           await Promise.all([loadProfile(u.id), loadTrust(), loadActivity(u.id), loadServices(u.id)])
+
+          // Real follower count from user_follows
+          const { count } = await supabase
+            .from('user_follows')
+            .select('*', { count: 'exact', head: true })
+            .eq('following_id', u.id)
+          setFollowerCount(count ?? 0)
         }
       } catch (err) {
         console.error('init error:', err)
@@ -434,6 +474,42 @@ export default function ProfilePage() {
     } finally {
       setCoverUploading(false)
       if (coverInputRef.current) coverInputRef.current.value = ''
+    }
+  }
+
+  const handleFollow = async () => {
+    if (!user || followLoading || !viewingId) return
+    setFollowLoading(true)
+    try {
+      const res = await fetch('/api/connections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: viewingId }),
+      })
+      if (res.ok) {
+        setIsFollowing(true)
+        setFollowerCount(prev => prev + 1)
+      }
+    } catch { /* silent */ } finally {
+      setFollowLoading(false)
+    }
+  }
+
+  const handleUnfollow = async () => {
+    if (!user || followLoading || !viewingId) return
+    setFollowLoading(true)
+    try {
+      const res = await fetch('/api/connections', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: viewingId }),
+      })
+      if (res.ok) {
+        setIsFollowing(false)
+        setFollowerCount(prev => Math.max(0, prev - 1))
+      }
+    } catch { /* silent */ } finally {
+      setFollowLoading(false)
     }
   }
 
@@ -585,9 +661,31 @@ export default function ProfilePage() {
                 {editing ? 'Cancel' : '✏️ Edit Profile'}
               </button>
             ) : (
-              <Link href="/members" style={{ fontSize: '0.82rem', color: '#64748b', textDecoration: 'none', border: '1px solid rgba(100,116,139,0.25)', borderRadius: 8, padding: '0.45rem 1rem' }}>
-                ← Members
-              </Link>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                {user && (
+                  <button
+                    onClick={isFollowing ? handleUnfollow : handleFollow}
+                    disabled={followLoading}
+                    style={{
+                      background: isFollowing ? 'transparent' : 'linear-gradient(135deg,#38bdf8,#818cf8)',
+                      border: isFollowing ? '1px solid rgba(148,163,184,0.3)' : 'none',
+                      borderRadius: 8,
+                      padding: '0.45rem 1.1rem',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      color: isFollowing ? '#94a3b8' : '#0f172a',
+                      cursor: followLoading ? 'default' : 'pointer',
+                      opacity: followLoading ? 0.6 : 1,
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {followLoading ? '…' : isFollowing ? 'Unfollow' : '+ Follow'}
+                  </button>
+                )}
+                <Link href="/members" style={{ fontSize: '0.82rem', color: '#64748b', textDecoration: 'none', border: '1px solid rgba(100,116,139,0.25)', borderRadius: 8, padding: '0.45rem 1rem' }}>
+                  ← Members
+                </Link>
+              </div>
             )}
           </div>
 
@@ -606,7 +704,7 @@ export default function ProfilePage() {
               <span>🗓 Member since {new Date(profile?.created_at ?? user?.created_at ?? '').toLocaleDateString('en-IE', { month: 'long', year: 'numeric' })}</span>
             </div>
             <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem', color: '#94a3b8' }}>
-              <span><strong style={{ color: '#f1f5f9' }}>{profile?.follower_count ?? 0}</strong> followers</span>
+              <span><strong style={{ color: '#f1f5f9' }}>{followerCount}</strong> followers</span>
               <span><strong style={{ color: '#f1f5f9' }}>{profile?.following_count ?? 0}</strong> following</span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: `${trustLevel.color}18`, border: `1px solid ${trustLevel.color}40`, borderRadius: 999, padding: '0.15rem 0.65rem', fontSize: '0.78rem', fontWeight: 700, color: trustLevel.color }}>
                 {trustLevel.icon} {trustLevel.label}
