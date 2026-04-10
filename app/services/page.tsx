@@ -4,6 +4,32 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { ONLINE_CATEGORIES, OFFLINE_CATEGORIES, LOCATION_RADII, LOCATION_SCOPE } from '@/lib/service-categories'
 
+// ─── Delete confirmation modal ────────────────────────────────────────────────
+function DeleteModal({ title, onConfirm, onCancel, deleting }: {
+  title: string; onConfirm: () => void; onCancel: () => void; deleting: boolean
+}) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
+      <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: 14, padding: '1.5rem', maxWidth: 420, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem' }}>Delete service?</div>
+        <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
+          &ldquo;{title}&rdquo; will be permanently deleted and cannot be recovered.
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+          <button onClick={onCancel} disabled={deleting}
+            style={{ padding: '0.5rem 1rem', borderRadius: 8, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>
+            Cancel
+          </button>
+          <button onClick={onConfirm} disabled={deleting}
+            style={{ padding: '0.5rem 1rem', borderRadius: 8, border: 'none', background: '#ef4444', color: '#fff', cursor: deleting ? 'wait' : 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', fontWeight: 700 }}>
+            {deleting ? 'Deleting…' : 'Delete'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Service {
@@ -56,8 +82,9 @@ function getGrad(str: string): string {
 
 // ─── Service Card ─────────────────────────────────────────────────────────────
 
-function ServiceCard({ svc }: { svc: Service }) {
+function ServiceCard({ svc, isOwner, onDelete }: { svc: Service; isOwner?: boolean; onDelete?: (id: string | number, title: string) => void }) {
   return (
+    <div style={{ position: 'relative' }}>
     <Link href={`/services/${svc.id}`} style={{ textDecoration: 'none', display: 'block' }}>
       <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0', transition: 'border-color 0.15s', height: '100%', boxSizing: 'border-box' }}
         onMouseEnter={e => (e.currentTarget.style.borderColor = '#38bdf8')}
@@ -137,11 +164,20 @@ function ServiceCard({ svc }: { svc: Service }) {
             <span style={{ fontSize: '18px', fontWeight: 800, color: '#38bdf8' }}>{svc.currency}{svc.price.toLocaleString()}</span>
             <span style={{ fontSize: '11px', color: '#475569' }}> / project</span>
           </div>
-          <span style={{ background: '#38bdf8', borderRadius: '8px', padding: '7px 16px', fontSize: '12px', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', flexShrink: 0 }}>View</span>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <span style={{ background: '#38bdf8', borderRadius: '8px', padding: '7px 16px', fontSize: '12px', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', flexShrink: 0 }}>View</span>
+            {isOwner && onDelete && (
+              <button onClick={e => { e.preventDefault(); e.stopPropagation(); onDelete(svc.id, svc.title) }}
+                style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '7px 10px', fontSize: '12px', color: '#ef4444', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
+                🗑
+              </button>
+            )}
+          </div>
         </div>
         </div>
       </div>
     </Link>
+    </div>
   )
 }
 
@@ -160,6 +196,10 @@ export default function ServicesPage() {
   const [priceMin, setPriceMin]   = useState('')
   const [priceMax, setPriceMax]   = useState('')
   const locationPanelRef = useRef<HTMLDivElement>(null)
+  const [userId, setUserId]       = useState<string | null>(null)
+  const [isAdmin, setIsAdmin]     = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string | number; title: string } | null>(null)
+  const [deleting, setDeleting]   = useState(false)
 
   // Collapsible sidebar sections — persisted to localStorage
   const [onlineOpen, setOnlineOpen] = useState(true)
@@ -185,6 +225,36 @@ export default function ServicesPage() {
     const next = !offlineOpen
     setOfflineOpen(next)
     try { localStorage.setItem('ft_sidebar_state', JSON.stringify({ onlineOpen, offlineOpen: next })) } catch { /* ignore */ }
+  }
+
+  // Load current user
+  useEffect(() => {
+    const supabase = createClient();
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      setUserId(user.id)
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+      if (profile?.role === 'admin') setIsAdmin(true)
+    })()
+  }, [])
+
+  async function handleDelete(id: string | number, title: string) {
+    setDeleteTarget({ id, title })
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/listings/${deleteTarget.id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setServices(prev => prev.filter(s => String(s.id) !== String(deleteTarget.id)))
+        setDeleteTarget(null)
+      }
+    } finally {
+      setDeleting(false)
+    }
   }
 
   // Load real Supabase data
@@ -271,6 +341,14 @@ export default function ServicesPage() {
 
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif' }}>
+      {deleteTarget && (
+        <DeleteModal
+          title={deleteTarget.title}
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteTarget(null)}
+          deleting={deleting}
+        />
+      )}
       <style>{`
         .svc-layout { max-width: 1200px; margin: 0 auto; padding: 20px 16px 80px; display: grid; grid-template-columns: 240px 1fr; gap: 24px; align-items: start; }
         .svc-sidebar { position: sticky; top: 110px; }
@@ -484,7 +562,14 @@ export default function ServicesPage() {
             </div>
           ) : (
             <div className="svc-grid">
-              {filtered.map(svc => <ServiceCard key={svc.id} svc={svc} />)}
+              {filtered.map(svc => (
+                <ServiceCard
+                  key={svc.id}
+                  svc={svc}
+                  isOwner={isAdmin || (!!userId && svc.providerId === userId)}
+                  onDelete={handleDelete}
+                />
+              ))}
             </div>
           )}
         </div>

@@ -206,11 +206,31 @@ export default function ServiceDetailPage() {
   const [reviewsAvg, setReviewsAvg] = useState(0)
   const [reviewsLoading, setReviewsLoading] = useState(true)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
-    const sb = createClient()
-    sb.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id || null))
+    const sb = createClient();
+    (async () => {
+      const { data: { user } } = await sb.auth.getUser()
+      if (!user) return
+      setCurrentUserId(user.id)
+      const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).single()
+      if (profile?.role === 'admin') setIsAdmin(true)
+    })()
   }, [])
+
+  async function handleDelete() {
+    if (!id) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/listings/${id}`, { method: 'DELETE' })
+      if (res.ok) router.push('/services')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   useEffect(() => {
     if (!id) { setNotFound(true); setLoading(false); return }
@@ -295,8 +315,30 @@ export default function ServiceDetailPage() {
 
   const card: React.CSSProperties = { background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '20px' }
 
+  const isOwner = svc ? (isAdmin || currentUserId === svc.seller.id) : false
+
   return (
     <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', paddingTop: 64 }}>
+      {showDeleteModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
+          <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: 14, padding: '1.5rem', maxWidth: 420, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem' }}>Delete service?</div>
+            <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
+              &ldquo;{svc?.title}&rdquo; will be permanently deleted and cannot be recovered.
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowDeleteModal(false)} disabled={deleting}
+                style={{ padding: '0.5rem 1rem', borderRadius: 8, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>
+                Cancel
+              </button>
+              <button onClick={handleDelete} disabled={deleting}
+                style={{ padding: '0.5rem 1rem', borderRadius: 8, border: 'none', background: '#ef4444', color: '#fff', cursor: deleting ? 'wait' : 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', fontWeight: 700 }}>
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <style>{`
         .sd-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
         .sd-right { position: sticky; top: 112px; }
@@ -322,10 +364,16 @@ export default function ServiceDetailPage() {
           <span>·</span>
           <Link href="/services" style={{ color: '#64748b', textDecoration: 'none' }}>Services</Link>
           {catInfo && <><span>›</span><span style={{ color: '#94a3b8' }}>{catInfo.icon} {catInfo.label}</span></>}
-          {currentUserId && svc && currentUserId === svc.seller.id && (
-            <Link href={`/products/${id}/edit`} style={{ marginLeft: 'auto', background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.35)', color: '#8b5cf6', padding: '4px 12px', borderRadius: 999, fontSize: '12px', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-              ✏️ Edit listing
-            </Link>
+          {isOwner && (
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
+              <Link href={`/products/${id}/edit`} style={{ background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.35)', color: '#8b5cf6', padding: '4px 12px', borderRadius: 999, fontSize: '12px', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                ✏️ Edit
+              </Link>
+              <button onClick={() => setShowDeleteModal(true)}
+                style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', padding: '4px 12px', borderRadius: 999, fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                🗑 Delete
+              </button>
+            </div>
           )}
         </nav>
 

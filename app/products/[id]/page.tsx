@@ -126,6 +126,9 @@ export default function ProductDetailPage() {
   const [buyLoading, setBuyLoading] = useState(false)
   const [cartCount, setCartCount] = useState(0)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [msgLoading, setMsgLoading] = useState(false)
 
   const messageSeller = async (sellerId: string, listingTitle: string) => {
@@ -153,11 +156,28 @@ export default function ProductDetailPage() {
     return () => window.removeEventListener('ft-cart-updated', update)
   }, [])
 
-  // Get current user for edit permissions
+  // Get current user for edit/delete permissions
   useEffect(() => {
-    const sb = createClient()
-    sb.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id || null))
+    const sb = createClient();
+    (async () => {
+      const { data: { user } } = await sb.auth.getUser()
+      if (!user) return
+      setCurrentUserId(user.id)
+      const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).single()
+      if (profile?.role === 'admin') setIsAdmin(true)
+    })()
   }, [])
+
+  async function handleDelete() {
+    if (!id) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/listings/${id}`, { method: 'DELETE' })
+      if (res.ok) router.push('/products')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   // Fetch listing from Supabase
   useEffect(() => {
@@ -297,8 +317,30 @@ export default function ProductDetailPage() {
     router.push('/cart')
   }
 
+  const isOwner = isAdmin || currentUserId === listing?.seller_id
+
   return (
     <main className="ft-page-content" style={{ minHeight: '100vh', background: bg, color: text, fontFamily: 'system-ui, sans-serif', paddingBottom: 80 }}>
+      {showDeleteModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
+          <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: 14, padding: '1.5rem', maxWidth: 420, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem' }}>Delete product?</div>
+            <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
+              &ldquo;{listing?.title}&rdquo; will be permanently deleted and cannot be recovered.
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowDeleteModal(false)} disabled={deleting}
+                style={{ padding: '0.5rem 1rem', borderRadius: 8, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>
+                Cancel
+              </button>
+              <button onClick={handleDelete} disabled={deleting}
+                style={{ padding: '0.5rem 1rem', borderRadius: 8, border: 'none', background: '#ef4444', color: '#fff', cursor: deleting ? 'wait' : 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', fontWeight: 700 }}>
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <style>{`
         @media (max-width: 1024px) { .pd-grid { grid-template-columns: 1fr !important; } }
         @media (max-width: 768px)  { .pd-ctas { flex-direction: column !important; } .pd-ship { grid-template-columns: 1fr !important; } }
@@ -324,10 +366,16 @@ export default function ProductDetailPage() {
           <span style={{ color: subtle }}>/</span>
           <span style={{ color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 260 }}>{listing.title}</span>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-            {currentUserId === listing?.seller_id && (
-              <Link href={`/products/${id}/edit`} style={{ background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.35)', color: '#8b5cf6', padding: '0.3rem 0.85rem', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-                ✏️ Edit
-              </Link>
+            {isOwner && (
+              <>
+                <Link href={`/products/${id}/edit`} style={{ background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.35)', color: '#8b5cf6', padding: '0.3rem 0.85rem', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  ✏️ Edit
+                </Link>
+                <button onClick={() => setShowDeleteModal(true)}
+                  style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', padding: '0.3rem 0.85rem', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  🗑 Delete
+                </button>
+              </>
             )}
             {cartCount > 0 && (
               <Link href="/cart" style={{ background: accent, color: '#fff', padding: '0.3rem 0.85rem', borderRadius: 999, fontSize: '0.75rem', fontWeight: 800, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>

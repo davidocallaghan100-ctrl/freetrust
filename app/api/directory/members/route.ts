@@ -10,13 +10,14 @@ export async function GET() {
     // who haven't set a name yet will show as "Anonymous" on the card)
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, username, avatar_url, bio, location')
+      .select('id, full_name, avatar_url, bio, location, created_at')
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(1000)
 
     if (error) {
-      console.error('[GET /api/directory/members]', error)
-      return NextResponse.json({ members: [] })
+      console.error('[GET /api/directory/members] query error:', error.message)
+      return NextResponse.json({ members: [], error: error.message }, { status: 500 })
     }
 
     const ids = (data ?? []).map((p: { id: string }) => p.id)
@@ -43,13 +44,13 @@ export async function GET() {
     })
 
     const members = (data ?? []).map((p: {
-      id: string; full_name: string | null; username: string | null
+      id: string; full_name: string | null
       avatar_url: string | null; bio: string | null; location: string | null
     }) => ({
       id: p.id,
       type: 'individual' as const,
       full_name: p.full_name ?? null,
-      username: p.username ?? null,
+      username: null as string | null,
       avatar_url: p.avatar_url ?? null,
       bio: p.bio ?? null,
       location: p.location ?? null,

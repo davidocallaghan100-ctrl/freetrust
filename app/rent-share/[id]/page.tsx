@@ -62,7 +62,10 @@ export default function RentShareDetailPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [activeImage, setActiveImage] = useState(0)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   // Request form
   const [fromDate, setFromDate] = useState('')
@@ -73,11 +76,25 @@ export default function RentShareDetailPage() {
   const [requestSuccess, setRequestSuccess] = useState(false)
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setCurrentUserId(session?.user?.id ?? null)
-    })
+    const supabase = createClient();
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) return
+      setCurrentUserId(session.user.id)
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
+      if (profile?.role === 'admin') setIsAdmin(true)
+    })()
   }, [])
+
+  async function handleDelete() {
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/rent-share/${id}`, { method: 'DELETE' })
+      if (res.ok) router.push('/rent-share')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   useEffect(() => {
     if (!id) return
@@ -142,11 +159,31 @@ export default function RentShareDetailPage() {
 
   const meta = catMeta(listing.category)
   const hasImages = listing.images?.length > 0
-  const isOwner = currentUserId === listing.owner?.id
+  const isOwner = isAdmin || currentUserId === listing.owner?.id
   const today = new Date().toISOString().slice(0, 10)
 
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64 }}>
+      {showDeleteModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
+          <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: 14, padding: '1.5rem', maxWidth: 420, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem' }}>Delete listing?</div>
+            <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
+              &ldquo;{listing.title}&rdquo; will be permanently deleted and cannot be recovered.
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowDeleteModal(false)} disabled={deleting}
+                style={{ padding: '0.5rem 1rem', borderRadius: 8, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>
+                Cancel
+              </button>
+              <button onClick={handleDelete} disabled={deleting}
+                style={{ padding: '0.5rem 1rem', borderRadius: 8, border: 'none', background: '#ef4444', color: '#fff', cursor: deleting ? 'wait' : 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', fontWeight: 700 }}>
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         .rs-detail-grid { display: grid; grid-template-columns: 1fr 340px; gap: 2rem; align-items: start; }
@@ -371,17 +408,30 @@ export default function RentShareDetailPage() {
             {isOwner && (
               <div style={{ background: '#1e293b', border: '1px solid rgba(45,212,191,0.2)', borderRadius: 14, padding: '1rem 1.25rem' }}>
                 <div style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.6rem' }}>Your listing</div>
-                <Link
-                  href={`/rent-share/${id}/edit`}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    background: 'linear-gradient(135deg,#2dd4bf,#0891b2)', color: '#0f172a',
-                    borderRadius: 10, padding: '10px 0', fontSize: 14, fontWeight: 700,
-                    textDecoration: 'none', width: '100%',
-                  }}
-                >
-                  ✏️ Edit Listing
-                </Link>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <Link
+                    href={`/rent-share/${id}/edit`}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      background: 'linear-gradient(135deg,#2dd4bf,#0891b2)', color: '#0f172a',
+                      borderRadius: 10, padding: '10px 0', fontSize: 14, fontWeight: 700,
+                      textDecoration: 'none', width: '100%',
+                    }}
+                  >
+                    ✏️ Edit Listing
+                  </Link>
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                      color: '#ef4444', borderRadius: 10, padding: '10px 0', fontSize: 14, fontWeight: 700,
+                      cursor: 'pointer', fontFamily: 'inherit', width: '100%',
+                    }}
+                  >
+                    🗑 Delete Listing
+                  </button>
+                </div>
               </div>
             )}
           </div>

@@ -5,6 +5,31 @@ import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useCurrency, type CurrencyCode } from '@/context/CurrencyContext'
 
+function DeleteModal({ title, onConfirm, onCancel, deleting }: {
+  title: string; onConfirm: () => void; onCancel: () => void; deleting: boolean
+}) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
+      <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: 14, padding: '1.5rem', maxWidth: 420, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem' }}>Delete product?</div>
+        <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
+          &ldquo;{title}&rdquo; will be permanently deleted and cannot be recovered.
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+          <button onClick={onCancel} disabled={deleting}
+            style={{ padding: '0.5rem 1rem', borderRadius: 8, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>
+            Cancel
+          </button>
+          <button onClick={onConfirm} disabled={deleting}
+            style={{ padding: '0.5rem 1rem', borderRadius: 8, border: 'none', background: '#ef4444', color: '#fff', cursor: deleting ? 'wait' : 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', fontWeight: 700 }}>
+            {deleting ? 'Deleting…' : 'Delete'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Product {
   id: string
@@ -73,10 +98,12 @@ function Stars({ rating }: { rating: number }) {
 }
 
 // ─── Product card ─────────────────────────────────────────────────────────────
-function ProductCard({ p, wishlist, onWishlist }: {
+function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete }: {
   p: Product
   wishlist: Set<string>
   onWishlist: (id: string) => void
+  isOwner?: boolean
+  onDelete?: (id: string, title: string) => void
 }) {
   const { format } = useCurrency()
   const catLabel = ALL_CATEGORIES.find(c => c.id === p.category)?.label ?? p.category
@@ -173,6 +200,12 @@ function ProductCard({ p, wishlist, onWishlist }: {
               onClick={e => { e.stopPropagation(); if (navigator.share) { navigator.share({ title: p.title, url: `${window.location.origin}/products/${p.id}` }) } else { navigator.clipboard.writeText(`${window.location.origin}/products/${p.id}`) } }}
               style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.45rem 0.5rem', fontSize: '0.75rem', color: '#38bdf8', cursor: 'pointer', minHeight: 36 }}
               title="Share">↗</button>
+            {isOwner && onDelete && (
+              <button
+                onClick={e => { e.preventDefault(); e.stopPropagation(); onDelete(p.id, p.title) }}
+                style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '0.45rem 0.5rem', fontSize: '0.75rem', color: '#ef4444', cursor: 'pointer', minHeight: 36 }}
+                title="Delete">🗑</button>
+            )}
           </div>
         </div>
       </div>
@@ -195,6 +228,39 @@ function ProductsInner() {
   const [wishlist, setWishlist] = useState<Set<string>>(new Set())
   const [dbProducts, setDbProducts] = useState<Product[] | null>(null)
   const [loading, setLoading] = useState(true)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  useEffect(() => {
+    const supabase = createClient();
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      setUserId(user.id)
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+      if (profile?.role === 'admin') setIsAdmin(true)
+    })()
+  }, [])
+
+  async function handleDelete(id: string, title: string) {
+    setDeleteTarget({ id, title })
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/listings/${deleteTarget.id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setDbProducts(prev => (prev ?? []).filter(p => p.id !== deleteTarget.id))
+        setDeleteTarget(null)
+      }
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   useEffect(() => {
     const supabase = createClient()
@@ -285,6 +351,14 @@ function ProductsInner() {
 
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
+      {deleteTarget && (
+        <DeleteModal
+          title={deleteTarget.title}
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteTarget(null)}
+          deleting={deleting}
+        />
+      )}
       <style>{`
         .prod-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1.1rem; }
         .prod-filter-row { display: flex; gap: 0.5rem; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
@@ -374,7 +448,14 @@ function ProductsInner() {
         ) : (
           <div className="prod-grid">
             {filtered.map(p => (
-              <ProductCard key={p.id} p={p} wishlist={wishlist} onWishlist={toggleWishlist} />
+              <ProductCard
+                key={p.id}
+                p={p}
+                wishlist={wishlist}
+                onWishlist={toggleWishlist}
+                isOwner={isAdmin || (!!userId && p.seller_id === userId)}
+                onDelete={handleDelete}
+              />
             ))}
           </div>
         )}

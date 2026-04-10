@@ -24,8 +24,8 @@ export async function GET(req: NextRequest) {
     // Parallel queries across all tables
     const [membersRes, servicesRes, productsRes, eventsRes, articlesRes, orgsRes] = await Promise.allSettled([
       (() => {
-        let qb = supabase.from('profiles').select('id, full_name, username, location').limit(browseMode ? 12 : perType)
-        if (q) qb = qb.or(`full_name.ilike.%${q}%,username.ilike.%${q}%`)
+        let qb = supabase.from('profiles').select('id, full_name, location').limit(browseMode ? 12 : perType)
+        if (q) qb = qb.ilike('full_name', `%${q}%`)
         return qb
       })(),
 
@@ -68,8 +68,8 @@ export async function GET(req: NextRequest) {
         hits.push({
           id: m.id,
           type: 'member',
-          title: m.full_name ?? m.username ?? 'Member',
-          subtitle: [m.username ? `@${m.username}` : null, m.location].filter(Boolean).join(' · ') || undefined,
+          title: m.full_name ?? 'Member',
+          subtitle: m.location || undefined,
           url: `/profile?id=${m.id}`,
         })
       }

@@ -23,7 +23,7 @@ export async function GET(
 
     const { data: members, error } = await supabase
       .from('community_members')
-      .select('id, user_id, role, tier, joined_at, profile:profiles!user_id(full_name, avatar_url, username)')
+      .select('id, user_id, role, tier, joined_at, profile:profiles!user_id(full_name, avatar_url)')
       .eq('community_id', community.id)
       .order('joined_at', { ascending: true })
       .limit(50)

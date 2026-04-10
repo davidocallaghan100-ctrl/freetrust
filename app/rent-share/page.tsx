@@ -56,7 +56,32 @@ function ownerInitials(name: string | null) {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 }
 
-function ListingCard({ listing, onClick, isOwner }: { listing: Listing; onClick: () => void; isOwner: boolean }) {
+function DeleteModal({ title, onConfirm, onCancel, deleting }: {
+  title: string; onConfirm: () => void; onCancel: () => void; deleting: boolean
+}) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
+      <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: 14, padding: '1.5rem', maxWidth: 420, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem' }}>Delete listing?</div>
+        <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
+          &ldquo;{title}&rdquo; will be permanently deleted and cannot be recovered.
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+          <button onClick={onCancel} disabled={deleting}
+            style={{ padding: '0.5rem 1rem', borderRadius: 8, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>
+            Cancel
+          </button>
+          <button onClick={onConfirm} disabled={deleting}
+            style={{ padding: '0.5rem 1rem', borderRadius: 8, border: 'none', background: '#ef4444', color: '#fff', cursor: deleting ? 'wait' : 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', fontWeight: 700 }}>
+            {deleting ? 'Deleting…' : 'Delete'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ListingCard({ listing, onClick, isOwner, onDelete }: { listing: Listing; onClick: () => void; isOwner: boolean; onDelete: (id: string, title: string) => void }) {
   const meta = catMeta(listing.category)
   const hasImage = listing.images?.length > 0
 
@@ -122,12 +147,19 @@ function ListingCard({ listing, onClick, isOwner }: { listing: Listing; onClick:
             {formatPrice(listing.price_per_day, listing.price_per_week)}
           </span>
           {isOwner ? (
-            <Link
-              href={`/rent-share/${listing.id}/edit`}
-              onClick={e => e.stopPropagation()}
-              style={{ fontSize: '0.72rem', fontWeight: 700, color: '#2dd4bf', background: 'rgba(45,212,191,0.1)', border: '1px solid rgba(45,212,191,0.25)', borderRadius: 6, padding: '2px 8px', textDecoration: 'none' }}>
-              ✏️ Edit
-            </Link>
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+              <Link
+                href={`/rent-share/${listing.id}/edit`}
+                onClick={e => e.stopPropagation()}
+                style={{ fontSize: '0.72rem', fontWeight: 700, color: '#2dd4bf', background: 'rgba(45,212,191,0.1)', border: '1px solid rgba(45,212,191,0.25)', borderRadius: 6, padding: '2px 8px', textDecoration: 'none' }}>
+                ✏️ Edit
+              </Link>
+              <button
+                onClick={e => { e.stopPropagation(); onDelete(listing.id, listing.title) }}
+                style={{ fontSize: '0.72rem', fontWeight: 700, color: '#ef4444', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 6, padding: '2px 8px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                🗑
+              </button>
+            </div>
           ) : (
             <span style={{ fontSize: '0.7rem', color: '#475569' }}>{daysAgo(listing.created_at)}</span>
           )}
@@ -147,14 +179,39 @@ export default function RentSharePage() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [category, setCategory] = useState<Category>('All')
   const [userId, setUserId] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   // Auth check
   useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUserId(session?.user?.id ?? null)
-    })
+    const supabase = createClient();
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) return
+      setUserId(session.user.id)
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
+      if (profile?.role === 'admin') setIsAdmin(true)
+    })()
   }, [])
+
+  async function handleDelete(id: string, title: string) {
+    setDeleteTarget({ id, title })
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/rent-share/${deleteTarget.id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setListings(prev => prev.filter(l => l.id !== deleteTarget.id))
+        setDeleteTarget(null)
+      }
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   // Debounce search
   useEffect(() => {
@@ -204,6 +261,14 @@ export default function RentSharePage() {
 
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64 }}>
+      {deleteTarget && (
+        <DeleteModal
+          title={deleteTarget.title}
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteTarget(null)}
+          deleting={deleting}
+        />
+      )}
       <style>{`
         .rs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
         .rs-card { background: #1e293b; border: 1px solid rgba(56,189,248,0.08); border-radius: 12px; display: flex; flex-direction: column; cursor: pointer; transition: border-color 0.15s, transform 0.15s; overflow: hidden; }
@@ -320,7 +385,13 @@ export default function RentSharePage() {
         ) : (
           <div className="rs-grid">
             {listings.map(l => (
-              <ListingCard key={l.id} listing={l} onClick={() => handleListClick(l.id)} isOwner={l.owner?.id === userId} />
+              <ListingCard
+                key={l.id}
+                listing={l}
+                onClick={() => handleListClick(l.id)}
+                isOwner={isAdmin || l.owner?.id === userId}
+                onDelete={handleDelete}
+              />
             ))}
           </div>
         )}
