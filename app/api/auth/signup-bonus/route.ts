@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 // POST /api/auth/signup-bonus — issue ₮25 welcome bonus (idempotent)
+// Idempotency is based on trust_balances existence, NOT trust_ledger,
+// because trust_ledger may not exist in the live DB yet.
 export async function POST() {
   try {
     const supabase = await createClient()
@@ -12,31 +14,23 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if already issued (idempotent)
-    const { data: existing } = await supabase
-      .from('trust_ledger')
-      .select('id')
+    // Check if a balance row already exists — if so, bonus was already issued
+    const { data: existingBalance } = await supabase
+      .from('trust_balances')
+      .select('balance, lifetime')
       .eq('user_id', user.id)
-      .eq('type', 'signup_bonus')
       .maybeSingle()
 
-    if (existing) {
-      // Already issued — return current balance
-      const { data: balanceData } = await supabase
-        .from('trust_balances')
-        .select('balance, lifetime')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
+    if (existingBalance) {
       return NextResponse.json({
         issued: false,
-        balance: balanceData?.balance ?? 0,
-        lifetime: balanceData?.lifetime ?? 0,
+        balance: existingBalance.balance ?? 0,
+        lifetime: existingBalance.lifetime ?? 0,
         message: 'Signup bonus already issued',
       })
     }
 
-    // Issue the bonus
+    // Try the RPC first — it handles ledger + balance atomically
     const { error: rpcError } = await supabase.rpc('issue_trust', {
       p_user_id: user.id,
       p_amount: 25,
@@ -46,12 +40,28 @@ export async function POST() {
     })
 
     if (rpcError) {
-      console.error('[POST /api/auth/signup-bonus] RPC error:', rpcError)
-      // Gracefully degrade — don't fail signup if trust system isn't set up yet
-      return NextResponse.json({ issued: false, balance: 0, lifetime: 0, message: 'Trust system not yet configured' })
+      // RPC not available — write directly to trust_balances (source of truth)
+      const { error: insertErr } = await supabase
+        .from('trust_balances')
+        .insert({ user_id: user.id, balance: 25, lifetime: 25 })
+
+      if (insertErr) {
+        console.error('[POST /api/auth/signup-bonus] direct insert error:', insertErr)
+        return NextResponse.json({ error: 'Could not award bonus', issued: false, balance: 0 }, { status: 500 })
+      }
+
+      // Best-effort ledger entry — table may not exist yet, that's OK
+      await supabase.from('trust_ledger').insert({
+        user_id: user.id,
+        amount: 25,
+        type: 'signup_bonus',
+        description: 'Welcome to FreeTrust! Here are your first ₮25 Trust tokens.',
+      })
+
+      return NextResponse.json({ issued: true, balance: 25, lifetime: 25, message: '₮25 Trust awarded!' })
     }
 
-    // Get updated balance
+    // RPC succeeded — read the written balance back
     const { data: balanceData } = await supabase
       .from('trust_balances')
       .select('balance, lifetime')
