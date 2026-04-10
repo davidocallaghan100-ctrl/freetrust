@@ -22,6 +22,7 @@ const NAV_SECTIONS = [
       { href: '/services', label: 'Services', icon: '🎯' },
       { href: '/products', label: 'Products', icon: '📦' },
       { href: '/organisations', label: 'Organisations', icon: '🏢' },
+      { href: '/rent-share', label: 'Rent & Share', icon: '♻️' },
     ],
   },
   {
