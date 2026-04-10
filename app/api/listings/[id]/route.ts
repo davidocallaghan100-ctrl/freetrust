@@ -81,12 +81,14 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { error } = await supabase
-      .from('listings')
-      .delete()
-      .eq('id', params.id)
-      .eq('seller_id', user.id)
+    // Check if admin — admins can delete any listing
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    const isAdmin = profile?.role === 'admin'
 
+    let query = supabase.from('listings').delete().eq('id', params.id)
+    if (!isAdmin) query = query.eq('seller_id', user.id)
+
+    const { error } = await query
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }

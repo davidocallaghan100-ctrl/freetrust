@@ -183,8 +183,19 @@ export default function AdminPage() {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null)
   const [analyticsLoading, setAnalyticsLoading] = useState(false)
   const [userSearch, setUserSearch] = useState('')
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'trust' | 'disputes' | 'fees' | 'growth'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'trust' | 'disputes' | 'fees' | 'growth' | 'content'>('overview')
   const [confirmModal, setConfirmModal] = useState<{ userId: string; action: string; value?: string } | null>(null)
+
+  // Content management state
+  type ContentListing = { id: string; title: string; description: string | null; price?: number | null; price_per_day?: number | null; price_per_week?: number | null; status: string; product_type?: string; category?: string; images: string[] | null; created_at: string; seller_id?: string; user_id?: string; profiles?: { full_name: string | null; email: string | null } | null }
+  const [contentListings, setContentListings] = useState<ContentListing[]>([])
+  const [contentServices, setContentServices] = useState<ContentListing[]>([])
+  const [contentRentShare, setContentRentShare] = useState<ContentListing[]>([])
+  const [contentLoading, setContentLoading] = useState(false)
+  const [contentSearch, setContentSearch] = useState('')
+  const [contentSubTab, setContentSubTab] = useState<'products' | 'services' | 'rent-share'>('products')
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; type: 'listing' | 'rent-share'; title: string } | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     const init = async () => {
@@ -244,6 +255,14 @@ export default function AdminPage() {
 
   if (!authorized) return null
 
+  // Load content when tab becomes active
+  React.useEffect(() => {
+    if (activeTab === 'content' && contentListings.length === 0 && contentServices.length === 0) {
+      loadContent()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab])
+
   const filteredUsers = users.filter(u =>
     !userSearch || (u.full_name?.toLowerCase().includes(userSearch.toLowerCase()) || u.email.toLowerCase().includes(userSearch.toLowerCase()))
   )
@@ -262,9 +281,45 @@ export default function AdminPage() {
     { id: 'growth', label: '📈 Sales & Growth' },
     { id: 'users', label: 'Users' },
     { id: 'trust', label: 'Trust Economy' },
+    { id: 'content', label: '🗂️ Content' },
     { id: 'disputes', label: 'Disputes' },
     { id: 'fees', label: 'Fees & Reports' },
   ]
+
+  async function loadContent(search = '') {
+    setContentLoading(true)
+    try {
+      const res = await fetch(`/api/admin/content?search=${encodeURIComponent(search)}`)
+      if (res.ok) {
+        const data = await res.json() as { listings: ContentListing[]; services: ContentListing[]; rentShare: ContentListing[] }
+        setContentListings(data.listings ?? [])
+        setContentServices(data.services ?? [])
+        setContentRentShare(data.rentShare ?? [])
+      }
+    } catch { /* silent */ }
+    finally { setContentLoading(false) }
+  }
+
+  async function handleDeleteContent() {
+    if (!deleteConfirm || deleting) return
+    setDeleting(true)
+    try {
+      const url = deleteConfirm.type === 'rent-share'
+        ? `/api/rent-share/${deleteConfirm.id}`
+        : `/api/listings/${deleteConfirm.id}`
+      const res = await fetch(url, { method: 'DELETE' })
+      if (res.ok) {
+        if (deleteConfirm.type === 'rent-share') {
+          setContentRentShare(prev => prev.filter(l => l.id !== deleteConfirm.id))
+        } else if (contentSubTab === 'services') {
+          setContentServices(prev => prev.filter(l => l.id !== deleteConfirm.id))
+        } else {
+          setContentListings(prev => prev.filter(l => l.id !== deleteConfirm.id))
+        }
+      }
+    } catch { /* silent */ }
+    finally { setDeleting(false); setDeleteConfirm(null) }
+  }
 
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
@@ -647,6 +702,126 @@ export default function AdminPage() {
           </>
         )}
 
+        {/* ── Content Tab ── */}
+        {activeTab === 'content' && (
+          <>
+            {/* Sub-tabs + search + refresh */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                {(['products', 'services', 'rent-share'] as const).map(t => (
+                  <button key={t} className={`admin-tab${contentSubTab === t ? ' active' : ''}`} onClick={() => setContentSubTab(t)}>
+                    {t === 'products' ? `📦 Products (${contentListings.length})` : t === 'services' ? `🛠️ Services (${contentServices.length})` : `♻️ Rent & Share (${contentRentShare.length})`}
+                  </button>
+                ))}
+              </div>
+              <input
+                value={contentSearch}
+                onChange={e => setContentSearch(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && loadContent(contentSearch)}
+                placeholder="Search by title…"
+                style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 7, padding: '0.4rem 0.75rem', color: '#f1f5f9', fontSize: '0.85rem', outline: 'none', fontFamily: 'inherit', flex: 1, maxWidth: 280 }}
+              />
+              <button
+                onClick={() => loadContent(contentSearch)}
+                style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 7, padding: '0.4rem 0.85rem', fontSize: '0.82rem', color: '#38bdf8', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+                {contentLoading ? 'Loading…' : '↻ Refresh'}
+              </button>
+            </div>
+
+            {contentLoading ? (
+              <div style={{ textAlign: 'center', padding: '4rem', color: '#64748b' }}>Loading content…</div>
+            ) : (
+              <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: 48 }}></th>
+                        <th>Title</th>
+                        <th>Owner</th>
+                        <th>{contentSubTab === 'rent-share' ? 'Category' : 'Type'}</th>
+                        <th>Price</th>
+                        <th>Status</th>
+                        <th>Listed</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(contentSubTab === 'products' ? contentListings : contentSubTab === 'services' ? contentServices : contentRentShare).map(item => {
+                        const thumb = item.images?.[0]
+                        const price = contentSubTab === 'rent-share'
+                          ? (item.price_per_day != null ? `€${item.price_per_day}/day` : item.price_per_week != null ? `€${item.price_per_week}/wk` : 'Free')
+                          : item.price != null ? `€${item.price}` : '—'
+                        const owner = (item.profiles as { full_name: string | null; email: string | null } | null)
+                        return (
+                          <tr key={item.id}>
+                            <td style={{ padding: '0.5rem 0.75rem' }}>
+                              {thumb ? (
+                                <img src={thumb} alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover' }} />
+                              ) : (
+                                <div style={{ width: 40, height: 40, borderRadius: 6, background: 'rgba(56,189,248,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
+                                  {contentSubTab === 'services' ? '🛠️' : contentSubTab === 'rent-share' ? '♻️' : '📦'}
+                                </div>
+                              )}
+                            </td>
+                            <td>
+                              <div style={{ fontWeight: 600, color: '#f1f5f9', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
+                              <div style={{ fontSize: '0.7rem', color: '#475569', fontFamily: 'monospace', marginTop: 2 }}>{item.id.slice(0, 8)}…</div>
+                            </td>
+                            <td>
+                              <div style={{ fontSize: '0.82rem', color: '#cbd5e1' }}>{owner?.full_name ?? '—'}</div>
+                              <div style={{ fontSize: '0.7rem', color: '#475569' }}>{owner?.email ?? ''}</div>
+                            </td>
+                            <td style={{ color: '#94a3b8', fontSize: '0.8rem' }}>
+                              {contentSubTab === 'rent-share' ? item.category : item.product_type}
+                            </td>
+                            <td style={{ color: '#38bdf8', fontWeight: 700, fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{price}</td>
+                            <td>
+                              <span style={{
+                                borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.7rem', fontWeight: 700, border: '1px solid transparent',
+                                background: item.status === 'active' ? 'rgba(52,211,153,0.1)' : 'rgba(148,163,184,0.1)',
+                                color: item.status === 'active' ? '#34d399' : '#94a3b8',
+                                borderColor: item.status === 'active' ? 'rgba(52,211,153,0.3)' : 'rgba(148,163,184,0.2)',
+                              }}>
+                                {item.status}
+                              </span>
+                            </td>
+                            <td style={{ color: '#475569', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                              {new Date(item.created_at).toLocaleDateString('en-IE')}
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                <a
+                                  href={contentSubTab === 'rent-share' ? `/rent-share/${item.id}` : `/listings/${item.id}`}
+                                  target="_blank" rel="noreferrer"
+                                  style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.75rem', color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>
+                                  View
+                                </a>
+                                <button
+                                  onClick={() => setDeleteConfirm({ id: item.id, type: contentSubTab === 'rent-share' ? 'rent-share' : 'listing', title: item.title })}
+                                  style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.75rem', color: '#f87171', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                      {(contentSubTab === 'products' ? contentListings : contentSubTab === 'services' ? contentServices : contentRentShare).length === 0 && (
+                        <tr>
+                          <td colSpan={8} style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                            No {contentSubTab} found
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
         {/* ── Disputes Tab ── */}
         {activeTab === 'disputes' && (
           <Section title="Dispute Management">
@@ -731,6 +906,39 @@ export default function AdminPage() {
           </>
         )}
       </div>
+
+      {/* Delete content modal */}
+      {deleteConfirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div style={{ background: '#1e293b', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 14, padding: '1.75rem', maxWidth: 420, width: '100%' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🗑️</div>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem', color: '#f1f5f9' }}>Delete listing?</h3>
+            <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.5rem', lineHeight: 1.5 }}>
+              You are about to permanently delete:
+            </p>
+            <div style={{ background: '#0f172a', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 8, padding: '0.65rem 1rem', marginBottom: '1.25rem', fontSize: '0.9rem', fontWeight: 600, color: '#f87171' }}>
+              &ldquo;{deleteConfirm.title}&rdquo;
+            </div>
+            <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '1.25rem' }}>
+              This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                disabled={deleting}
+                style={{ background: 'transparent', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 7, padding: '0.55rem 1.1rem', fontSize: '0.85rem', color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteContent}
+                disabled={deleting}
+                style={{ background: deleting ? '#374151' : '#ef4444', border: 'none', borderRadius: 7, padding: '0.55rem 1.25rem', fontSize: '0.85rem', fontWeight: 700, color: '#fff', cursor: deleting ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                {deleting ? 'Deleting…' : 'Delete listing'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirm modal */}
       {confirmModal && (
