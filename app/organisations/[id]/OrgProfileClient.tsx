@@ -312,13 +312,16 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
     <div style={{ minHeight: "100vh", background: "#020617" }}>
 
       {/* ── COVER ── pulls up to sit flush against the fixed nav bar ── */}
-      <div style={{ position: "relative", height: 260, marginTop: -104, background: "linear-gradient(135deg, #0d0221 0%, #1e1b4b 40%, #1a1040 100%)", overflow: "hidden" }}>
-        {org.cover_url && !coverError && (
-          <img src={org.cover_url} alt="cover" onError={() => setCoverError(true)}
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }} />
-        )}
-        {/* Dark overlay — heavier at top (behind nav) and bottom (into page bg) */}
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(2,6,23,0.55) 0%, rgba(2,6,23,0.1) 50%, rgba(2,6,23,0.92) 100%)" }} />
+      <div style={{ position: "relative", height: 260, marginTop: -104, background: "linear-gradient(135deg, #0d0221 0%, #1e1b4b 40%, #1a1040 100%)" }}>
+        {/* Inner clip wrapper — contains the image and overlay, not the logo */}
+        <div style={{ position: "absolute", inset: 0, overflow: "hidden", borderRadius: 0 }}>
+          {org.cover_url && !coverError && (
+            <img src={org.cover_url} alt="cover" onError={() => setCoverError(true)}
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }} />
+          )}
+          {/* Dark overlay */}
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(2,6,23,0.55) 0%, rgba(2,6,23,0.1) 50%, rgba(2,6,23,0.92) 100%)" }} />
+        </div>
 
         {/* Back button — sits in the visible zone below the 104px nav area */}
         <button onClick={() => router.back()}
@@ -345,8 +348,8 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
       {/* ── PROFILE HEADER ── */}
       <div style={{ padding: "0 16px" }}>
 
-        {/* Logo — overlaps cover bottom */}
-        <div style={{ marginTop: -50, marginBottom: 12 }}>
+        {/* Logo — overlaps cover bottom, z-index ensures it sits above the cover */}
+        <div style={{ marginTop: -50, marginBottom: 12, position: "relative", zIndex: 10 }}>
           <div style={{ width: 96, height: 96, borderRadius: 22, overflow: "hidden", background: "#0f172a", border: "4px solid #020617", boxShadow: "0 8px 40px rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {org.logo_url && !logoError
               ? <img src={org.logo_url} alt={org.name} onError={() => setLogoError(true)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
