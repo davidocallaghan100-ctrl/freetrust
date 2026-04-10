@@ -94,9 +94,6 @@ export default function ConnectionsPage() {
         .order('created_at', { ascending: false })
         .limit(24)
 
-      console.log('[connections] profilesError:', profilesError)
-      console.log('[connections] profilesData length:', profilesData?.length ?? 0)
-
       if (profilesError) {
         console.error('[connections page] profiles query:', profilesError)
         setError('Failed to load members. Please try again.')

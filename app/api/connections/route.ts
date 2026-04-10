@@ -23,11 +23,6 @@ export async function GET(_req: NextRequest) {
         .eq('following_id', user.id),
     ])
 
-    console.log('[GET /api/connections] followingRes error:', followingRes.error)
-    console.log('[GET /api/connections] followersRes error:', followersRes.error)
-    console.log('[GET /api/connections] following rows:', followingRes.data?.length ?? 0)
-    console.log('[GET /api/connections] followers rows:', followersRes.data?.length ?? 0)
-
     const following = (followingRes.data ?? []).map((r: Record<string, unknown>) => r.profiles).filter(Boolean)
     const followers = (followersRes.data ?? []).map((r: Record<string, unknown>) => r.profiles).filter(Boolean)
     const followingIds = (following as Array<{ id: string }>).map((p) => p.id)
