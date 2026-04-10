@@ -5,11 +5,12 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { useCurrency } from '@/context/CurrencyContext'
-import { createClient } from '@supabase/supabase-js'
+import { createClient as createAnonClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/client'
 
 // ─── Supabase client ──────────────────────────────────────────────────────────
 
-const supabase = createClient(
+const supabase = createAnonClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
@@ -124,6 +125,7 @@ export default function ProductDetailPage() {
   const [cartAdded, setCartAdded] = useState(false)
   const [buyLoading, setBuyLoading] = useState(false)
   const [cartCount, setCartCount] = useState(0)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   // Load cart count
   useEffect(() => {
@@ -131,6 +133,12 @@ export default function ProductDetailPage() {
     update()
     window.addEventListener('ft-cart-updated', update)
     return () => window.removeEventListener('ft-cart-updated', update)
+  }, [])
+
+  // Get current user for edit permissions
+  useEffect(() => {
+    const sb = createClient()
+    sb.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id || null))
   }, [])
 
   // Fetch listing from Supabase
@@ -297,11 +305,18 @@ export default function ProductDetailPage() {
           <Link href="/products" style={{ color: muted, textDecoration: 'none' }}>Products</Link>
           <span style={{ color: subtle }}>/</span>
           <span style={{ color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 260 }}>{listing.title}</span>
-          {cartCount > 0 && (
-            <Link href="/cart" style={{ marginLeft: 'auto', background: accent, color: '#fff', padding: '0.3rem 0.85rem', borderRadius: 999, fontSize: '0.75rem', fontWeight: 800, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
-              🛒 Cart ({cartCount})
-            </Link>
-          )}
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+            {currentUserId === listing?.seller_id && (
+              <Link href={`/products/${id}/edit`} style={{ background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.35)', color: '#8b5cf6', padding: '0.3rem 0.85rem', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                ✏️ Edit
+              </Link>
+            )}
+            {cartCount > 0 && (
+              <Link href="/cart" style={{ background: accent, color: '#fff', padding: '0.3rem 0.85rem', borderRadius: 999, fontSize: '0.75rem', fontWeight: 800, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
+                🛒 Cart ({cartCount})
+              </Link>
+            )}
+          </div>
         </div>
       </div>
 

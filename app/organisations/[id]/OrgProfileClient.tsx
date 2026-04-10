@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Avatar from "@/components/Avatar";
+import { createClient } from "@/lib/supabase/client";
 import {
   UserGroupIcon,
   StarIcon,
@@ -214,6 +215,12 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
   const [reviewTitle, setReviewTitle] = useState("");
   const [reviewContent, setReviewContent] = useState("");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const sb = createClient();
+    sb.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id || null));
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -372,8 +379,8 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
           </div>
         </div>
 
-        {/* Follow + Message buttons */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        {/* Follow + Message + Edit buttons */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
           <button onClick={handleFollow}
             style={{
               display: "flex", alignItems: "center", gap: 6, borderRadius: 12, padding: "9px 18px",
@@ -391,6 +398,12 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
             <ChatBubbleLeftRightIcon style={{ width: 16, height: 16 }} />
             Message
           </button>
+          {currentUserId && org && currentUserId === org.creator_id && (
+            <Link href={`/organisations/${id}/edit`}
+              style={{ display: "flex", alignItems: "center", gap: 6, borderRadius: 12, padding: "9px 18px", fontSize: 14, fontWeight: 600, cursor: "pointer", background: "rgba(139,92,246,0.15)", color: "#8b5cf6", border: "1px solid rgba(139,92,246,0.35)", textDecoration: "none" }}>
+              ✏️ Edit
+            </Link>
+          )}
         </div>
 
         {/* Meta chips */}

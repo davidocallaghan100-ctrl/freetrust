@@ -59,6 +59,7 @@ export default function EventDetailPage() {
   const [notFound, setNotFound] = useState(false)
   const [rsvped, setRsvped] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [canEdit, setCanEdit] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -72,6 +73,18 @@ export default function EventDetailPage() {
           .maybeSingle()
         if (error || !data) { setNotFound(true); return }
         setEvent(data)
+
+        // Check edit permission
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user && data.community_id) {
+          const [{ data: community }, { data: membership }] = await Promise.all([
+            supabase.from('communities').select('owner_id').eq('id', data.community_id).single(),
+            supabase.from('community_members').select('role').eq('community_id', data.community_id).eq('user_id', user.id).single(),
+          ])
+          const isOwner = community?.owner_id === user.id
+          const isAdmin = membership?.role === 'admin' || membership?.role === 'moderator'
+          setCanEdit(isOwner || isAdmin)
+        }
       } catch { setNotFound(true) }
       finally { setLoading(false) }
     }
@@ -128,6 +141,12 @@ export default function EventDetailPage() {
         >
           ← Back
         </button>
+        {canEdit && (
+          <Link href={`/events/${id}/edit`}
+            style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(139,92,246,0.85)', border: 'none', borderRadius: 10, padding: '6px 14px', color: '#fff', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
+            ✏️ Edit
+          </Link>
+        )}
 
         {/* Badges */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>

@@ -178,6 +178,12 @@ export default function ServiceDetailPage() {
   const [reviews, setReviews] = useState<VerifiedReview[]>([])
   const [reviewsAvg, setReviewsAvg] = useState(0)
   const [reviewsLoading, setReviewsLoading] = useState(true)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const sb = createClient()
+    sb.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id || null))
+  }, [])
 
   useEffect(() => {
     if (!id) { setNotFound(true); setLoading(false); return }
@@ -289,6 +295,11 @@ export default function ServiceDetailPage() {
           <span>·</span>
           <Link href="/services" style={{ color: '#64748b', textDecoration: 'none' }}>Services</Link>
           {catInfo && <><span>›</span><span style={{ color: '#94a3b8' }}>{catInfo.icon} {catInfo.label}</span></>}
+          {currentUserId && svc && currentUserId === svc.seller.id && (
+            <Link href={`/products/${id}/edit`} style={{ marginLeft: 'auto', background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.35)', color: '#8b5cf6', padding: '4px 12px', borderRadius: 999, fontSize: '12px', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+              ✏️ Edit listing
+            </Link>
+          )}
         </nav>
 
         {/* Mobile: book card at top */}
