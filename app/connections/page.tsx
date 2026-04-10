@@ -1,6 +1,6 @@
 'use client'
 export const revalidate = 0
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
@@ -67,23 +67,36 @@ export default function ConnectionsPage() {
   const [suggestions, setSuggestions] = useState<MemberProfile[]>([])
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set())
   const [trustBalances, setTrustBalances] = useState<Record<string, number>>({})
+  const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
+  // Stable client ref — createClient() returns a new object on every call, so
+  // calling it at component level causes useCallback([supabase]) to change on
+  // every render, which re-fires the effect and keeps loading: true forever.
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
 
   const loadData = useCallback(async () => {
     setLoading(true)
+    setError(null)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
       setUserId(user.id)
 
       // Load real members from profiles for suggestions (exclude self)
-      const { data: profilesData } = await supabase
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, full_name, bio, avatar_url, location, follower_count, following_count, last_seen_at')
         .neq('id', user.id)
-        .order('follower_count', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(24)
+
+      if (profilesError) {
+        console.error('[connections page] profiles query:', profilesError)
+        setError('Failed to load members. Please try again.')
+        setLoading(false)
+        return
+      }
 
       const members: MemberProfile[] = (profilesData ?? []).map((p: Record<string, unknown>) => ({
         id: p.id as string,
@@ -120,12 +133,17 @@ export default function ConnectionsPage() {
           setFollowing(connData.following ?? [])
           setFollowers(connData.followers ?? [])
           setFollowingIds(new Set(connData.followingIds ?? []))
+        } else {
+          console.error('[connections page] /api/connections returned', connRes.status)
         }
-      } catch { /* silent */ }
+      } catch (fetchErr) {
+        console.error('[connections page] fetch /api/connections:', fetchErr)
+      }
       setConnections([])
 
     } catch (err) {
       console.error('[connections page]', err)
+      setError('Something went wrong. Please refresh and try again.')
     } finally {
       setLoading(false)
     }
@@ -211,6 +229,16 @@ export default function ConnectionsPage() {
       </div>
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '1.5rem' }}>
+        {/* Error banner */}
+        {error && (
+          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10, padding: '0.9rem 1.1rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+            <span style={{ fontSize: '0.88rem', color: '#f87171' }}>⚠️ {error}</span>
+            <button onClick={loadData} style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 7, padding: '0.35rem 0.85rem', fontSize: '0.8rem', color: '#f87171', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, flexShrink: 0 }}>
+              Retry
+            </button>
+          </div>
+        )}
+
         {/* Search */}
         {tab !== 'requests' && (
           <div style={{ position: 'relative', marginBottom: '1.5rem', maxWidth: 400 }}>
