@@ -1,5 +1,6 @@
 'use client'
-import React, { useState, useEffect, use } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { formatDistanceToNow } from 'date-fns'
@@ -56,8 +57,10 @@ const TYPE_COLOR: Record<string, string> = {
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-export default function PostPage({ params }: { params: Promise<{ slug: string; id: string }> }) {
-  const { slug, id } = use(params)
+export default function PostPage() {
+  const params = useParams()
+  const slug = params?.slug as string
+  const id = params?.id as string
 
   const [post, setPost] = useState<Post | null>(null)
   const [comments, setComments] = useState<Comment[]>([])
