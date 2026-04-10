@@ -82,13 +82,20 @@ export default function ConnectionsPage() {
       if (!user) { setLoading(false); return }
       setUserId(user.id)
 
-      // Load real members from profiles for suggestions (exclude self)
+      // Load real members from profiles for suggestions (exclude self).
+      // Only select core columns that exist in the base schema — extended
+      // columns (follower_count, following_count, last_seen_at) are added by
+      // migrations that may not yet be applied; including them would cause a
+      // 400 and prevent the suggestions tab from ever loading.
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, full_name, bio, avatar_url, location, follower_count, following_count, last_seen_at')
+        .select('id, full_name, bio, avatar_url, location, created_at')
         .neq('id', user.id)
         .order('created_at', { ascending: false })
         .limit(24)
+
+      console.log('[connections] profilesError:', profilesError)
+      console.log('[connections] profilesData length:', profilesData?.length ?? 0)
 
       if (profilesError) {
         console.error('[connections page] profiles query:', profilesError)
@@ -103,9 +110,9 @@ export default function ConnectionsPage() {
         bio: p.bio as string | null,
         avatar_url: p.avatar_url as string | null,
         location: p.location as string | null,
-        follower_count: (p.follower_count as number) || 0,
-        following_count: (p.following_count as number) || 0,
-        last_seen_at: p.last_seen_at as string | null,
+        follower_count: 0,
+        following_count: 0,
+        last_seen_at: null,
       }))
 
       // Fetch trust balances for suggestions

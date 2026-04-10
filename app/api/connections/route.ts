@@ -15,13 +15,18 @@ export async function GET(_req: NextRequest) {
     const [followingRes, followersRes] = await Promise.all([
       admin
         .from('user_follows')
-        .select('following_id, profiles!following_id(id, full_name, avatar_url, username, bio, location, follower_count, following_count, trust_balance)')
+        .select('following_id, profiles!following_id(id, full_name, avatar_url, bio, location)')
         .eq('follower_id', user.id),
       admin
         .from('user_follows')
-        .select('follower_id, profiles!follower_id(id, full_name, avatar_url, username, bio, location, follower_count, following_count, trust_balance)')
+        .select('follower_id, profiles!follower_id(id, full_name, avatar_url, bio, location)')
         .eq('following_id', user.id),
     ])
+
+    console.log('[GET /api/connections] followingRes error:', followingRes.error)
+    console.log('[GET /api/connections] followersRes error:', followersRes.error)
+    console.log('[GET /api/connections] following rows:', followingRes.data?.length ?? 0)
+    console.log('[GET /api/connections] followers rows:', followersRes.data?.length ?? 0)
 
     const following = (followingRes.data ?? []).map((r: Record<string, unknown>) => r.profiles).filter(Boolean)
     const followers = (followersRes.data ?? []).map((r: Record<string, unknown>) => r.profiles).filter(Boolean)
