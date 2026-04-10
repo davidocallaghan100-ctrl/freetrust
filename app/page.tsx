@@ -483,20 +483,15 @@ export default function Home() {
                     <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s' }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.15)' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
-                      {/* Banner / cover image — gradient is always the background.
-                          Cover image is absolutely overlaid; onError hides it so the
-                          gradient + avatar fallback shows instead of a broken placeholder. */}
-                      <div style={{ height: 140, background: s.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
-                        {/* Fallback: avatar circle or initials, always rendered under the cover */}
-                        {s.avatarUrl
-                          ? <img src={s.avatarUrl} alt={s.provider} style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.3)', flexShrink: 0 }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
-                          : <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.2rem', color: '#fff', flexShrink: 0 }}>
-                              {s.provider.split(' ').map((w: string) => w[0]).join('').slice(0,2).toUpperCase()}
-                            </div>
-                        }
-                        {/* Cover image: absolutely fills the banner; hidden via onError if URL is broken */}
+                      {/* Banner — gradient background, service cover image on top if available */}
+                      <div style={{ height: 140, background: s.grad, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
                         {s.coverImage && (
-                          <img src={s.coverImage} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                          <img
+                            src={s.coverImage}
+                            alt=""
+                            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                            onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                          />
                         )}
                       </div>
                       <div style={{ padding: '0.85rem' }}>
