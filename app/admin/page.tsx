@@ -490,6 +490,158 @@ export default function AdminPage() {
           </>
         )}
 
+        {/* ── Sales & Growth Tab ── */}
+        {activeTab === 'growth' && (
+          <>
+            {analyticsLoading ? (
+              <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>Loading analytics…</div>
+            ) : !analyticsData ? (
+              <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>Failed to load analytics data.</div>
+            ) : (
+              <>
+                {/* Summary cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                  {[
+                    { label: 'Members', value: analyticsData.summary.totalMembers, icon: '👥', color: '#38bdf8' },
+                    { label: 'Active Listings', value: analyticsData.summary.activeListings, icon: '📦', color: '#fbbf24' },
+                    { label: 'Listing Views', value: analyticsData.summary.totalListingViews.toLocaleString(), icon: '👁', color: '#818cf8' },
+                    { label: 'Trust Issued', value: `₮${analyticsData.summary.totalTrustIssued.toLocaleString()}`, icon: '⚡', color: '#34d399' },
+                    { label: 'Total Orders', value: analyticsData.summary.totalOrders, icon: '💳', color: '#f472b6' },
+                    { label: 'Revenue', value: `€${analyticsData.summary.totalRevenue.toFixed(2)}`, icon: '💰', color: '#34d399' },
+                    { label: 'Articles', value: analyticsData.summary.totalArticles, icon: '✍️', color: '#a78bfa' },
+                    { label: 'Communities', value: analyticsData.summary.totalCommunities, icon: '🏘️', color: '#fb923c' },
+                  ].map(s => (
+                    <div key={s.label} style={{ background: '#1e293b', border: `1px solid ${s.color}20`, borderRadius: 12, padding: '1rem' }}>
+                      <div style={{ fontSize: '1.4rem', marginBottom: '0.4rem' }}>{s.icon}</div>
+                      <div style={{ fontSize: '1.4rem', fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value.toLocaleString()}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.3rem' }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Member growth by day */}
+                <Section title="Member Growth (Signups by Day)">
+                  <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1.25rem' }}>
+                    {Object.keys(analyticsData.memberGrowth).length === 0 ? (
+                      <div style={{ color: '#64748b', fontSize: '0.85rem', textAlign: 'center', padding: '1rem' }}>No member signup data yet</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {Object.entries(analyticsData.memberGrowth).sort(([a], [b]) => a.localeCompare(b)).map(([day, count]) => (
+                          <div key={day} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <span style={{ fontSize: '0.78rem', color: '#64748b', width: 90, flexShrink: 0 }}>{day}</span>
+                            <div style={{ flex: 1, background: '#0f172a', borderRadius: 4, height: 8, overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${Math.min(count * 50, 100)}%`, background: 'linear-gradient(90deg,#38bdf8,#818cf8)', borderRadius: 4 }} />
+                            </div>
+                            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#38bdf8', width: 24, textAlign: 'right', flexShrink: 0 }}>{count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Section>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+                  {/* Top listings by views */}
+                  <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1.25rem' }}>
+                    <h3 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '1rem', color: '#f1f5f9' }}>Top Listings by Views</h3>
+                    {analyticsData.topListings.length === 0 ? (
+                      <div style={{ color: '#64748b', fontSize: '0.85rem' }}>No listing data</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                        {analyticsData.topListings.slice(0, 8).map((l, i) => (
+                          <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <span style={{ fontSize: '0.72rem', color: '#475569', width: 18, textAlign: 'right', flexShrink: 0 }}>#{i + 1}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#cbd5e1' }}>{l.title}</div>
+                              <div style={{ fontSize: '0.68rem', color: '#475569', marginTop: 2 }}>
+                                {l.product_type} · €{l.price?.toFixed(2) ?? '—'} · <span style={{ color: l.status === 'active' ? '#34d399' : '#64748b' }}>{l.status}</span>
+                              </div>
+                            </div>
+                            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#38bdf8', flexShrink: 0 }}>👁 {(l.views ?? 0).toLocaleString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Trust by type */}
+                  <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1.25rem' }}>
+                    <h3 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '1rem', color: '#f1f5f9' }}>Trust Economy Breakdown</h3>
+                    {Object.keys(analyticsData.trustByType).length === 0 ? (
+                      <div style={{ color: '#64748b', fontSize: '0.85rem' }}>No trust data</div>
+                    ) : (() => {
+                      const maxAbs = Math.max(...Object.values(analyticsData.trustByType).map(Math.abs), 1)
+                      return Object.entries(analyticsData.trustByType)
+                        .sort(([, a], [, b]) => b - a)
+                        .map(([type, total]) => (
+                          <div key={type} style={{ marginBottom: '0.7rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                              <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>{TYPE_LABELS[type] || type}</span>
+                              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: total >= 0 ? '#34d399' : '#f87171' }}>
+                                {total >= 0 ? '+' : ''}₮{total.toLocaleString()}
+                              </span>
+                            </div>
+                            <div style={{ height: 5, background: 'rgba(148,163,184,0.1)', borderRadius: 3, overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${(Math.abs(total) / maxAbs) * 100}%`, background: total >= 0 ? '#38bdf8' : '#f87171', borderRadius: 3, transition: 'width 0.4s' }} />
+                            </div>
+                          </div>
+                        ))
+                    })()}
+                  </div>
+                </div>
+
+                {/* Role breakdown */}
+                <Section title="Member Role Breakdown">
+                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    {Object.entries(analyticsData.roleCounts).map(([role, count]) => (
+                      <div key={role} style={{ background: '#1e293b', border: `1px solid ${ROLE_COLORS[role] || '#64748b'}25`, borderRadius: 10, padding: '0.9rem 1.5rem', textAlign: 'center' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: ROLE_COLORS[role] || '#94a3b8' }}>{count}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'capitalize', marginTop: 2 }}>{role}</div>
+                      </div>
+                    ))}
+                  </div>
+                </Section>
+
+                {/* Recent trust ledger */}
+                <Section title="Recent Trust Activity">
+                  <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden' }}>
+                    <div style={{ overflowX: 'auto' }}>
+                      <table className="admin-table">
+                        <thead>
+                          <tr>
+                            <th>User ID</th>
+                            <th>Amount</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                            <th>Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {analyticsData.recentLedger.slice(0, 15).map(row => (
+                            <tr key={row.id}>
+                              <td style={{ fontSize: '0.75rem', color: '#475569', fontFamily: 'monospace' }}>{row.user_id?.slice(0, 8)}…</td>
+                              <td style={{ color: (row.amount ?? 0) >= 0 ? '#34d399' : '#f87171', fontWeight: 700 }}>
+                                {(row.amount ?? 0) >= 0 ? '+' : ''}₮{row.amount}
+                              </td>
+                              <td>
+                                <span style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.1rem 0.5rem', fontSize: '0.7rem', color: '#94a3b8' }}>
+                                  {TYPE_LABELS[row.type] || row.type}
+                                </span>
+                              </td>
+                              <td style={{ color: '#64748b', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.description}</td>
+                              <td style={{ color: '#475569', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>{new Date(row.created_at).toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </Section>
+              </>
+            )}
+          </>
+        )}
+
         {/* ── Disputes Tab ── */}
         {activeTab === 'disputes' && (
           <Section title="Dispute Management">
