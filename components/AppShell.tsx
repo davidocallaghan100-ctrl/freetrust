@@ -41,7 +41,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         className="ft-fab"
         style={{
           position: 'fixed',
-          bottom: '2rem',
+          bottom: '160px',
           right: '2rem',
           width: '56px',
           height: '56px',
