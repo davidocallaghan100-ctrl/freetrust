@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -15,11 +15,18 @@ const CAT_HINTS: Record<string, string> = {
   Other:       'Anything that doesn\'t fit the above categories',
 }
 
+const MAX_PHOTOS = 8
+
+interface NewPhoto { type: 'new'; file: File; preview: string }
+
 export default function NewRentSharePage() {
   const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState(false)
   const [authChecking, setAuthChecking] = useState(true)
   const [error, setError] = useState('')
+  const [dragOver, setDragOver] = useState(false)
+  const [uploadingCount, setUploadingCount] = useState(0)
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -28,7 +35,7 @@ export default function NewRentSharePage() {
   const [pricePerWeek, setPricePerWeek] = useState('')
   const [deposit, setDeposit] = useState('')
   const [location, setLocation] = useState('')
-  const [imageUrl, setImageUrl] = useState('')
+  const [photos, setPhotos] = useState<NewPhoto[]>([])
   const [availableFrom, setAvailableFrom] = useState('')
   const [availableTo, setAvailableTo] = useState('')
 
@@ -43,6 +50,58 @@ export default function NewRentSharePage() {
     })
   }, [router])
 
+  // Clean up object URLs on unmount
+  useEffect(() => {
+    return () => {
+      photos.forEach(p => URL.revokeObjectURL(p.preview))
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const addFiles = useCallback((files: FileList | File[]) => {
+    const arr = Array.from(files)
+    const remaining = MAX_PHOTOS - photos.length
+    if (remaining <= 0) return
+    const toAdd = arr.slice(0, remaining).filter(f => f.type.startsWith('image/'))
+    const newPhotos: NewPhoto[] = toAdd.map(f => ({
+      type: 'new',
+      file: f,
+      preview: URL.createObjectURL(f),
+    }))
+    setPhotos(prev => [...prev, ...newPhotos])
+  }, [photos.length])
+
+  function removePhoto(index: number) {
+    setPhotos(prev => {
+      URL.revokeObjectURL(prev[index].preview)
+      return prev.filter((_, i) => i !== index)
+    })
+  }
+
+  function movePhoto(from: number, to: number) {
+    setPhotos(prev => {
+      const arr = [...prev]
+      const [item] = arr.splice(from, 1)
+      arr.splice(to, 0, item)
+      return arr
+    })
+  }
+
+  async function uploadPhotos(): Promise<string[]> {
+    if (photos.length === 0) return []
+    setUploadingCount(photos.length)
+    const uploaded: string[] = []
+    for (const p of photos) {
+      const fd = new FormData()
+      fd.append('file', p.file)
+      const res = await fetch('/api/upload/rent-share', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Photo upload failed')
+      uploaded.push(data.url)
+      setUploadingCount(c => c - 1)
+    }
+    return uploaded
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim() || title.trim().length < 3) {
@@ -56,6 +115,7 @@ export default function NewRentSharePage() {
     setLoading(true)
     setError('')
     try {
+      const images = await uploadPhotos()
       const res = await fetch('/api/rent-share', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -67,7 +127,7 @@ export default function NewRentSharePage() {
           price_per_week: pricePerWeek ? parseFloat(pricePerWeek) : null,
           deposit:        deposit      ? parseFloat(deposit)       : 0,
           location:       location.trim() || null,
-          images:         imageUrl.trim() ? [imageUrl.trim()] : [],
+          images,
           available_from: availableFrom || null,
           available_to:   availableTo   || null,
         }),
@@ -79,6 +139,7 @@ export default function NewRentSharePage() {
       setError(err instanceof Error ? err.message : 'Something went wrong.')
     } finally {
       setLoading(false)
+      setUploadingCount(0)
     }
   }
 
@@ -100,8 +161,31 @@ export default function NewRentSharePage() {
     letterSpacing: '0.06em', display: 'block', marginBottom: 6,
   }
 
+  const submitLabel = uploadingCount > 0
+    ? `Uploading ${uploadingCount} photo${uploadingCount > 1 ? 's' : ''}…`
+    : loading ? 'Publishing…' : '♻️ Publish Listing'
+
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64 }}>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .photo-thumb { position: relative; border-radius: 10px; overflow: hidden; aspect-ratio: 1; background: #1e293b; border: 2px solid #334155; }
+        .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .photo-thumb .rm-btn { position: absolute; top: 4px; right: 4px; background: rgba(15,23,42,0.85); border: 1px solid #334155; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #f87171; font-size: 11px; font-weight: 700; }
+        .photo-thumb .rm-btn:hover { background: rgba(248,113,113,0.15); border-color: rgba(248,113,113,0.4); }
+        .photo-thumb .move-btns { position: absolute; bottom: 4px; left: 4px; display: none; gap: 3px; }
+        .photo-thumb:hover .move-btns { display: flex; }
+        .photo-thumb .move-btn { background: rgba(15,23,42,0.85); border: 1px solid #334155; border-radius: 5px; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #94a3b8; font-size: 10px; }
+        .photo-thumb .move-btn:hover:not(:disabled) { color: #38bdf8; border-color: rgba(56,189,248,0.4); }
+        .photo-thumb .move-btn:disabled { opacity: 0.3; cursor: default; }
+        .photo-thumb .order-badge { position: absolute; top: 4px; left: 4px; background: rgba(15,23,42,0.85); border: 1px solid #334155; border-radius: 4px; padding: 1px 5px; font-size: 10px; font-weight: 700; color: #64748b; }
+        .photo-thumb:first-child .order-badge { color: #38bdf8; border-color: rgba(56,189,248,0.3); }
+        .drop-zone { border: 2px dashed #334155; border-radius: 12px; padding: 1.5rem; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+        .drop-zone:hover, .drop-zone.drag-over { border-color: rgba(45,212,191,0.5); background: rgba(45,212,191,0.04); }
+        .rs-photo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin-bottom: 0.75rem; }
+        @media (max-width: 600px) { .rs-photo-grid { grid-template-columns: repeat(3, 1fr) !important; } }
+        @media (max-width: 400px) { .rs-photo-grid { grid-template-columns: repeat(2, 1fr) !important; } }
+      `}</style>
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
@@ -189,11 +273,66 @@ export default function NewRentSharePage() {
             </div>
           </div>
 
-          {/* Photo URL */}
+          {/* Photos */}
           <div>
-            <label style={labelStyle}>Photo URL <span style={{ color: '#334155', textTransform: 'none', fontWeight: 400 }}>(optional)</span></label>
-            <input value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="https://…" style={inputStyle} />
-            <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: 6 }}>Paste a direct link to an image of your item</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <label style={{ ...labelStyle, marginBottom: 0 }}>Photos ({photos.length}/{MAX_PHOTOS})</label>
+              {photos.length > 0 && (
+                <span style={{ fontSize: '0.72rem', color: '#475569' }}>First photo is the cover image · hover to reorder</span>
+              )}
+            </div>
+
+            {photos.length > 0 && (
+              <div className="rs-photo-grid">
+                {photos.map((p, i) => (
+                  <div key={i} className="photo-thumb">
+                    <img src={p.preview} alt={`Photo ${i + 1}`} />
+                    <div className="order-badge">{i === 0 ? 'Cover' : `#${i + 1}`}</div>
+                    <button type="button" className="rm-btn" onClick={() => removePhoto(i)} title="Remove photo">✕</button>
+                    <div className="move-btns">
+                      <button type="button" className="move-btn" onClick={() => movePhoto(i, i - 1)} disabled={i === 0} title="Move left">←</button>
+                      <button type="button" className="move-btn" onClick={() => movePhoto(i, i + 1)} disabled={i === photos.length - 1} title="Move right">→</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {photos.length < MAX_PHOTOS && (
+              <div
+                className={`drop-zone${dragOver ? ' drag-over' : ''}`}
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={e => {
+                  e.preventDefault()
+                  setDragOver(false)
+                  if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files)
+                }}
+              >
+                <div style={{ fontSize: '1.5rem', marginBottom: 6 }}>📷</div>
+                <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: 3 }}>
+                  Drop photos here or <span style={{ color: '#2dd4bf' }}>click to browse</span>
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#475569' }}>
+                  JPG, PNG, WEBP — up to 10MB each · {MAX_PHOTOS - photos.length} slot{MAX_PHOTOS - photos.length !== 1 ? 's' : ''} remaining
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  multiple
+                  style={{ display: 'none' }}
+                  onChange={e => { if (e.target.files?.length) { addFiles(e.target.files); e.target.value = '' } }}
+                />
+              </div>
+            )}
+
+            {photos.length >= MAX_PHOTOS && (
+              <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 10, padding: '10px 14px', fontSize: '0.82rem', color: '#64748b', textAlign: 'center' }}>
+                Maximum {MAX_PHOTOS} photos reached — remove one to add another
+              </div>
+            )}
           </div>
 
           {/* Error */}
@@ -208,7 +347,7 @@ export default function NewRentSharePage() {
             type="submit"
             disabled={loading}
             style={{ background: loading ? '#1e293b' : 'linear-gradient(135deg,#2dd4bf,#0891b2)', border: 'none', borderRadius: 12, padding: '13px 0', fontSize: 15, fontWeight: 700, color: loading ? '#475569' : '#0f172a', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-            {loading ? 'Publishing…' : '♻️ Publish Listing'}
+            {submitLabel}
           </button>
         </form>
       </div>

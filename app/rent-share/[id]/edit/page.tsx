@@ -48,7 +48,15 @@ export default function EditRentSharePage() {
       if (!res.ok) { router.replace('/rent-share'); return }
       const { listing } = await res.json()
 
-      if (listing.user_id !== session.user.id) {
+      // Allow admins to edit any listing
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single()
+      const isAdmin = profile?.role === 'admin'
+
+      if (!isAdmin && listing.user_id !== session.user.id) {
         router.replace(`/rent-share/${id}`)
         return
       }
