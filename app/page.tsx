@@ -11,7 +11,7 @@ type StatsData = {
   events: { upcoming: number }
   articles: { published: number }
   communities: { total: number }
-  trust: { total: number; thisWeek: number }
+  trust: { total: number; thisWeek: number; inCirculation: number; membersHolding: number }
   ticker: TickerItem[]
   growth: { date: string; count: number; cumulative: number }[]
   foundingGoal: number
@@ -288,6 +288,8 @@ export default function Home() {
   const tm = stats?.members.total ?? 0
   const tw = stats?.members.thisWeek ?? 0
   const tt = stats?.trust.total ?? 0
+  const tc = stats?.trust.inCirculation ?? 0
+  const th = stats?.trust.membersHolding ?? 0
   const sl = stats?.listings.services ?? 0
   const pl = stats?.listings.products ?? 0
   const goal = stats?.foundingGoal ?? 1000
@@ -395,25 +397,48 @@ export default function Home() {
 
       {/* ── 4. STATS BAR ── */}
       <div style={{ background: 'rgba(56,189,248,0.03)', borderBottom: '1px solid rgba(56,189,248,0.08)' }}>
-        <div className="lp" style={{ padding: '1.75rem 1.25rem' }}>
+        <div className="lp" style={{ padding: '1.75rem 1.25rem 1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', marginBottom: '1rem', fontSize: '0.72rem', color: '#475569' }}>
             <span className="live-dot" /> Live stats — refreshes every 60s
           </div>
           <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.85rem', textAlign: 'center' }}>
             {[
-              { val: tm, prefix: '', suffix: '', label: 'Members & growing', sub: tw > 0 ? `+${tw} this week` : 'Join free' },
-              { val: sl, prefix: '', suffix: '', label: 'Services available', sub: sl === 0 ? 'Be the first!' : 'Browse now' },
-              { val: pl, prefix: '', suffix: '', label: 'Products listed', sub: pl === 0 ? 'List yours' : 'Shop now' },
-              { val: tt, prefix: '₮', suffix: '', label: 'Trust issued', sub: 'Earn yours today' },
+              { val: tm, prefix: '', suffix: '', label: 'Members & growing', sub: tw > 0 ? `+${tw} this week` : 'Join free', color: '#38bdf8' },
+              { val: sl, prefix: '', suffix: '', label: 'Services available', sub: sl === 0 ? 'Be the first!' : 'Browse now', color: '#38bdf8' },
+              { val: pl, prefix: '', suffix: '', label: 'Products listed', sub: pl === 0 ? 'List yours' : 'Shop now', color: '#38bdf8' },
+              { val: tt, prefix: '₮', suffix: '', label: 'Total ₮ issued', sub: 'Since launch', color: '#38bdf8' },
             ].map(s => (
               <div key={s.label} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1rem 0.5rem' }}>
-                <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#38bdf8', letterSpacing: '-1px' }}>
+                <div style={{ fontSize: '1.8rem', fontWeight: 900, color: s.color, letterSpacing: '-1px' }}>
                   <Counter target={s.val} prefix={s.prefix} suffix={s.suffix} />
                 </div>
                 <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
-                <div style={{ fontSize: '0.65rem', color: '#38bdf8', marginTop: 3, fontWeight: 600 }}>{s.sub}</div>
+                <div style={{ fontSize: '0.65rem', color: s.color, marginTop: 3, fontWeight: 600 }}>{s.sub}</div>
               </div>
             ))}
+          </div>
+
+          {/* Trust Economy strip */}
+          <div style={{ marginTop: '0.85rem', background: 'linear-gradient(135deg,rgba(45,212,191,0.07),rgba(56,189,248,0.04))', border: '1px solid rgba(45,212,191,0.15)', borderRadius: 12, padding: '1rem 1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#2dd4bf', letterSpacing: '0.1em', textTransform: 'uppercase' }}>₮ Trust Economy</span>
+              <span className="live-dot" style={{ width: 5, height: 5 } as React.CSSProperties} />
+            </div>
+            <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem', textAlign: 'center' }}>
+              {[
+                { val: tc, prefix: '₮', label: '₮ in circulation', sub: 'Current balances held', color: '#2dd4bf' },
+                { val: tt, prefix: '₮', label: '₮ issued since launch', sub: 'Total ever earned', color: '#34d399' },
+                { val: th, prefix: '', label: 'Members holding ₮', sub: 'Active trust holders', color: '#38bdf8' },
+              ].map(s => (
+                <div key={s.label} style={{ background: 'rgba(15,23,42,0.5)', borderRadius: 10, padding: '0.75rem 0.5rem', border: '1px solid rgba(45,212,191,0.1)' }}>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: s.color, letterSpacing: '-0.5px' }}>
+                    <Counter target={s.val} prefix={s.prefix} />
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
+                  <div style={{ fontSize: '0.62rem', color: s.color, marginTop: 2, fontWeight: 600, opacity: 0.8 }}>{s.sub}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

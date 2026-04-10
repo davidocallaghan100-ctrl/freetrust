@@ -24,6 +24,8 @@ export async function GET() {
       communitiesRes,
       trustSumRes,
       trustWeekRes,
+      trustCirculationRes,
+      trustHoldersRes,
       recentProfilesRes,
       recentTrustRes,
       recentArticlesRes,
@@ -50,6 +52,10 @@ export async function GET() {
       supabase.from('trust_balances').select('lifetime'),
       // Trust this week — use balances updated this week as proxy
       supabase.from('trust_balances').select('lifetime').gte('updated_at', weekAgo),
+      // Total trust in circulation (sum of current balances)
+      supabase.from('trust_balances').select('balance'),
+      // Members holding trust (balance > 0)
+      supabase.from('trust_balances').select('user_id', { count: 'exact', head: true }).gt('balance', 0),
       // Recent member joins (for ticker)
       supabase.from('profiles').select('id, full_name, location, created_at').is('deleted_at', null).order('created_at', { ascending: false }).limit(10),
       // Recent trust events — pull from trust_balances (fallback: no ledger table)
@@ -83,6 +89,13 @@ export async function GET() {
 
     const trustWeekRows = getData<{ lifetime: number }>(trustWeekRes)
     const trustThisWeek = trustWeekRows.reduce((sum, r) => sum + (r.lifetime ?? 0), 0)
+
+    // Trust in circulation (sum of current balance held by all users)
+    const circulationRows = getData<{ balance: number }>(trustCirculationRes)
+    const trustInCirculation = circulationRows.reduce((sum, r) => sum + (r.balance ?? 0), 0)
+
+    // Members currently holding trust (balance > 0)
+    const membersHoldingTrust = trustHoldersRes.status === 'fulfilled' ? (trustHoldersRes.value.count ?? 0) : 0
 
     // Ticker feed — mix of recent joins, trust events, articles
     type TickerItem = {
@@ -138,7 +151,7 @@ export async function GET() {
       events: { upcoming: upcomingEvents },
       articles: { published: articlesPublished },
       communities: { total: communitiesCount },
-      trust: { total: totalTrust, thisWeek: trustThisWeek },
+      trust: { total: totalTrust, thisWeek: trustThisWeek, inCirculation: trustInCirculation, membersHolding: membersHoldingTrust },
       ticker: tickerFeed,
       growth: growthChart,
       foundingGoal: 1000,
@@ -153,7 +166,7 @@ export async function GET() {
       events: { upcoming: 0 },
       articles: { published: 0 },
       communities: { total: 0 },
-      trust: { total: 0, thisWeek: 0 },
+      trust: { total: 0, thisWeek: 0, inCirculation: 0, membersHolding: 0 },
       ticker: [],
       growth: [],
       foundingGoal: 1000,

@@ -133,7 +133,7 @@ export default function ImpactPage() {
   const [donateSuccess, setDonateSuccess] = useState<string | null>(null)
   const [voting, setVoting] = useState(false)
   const [trustBalance, setTrustBalance] = useState(0)
-  const [platformStats, setPlatformStats] = useState<{ members?: { total: number }; listings?: { services: number; products: number }; trust?: { total: number } } | null>(null)
+  const [platformStats, setPlatformStats] = useState<{ members?: { total: number }; listings?: { services: number; products: number }; trust?: { total: number; inCirculation: number; membersHolding: number } } | null>(null)
 
   const daysLeft = getDaysToQuarterEnd()
 
@@ -153,7 +153,7 @@ export default function ImpactPage() {
       if (voteRes.ok) { const d = await voteRes.json() as { tallies: Record<string, number>; myVote: string | null }; setVoteTallies(d.tallies ?? {}); setMyVote(d.myVote ?? null) }
       if (trustRes.ok) { const d = await trustRes.json() as { balance?: number }; setTrustBalance(d.balance ?? 0) }
       if (platformStatsRes.ok) {
-        const d = await platformStatsRes.json() as { members?: { total: number }; listings?: { services: number; products: number }; trust?: { total: number } }
+        const d = await platformStatsRes.json() as { members?: { total: number }; listings?: { services: number; products: number }; trust?: { total: number; inCirculation: number; membersHolding: number } }
         setPlatformStats(d)
       }
     } catch (err) {
@@ -214,10 +214,12 @@ export default function ImpactPage() {
         .impact-stats{display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;margin:1.5rem 0}
         .impact-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.25rem;padding:1.5rem;max-width:1200px;margin:0 auto}
         .impact-causes-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+        .trust-econ-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
         @media(max-width:768px){
           .impact-grid{grid-template-columns:1fr!important;padding:1rem!important}
           .impact-causes-grid{grid-template-columns:1fr!important}
           .impact-hero-btns{flex-direction:column!important;align-items:stretch!important}
+          .trust-econ-grid{grid-template-columns:1fr!important}
         }
       `}</style>
 
@@ -281,14 +283,16 @@ export default function ImpactPage() {
           </div>
           <div className="impact-stats">
             {[
-              { label: 'Members', icon: '🎯', val: (platformStats?.members?.total ?? stats?.memberCount ?? 0).toLocaleString() },
-              { label: 'Services Listed', icon: '🛠️', val: (platformStats?.listings?.services ?? 0).toLocaleString() },
-              { label: 'Products Listed', icon: '📦', val: (platformStats?.listings?.products ?? 0).toLocaleString() },
-              { label: 'Trust Issued', icon: '₮', val: `₮${(platformStats?.trust?.total ?? 0).toLocaleString()}` },
+              { label: 'Members', icon: '🎯', val: (platformStats?.members?.total ?? stats?.memberCount ?? 0).toLocaleString(), color: '#38bdf8' },
+              { label: 'Active Projects', icon: '🌱', val: (stats?.activeProjects ?? 0).toLocaleString(), color: '#34d399' },
+              { label: 'Impact Fund', icon: '💚', val: `₮${(stats?.fundBalance ?? 0).toLocaleString()}`, color: '#34d399' },
+              { label: '₮ in Circulation', icon: '₮', val: `₮${(platformStats?.trust?.inCirculation ?? 0).toLocaleString()}`, color: '#2dd4bf' },
+              { label: '₮ Issued (Total)', icon: '📈', val: `₮${(platformStats?.trust?.total ?? 0).toLocaleString()}`, color: '#38bdf8' },
+              { label: 'Members Holding ₮', icon: '🤝', val: (platformStats?.trust?.membersHolding ?? 0).toLocaleString(), color: '#a78bfa' },
             ].map(s => (
               <div key={s.label} style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 12, padding: '1rem 1.25rem', textAlign: 'center', flex: 1, minWidth: 130 }}>
                 <span style={{ fontSize: '1.25rem' }}>{s.icon}</span>
-                <span style={{ display: 'block', fontSize: '1.6rem', fontWeight: 800, color: '#38bdf8' }}>{s.val}</span>
+                <span style={{ display: 'block', fontSize: '1.6rem', fontWeight: 800, color: s.color }}>{s.val}</span>
                 <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>{s.label}</div>
               </div>
             ))}
@@ -301,6 +305,70 @@ export default function ImpactPage() {
               </button>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Trust Economy — live figures */}
+      <div style={{ maxWidth: 1200, margin: '2rem auto 0', padding: '0 1.5rem' }}>
+        <div style={{ background: 'linear-gradient(135deg,rgba(45,212,191,0.07),rgba(56,189,248,0.04))', border: '1px solid rgba(45,212,191,0.2)', borderRadius: 16, padding: '1.5rem 2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f1f5f9' }}>₮ Trust Economy</span>
+            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#2dd4bf', background: 'rgba(45,212,191,0.1)', border: '1px solid rgba(45,212,191,0.25)', borderRadius: 999, padding: '2px 8px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Live</span>
+            <span style={{ fontSize: '0.8rem', color: '#64748b', marginLeft: 'auto' }}>All figures pulled live from Supabase</span>
+          </div>
+          <div className="trust-econ-grid">
+            {[
+              {
+                icon: '₮',
+                val: `₮${(platformStats?.trust?.inCirculation ?? 0).toLocaleString()}`,
+                label: 'Total ₮ in Circulation',
+                sub: 'Sum of all current member balances',
+                color: '#2dd4bf',
+              },
+              {
+                icon: '📈',
+                val: `₮${(platformStats?.trust?.total ?? 0).toLocaleString()}`,
+                label: 'Total ₮ Issued Since Launch',
+                sub: 'Lifetime earnings across all members',
+                color: '#34d399',
+              },
+              {
+                icon: '🤝',
+                val: (platformStats?.trust?.membersHolding ?? 0).toLocaleString(),
+                label: 'Members Holding ₮',
+                sub: 'Members who have earned trust through activity',
+                color: '#38bdf8',
+              },
+            ].map(s => (
+              <div key={s.label} style={{ background: 'rgba(15,23,42,0.5)', border: `1px solid ${s.color}25`, borderRadius: 12, padding: '1.25rem 1rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '1.5rem', marginBottom: '0.35rem' }}>{s.icon}</div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 900, color: s.color, letterSpacing: '-0.5px', lineHeight: 1 }}>{s.val}</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f1f5f9', marginTop: '0.4rem' }}>{s.label}</div>
+                <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '0.2rem', lineHeight: 1.4 }}>{s.sub}</div>
+              </div>
+            ))}
+          </div>
+          {(platformStats?.trust?.total ?? 0) > 0 && (
+            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                ₮{(platformStats?.trust?.inCirculation ?? 0).toLocaleString()} in active circulation
+                out of ₮{(platformStats?.trust?.total ?? 0).toLocaleString()} ever issued
+              </span>
+              <div style={{ flex: 1, background: 'rgba(45,212,191,0.1)', borderRadius: 4, height: 6, minWidth: 100, overflow: 'hidden' }}>
+                <div style={{
+                  background: 'linear-gradient(90deg,#2dd4bf,#38bdf8)',
+                  height: '100%',
+                  borderRadius: 4,
+                  width: `${(platformStats?.trust?.total ?? 0) > 0 ? Math.round(((platformStats?.trust?.inCirculation ?? 0) / (platformStats?.trust?.total ?? 1)) * 100) : 0}%`,
+                }} />
+              </div>
+              <span style={{ fontSize: '0.72rem', color: '#2dd4bf', fontWeight: 700 }}>
+                {(platformStats?.trust?.total ?? 0) > 0
+                  ? `${Math.round(((platformStats?.trust?.inCirculation ?? 0) / (platformStats?.trust?.total ?? 1)) * 100)}% retention`
+                  : '—'}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
