@@ -1,4 +1,5 @@
 'use client'
+export const revalidate = 0
 import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -429,7 +430,7 @@ function DisputesTab({ userId }: { userId: string }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch('/api/disputes')
+        const res = await fetch('/api/disputes', { cache: 'no-store' })
         if (res.ok) {
           const data = await res.json()
           setDisputes(data.disputes ?? [])
@@ -540,7 +541,7 @@ function PaymentsTab({ userId }: { userId: string }) {
     const load = async () => {
       try {
         const [walletRes, txRes] = await Promise.allSettled([
-          fetch('/api/wallet'),
+          fetch('/api/wallet', { cache: 'no-store' }),
           (async () => {
             const sb = createClient()
             const { data } = await sb.from('wallet_transactions').select('id, amount, type, description, created_at, reference_id').eq('user_id', userId).order('created_at', { ascending: false }).limit(30)

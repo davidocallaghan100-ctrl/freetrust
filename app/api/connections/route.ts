@@ -27,7 +27,9 @@ export async function GET(_req: NextRequest) {
     const followers = (followersRes.data ?? []).map((r: Record<string, unknown>) => r.profiles).filter(Boolean)
     const followingIds = (following as Array<{ id: string }>).map((p) => p.id)
 
-    return NextResponse.json({ following, followers, followingIds })
+    return NextResponse.json({ following, followers, followingIds }, {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
+    })
   } catch (err) {
     console.error('[GET /api/connections]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

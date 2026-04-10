@@ -32,7 +32,9 @@ export async function GET(request: NextRequest) {
     const { data: disputes, error } = await query
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    return NextResponse.json({ disputes: disputes ?? [] })
+    return NextResponse.json({ disputes: disputes ?? [] }, {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
+    })
   } catch (err) {
     console.error('[GET /api/disputes]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

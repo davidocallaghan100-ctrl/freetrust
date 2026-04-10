@@ -1,4 +1,5 @@
 'use client'
+export const revalidate = 0
 import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -113,7 +114,7 @@ export default function ConnectionsPage() {
 
       // Load follow data from API
       try {
-        const connRes = await fetch('/api/connections')
+        const connRes = await fetch('/api/connections', { cache: 'no-store' })
         if (connRes.ok) {
           const connData = await connRes.json() as { following?: MemberProfile[]; followers?: MemberProfile[]; followingIds?: string[] }
           setFollowing(connData.following ?? [])

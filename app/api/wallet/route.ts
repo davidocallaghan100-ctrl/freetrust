@@ -168,6 +168,8 @@ export async function GET() {
         updatedAt: trustUpdated,
       },
       transactions: txList,
+    }, {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
     })
   } catch (err) {
     console.error('[GET /api/wallet]', err)
