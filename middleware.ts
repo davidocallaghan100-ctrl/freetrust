@@ -120,19 +120,31 @@ export async function middleware(request: NextRequest) {
 
   // ── 3. Protected route redirect ─────────────────────────────────────────
   const protectedPaths = [
+    // Account & commerce
     '/dashboard',
     '/wallet',
     '/admin',
     '/profile',
+    '/settings',
+    '/analytics',
     '/messages',
-    '/seller',
-    '/community/new',
-    '/articles/new',
-    '/articles/drafts',
-    '/jobs/new',
-    '/onboarding',
-    '/create-business',
+    '/notifications',
     '/orders',
+    '/onboarding',
+    // Connections & community
+    '/connections',
+    '/collab',
+    // Create / submit actions — all require auth
+    '/create',              // general post/listing creation
+    '/feed/new',            // new feed post
+    '/articles/new',        // new article
+    '/articles/drafts',
+    '/organisations/new',   // create organisation
+    '/events/create',       // create event
+    '/community/new',       // create community
+    '/seller',              // all seller pages (gigs, listings, etc.)
+    '/jobs/new',
+    '/create-business',
   ]
   const isProtected = protectedPaths.some(p => pathname.startsWith(p))
 

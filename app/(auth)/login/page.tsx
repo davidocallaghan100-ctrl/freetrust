@@ -3,11 +3,14 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+  // Where to send the user after login — middleware sets ?redirect=<path>
+  const redirectTo = searchParams.get('redirect') || '/feed'
 
   const [form, setForm] = useState({ email: '', password: '' })
   const [loading, setLoading] = useState(false)
@@ -57,7 +60,7 @@ export default function LoginPage() {
         }
         return
       }
-      router.push('/feed')
+      router.push(redirectTo)
       router.refresh()
     } catch {
       setError('Unable to sign in. Please check your connection and try again.')
@@ -72,7 +75,7 @@ export default function LoginPage() {
       await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/feed`,
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
           queryParams: { prompt: 'select_account', access_type: 'offline' },
         },
       })
