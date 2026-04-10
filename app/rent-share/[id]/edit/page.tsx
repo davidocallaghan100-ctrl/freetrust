@@ -213,9 +213,27 @@ export default function EditRentSharePage() {
         .photo-thumb:first-child .order-badge { color: #38bdf8; border-color: rgba(56,189,248,0.3); }
         .drop-zone { border: 2px dashed #334155; border-radius: 12px; padding: 1.5rem; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
         .drop-zone:hover, .drop-zone.drag-over { border-color: rgba(45,212,191,0.5); background: rgba(45,212,191,0.04); }
+        .rs-edit-wrap { max-width: 700px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+        .rs-pricing-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; }
+        .rs-avail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .rs-photo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin-bottom: 0.75rem; }
+        .rs-edit-actions { display: flex; gap: 0.75rem; padding-top: 0.5rem; }
+        .rs-cover-hint { font-size: 0.72rem; color: #475569; }
+        @media (max-width: 768px) {
+          .rs-edit-wrap { padding: 1.25rem 1rem 5rem !important; }
+          .rs-pricing-grid { grid-template-columns: 1fr 1fr !important; }
+          .rs-avail-grid { grid-template-columns: 1fr !important; }
+          .rs-photo-grid { grid-template-columns: repeat(3, 1fr) !important; }
+          .rs-edit-actions { flex-direction: column !important; }
+          .rs-cover-hint { display: none; }
+        }
+        @media (max-width: 400px) {
+          .rs-pricing-grid { grid-template-columns: 1fr !important; }
+          .rs-photo-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
       `}</style>
 
-      <div style={{ maxWidth: 700, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
+      <div className="rs-edit-wrap">
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
           <Link href={`/rent-share/${id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#64748b', textDecoration: 'none', fontSize: '0.85rem', marginBottom: '1rem' }}>
@@ -280,7 +298,7 @@ export default function EditRentSharePage() {
           {/* Pricing */}
           <div>
             <label style={labelStyle}>Pricing (€)</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+            <div className="rs-pricing-grid">
               <div>
                 <div style={{ fontSize: '0.75rem', color: '#475569', marginBottom: 5 }}>Per Day</div>
                 <input type="number" min="0" step="0.5" value={pricePerDay} onChange={e => setPricePerDay(e.target.value)} placeholder="0.00" style={inputStyle} />
@@ -306,7 +324,7 @@ export default function EditRentSharePage() {
           {/* Availability */}
           <div>
             <label style={labelStyle}>Availability</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="rs-avail-grid">
               <div>
                 <div style={{ fontSize: '0.75rem', color: '#475569', marginBottom: 5 }}>Available From</div>
                 <input type="date" value={availableFrom} onChange={e => setAvailableFrom(e.target.value)} style={{ ...inputStyle, colorScheme: 'dark' }} />
@@ -323,13 +341,13 @@ export default function EditRentSharePage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <label style={{ ...labelStyle, marginBottom: 0 }}>Photos ({photos.length}/{MAX_PHOTOS})</label>
               {photos.length > 0 && (
-                <span style={{ fontSize: '0.72rem', color: '#475569' }}>First photo is the cover image · hover to reorder</span>
+                <span className="rs-cover-hint">First photo is the cover image · hover to reorder</span>
               )}
             </div>
 
             {/* Photo grid */}
             {photos.length > 0 && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.6rem', marginBottom: '0.75rem' }}>
+              <div className="rs-photo-grid">
                 {photos.map((p, i) => (
                   <div key={i} className="photo-thumb">
                     <img src={p.type === 'existing' ? p.url : p.preview} alt={`Photo ${i + 1}`} />
@@ -390,7 +408,7 @@ export default function EditRentSharePage() {
           )}
 
           {/* Actions */}
-          <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.5rem' }}>
+          <div className="rs-edit-actions">
             <Link href={`/rent-share/${id}`} style={{
               flex: '0 0 auto', background: '#1e293b', border: '1px solid #334155', borderRadius: 12,
               padding: '12px 20px', fontSize: 14, fontWeight: 600, color: '#94a3b8',

@@ -210,16 +210,24 @@ export default function RentSharePage() {
         .rs-card:hover { border-color: rgba(56,189,248,0.3); transform: translateY(-2px); }
         .rs-card:active { transform: scale(0.99); }
         .rs-cats { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+        .rs-cats button { flex-shrink: 0; }
         .spinner { display: inline-block; width: 28px; height: 28px; border: 3px solid rgba(56,189,248,0.2); border-top-color: #38bdf8; border-radius: 50%; animation: spin 0.7s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        @media (max-width: 600px) {
+        @media (max-width: 768px) {
           .rs-grid { grid-template-columns: 1fr; }
           .rs-hero-row { flex-direction: column !important; align-items: stretch !important; }
+          .rs-cats { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; scrollbar-width: none; }
+          .rs-cats::-webkit-scrollbar { display: none; }
+          .rs-search-count { display: none; }
+          .rs-search-input-wrap { max-width: none !important; }
+          .rs-hero-section { padding: 1.5rem 1rem 1.25rem !important; }
+          .rs-content-section { padding: 1rem 1rem 5rem !important; }
+          .rs-info-banner { flex-direction: column !important; }
         }
       `}</style>
 
       {/* Hero */}
-      <div style={{ background: 'linear-gradient(180deg,rgba(45,212,191,0.07) 0%,transparent 100%)', padding: '2.5rem 1.5rem 2rem', borderBottom: '1px solid rgba(45,212,191,0.08)' }}>
+      <div className="rs-hero-section" style={{ background: 'linear-gradient(180deg,rgba(45,212,191,0.07) 0%,transparent 100%)', padding: '2.5rem 1.5rem 2rem', borderBottom: '1px solid rgba(45,212,191,0.08)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div className="rs-hero-row" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
@@ -235,7 +243,7 @@ export default function RentSharePage() {
 
           {/* Search */}
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-            <div style={{ position: 'relative', flex: 1, maxWidth: 480 }}>
+            <div className="rs-search-input-wrap" style={{ position: 'relative', flex: 1, maxWidth: 480 }}>
               <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#475569', pointerEvents: 'none' }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               <input
                 value={search}
@@ -244,14 +252,14 @@ export default function RentSharePage() {
                 style={{ width: '100%', background: '#1e293b', border: '1px solid rgba(45,212,191,0.2)', borderRadius: 8, padding: '0.65rem 1rem 0.65rem 2.25rem', color: '#f1f5f9', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
-            <span style={{ fontSize: '0.85rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+            <span className="rs-search-count" style={{ fontSize: '0.85rem', color: '#64748b', whiteSpace: 'nowrap' }}>
               {loading ? 'Loading…' : `${listings.length} items`}
             </span>
           </div>
         </div>
       </div>
 
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '1.5rem 1.5rem 3rem' }}>
+      <div className="rs-content-section" style={{ maxWidth: 1200, margin: '0 auto', padding: '1.5rem 1.5rem 3rem' }}>
         {/* Setup required banner */}
         {setupRequired && (
           <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 12, padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
@@ -319,7 +327,7 @@ export default function RentSharePage() {
 
         {/* Info banner */}
         {!loading && listings.length > 0 && (
-          <div style={{ marginTop: '2.5rem', background: '#1e293b', border: '1px solid rgba(45,212,191,0.15)', borderRadius: 12, padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <div className="rs-info-banner" style={{ marginTop: '2.5rem', background: '#1e293b', border: '1px solid rgba(45,212,191,0.15)', borderRadius: 12, padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
             <div style={{ fontSize: '1.5rem' }}>♻️</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, color: '#f1f5f9', marginBottom: 2 }}>Share what you have. Borrow what you need.</div>

@@ -24,6 +24,7 @@ const DRAWER_SECTIONS = [
       { href: '/community',       label: 'Community',         icon: '👥' },
       { href: '/articles',        label: 'Articles',          icon: '✍️' },
       { href: '/jobs',            label: 'Jobs',              icon: '💼' },
+      { href: '/rent-share',      label: 'Rent & Share',      icon: '♻️' },
       { href: '/organisations',   label: 'Organisations',     icon: '🏢' },
       { href: '/organisations/new', label: 'Add Organisation', icon: '➕' },
     ],

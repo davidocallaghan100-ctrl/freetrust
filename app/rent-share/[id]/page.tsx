@@ -147,19 +147,31 @@ export default function RentShareDetailPage() {
 
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64 }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .rs-detail-grid { display: grid; grid-template-columns: 1fr 340px; gap: 2rem; align-items: start; }
+        .rs-detail-right { position: sticky; top: 80px; display: flex; flex-direction: column; gap: 1rem; }
+        .rs-thumb-strip { display: flex; gap: 8px; margin-bottom: 1.25rem; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .rs-thumb-strip::-webkit-scrollbar { display: none; }
+        @media (max-width: 768px) {
+          .rs-detail-grid { grid-template-columns: 1fr !important; }
+          .rs-detail-right { position: static !important; }
+          .rs-detail-wrap { padding: 1.25rem 1rem 5rem !important; }
+          .rs-gallery { height: 220px !important; }
+        }
+      `}</style>
+      <div className="rs-detail-wrap" style={{ maxWidth: 1000, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
         {/* Back */}
         <Link href="/rent-share" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#64748b', textDecoration: 'none', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
           ← Back to listings
         </Link>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '2rem', alignItems: 'start' }}>
+        <div className="rs-detail-grid">
 
           {/* LEFT: Details */}
           <div>
             {/* Image gallery */}
-            <div style={{
+            <div className="rs-gallery" style={{
               height: 320, borderRadius: 14, overflow: 'hidden', marginBottom: '1rem',
               background: hasImages ? '#0f172a' : `linear-gradient(135deg, ${meta.bg.replace('0.12', '0.3')}, ${meta.bg})`,
               display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative',
@@ -180,7 +192,7 @@ export default function RentShareDetailPage() {
               </div>
             </div>
             {hasImages && listing.images.length > 1 && (
-              <div style={{ display: 'flex', gap: 8, marginBottom: '1.25rem' }}>
+              <div className="rs-thumb-strip">
                 {listing.images.map((img, i) => (
                   <button key={i} onClick={() => setActiveImage(i)} style={{ width: 60, height: 60, borderRadius: 8, overflow: 'hidden', border: `2px solid ${i === activeImage ? '#2dd4bf' : 'transparent'}`, padding: 0, cursor: 'pointer', background: 'none' }}>
                     <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -254,7 +266,7 @@ export default function RentShareDetailPage() {
           </div>
 
           {/* RIGHT: Owner + Request form */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', position: 'sticky', top: 80 }}>
+          <div className="rs-detail-right">
 
             {/* Owner card */}
             {listing.owner && (
