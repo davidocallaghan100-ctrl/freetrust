@@ -357,8 +357,19 @@ export default function RentShareDetailPage() {
             )}
 
             {isOwner && (
-              <div style={{ background: 'rgba(45,212,191,0.08)', border: '1px solid rgba(45,212,191,0.2)', borderRadius: 14, padding: '1rem 1.25rem', fontSize: '0.85rem', color: '#2dd4bf' }}>
-                ✓ This is your listing
+              <div style={{ background: '#1e293b', border: '1px solid rgba(45,212,191,0.2)', borderRadius: 14, padding: '1rem 1.25rem' }}>
+                <div style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.6rem' }}>Your listing</div>
+                <Link
+                  href={`/rent-share/${id}/edit`}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    background: 'linear-gradient(135deg,#2dd4bf,#0891b2)', color: '#0f172a',
+                    borderRadius: 10, padding: '10px 0', fontSize: 14, fontWeight: 700,
+                    textDecoration: 'none', width: '100%',
+                  }}
+                >
+                  ✏️ Edit Listing
+                </Link>
               </div>
             )}
           </div>

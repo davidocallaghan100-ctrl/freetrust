@@ -56,7 +56,7 @@ function ownerInitials(name: string | null) {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 }
 
-function ListingCard({ listing, onClick }: { listing: Listing; onClick: () => void }) {
+function ListingCard({ listing, onClick, isOwner }: { listing: Listing; onClick: () => void; isOwner: boolean }) {
   const meta = catMeta(listing.category)
   const hasImage = listing.images?.length > 0
 
@@ -121,7 +121,16 @@ function ListingCard({ listing, onClick }: { listing: Listing; onClick: () => vo
           <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#38bdf8' }}>
             {formatPrice(listing.price_per_day, listing.price_per_week)}
           </span>
-          <span style={{ fontSize: '0.7rem', color: '#475569' }}>{daysAgo(listing.created_at)}</span>
+          {isOwner ? (
+            <Link
+              href={`/rent-share/${listing.id}/edit`}
+              onClick={e => e.stopPropagation()}
+              style={{ fontSize: '0.72rem', fontWeight: 700, color: '#2dd4bf', background: 'rgba(45,212,191,0.1)', border: '1px solid rgba(45,212,191,0.25)', borderRadius: 6, padding: '2px 8px', textDecoration: 'none' }}>
+              ✏️ Edit
+            </Link>
+          ) : (
+            <span style={{ fontSize: '0.7rem', color: '#475569' }}>{daysAgo(listing.created_at)}</span>
+          )}
         </div>
       </div>
     </div>
@@ -303,7 +312,7 @@ export default function RentSharePage() {
         ) : (
           <div className="rs-grid">
             {listings.map(l => (
-              <ListingCard key={l.id} listing={l} onClick={() => handleListClick(l.id)} />
+              <ListingCard key={l.id} listing={l} onClick={() => handleListClick(l.id)} isOwner={l.owner?.id === userId} />
             ))}
           </div>
         )}
