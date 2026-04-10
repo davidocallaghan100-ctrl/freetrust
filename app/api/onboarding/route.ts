@@ -18,27 +18,32 @@ export async function POST(request: NextRequest) {
       avatar_url,
     } = body
 
-    // Check if already completed
+    // Check if already completed; also read current avatar_url so we don't overwrite it
     const { data: profile } = await supabase
       .from('profiles')
-      .select('onboarding_complete, full_name')
+      .select('onboarding_complete, full_name, avatar_url')
       .eq('id', user.id)
       .single()
 
-    // Update profile
-    await supabase.from('profiles').upsert({
+    // Update profile — never null out avatar_url (it is managed by the upload step)
+    const { error: upsertError } = await supabase.from('profiles').upsert({
       id: user.id,
       account_type: account_type ?? 'individual',
       full_name: full_name ?? profile?.full_name,
-      bio: bio ?? null,
-      location: location ?? null,
+      bio: bio || null,
+      location: location || null,
       skills: skills ?? [],
       interests: interests ?? [],
       purpose: purpose ?? [],
-      avatar_url: avatar_url ?? null,
+      avatar_url: avatar_url ?? profile?.avatar_url ?? null,
       onboarding_complete: true,
       updated_at: new Date().toISOString(),
     })
+
+    if (upsertError) {
+      console.error('[POST /api/onboarding] upsert error:', upsertError)
+      return NextResponse.json({ error: upsertError.message }, { status: 500 })
+    }
 
     // Read trust balance to confirm ₮25 was already issued at signup
     const { data: tb } = await supabase

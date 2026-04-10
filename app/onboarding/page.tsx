@@ -88,6 +88,7 @@ export default function OnboardingPage() {
           skills: selectedSkills,
           interests: selectedInterests,
           purpose: selectedPurposes,
+          avatar_url: avatarUrl,
         }),
       })
       const json = await res.json()
