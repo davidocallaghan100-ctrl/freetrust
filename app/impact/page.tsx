@@ -133,23 +133,29 @@ export default function ImpactPage() {
   const [donateSuccess, setDonateSuccess] = useState<string | null>(null)
   const [voting, setVoting] = useState(false)
   const [trustBalance, setTrustBalance] = useState(0)
+  const [platformStats, setPlatformStats] = useState<{ members?: { total: number }; listings?: { services: number; products: number }; trust?: { total: number } } | null>(null)
 
   const daysLeft = getDaysToQuarterEnd()
 
   const loadAll = useCallback(async () => {
     try {
-      const [projRes, statsRes, lbRes, voteRes, trustRes] = await Promise.all([
+      const [projRes, statsRes, lbRes, voteRes, trustRes, platformStatsRes] = await Promise.all([
         fetch('/api/impact/projects'),
         fetch('/api/impact/stats'),
         fetch('/api/impact/leaderboard'),
         fetch('/api/impact/vote'),
         fetch('/api/trust'),
+        fetch('/api/stats'),
       ])
       if (projRes.ok) { const d = await projRes.json() as { projects: ImpactProject[] }; setProjects(d.projects ?? []) }
       if (statsRes.ok) { const d = await statsRes.json() as ImpactStats; setStats(d) }
       if (lbRes.ok) { const d = await lbRes.json() as { leaderboard: LeaderboardEntry[] }; setLeaderboard(d.leaderboard ?? []) }
       if (voteRes.ok) { const d = await voteRes.json() as { tallies: Record<string, number>; myVote: string | null }; setVoteTallies(d.tallies ?? {}); setMyVote(d.myVote ?? null) }
       if (trustRes.ok) { const d = await trustRes.json() as { balance?: number }; setTrustBalance(d.balance ?? 0) }
+      if (platformStatsRes.ok) {
+        const d = await platformStatsRes.json() as { members?: { total: number }; listings?: { services: number; products: number }; trust?: { total: number } }
+        setPlatformStats(d)
+      }
     } catch (err) {
       console.error('Impact loadAll error:', err)
     } finally {
@@ -275,10 +281,10 @@ export default function ImpactPage() {
           </div>
           <div className="impact-stats">
             {[
-              { label: 'Total Raised', icon: '💰', val: `€${((stats?.totalRaised ?? 0) / 1000).toFixed(0)}k` },
-              { label: 'Contributors', icon: '👥', val: (stats?.totalBackers ?? 0).toLocaleString() },
-              { label: 'Active Projects', icon: '🌍', val: String(stats?.activeProjects ?? 0) },
-              { label: 'Members', icon: '🎯', val: (stats?.memberCount ?? 0).toLocaleString() },
+              { label: 'Members', icon: '🎯', val: (platformStats?.members?.total ?? stats?.memberCount ?? 0).toLocaleString() },
+              { label: 'Services Listed', icon: '🛠️', val: (platformStats?.listings?.services ?? 0).toLocaleString() },
+              { label: 'Products Listed', icon: '📦', val: (platformStats?.listings?.products ?? 0).toLocaleString() },
+              { label: 'Trust Issued', icon: '₮', val: `₮${(platformStats?.trust?.total ?? 0).toLocaleString()}` },
             ].map(s => (
               <div key={s.label} style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 12, padding: '1rem 1.25rem', textAlign: 'center', flex: 1, minWidth: 130 }}>
                 <span style={{ fontSize: '1.25rem' }}>{s.icon}</span>
@@ -342,9 +348,9 @@ export default function ImpactPage() {
               <div style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(129,140,248,0.25)', borderRadius: 14, padding: '1.25rem 1.75rem' }}>
                 <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>Reserve Balance</div>
                 <div style={{ fontSize: '2.2rem', fontWeight: 900, color: '#818cf8', lineHeight: 1 }}>
-                  ₮{Math.round((stats?.totalRaised ?? 1090) * 0.05).toLocaleString()}
+                  ₮{Math.round((platformStats?.trust?.total ?? stats?.totalRaised ?? 0) * 0.05).toLocaleString()}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '0.35rem' }}>5% of ₮{(stats?.totalRaised ?? 1090).toLocaleString()} lifetime issued</div>
+                <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '0.35rem' }}>5% of ₮{(platformStats?.trust?.total ?? stats?.totalRaised ?? 0).toLocaleString()} lifetime issued</div>
                 <div style={{ background: 'rgba(129,140,248,0.08)', borderRadius: 4, height: 5, marginTop: '0.75rem', overflow: 'hidden' }}>
                   <div style={{ background: 'linear-gradient(90deg,#818cf8,#a78bfa)', height: '100%', width: '5%', borderRadius: 4 }} />
                 </div>
