@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 type JobType = 'full_time' | 'part_time' | 'contract' | 'freelance' | 'all'
+type LocationType = 'all' | 'remote' | 'on_site' | 'hybrid'
 
 interface RemoteJob {
   id: string
@@ -19,16 +20,79 @@ interface RemoteJob {
   created_at: string
   url: string
   description_snippet: string
+  is_local?: boolean
+}
+
+interface SupabaseJob {
+  id: string
+  title: string
+  description: string
+  job_type: string
+  location_type: string
+  location: string | null
+  category: string
+  tags: string[]
+  salary_min: number | null
+  salary_max: number | null
+  salary_currency: string
+  created_at: string
+  poster: { id: string; full_name: string | null } | null
 }
 
 const TYPE_LABELS: Record<string, string> = { full_time: 'Full Time', part_time: 'Part Time', contract: 'Contract', freelance: 'Freelance' }
 const TYPE_COLORS: Record<string, string> = { full_time: '#38bdf8', part_time: '#a78bfa', contract: '#fbbf24', freelance: '#34d399' }
+
+const LOC_BADGE: Record<string, { emoji: string; label: string; color: string; bg: string; border: string }> = {
+  remote:  { emoji: '🌍', label: 'Remote',  color: '#34d399', bg: 'rgba(52,211,153,0.1)',  border: 'rgba(52,211,153,0.25)' },
+  hybrid:  { emoji: '🔀', label: 'Hybrid',  color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.25)' },
+  on_site: { emoji: '🏢', label: 'On-site', color: '#fb923c', bg: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.25)' },
+}
+
+const LOC_FILTER_LABELS: Record<LocationType, string> = { all: 'All', remote: 'Remote', on_site: 'On-site', hybrid: 'Hybrid' }
 
 const CATEGORIES = ['All', 'Tech', 'Design', 'Marketing', 'Sales', 'Finance', 'AI', 'Data', 'DevOps', 'Product', 'Writing', 'QA']
 
 function daysAgo(iso: string) {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
   return diff === 0 ? 'Today' : diff === 1 ? 'Yesterday' : `${diff}d ago`
+}
+
+function formatSalary(min: number | null, max: number | null, currency: string): string | null {
+  if (!min && !max) return null
+  const sym = currency === 'GBP' ? '£' : currency === 'EUR' ? '€' : '$'
+  const fmt = (n: number) => n >= 1000 ? `${sym}${Math.round(n / 1000)}k` : `${sym}${n}`
+  if (min && max) return `${fmt(min)} – ${fmt(max)}`
+  return min ? `From ${fmt(min)}` : `Up to ${fmt(max!)}`
+}
+
+function supabaseToRemoteJob(j: SupabaseJob): RemoteJob {
+  return {
+    id: `local-${j.id}`,
+    title: j.title,
+    company_name: j.poster?.full_name ?? 'FreeTrust Member',
+    company_logo: null,
+    job_type: j.job_type,
+    location_type: j.location_type,
+    location: j.location,
+    salary: formatSalary(j.salary_min, j.salary_max, j.salary_currency),
+    tags: j.tags ?? [],
+    category: j.category,
+    created_at: j.created_at,
+    url: `/jobs/${j.id}`,
+    description_snippet: j.description.slice(0, 200),
+    is_local: true,
+  }
+}
+
+// ── Location Badge ─────────────────────────────────────────────────────────────
+function LocationBadge({ locationType }: { locationType: string }) {
+  const b = LOC_BADGE[locationType]
+  if (!b) return null
+  return (
+    <span style={{ background: b.bg, color: b.color, border: `1px solid ${b.border}`, borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.72rem', fontWeight: 600 }}>
+      {b.emoji} {b.label}
+    </span>
+  )
 }
 
 // ── Apply Modal ────────────────────────────────────────────────────────────────
@@ -39,7 +103,6 @@ function ApplyModal({ job, onClose }: { job: RemoteJob; onClose: () => void }) {
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
-  // Pre-fill from Supabase profile if logged in
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -54,7 +117,6 @@ function ApplyModal({ job, onClose }: { job: RemoteJob; onClose: () => void }) {
     })
   }, [])
 
-  // Lock body scroll
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
@@ -63,7 +125,6 @@ function ApplyModal({ job, onClose }: { job: RemoteJob; onClose: () => void }) {
   async function handleSubmit() {
     if (!name.trim() || !email.trim()) return
     setSubmitting(true)
-    // Small delay to feel real — actual submission goes to the external URL
     await new Promise(r => setTimeout(r, 900))
     setSubmitting(false)
     setSubmitted(true)
@@ -72,6 +133,7 @@ function ApplyModal({ job, onClose }: { job: RemoteJob; onClose: () => void }) {
   const initials = job.company_name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
   const typeColor = TYPE_COLORS[job.job_type] ?? '#94a3b8'
   const typeLabel = TYPE_LABELS[job.job_type] ?? job.job_type
+  const locBadge = LOC_BADGE[job.location_type]
 
   return (
     <div
@@ -104,7 +166,11 @@ function ApplyModal({ job, onClose }: { job: RemoteJob; onClose: () => void }) {
           {/* Badges */}
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
             <span style={{ background: `${typeColor}18`, color: typeColor, border: `1px solid ${typeColor}30`, borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{typeLabel}</span>
-            <span style={{ background: 'rgba(52,211,153,0.1)', color: '#34d399', border: '1px solid rgba(52,211,153,0.25)', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>🌍 Remote</span>
+            {locBadge && (
+              <span style={{ background: locBadge.bg, color: locBadge.color, border: `1px solid ${locBadge.border}`, borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>
+                {locBadge.emoji} {locBadge.label}
+              </span>
+            )}
             {job.location && job.location !== 'Worldwide' && (
               <span style={{ background: 'rgba(148,163,184,0.08)', color: '#94a3b8', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '2px 8px', fontSize: 11 }}>📍 {job.location}</span>
             )}
@@ -115,7 +181,6 @@ function ApplyModal({ job, onClose }: { job: RemoteJob; onClose: () => void }) {
         </div>
 
         {submitted ? (
-          /* ── Success state ── */
           <div style={{ padding: '40px 20px', textAlign: 'center' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: '#f1f5f9', marginBottom: 8 }}>Application sent!</div>
@@ -137,17 +202,13 @@ function ApplyModal({ job, onClose }: { job: RemoteJob; onClose: () => void }) {
             </div>
           </div>
         ) : (
-          /* ── Form ── */
           <div style={{ padding: '20px 20px 0' }}>
-            {/* Description snippet */}
             {job.description_snippet && (
               <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: '12px 14px', marginBottom: 18 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>About the role</div>
                 <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6, margin: 0 }}>{job.description_snippet}</p>
               </div>
             )}
-
-            {/* Tags */}
             {job.tags.length > 0 && (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18 }}>
                 {job.tags.slice(0, 6).map(t => (
@@ -155,49 +216,27 @@ function ApplyModal({ job, onClose }: { job: RemoteJob; onClose: () => void }) {
                 ))}
               </div>
             )}
-
             <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', marginBottom: 14 }}>Your details</div>
-
             <div style={{ marginBottom: 12 }}>
               <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Full Name *</label>
-              <input
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="Your full name"
-                style={{ width: '100%', boxSizing: 'border-box', background: '#1e293b', border: '1px solid #334155', borderRadius: 10, padding: '10px 14px', fontSize: 16, color: '#f1f5f9', outline: 'none' }}
-              />
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="Your full name"
+                style={{ width: '100%', boxSizing: 'border-box', background: '#1e293b', border: '1px solid #334155', borderRadius: 10, padding: '10px 14px', fontSize: 16, color: '#f1f5f9', outline: 'none' }} />
             </div>
-
             <div style={{ marginBottom: 12 }}>
               <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Email Address *</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                style={{ width: '100%', boxSizing: 'border-box', background: '#1e293b', border: '1px solid #334155', borderRadius: 10, padding: '10px 14px', fontSize: 16, color: '#f1f5f9', outline: 'none' }}
-              />
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com"
+                style={{ width: '100%', boxSizing: 'border-box', background: '#1e293b', border: '1px solid #334155', borderRadius: 10, padding: '10px 14px', fontSize: 16, color: '#f1f5f9', outline: 'none' }} />
             </div>
-
             <div style={{ marginBottom: 20 }}>
               <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Cover Note <span style={{ color: '#334155', fontWeight: 400, textTransform: 'none' }}>(optional)</span></label>
-              <textarea
-                value={coverNote}
-                onChange={e => setCoverNote(e.target.value)}
+              <textarea value={coverNote} onChange={e => setCoverNote(e.target.value)}
                 placeholder={`Briefly introduce yourself and why you're a great fit for ${job.company_name}…`}
-                rows={4}
-                style={{ width: '100%', boxSizing: 'border-box', background: '#1e293b', border: '1px solid #334155', borderRadius: 10, padding: '10px 14px', fontSize: 16, color: '#f1f5f9', resize: 'none', outline: 'none' }}
-              />
+                rows={4} style={{ width: '100%', boxSizing: 'border-box', background: '#1e293b', border: '1px solid #334155', borderRadius: 10, padding: '10px 14px', fontSize: 16, color: '#f1f5f9', resize: 'none', outline: 'none' }} />
             </div>
-
-            <button
-              onClick={handleSubmit}
-              disabled={submitting || !name.trim() || !email.trim()}
-              style={{ width: '100%', background: !name.trim() || !email.trim() ? '#1e293b' : 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 12, padding: '13px 0', fontSize: 15, fontWeight: 700, color: !name.trim() || !email.trim() ? '#475569' : '#0f172a', cursor: !name.trim() || !email.trim() ? 'not-allowed' : 'pointer', marginBottom: 10 }}
-            >
+            <button onClick={handleSubmit} disabled={submitting || !name.trim() || !email.trim()}
+              style={{ width: '100%', background: !name.trim() || !email.trim() ? '#1e293b' : 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 12, padding: '13px 0', fontSize: 15, fontWeight: 700, color: !name.trim() || !email.trim() ? '#475569' : '#0f172a', cursor: !name.trim() || !email.trim() ? 'not-allowed' : 'pointer', marginBottom: 10 }}>
               {submitting ? 'Sending…' : `Apply to ${job.company_name}`}
             </button>
-
             <p style={{ fontSize: 11, color: '#334155', textAlign: 'center', lineHeight: 1.5, margin: 0 }}>
               Your application will be forwarded to the employer. You can also{' '}
               <a href={job.url} target="_blank" rel="noopener noreferrer" style={{ color: '#475569', textDecoration: 'underline' }}>apply directly on their site ↗</a>
@@ -217,6 +256,7 @@ export default function JobsPage() {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [jobType, setJobType] = useState<JobType>('all')
+  const [locationType, setLocationType] = useState<LocationType>('all')
   const [category, setCategory] = useState('All')
   const [applyJob, setApplyJob] = useState<RemoteJob | null>(null)
 
@@ -229,13 +269,31 @@ export default function JobsPage() {
     setLoading(true)
     setError('')
     try {
-      const params = new URLSearchParams({ limit: '80' })
-      if (category !== 'All') params.set('category', category)
-      if (debouncedSearch) params.set('search', debouncedSearch)
-      const res = await fetch(`/api/jobs/remote?${params}`)
-      if (!res.ok) throw new Error('Failed to load jobs')
-      const data = await res.json() as { jobs: RemoteJob[] }
-      setJobs(data.jobs ?? [])
+      const remoteParams = new URLSearchParams({ limit: '80' })
+      if (category !== 'All') remoteParams.set('category', category)
+      if (debouncedSearch) remoteParams.set('search', debouncedSearch)
+
+      const localParams = new URLSearchParams({ limit: '50' })
+      if (debouncedSearch) localParams.set('search', debouncedSearch)
+      if (category !== 'All') localParams.set('category', category)
+
+      const [remoteRes, localRes] = await Promise.allSettled([
+        fetch(`/api/jobs/remote?${remoteParams}`),
+        fetch(`/api/jobs?${localParams}`),
+      ])
+
+      const remoteJobs: RemoteJob[] = remoteRes.status === 'fulfilled' && remoteRes.value.ok
+        ? ((await remoteRes.value.json()) as { jobs: RemoteJob[] }).jobs ?? []
+        : []
+
+      const localRaw: SupabaseJob[] = localRes.status === 'fulfilled' && localRes.value.ok
+        ? ((await localRes.value.json()) as { jobs: SupabaseJob[] }).jobs ?? []
+        : []
+
+      const localJobs = localRaw.map(supabaseToRemoteJob)
+
+      // Local (Irish/on-site/hybrid) jobs first, then Remotive remote jobs
+      setJobs([...localJobs, ...remoteJobs])
     } catch {
       setError('Unable to load jobs right now. Please try again.')
       setJobs([])
@@ -246,7 +304,9 @@ export default function JobsPage() {
 
   useEffect(() => { void fetchJobs() }, [fetchJobs])
 
-  const filtered = jobType === 'all' ? jobs : jobs.filter(j => j.job_type === jobType)
+  const filtered = jobs
+    .filter(j => locationType === 'all' || j.location_type === locationType)
+    .filter(j => jobType === 'all' || j.job_type === jobType)
 
   const btnBase: React.CSSProperties = {
     padding: '0.35rem 0.9rem', borderRadius: 999, fontSize: '0.8rem', cursor: 'pointer',
@@ -267,6 +327,8 @@ export default function JobsPage() {
         .job-card { background: #1e293b; border: 1px solid rgba(56,189,248,0.08); border-radius: 14px; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.85rem; transition: border-color 0.15s, transform 0.15s; color: inherit; cursor: pointer; }
         .job-card:hover { border-color: rgba(56,189,248,0.3); transform: translateY(-2px); }
         .job-card:active { transform: scale(0.99); }
+        .job-card-local { border-color: rgba(251,146,60,0.12) !important; }
+        .job-card-local:hover { border-color: rgba(251,146,60,0.35) !important; }
         .spinner { display: inline-block; width: 28px; height: 28px; border: 3px solid rgba(56,189,248,0.2); border-top-color: #38bdf8; border-radius: 50%; animation: spin 0.7s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         @media (max-width: 768px) {
@@ -278,7 +340,6 @@ export default function JobsPage() {
         }
       `}</style>
 
-      {/* Apply modal */}
       {applyJob && <ApplyModal job={applyJob} onClose={() => setApplyJob(null)} />}
 
       {/* Hero */}
@@ -286,8 +347,8 @@ export default function JobsPage() {
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.4rem' }}>Remote Jobs</h1>
-              <p style={{ color: '#64748b', margin: 0 }}>Real remote opportunities from companies around the world</p>
+              <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.4rem' }}>Jobs</h1>
+              <p style={{ color: '#64748b', margin: 0 }}>Remote, hybrid, and on-site opportunities — Ireland and beyond</p>
             </div>
             <Link href="/jobs/new" style={{ background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 8, padding: '0.6rem 1.3rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap', display: 'inline-block' }}>
               + Post a Job
@@ -314,6 +375,14 @@ export default function JobsPage() {
         {/* Filters */}
         <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1rem 1.25rem', marginBottom: '1.5rem' }}>
           <div className="jobs-filters">
+            <span className="jobs-filter-label">Location:</span>
+            {(['all', 'remote', 'on_site', 'hybrid'] as LocationType[]).map(l => (
+              <button key={l} onClick={() => setLocationType(l)} style={{ ...btnBase, ...(locationType === l ? btnActive : {}) }}>
+                {LOC_FILTER_LABELS[l]}
+              </button>
+            ))}
+          </div>
+          <div className="jobs-filters">
             <span className="jobs-filter-label">Type:</span>
             {(['all', 'full_time', 'part_time', 'contract', 'freelance'] as JobType[]).map(t => (
               <button key={t} onClick={() => setJobType(t)} style={{ ...btnBase, ...(jobType === t ? btnActive : {}) }}>
@@ -321,7 +390,7 @@ export default function JobsPage() {
               </button>
             ))}
           </div>
-          <div className="jobs-filters">
+          <div className="jobs-filters" style={{ marginBottom: 0 }}>
             <span className="jobs-filter-label">Category:</span>
             {CATEGORIES.map(c => (
               <button key={c} onClick={() => setCategory(c)} style={{ ...btnBase, ...(category === c ? btnActive : {}) }}>{c}</button>
@@ -333,7 +402,7 @@ export default function JobsPage() {
         {loading ? (
           <div style={{ textAlign: 'center', padding: '5rem 1rem', color: '#64748b' }}>
             <div className="spinner" style={{ margin: '0 auto 1rem' }} />
-            <div style={{ fontSize: '0.9rem' }}>Loading real jobs…</div>
+            <div style={{ fontSize: '0.9rem' }}>Loading jobs…</div>
           </div>
         ) : error ? (
           <div style={{ textAlign: 'center', padding: '4rem 1rem', color: '#64748b' }}>
@@ -347,7 +416,7 @@ export default function JobsPage() {
           <div style={{ textAlign: 'center', padding: '4rem 1rem', color: '#64748b' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem', color: '#94a3b8' }}>No jobs match your filters</div>
-            <div>Try a different category or search term</div>
+            <div>Try a different category, location type, or search term</div>
           </div>
         ) : (
           <div className="jobs-grid">
@@ -356,32 +425,35 @@ export default function JobsPage() {
               const typeColor = TYPE_COLORS[job.job_type] ?? '#94a3b8'
               const typeLabel = TYPE_LABELS[job.job_type] ?? job.job_type
               return (
-                <div key={job.id} className="job-card" onClick={() => setApplyJob(job)}>
+                <div key={job.id} className={`job-card${job.is_local ? ' job-card-local' : ''}`} onClick={() => setApplyJob(job)}>
                   {/* Company row */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                       {job.company_logo ? (
                         <img src={job.company_logo} alt={job.company_name} style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'contain', background: '#fff', padding: 3, flexShrink: 0 }} />
                       ) : (
-                        <div style={{ width: 36, height: 36, borderRadius: 8, background: 'linear-gradient(135deg,#38bdf8,#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.75rem', color: '#0f172a', flexShrink: 0 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 8, background: job.is_local ? 'linear-gradient(135deg,#fb923c,#ea580c)' : 'linear-gradient(135deg,#38bdf8,#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.75rem', color: '#0f172a', flexShrink: 0 }}>
                           {initials}
                         </div>
                       )}
-                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#94a3b8' }}>{job.company_name}</span>
+                      <div>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#94a3b8' }}>{job.company_name}</span>
+                        {job.is_local && (
+                          <div style={{ fontSize: '0.65rem', color: '#fb923c', fontWeight: 600, letterSpacing: '0.04em' }}>FreeTrust</div>
+                        )}
+                      </div>
                     </div>
                     <span style={{ fontSize: '0.72rem', color: '#475569', flexShrink: 0 }}>{daysAgo(job.created_at)}</span>
                   </div>
 
-                  {/* Title + type badge */}
+                  {/* Title + badges */}
                   <div>
                     <h3 style={{ fontSize: '1.02rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem', lineHeight: 1.3 }}>{job.title}</h3>
                     <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                       <span style={{ background: `${typeColor}18`, color: typeColor, border: `1px solid ${typeColor}30`, borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.72rem', fontWeight: 600 }}>
                         {typeLabel}
                       </span>
-                      <span style={{ background: 'rgba(52,211,153,0.1)', color: '#34d399', border: '1px solid rgba(52,211,153,0.25)', borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.72rem', fontWeight: 600 }}>
-                        🌍 Remote
-                      </span>
+                      <LocationBadge locationType={job.location_type} />
                       {job.location && job.location !== 'Worldwide' && (
                         <span style={{ background: 'rgba(148,163,184,0.08)', color: '#94a3b8', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.72rem' }}>
                           📍 {job.location}
@@ -424,7 +496,7 @@ export default function JobsPage() {
         {/* Attribution */}
         {!loading && filtered.length > 0 && (
           <div style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.75rem', color: '#334155' }}>
-            Jobs powered by <a href="https://remotive.com" target="_blank" rel="noopener noreferrer" style={{ color: '#475569', textDecoration: 'none' }}>Remotive</a>
+            Remote listings powered by <a href="https://remotive.com" target="_blank" rel="noopener noreferrer" style={{ color: '#475569', textDecoration: 'none' }}>Remotive</a>
             {' · '}
             <Link href="/jobs/new" style={{ color: '#475569', textDecoration: 'none' }}>Post your own job on FreeTrust →</Link>
           </div>
