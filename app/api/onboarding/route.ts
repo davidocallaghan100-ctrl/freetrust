@@ -18,32 +18,50 @@ export async function POST(request: NextRequest) {
       avatar_url,
     } = body
 
-    // Check if already completed; also read current avatar_url so we don't overwrite it
+    // Read only base-schema columns that are guaranteed to exist.
+    // Avoid selecting extended columns (onboarding_complete, account_type, etc.)
+    // which are added by a migration that may not yet be applied to the live DB.
     const { data: profile } = await supabase
       .from('profiles')
-      .select('onboarding_complete, full_name, avatar_url')
+      .select('full_name, avatar_url')
       .eq('id', user.id)
       .single()
 
-    // Update profile — never null out avatar_url (it is managed by the upload step)
-    const { error: upsertError } = await supabase.from('profiles').upsert({
-      id: user.id,
-      account_type: account_type ?? 'individual',
-      full_name: full_name ?? profile?.full_name,
-      bio: bio || null,
-      location: location || null,
-      skills: skills ?? [],
-      interests: interests ?? [],
-      purpose: purpose ?? [],
-      avatar_url: avatar_url ?? profile?.avatar_url ?? null,
-      onboarding_complete: true,
-      updated_at: new Date().toISOString(),
-    })
+    // ── Step 1: update core columns (guaranteed in base schema) ──────────────
+    // bio and location live in the base schema so this update ALWAYS works,
+    // even if the extended-columns migration hasn't been applied yet.
+    const { error: coreError } = await supabase
+      .from('profiles')
+      .update({
+        full_name: full_name || profile?.full_name || null,
+        bio: bio || null,
+        location: location || null,
+        // Prefer the freshly uploaded avatar_url from the request body, then
+        // fall back to whatever is already stored — never overwrite with null.
+        avatar_url: avatar_url ?? profile?.avatar_url ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', user.id)
 
-    if (upsertError) {
-      console.error('[POST /api/onboarding] upsert error:', upsertError)
-      return NextResponse.json({ error: upsertError.message }, { status: 500 })
+    if (coreError) {
+      console.error('[POST /api/onboarding] core update error:', coreError)
+      return NextResponse.json({ error: coreError.message }, { status: 500 })
     }
+
+    // ── Step 2: update extended columns (best-effort) ────────────────────────
+    // These columns are added by the 20260410_profiles_extended_columns migration.
+    // If it hasn't been applied yet the update will fail — that's acceptable
+    // because the important fields (bio, location) were already saved above.
+    await supabase
+      .from('profiles')
+      .update({
+        account_type: account_type ?? 'individual',
+        skills: skills ?? [],
+        interests: interests ?? [],
+        purpose: purpose ?? [],
+        onboarding_complete: true,
+      })
+      .eq('id', user.id)
 
     // Read trust balance to confirm ₮25 was already issued at signup
     const { data: tb } = await supabase
