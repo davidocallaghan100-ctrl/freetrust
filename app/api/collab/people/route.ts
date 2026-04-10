@@ -23,8 +23,7 @@ export async function GET(request: NextRequest) {
         id, full_name, avatar_url, bio, location, last_seen_at, role, created_at,
         trust_balances!profiles_id_fkey(balance)
       `, { count: 'exact' })
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
+            .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
     if (search) {
@@ -45,8 +44,7 @@ export async function GET(request: NextRequest) {
       const { data: profiles2, error: error2, count: count2 } = await supabase
         .from('profiles')
         .select('id, full_name, avatar_url, bio, location, last_seen_at, role, created_at', { count: 'exact' })
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false })
+                .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1)
 
       if (error2) {

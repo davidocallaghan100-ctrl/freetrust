@@ -33,11 +33,11 @@ export async function GET() {
       growthRes,
     ] = await Promise.allSettled([
       // Total members
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).is('deleted_at', null),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }),
       // Members this week
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', weekAgo).is('deleted_at', null),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', weekAgo),
       // Members this month
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', monthAgo).is('deleted_at', null),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', monthAgo),
       // Services listed (from listings table)
       supabase.from('listings').select('id', { count: 'exact', head: true }).eq('product_type', 'service').eq('status', 'active'),
       // Products listed (from listings table) — physical/digital/everything non-service
@@ -57,13 +57,13 @@ export async function GET() {
       // Members holding trust (balance > 0)
       supabase.from('trust_balances').select('user_id', { count: 'exact', head: true }).gt('balance', 0),
       // Recent member joins (for ticker)
-      supabase.from('profiles').select('id, full_name, location, created_at').is('deleted_at', null).order('created_at', { ascending: false }).limit(10),
+      supabase.from('profiles').select('id, full_name, location, created_at').order('created_at', { ascending: false }).limit(10),
       // Recent trust events — pull from trust_balances (fallback: no ledger table)
       supabase.from('trust_balances').select('user_id, lifetime, updated_at').order('updated_at', { ascending: false }).limit(10),
       // Recent articles (for ticker)
       supabase.from('articles').select('id, title, created_at').eq('status', 'published').order('created_at', { ascending: false }).limit(5),
       // Growth: last 30 profiles with created_at for sparkline
-      supabase.from('profiles').select('created_at').is('deleted_at', null).order('created_at', { ascending: true }).limit(200),
+      supabase.from('profiles').select('created_at').order('created_at', { ascending: true }).limit(200),
     ])
 
     // Helper to safely get count
