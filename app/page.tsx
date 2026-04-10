@@ -476,15 +476,15 @@ export default function Home() {
           <div className="hscroll">
             {featuredServices.length === 0
               ? Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} style={{ flexShrink: 0, width: 240, height: 210, background: '#1e293b', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.1)', animation: 'shimmer 1.4s infinite', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%' }} />
+                  <div key={i} style={{ flexShrink: 0, width: 240, height: 268, background: '#1e293b', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.1)', animation: 'shimmer 1.4s infinite', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%' }} />
                 ))
               : featuredServices.map(s => (
                   <Link key={s.id} href={`/services/${s.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 240 }}>
-                    <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s' }}
+                    <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s', display: 'flex', flexDirection: 'column', height: 268 }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.15)' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
-                      {/* Banner — gradient background, service cover image on top if available */}
-                      <div style={{ height: 140, background: s.grad, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
+                      {/* Banner — fixed 148px, object-cover so all images fill uniformly */}
+                      <div style={{ height: 148, flexShrink: 0, background: s.grad, overflow: 'hidden', position: 'relative' }}>
                         {s.coverImage && (
                           <img
                             src={s.coverImage}
@@ -494,10 +494,13 @@ export default function Home() {
                           />
                         )}
                       </div>
-                      <div style={{ padding: '0.85rem' }}>
-                        <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.3rem', lineHeight: 1.25, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{s.title}</div>
-                        <div style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: '0.4rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.provider}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      {/* Body — flex-col, price pinned to bottom */}
+                      <div style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', marginBottom: '0.3rem' } as React.CSSProperties}>{s.title}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.provider}</div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
                           <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#f1f5f9' }}>{format(s.price, s.currency as 'GBP' | 'EUR' | 'USD')}</span>
                           {s.reviews > 0 && <span style={{ fontSize: '0.68rem', color: '#fbbf24' }}>★ {s.rating.toFixed(1)} ({s.reviews})</span>}
                         </div>
