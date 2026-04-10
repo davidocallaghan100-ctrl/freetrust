@@ -6,13 +6,13 @@ export async function GET() {
   try {
     const supabase = createAdminClient()
 
-    // Only select columns that actually exist on profiles
+    // Fetch all registered profiles (not filtered by full_name — members
+    // who haven't set a name yet will show as "Anonymous" on the card)
     const { data, error } = await supabase
       .from('profiles')
       .select('id, full_name, username, avatar_url, bio, location')
-      .not('full_name', 'is', null)
       .order('created_at', { ascending: false })
-      .limit(100)
+      .limit(1000)
 
     if (error) {
       console.error('[GET /api/directory/members]', error)
