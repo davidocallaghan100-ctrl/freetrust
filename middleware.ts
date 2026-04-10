@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { checkApiRateLimit, checkLoginRateLimit } from '@/lib/security/rate-limit'
+import { checkApiRateLimit, checkLoginRateLimit, checkSignupRateLimit } from '@/lib/security/rate-limit'
 
 function getClientIp(req: NextRequest): string {
   return (
@@ -60,6 +60,22 @@ export async function middleware(request: NextRequest) {
           : 900
         const res = NextResponse.json(
           { error: `Too many login attempts. Please wait ${Math.ceil(waitSecs / 60)} minutes before trying again.` },
+          { status: 429 }
+        )
+        res.headers.set('Retry-After', String(waitSecs))
+        return applySecurityHeaders(res)
+      }
+    }
+
+    // Signup endpoint: 5 per hour per IP (anti-bot)
+    if (pathname === '/api/auth/signup-bonus' && request.method === 'POST') {
+      const signupResult = checkSignupRateLimit(ip)
+      if (!signupResult.allowed) {
+        const waitSecs = signupResult.lockedUntil
+          ? Math.ceil((signupResult.lockedUntil - Date.now()) / 1000)
+          : 3600
+        const res = NextResponse.json(
+          { error: 'Too many signup attempts. Please try again later.' },
           { status: 429 }
         )
         res.headers.set('Retry-After', String(waitSecs))

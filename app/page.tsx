@@ -234,9 +234,9 @@ type FeaturedProduct = {
 
 // ── Value props ───────────────────────────────────────────────────────────────
 const VALUE_PROPS = [
-  { icon: '₮', title: 'Trust is your currency', desc: 'Every transaction, review, and contribution earns Trust tokens. Higher Trust = lower fees and better visibility.' },
-  { icon: '0%', title: 'Fees that drop to zero', desc: 'Start at 5%, reach Elite level and pay nothing. The more you do, the less it costs — forever.' },
-  { icon: '🌍', title: 'Commerce with purpose', desc: '1% of every transaction funds community impact projects. Buy and sell knowing your money does more.' },
+  { icon: '🙋', title: 'Real people. No bots.', desc: 'Every member is a verified human. We have zero tolerance for fake profiles, automated accounts or bots — your trust score depends on it.' },
+  { icon: '₮', title: 'Trust is your currency', desc: 'Every transaction, review, and contribution earns Trust tokens. Higher Trust = lower fees and better visibility across the platform.' },
+  { icon: '🌍', title: 'Commerce with purpose', desc: '1% of every transaction funds community impact projects. Buy, sell and connect knowing your activity does more good in the world.' },
 ]
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -385,7 +385,7 @@ export default function Home() {
               {/* Trust points */}
               <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.8rem', color: '#64748b' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> Free to join — ₮25 on signup</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> Fees from 0% at Elite</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> Real people only — no bots</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> No subscription</span>
               </div>
             </div>

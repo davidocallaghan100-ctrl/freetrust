@@ -135,7 +135,7 @@ export default function CommunityPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
               <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.5rem' }}>Communities</h1>
-              <p style={{ color: '#64748b' }}>Find your people. Join purpose-driven groups and grow with others who share your goals.</p>
+              <p style={{ color: '#64748b' }}>Find your people. Real humans, shared goals — no bots, no spam, no fake accounts.</p>
             </div>
             <Link
               href="/community/new"

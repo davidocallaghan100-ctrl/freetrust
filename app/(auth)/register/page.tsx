@@ -9,7 +9,8 @@ export default function RegisterPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' })
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '', website_url: '' })
+  const [agreeHuman, setAgreeHuman] = useState(false)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
@@ -71,6 +72,14 @@ export default function RegisterPage() {
     if (!/[0-9]/.test(form.password)) { setError('Password must contain at least one number.'); return }
     if (!/[^A-Za-z0-9]/.test(form.password)) { setError('Password must contain at least one special character (e.g. ! @ # $).'); return }
     if (form.password !== form.confirm) { setError('Passwords don\'t match.'); return }
+
+    // Honeypot: bots fill the hidden field, humans don't
+    if (form.website_url) {
+      // Silently fake success so bots don't learn to bypass this
+      setSuccess(true)
+      return
+    }
+    if (!agreeHuman) { setError('Please confirm you are a real person to continue.'); return }
 
     setLoading(true)
     try {
@@ -319,6 +328,27 @@ export default function RegisterPage() {
         .auth-terms a { color: #38bdf8; text-decoration: none; }
         .auth-terms a:hover { text-decoration: underline; }
 
+        .real-person-banner {
+          display: flex; align-items: center; gap: 8px;
+          background: rgba(52,211,153,0.07);
+          border: 1px solid rgba(52,211,153,0.2);
+          border-radius: 10px;
+          padding: 9px 12px;
+          margin-bottom: 18px;
+          font-size: 12px; color: #6ee7b7; font-weight: 600;
+        }
+        .human-checkbox-row {
+          display: flex; align-items: flex-start; gap: 10px;
+          margin-bottom: 14px;
+          background: rgba(56,189,248,0.04);
+          border: 1px solid rgba(56,189,248,0.15);
+          border-radius: 10px;
+          padding: 11px 13px;
+          cursor: pointer;
+        }
+        .human-checkbox-row input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; accent-color: #38bdf8; width: 15px; height: 15px; cursor: pointer; }
+        .human-checkbox-label { font-size: 12px; color: #94a3b8; line-height: 1.5; user-select: none; }
+
         .success-box { text-align: center; padding: 8px 0; }
         .success-icon {
           width: 64px; height: 64px;
@@ -380,8 +410,13 @@ export default function RegisterPage() {
 
               <div className="perks-strip">
                 <div className="perk">✅ Free forever</div>
-                <div className="perk">🔒 No spam</div>
+                <div className="perk">🙋 Real people only</div>
                 <div className="perk">₮ Earn ₮25 on signup</div>
+              </div>
+
+              <div className="real-person-banner">
+                <span style={{ fontSize: '16px' }}>🛡️</span>
+                <span>No bots. No fake profiles. <strong>Real trust.</strong> FreeTrust is a human-only platform.</span>
               </div>
 
               <button className="btn-google" type="button" onClick={handleGoogleSignup} disabled={googleLoading}>
@@ -494,6 +529,30 @@ export default function RegisterPage() {
                   )}
                 </div>
 
+                {/* Honeypot — hidden from humans, filled by bots */}
+                <div style={{ position: 'absolute', left: '-9999px', opacity: 0, pointerEvents: 'none', tabIndex: -1 } as React.CSSProperties} aria-hidden="true">
+                  <input
+                    name="website_url"
+                    type="text"
+                    autoComplete="off"
+                    tabIndex={-1}
+                    value={form.website_url}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                {/* Real-person acknowledgement */}
+                <label className="human-checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={agreeHuman}
+                    onChange={e => setAgreeHuman(e.target.checked)}
+                  />
+                  <span className="human-checkbox-label">
+                    I confirm I am a real person and will not use automated tools or fake identities on this platform.
+                  </span>
+                </label>
+
                 {error && (
                   <div className="auth-error">
                     <span>⚠️</span>
@@ -501,7 +560,7 @@ export default function RegisterPage() {
                   </div>
                 )}
 
-                <button type="submit" className="btn-primary" disabled={loading}>
+                <button type="submit" className="btn-primary" disabled={loading || !agreeHuman}>
                   {loading && <span className="spinner" />}
                   {loading ? 'Creating account…' : 'Create free account'}
                 </button>

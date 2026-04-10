@@ -69,23 +69,12 @@ export async function GET(req: NextRequest) {
 
     // ── Parallel fetch everything ──────────────────────────────────────────
     const [
-      allMembersRes,
-      newMembersRes,
-      listingsRes,
-      communitiesRes,
-      articlesRes,
-      ordersRes,
-      feedPostsRes,
-      feedCommentsRes,
-      followsRes,
-      gigsRes,
-      eventsRes,
+      allMembersRes, newMembersRes, listingsRes, communitiesRes, articlesRes,
+      ordersRes, feedPostsRes, feedCommentsRes, followsRes, gigsRes, eventsRes,
+      noAvatarRes, noBioRes, noLocationRes,
     ] = await Promise.allSettled([
-      // All-time totals (unfiltered)
       admin.from('profiles').select('id, created_at, role').order('created_at', { ascending: true }),
-      // New signups in range
       admin.from('profiles').select('id, created_at').gte('created_at', since).order('created_at', { ascending: true }),
-      // Listings (all-time for totals, range for activity)
       admin.from('listings').select('id, title, views, status, product_type, price, created_at').order('views', { ascending: false }),
       admin.from('communities').select('id, name, member_count, created_at'),
       admin.from('articles').select('id, title, clap_count, comment_count, status, author_id, created_at').eq('status', 'published'),
@@ -93,9 +82,11 @@ export async function GET(req: NextRequest) {
       admin.from('feed_posts').select('id, user_id, type, created_at').gte('created_at', since).order('created_at', { ascending: true }),
       admin.from('feed_comments').select('id, post_id, user_id, created_at').gte('created_at', since).order('created_at', { ascending: true }),
       admin.from('user_follows').select('follower_id, following_id, created_at').gte('created_at', since).order('created_at', { ascending: true }),
-      // Seller gigs (if table exists)
       admin.from('gigs').select('id, status, created_at'),
       admin.from('events').select('id, status, created_at'),
+      admin.from('profiles').select('id', { count: 'exact', head: true }).is('avatar_url', null),
+      admin.from('profiles').select('id', { count: 'exact', head: true }).is('bio', null),
+      admin.from('profiles').select('id', { count: 'exact', head: true }).is('location', null),
     ])
 
     const allMembers  = allMembersRes.status  === 'fulfilled' ? (allMembersRes.value.data  ?? []) : []
@@ -109,6 +100,9 @@ export async function GET(req: NextRequest) {
     const follows     = followsRes.status     === 'fulfilled' ? (followsRes.value.data     ?? []) : []
     const gigs        = gigsRes.status        === 'fulfilled' ? (gigsRes.value.data        ?? []) : []
     const events      = eventsRes.status      === 'fulfilled' ? (eventsRes.value.data      ?? []) : []
+    const noAvatarCount   = noAvatarRes.status   === 'fulfilled' ? (noAvatarRes.value.count   ?? 0) : 0
+    const noBioCount      = noBioRes.status      === 'fulfilled' ? (noBioRes.value.count      ?? 0) : 0
+    const noLocationCount = noLocationRes.status === 'fulfilled' ? (noLocationRes.value.count ?? 0) : 0
 
     // ── Member stats ───────────────────────────────────────────────────────
     const roleCounts: Record<string, number> = {}
@@ -209,6 +203,10 @@ export async function GET(req: NextRequest) {
         newFollows: follows.length,
         newOrders: ordersInRange.length,
         revenueInRange,
+        // Profile completeness (all-time)
+        noAvatarCount,
+        noBioCount,
+        noLocationCount,
       },
       roleCounts,
       memberGrowth,

@@ -107,3 +107,13 @@ export function resetLoginRateLimit(ip: string, email: string): void {
   const key = `login:${ip}:${email.toLowerCase()}`
   store.delete(key)
 }
+
+/** Signup rate limit: 5 accounts per hour per IP */
+export function checkSignupRateLimit(ip: string): RateLimitResult {
+  const key = `signup:${ip}`
+  return checkRateLimit(key, {
+    limit: 5,
+    windowMs: 60 * 60 * 1000, // 1 hour
+    lockoutMs: 60 * 60 * 1000, // 1 hour lockout
+  })
+}

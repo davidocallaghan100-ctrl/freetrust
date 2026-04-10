@@ -54,6 +54,9 @@ interface AnalyticsPayload {
     newFollows: number
     newOrders: number
     revenueInRange: number
+    noAvatarCount: number
+    noBioCount: number
+    noLocationCount: number
   }
   roleCounts: Record<string, number>
   dailySignups: DailyPoint[]
@@ -515,6 +518,37 @@ export default function AdminAnalyticsPage() {
                     </div>
                   )
                 })}
+              </div>
+            </Section>
+
+            {/* ── Section 7: Profile completeness / trust integrity ── */}
+            <Section title="Profile Authenticity">
+              <div style={{ background: '#1e293b', border: '1px solid rgba(239,68,68,0.12)', borderRadius: 14, padding: '1.25rem' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span>🛡️</span> Incomplete & Unverified Accounts
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem' }}>
+                  {[
+                    { label: 'No avatar photo', value: s?.noAvatarCount ?? 0, color: '#f87171', icon: '🖼️', hint: 'missing profile photo' },
+                    { label: 'No bio',           value: s?.noBioCount    ?? 0, color: '#fbbf24', icon: '📝', hint: 'missing bio' },
+                    { label: 'No location',      value: s?.noLocationCount ?? 0, color: '#fb923c', icon: '📍', hint: 'missing location' },
+                  ].map(row => (
+                    <div key={row.label} style={{ background: '#0f172a', border: `1px solid ${row.color}22`, borderRadius: 10, padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                      <span style={{ fontSize: '1.2rem' }}>{row.icon}</span>
+                      <span style={{ fontSize: '1.5rem', fontWeight: 800, color: row.color }}>{fmt(row.value)}</span>
+                      <span style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{row.label}</span>
+                      <span style={{ fontSize: '0.68rem', color: '#334155' }}>of {fmt(s?.totalMembers ?? 0)} members</span>
+                    </div>
+                  ))}
+                </div>
+                {(s?.noAvatarCount ?? 0) > 0 && (
+                  <div style={{ marginTop: '0.85rem', fontSize: '0.78rem', color: '#475569', background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.1)', borderRadius: 8, padding: '0.6rem 0.85rem' }}>
+                    ⚠️ <strong style={{ color: '#f87171' }}>{fmt(s?.noAvatarCount ?? 0)}</strong> accounts have no profile photo. These members don&apos;t yet show a Verified badge on the directory.
+                    {(s?.totalMembers ?? 0) > 0 && (
+                      <span style={{ color: '#64748b' }}> ({Math.round(((s?.noAvatarCount ?? 0) / (s?.totalMembers ?? 1)) * 100)}% of all members)</span>
+                    )}
+                  </div>
+                )}
               </div>
             </Section>
 

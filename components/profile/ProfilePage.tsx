@@ -575,6 +575,19 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* Low-trust nudge — own profile, trust below ₮10 */}
+      {isOwnProfile && trustBalance < 10 && (
+        <div style={{ background: 'linear-gradient(90deg,rgba(56,189,248,0.07),rgba(52,211,153,0.05))', borderBottom: '1px solid rgba(56,189,248,0.15)', padding: '0.6rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '1rem' }}>⚡</span>
+          <span style={{ fontSize: '0.8rem', color: '#94a3b8', flex: 1 }}>
+            Your Trust score is <strong style={{ color: '#38bdf8' }}>₮{trustBalance}</strong>. Complete your profile and make your first connection to start building trust.
+          </span>
+          <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+            <Link href="/browse" style={{ fontSize: '0.75rem', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 6, padding: '0.3rem 0.7rem', color: '#38bdf8', fontWeight: 600, textDecoration: 'none' }}>Connect →</Link>
+          </div>
+        </div>
+      )}
+
       {/* Hidden file inputs — own profile only */}
       {isOwnProfile && (
         <>

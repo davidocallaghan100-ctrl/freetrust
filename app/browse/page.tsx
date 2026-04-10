@@ -70,6 +70,12 @@ function MemberCard({ member }: { member: Member }) {
     try { await fetch('/api/connections', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetUserId: member.id }) }) }
     catch { setFollowing(prev) }
   }
+
+  // Profile completeness: avatar + bio + location = Verified Member badge
+  const completionFields = [member.avatar_url, member.bio, member.location, member.full_name].filter(Boolean).length
+  const completionPct = Math.round((completionFields / 4) * 100)
+  const isVerified = !!(member.avatar_url && member.bio && member.location)
+
   return (
     <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
@@ -78,9 +84,12 @@ function MemberCard({ member }: { member: Member }) {
         </Link>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
-            <Link href={`/profile?id=${member.id}`} style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '130px' }}>
+            <Link href={`/profile?id=${member.id}`} style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '110px' }}>
               {member.full_name ?? 'Unknown'}
             </Link>
+            {isVerified && (
+              <span style={{ fontSize: '9px', background: 'rgba(52,211,153,0.15)', color: '#34d399', padding: '1px 6px', borderRadius: '20px', fontWeight: 700, whiteSpace: 'nowrap', border: '1px solid rgba(52,211,153,0.25)' }}>✓ Verified</span>
+            )}
             <TrustBadge score={member.trust_balance} />
           </div>
           {member.username && <div style={{ fontSize: '11px', color: '#475569' }}>@{member.username}</div>}
@@ -93,8 +102,10 @@ function MemberCard({ member }: { member: Member }) {
           {following ? 'Following' : 'Follow'}
         </button>
       </div>
-      {member.bio && (
+      {member.bio ? (
         <p style={{ fontSize: '12px', color: '#94a3b8', margin: 0, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{member.bio}</p>
+      ) : (
+        <p style={{ fontSize: '11px', color: '#334155', margin: 0, fontStyle: 'italic' }}>No bio yet — profile {completionPct}% complete</p>
       )}
       {member.skills.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
@@ -285,7 +296,7 @@ export default function DirectoryPage() {
         {/* Header */}
         <div style={{ marginBottom: '16px' }}>
           <h1 style={{ fontSize: '22px', fontWeight: 800, margin: '0 0 4px' }}>Directory</h1>
-          <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>Members, businesses & organisations on FreeTrust</p>
+          <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>Real people. Real businesses. Zero fake profiles.</p>
         </div>
 
         {/* Search + Location */}
