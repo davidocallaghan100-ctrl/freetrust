@@ -483,16 +483,21 @@ export default function Home() {
                     <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s' }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.15)' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
-                      {/* Banner / cover image */}
-                      <div style={{ height: 140, background: s.coverImage ? '#0f172a' : s.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
-                        {s.coverImage
-                          ? <img src={s.coverImage} alt={s.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                          : s.avatarUrl
-                            ? <img src={s.avatarUrl} alt={s.provider} style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.3)' }} />
-                            : <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.2rem', color: '#fff' }}>
-                                {s.provider.split(' ').map((w: string) => w[0]).join('').slice(0,2).toUpperCase()}
-                              </div>
+                      {/* Banner / cover image — gradient is always the background.
+                          Cover image is absolutely overlaid; onError hides it so the
+                          gradient + avatar fallback shows instead of a broken placeholder. */}
+                      <div style={{ height: 140, background: s.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
+                        {/* Fallback: avatar circle or initials, always rendered under the cover */}
+                        {s.avatarUrl
+                          ? <img src={s.avatarUrl} alt={s.provider} style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.3)', flexShrink: 0 }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                          : <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.2rem', color: '#fff', flexShrink: 0 }}>
+                              {s.provider.split(' ').map((w: string) => w[0]).join('').slice(0,2).toUpperCase()}
+                            </div>
                         }
+                        {/* Cover image: absolutely fills the banner; hidden via onError if URL is broken */}
+                        {s.coverImage && (
+                          <img src={s.coverImage} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                        )}
                       </div>
                       <div style={{ padding: '0.85rem' }}>
                         <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.3rem', lineHeight: 1.25, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{s.title}</div>
@@ -527,15 +532,18 @@ export default function Home() {
                   <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s' }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.15)' }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
-                    <div style={{ height: 140, background: p.coverImage ? '#0f172a' : p.grad, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {p.coverImage
-                        ? <img src={p.coverImage} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                        : p.avatarUrl
-                          ? <img src={p.avatarUrl} alt={p.seller} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.3)' }} />
-                          : <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', color: '#fff' }}>
-                              {p.seller.split(' ').map((w: string) => w[0]).join('').slice(0,2).toUpperCase()}
-                            </div>
+                    <div style={{ height: 140, background: p.grad, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {/* Fallback: avatar circle or initials, always rendered under the cover */}
+                      {p.avatarUrl
+                        ? <img src={p.avatarUrl} alt={p.seller} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.3)', flexShrink: 0 }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                        : <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', color: '#fff', flexShrink: 0 }}>
+                            {p.seller.split(' ').map((w: string) => w[0]).join('').slice(0,2).toUpperCase()}
+                          </div>
                       }
+                      {/* Cover image: absolutely fills the banner; hidden via onError if URL is broken */}
+                      {p.coverImage && (
+                        <img src={p.coverImage} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                      )}
                       <span style={{ position: 'absolute', top: 8, right: 8, background: p.type === 'digital' ? 'rgba(56,189,248,0.9)' : 'rgba(148,163,184,0.9)', color: '#0f172a', fontSize: '0.58rem', fontWeight: 800, padding: '2px 6px', borderRadius: 999 }}>
                         {p.type === 'digital' ? 'DIGITAL' : 'PHYSICAL'}
                       </span>
