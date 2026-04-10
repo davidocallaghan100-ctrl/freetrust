@@ -28,6 +28,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <Sidebar />
         <main className="ft-page-content">
           {children}
+          <footer style={{
+            borderTop: '1px solid #1e293b',
+            padding: '1.25rem 1.5rem',
+            textAlign: 'center',
+            fontSize: '0.78rem',
+            color: '#475569',
+            marginTop: '2rem',
+          }}>
+            &copy; 2026 FreeTrust. All rights reserved.
+          </footer>
         </main>
       </div>
       <BottomNav />

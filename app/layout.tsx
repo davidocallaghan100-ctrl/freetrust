@@ -70,6 +70,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <meta name="copyright" content="FreeTrust 2026" />
+        <meta name="author" content="FreeTrust" />
         {process.env.NEXT_PUBLIC_GA_ID && (
           <>
             <script async src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`} />
