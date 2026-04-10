@@ -31,12 +31,19 @@ export async function GET(request: NextRequest) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      // Check if this is a brand new user (created within last 60 seconds)
+      // Check if this is a new user
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
-          const createdAt = new Date(user.created_at).getTime()
-          const isNewUser = Date.now() - createdAt < 60_000
+          // Determine "new user" by whether a signup bonus has already been issued.
+          // Time-based checks (e.g. 60s) fail for email signups — users typically
+          // take 1–5+ minutes to confirm their email, blowing past any short window.
+          const { data: existingBalance } = await supabase
+            .from('trust_balances')
+            .select('user_id')
+            .eq('user_id', user.id)
+            .maybeSingle()
+          const isNewUser = !existingBalance
 
           if (isNewUser) {
             // Sync Google OAuth metadata (name, avatar) into profiles
@@ -54,7 +61,8 @@ export async function GET(request: NextRequest) {
               console.error('[auth/callback] Profile metadata sync error:', err)
             }
 
-            // Award ₮25 founding member signup bonus (idempotent)
+            // Award ₮25 founding member signup bonus (idempotent — only reached when
+            // no trust_balances row exists yet, confirmed by the isNewUser check above)
             try {
               const { error: rpcError } = await supabase.rpc('issue_trust', {
                 p_user_id: user.id,
@@ -64,16 +72,16 @@ export async function GET(request: NextRequest) {
                 p_desc: 'Welcome to FreeTrust! Founding Member bonus.',
               })
               if (rpcError) {
-                // Fallback: direct insert if RPC not available
+                // Fallback: best-effort ledger insert (table may not exist yet — that's OK)
                 await supabase.from('trust_ledger').insert({
                   user_id: user.id,
                   amount: 25,
                   type: 'signup_bonus',
                   description: 'Welcome to FreeTrust! Founding Member bonus.',
                 })
-                await supabase.from('trust_balances').upsert(
-                  { user_id: user.id, balance: 25, lifetime: 25 },
-                  { onConflict: 'user_id' }
+                // Always create the balance row — this is the source of truth the UI reads
+                await supabase.from('trust_balances').insert(
+                  { user_id: user.id, balance: 25, lifetime: 25 }
                 )
               }
             } catch {
