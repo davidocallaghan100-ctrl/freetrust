@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { createClient } from "@/lib/supabase/server";
 
 // Stripe is optional — checkout routes return 503 if key not configured
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -14,6 +15,13 @@ const PLATFORM_FEES = {
 };
 
 export async function POST(req: NextRequest) {
+  // Auth guard — must be logged in to initiate checkout
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   if (!stripe) {
     return NextResponse.json({ error: "Payments not yet configured" }, { status: 503 });
   }

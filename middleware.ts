@@ -135,6 +135,7 @@ export async function middleware(request: NextRequest) {
     '/connections',
     '/collab',
     // Create / submit actions — all require auth
+    '/checkout',            // service/product checkout
     '/create',              // general post/listing creation
     '/feed/new',            // new feed post
     '/articles/new',        // new article
