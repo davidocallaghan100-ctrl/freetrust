@@ -19,15 +19,27 @@ export async function GET() {
       return NextResponse.json({ members: [] })
     }
 
-    // Fetch trust balances separately (lives in trust_balances table)
     const ids = (data ?? []).map((p: { id: string }) => p.id)
-    const { data: balances } = ids.length > 0
-      ? await supabase.from('trust_balances').select('user_id, balance').in('user_id', ids)
-      : { data: [] as { user_id: string; balance: number }[] }
+
+    // Fetch trust balances and follower counts in parallel
+    const [balancesRes, followsRes] = await Promise.all([
+      ids.length > 0
+        ? supabase.from('trust_balances').select('user_id, balance').in('user_id', ids)
+        : Promise.resolve({ data: [] as { user_id: string; balance: number }[] }),
+      ids.length > 0
+        ? supabase.from('user_follows').select('following_id').in('following_id', ids)
+        : Promise.resolve({ data: [] as { following_id: string }[] }),
+    ])
 
     const balanceMap: Record<string, number> = {}
-    ;(balances ?? []).forEach((b: { user_id: string; balance: number }) => {
+    ;(balancesRes.data ?? []).forEach((b: { user_id: string; balance: number }) => {
       balanceMap[b.user_id] = b.balance
+    })
+
+    // Count followers per user from the raw rows (no GROUP BY needed)
+    const followerMap: Record<string, number> = {}
+    ;(followsRes.data ?? []).forEach((f: { following_id: string }) => {
+      followerMap[f.following_id] = (followerMap[f.following_id] ?? 0) + 1
     })
 
     const members = (data ?? []).map((p: {
@@ -42,7 +54,7 @@ export async function GET() {
       bio: p.bio ?? null,
       location: p.location ?? null,
       trust_balance: balanceMap[p.id] ?? 0,
-      follower_count: 0,
+      follower_count: followerMap[p.id] ?? 0,
       skills: [] as string[],
     }))
 
