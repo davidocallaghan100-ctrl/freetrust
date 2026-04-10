@@ -270,6 +270,7 @@ function ProductsInner() {
           .from('listings')
           .select('id, title, description, price, currency, product_type, tags, images, cover_image, avg_rating, review_count, seller_id, profiles!seller_id(id, full_name, avatar_url)')
           .eq('status', 'active')
+          .neq('product_type', 'service')
           .order('created_at', { ascending: false })
           .limit(100)
         if (data && data.length > 0) {

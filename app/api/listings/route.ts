@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     // Validate required fields
-    const { title, description, price, currency = 'EUR', category_id, category, service_mode = 'online', location, service_radius, delivery_types = [], tags = [], images = [] } = body
+    const { title, description, price, currency = 'EUR', product_type, category_id, category, service_mode = 'online', location, service_radius, delivery_types = [], tags = [], images = [] } = body
 
     if (!title || typeof title !== 'string' || title.trim().length < 3) {
       return NextResponse.json({ error: 'Title must be at least 3 characters' }, { status: 400 })
@@ -82,6 +82,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Price must be a non-negative number' }, { status: 400 })
     }
 
+    // Ensure product_type is always set so services and products are kept separate
+    const resolvedProductType = (typeof product_type === 'string' && product_type.trim())
+      ? product_type.trim()
+      : 'physical'
+
     const { data: listing, error } = await supabase
       .from('listings')
       .insert({
@@ -90,6 +95,7 @@ export async function POST(request: NextRequest) {
         description: description.trim(),
         price,
         currency,
+        product_type: resolvedProductType,
         category_id: category_id ?? null,
         category: category ?? null,
         service_mode: service_mode,

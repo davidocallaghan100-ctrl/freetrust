@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
         description: data.description,
         price: data.price ? Number(data.price) : 0,
         currency: 'TRUST',
+        product_type: 'service',
         status: 'active',
         images: [],
         tags: [],
@@ -92,14 +93,23 @@ export async function POST(req: NextRequest) {
       if (error) throw error
       redirectUrl = '/services'
     } else if (type === 'product') {
+      const productType = (data.product_type as string) ?? 'physical'
+      // images may arrive as newline-separated string from the textarea
+      const rawImages = data.images
+      const parsedImages = Array.isArray(rawImages)
+        ? rawImages
+        : typeof rawImages === 'string'
+          ? rawImages.split('\n').map(s => s.trim()).filter(Boolean)
+          : []
       const { error } = await supabase.from('listings').insert({
         seller_id: user.id,
         title: data.title,
         description: data.description,
         price: data.price ? Number(data.price) : 0,
         currency: 'TRUST',
+        product_type: productType === 'service' ? 'physical' : productType,
         status: 'active',
-        images: data.images ?? [],
+        images: parsedImages,
         tags: [],
       })
       if (error) throw error
