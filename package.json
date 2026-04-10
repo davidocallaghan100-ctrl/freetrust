@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "setup:rent-share": "node scripts/setup-rent-share.mjs"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
@@ -17,6 +18,7 @@
     "date-fns": "^4.1.0",
     "isomorphic-dompurify": "^3.8.0",
     "next": "14.2.35",
+    "pg": "^8.20.0",
     "react": "^18",
     "react-dom": "^18",
     "recharts": "^3.8.1",
@@ -27,6 +29,7 @@
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/pg": "^8.20.0",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "postcss": "^8",

@@ -23,6 +23,11 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await query
     if (error) {
+      // Table doesn't exist yet — return empty rather than crashing the page
+      if (error.code === 'PGRST205' || error.message?.includes('rent_share_listings')) {
+        console.warn('[GET /api/rent-share] Table not yet created — run: npm run setup:rent-share')
+        return NextResponse.json({ listings: [], _setup_required: true })
+      }
       console.error('[GET /api/rent-share]', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }

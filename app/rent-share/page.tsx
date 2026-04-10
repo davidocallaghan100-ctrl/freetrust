@@ -133,6 +133,7 @@ export default function RentSharePage() {
   const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [setupRequired, setSetupRequired] = useState(false)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [category, setCategory] = useState<Category>('All')
@@ -161,7 +162,8 @@ export default function RentSharePage() {
       if (debouncedSearch) params.set('search', debouncedSearch)
       const res = await fetch(`/api/rent-share?${params}`)
       if (!res.ok) throw new Error('Failed to load listings')
-      const data = await res.json() as { listings: Listing[] }
+      const data = await res.json() as { listings: Listing[]; _setup_required?: boolean }
+      setSetupRequired(!!data._setup_required)
       setListings(data.listings ?? [])
     } catch {
       setError('Unable to load listings right now.')
@@ -241,6 +243,25 @@ export default function RentSharePage() {
       </div>
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '1.5rem 1.5rem 3rem' }}>
+        {/* Setup required banner */}
+        {setupRequired && (
+          <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 12, padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+            <span style={{ fontSize: '1.25rem', flexShrink: 0 }}>⚠️</span>
+            <div>
+              <div style={{ fontWeight: 700, color: '#fbbf24', marginBottom: 4 }}>Database table not set up yet</div>
+              <div style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.6 }}>
+                Run the one-time setup to create the Rent &amp; Share tables and seed listings:
+              </div>
+              <div style={{ marginTop: 8, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <code style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 6, padding: '4px 10px', fontSize: '0.8rem', color: '#38bdf8' }}>
+                  npm run setup:rent-share
+                </code>
+                <span style={{ fontSize: '0.8rem', color: '#64748b', alignSelf: 'center' }}>or paste <strong style={{ color: '#94a3b8' }}>supabase/setup-rent-share.sql</strong> into the Supabase SQL Editor</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Category tabs */}
         <div className="rs-cats" style={{ marginBottom: '1.5rem' }}>
           {CATEGORIES.map(c => {
