@@ -6,10 +6,12 @@ export async function GET() {
   try {
     const supabase = createAdminClient()
 
-    // Use real organisations columns: is_verified (not verified), type (not category), tags (not services)
+    // Only return real (active) organisations — rows without status='active' are
+    // placeholder/seed data inserted before the status column was introduced.
     const { data, error } = await supabase
       .from('organisations')
       .select('id, name, logo_url, description, type, location, is_verified, members_count, tags')
+      .eq('status', 'active')
       .order('members_count', { ascending: false })
       .limit(100)
 
@@ -35,7 +37,9 @@ export async function GET() {
       services: Array.isArray(o.tags) ? o.tags : [],
     }))
 
-    return NextResponse.json({ orgs })
+    return NextResponse.json({ orgs }, {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
+    })
   } catch (err) {
     console.error('[GET /api/directory/orgs] unexpected error:', err)
     return NextResponse.json({ orgs: [] })

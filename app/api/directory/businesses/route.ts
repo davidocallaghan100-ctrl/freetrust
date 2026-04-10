@@ -6,10 +6,12 @@ export async function GET() {
   try {
     const supabase = createAdminClient()
 
-    // No separate 'businesses' table — use organisations table with business-type entries
+    // No separate 'businesses' table — use organisations table with business-type entries.
+    // Only return rows with status='active' to exclude placeholder/seed data.
     const { data, error } = await supabase
       .from('organisations')
       .select('id, name, slug, type, sector, description, logo_url, location, is_verified, members_count, trust_score, tags')
+      .eq('status', 'active')
       .order('trust_score', { ascending: false })
       .limit(100)
 
@@ -38,7 +40,9 @@ export async function GET() {
       trust_score: b.trust_score ?? null,
     }))
 
-    return NextResponse.json({ businesses })
+    return NextResponse.json({ businesses }, {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
+    })
   } catch (err) {
     console.error('[GET /api/directory/businesses] unexpected error:', err)
     return NextResponse.json({ businesses: [] })

@@ -1,4 +1,5 @@
 'use client'
+export const revalidate = 0
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Avatar from '@/components/Avatar'
@@ -219,9 +220,9 @@ export default function DirectoryPage() {
     setLoading(true)
     try {
       const [mRes, bRes, oRes] = await Promise.all([
-        fetch('/api/directory/members'),
-        fetch('/api/directory/businesses'),
-        fetch('/api/directory/orgs'),
+        fetch('/api/directory/members',    { cache: 'no-store' }),
+        fetch('/api/directory/businesses', { cache: 'no-store' }),
+        fetch('/api/directory/orgs',       { cache: 'no-store' }),
       ])
       const dbMembers: Member[] = mRes.ok ? ((await mRes.json()).members ?? []) : []
       const dbBiz: Business[]   = bRes.ok ? ((await bRes.json()).businesses ?? []) : []
@@ -382,11 +383,22 @@ export default function DirectoryPage() {
                   <h2 style={{ fontSize: '14px', fontWeight: 700, color: '#94a3b8', margin: 0 }}>
                     Organisations <span style={{ color: '#475569', fontWeight: 400 }}>({filteredOrgs.length})</span>
                   </h2>
+                  <Link href="/organisations/new" style={{ marginLeft: 'auto', fontSize: '11px', color: '#38bdf8', textDecoration: 'none', fontWeight: 600, flexShrink: 0 }}>+ Add yours</Link>
                 </div>
                 <div className="dir-grid">
                   {filteredOrgs.map(o => <OrgCard key={o.id} org={o} />)}
                 </div>
               </section>
+            )}
+
+            {/* Empty organisations CTA */}
+            {showOrgs && filteredOrgs.length === 0 && !loading && tab === 'organisations' && (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b', marginBottom: '28px' }}>
+                <div style={{ fontSize: '36px', marginBottom: '10px' }}>🌐</div>
+                <div style={{ fontSize: '14px', color: '#94a3b8', marginBottom: '6px' }}>No organisations yet</div>
+                <div style={{ fontSize: '13px', marginBottom: '12px' }}>Be the first to add an NGO, co-op, or social enterprise.</div>
+                <Link href="/organisations/new" style={{ display: 'inline-block', padding: '8px 20px', borderRadius: '8px', background: '#38bdf8', color: '#0f172a', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>Create an organisation</Link>
+              </div>
             )}
           </>
         )}
