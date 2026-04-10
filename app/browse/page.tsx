@@ -1,5 +1,4 @@
 'use client'
-export const revalidate = 0
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Avatar from '@/components/Avatar'
