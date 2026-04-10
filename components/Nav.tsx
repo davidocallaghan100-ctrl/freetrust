@@ -202,6 +202,35 @@ export default function Nav() {
         </div>
       </header>
 
+      {/* ── Create button — pinned just below the hamburger ── */}
+      {user && (
+        <Link
+          href="/create"
+          aria-label="Create"
+          style={{
+            position: 'fixed',
+            top: '64px',
+            right: '12px',
+            width: '36px',
+            height: '36px',
+            borderRadius: '10px',
+            background: 'linear-gradient(135deg, #38bdf8, #818cf8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '22px',
+            fontWeight: 700,
+            color: '#fff',
+            textDecoration: 'none',
+            boxShadow: '0 2px 10px rgba(56,189,248,0.35)',
+            zIndex: 99,
+            lineHeight: 1,
+          }}
+        >
+          +
+        </Link>
+      )}
+
       {/* ── Drawer overlay ── */}
       <div
         onClick={() => setDrawerOpen(false)}

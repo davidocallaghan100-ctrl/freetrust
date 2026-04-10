@@ -5,7 +5,6 @@ import Sidebar from './Sidebar'
 import BottomNav from './BottomNav'
 import SearchBar from './SearchBar'
 import TrustAssistant from './TrustAssistant'
-import Link from 'next/link'
 
 const AUTH_PATHS = ['/login', '/register', '/onboarding']
 
@@ -33,35 +32,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </div>
       <BottomNav />
       <TrustAssistant />
-      <style>{`
-        @media (max-width: 768px) { .ft-fab { display: none !important; } }
-      `}</style>
-      <Link
-        href="/create"
-        className="ft-fab"
-        style={{
-          position: 'fixed',
-          bottom: '160px',
-          right: '2rem',
-          width: '56px',
-          height: '56px',
-          borderRadius: '50%',
-          background: 'linear-gradient(135deg, #38bdf8, #818cf8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '26px',
-          color: '#fff',
-          fontWeight: 700,
-          textDecoration: 'none',
-          boxShadow: '0 4px 20px rgba(56,189,248,0.45)',
-          zIndex: 90,
-          lineHeight: 1,
-        }}
-        aria-label="Create"
-      >
-        +
-      </Link>
     </>
   )
 }
