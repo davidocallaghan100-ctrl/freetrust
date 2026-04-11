@@ -7,74 +7,69 @@ import { sanitizeFilename } from '@/lib/security/sanitize'
 
 const BUCKET = 'rent-share'
 
-function jsonError(message: string, status = 500) {
-  console.error(`[rent-share upload] ERROR ${status}:`, message)
-  return new NextResponse(JSON.stringify({ error: message }), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  })
-}
-
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<NextResponse> {
   console.log('[rent-share upload] POST received')
 
-  // ── 1. Environment check ──────────────────────────────────────────────────
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY
-  console.log('[rent-share upload] env — URL:', !!supabaseUrl, 'SERVICE_KEY:', !!serviceKey)
-
-  if (!supabaseUrl || !serviceKey) {
-    return jsonError('Server configuration error: missing Supabase credentials', 500)
-  }
-
-  // ── 2. Auth ───────────────────────────────────────────────────────────────
-  let userId: string
   try {
+    // ── 1. Environment ──────────────────────────────────────────────────────
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+    const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
+    console.log('[rent-share upload] env — URL:', !!supabaseUrl, 'SERVICE_KEY:', !!serviceKey)
+
+    if (!supabaseUrl || !serviceKey) {
+      return NextResponse.json(
+        { error: 'Server configuration error: missing Supabase credentials' },
+        { status: 500 }
+      )
+    }
+
+    // ── 2. Auth ─────────────────────────────────────────────────────────────
     const supabase = await createClient()
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) {
-      console.warn('[rent-share upload] auth failed:', authErr?.message)
-      return jsonError('Unauthorized', 401)
-    }
-    userId = user.id
-    console.log('[rent-share upload] auth ok, user:', userId)
-  } catch (err) {
-    console.error('[rent-share upload] auth exception:', err)
-    return jsonError('Auth error', 500)
-  }
+    console.log('[rent-share upload] auth — user:', user?.id ?? null, 'err:', authErr?.message ?? null)
 
-  // ── 3. Parse FormData ─────────────────────────────────────────────────────
-  let file: File
-  try {
+    if (authErr || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // ── 3. Parse FormData ────────────────────────────────────────────────────
     const formData = await req.formData()
     const raw = formData.get('file')
-    if (!raw || typeof raw === 'string') return jsonError('No file provided', 400)
-    file = raw as File
+    console.log('[rent-share upload] formData — file field type:', typeof raw, raw instanceof File ? raw.name : 'n/a')
+
+    if (!raw || typeof raw === 'string') {
+      return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+    }
+
+    const file = raw as File
     console.log('[rent-share upload] file:', file.name, file.type, file.size, 'bytes')
-  } catch (err) {
-    console.error('[rent-share upload] formData exception:', err)
-    return jsonError('Failed to parse request body', 400)
-  }
 
-  // ── 4. Validate ───────────────────────────────────────────────────────────
-  const { valid, error: fileError } = validateFileUpload(file)
-  if (!valid) return jsonError(fileError ?? 'Invalid file', 400)
-  if (!(ALLOWED_IMAGE_TYPES as readonly string[]).includes(file.type)) {
-    return jsonError('Only jpg, png, gif, and webp images are allowed', 400)
-  }
+    // ── 4. Validate ──────────────────────────────────────────────────────────
+    const { valid, error: fileError } = validateFileUpload(file)
+    if (!valid) {
+      return NextResponse.json({ error: fileError ?? 'Invalid file' }, { status: 400 })
+    }
+    if (!(ALLOWED_IMAGE_TYPES as readonly string[]).includes(file.type)) {
+      return NextResponse.json(
+        { error: 'Only jpg, png, gif, and webp images are allowed' },
+        { status: 400 }
+      )
+    }
 
-  // ── 5. Upload via service-role client ─────────────────────────────────────
-  try {
+    // ── 5. Prepare buffer ────────────────────────────────────────────────────
+    const safeFilename  = sanitizeFilename(file.name)
+    const ext           = safeFilename.split('.').pop()?.toLowerCase() ?? 'jpg'
+    const storagePath   = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`
+    const arrayBuffer   = await file.arrayBuffer()
+    const buffer        = Buffer.from(arrayBuffer)   // Buffer is more reliable than Uint8Array on Vercel
+    console.log('[rent-share upload] buffer size:', buffer.byteLength, 'path:', storagePath)
+
+    // ── 6. Storage upload via service-role client ────────────────────────────
     const admin = createSupabaseClient(supabaseUrl, serviceKey, {
       auth: { persistSession: false },
     })
 
-    const safeFilename = sanitizeFilename(file.name)
-    const ext = safeFilename.split('.').pop()?.toLowerCase() ?? 'jpg'
-    const storagePath = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`
-    console.log('[rent-share upload] path:', storagePath)
-
-    // Ensure bucket exists (idempotent)
+    // Ensure bucket exists (idempotent — ignores "already exists")
     const { error: bucketErr } = await admin.storage.createBucket(BUCKET, {
       public: true,
       fileSizeLimit: 10485760,
@@ -83,27 +78,31 @@ export async function POST(req: NextRequest) {
     if (bucketErr) {
       const msg = bucketErr.message?.toLowerCase() ?? ''
       if (!msg.includes('already exists') && !msg.includes('duplicate')) {
-        console.warn('[rent-share upload] createBucket (non-fatal):', bucketErr.message)
+        console.warn('[rent-share upload] createBucket warning:', bucketErr.message)
       }
     }
 
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = new Uint8Array(arrayBuffer)
-
-    const { error: uploadError } = await admin.storage
+    const { data: uploadData, error: uploadError } = await admin.storage
       .from(BUCKET)
       .upload(storagePath, buffer, { contentType: file.type, upsert: false })
 
+    console.log('[rent-share upload] upload result — data:', JSON.stringify(uploadData), 'error:', JSON.stringify(uploadError))
+
     if (uploadError) {
-      console.error('[rent-share upload] upload failed:', JSON.stringify(uploadError))
-      return jsonError(`Storage upload failed: ${uploadError.message}`, 500)
+      return NextResponse.json(
+        { error: `Storage upload failed: ${uploadError.message}` },
+        { status: 500 }
+      )
     }
 
     const { data: urlData } = admin.storage.from(BUCKET).getPublicUrl(storagePath)
-    console.log('[rent-share upload] success:', urlData.publicUrl)
+    console.log('[rent-share upload] public URL:', urlData.publicUrl)
+
     return NextResponse.json({ url: urlData.publicUrl })
+
   } catch (err) {
-    console.error('[rent-share upload] storage exception:', err)
-    return jsonError(`Storage error: ${err instanceof Error ? err.message : String(err)}`, 500)
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[rent-share upload] unhandled exception:', message, err)
+    return NextResponse.json({ error: `Upload error: ${message}` }, { status: 500 })
   }
 }
