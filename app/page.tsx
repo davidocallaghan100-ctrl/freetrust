@@ -334,7 +334,10 @@ export default function Home() {
           .hero-text { align-items: center !important; }
           .hero-cta { flex-direction: column !important; width: 100% !important; }
           .hero-cta a, .hero-cta button { width: 100% !important; text-align: center; justify-content: center; }
-          .stats-grid { grid-template-columns: repeat(2,1fr) !important; }
+          .stats-grid { grid-template-columns: repeat(2,1fr) !important; gap: 0.6rem !important; }
+          .trust-econ-grid { grid-template-columns: repeat(3,1fr) !important; }
+          .stat-val { font-size: 1.4rem !important; }
+          .trust-val { font-size: 1.3rem !important; }
           .val-grid { grid-template-columns: 1fr !important; }
           .found-inner { flex-direction: column !important; text-align: center; }
           .footer-links { justify-content: center !important; }
@@ -343,7 +346,15 @@ export default function Home() {
           .section-h2 { font-size: clamp(1.4rem,5vw,2rem) !important; }
         }
         @media (max-width: 480px) {
-          .stats-grid { grid-template-columns: repeat(2,1fr) !important; }
+          .stats-grid { grid-template-columns: repeat(2,1fr) !important; gap: 0.5rem !important; }
+          .stat-val { font-size: 1.15rem !important; letter-spacing: -0.5px !important; }
+          .trust-econ-grid { grid-template-columns: repeat(3,1fr) !important; gap: 0.5rem !important; }
+          .trust-val { font-size: 1rem !important; letter-spacing: -0.5px !important; }
+          .trust-econ-label { font-size: 0.58rem !important; }
+          .trust-econ-sub { font-size: 0.54rem !important; }
+          .stat-label { font-size: 0.65rem !important; }
+          .stat-sub { font-size: 0.58rem !important; }
+          .trust-econ-strip { padding: 0.75rem 0.6rem !important; }
         }
       `}</style>
 
@@ -409,33 +420,33 @@ export default function Home() {
               { val: tt, prefix: '₮', suffix: '', label: 'Total ₮ issued', sub: 'Since launch', color: '#38bdf8' },
             ].map(s => (
               <div key={s.label} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1rem 0.5rem' }}>
-                <div style={{ fontSize: '1.8rem', fontWeight: 900, color: s.color, letterSpacing: '-1px' }}>
+                <div className="stat-val" style={{ fontSize: '1.8rem', fontWeight: 900, color: s.color, letterSpacing: '-1px' }}>
                   <Counter target={s.val} prefix={s.prefix} suffix={s.suffix} />
                 </div>
-                <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
-                <div style={{ fontSize: '0.65rem', color: s.color, marginTop: 3, fontWeight: 600 }}>{s.sub}</div>
+                <div className="stat-label" style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
+                <div className="stat-sub" style={{ fontSize: '0.65rem', color: s.color, marginTop: 3, fontWeight: 600 }}>{s.sub}</div>
               </div>
             ))}
           </div>
 
           {/* Trust Economy strip */}
-          <div style={{ marginTop: '0.85rem', background: 'linear-gradient(135deg,rgba(45,212,191,0.07),rgba(56,189,248,0.04))', border: '1px solid rgba(45,212,191,0.15)', borderRadius: 12, padding: '1rem 1.25rem' }}>
+          <div className="trust-econ-strip" style={{ marginTop: '0.85rem', background: 'linear-gradient(135deg,rgba(45,212,191,0.07),rgba(56,189,248,0.04))', border: '1px solid rgba(45,212,191,0.15)', borderRadius: 12, padding: '1rem 1.25rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
               <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#2dd4bf', letterSpacing: '0.1em', textTransform: 'uppercase' }}>₮ Trust Economy</span>
               <span className="live-dot" style={{ width: 5, height: 5 } as React.CSSProperties} />
             </div>
-            <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem', textAlign: 'center' }}>
+            <div className="trust-econ-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem', textAlign: 'center' }}>
               {[
                 { val: tc, prefix: '₮', label: '₮ in circulation', sub: 'Current balances held', color: '#2dd4bf' },
                 { val: tt, prefix: '₮', label: '₮ issued since launch', sub: 'Total ever earned', color: '#34d399' },
                 { val: th, prefix: '', label: 'Members holding ₮', sub: 'Active trust holders', color: '#38bdf8' },
               ].map(s => (
                 <div key={s.label} style={{ background: 'rgba(15,23,42,0.5)', borderRadius: 10, padding: '0.75rem 0.5rem', border: '1px solid rgba(45,212,191,0.1)' }}>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: s.color, letterSpacing: '-0.5px' }}>
+                  <div className="trust-val" style={{ fontSize: '1.6rem', fontWeight: 900, color: s.color, letterSpacing: '-0.5px' }}>
                     <Counter target={s.val} prefix={s.prefix} />
                   </div>
-                  <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
-                  <div style={{ fontSize: '0.62rem', color: s.color, marginTop: 2, fontWeight: 600, opacity: 0.8 }}>{s.sub}</div>
+                  <div className="trust-econ-label" style={{ fontSize: '0.68rem', color: '#64748b', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
+                  <div className="trust-econ-sub" style={{ fontSize: '0.62rem', color: s.color, marginTop: 2, fontWeight: 600, opacity: 0.8 }}>{s.sub}</div>
                 </div>
               ))}
             </div>
