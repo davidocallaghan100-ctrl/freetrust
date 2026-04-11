@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, use } from 'react'
+import React, { useState, useEffect, use } from 'react'
 import Link from 'next/link'
 
 interface Lesson {
@@ -10,34 +10,66 @@ interface Lesson {
   position: number
 }
 
-const MOCK_LESSONS: Lesson[] = [
-  { id: 'l1', title: 'Introduction to Value-Based Pricing', body: `<h2>What is value-based pricing?</h2><p>Value-based pricing is a strategy that sets prices primarily based on the perceived value of the product or service to the customer, rather than on the cost of production or historical prices.</p><p>Unlike cost-plus pricing (where you add a markup to your costs) or competitive pricing (where you match competitors), value-based pricing starts with the question: <strong>how much is this worth to the customer?</strong></p><h3>The core principle</h3><p>Customers don't buy features. They buy outcomes. When you price based on value, you're acknowledging that the true worth of your product is determined by what it does for the customer — the problems it solves, the time it saves, the money it makes them.</p><p>A SaaS tool that saves a team 10 hours per week is worth far more than its build cost. A tool that helps a company close 20% more deals is worth a percentage of those deals, not the cost of the code.</p>`, video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', position: 0 },
-  { id: 'l2', title: 'Identifying Your Value Metric', body: `<h2>What is a value metric?</h2><p>A value metric is the unit by which your customers measure the value they get from your product. Getting this right is one of the most important decisions in SaaS pricing.</p><p>Examples of value metrics:</p><ul><li><strong>Seats/users</strong> — e.g. Slack, Notion</li><li><strong>Usage volume</strong> — e.g. API calls, emails sent, storage</li><li><strong>Outcomes</strong> — e.g. revenue generated, leads closed</li><li><strong>Features</strong> — e.g. access to premium functionality</li></ul><h3>How to find your value metric</h3><p>Ask your customers: what would make you feel you were getting <em>more</em> value from this product? Their answer reveals the metric they care about most.</p>`, video_url: null, position: 1 },
-  { id: 'l3', title: 'Building Your Pricing Tiers', body: `<h2>Tier structure fundamentals</h2><p>Most SaaS products benefit from 3 pricing tiers: a starter/free tier to reduce friction, a mid-tier (usually your most important) that captures the majority of customers, and an enterprise tier for high-value accounts.</p><p>The classic structure is <strong>Good / Better / Best</strong>. The trick is to make the "better" tier feel like the obvious choice — and price accordingly.</p><h3>What goes in each tier?</h3><p>Design tiers around customer segments, not features. Ask: who is my smallest viable customer? My ideal customer? My largest enterprise customer? Build tiers for each persona.</p>`, video_url: null, position: 2 },
-  { id: 'l4', title: 'Anchoring and Psychological Pricing', body: `<h2>The power of anchors</h2><p>Pricing is relative. Customers don't evaluate price in isolation — they evaluate it relative to something else. That "something else" is your anchor.</p><p>By showing a higher price first (your enterprise plan), your mid-tier plan suddenly looks more reasonable. This is anchoring — one of the most powerful tools in your pricing toolkit.</p>`, video_url: null, position: 3 },
-  { id: 'l5', title: 'Testing and Iterating Your Price', body: `<h2>Pricing is not a one-time decision</h2><p>One of the biggest mistakes founders make is treating pricing as a fixed decision. Your price should evolve as you learn more about your customers and market.</p><p>How to test: run A/B tests on pricing pages, grandfathering existing customers while testing higher prices on new ones, and use cohort analysis to understand price sensitivity by segment.</p>`, video_url: null, position: 4 },
-]
-
-const MOCK_COURSE = {
-  id: 'c1',
-  title: 'SaaS Pricing Masterclass',
-  description: 'A comprehensive guide to pricing your SaaS product for maximum growth. Covers value-based pricing, packaging, tier design, and testing.',
+interface Course {
+  id: string
+  title: string
+  description: string
 }
 
 export default function CoursePage({ params }: { params: Promise<{ slug: string; courseId: string }> }) {
-  const { slug } = use(params)
+  const { slug, courseId } = use(params)
   const [currentLesson, setCurrentLesson] = useState(0)
   const [completed, setCompleted] = useState<Set<number>>(new Set())
+  const [lessons, setLessons] = useState<Lesson[]>([])
+  const [course, setCourse] = useState<Course | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const lesson = MOCK_LESSONS[currentLesson]
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch(`/api/communities/${slug}/courses/${courseId}`)
+        if (res.ok) {
+          const data = await res.json() as { course?: Course; lessons?: Lesson[] }
+          if (data.course) setCourse(data.course)
+          if (data.lessons) setLessons(data.lessons)
+        }
+      } catch { /* leave empty */ }
+      finally { setLoading(false) }
+    }
+    load()
+  }, [slug, courseId])
+
+  const lesson = lessons[currentLesson]
   const progress = completed.size
-  const total = MOCK_LESSONS.length
+  const total = lessons.length
 
   const markComplete = () => {
     setCompleted(prev => new Set(Array.from(prev).concat(currentLesson)))
-    if (currentLesson < MOCK_LESSONS.length - 1) {
+    if (currentLesson < lessons.length - 1) {
       setCurrentLesson(p => p + 1)
     }
+  }
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 32, height: 32, border: '3px solid rgba(56,189,248,0.2)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    )
+  }
+
+  if (!course || lessons.length === 0) {
+    return (
+      <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📚</div>
+          <h2 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>No course content yet</h2>
+          <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Lessons will appear here when the course creator adds them.</p>
+          <Link href={`/community/${slug}`} style={{ color: '#38bdf8', fontSize: '0.9rem', textDecoration: 'none' }}>← Back to Group</Link>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -66,17 +98,17 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string;
             <span>›</span>
             <Link href={`/community/${slug}`} onClick={() => {}} style={{ color: '#64748b', textDecoration: 'none' }}>Classroom</Link>
             <span>›</span>
-            <span style={{ color: '#94a3b8' }}>{MOCK_COURSE.title}</span>
+            <span style={{ color: '#94a3b8' }}>{course.title}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
             <div>
-              <h1 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0 0 0.3rem' }}>{MOCK_COURSE.title}</h1>
-              <p style={{ fontSize: '0.83rem', color: '#64748b', margin: 0 }}>{MOCK_COURSE.description}</p>
+              <h1 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0 0 0.3rem' }}>{course.title}</h1>
+              <p style={{ fontSize: '0.83rem', color: '#64748b', margin: 0 }}>{course.description}</p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <div style={{ fontSize: '0.82rem', color: '#64748b' }}>{progress}/{total} complete</div>
               <div style={{ width: 120, height: 6, background: 'rgba(148,163,184,0.15)', borderRadius: 999, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${(progress / total) * 100}%`, background: '#38bdf8', borderRadius: 999, transition: 'width 0.3s' }} />
+                <div style={{ height: '100%', width: `${total > 0 ? (progress / total) * 100 : 0}%`, background: '#38bdf8', borderRadius: 999, transition: 'width 0.3s' }} />
               </div>
             </div>
           </div>
@@ -91,7 +123,7 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string;
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '0 1.25rem', marginBottom: '0.75rem' }}>
             Lessons · {total}
           </div>
-          {MOCK_LESSONS.map((l, i) => (
+          {lessons.map((l, i) => (
             <button
               key={l.id}
               className="lesson-sidebar-item"
@@ -110,50 +142,52 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string;
 
         {/* Lesson Content */}
         <div style={{ padding: '2rem', overflowY: 'auto' }}>
-          <div style={{ maxWidth: 720 }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
-              Lesson {currentLesson + 1} of {total}
-            </div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '1.5rem', lineHeight: 1.3 }}>{lesson.title}</h2>
-
-            {lesson.video_url && (
-              <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, marginBottom: '1.75rem', borderRadius: 10, overflow: 'hidden', background: '#0f172a' }}>
-                <iframe
-                  src={lesson.video_url}
-                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-                  allowFullScreen
-                  title={lesson.title}
-                />
+          {lesson && (
+            <div style={{ maxWidth: 720 }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
+                Lesson {currentLesson + 1} of {total}
               </div>
-            )}
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '1.5rem', lineHeight: 1.3 }}>{lesson.title}</h2>
 
-            <div className="lesson-body" dangerouslySetInnerHTML={{ __html: lesson.body }} />
-
-            {/* Navigation */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(56,189,248,0.1)', flexWrap: 'wrap' }}>
-              <button
-                onClick={() => setCurrentLesson(p => Math.max(0, p - 1))}
-                disabled={currentLesson === 0}
-                style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 8, padding: '0.55rem 1.1rem', fontSize: '0.85rem', fontWeight: 600, color: currentLesson === 0 ? '#475569' : '#94a3b8', cursor: currentLesson === 0 ? 'not-allowed' : 'pointer' }}
-              >
-                ← Previous
-              </button>
-              <button
-                onClick={markComplete}
-                style={{ background: completed.has(currentLesson) ? 'rgba(52,211,153,0.1)' : '#38bdf8', border: completed.has(currentLesson) ? '1px solid rgba(52,211,153,0.3)' : 'none', borderRadius: 8, padding: '0.55rem 1.25rem', fontSize: '0.85rem', fontWeight: 700, color: completed.has(currentLesson) ? '#34d399' : '#0f172a', cursor: 'pointer' }}
-              >
-                {completed.has(currentLesson) ? '✓ Completed' : currentLesson === total - 1 ? '🎉 Complete Course' : 'Mark Complete & Next →'}
-              </button>
-              {currentLesson < total - 1 && (
-                <button
-                  onClick={() => setCurrentLesson(p => Math.min(total - 1, p + 1))}
-                  style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 8, padding: '0.55rem 1.1rem', fontSize: '0.85rem', fontWeight: 600, color: '#94a3b8', cursor: 'pointer' }}
-                >
-                  Next →
-                </button>
+              {lesson.video_url && (
+                <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, marginBottom: '1.75rem', borderRadius: 10, overflow: 'hidden', background: '#0f172a' }}>
+                  <iframe
+                    src={lesson.video_url}
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                    allowFullScreen
+                    title={lesson.title}
+                  />
+                </div>
               )}
+
+              <div className="lesson-body" dangerouslySetInnerHTML={{ __html: lesson.body }} />
+
+              {/* Navigation */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(56,189,248,0.1)', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => setCurrentLesson(p => Math.max(0, p - 1))}
+                  disabled={currentLesson === 0}
+                  style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 8, padding: '0.55rem 1.1rem', fontSize: '0.85rem', fontWeight: 600, color: currentLesson === 0 ? '#475569' : '#94a3b8', cursor: currentLesson === 0 ? 'not-allowed' : 'pointer' }}
+                >
+                  ← Previous
+                </button>
+                <button
+                  onClick={markComplete}
+                  style={{ background: completed.has(currentLesson) ? 'rgba(52,211,153,0.1)' : '#38bdf8', border: completed.has(currentLesson) ? '1px solid rgba(52,211,153,0.3)' : 'none', borderRadius: 8, padding: '0.55rem 1.25rem', fontSize: '0.85rem', fontWeight: 700, color: completed.has(currentLesson) ? '#34d399' : '#0f172a', cursor: 'pointer' }}
+                >
+                  {completed.has(currentLesson) ? '✓ Completed' : currentLesson === total - 1 ? '🎉 Complete Course' : 'Mark Complete & Next →'}
+                </button>
+                {currentLesson < total - 1 && (
+                  <button
+                    onClick={() => setCurrentLesson(p => Math.min(total - 1, p + 1))}
+                    style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 8, padding: '0.55rem 1.1rem', fontSize: '0.85rem', fontWeight: 600, color: '#94a3b8', cursor: 'pointer' }}
+                  >
+                    Next →
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

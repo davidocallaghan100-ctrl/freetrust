@@ -48,17 +48,6 @@ function getTrustBalance(tb: Listing['trust_balances']): number {
   return (tb as { balance: number }).balance ?? 0
 }
 
-const MOCK_LISTINGS: Listing[] = [
-  { id: 'm1', seller_id: 'm1', title: 'Handcrafted Leather Wallet', description: 'Genuine full-grain leather bifold wallet. Made to order, ships worldwide.', price: 65, currency: '£', images: null, tags: ['Leather', 'Handmade'], location: 'Dublin, Ireland', created_at: new Date().toISOString(), profiles: { id: 'm1', full_name: 'Tom Walsh', avatar_url: 'https://i.pravatar.cc/150?img=53', location: 'Dublin, Ireland' }, trust_balances: { balance: 640 } },
-  { id: 'm2', seller_id: 'm2', title: 'Illustrated Nature Prints (Set of 3)', description: 'A3 archival prints of original botanical illustrations. Printed on 300gsm paper.', price: 48, currency: '£', images: null, tags: ['Art', 'Print', 'Decor'], location: 'London, UK', created_at: new Date().toISOString(), profiles: { id: 'm2', full_name: 'Sarah Chen', avatar_url: 'https://i.pravatar.cc/150?img=47', location: 'London, UK' }, trust_balances: { balance: 820 } },
-  { id: 'm3', seller_id: 'm3', title: 'Notion Productivity System Template', description: 'Complete life & work OS built in Notion. Includes 40+ linked databases and views.', price: 29, currency: '£', images: null, tags: ['Notion', 'Productivity', 'Digital'], location: 'Berlin, Germany', created_at: new Date().toISOString(), profiles: { id: 'm3', full_name: 'Lena Fischer', avatar_url: 'https://i.pravatar.cc/150?img=41', location: 'Berlin, Germany' }, trust_balances: { balance: 530 } },
-  { id: 'm4', seller_id: 'm4', title: 'Next.js Starter Boilerplate', description: 'Production-ready Next.js 14 + Supabase + Stripe boilerplate with auth, billing, and dark mode.', price: 79, currency: '£', images: null, tags: ['Next.js', 'Code', 'Template'], location: 'Bangalore, India', created_at: new Date().toISOString(), profiles: { id: 'm4', full_name: 'Priya Nair', avatar_url: 'https://i.pravatar.cc/150?img=44', location: 'Bangalore, India' }, trust_balances: { balance: 1100 } },
-  { id: 'm5', seller_id: 'm5', title: 'ESG Reporting Excel Toolkit', description: 'Complete Excel/Google Sheets toolkit for SME ESG reporting. Includes GRI & CSRD templates.', price: 120, currency: '£', images: null, tags: ['ESG', 'Excel', 'Business'], location: 'Lagos, Nigeria', created_at: new Date().toISOString(), profiles: { id: 'm5', full_name: 'Amara Diallo', avatar_url: 'https://i.pravatar.cc/150?img=45', location: 'Lagos, Nigeria' }, trust_balances: { balance: 710 } },
-  { id: 'm6', seller_id: 'm6', title: 'Ceramic Pour-Over Coffee Set', description: 'Handthrown ceramic pour-over dripper + mug set. Each piece is unique.', price: 95, currency: '£', images: null, tags: ['Ceramic', 'Coffee', 'Handmade'], location: 'Glasgow, UK', created_at: new Date().toISOString(), profiles: { id: 'm6', full_name: 'James Reid', avatar_url: 'https://i.pravatar.cc/150?img=22', location: 'Glasgow, UK' }, trust_balances: { balance: 320 } },
-  { id: 'm7', seller_id: 'm7', title: 'Watercolour Greeting Card Set (8pk)', description: 'Eight hand-painted watercolour greeting cards, blank inside. Perfect for any occasion.', price: 18, currency: '£', images: null, tags: ['Cards', 'Art', 'Stationery'], location: 'Cork, Ireland', created_at: new Date().toISOString(), profiles: { id: 'm7', full_name: 'Ciara Murphy', avatar_url: 'https://i.pravatar.cc/150?img=39', location: 'Cork, Ireland' }, trust_balances: { balance: 410 } },
-  { id: 'm8', seller_id: 'm8', title: 'Organic Beeswax Candle Set', description: 'Set of 4 hand-poured beeswax candles with organic cotton wicks. Honey & vanilla scent.', price: 36, currency: '£', images: null, tags: ['Candles', 'Organic', 'Handmade'], location: 'Edinburgh, UK', created_at: new Date().toISOString(), profiles: { id: 'm8', full_name: 'Maja Eriksson', avatar_url: 'https://i.pravatar.cc/150?img=25', location: 'Edinburgh, UK' }, trust_balances: { balance: 290 } },
-]
-
 function MarketplaceContent() {
   const searchParams = useSearchParams()
   const { format } = useCurrency()
@@ -87,16 +76,11 @@ function MarketplaceContent() {
       const res = await fetch(`/api/collab/listings?${params}`)
       if (!res.ok) throw new Error('Failed to fetch')
       const json = await res.json() as { listings?: Listing[]; total?: number }
-      if (json.listings && json.listings.length > 0) {
-        setListings(json.listings)
-        setTotal(json.total ?? json.listings.length)
-      } else {
-        setListings(MOCK_LISTINGS)
-        setTotal(MOCK_LISTINGS.length)
-      }
+      setListings(json.listings ?? [])
+      setTotal(json.total ?? json.listings?.length ?? 0)
     } catch {
-      setListings(MOCK_LISTINGS)
-      setTotal(MOCK_LISTINGS.length)
+      setListings([])
+      setTotal(0)
     } finally {
       setLoading(false)
     }

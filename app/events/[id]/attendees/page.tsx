@@ -45,28 +45,14 @@ interface Attendee {
   notes?: string;
 }
 
-const MOCK_EVENT = {
-  id: '1',
-  title: 'FreeTrust Community Summit 2025',
-  date: '2025-03-15T10:00:00',
-  location: 'London ExCeL Centre',
-  totalCapacity: 500,
+// Event metadata is loaded from DB in a real implementation; fallback to empty
+const EMPTY_EVENT = {
+  id: '',
+  title: 'Event',
+  date: new Date().toISOString(),
+  location: '',
+  totalCapacity: 0,
 };
-
-const MOCK_ATTENDEES: Attendee[] = [
-  { id: 'a1', name: 'Alice Thornton', email: 'alice@example.com', phone: '+44 7700 900001', ticketType: 'vip', ticketCode: 'FT-VIP-001', status: 'checked-in', registeredAt: '2025-02-01T09:15:00', checkedInAt: '2025-03-15T09:45:00', amountPaid: 149, trustScore: 87, notes: 'Speaker guest' },
-  { id: 'a2', name: 'Bob Marshfield', email: 'bob@example.com', ticketType: 'paid', ticketCode: 'FT-PAI-002', status: 'confirmed', registeredAt: '2025-02-03T14:22:00', amountPaid: 49, trustScore: 72 },
-  { id: 'a3', name: 'Carla Nguyen', email: 'carla@example.com', phone: '+44 7700 900003', ticketType: 'free', ticketCode: 'FT-FRE-003', status: 'confirmed', registeredAt: '2025-02-05T11:00:00', trustScore: 65 },
-  { id: 'a4', name: 'David Osei', email: 'david@example.com', ticketType: 'paid', ticketCode: 'FT-PAI-004', status: 'pending', registeredAt: '2025-02-07T16:30:00', amountPaid: 49, trustScore: 55 },
-  { id: 'a5', name: 'Eva Kowalski', email: 'eva@example.com', phone: '+44 7700 900005', ticketType: 'vip', ticketCode: 'FT-VIP-005', status: 'confirmed', registeredAt: '2025-02-08T10:10:00', amountPaid: 149, trustScore: 91 },
-  { id: 'a6', name: 'Frank Belmont', email: 'frank@example.com', ticketType: 'free', ticketCode: 'FT-FRE-006', status: 'cancelled', registeredAt: '2025-02-09T13:45:00', trustScore: 40 },
-  { id: 'a7', name: 'Grace Liu', email: 'grace@example.com', ticketType: 'paid', ticketCode: 'FT-PAI-007', status: 'checked-in', registeredAt: '2025-02-10T08:00:00', checkedInAt: '2025-03-15T10:05:00', amountPaid: 49, trustScore: 78 },
-  { id: 'a8', name: 'Henry Walsh', email: 'henry@example.com', phone: '+44 7700 900008', ticketType: 'free', ticketCode: 'FT-FRE-008', status: 'confirmed', registeredAt: '2025-02-11T15:20:00', trustScore: 62 },
-  { id: 'a9', name: 'Iris Fontaine', email: 'iris@example.com', ticketType: 'vip', ticketCode: 'FT-VIP-009', status: 'checked-in', registeredAt: '2025-02-12T09:30:00', checkedInAt: '2025-03-15T09:58:00', amountPaid: 149, trustScore: 95 },
-  { id: 'a10', name: 'James Okeke', email: 'james@example.com', ticketType: 'paid', ticketCode: 'FT-PAI-010', status: 'pending', registeredAt: '2025-02-13T12:00:00', amountPaid: 49, trustScore: 58 },
-  { id: 'a11', name: 'Kate Morrison', email: 'kate@example.com', phone: '+44 7700 900011', ticketType: 'free', ticketCode: 'FT-FRE-011', status: 'confirmed', registeredAt: '2025-02-14T10:45:00', trustScore: 70 },
-  { id: 'a12', name: 'Liam Chen', email: 'liam@example.com', ticketType: 'paid', ticketCode: 'FT-PAI-012', status: 'confirmed', registeredAt: '2025-02-15T14:00:00', amountPaid: 49, trustScore: 83 },
-];
 
 const statusConfig: Record<AttendeeStatus, { label: string; color: string; icon: React.ElementType }> = {
   'confirmed': { label: 'Confirmed', color: 'bg-green-100 text-green-700', icon: CheckCircleIcon },
@@ -111,7 +97,7 @@ export default function AttendeesPage() {
   const router = useRouter();
   const eventId = params.id as string;
 
-  const [attendees, setAttendees] = useState<Attendee[]>(MOCK_ATTENDEES);
+  const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<AttendeeStatus | 'all'>('all');
   const [ticketFilter, setTicketFilter] = useState<TicketType | 'all'>('all');
@@ -225,7 +211,7 @@ export default function AttendeesPage() {
             </button>
             <div className="min-w-0">
               <h1 className="text-lg font-bold text-gray-900 truncate">Attendees</h1>
-              <p className="text-xs text-gray-500 truncate">{MOCK_EVENT.title}</p>
+              <p className="text-xs text-gray-500 truncate">{EMPTY_EVENT.title}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -250,7 +236,7 @@ export default function AttendeesPage() {
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard icon={UsersIcon} label="Total Registered" value={stats.total} sub={`of ${MOCK_EVENT.totalCapacity} capacity`} color="bg-indigo-50 text-indigo-600" />
+          <StatCard icon={UsersIcon} label="Total Registered" value={stats.total} sub={`of ${EMPTY_EVENT.totalCapacity} capacity`} color="bg-indigo-50 text-indigo-600" />
           <StatCard icon={CheckCircleIcon} label="Confirmed" value={stats.confirmed} sub={`${stats.pending} pending`} color="bg-green-50 text-green-600" />
           <StatCard icon={CheckCircleSolid} label="Checked In" value={stats.checkedIn} sub={`${Math.round((stats.checkedIn / stats.total) * 100)}% attendance`} color="bg-blue-50 text-blue-600" />
           <StatCard icon={CurrencyDollarIcon} label="Revenue" value={`£${stats.revenue}`} sub="from paid tickets" color="bg-amber-50 text-amber-600" />
@@ -260,12 +246,12 @@ export default function AttendeesPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex justify-between text-sm mb-2">
             <span className="font-medium text-gray-700">Capacity</span>
-            <span className="text-gray-500">{stats.total} / {MOCK_EVENT.totalCapacity}</span>
+            <span className="text-gray-500">{stats.total} / {EMPTY_EVENT.totalCapacity}</span>
           </div>
           <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all"
-              style={{ width: `${Math.min((stats.total / MOCK_EVENT.totalCapacity) * 100, 100)}%` }}
+              style={{ width: `${Math.min((stats.total / EMPTY_EVENT.totalCapacity) * 100, 100)}%` }}
             />
           </div>
           <div className="flex gap-4 mt-2 text-xs text-gray-500">

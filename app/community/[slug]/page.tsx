@@ -160,10 +160,17 @@ export default function CommunityDetailPage() {
     } catch { /* silent */ } finally { setJoinLoading(false) }
   }
 
-  const handleVote = (postId: string) => {
+  const handleVote = async (postId: string) => {
     if (votedPosts.has(postId)) return
     setVotedPosts(prev => { const n = new Set(prev); n.add(postId); return n })
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, upvotes: p.upvotes + 1 } : p))
+    try {
+      const res = await fetch(`/api/communities/${slug}/posts/${postId}/vote`, { method: 'POST' })
+      if (res.ok) {
+        const data = await res.json() as { upvotes: number; alreadyVoted?: boolean }
+        setPosts(prev => prev.map(p => p.id === postId ? { ...p, upvotes: data.upvotes } : p))
+      }
+    } catch { /* optimistic update stands */ }
   }
 
   const handlePost = async () => {

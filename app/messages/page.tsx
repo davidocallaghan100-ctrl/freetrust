@@ -58,34 +58,12 @@ function formatTime(iso: string): string {
   return d.toLocaleDateString()
 }
 
-// ── Mock data ──────────────────────────────────────────────────────────────────
-const MOCK_CONVERSATIONS: ConversationItem[] = [
-  { id: 'c1', updated_at: new Date(Date.now() - 600000).toISOString(), unread_count: 2, other_user: { id: 'u1', full_name: 'Amara Diallo', avatar_url: null }, last_message: { id: 'm1', conversation_id: 'c1', sender_id: 'u1', content: 'Hey, are you available for a quick call tomorrow?', created_at: new Date(Date.now() - 600000).toISOString() } },
-  { id: 'c2', updated_at: new Date(Date.now() - 3600000).toISOString(), unread_count: 0, other_user: { id: 'u2', full_name: 'Tom Walsh', avatar_url: null }, last_message: { id: 'm2', conversation_id: 'c2', sender_id: 'me', content: 'Sounds great, I\'ll send the files over now.', created_at: new Date(Date.now() - 3600000).toISOString() } },
-  { id: 'c3', updated_at: new Date(Date.now() - 86400000).toISOString(), unread_count: 1, other_user: { id: 'u3', full_name: 'Priya Nair', avatar_url: null }, last_message: { id: 'm3', conversation_id: 'c3', sender_id: 'u3', content: 'I\'d love to collaborate on this project!', created_at: new Date(Date.now() - 86400000).toISOString() } },
-  { id: 'c4', updated_at: new Date(Date.now() - 172800000).toISOString(), unread_count: 0, other_user: { id: 'u4', full_name: 'James Okafor', avatar_url: null }, last_message: { id: 'm4', conversation_id: 'c4', sender_id: 'u4', content: 'Thanks for the review, really appreciate it!', created_at: new Date(Date.now() - 172800000).toISOString() } },
-]
-
-const MOCK_MESSAGES: Record<string, Message[]> = {
-  c1: [
-    { id: 'm1a', conversation_id: 'c1', sender_id: 'u1', content: 'Hi! I saw your listing for brand design services.', created_at: new Date(Date.now() - 3600000).toISOString() },
-    { id: 'm1b', conversation_id: 'c1', sender_id: 'me', content: 'Yes! Happy to help. What kind of project do you have in mind?', created_at: new Date(Date.now() - 3000000).toISOString() },
-    { id: 'm1c', conversation_id: 'c1', sender_id: 'u1', content: 'It\'s a startup in the fintech space. We need a full brand identity.', created_at: new Date(Date.now() - 2400000).toISOString() },
-    { id: 'm1d', conversation_id: 'c1', sender_id: 'me', content: 'Sounds perfect. I\'ve done several fintech brands. Can you share more about the company?', created_at: new Date(Date.now() - 1800000).toISOString() },
-    { id: 'm1e', conversation_id: 'c1', sender_id: 'u1', content: 'Hey, are you available for a quick call tomorrow?', created_at: new Date(Date.now() - 600000).toISOString() },
-  ],
-  c2: [
-    { id: 'm2a', conversation_id: 'c2', sender_id: 'u2', content: 'Hi, I purchased your SEO audit package. Just checking in on progress.', created_at: new Date(Date.now() - 86400000).toISOString() },
-    { id: 'm2b', conversation_id: 'c2', sender_id: 'me', content: 'Hey Tom! I\'m about 60% through. Lots of technical issues to address.', created_at: new Date(Date.now() - 72000000).toISOString() },
-    { id: 'm2c', conversation_id: 'c2', sender_id: 'me', content: 'Sounds great, I\'ll send the files over now.', created_at: new Date(Date.now() - 3600000).toISOString() },
-  ],
-}
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function MessagesPage() {
   const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
-  const [conversations, setConversations] = useState<ConversationItem[]>(MOCK_CONVERSATIONS)
+  const [conversations, setConversations] = useState<ConversationItem[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -146,7 +124,7 @@ export default function MessagesPage() {
         return
       }
     } catch { /* fall through */ }
-    setMessages(MOCK_MESSAGES[convId] || [])
+    setMessages([])
   }, [])
 
   useEffect(() => {
