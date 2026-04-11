@@ -88,7 +88,7 @@ function EventsContent() {
         setEvents(mapped)
       }
     } catch {
-      setEvents(MOCK_EVENTS)
+      setEvents([])
     } finally {
       setLoading(false)
     }
