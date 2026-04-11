@@ -15,7 +15,7 @@ export async function GET() {
     const admin = createAdminClient()
 
     // ── Trust balance ────────────────────────────────────────────────────────
-    const [trustBalRes, trustLedgerRes, ordersEarnedRes, ordersSpentRes, depositsRes] = await Promise.all([
+    const [trustBalRes, trustLedgerRes, ordersEarnedRes, ordersSpentRes, depositsRes, sentTransfersRes, receivedTransfersRes] = await Promise.all([
       supabase
         .from('trust_balances')
         .select('balance, lifetime, updated_at')
@@ -51,6 +51,22 @@ export async function GET() {
         .eq('status', 'completed')
         .order('created_at', { ascending: false })
         .limit(100),
+      // Transfers sent by this user
+      admin
+        .from('wallet_transfers')
+        .select('id, amount, currency, note, status, created_at, recipient_id')
+        .eq('sender_id', user.id)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(100),
+      // Transfers received by this user
+      admin
+        .from('wallet_transfers')
+        .select('id, amount, currency, note, status, created_at, sender_id')
+        .eq('recipient_id', user.id)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(100),
     ])
 
     const trustBalance  = trustBalRes.data?.balance  ?? 0
@@ -76,7 +92,7 @@ export async function GET() {
     // ── Build unified transaction list ────────────────────────────────────────
     type Tx = {
       id: string
-      category: 'earned' | 'spent' | 'pending' | 'withdrawn' | 'trust' | 'deposit'
+      category: 'earned' | 'spent' | 'pending' | 'withdrawn' | 'trust' | 'deposit' | 'transfer_sent' | 'transfer_received'
       amount: number
       currency: 'EUR' | 'TRUST'
       description: string
@@ -127,6 +143,49 @@ export async function GET() {
       })
     }
 
+    // Transfers sent
+    // Collect profile IDs for transfer counterparties
+    const transferRecipientIds = (sentTransfersRes.data ?? []).map((t: { recipient_id: string }) => t.recipient_id).filter(Boolean)
+    const transferSenderIds = (receivedTransfersRes.data ?? []).map((t: { sender_id: string }) => t.sender_id).filter(Boolean)
+    const allTransferIds = [...transferRecipientIds, ...transferSenderIds].filter((id, idx, arr) => arr.indexOf(id) === idx && !profileMap[id])
+    if (allTransferIds.length > 0) {
+      const { data: tProfiles } = await supabase.from('profiles').select('id, full_name').in('id', allTransferIds)
+      for (const p of tProfiles ?? []) {
+        profileMap[(p as { id: string; full_name: string | null }).id] = (p as { id: string; full_name: string | null }).full_name ?? 'Unknown'
+      }
+    }
+
+    for (const t of sentTransfersRes.data ?? []) {
+      const recipientName = profileMap[t.recipient_id] ?? 'a member'
+      const sym = t.currency === 'EUR' ? '€' : '₮'
+      const fmtAmt = t.currency === 'EUR' ? Number(t.amount).toFixed(2) : String(t.amount)
+      txList.push({
+        id: `transfer-sent-${t.id}`,
+        category: 'transfer_sent',
+        amount: -Number(t.amount),
+        currency: t.currency as 'EUR' | 'TRUST',
+        description: `Sent ${sym}${fmtAmt} to ${recipientName}${t.note ? ` — ${t.note}` : ''}`,
+        date: t.created_at,
+        status: t.status,
+      })
+    }
+
+    // Transfers received
+    for (const t of receivedTransfersRes.data ?? []) {
+      const senderName = profileMap[t.sender_id] ?? 'a member'
+      const sym = t.currency === 'EUR' ? '€' : '₮'
+      const fmtAmt = t.currency === 'EUR' ? Number(t.amount).toFixed(2) : String(t.amount)
+      txList.push({
+        id: `transfer-recv-${t.id}`,
+        category: 'transfer_received',
+        amount: Number(t.amount),
+        currency: t.currency as 'EUR' | 'TRUST',
+        description: `Received ${sym}${fmtAmt} from ${senderName}${t.note ? ` — ${t.note}` : ''}`,
+        date: t.created_at,
+        status: t.status,
+      })
+    }
+
     // Trust ledger as trust transactions
     for (const entry of trustLedger) {
       txList.push({
@@ -158,9 +217,17 @@ export async function GET() {
       .filter((o: { status: string }) => o.status === 'completed')
       .reduce((s: number, o: { amount: number }) => s + (o.amount ?? 0), 0)
 
+    // EUR transfers: net effect on available balance
+    const eurSent = (sentTransfersRes.data ?? [])
+      .filter((t: { currency: string }) => t.currency === 'EUR')
+      .reduce((s: number, t: { amount: number }) => s + Number(t.amount), 0)
+    const eurReceived = (receivedTransfersRes.data ?? [])
+      .filter((t: { currency: string }) => t.currency === 'EUR')
+      .reduce((s: number, t: { amount: number }) => s + Number(t.amount), 0)
+
     return NextResponse.json({
       money: {
-        available: totalDeposited + completedEarned - totalSpent,
+        available: totalDeposited + completedEarned - totalSpent - eurSent + eurReceived,
         pendingPayout: pendingEarned,
         totalEarned: completedEarned,
         totalSpent,

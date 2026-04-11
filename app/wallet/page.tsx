@@ -1,12 +1,12 @@
 'use client'
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useCurrency } from '@/context/CurrencyContext'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type TxCategory = 'earned' | 'spent' | 'pending' | 'withdrawn' | 'trust' | 'deposit'
+type TxCategory = 'earned' | 'spent' | 'pending' | 'withdrawn' | 'trust' | 'deposit' | 'transfer_sent' | 'transfer_received'
 type Currency   = 'EUR' | 'TRUST'
 
 interface Tx {
@@ -67,17 +67,20 @@ function fmtDate(ts: string) {
 
 const TX_ICONS: Record<TxCategory, string> = {
   earned: '⬇', spent: '⬆', pending: '⏳', withdrawn: '🏦', trust: '💎', deposit: '💳',
+  transfer_sent: '↗', transfer_received: '↙',
 }
 const TX_COLORS: Record<TxCategory, string> = {
   earned: '#34d399', spent: '#f87171', pending: '#f59e0b', withdrawn: '#94a3b8', trust: '#38bdf8', deposit: '#a78bfa',
+  transfer_sent: '#fb923c', transfer_received: '#34d399',
 }
 const TX_BG: Record<TxCategory, string> = {
   earned: 'rgba(52,211,153,0.1)', spent: 'rgba(248,113,113,0.1)', pending: 'rgba(245,158,11,0.1)',
   withdrawn: 'rgba(148,163,184,0.08)', trust: 'rgba(56,189,248,0.1)', deposit: 'rgba(167,139,250,0.1)',
+  transfer_sent: 'rgba(251,146,60,0.1)', transfer_received: 'rgba(52,211,153,0.1)',
 }
 
-type FilterKey = 'All' | 'Earned' | 'Spent' | 'Pending' | 'Withdrawn' | 'Trust' | 'Deposits'
-const FILTERS: FilterKey[] = ['All', 'Deposits', 'Earned', 'Spent', 'Pending', 'Withdrawn', 'Trust']
+type FilterKey = 'All' | 'Earned' | 'Spent' | 'Pending' | 'Withdrawn' | 'Trust' | 'Deposits' | 'Transfers'
+const FILTERS: FilterKey[] = ['All', 'Deposits', 'Earned', 'Spent', 'Transfers', 'Pending', 'Withdrawn', 'Trust']
 
 // ── Mini bar chart for trust history ─────────────────────────────────────────
 
@@ -233,6 +236,207 @@ function AddFundsModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
   )
 }
 
+interface SearchUser { id: string; full_name: string | null; username: string | null; avatar_url: string | null }
+
+function TransferModal({ walletData, onClose, onSuccess }: { walletData: WalletData | null; onClose: () => void; onSuccess: (msg: string) => void }) {
+  const [query, setQuery]           = useState('')
+  const [results, setResults]       = useState<SearchUser[]>([])
+  const [searching, setSearching]   = useState(false)
+  const [selected, setSelected]     = useState<SearchUser | null>(null)
+  const [amount, setAmount]         = useState('')
+  const [currency, setCurrency]     = useState<'EUR' | 'TRUST'>('EUR')
+  const [note, setNote]             = useState('')
+  const [loading, setLoading]       = useState(false)
+  const [error, setError]           = useState<string | null>(null)
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const availableEur   = walletData?.money.available ?? 0
+  const availableTrust = walletData?.trust.balance ?? 0
+
+  // Debounced user search
+  useEffect(() => {
+    if (searchTimer.current) clearTimeout(searchTimer.current)
+    if (!query || query.length < 2) { setResults([]); return }
+    setSearching(true)
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`)
+        if (res.ok) {
+          const data = await res.json() as { users: SearchUser[] }
+          setResults(data.users ?? [])
+        }
+      } catch { /* silent */ }
+      finally { setSearching(false) }
+    }, 300)
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current) }
+  }, [query])
+
+  const parsedAmount = parseFloat(amount) || 0
+  const hasEnough = currency === 'EUR' ? parsedAmount <= availableEur : parsedAmount <= availableTrust
+  const canSubmit = selected && parsedAmount > 0 && hasEnough && !loading
+
+  const handleTransfer = async () => {
+    if (!canSubmit) return
+    setLoading(true); setError(null)
+    try {
+      const res = await fetch('/api/wallet/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipient_id: selected.id,
+          amount: parsedAmount,
+          currency,
+          note: note.trim() || undefined,
+        }),
+      })
+      const data = await res.json() as { transfer?: { id: string; amount: number; currency: string; recipient: string }; error?: string }
+      if (!res.ok) {
+        setError(data.error ?? 'Transfer failed')
+        setLoading(false)
+        return
+      }
+      const sym = currency === 'EUR' ? '€' : '₮'
+      const fmtAmt = currency === 'EUR' ? parsedAmount.toFixed(2) : String(parsedAmount)
+      onSuccess(`✅ ${sym}${fmtAmt} sent to ${data.transfer?.recipient ?? selected.full_name ?? 'recipient'}!`)
+    } catch {
+      setError('Network error — please try again')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: '480px', boxShadow: '0 -8px 40px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <div>
+            <div style={{ fontSize: '17px', fontWeight: 800, color: '#f1f5f9' }}>↗ Transfer Funds</div>
+            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>Send € or ₮ to another FreeTrust member</div>
+          </div>
+          <button onClick={onClose} style={{ background: '#0f172a', border: 'none', borderRadius: '50%', width: '32px', height: '32px', color: '#64748b', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+        </div>
+
+        {/* Recipient search */}
+        {!selected ? (
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recipient</label>
+            <input
+              type="text"
+              placeholder="Search by name, username, or email..."
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              style={{ width: '100%', background: '#0f172a', border: '1.5px solid #334155', borderRadius: '10px', padding: '12px', fontSize: '14px', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+            />
+            {searching && <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>Searching...</div>}
+            {results.length > 0 && (
+              <div style={{ marginTop: '6px', background: '#0f172a', border: '1px solid #334155', borderRadius: '10px', maxHeight: '180px', overflowY: 'auto' }}>
+                {results.map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => { setSelected(u); setQuery(''); setResults([]) }}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'transparent', border: 'none', borderBottom: '1px solid #1e293b', cursor: 'pointer', textAlign: 'left' }}
+                  >
+                    {u.avatar_url
+                      ? <img src={u.avatar_url} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover' }} />
+                      : <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800, color: '#0f172a' }}>{(u.full_name ?? '?')[0].toUpperCase()}</div>
+                    }
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9' }}>{u.full_name ?? 'Unknown'}</div>
+                      {u.username && <div style={{ fontSize: '11px', color: '#64748b' }}>@{u.username}</div>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {query.length >= 2 && !searching && results.length === 0 && (
+              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>No users found</div>
+            )}
+          </div>
+        ) : (
+          <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: 'rgba(56,189,248,0.06)', borderRadius: '10px', border: '1px solid rgba(56,189,248,0.12)' }}>
+            {selected.avatar_url
+              ? <img src={selected.avatar_url} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
+              : <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800, color: '#0f172a' }}>{(selected.full_name ?? '?')[0].toUpperCase()}</div>
+            }
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9' }}>{selected.full_name ?? 'Unknown'}</div>
+              {selected.username && <div style={{ fontSize: '11px', color: '#64748b' }}>@{selected.username}</div>}
+            </div>
+            <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '14px' }}>✕</button>
+          </div>
+        )}
+
+        {/* Currency toggle */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+          {(['EUR', 'TRUST'] as const).map(c => (
+            <button
+              key={c}
+              onClick={() => setCurrency(c)}
+              style={{
+                flex: 1, padding: '10px', borderRadius: '10px',
+                border: `1.5px solid ${currency === c ? (c === 'EUR' ? '#38bdf8' : '#a78bfa') : '#334155'}`,
+                background: currency === c ? (c === 'EUR' ? 'rgba(56,189,248,0.12)' : 'rgba(167,139,250,0.12)') : '#0f172a',
+                color: currency === c ? (c === 'EUR' ? '#38bdf8' : '#a78bfa') : '#64748b',
+                fontWeight: 700, fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              {c === 'EUR' ? `€ Euro · ${availableEur.toFixed(2)}` : `₮ Trust · ${availableTrust}`}
+            </button>
+          ))}
+        </div>
+
+        {/* Amount */}
+        <div style={{ marginBottom: '14px' }}>
+          <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Amount</label>
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '15px', fontWeight: 600 }}>{currency === 'EUR' ? '€' : '₮'}</span>
+            <input
+              type="number"
+              min={currency === 'EUR' ? '0.01' : '1'}
+              step={currency === 'EUR' ? '0.01' : '1'}
+              placeholder="0.00"
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              style={{ width: '100%', background: '#0f172a', border: `1.5px solid ${amount ? (hasEnough ? '#334155' : '#f87171') : '#334155'}`, borderRadius: '10px', padding: '12px 12px 12px 28px', fontSize: '15px', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+            />
+          </div>
+          {parsedAmount > 0 && !hasEnough && (
+            <div style={{ fontSize: '12px', color: '#f87171', marginTop: '4px' }}>Insufficient balance</div>
+          )}
+        </div>
+
+        {/* Note */}
+        <div style={{ marginBottom: '18px' }}>
+          <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Note (optional)</label>
+          <input
+            type="text"
+            placeholder="What's this for?"
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            maxLength={500}
+            style={{ width: '100%', background: '#0f172a', border: '1.5px solid #334155', borderRadius: '10px', padding: '12px', fontSize: '14px', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+          />
+        </div>
+
+        {error && <div style={{ fontSize: '13px', color: '#f87171', marginBottom: '12px', padding: '10px 14px', background: 'rgba(248,113,113,0.08)', borderRadius: '8px' }}>{error}</div>}
+
+        <button
+          onClick={handleTransfer}
+          disabled={!canSubmit}
+          style={{
+            width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
+            background: canSubmit ? 'linear-gradient(135deg, #fb923c, #f97316)' : '#1e293b',
+            color: canSubmit ? '#0f172a' : '#475569',
+            fontSize: '15px', fontWeight: 800, cursor: canSubmit ? 'pointer' : 'not-allowed',
+            fontFamily: 'inherit', transition: 'all 0.15s', opacity: loading ? 0.7 : 1,
+          }}
+        >
+          {loading ? '⏳ Sending…' : `Send ${currency === 'EUR' ? '€' : '₮'}${parsedAmount > 0 ? (currency === 'EUR' ? parsedAmount.toFixed(2) : parsedAmount) : '0'} to ${selected?.full_name ?? 'recipient'}`}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function WalletPageInner() {
   const { currency: curr } = useCurrency()
   const sym = curr.symbol
@@ -244,8 +448,9 @@ function WalletPageInner() {
   const [exporting,   setExporting]   = useState(false)
   const [spendLoading,setSpendLoading]= useState<string | null>(null)
   const [toast,       setToast]       = useState<string | null>(null)
-  const [showAddFunds, setShowAddFunds] = useState(false)
-  const [withdrawing,  setWithdrawing]  = useState(false)
+  const [showAddFunds,  setShowAddFunds]  = useState(false)
+  const [showTransfer,  setShowTransfer]  = useState(false)
+  const [withdrawing,   setWithdrawing]   = useState(false)
 
   const searchParams = useSearchParams()
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000) }
@@ -319,6 +524,8 @@ function WalletPageInner() {
 
   const filtered = txList.filter(tx => {
     if (filter === 'All') return true
+    if (filter === 'Transfers') return tx.category === 'transfer_sent' || tx.category === 'transfer_received'
+    if (filter === 'Deposits') return tx.category === 'deposit'
     return tx.category === filter.toLowerCase()
   })
 
@@ -452,6 +659,15 @@ function WalletPageInner() {
         />
       )}
 
+      {/* Transfer Modal */}
+      {showTransfer && (
+        <TransferModal
+          walletData={data}
+          onClose={() => setShowTransfer(false)}
+          onSuccess={(msg) => { setShowTransfer(false); showToast(msg); load() }}
+        />
+      )}
+
       {/* Toast */}
       {toast && (
         <div style={{ position: 'fixed', bottom: '80px', left: '50%', transform: 'translateX(-50%)', background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '12px 20px', fontSize: '13px', color: '#f1f5f9', zIndex: 9999, animation: 'slideUp 0.2s ease', boxShadow: '0 8px 30px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
@@ -522,13 +738,19 @@ function WalletPageInner() {
                 <button
                   onClick={handleWithdraw}
                   disabled={withdrawing}
-                  style={{ flex: 1, minWidth: '120px', padding: '11px 18px', background: withdrawing ? '#1e293b' : '#38bdf8', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 700, color: withdrawing ? '#475569' : '#0f172a', cursor: withdrawing ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: withdrawing ? 0.7 : 1 }}
+                  style={{ flex: 1, minWidth: '100px', padding: '11px 14px', background: withdrawing ? '#1e293b' : '#38bdf8', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 700, color: withdrawing ? '#475569' : '#0f172a', cursor: withdrawing ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: withdrawing ? 0.7 : 1 }}
                 >
-                  {withdrawing ? '⏳ Opening…' : '💸 Withdraw Earnings'}
+                  {withdrawing ? '⏳ Opening…' : '💸 Withdraw'}
+                </button>
+                <button
+                  onClick={() => setShowTransfer(true)}
+                  style={{ flex: 1, minWidth: '100px', padding: '11px 14px', background: 'rgba(251,146,60,0.1)', border: '1px solid rgba(251,146,60,0.25)', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#fb923c', cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  ↗ Transfer
                 </button>
                 <button
                   onClick={() => setShowAddFunds(true)}
-                  style={{ flex: 1, minWidth: '100px', padding: '11px 18px', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#38bdf8', cursor: 'pointer', fontFamily: 'inherit' }}
+                  style={{ flex: 1, minWidth: '100px', padding: '11px 14px', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#38bdf8', cursor: 'pointer', fontFamily: 'inherit' }}
                 >
                   ➕ Add Funds
                 </button>
