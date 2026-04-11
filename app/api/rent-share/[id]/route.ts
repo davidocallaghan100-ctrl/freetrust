@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET(
   _req: NextRequest,
@@ -40,7 +41,11 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Verify ownership
+    // Check admin role
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    const isAdmin = profile?.role === 'admin'
+
+    // Verify ownership (admins can edit any listing)
     const { data: existing } = await supabase
       .from('rent_share_listings')
       .select('user_id')
@@ -48,7 +53,7 @@ export async function PATCH(
       .single()
 
     if (!existing) return NextResponse.json({ error: 'Listing not found' }, { status: 404 })
-    if (existing.user_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (!isAdmin && existing.user_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const body = await req.json()
     const {
@@ -67,19 +72,22 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
     }
 
-    const { data, error } = await supabase
+    // Use admin client to bypass RLS when an admin is editing someone else's listing
+    const db = isAdmin ? createAdminClient() : supabase
+
+    const { data, error } = await db
       .from('rent_share_listings')
       .update({
         title:          title.trim(),
         description:    description.trim(),
         category:       category?.trim() ?? 'Other',
-        price_per_day:  price_per_day  ?? null,
-        price_per_week: price_per_week ?? null,
-        deposit:        deposit        ?? 0,
-        location:       location?.trim() ?? null,
-        images:         Array.isArray(images) ? images : [],
-        available_from: available_from ?? null,
-        available_to:   available_to   ?? null,
+        price_per_day:  (price_per_day != null && price_per_day !== '') ? Number(price_per_day) : null,
+        price_per_week: (price_per_week != null && price_per_week !== '') ? Number(price_per_week) : null,
+        deposit:        (deposit != null && deposit !== '') ? Number(deposit) : 0,
+        location:       location?.trim() || null,
+        images:         Array.isArray(images) ? images.filter((u: unknown) => typeof u === 'string') : [],
+        available_from: available_from || null,
+        available_to:   available_to   || null,
         status:         status         ?? 'active',
         updated_at:     new Date().toISOString(),
       })

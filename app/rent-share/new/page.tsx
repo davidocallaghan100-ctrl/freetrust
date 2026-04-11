@@ -127,7 +127,7 @@ export default function NewRentSharePage() {
           price_per_week: pricePerWeek ? parseFloat(pricePerWeek) : null,
           deposit:        deposit      ? parseFloat(deposit)       : 0,
           location:       location.trim() || null,
-          images,
+          images:         uploadedImages,
           available_from: availableFrom || null,
           available_to:   availableTo   || null,
         }),
