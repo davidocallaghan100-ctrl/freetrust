@@ -251,13 +251,31 @@ function WalletPageInner() {
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000) }
 
   // Handle Stripe redirect back after top-up
+  // The webhook may not have fired yet, so poll a few times until the deposit
+  // shows as completed and the balance reflects the new amount.
   useEffect(() => {
     const topup = searchParams.get('topup')
     const amount = searchParams.get('amount')
     if (topup === 'success' && amount) {
       showToast(`✅ €${(parseInt(amount) / 100).toFixed(2)} added to your wallet!`)
       window.history.replaceState({}, '', '/wallet')
-      load() // Re-fetch so balance updates immediately without a manual refresh
+
+      const expectedCents = parseInt(amount)
+      let attempts = 0
+      const poll = async () => {
+        attempts++
+        const res = await fetch('/api/wallet')
+        if (!res.ok) return
+        const d = await res.json() as WalletData
+        setData(d)
+        // Check if the deposit is reflected (totalDeposited includes it)
+        const depositedCents = Math.round(d.money.totalDeposited * 100)
+        if (depositedCents >= expectedCents || attempts >= 6) return
+        // Webhook hasn't arrived yet — wait and retry (1s, 2s, 2s, 2s, 2s)
+        await new Promise(r => setTimeout(r, attempts === 1 ? 1000 : 2000))
+        await poll()
+      }
+      poll()
     } else if (topup === 'cancelled') {
       showToast('Payment cancelled — no charge was made')
       window.history.replaceState({}, '', '/wallet')

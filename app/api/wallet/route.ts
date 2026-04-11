@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET() {
   try {
@@ -9,6 +10,9 @@ export async function GET() {
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Admin client for money_deposits (table lacks RLS SELECT policy)
+    const admin = createAdminClient()
 
     // ── Trust balance ────────────────────────────────────────────────────────
     const [trustBalRes, trustLedgerRes, ordersEarnedRes, ordersSpentRes, depositsRes] = await Promise.all([
@@ -39,8 +43,8 @@ export async function GET() {
         .neq('delivery_type', 'deposit')
         .order('created_at', { ascending: false })
         .limit(100),
-      // Wallet top-ups from money_deposits
-      supabase
+      // Wallet top-ups from money_deposits (use admin — no RLS SELECT policy on this table)
+      admin
         .from('money_deposits')
         .select('id, amount_cents, currency, status, created_at')
         .eq('user_id', user.id)
