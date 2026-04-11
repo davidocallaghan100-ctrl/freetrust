@@ -245,6 +245,7 @@ function WalletPageInner() {
   const [spendLoading,setSpendLoading]= useState<string | null>(null)
   const [toast,       setToast]       = useState<string | null>(null)
   const [showAddFunds, setShowAddFunds] = useState(false)
+  const [withdrawing,  setWithdrawing]  = useState(false)
 
   const searchParams = useSearchParams()
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000) }
@@ -255,8 +256,8 @@ function WalletPageInner() {
     const amount = searchParams.get('amount')
     if (topup === 'success' && amount) {
       showToast(`✅ €${(parseInt(amount) / 100).toFixed(2)} added to your wallet!`)
-      // Clean URL
       window.history.replaceState({}, '', '/wallet')
+      load() // Re-fetch so balance updates immediately without a manual refresh
     } else if (topup === 'cancelled') {
       showToast('Payment cancelled — no charge was made')
       window.history.replaceState({}, '', '/wallet')
@@ -342,6 +343,48 @@ function WalletPageInner() {
       else { showToast('Something went wrong — try again') }
     } catch { showToast('Something went wrong — try again') }
     finally { setSpendLoading(null) }
+  }
+
+  const handleWithdraw = async () => {
+    if ((data?.money.available ?? 0) <= 0) {
+      showToast('No available balance to withdraw')
+      return
+    }
+    setWithdrawing(true)
+    try {
+      // GET returns onboarding URL if not yet set up, or { onboarded: true } if complete
+      const res = await fetch('/api/stripe/connect')
+      const d = await res.json() as { url?: string; onboarded?: boolean; error?: string }
+      if (!res.ok) {
+        showToast(d.error ?? 'Could not start withdrawal')
+        return
+      }
+      if (d.url) {
+        // Not onboarded yet — redirect to Stripe Connect onboarding
+        window.location.href = d.url
+        return
+      }
+      if (d.onboarded) {
+        // Already onboarded — open Stripe Express dashboard
+        const dashRes = await fetch('/api/stripe/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'dashboard' }),
+        })
+        const dashData = await dashRes.json() as { url?: string; error?: string }
+        if (dashData.url) {
+          window.location.href = dashData.url
+        } else {
+          showToast(dashData.error ?? 'Could not open Stripe dashboard')
+        }
+        return
+      }
+      showToast(d.error ?? 'Could not start withdrawal — please try again')
+    } catch {
+      showToast('Network error — please try again')
+    } finally {
+      setWithdrawing(false)
+    }
   }
 
   const trustLevel   = getTrustLevel(data?.trust.balance ?? 0)
@@ -459,10 +502,11 @@ function WalletPageInner() {
               {/* Action buttons */}
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <button
-                  onClick={() => showToast('Stripe Connect withdrawal coming soon')}
-                  style={{ flex: 1, minWidth: '120px', padding: '11px 18px', background: '#38bdf8', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 700, color: '#0f172a', cursor: 'pointer', fontFamily: 'inherit' }}
+                  onClick={handleWithdraw}
+                  disabled={withdrawing}
+                  style={{ flex: 1, minWidth: '120px', padding: '11px 18px', background: withdrawing ? '#1e293b' : '#38bdf8', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 700, color: withdrawing ? '#475569' : '#0f172a', cursor: withdrawing ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: withdrawing ? 0.7 : 1 }}
                 >
-                  💸 Withdraw Earnings
+                  {withdrawing ? '⏳ Opening…' : '💸 Withdraw Earnings'}
                 </button>
                 <button
                   onClick={() => setShowAddFunds(true)}
