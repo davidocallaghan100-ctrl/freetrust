@@ -105,7 +105,7 @@ export default function JobDetailPage() {
           setJob(null)
         }
       } catch {
-        setJob(MOCK_JOB)
+        setJob(null)
       } finally {
         setJobLoading(false)
       }
