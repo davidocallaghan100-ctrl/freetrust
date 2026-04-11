@@ -383,7 +383,7 @@ function ProductsInner() {
               style={{ background: '#1e293b', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: '#94a3b8', cursor: 'pointer', minHeight: 36 }}>
               {SORT_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
-            <Link href="/seller/gigs/create" style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.5rem 1.1rem', borderRadius: 9, fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none', minHeight: 36, display: 'flex', alignItems: 'center' }}>
+            <Link href="/products/new" style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.5rem 1.1rem', borderRadius: 9, fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none', minHeight: 36, display: 'flex', alignItems: 'center' }}>
               + List Product
             </Link>
           </div>
@@ -442,7 +442,7 @@ function ProductsInner() {
             <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>
               {catFilter !== 'all' ? `No products yet in this category — be the first to list one.` : 'No products match your filters.'}
             </p>
-            <Link href="/seller/gigs/create" style={{ display: 'inline-block', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.75rem 1.75rem', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>
+            <Link href="/products/new" style={{ display: 'inline-block', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.75rem 1.75rem', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>
               + List a Product
             </Link>
           </div>
