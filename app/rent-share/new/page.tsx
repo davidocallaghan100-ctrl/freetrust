@@ -115,7 +115,7 @@ export default function NewRentSharePage() {
     setLoading(true)
     setError('')
     try {
-      const images = await uploadPhotos()
+      const uploadedImages = await uploadPhotos()
       const res = await fetch('/api/rent-share', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
