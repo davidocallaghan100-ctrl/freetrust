@@ -21,11 +21,25 @@ create index if not exists idx_money_deposits_stripe_session on money_deposits(s
 alter table money_deposits enable row level security;
 
 -- Users can read their own deposits
-create policy "Users can view own deposits"
-  on money_deposits for select
-  using (auth.uid() = user_id);
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies where tablename = 'money_deposits' and policyname = 'Users can view own deposits'
+  ) then
+    create policy "Users can view own deposits"
+      on money_deposits for select
+      using (auth.uid() = user_id);
+  end if;
+end $$;
 
 -- Only service role (API routes) can insert/update deposits
-create policy "Service role manages deposits"
-  on money_deposits for all
-  using (auth.role() = 'service_role');
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies where tablename = 'money_deposits' and policyname = 'Service role manages deposits'
+  ) then
+    create policy "Service role manages deposits"
+      on money_deposits for all
+      using (auth.role() = 'service_role');
+  end if;
+end $$;
