@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   ChevronLeftIcon,
@@ -51,182 +51,6 @@ interface CalendarEvent {
   description: string;
 }
 
-const MOCK_EVENTS: CalendarEvent[] = [
-  {
-    id: "1",
-    title: "Web3 Trust Summit",
-    date: format(new Date(), "yyyy-MM-dd"),
-    startTime: "10:00",
-    endTime: "12:00",
-    mode: "online",
-    ticketType: "free",
-    attendees: 142,
-    maxAttendees: 200,
-    organiser: "Alex Rivera",
-    organiserAvatar: "AR",
-    category: "Technology",
-    color: "bg-violet-500",
-    description: "Explore how blockchain is reshaping digital trust.",
-    meetingUrl: "https://meet.example.com/web3-trust",
-  },
-  {
-    id: "2",
-    title: "Community Builders Meetup",
-    date: format(addDays(new Date(), 2), "yyyy-MM-dd"),
-    startTime: "18:00",
-    endTime: "20:00",
-    mode: "in-person",
-    ticketType: "free",
-    location: "The Hub, 12 Main St, London",
-    attendees: 38,
-    maxAttendees: 50,
-    organiser: "Priya Nair",
-    organiserAvatar: "PN",
-    category: "Community",
-    color: "bg-emerald-500",
-    description: "Connect with local community builders and change-makers.",
-  },
-  {
-    id: "3",
-    title: "DeFi Masterclass",
-    date: format(addDays(new Date(), 4), "yyyy-MM-dd"),
-    startTime: "14:00",
-    endTime: "16:30",
-    mode: "online",
-    ticketType: "paid",
-    price: 25,
-    attendees: 67,
-    maxAttendees: 100,
-    organiser: "Marco Chen",
-    organiserAvatar: "MC",
-    category: "Finance",
-    color: "bg-blue-500",
-    description: "Deep dive into decentralised finance protocols.",
-    meetingUrl: "https://meet.example.com/defi-masterclass",
-  },
-  {
-    id: "4",
-    title: "Trust Score Workshop",
-    date: format(addDays(new Date(), 7), "yyyy-MM-dd"),
-    startTime: "11:00",
-    endTime: "13:00",
-    mode: "in-person",
-    ticketType: "paid",
-    price: 10,
-    location: "Innovation Centre, 45 Tech Park, Manchester",
-    attendees: 22,
-    maxAttendees: 30,
-    organiser: "Sarah Okafor",
-    organiserAvatar: "SO",
-    category: "Education",
-    color: "bg-amber-500",
-    description: "Learn how to build and maintain your FreeTrust score.",
-  },
-  {
-    id: "5",
-    title: "Freelancer Networking Night",
-    date: format(addDays(new Date(), 10), "yyyy-MM-dd"),
-    startTime: "19:00",
-    endTime: "21:00",
-    mode: "in-person",
-    ticketType: "free",
-    location: "Workspace Co, 8 Digital Ave, Birmingham",
-    attendees: 55,
-    maxAttendees: 80,
-    organiser: "Jake Williams",
-    organiserAvatar: "JW",
-    category: "Networking",
-    color: "bg-pink-500",
-    description: "Meet freelancers, share opportunities and grow your network.",
-  },
-  {
-    id: "6",
-    title: "NFT Art & Identity Panel",
-    date: format(addDays(new Date(), 14), "yyyy-MM-dd"),
-    startTime: "15:00",
-    endTime: "17:00",
-    mode: "online",
-    ticketType: "free",
-    attendees: 210,
-    maxAttendees: 500,
-    organiser: "Luna Park",
-    organiserAvatar: "LP",
-    category: "Art",
-    color: "bg-rose-500",
-    description: "Panellists discuss NFTs as tools for digital identity.",
-    meetingUrl: "https://meet.example.com/nft-panel",
-  },
-  {
-    id: "7",
-    title: "Smart Contract Bootcamp",
-    date: format(addDays(new Date(), 18), "yyyy-MM-dd"),
-    startTime: "09:00",
-    endTime: "17:00",
-    mode: "online",
-    ticketType: "paid",
-    price: 75,
-    attendees: 44,
-    maxAttendees: 60,
-    organiser: "Dev Collective",
-    organiserAvatar: "DC",
-    category: "Technology",
-    color: "bg-cyan-500",
-    description: "Full-day intensive on writing and auditing smart contracts.",
-    meetingUrl: "https://meet.example.com/sc-bootcamp",
-  },
-  {
-    id: "8",
-    title: "Local DAO Governance Call",
-    date: format(addDays(new Date(), 21), "yyyy-MM-dd"),
-    startTime: "17:00",
-    endTime: "18:30",
-    mode: "online",
-    ticketType: "free",
-    attendees: 89,
-    maxAttendees: 300,
-    organiser: "FreeTrust DAO",
-    organiserAvatar: "FD",
-    category: "Governance",
-    color: "bg-indigo-500",
-    description: "Monthly governance call — vote on proposals and updates.",
-    meetingUrl: "https://meet.example.com/dao-call",
-  },
-  {
-    id: "9",
-    title: "Women in Web3 Brunch",
-    date: format(addDays(new Date(), 5), "yyyy-MM-dd"),
-    startTime: "10:30",
-    endTime: "13:00",
-    mode: "in-person",
-    ticketType: "paid",
-    price: 15,
-    location: "Bloom Café, 22 Garden Lane, Edinburgh",
-    attendees: 18,
-    maxAttendees: 25,
-    organiser: "WiW3 Scotland",
-    organiserAvatar: "WS",
-    category: "Community",
-    color: "bg-fuchsia-500",
-    description: "Brunch and conversations for women building in Web3.",
-  },
-  {
-    id: "10",
-    title: "Beginner's Crypto AMA",
-    date: format(new Date(), "yyyy-MM-dd"),
-    startTime: "20:00",
-    endTime: "21:30",
-    mode: "online",
-    ticketType: "free",
-    attendees: 320,
-    maxAttendees: 1000,
-    organiser: "CryptoHelp UK",
-    organiserAvatar: "CU",
-    category: "Education",
-    color: "bg-teal-500",
-    description: "Ask anything about crypto — experts answer live.",
-    meetingUrl: "https://meet.example.com/crypto-ama",
-  },
-];
 
 const CATEGORY_COLORS: Record<string, string> = {
   Technology: "bg-violet-100 text-violet-700",
@@ -249,6 +73,42 @@ export default function CalendarPage() {
   const [filterMode, setFilterMode] = useState<"all" | EventMode>("all");
   const [filterTicket, setFilterTicket] = useState<"all" | TicketType>("all");
   const [shareToast, setShareToast] = useState(false);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("events")
+          .select("*")
+          .order("date", { ascending: true });
+        if (data && data.length > 0) {
+          setEvents(data.map((e: Record<string, unknown>) => ({
+            id: e.id as string,
+            title: e.title as string,
+            date: format(new Date(e.start_date as string), "yyyy-MM-dd"),
+            startTime: format(new Date(e.start_date as string), "HH:mm"),
+            endTime: e.end_date ? format(new Date(e.end_date as string), "HH:mm") : "",
+            mode: (e.is_online ? "online" : "in-person") as EventMode,
+            ticketType: ((e.ticket_price as number) > 0 ? "paid" : "free") as TicketType,
+            price: (e.ticket_price as number) || undefined,
+            location: e.location as string | undefined,
+            meetingUrl: e.meeting_url as string | undefined,
+            attendees: (e.attendee_count as number) ?? 0,
+            maxAttendees: (e.max_attendees as number) ?? 100,
+            organiser: (e.organiser_name as string) ?? "FreeTrust Member",
+            organiserAvatar: ((e.organiser_name as string) ?? "FT").split(" ").map((w: string) => w[0]).join("").slice(0, 2),
+            category: (e.category as string) ?? "General",
+            color: "bg-blue-500",
+            description: (e.description as string) ?? "",
+          })));
+        }
+      } catch { /* use empty state */ }
+    };
+    fetchEvents();
+  }, []);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -266,12 +126,12 @@ export default function CalendarPage() {
   }, [calStart, calEnd]);
 
   const filteredEvents = useMemo(() => {
-    return MOCK_EVENTS.filter((e) => {
+    return events.filter((e) => {
       if (filterMode !== "all" && e.mode !== filterMode) return false;
       if (filterTicket !== "all" && e.ticketType !== filterTicket) return false;
       return true;
     });
-  }, [filterMode, filterTicket]);
+  }, [events, filterMode, filterTicket]);
 
   const getEventsForDay = (day: Date) =>
     filteredEvents.filter((e) => isSameDay(parseISO(e.date), day));

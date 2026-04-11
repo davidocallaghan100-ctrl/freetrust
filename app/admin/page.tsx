@@ -67,54 +67,15 @@ interface AnalyticsData {
   profiles: UserRow[]
 }
 
-// ── Mock fallback data ─────────────────────────────────────────────────────────
-const MOCK_STATS: StatsData = {
-  totalMembers: 24187,
-  totalTransactions: 8432,
-  platformRevenue: 142600,
-  trustIssued: 487200,
-  activeListings: 3841,
-  activeCommunities: 127,
+// ── Empty defaults ─────────────────────────────────────────────────────────
+const EMPTY_STATS: StatsData = {
+  totalMembers: 0,
+  totalTransactions: 0,
+  platformRevenue: 0,
+  trustIssued: 0,
+  activeListings: 0,
+  activeCommunities: 0,
 }
-
-const MOCK_LEDGER: TrustLedgerRow[] = [
-  { id: '1', user_id: 'u1', amount: 25, type: 'signup_bonus', description: 'Welcome to FreeTrust!', created_at: new Date().toISOString(), profile: { full_name: 'Amara Diallo', email: 'amara@example.com' } },
-  { id: '2', user_id: 'u2', amount: 20, type: 'article_published', description: 'Published article: The Trust Economy', created_at: new Date(Date.now() - 3600000).toISOString(), profile: { full_name: 'Tom Walsh', email: 'tom@example.com' } },
-  { id: '3', user_id: 'u3', amount: -5, type: 'platform_fee', description: 'Platform fee on community join', created_at: new Date(Date.now() - 7200000).toISOString(), profile: { full_name: 'Priya Nair', email: 'priya@example.com' } },
-  { id: '4', user_id: 'u4', amount: 15, type: 'event_hosted', description: 'Hosted: Founder Summit 2025', created_at: new Date(Date.now() - 10800000).toISOString(), profile: { full_name: 'James Okafor', email: 'james@example.com' } },
-  { id: '5', user_id: 'u5', amount: 5, type: 'job_application', description: 'Applied for: Senior UX Designer', created_at: new Date(Date.now() - 14400000).toISOString(), profile: { full_name: 'Sarah Chen', email: 'sarah@example.com' } },
-]
-
-const MOCK_USERS: UserRow[] = [
-  { id: 'u1', email: 'amara@example.com', full_name: 'Amara Diallo', role: 'seller', trust_balance: 840, created_at: '2024-01-15T00:00:00Z' },
-  { id: 'u2', email: 'tom@example.com', full_name: 'Tom Walsh', role: 'seller', trust_balance: 620, created_at: '2024-02-20T00:00:00Z' },
-  { id: 'u3', email: 'priya@example.com', full_name: 'Priya Nair', role: 'buyer', trust_balance: 180, created_at: '2024-03-10T00:00:00Z' },
-  { id: 'u4', email: 'james@example.com', full_name: 'James Okafor', role: 'seller', trust_balance: 990, created_at: '2024-01-05T00:00:00Z' },
-  { id: 'u5', email: 'sarah@example.com', full_name: 'Sarah Chen', role: 'buyer', trust_balance: 310, created_at: '2024-04-01T00:00:00Z' },
-]
-
-const MOCK_TOP_EARNERS: TopEarner[] = [
-  { user_id: 'u4', balance: 990, lifetime: 1200, full_name: 'James Okafor', email: 'james@example.com' },
-  { user_id: 'u1', balance: 840, lifetime: 1050, full_name: 'Amara Diallo', email: 'amara@example.com' },
-  { user_id: 'u2', balance: 620, lifetime: 780, full_name: 'Tom Walsh', email: 'tom@example.com' },
-  { user_id: 'u5', balance: 310, lifetime: 400, full_name: 'Sarah Chen', email: 'sarah@example.com' },
-  { user_id: 'u3', balance: 180, lifetime: 230, full_name: 'Priya Nair', email: 'priya@example.com' },
-]
-
-const MOCK_TYPE_BREAKDOWN: TrustTypeBreakdown[] = [
-  { type: 'signup_bonus', total: 120250 },
-  { type: 'article_published', total: 87400 },
-  { type: 'event_hosted', total: 64800 },
-  { type: 'job_application', total: 42100 },
-  { type: 'platform_fee', total: -28300 },
-  { type: 'review_received', total: 31200 },
-]
-
-const MOCK_DISPUTES = [
-  { id: 'd1', title: 'Service not delivered', buyer: 'Tom Walsh', seller: 'Yuki Tanaka', amount: 320, status: 'Open', created: '2 days ago' },
-  { id: 'd2', title: 'Product damaged in transit', buyer: 'Lena Fischer', seller: 'Marcus Obi', amount: 89, status: 'Under Review', created: '5 days ago' },
-  { id: 'd3', title: 'Gig delivered late', buyer: 'Priya Nair', seller: 'Sarah Chen', amount: 150, status: 'Resolved', created: '1 week ago' },
-]
 
 function getInitials(name: string | null | undefined): string {
   if (!name) return '?'
@@ -175,15 +136,16 @@ export default function AdminPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [authorized, setAuthorized] = useState(false)
-  const [stats, setStats] = useState<StatsData>(MOCK_STATS)
-  const [ledger, setLedger] = useState<TrustLedgerRow[]>(MOCK_LEDGER)
-  const [users, setUsers] = useState<UserRow[]>(MOCK_USERS)
-  const [topEarners, setTopEarners] = useState<TopEarner[]>(MOCK_TOP_EARNERS)
-  const [typeBreakdown, setTypeBreakdown] = useState<TrustTypeBreakdown[]>(MOCK_TYPE_BREAKDOWN)
+  const [stats, setStats] = useState<StatsData>(EMPTY_STATS)
+  const [ledger, setLedger] = useState<TrustLedgerRow[]>([])
+  const [users, setUsers] = useState<UserRow[]>([])
+  const [topEarners, setTopEarners] = useState<TopEarner[]>([])
+  const [typeBreakdown, setTypeBreakdown] = useState<TrustTypeBreakdown[]>([])
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null)
   const [analyticsLoading, setAnalyticsLoading] = useState(false)
   const [userSearch, setUserSearch] = useState('')
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'trust' | 'disputes' | 'fees' | 'growth' | 'content'>('overview')
+  const [disputes, setDisputes] = useState<{ id: string; title: string; buyer: string; seller: string; amount: number; status: string; created: string }[]>([])
   const [confirmModal, setConfirmModal] = useState<{ userId: string; action: string; value?: string } | null>(null)
 
   // Content management state
@@ -840,7 +802,10 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {MOCK_DISPUTES.map(d => (
+                    {disputes.length === 0 && (
+                      <tr><td colSpan={7} style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>No disputes yet</td></tr>
+                    )}
+                    {disputes.map(d => (
                       <tr key={d.id}>
                         <td style={{ fontWeight: 600, color: '#f1f5f9' }}>{d.title}</td>
                         <td>{d.buyer}</td>

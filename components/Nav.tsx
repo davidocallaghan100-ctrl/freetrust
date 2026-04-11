@@ -21,7 +21,7 @@ const DRAWER_SECTIONS = [
   {
     label: 'SOCIAL',
     links: [
-      { href: '/community',       label: 'Community',         icon: '👥' },
+      { href: '/community',       label: 'Groups',             icon: '👥' },
       { href: '/articles',        label: 'Articles',          icon: '✍️' },
       { href: '/jobs',            label: 'Jobs',              icon: '💼' },
       { href: '/rent-share',      label: 'Rent & Share',      icon: '♻️' },

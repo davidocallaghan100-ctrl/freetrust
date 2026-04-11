@@ -114,7 +114,7 @@ export default function NewCommunityPage() {
       `}</style>
       <div className="nc-page" style={S.inner}>
         <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '0.4rem' }}>Create a Community</h1>
+          <h1 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '0.4rem' }}>Create a Group</h1>
           <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Build your own space for members to learn, connect, and grow together.</p>
         </div>
 
@@ -124,7 +124,7 @@ export default function NewCommunityPage() {
             <div style={S.sectionTitle}>Basic Information</div>
 
             <div style={S.field}>
-              <label style={S.label}>Community Name *</label>
+              <label style={S.label}>Group Name *</label>
               <input className="nc-input" style={S.input} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. SaaS Builders Circle" maxLength={60} />
               {name && (
                 <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.35rem' }}>
@@ -273,7 +273,7 @@ export default function NewCommunityPage() {
             disabled={loading}
             style={{ width: '100%', background: loading ? 'rgba(56,189,248,0.5)' : '#38bdf8', border: 'none', borderRadius: 10, padding: '0.9rem', fontSize: '1rem', fontWeight: 800, color: '#0f172a', cursor: loading ? 'not-allowed' : 'pointer' }}
           >
-            {loading ? 'Creating...' : '🚀 Create Community'}
+            {loading ? 'Creating...' : '🚀 Create Group'}
           </button>
         </form>
       </div>

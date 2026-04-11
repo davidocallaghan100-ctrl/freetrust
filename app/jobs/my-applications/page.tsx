@@ -23,11 +23,6 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 const TYPE_LABELS: Record<string, string> = { full_time: 'Full Time', part_time: 'Part Time', contract: 'Contract', freelance: 'Freelance' }
 const LOC_LABELS: Record<string, string> = { remote: 'Remote', hybrid: 'Hybrid', on_site: 'On-Site' }
 
-const MOCK_APPS: Application[] = [
-  { id: 'a1', job_id: '1', created_at: new Date(Date.now() - 2 * 86400000).toISOString(), status: 'shortlisted', cover_letter: null, job: { title: 'Senior Full-Stack Engineer', job_type: 'full_time', location_type: 'remote', poster: { full_name: 'SaaS Builders Co' } } },
-  { id: 'a2', job_id: '2', created_at: new Date(Date.now() - 5 * 86400000).toISOString(), status: 'reviewed', cover_letter: null, job: { title: 'UX/UI Designer', job_type: 'contract', location_type: 'hybrid', poster: { full_name: 'Design Collective' } } },
-  { id: 'a3', job_id: '4', created_at: new Date(Date.now() - 9 * 86400000).toISOString(), status: 'pending', cover_letter: null, job: { title: 'Freelance Copywriter', job_type: 'freelance', location_type: 'remote', poster: { full_name: 'Impact Agency' } } },
-]
 
 function timeAgo(iso: string) {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
@@ -43,7 +38,7 @@ export default function MyApplicationsPage() {
       try {
         const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
-        if (!user) { setApps(MOCK_APPS); setLoading(false); return }
+        if (!user) { setApps([]); setLoading(false); return }
 
         const { data } = await supabase
           .from('job_applications')
@@ -51,9 +46,9 @@ export default function MyApplicationsPage() {
           .eq('applicant_id', user.id)
           .order('created_at', { ascending: false })
 
-        setApps(data && data.length > 0 ? (data as Application[]) : MOCK_APPS)
+        setApps(data ? (data as Application[]) : [])
       } catch {
-        setApps(MOCK_APPS)
+        setApps([])
       } finally {
         setLoading(false)
       }

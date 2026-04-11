@@ -183,7 +183,7 @@ export default function PostPage() {
       <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem', paddingTop: 64 }}>
         <div style={{ fontSize: '3rem' }}>💬</div>
         <h2 style={{ margin: 0 }}>Post not found</h2>
-        <Link href={`/community/${slug}`} style={{ color: '#38bdf8', fontSize: '0.9rem' }}>← Back to {communityName || 'community'}</Link>
+        <Link href={`/community/${slug}`} style={{ color: '#38bdf8', fontSize: '0.9rem' }}>← Back to {communityName || 'group'}</Link>
       </div>
     )
   }
@@ -200,7 +200,7 @@ export default function PostPage() {
 
         {/* Breadcrumb */}
         <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: '#64748b', flexWrap: 'wrap' }}>
-          <Link href="/community" style={{ color: '#64748b', textDecoration: 'none' }}>Communities</Link>
+          <Link href="/community" style={{ color: '#64748b', textDecoration: 'none' }}>Groups</Link>
           <span>›</span>
           <Link href={`/community/${slug}`} style={{ color: '#64748b', textDecoration: 'none' }}>{communityName || slug}</Link>
           <span>›</span>

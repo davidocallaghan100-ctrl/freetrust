@@ -29,7 +29,7 @@ const PAGE_HINTS: Record<string, string> = {
   '/checkout':   'Questions about our secure payment & escrow?',
   '/cart':       'Questions about your order or payment?',
   '/profile':    'Want tips to improve your profile and earn more Trust?',
-  '/community':  'Looking for the right community to join?',
+  '/community':  'Looking for the right group to join?',
   '/jobs':       'Need help finding or posting a job?',
   '/impact':     'Want to learn how your purchases drive real-world change?',
   '/onboarding': 'Let me guide you through getting started on FreeTrust!',
@@ -206,7 +206,7 @@ export default function TrustAssistant() {
     if (pathname.startsWith('/wallet')) return ['How do I earn more Trust?', 'How do I withdraw?', 'What is escrow?']
     if (pathname.startsWith('/services') || pathname.startsWith('/products')) return ['How does buying work?', 'Is payment secure?', 'How do I leave a review?']
     if (pathname.startsWith('/profile')) return ['How do I get verified?', 'How do I improve my Trust score?', 'How do I add a listing?']
-    if (pathname.startsWith('/community')) return ['How do I create a community?', 'Are communities free?', 'How do I find my people?']
+    if (pathname.startsWith('/community')) return ['How do I create a group?', 'Are groups free?', 'How do I find my people?']
     if (pathname.startsWith('/orders') || pathname.startsWith('/disputes')) return ['How does escrow work?', 'How do I raise a dispute?', 'When do I get paid?']
     if (pathname.startsWith('/jobs')) return ['How do I post a job?', 'Is it free to apply?', 'How do I find remote jobs?']
     return ['How does Trust work?', 'How do I earn Trust points?', 'How does escrow protect me?']

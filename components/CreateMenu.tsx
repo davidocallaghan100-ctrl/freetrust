@@ -3,7 +3,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-const CATEGORIES = ['General', 'Services', 'Products', 'Events', 'Jobs', 'Community', 'Article']
+const CATEGORIES = ['General', 'Services', 'Products', 'Events', 'Jobs', 'Group', 'Article']
 
 interface CreateMenuProps {
   /** When true the trigger renders as the big center pill for mobile bottom nav */

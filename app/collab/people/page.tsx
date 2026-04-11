@@ -35,20 +35,6 @@ function initials(name: string | null) {
   return name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2)
 }
 
-const MOCK_MEMBERS: Member[] = [
-  { id:'m1', full_name:'Priya Nair', avatar_url:'https://i.pravatar.cc/150?img=44', bio:'Full-stack developer & designer. Building products that matter. Available for freelance & collaboration.', location:'Dublin, Ireland', role:'Developer', trust_balance:1580, skills:['React', 'TypeScript', 'Node.js'], verified:true, online:true },
-  { id:'m2', full_name:'Marcus Obi', avatar_url:'https://i.pravatar.cc/150?img=12', bio:'SEO consultant & content strategist. Helped 200+ businesses rank on Google. Open to collab.', location:'London, UK', role:'SEO Consultant', trust_balance:2100, skills:['SEO', 'Content', 'Analytics'], verified:true, online:false },
-  { id:'m3', full_name:'Sarah Chen', avatar_url:'https://i.pravatar.cc/150?img=47', bio:'UX/UI designer with 8 years experience. Passionate about building accessible, beautiful products.', location:'Remote', role:'UX Designer', trust_balance:1240, skills:['Figma', 'UX Research', 'Design Systems'], verified:true, online:true },
-  { id:'m4', full_name:'Tom Walsh', avatar_url:'https://i.pravatar.cc/150?img=53', bio:'Business coach & consultant. Helping founders build £10k+/mo consulting businesses using trust-based marketing.', location:'Cork, Ireland', role:'Business Coach', trust_balance:890, skills:['Coaching', 'Sales', 'Strategy'], verified:false, online:false },
-  { id:'m5', full_name:'Amara Diallo', avatar_url:'https://i.pravatar.cc/150?img=45', bio:'Sustainability consultant & ESG reporting specialist. Working with SMEs to embed impact into operations.', location:'Berlin, Germany', role:'Sustainability Consultant', trust_balance:650, skills:['ESG', 'Sustainability', 'Reporting'], verified:true, online:true },
-  { id:'m6', full_name:'Lena Fischer', avatar_url:'https://i.pravatar.cc/150?img=41', bio:'Community builder, event host, and podcast creator. Building spaces where people genuinely connect.', location:'Amsterdam, Netherlands', role:'Community Manager', trust_balance:780, skills:['Community', 'Events', 'Podcasting'], verified:false, online:false },
-  { id:'m7', full_name:'James Okafor', avatar_url:'https://i.pravatar.cc/150?img=13', bio:'Impact investor & startup advisor. Previously built and exited two SaaS companies. Angels in purpose-driven ventures.', location:'Lagos, Nigeria', role:'Investor & Advisor', trust_balance:920, skills:['Investment', 'SaaS', 'Startups'], verified:true, online:true },
-  { id:'m8', full_name:'Ciara Murphy', avatar_url:'https://i.pravatar.cc/150?img=39', bio:'Brand designer and illustrator. Creating visual identities that tell honest stories. Open to collab projects.', location:'Galway, Ireland', role:'Brand Designer', trust_balance:580, skills:['Branding', 'Illustration', 'Identity'], verified:false, online:false },
-  { id:'m9', full_name:'Dave Kelly', avatar_url:'https://i.pravatar.cc/150?img=15', bio:'Freelance accountant specialising in creative businesses and sole traders. Making money less scary.', location:'Dublin, Ireland', role:'Accountant', trust_balance:1100, skills:['Accounting', 'Tax', 'Finance'], verified:true, online:true },
-  { id:'m10', full_name:'Yuki Tanaka', avatar_url:'https://i.pravatar.cc/150?img=5', bio:'Product manager and agile coach. Turning messy requirements into beautiful roadmaps. Love working with mission-driven teams.', location:'Tokyo, Japan', role:'Product Manager', trust_balance:390, skills:['Product', 'Agile', 'Roadmapping'], verified:false, online:false },
-  { id:'m11', full_name:'Maja Eriksson', avatar_url:'https://i.pravatar.cc/150?img=25', bio:'E-commerce specialist and growth marketer. Scaled multiple DTC brands from 0 to 7 figures.', location:'Stockholm, Sweden', role:'Growth Marketer', trust_balance:740, skills:['E-commerce', 'Growth', 'Email'], verified:true, online:false },
-  { id:'m12', full_name:'Lucia Romano', avatar_url:'https://i.pravatar.cc/150?img=49', bio:'Copywriter & brand strategist. Words that sell, stories that connect. Working with SaaS and fintech.', location:'Milan, Italy', role:'Copywriter', trust_balance:510, skills:['Copywriting', 'Brand', 'SaaS'], verified:false, online:true },
-]
 
 const TYPE_FILTERS = ['All', 'Services', 'Products', 'Events']
 const MODE_FILTERS = ['Online', 'Local']
@@ -172,7 +158,7 @@ function CollabPeopleInner() {
     load()
   }, [])
 
-  const members = dbMembers ?? MOCK_MEMBERS
+  const members = dbMembers ?? []
 
   const filtered = members.filter(m => {
     const q = search.toLowerCase()

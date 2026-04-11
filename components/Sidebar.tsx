@@ -29,7 +29,7 @@ const NAV_SECTIONS = [
     label: 'EVENTS',
     links: [
       { href: '/events', label: 'Events', icon: '📅' },
-      { href: '/community', label: 'Community', icon: '👥' },
+      { href: '/community', label: 'Groups', icon: '👥' },
       { href: '/jobs', label: 'Jobs', icon: '💼' },
       { href: '/articles', label: 'Articles', icon: '✍️' },
     ],

@@ -65,7 +65,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'payments',  label: 'Payments' },
   { key: 'messages',  label: 'Messages' },
   { key: 'reviews',   label: 'Reviews' },
-  { key: 'community', label: 'Community' },
+  { key: 'community', label: 'Groups' },
   { key: 'system',    label: 'System' },
 ]
 

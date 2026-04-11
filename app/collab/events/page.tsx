@@ -45,14 +45,6 @@ function trustBadge(score: number) {
   return { label: 'Host', color: '#38bdf8' }
 }
 
-const MOCK_EVENTS: CollabEvent[] = [
-  { id: 'e1', title: 'Founder Roundtable: Sustainable Business Models', description: 'Join 20 founders for a live roundtable on building profitable and sustainable businesses in 2025.', starts_at: new Date(Date.now() + 86400000 * 3).toISOString(), ends_at: null, is_online: true, meeting_url: null, attendee_count: 18, created_at: new Date().toISOString(), community_id: null, host_name: 'Amara Diallo', host_id: 'h1', trust_balance: 710, price: 0, location: 'Zoom' },
-  { id: 'e2', title: 'Next.js 14 Workshop: App Router Deep Dive', description: 'Hands-on 3-hour workshop covering RSC, Server Actions, streaming, and production patterns.', starts_at: new Date(Date.now() + 86400000 * 7).toISOString(), ends_at: null, is_online: true, meeting_url: null, attendee_count: 34, created_at: new Date().toISOString(), community_id: null, host_name: 'Priya Nair', host_id: 'h2', trust_balance: 1100, price: 45, location: 'Google Meet' },
-  { id: 'e3', title: 'Dublin Tech Meetup — April Edition', description: 'Monthly in-person tech meetup in Dublin city centre. 3 lightning talks + networking.', starts_at: new Date(Date.now() + 86400000 * 10).toISOString(), ends_at: null, is_online: false, meeting_url: null, attendee_count: 67, created_at: new Date().toISOString(), community_id: null, host_name: 'Tom Walsh', host_id: 'h3', trust_balance: 640, price: 0, location: 'Dublin, Ireland' },
-  { id: 'e4', title: 'Design Systems Masterclass', description: 'Build a production-ready design system from scratch with Figma and Storybook. Full day event.', starts_at: new Date(Date.now() + 86400000 * 14).toISOString(), ends_at: null, is_online: true, meeting_url: null, attendee_count: 22, created_at: new Date().toISOString(), community_id: null, host_name: 'Sarah Chen', host_id: 'h4', trust_balance: 820, price: 120, location: 'Zoom' },
-  { id: 'e5', title: 'ESG & Impact Investing Forum', description: 'Panel discussion with 5 impact investors on where capital is flowing in 2025-2026.', starts_at: new Date(Date.now() + 86400000 * 21).toISOString(), ends_at: null, is_online: false, meeting_url: null, attendee_count: 41, created_at: new Date().toISOString(), community_id: null, host_name: 'Amara Diallo', host_id: 'h1', trust_balance: 710, price: 15, location: 'Lagos, Nigeria' },
-  { id: 'e6', title: 'Community Building Q&A with Lena', description: 'Open Q&A on growing online communities, monetisation strategies, and community health.', starts_at: new Date(Date.now() + 86400000 * 5).toISOString(), ends_at: null, is_online: true, meeting_url: null, attendee_count: 29, created_at: new Date().toISOString(), community_id: null, host_name: 'Lena Fischer', host_id: 'h5', trust_balance: 530, price: 0, location: 'Luma' },
-]
 
 function EventsContent() {
   const searchParams = useSearchParams()
@@ -75,7 +67,7 @@ function EventsContent() {
         .limit(50)
 
       if (error || !data || data.length === 0) {
-        setEvents(MOCK_EVENTS)
+        setEvents([])
       } else {
         // Map to CollabEvent
         const mapped: CollabEvent[] = data.map((e: any) => ({
@@ -89,7 +81,7 @@ function EventsContent() {
           attendee_count: e.attendee_count ?? 0,
           created_at: e.created_at,
           community_id: e.community_id,
-          host_name: e.communities?.name ?? 'Community',
+          host_name: e.communities?.name ?? 'Group',
           trust_balance: 0,
           price: 0,
         }))

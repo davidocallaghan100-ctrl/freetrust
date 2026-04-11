@@ -35,15 +35,6 @@ const TYPE_COLORS: Record<string, string> = { full_time: '#38bdf8', part_time: '
 const LOC_COLORS: Record<string, string> = { remote: '#34d399', hybrid: '#38bdf8', on_site: '#fb923c' }
 const LOC_LABELS: Record<string, string> = { remote: 'Remote', hybrid: 'Hybrid', on_site: 'On-Site' }
 
-const MOCK_JOB: Job = {
-  id: '1', title: 'Senior Full-Stack Engineer', description: `We are looking for an experienced Full-Stack Engineer to join our growing product team. You will work closely with design, product, and backend engineers to build features that serve thousands of users across the FreeTrust platform.\n\nYou will own complete feature development from API design through to frontend implementation, and be expected to contribute to architecture decisions, code reviews, and engineering culture.\n\nThis is a remote-first role with flexible hours. We care about outcomes, not hours.`,
-  requirements: `• 4+ years of professional software engineering experience\n• Strong TypeScript and React skills\n• Experience with Next.js (app router preferred)\n• Comfortable with SQL and Supabase or similar BaaS\n• Git-based workflow, code review experience\n• Bonus: experience with real-time features, WebSockets or Supabase Realtime\n• Bonus: experience at a startup or scale-up`,
-  job_type: 'full_time', location_type: 'remote', location: null, salary_min: 70000, salary_max: 95000, salary_currency: 'EUR',
-  category: 'Tech', tags: ['React', 'Node.js', 'TypeScript', 'Next.js', 'Supabase'],
-  created_at: new Date(Date.now() - 86400000).toISOString(), updated_at: new Date().toISOString(),
-  applicant_count: 24, application_deadline: new Date(Date.now() + 14 * 86400000).toISOString(),
-  poster: { id: 'poster-1', full_name: 'SaaS Builders Co', bio: 'We build B2B SaaS tools for modern teams. 45 people, Series A, fully remote.', created_at: '2023-06-01T00:00:00Z', trust_balance: 312 },
-}
 
 const SIMILAR_JOBS_FALLBACK: SimilarJob[] = []
 
@@ -111,7 +102,7 @@ export default function JobDetailPage() {
             })))
           }
         } else {
-          setJob(MOCK_JOB)
+          setJob(null)
         }
       } catch {
         setJob(MOCK_JOB)

@@ -134,14 +134,14 @@ export default function CommunityPage() {
         <div style={S.inner}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.5rem' }}>Communities</h1>
+              <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.5rem' }}>Groups</h1>
               <p style={{ color: '#64748b' }}>Find your people. Real humans, shared goals — no bots, no spam, no fake accounts.</p>
             </div>
             <Link
               href="/community/new"
               style={{ background: '#38bdf8', color: '#0f172a', borderRadius: 8, padding: '0.6rem 1.25rem', fontSize: '0.88rem', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}
             >
-              + Create Community
+              + Create Group
             </Link>
           </div>
           <div style={S.catRow}>
@@ -160,12 +160,12 @@ export default function CommunityPage() {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search communities..."
+              placeholder="Search groups..."
               style={{ width: '100%', background: '#1e293b', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 8, padding: '0.42rem 0.75rem 0.42rem 2rem', fontSize: '0.85rem', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
           <span style={{ fontSize: '0.82rem', color: '#64748b' }}>
-            {loading ? 'Loading...' : `${filtered.length} communities`}
+            {loading ? 'Loading...' : `${filtered.length} groups`}
           </span>
           <div className="comm-featured-list" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
             <span style={{ fontSize: '0.72rem', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 999, padding: '0.2rem 0.7rem', color: '#38bdf8', fontWeight: 600 }}>✦ Featured</span>
@@ -214,16 +214,16 @@ export default function CommunityPage() {
           <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '4rem 1rem' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👥</div>
             <h2 style={{ fontSize: '1.3rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem' }}>
-              {communities.length === 0 ? 'No communities yet — be the first to create one!' : 'No communities match your search'}
+              {communities.length === 0 ? 'No groups yet — be the first to create one!' : 'No groups match your search'}
             </h2>
             <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
               {communities.length === 0
-                ? 'Create a community around your passion, profession, or purpose.'
+                ? 'Create a group around your passion, profession, or purpose.'
                 : 'Try a different search term or category.'}
             </p>
             {communities.length === 0 && (
               <Link href="/community/new" style={{ display: 'inline-block', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.75rem 1.75rem', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>
-                + Create Community
+                + Create Group
               </Link>
             )}
           </div>
@@ -272,7 +272,7 @@ export default function CommunityPage() {
                   border: joined.has(c.id) ? '1px solid rgba(56,189,248,0.3)' : 'none',
                 }}
               >
-                {joined.has(c.id) ? '✓ Joined' : c.is_paid && c.price_monthly > 0 ? `Join ${format(c.price_monthly, 'EUR')}/mo` : 'Join Community'}
+                {joined.has(c.id) ? '✓ Joined' : c.is_paid && c.price_monthly > 0 ? `Join ${format(c.price_monthly, 'EUR')}/mo` : 'Join Group'}
               </button>
             </div>
           </div>

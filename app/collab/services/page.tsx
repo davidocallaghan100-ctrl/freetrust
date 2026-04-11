@@ -48,14 +48,6 @@ function getTrustBalance(tb: ServiceListing['trust_balances']): number {
   return (tb as { balance: number }).balance ?? 0
 }
 
-const MOCK_SERVICES: ServiceListing[] = [
-  { id: 's1', seller_id: 's1', title: 'Brand Identity Design', description: 'Complete brand identity including logo, colour palette, typography and brand guidelines.', price: 450, currency: '£', images: null, tags: ['Logo', 'Brand', 'Figma'], location: 'London, UK', created_at: new Date().toISOString(), profiles: { id: 's1', full_name: 'Sarah Chen', avatar_url: 'https://i.pravatar.cc/150?img=47', location: 'London, UK' }, trust_balances: { balance: 820 } },
-  { id: 's2', seller_id: 's2', title: 'Full-Stack Web App Development', description: 'End-to-end web application development using modern tech stack. From MVP to production.', price: 2800, currency: '£', images: null, tags: ['Next.js', 'Supabase', 'TypeScript'], location: 'Bangalore, India', created_at: new Date().toISOString(), profiles: { id: 's2', full_name: 'Priya Nair', avatar_url: 'https://i.pravatar.cc/150?img=44', location: 'Bangalore, India' }, trust_balances: { balance: 1100 } },
-  { id: 's3', seller_id: 's3', title: 'SEO & Content Strategy', description: 'Comprehensive SEO audit and content strategy to grow organic traffic by 40%+ in 90 days.', price: 320, currency: '£', images: null, tags: ['SEO', 'Content', 'Analytics'], location: 'Dublin, Ireland', created_at: new Date().toISOString(), profiles: { id: 's3', full_name: 'Tom Walsh', avatar_url: 'https://i.pravatar.cc/150?img=53', location: 'Dublin, Ireland' }, trust_balances: { balance: 640 } },
-  { id: 's4', seller_id: 's4', title: 'Startup Business Coaching', description: '4-session coaching package covering product-market fit, fundraising, and growth strategy.', price: 180, currency: '£', images: null, tags: ['Startup', 'Pitch', 'Strategy'], location: 'Remote', created_at: new Date().toISOString(), profiles: { id: 's4', full_name: 'James Okafor', avatar_url: 'https://i.pravatar.cc/150?img=13', location: 'Abuja, Nigeria' }, trust_balances: { balance: 320 } },
-  { id: 's5', seller_id: 's5', title: 'Impact Report & ESG Consulting', description: 'Professional ESG impact reports and sustainability strategy for SMEs and startups.', price: 750, currency: '£', images: null, tags: ['ESG', 'Sustainability', 'Reporting'], location: 'Lagos, Nigeria', created_at: new Date().toISOString(), profiles: { id: 's5', full_name: 'Amara Diallo', avatar_url: 'https://i.pravatar.cc/150?img=45', location: 'Lagos, Nigeria' }, trust_balances: { balance: 710 } },
-  { id: 's6', seller_id: 's6', title: 'UX Research & Usability Testing', description: '10-participant usability study with full analysis, recordings, and actionable recommendations.', price: 600, currency: '£', images: null, tags: ['UX', 'Research', 'Testing'], location: 'Berlin, Germany', created_at: new Date().toISOString(), profiles: { id: 's6', full_name: 'Lena Fischer', avatar_url: 'https://i.pravatar.cc/150?img=41', location: 'Berlin, Germany' }, trust_balances: { balance: 530 } },
-]
 
 function ServicesContent() {
   const searchParams = useSearchParams()
@@ -86,12 +78,12 @@ function ServicesContent() {
         setServices(json.listings)
         setTotal(json.total)
       } else {
-        setServices(MOCK_SERVICES)
-        setTotal(MOCK_SERVICES.length)
+        setServices([])
+        setTotal(0)
       }
     } catch {
-      setServices(MOCK_SERVICES)
-      setTotal(MOCK_SERVICES.length)
+      setServices([])
+      setTotal(0)
     } finally {
       setLoading(false)
     }

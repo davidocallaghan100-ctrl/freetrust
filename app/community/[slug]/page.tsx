@@ -216,8 +216,8 @@ export default function CommunityDetailPage() {
       <div style={{ minHeight: '100vh', background: '#0f172a', paddingTop: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', color: '#64748b' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👥</div>
-          <h2 style={{ color: '#f1f5f9', marginBottom: '0.75rem' }}>Community not found</h2>
-          <Link href="/community" style={{ color: '#38bdf8', fontSize: '0.9rem' }}>← Back to Communities</Link>
+          <h2 style={{ color: '#f1f5f9', marginBottom: '0.75rem' }}>Group not found</h2>
+          <Link href="/community" style={{ color: '#38bdf8', fontSize: '0.9rem' }}>← Back to Groups</Link>
         </div>
       </div>
     )
@@ -243,7 +243,7 @@ export default function CommunityDetailPage() {
       {/* Header */}
       <div style={{ background: 'linear-gradient(180deg,rgba(56,189,248,.1) 0%,transparent 100%)', borderBottom: '1px solid rgba(56,189,248,.1)', padding: '2rem 1.5rem' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <Link href="/community" style={{ fontSize: '0.8rem', color: '#475569', textDecoration: 'none', display: 'inline-block', marginBottom: '1rem' }}>← Communities</Link>
+          <Link href="/community" style={{ fontSize: '0.8rem', color: '#475569', textDecoration: 'none', display: 'inline-block', marginBottom: '1rem' }}>← Groups</Link>
           <div className="chg" style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '1.25rem', alignItems: 'start' }}>
             <div style={{ width: 72, height: 72, borderRadius: 16, background: community.avatar_gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.3rem', color: '#0f172a', flexShrink: 0 }}>
               {community.avatar_initials}
@@ -267,7 +267,7 @@ export default function CommunityDetailPage() {
             <div className="cjb" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
               {!joined
                 ? <button onClick={handleJoin} disabled={joinLoading} style={{ background: '#38bdf8', border: 'none', borderRadius: 8, padding: '0.55rem 1.25rem', fontSize: '0.88rem', fontWeight: 700, color: '#0f172a', cursor: joinLoading ? 'not-allowed' : 'pointer', opacity: joinLoading ? 0.7 : 1 }}>
-                    {joinLoading ? 'Joining…' : community.is_paid ? `Join £${community.price_monthly}/mo` : 'Join Community'}
+                    {joinLoading ? 'Joining…' : community.is_paid ? `Join £${community.price_monthly}/mo` : 'Join Group'}
                   </button>
                 : <span style={{ background: 'rgba(56,189,248,.1)', border: '1px solid rgba(56,189,248,.3)', borderRadius: 8, padding: '0.55rem 1.25rem', fontSize: '0.88rem', fontWeight: 700, color: '#38bdf8' }}>✓ Joined</span>
               }
@@ -412,11 +412,11 @@ export default function CommunityDetailPage() {
         {/* ADMIN */}
         {tab === 'admin' && isOwner && (
           <div>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.5rem' }}>Community Settings</h2>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.5rem' }}>Group Settings</h2>
             <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,.1)', borderRadius: 12, padding: '1.5rem', marginBottom: '1.25rem' }}>
               <div style={{ fontWeight: 700, marginBottom: '1rem', color: '#f1f5f9' }}>General</div>
               <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.35rem' }}>Community Name</label>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.35rem' }}>Group Name</label>
                 <input value={editName} onChange={e => setEditName(e.target.value)} style={{ width: '100%', background: 'rgba(15,23,42,.5)', border: '1px solid rgba(148,163,184,.2)', borderRadius: 7, padding: '0.55rem 0.75rem', fontSize: '0.88rem', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box' }} />
               </div>
               <div style={{ marginBottom: '1.25rem' }}>
@@ -428,7 +428,7 @@ export default function CommunityDetailPage() {
             <div style={{ background: 'rgba(239,68,68,.05)', border: '1px solid rgba(239,68,68,.2)', borderRadius: 12, padding: '1.5rem' }}>
               <div style={{ fontWeight: 700, marginBottom: '0.75rem', color: '#fca5a5' }}>Danger Zone</div>
               <p style={{ fontSize: '0.83rem', color: '#64748b', marginBottom: '1rem' }}>These actions are irreversible.</p>
-              <button style={{ background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.3)', borderRadius: 7, padding: '0.5rem 1rem', fontSize: '0.83rem', color: '#f87171', cursor: 'pointer', fontWeight: 600 }}>Archive Community</button>
+              <button style={{ background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.3)', borderRadius: 7, padding: '0.5rem 1rem', fontSize: '0.83rem', color: '#f87171', cursor: 'pointer', fontWeight: 600 }}>Archive Group</button>
             </div>
           </div>
         )}

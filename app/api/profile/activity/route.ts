@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
         .limit(6)
       joinedCommunities = (data ?? []).map((m: any) => ({
         id: m.communities?.id ?? m.community_id,
-        name: m.communities?.name ?? 'Community',
+        name: m.communities?.name ?? 'Group',
         member_count: m.communities?.member_count ?? 0,
         role: m.role ?? 'member',
       }))

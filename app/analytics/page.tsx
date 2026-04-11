@@ -307,7 +307,7 @@ export default function AnalyticsDashboard() {
     { id: 'content',      label: 'Content',       icon: '✍️' },
     { id: 'marketplace',  label: 'Market',        icon: '🛒' },
     { id: 'trust',        label: 'Trust',         icon: '💎' },
-    { id: 'community',    label: 'Community',     icon: '👥' },
+    { id: 'community',    label: 'Groups',        icon: '👥' },
   ] as const
 
   if (loading) return (
@@ -518,7 +518,7 @@ export default function AnalyticsDashboard() {
               {[
                 { label: 'Completed Orders', value: marketStats.orders * 5, color: '#34d399' },
                 { label: 'Profile Completeness', value: 25, color: '#38bdf8' },
-                { label: 'Community Activity', value: contentStats.totalLikes * 2, color: '#818cf8' },
+                { label: 'Group Activity', value: contentStats.totalLikes * 2, color: '#818cf8' },
                 { label: 'Positive Reviews', value: 10, color: '#f59e0b' },
               ].map(item => (
                 <ProgressBar key={item.label} label={item.label} value={item.value} max={Math.max(item.value + 20, 50)} color={item.color} />
@@ -533,7 +533,7 @@ export default function AnalyticsDashboard() {
                 { action: 'Make your first sale', points: '+₮25', href: '/services', done: marketStats.orders > 0 },
                 { action: 'Post 5 pieces of content', points: '+₮15', href: '/create', done: topPosts.length >= 5 },
                 { action: 'Get 10 followers', points: '+₮20', href: '/profile', done: communityStats.followers >= 10 },
-                { action: 'Join a community', points: '+₮5', href: '/community', done: false },
+                { action: 'Join a group', points: '+₮5', href: '/community', done: false },
               ].map(item => (
                 <a key={item.action} href={item.href} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: '1px solid #1e293b', textDecoration: 'none' }}>
                   <span style={{ fontSize: '16px' }}>{item.done ? '✅' : '⭕'}</span>
@@ -550,7 +550,7 @@ export default function AnalyticsDashboard() {
         {/* ── COMMUNITY ────────────────────────────────────────────────── */}
         {activeTab === 'community' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <SectionHeader icon="👥" title="Community Analytics" />
+            <SectionHeader icon="👥" title="Group Analytics" />
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <StatCard icon="👁" label="Profile Visits" value={communityStats.profileVisits.toLocaleString()} color="#818cf8" />
@@ -583,11 +583,11 @@ export default function AnalyticsDashboard() {
 
             {/* Growth tips */}
             <div style={{ background: '#1e293b', borderRadius: '14px', padding: '16px', border: '1px solid #334155' }}>
-              <div style={{ fontSize: '13px', color: '#94a3b8', fontWeight: 600, marginBottom: '12px' }}>Grow Your Community</div>
+              <div style={{ fontSize: '13px', color: '#94a3b8', fontWeight: 600, marginBottom: '12px' }}>Grow Your Group</div>
               {[
                 { tip: 'Post consistently — aim for 3×/week', icon: '📅' },
                 { tip: 'Engage on others\' posts to attract followers', icon: '💬' },
-                { tip: 'Share your profile link in communities', icon: '🔗' },
+                { tip: 'Share your profile link in groups', icon: '🔗' },
                 { tip: 'Complete your profile for more trust', icon: '✅' },
               ].map(item => (
                 <div key={item.tip} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 0', borderBottom: '1px solid #0f172a' }}>

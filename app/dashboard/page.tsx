@@ -32,7 +32,7 @@ const QUICK_LINKS = [
   { href: '/products',   icon: '📦', label: 'Products'     },
   { href: '/jobs',       icon: '💼', label: 'Jobs'          },
   { href: '/events',     icon: '📅', label: 'Events'        },
-  { href: '/community',  icon: '👥', label: 'Community'    },
+  { href: '/community',  icon: '👥', label: 'Groups'       },
   { href: '/articles',   icon: '✍️', label: 'Articles'     },
   { href: '/browse',     icon: '🔍', label: 'Directory'    },
   { href: '/impact',     icon: '🌍', label: 'Impact'        },
