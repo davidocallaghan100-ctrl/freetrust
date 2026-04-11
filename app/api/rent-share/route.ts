@@ -64,22 +64,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Category is required' }, { status: 400 })
     }
 
+    // Sanitise images: keep only http/https URL strings, then format as a
+    // PostgreSQL text[] literal so array_in() handles the cast directly.
+    // Relying on PostgREST's JSON→text[] coercion fails in some Supabase
+    // project versions with "The string did not match the expected pattern."
+    const imageUrls: string[] = Array.isArray(images)
+      ? images.filter((u: unknown): u is string => typeof u === 'string' && /^https?:\/\//.test(u))
+      : []
+    const imagesPg = imageUrls.length === 0
+      ? '{}'
+      : '{' + imageUrls.map(u => '"' + u.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"').join(',') + '}'
+
+    const insertPayload = {
+      user_id:       user.id,
+      title:         title.trim(),
+      description:   description.trim(),
+      category:      category.trim(),
+      price_per_day: (price_per_day != null && price_per_day !== '') ? Number(price_per_day) : null,
+      price_per_week: (price_per_week != null && price_per_week !== '') ? Number(price_per_week) : null,
+      deposit:       (deposit != null && deposit !== '') ? Number(deposit) : 0,
+      location:      location?.trim() || null,
+      images:        imagesPg,
+      available_from: available_from || null,
+      available_to:  available_to || null,
+      status:        'active',
+    }
+
     const { data, error } = await supabase
       .from('rent_share_listings')
-      .insert({
-        user_id:       user.id,
-        title:         title.trim(),
-        description:   description.trim(),
-        category:      category.trim(),
-        price_per_day: (price_per_day != null && price_per_day !== '') ? Number(price_per_day) : null,
-        price_per_week: (price_per_week != null && price_per_week !== '') ? Number(price_per_week) : null,
-        deposit:       (deposit != null && deposit !== '') ? Number(deposit) : 0,
-        location:      location?.trim() || null,
-        images:        Array.isArray(images) ? images.filter((u: unknown) => typeof u === 'string') : [],
-        available_from: available_from || null,
-        available_to:  available_to || null,
-        status:        'active',
-      })
+      .insert(insertPayload)
       .select()
       .single()
 

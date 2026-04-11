@@ -85,7 +85,14 @@ export async function PATCH(
         price_per_week: (price_per_week != null && price_per_week !== '') ? Number(price_per_week) : null,
         deposit:        (deposit != null && deposit !== '') ? Number(deposit) : 0,
         location:       location?.trim() || null,
-        images:         Array.isArray(images) ? images.filter((u: unknown) => typeof u === 'string') : [],
+        images:         (() => {
+          const urls: string[] = Array.isArray(images)
+            ? images.filter((u: unknown): u is string => typeof u === 'string' && /^https?:\/\//.test(u))
+            : []
+          return urls.length === 0
+            ? '{}'
+            : '{' + urls.map(u => '"' + u.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"').join(',') + '}'
+        })(),
         available_from: available_from || null,
         available_to:   available_to   || null,
         status:         status         ?? 'active',
