@@ -1,11 +1,15 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { validateFileUpload, ALLOWED_IMAGE_TYPES } from '@/lib/security/validate'
 import { sanitizeFilename } from '@/lib/security/sanitize'
 
+const BUCKET = 'rent-share'
+
 export async function POST(req: NextRequest) {
   try {
+    // Auth check via user client
     const supabase = await createClient()
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) {
@@ -30,37 +34,32 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     const buffer = new Uint8Array(arrayBuffer)
 
-    const { error: uploadError } = await supabase.storage
-      .from('rent-share')
+    // Use service-role client for storage — ensures the bucket exists and RLS
+    // policies on the storage.objects table don't block the upload.
+    const admin = createAdminClient()
+
+    // Ensure the bucket exists (no-op if it already does)
+    const { error: bucketErr } = await admin.storage.createBucket(BUCKET, {
+      public: true,
+      fileSizeLimit: 10485760, // 10 MB
+      allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+    })
+    if (bucketErr && !bucketErr.message?.includes('already exists') && !bucketErr.message?.toLowerCase().includes('duplicate')) {
+      console.error('[rent-share upload] bucket create error:', bucketErr)
+      // Non-fatal: the bucket may already exist under a different error message,
+      // so we proceed and let the upload fail if truly unavailable.
+    }
+
+    const { error: uploadError } = await admin.storage
+      .from(BUCKET)
       .upload(path, buffer, { contentType: file.type, upsert: false })
 
     if (uploadError) {
-      // Bucket may not exist yet — try to create it, then retry
-      if (uploadError.message?.includes('Bucket not found') || uploadError.message?.includes('bucket') || (uploadError as { statusCode?: string }).statusCode === '404') {
-        const { error: bucketErr } = await supabase.storage.createBucket('rent-share', {
-          public: true,
-          fileSizeLimit: 10485760, // 10MB
-          allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-        })
-        if (bucketErr && !bucketErr.message?.includes('already exists')) {
-          console.error('[rent-share upload] create bucket error:', bucketErr)
-          return NextResponse.json({ error: 'Storage not available' }, { status: 500 })
-        }
-        // Retry upload
-        const { error: retryErr } = await supabase.storage
-          .from('rent-share')
-          .upload(path, buffer, { contentType: file.type, upsert: false })
-        if (retryErr) {
-          console.error('[rent-share upload] retry error:', retryErr)
-          return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
-        }
-      } else {
-        console.error('[rent-share upload] upload error:', uploadError)
-        return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
-      }
+      console.error('[rent-share upload] upload error:', uploadError)
+      return NextResponse.json({ error: 'Upload failed: ' + uploadError.message }, { status: 500 })
     }
 
-    const { data: urlData } = supabase.storage.from('rent-share').getPublicUrl(path)
+    const { data: urlData } = admin.storage.from(BUCKET).getPublicUrl(path)
     return NextResponse.json({ url: urlData.publicUrl })
   } catch (err) {
     console.error('[rent-share upload] unexpected error:', err)

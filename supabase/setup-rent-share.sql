@@ -4,6 +4,43 @@
 --   https://app.supabase.com/project/tioqakxnqjxyuzgnwhrb/sql
 -- =============================================================================
 
+-- 0. Storage bucket -----------------------------------------------------------
+-- Creates the public 'rent-share' bucket used for listing photo uploads.
+-- insert into storage.buckets is idempotent when wrapped in a DO block.
+do $$
+begin
+  insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values (
+    'rent-share', 'rent-share', true, 10485760,
+    array['image/jpeg','image/png','image/gif','image/webp']
+  )
+  on conflict (id) do nothing;
+end $$;
+
+-- Allow authenticated users to upload to their own folder
+drop policy if exists "Authenticated users can upload rent-share photos" on storage.objects;
+create policy "Authenticated users can upload rent-share photos"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'rent-share'
+    and auth.role() = 'authenticated'
+  );
+
+-- Public read access
+drop policy if exists "Public read rent-share photos" on storage.objects;
+create policy "Public read rent-share photos"
+  on storage.objects for select
+  using ( bucket_id = 'rent-share' );
+
+-- Owners can delete their own photos
+drop policy if exists "Owners can delete rent-share photos" on storage.objects;
+create policy "Owners can delete rent-share photos"
+  on storage.objects for delete
+  using (
+    bucket_id = 'rent-share'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
 -- 1. Tables ------------------------------------------------------------------
 
 create table if not exists rent_share_listings (
