@@ -4,18 +4,28 @@
  * - URL validation
  * - Filename sanitisation for uploads
  */
-import DOMPurify from 'isomorphic-dompurify'
+
+// Lazy-load DOMPurify so modules that only need sanitizeFilename / sanitizeUrl
+// don't crash when isomorphic-dompurify is unavailable (e.g. missing native deps).
+let _DOMPurify: typeof import('isomorphic-dompurify').default | null = null
+function getDOMPurify() {
+  if (!_DOMPurify) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    _DOMPurify = require('isomorphic-dompurify') as typeof import('isomorphic-dompurify').default
+  }
+  return _DOMPurify
+}
 
 /** Strip all HTML tags — safe plain-text output */
 export function sanitizeText(input: unknown): string {
   if (typeof input !== 'string') return ''
-  return DOMPurify.sanitize(input, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }).trim()
+  return getDOMPurify().sanitize(input, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }).trim()
 }
 
 /** Allow a safe subset of HTML (bold, italic, lists, links) */
 export function sanitizeRichText(input: unknown): string {
   if (typeof input !== 'string') return ''
-  return DOMPurify.sanitize(input, {
+  return getDOMPurify().sanitize(input, {
     ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'ul', 'ol', 'li', 'p', 'br', 'a'],
     ALLOWED_ATTR: ['href', 'target', 'rel'],
     FORCE_BODY: true,
