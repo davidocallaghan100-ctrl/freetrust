@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Filter = 'all' | 'videos' | 'articles' | 'services' | 'jobs' | 'events' | 'trending'
+type Filter = 'all' | 'photos' | 'videos' | 'articles' | 'services' | 'jobs' | 'events' | 'trending'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -24,6 +24,7 @@ const COMPOSER_ACTIONS = [
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'all',      label: 'All'      },
+  { key: 'photos',   label: 'Photos'   },
   { key: 'videos',   label: 'Videos'   },
   { key: 'articles', label: 'Articles' },
   { key: 'services', label: 'Services' },
@@ -33,6 +34,17 @@ const FILTERS: { key: Filter; label: string }[] = [
 ]
 
 const TRENDING_TAGS = ['#TrustEconomy', '#FreelanceLife', '#ImpactInvesting', '#BuildInPublic', '#SustainableBusiness', '#CreatorEconomy']
+
+const EMPTY_META: Record<Filter, { icon: string; title: string; sub: string }> = {
+  all:      { icon: '🌱', title: 'No posts yet',         sub: 'Be the first to share something!' },
+  photos:   { icon: '📷', title: 'No photos yet',        sub: 'Share a photo to get this filter going.' },
+  videos:   { icon: '🎬', title: 'No videos yet',        sub: 'Upload a video to be the first.' },
+  articles: { icon: '📰', title: 'No articles yet',      sub: 'Publish an article to get featured here.' },
+  services: { icon: '🛠',  title: 'No services yet',      sub: 'List a service to get discovered.' },
+  jobs:     { icon: '💼', title: 'No active jobs',       sub: 'Post a job to find collaborators.' },
+  events:   { icon: '📅', title: 'No upcoming events',   sub: 'Create an event to bring people together.' },
+  trending: { icon: '🔥', title: 'Nothing trending yet', sub: 'Posts from the last 24 hours will appear here once they get likes and comments.' },
+}
 
 // ── Composer ──────────────────────────────────────────────────────────────────
 
@@ -187,9 +199,9 @@ export default function FeedPage() {
             <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>⏳ Loading feed…</div>
           ) : posts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '4rem 2rem', color: '#64748b' }}>
-              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🌱</div>
-              <h3 style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>No posts yet</h3>
-              <p style={{ marginBottom: '1.5rem' }}>Be the first to share something!</p>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{EMPTY_META[activeFilter].icon}</div>
+              <h3 style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>{EMPTY_META[activeFilter].title}</h3>
+              <p style={{ marginBottom: '1.5rem' }}>{EMPTY_META[activeFilter].sub}</p>
               <Link href="/create" style={{ padding: '0.6rem 1.4rem', borderRadius: '8px', background: '#38bdf8', color: '#0f172a', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none' }}>Create a post</Link>
             </div>
           ) : (
