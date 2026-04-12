@@ -98,6 +98,31 @@ export default function RootLayout({
       <head>
         <meta name="copyright" content="FreeTrust 2026" />
         <meta name="author" content="FreeTrust" />
+        {/*
+          Early capture of beforeinstallprompt. Chrome can fire this event
+          during initial HTML parse, long before React hydrates — if we only
+          listen inside the React component, we'd miss it entirely. This
+          inline script captures the live event into window.__ftPwaPrompt
+          and re-dispatches as a custom 'ft-pwa-ready' event that
+          PWAInstallBanner picks up on mount. Safe to run in production
+          (gated by development check).
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){
+              if (typeof window === 'undefined') return;
+              window.__ftPwaPrompt = null;
+              window.addEventListener('beforeinstallprompt', function(e){
+                e.preventDefault();
+                window.__ftPwaPrompt = e;
+                try { window.dispatchEvent(new CustomEvent('ft-pwa-ready')); } catch(_){}
+              });
+              window.addEventListener('appinstalled', function(){
+                window.__ftPwaPrompt = null;
+              });
+            })();`,
+          }}
+        />
         {process.env.NEXT_PUBLIC_GA_ID && (
           <>
             <script async src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`} />
