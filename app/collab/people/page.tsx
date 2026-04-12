@@ -17,6 +17,9 @@ interface Member {
   online?: boolean
 }
 
+// Module-level cache for follow state per member, shared across cards
+type FollowState = { following: boolean; loading: boolean }
+
 const GRADIENTS = [
   'linear-gradient(135deg,#38bdf8,#0284c7)',
   'linear-gradient(135deg,#f472b6,#db2777)',
@@ -40,9 +43,7 @@ const TYPE_FILTERS = ['All', 'Services', 'Products', 'Events']
 const MODE_FILTERS = ['Online', 'Local']
 const BADGE_FILTERS = ['Verified']
 
-function MemberCard({ member }: { member: Member }) {
-  const [followed, setFollowed] = useState(false)
-
+function MemberCard({ member, followState, onToggleFollow }: { member: Member; followState: FollowState; onToggleFollow: () => void }) {
   return (
     <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.7rem', transition: 'transform 0.15s, box-shadow 0.15s' }}
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.12)' }}
@@ -102,9 +103,10 @@ function MemberCard({ member }: { member: Member }) {
           Collab
         </Link>
         <button
-          onClick={() => setFollowed(f => !f)}
-          style={{ flex: 1, background: followed ? 'rgba(56,189,248,0.15)' : 'transparent', border: `1px solid ${followed ? 'rgba(56,189,248,0.4)' : 'rgba(148,163,184,0.25)'}`, borderRadius: 9, padding: '0.55rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, color: followed ? '#38bdf8' : '#94a3b8', cursor: 'pointer', minHeight: 44 }}>
-          {followed ? 'Following' : 'Follow'}
+          onClick={onToggleFollow}
+          disabled={followState.loading}
+          style={{ flex: 1, background: followState.following ? 'rgba(56,189,248,0.15)' : 'transparent', border: `1px solid ${followState.following ? 'rgba(56,189,248,0.4)' : 'rgba(148,163,184,0.25)'}`, borderRadius: 9, padding: '0.55rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, color: followState.following ? '#38bdf8' : '#94a3b8', cursor: followState.loading ? 'wait' : 'pointer', minHeight: 44, opacity: followState.loading ? 0.7 : 1 }}>
+          {followState.loading ? '…' : followState.following ? 'Following' : 'Follow'}
         </button>
       </div>
     </div>
@@ -122,41 +124,99 @@ function CollabPeopleInner() {
   const [dbMembers, setDbMembers] = useState<Member[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
+  const [followStates, setFollowStates] = useState<Record<string, FollowState>>({})
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const PAGE_SIZE = 12
 
   useEffect(() => {
     const supabase = createClient()
     async function load() {
       try {
+        // Get current user (for filtering self out and loading follow state)
+        const { data: { user } } = await supabase.auth.getUser()
+        setCurrentUserId(user?.id ?? null)
+
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, full_name, avatar_url, bio, location, role, created_at')
           .is('deleted_at', null)
           .order('created_at', { ascending: false })
           .limit(100)
+
         if (profiles && profiles.length > 0) {
           const ids = profiles.map((p: Record<string, unknown>) => p.id as string)
+
+          // Fetch trust balances (relies on public-read RLS policy on trust_balances)
           const { data: balances } = await supabase
             .from('trust_balances')
             .select('user_id, balance')
             .in('user_id', ids)
           const balanceMap: Record<string, number> = {}
           for (const b of balances ?? []) balanceMap[(b as Record<string, unknown>).user_id as string] = Number((b as Record<string, unknown>).balance ?? 0)
-          setDbMembers(profiles.map((m: Record<string, unknown>) => ({
-            id: String(m.id),
-            full_name: m.full_name as string | null,
-            avatar_url: m.avatar_url as string | null,
-            bio: m.bio as string | null,
-            location: m.location as string | null,
-            role: m.role as string | null,
-            trust_balance: balanceMap[String(m.id)] ?? 0,
-          })).sort((a, b) => b.trust_balance - a.trust_balance))
+
+          // Fetch which of these users the current user is following
+          let followingIds = new Set<string>()
+          if (user) {
+            const { data: follows } = await supabase
+              .from('user_follows')
+              .select('following_id')
+              .eq('follower_id', user.id)
+              .in('following_id', ids)
+            followingIds = new Set((follows ?? []).map((f: Record<string, unknown>) => String(f.following_id)))
+          }
+
+          const initialFollowStates: Record<string, FollowState> = {}
+          for (const id of ids) {
+            initialFollowStates[id] = { following: followingIds.has(id), loading: false }
+          }
+          setFollowStates(initialFollowStates)
+
+          setDbMembers(profiles
+            .filter((m: Record<string, unknown>) => String(m.id) !== user?.id)
+            .map((m: Record<string, unknown>) => ({
+              id: String(m.id),
+              full_name: m.full_name as string | null,
+              avatar_url: m.avatar_url as string | null,
+              bio: m.bio as string | null,
+              location: m.location as string | null,
+              role: m.role as string | null,
+              trust_balance: balanceMap[String(m.id)] ?? 0,
+            })).sort((a, b) => b.trust_balance - a.trust_balance))
         }
-      } catch { /* use mock */ }
+      } catch (err) {
+        console.error('[collab/people] load error:', err)
+      }
       finally { setLoading(false) }
     }
     load()
   }, [])
+
+  const handleToggleFollow = async (memberId: string) => {
+    if (!currentUserId) {
+      // Not signed in — could redirect to login, but for now just no-op
+      return
+    }
+    // Optimistic update
+    setFollowStates(prev => ({
+      ...prev,
+      [memberId]: { following: !prev[memberId]?.following, loading: true },
+    }))
+    try {
+      const res = await fetch(`/api/users/${memberId}/follow`, { method: 'POST' })
+      if (!res.ok) throw new Error('follow failed')
+      const data = await res.json() as { following: boolean }
+      setFollowStates(prev => ({
+        ...prev,
+        [memberId]: { following: data.following, loading: false },
+      }))
+    } catch {
+      // Rollback
+      setFollowStates(prev => ({
+        ...prev,
+        [memberId]: { following: !prev[memberId]?.following, loading: false },
+      }))
+    }
+  }
 
   const members = dbMembers ?? []
 
@@ -245,7 +305,14 @@ function CollabPeopleInner() {
         ) : (
           <>
             <div className="collab-grid">
-              {paginated.map(m => <MemberCard key={m.id} member={m} />)}
+              {paginated.map(m => (
+                <MemberCard
+                  key={m.id}
+                  member={m}
+                  followState={followStates[m.id] ?? { following: false, loading: false }}
+                  onToggleFollow={() => handleToggleFollow(m.id)}
+                />
+              ))}
             </div>
             {hasMore && (
               <div style={{ textAlign: 'center', marginTop: '2rem' }}>
