@@ -325,7 +325,7 @@ export default function ArticlePage() {
 
             {/* Comment list */}
             {comments.length === 0
-              ? <div style={{ textAlign: 'center', color: '#475569', padding: '2rem', fontSize: '0.9rem' }}>No comments yet. Be the first!</div>
+              ? <div style={{ textAlign: 'center', color: '#475569', padding: '2rem', fontSize: '0.9rem' }}>No comments yet — be the first to comment</div>
               : comments.map(c => {
                 const cInitials = getInitials(c.author?.full_name)
                 return (

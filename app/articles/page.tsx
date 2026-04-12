@@ -212,18 +212,37 @@ export default function ArticlesPage() {
             </div>
           )}
 
-          <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1.25rem' }}>
-            <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem', color: '#f1f5f9' }}>Popular Tags</div>
-            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-              {['#startup', '#design', '#sustainability', '#SaaS', '#freelance', '#impact', '#AI', '#community'].map(t => (
-                <span key={t} style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.2rem 0.6rem', fontSize: '0.75rem', color: '#38bdf8', cursor: 'pointer' }}>{t}</span>
-              ))}
-            </div>
-          </div>
+          {(() => {
+            // Aggregate real tags from fetched articles, count occurrences,
+            // and show the top 8. If no articles have tags, hide the card.
+            const tagCounts = new Map<string, number>()
+            for (const a of allArticles) {
+              for (const t of a.tags ?? []) {
+                if (!t) continue
+                tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1)
+              }
+            }
+            const topTags = Array.from(tagCounts.entries())
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 8)
+              .map(([tag]) => tag)
+
+            if (topTags.length === 0) return null
+            return (
+              <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1.25rem' }}>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem', color: '#f1f5f9' }}>Popular Tags</div>
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  {topTags.map(t => (
+                    <span key={t} style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.2rem 0.6rem', fontSize: '0.75rem', color: '#38bdf8', cursor: 'pointer' }}>#{t}</span>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
 
           <div style={{ background: 'rgba(56,189,248,0.04)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 12, padding: '1.25rem' }}>
             <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.5rem', color: '#f1f5f9' }}>Write for FreeTrust</div>
-            <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.5, marginBottom: '0.75rem' }}>Share your expertise with 24,000+ readers. Build your reputation and earn ₮20 Trust per article published.</p>
+            <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.5, marginBottom: '0.75rem' }}>Share your expertise with the FreeTrust community. Build your reputation and earn ₮20 Trust per article published.</p>
             <Link href="/articles/new" style={{ display: 'block', textAlign: 'center', background: '#38bdf8', borderRadius: 8, padding: '0.6rem', fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', textDecoration: 'none' }}>Start Writing</Link>
           </div>
 
