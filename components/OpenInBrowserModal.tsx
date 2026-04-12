@@ -11,9 +11,16 @@ import { buildSystemBrowserUrl, type InAppBrowserInfo } from '@/lib/auth/in-app-
 export default function OpenInBrowserModal({
   info,
   onClose,
+  onContinueWithEmail,
 }: {
   info: InAppBrowserInfo
   onClose: () => void
+  /**
+   * Called when the user clicks "Continue with Email". The parent page
+   * is expected to scroll to its email form and close the modal. If
+   * omitted, behaves like onClose.
+   */
+  onContinueWithEmail?: () => void
 }) {
   const [copied, setCopied] = useState(false)
   const [currentUrl, setCurrentUrl] = useState('')
@@ -87,8 +94,10 @@ export default function OpenInBrowserModal({
           Open in your default browser
         </h2>
         <p style={{ fontSize: 14, color: '#94a3b8', textAlign: 'center', margin: '0 0 20px', lineHeight: 1.55 }}>
-          Google blocks sign-in from inside <strong style={{ color: '#f1f5f9' }}>{browserLabel}</strong>.
-          To continue with Google, open FreeTrust in {targetBrowser}.
+          To sign in with Google, please open FreeTrust in your default browser.
+          {info.browserName ? (
+            <><br /><span style={{ fontSize: 12, color: '#64748b' }}>Detected: {browserLabel}</span></>
+          ) : null}
         </p>
 
         {/* URL row for copy */}
@@ -164,7 +173,7 @@ export default function OpenInBrowserModal({
             fontSize: 12,
             color: '#94a3b8',
             lineHeight: 1.6,
-            marginBottom: 16,
+            marginBottom: 20,
           }}
         >
           <strong style={{ color: '#cbd5e1' }}>Or manually:</strong> tap the{' '}
@@ -173,26 +182,31 @@ export default function OpenInBrowserModal({
           then sign in with Google from there.
         </div>
 
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              flex: 1,
-              background: 'transparent',
-              color: '#94a3b8',
-              border: '1px solid #334155',
-              borderRadius: 10,
-              padding: '12px',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
-          >
-            Use email instead
-          </button>
+        {/* or divider */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 16px' }}>
+          <div style={{ flex: 1, height: 1, background: '#1e293b' }} />
+          <span style={{ fontSize: 11, color: '#475569', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>or</span>
+          <div style={{ flex: 1, height: 1, background: '#1e293b' }} />
         </div>
+
+        <button
+          type="button"
+          onClick={onContinueWithEmail ?? onClose}
+          style={{
+            width: '100%',
+            background: 'rgba(56,189,248,0.1)',
+            color: '#38bdf8',
+            border: '1px solid rgba(56,189,248,0.3)',
+            borderRadius: 12,
+            padding: '14px',
+            fontSize: 14,
+            fontWeight: 700,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}
+        >
+          ✉️ Continue with Email
+        </button>
       </div>
     </div>
   )

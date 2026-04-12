@@ -464,7 +464,20 @@ export default function RegisterPage() {
       )}
 
       {inAppInfo && (
-        <OpenInBrowserModal info={inAppInfo} onClose={() => setInAppInfo(null)} />
+        <OpenInBrowserModal
+          info={inAppInfo}
+          onClose={() => setInAppInfo(null)}
+          onContinueWithEmail={() => {
+            setInAppInfo(null)
+            // Defer so the modal unmounts before we scroll
+            setTimeout(() => {
+              document.getElementById('email-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              // Focus the first text field inside the form for instant typing
+              const firstInput = document.querySelector<HTMLInputElement>('#email-form input[type="text"], #email-form input:not([type="hidden"])')
+              firstInput?.focus()
+            }, 50)
+          }}
+        />
       )}
 
       <div className="auth-page">
@@ -554,7 +567,7 @@ export default function RegisterPage() {
                 <div className="auth-divider-line" />
               </div>
 
-              <form onSubmit={handleSubmit} noValidate>
+              <form id="email-form" onSubmit={handleSubmit} noValidate>
                 <div className="auth-row">
                   <div className="auth-field">
                     <label className="auth-label" htmlFor="reg-first-name">First name</label>

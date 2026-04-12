@@ -337,7 +337,18 @@ function LoginForm() {
       `}</style>
 
       {inAppInfo && (
-        <OpenInBrowserModal info={inAppInfo} onClose={() => setInAppInfo(null)} />
+        <OpenInBrowserModal
+          info={inAppInfo}
+          onClose={() => setInAppInfo(null)}
+          onContinueWithEmail={() => {
+            setInAppInfo(null)
+            setTimeout(() => {
+              document.getElementById('email-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              const firstInput = document.querySelector<HTMLInputElement>('#email-form input[type="email"], #email-form input:not([type="hidden"])')
+              firstInput?.focus()
+            }, 50)
+          }}
+        />
       )}
 
       <div className="auth-page">
@@ -415,7 +426,7 @@ function LoginForm() {
                 <div className="auth-divider-line" />
               </div>
 
-              <form onSubmit={handleSubmit} noValidate>
+              <form id="email-form" onSubmit={handleSubmit} noValidate>
                 <div className="auth-field">
                   <label className="auth-label" htmlFor="login-email">Email address</label>
                   <input
