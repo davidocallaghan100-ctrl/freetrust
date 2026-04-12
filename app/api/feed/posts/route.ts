@@ -209,7 +209,7 @@ export async function GET(req: NextRequest) {
       followingSet = new Set(((followingRes.data ?? []) as { following_id: string }[]).map(f => f.following_id))
     }
 
-    let enriched = (posts ?? []).map((p: Record<string, unknown>) => {
+    let enriched: Record<string, unknown>[] = (posts ?? []).map((p: Record<string, unknown>) => {
       const realLikes = likeCountMap[p.id as string] ?? 0
       const realComments = commentCountMap[p.id as string] ?? 0
       const reactions = reactionCountsMap[p.id as string] ?? { trust: 0, love: 0, insightful: 0, collab: 0, total: 0 }
