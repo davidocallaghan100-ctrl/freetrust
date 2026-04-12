@@ -105,6 +105,17 @@ export default function RegisterPage() {
         },
       })
       if (error) {
+        // Surface the full Supabase error object in DevTools so the next
+        // debug cycle shows exactly what Postgres/trigger said. The friendly
+        // messages below are for the user — the console.error is for us.
+        console.error('[register] supabase.signUp error:', {
+          message: error.message,
+          status: (error as unknown as { status?: number }).status,
+          code: (error as unknown as { code?: string }).code,
+          name: error.name,
+          raw: error,
+        })
+
         const msg = error.message || ''
         if (msg.includes('already registered') || msg.includes('User already registered') || msg.includes('already been registered')) {
           throw new Error('An account with this email already exists. Try signing in instead.')
@@ -113,6 +124,13 @@ export default function RegisterPage() {
           throw new Error('Too many attempts. Please wait a minute and try again.')
         }
         if (msg.includes('Database error') || msg.includes('unexpected_failure')) {
+          // A trigger is failing during profile creation. Show the friendly
+          // message but also print the actual cause to the console for
+          // the developer to see. The defensive triggers in
+          // supabase/migrations/20260412_signup_defensive.sql should prevent
+          // this from ever happening — if you're seeing this, run that
+          // migration in the Supabase SQL editor.
+          console.error('[register] Database error during signup — likely a trigger failure. Run supabase/migrations/20260412_signup_defensive.sql to install the self-healing trigger.')
           throw new Error('We\'re setting things up — please try again in a moment.')
         }
         throw new Error(msg || 'Something went wrong. Please try again.')
