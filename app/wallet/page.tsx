@@ -571,17 +571,21 @@ function WalletPageInner() {
   }
 
   const handleWithdraw = async () => {
+    console.log('[wallet] Withdraw Earnings clicked', { available: data?.money.available ?? 0 })
     if ((data?.money.available ?? 0) <= 0) {
       showToast('No available balance to withdraw')
       return
     }
     setWithdrawing(true)
     try {
-      // GET returns onboarding URL if not yet set up, or { onboarded: true } if complete
-      const res = await fetch('/api/stripe/connect')
+      // GET returns either { url } for a pending-onboarding account, or
+      // { onboarded: true } for an account Stripe confirms is fully
+      // enabled. Any error comes back as { error } with a non-2xx status.
+      const res = await fetch('/api/stripe/connect', { cache: 'no-store' })
       const d = await res.json() as { url?: string; onboarded?: boolean; error?: string }
+      console.log('[wallet] /api/stripe/connect GET response', { status: res.status, ...d })
       if (!res.ok) {
-        showToast(d.error ?? 'Could not start withdrawal')
+        showToast(d.error ?? `Could not start withdrawal (HTTP ${res.status})`)
         return
       }
       if (d.url) {
@@ -594,9 +598,15 @@ function WalletPageInner() {
         const dashRes = await fetch('/api/stripe/connect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          cache: 'no-store',
           body: JSON.stringify({ action: 'dashboard' }),
         })
         const dashData = await dashRes.json() as { url?: string; error?: string }
+        console.log('[wallet] /api/stripe/connect POST response', { status: dashRes.status, ...dashData })
+        if (!dashRes.ok) {
+          showToast(dashData.error ?? `Could not open Stripe dashboard (HTTP ${dashRes.status})`)
+          return
+        }
         if (dashData.url) {
           window.location.href = dashData.url
         } else {
@@ -605,7 +615,8 @@ function WalletPageInner() {
         return
       }
       showToast(d.error ?? 'Could not start withdrawal — please try again')
-    } catch {
+    } catch (err) {
+      console.error('[wallet] handleWithdraw network error', err)
       showToast('Network error — please try again')
     } finally {
       setWithdrawing(false)
