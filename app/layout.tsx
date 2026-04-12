@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { CurrencyProvider } from "@/context/CurrencyContext";
 import AppShell from "@/components/AppShell";
+import PWAInstallBanner from "@/components/PWAInstallBanner";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -56,12 +57,35 @@ export const metadata: Metadata = {
     creator: '@freetrust',
   },
   alternates: { canonical: BASE_URL },
+
+  // ── PWA metadata ────────────────────────────────────────────────────────
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'FreeTrust',
+  },
+  // Next.js auto-serves app/icon.png and app/apple-icon.png. These extra
+  // entries add the PWA-specific sizes served dynamically via next/og at
+  // app/icons/icon-*.png/route.tsx so the manifest can reference them.
+  icons: {
+    icon: [
+      { url: '/icons/icon-16x16.png',  sizes: '16x16',   type: 'image/png' },
+      { url: '/icons/icon-32x32.png',  sizes: '32x32',   type: 'image/png' },
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icons/icon-180x180.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  themeColor: '#00b4d8',
 };
 
 export default function RootLayout({
@@ -89,6 +113,7 @@ export default function RootLayout({
           <AppShell>
             {children}
           </AppShell>
+          <PWAInstallBanner />
         </CurrencyProvider>
       </body>
     </html>

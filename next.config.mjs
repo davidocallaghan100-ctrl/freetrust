@@ -1,3 +1,53 @@
+import nextPwa from 'next-pwa'
+
+const withPWA = nextPwa({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === 'development',
+  // Cache key pages for offline use. Runtime caching applies the first
+  // time a user visits each page; subsequent visits work offline.
+  runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'google-fonts',
+        expiration: { maxEntries: 10, maxAgeSeconds: 365 * 24 * 60 * 60 },
+      },
+    },
+    {
+      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'static-images',
+        expiration: { maxEntries: 128, maxAgeSeconds: 30 * 24 * 60 * 60 },
+      },
+    },
+    {
+      urlPattern: /\/_next\/static\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'next-static',
+        expiration: { maxEntries: 256, maxAgeSeconds: 30 * 24 * 60 * 60 },
+      },
+    },
+    {
+      // Core navigation targets — cache the HTML so the shell loads offline
+      urlPattern: ({ url }) => {
+        const pathname = new URL(url, 'http://x').pathname
+        return ['/', '/feed', '/wallet', '/profile'].some(p => pathname === p || pathname.startsWith(`${p}/`))
+      },
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'pages',
+        networkTimeoutSeconds: 5,
+        expiration: { maxEntries: 32, maxAgeSeconds: 7 * 24 * 60 * 60 },
+      },
+    },
+  ],
+})
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -44,4 +94,4 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+export default withPWA(nextConfig)
