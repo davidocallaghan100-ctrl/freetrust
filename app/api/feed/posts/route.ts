@@ -102,27 +102,48 @@ export async function GET(req: NextRequest) {
     let likedIds: string[] = []
     let savedIds: string[] = []
     const commentCountMap: Record<string, number> = {}
+    const likeCountMap: Record<string, number> = {}
+    const saveCountMap: Record<string, number> = {}
 
     if (posts && posts.length > 0) {
       const postIds = posts.map((p: { id: string }) => p.id)
 
-      const [likesRes, savesRes, commentsRes] = await Promise.all([
+      // Real engagement counts come from the junction tables, not the cached
+      // columns on feed_posts (which may have drifted). Fetch all rows for
+      // the visible post ids in parallel.
+      const [allLikesRes, allSavesRes, commentsRes, userLikesRes, userSavesRes] = await Promise.all([
+        supabase.from('feed_likes').select('post_id').in('post_id', postIds),
+        supabase.from('feed_saves').select('post_id').in('post_id', postIds),
+        supabase.from('feed_comments').select('post_id').in('post_id', postIds),
         user ? supabase.from('feed_likes').select('post_id').eq('user_id', user.id).in('post_id', postIds) : Promise.resolve({ data: [] }),
         user ? supabase.from('feed_saves').select('post_id').eq('user_id', user.id).in('post_id', postIds) : Promise.resolve({ data: [] }),
-        supabase.from('feed_comments').select('post_id').in('post_id', postIds),
       ])
 
-      likedIds = ((likesRes as { data: { post_id: string }[] | null }).data ?? []).map((l) => l.post_id)
-      savedIds = ((savesRes as { data: { post_id: string }[] | null }).data ?? []).map((s) => s.post_id)
-
+      // Build per-post total counts
+      ;((allLikesRes.data ?? []) as { post_id: string }[]).forEach((l) => {
+        likeCountMap[l.post_id] = (likeCountMap[l.post_id] ?? 0) + 1
+      })
+      ;((allSavesRes.data ?? []) as { post_id: string }[]).forEach((s) => {
+        saveCountMap[s.post_id] = (saveCountMap[s.post_id] ?? 0) + 1
+      })
       ;((commentsRes.data ?? []) as { post_id: string }[]).forEach((c) => {
         commentCountMap[c.post_id] = (commentCountMap[c.post_id] ?? 0) + 1
       })
+
+      // Per-user flags (which posts the current user has liked/saved)
+      likedIds = ((userLikesRes as { data: { post_id: string }[] | null }).data ?? []).map((l) => l.post_id)
+      savedIds = ((userSavesRes as { data: { post_id: string }[] | null }).data ?? []).map((s) => s.post_id)
     }
 
     const enriched = (posts ?? []).map((p: Record<string, unknown>) => ({
       ...p,
+      // Override the cached count columns with real row counts. views_count
+      // has no junction table — left as the cached value (which is fine; it
+      // increments deterministically) and falls back to 0 if missing.
+      likes_count: likeCountMap[p.id as string] ?? 0,
+      saves_count: saveCountMap[p.id as string] ?? 0,
       comments_count: commentCountMap[p.id as string] ?? 0,
+      views_count: Number((p as { views_count?: number }).views_count ?? 0),
       liked: likedIds.includes(p.id as string),
       saved: savedIds.includes(p.id as string),
     }))
@@ -145,7 +166,7 @@ async function fetchArticles(supabase: SupabaseLike, offset: number, limit: numb
     .from('articles')
     .select(`
       id, author_id, title, slug, excerpt, body, featured_image_url,
-      clap_count, comment_count, created_at, published_at,
+      created_at, published_at,
       author:profiles!author_id(id, full_name, avatar_url, trust_balance)
     `)
     .eq('status', 'published')
@@ -157,6 +178,28 @@ async function fetchArticles(supabase: SupabaseLike, offset: number, limit: numb
     return NextResponse.json({ posts: [], hasMore: false })
   }
 
+  // Don't trust the cached articles.comment_count / clap_count columns —
+  // they may have drifted from seeded data or buggy increment logic.
+  // Count real rows in article_comments and article_claps for the visible
+  // article ids in two parallel round-trips.
+  const articleIds = (data ?? []).map((a: Record<string, unknown>) => a.id as string)
+  const realCommentCounts: Record<string, number> = {}
+  const realClapCounts: Record<string, number> = {}
+  if (articleIds.length > 0) {
+    const [commentsRes, clapsRes] = await Promise.all([
+      supabase.from('article_comments').select('article_id').in('article_id', articleIds),
+      supabase.from('article_claps').select('article_id').in('article_id', articleIds),
+    ])
+    for (const row of commentsRes.data ?? []) {
+      const aid = (row as { article_id: string }).article_id
+      realCommentCounts[aid] = (realCommentCounts[aid] ?? 0) + 1
+    }
+    for (const row of clapsRes.data ?? []) {
+      const aid = (row as { article_id: string }).article_id
+      realClapCounts[aid] = (realClapCounts[aid] ?? 0) + 1
+    }
+  }
+
   const items: FeedItem[] = (data ?? []).map((a: Record<string, unknown>) => ({
     id: `article-${a.id}`,
     user_id: a.author_id as string,
@@ -166,8 +209,8 @@ async function fetchArticles(supabase: SupabaseLike, offset: number, limit: numb
     media_type: a.featured_image_url ? 'image' : null,
     title: a.title as string,
     link_url: `/articles/${a.slug}`,
-    likes_count: Number(a.clap_count ?? 0),
-    comments_count: Number(a.comment_count ?? 0),
+    likes_count: realClapCounts[a.id as string] ?? 0,
+    comments_count: realCommentCounts[a.id as string] ?? 0,
     saves_count: 0,
     views_count: 0,
     created_at: (a.published_at as string) ?? (a.created_at as string),
