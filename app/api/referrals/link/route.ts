@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
       title: '🎉 New referral!',
       body: 'Someone joined FreeTrust using your referral link. Once they complete their first transaction, you\'ll earn ₮50 trust.',
       link: '/settings?tab=referral',
-    }).catch(() => { /* non-critical */ })
+    })
 
     return NextResponse.json({ linked: true })
   } catch (err) {
