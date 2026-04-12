@@ -620,7 +620,7 @@ export default function PostCard({
               ? reactionTotal.toString()
               : (userReaction ? (REACTIONS.find(r => r.type === userReaction)?.label ?? 'React') : 'React')}
             active={!!userReaction}
-            onClick={(e) => { e.stopPropagation(); setShowReactionPicker(v => !v) }}
+            onClick={(e) => { e?.stopPropagation(); setShowReactionPicker(v => !v) }}
           />
           {showReactionPicker && (
             <div style={{ position: 'absolute', bottom: '100%', left: 0, marginBottom: 6, background: '#0f172a', border: '1px solid #334155', borderRadius: 999, padding: '6px 8px', display: 'flex', gap: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 50 }}>
