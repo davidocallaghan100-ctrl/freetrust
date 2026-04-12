@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState, useRef, useCallback, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 
@@ -33,13 +33,14 @@ interface TrustLedgerEntry {
   created_at: string
 }
 
-type Tab = 'account' | 'privacy' | 'notifications' | 'trust' | 'stripe' | 'security' | 'danger'
+type Tab = 'account' | 'privacy' | 'notifications' | 'trust' | 'referral' | 'stripe' | 'security' | 'danger'
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'account',       label: 'Account',        icon: '👤' },
   { id: 'privacy',       label: 'Privacy',         icon: '🔒' },
   { id: 'notifications', label: 'Notifications',   icon: '🔔' },
   { id: 'trust',         label: 'Trust Breakdown', icon: '₮'  },
+  { id: 'referral',      label: 'Refer & Earn',    icon: '🎁' },
   { id: 'stripe',        label: 'Stripe Connect',  icon: '💳' },
   { id: 'security',      label: 'Security',        icon: '🛡️'  },
   { id: 'danger',        label: 'Danger Zone',     icon: '⚠️'  },
@@ -72,11 +73,25 @@ function timeAgo(ts: string): string {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div style={{ color: '#64748b', padding: 24 }}>Loading settings…</div>}>
+      <SettingsPageInner />
+    </Suspense>
+  )
+}
+
+function SettingsPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const initialTab = (searchParams.get('tab') as Tab | null) ?? 'account'
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<Tab>('account')
+  const [activeTab, setActiveTab] = useState<Tab>(
+    ['account', 'privacy', 'notifications', 'trust', 'referral', 'stripe', 'security', 'danger'].includes(initialTab)
+      ? initialTab
+      : 'account'
+  )
 
   useEffect(() => {
     const supabase = createClient()
@@ -199,6 +214,9 @@ export default function SettingsPage() {
           )}
           {activeTab === 'trust' && (
             <TrustTab userId={user.id} />
+          )}
+          {activeTab === 'referral' && (
+            <ReferralTab />
           )}
           {activeTab === 'stripe' && (
             <StripeTab profile={profile} />
@@ -631,6 +649,227 @@ function TrustTab({ userId }: { userId: string }) {
               </div>
             </div>
           ))
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Referral Tab ───────────────────────────────────────────────────────────────
+
+interface ReferralRow {
+  id: string
+  referred_id: string
+  referred_name: string
+  referred_avatar: string | null
+  status: 'pending' | 'completed'
+  reward_credited: boolean
+  reward_amount: number
+  completed_at: string | null
+  created_at: string
+}
+
+interface ReferralData {
+  referral_code: string | null
+  stats: { total: number; pending: number; completed: number; tokens_earned: number }
+  referrals: ReferralRow[]
+}
+
+function ReferralTab() {
+  const [data, setData] = useState<ReferralData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [copied, setCopied] = useState(false)
+  const [toast, setToast] = useState('')
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch('/api/referrals')
+        if (res.ok) {
+          const json = await res.json() as ReferralData
+          setData(json)
+        }
+      } catch { /* silent */ }
+      finally { setLoading(false) }
+    }
+    load()
+  }, [])
+
+  const showToast = (msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(''), 2500)
+  }
+
+  if (loading) return <div style={{ color: '#64748b', padding: 24 }}>Loading referral data…</div>
+
+  const code = data?.referral_code ?? ''
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const inviteUrl = code ? `${origin}/invite/${code}` : ''
+  const shareMessage = `Join me on FreeTrust — the trust-powered marketplace for creators. Sign up with my link and we both earn trust tokens: ${inviteUrl}`
+
+  const handleCopy = async () => {
+    if (!inviteUrl) return
+    try {
+      await navigator.clipboard.writeText(inviteUrl)
+      setCopied(true)
+      showToast('Link copied!')
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      showToast('Could not copy — please copy manually')
+    }
+  }
+
+  const handleNativeShare = async () => {
+    if (!inviteUrl) return
+    if (typeof navigator !== 'undefined' && 'share' in navigator) {
+      try {
+        await navigator.share({
+          title: 'Join me on FreeTrust',
+          text: shareMessage,
+          url: inviteUrl,
+        })
+      } catch { /* user cancelled */ }
+    } else {
+      handleCopy()
+    }
+  }
+
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareMessage)}`
+  const twitterUrl  = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}`
+  const emailUrl    = `mailto:?subject=${encodeURIComponent('Join me on FreeTrust')}&body=${encodeURIComponent(shareMessage)}`
+
+  const stats = data?.stats ?? { total: 0, pending: 0, completed: 0, tokens_earned: 0 }
+  const referrals = data?.referrals ?? []
+
+  return (
+    <div>
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: '#1e293b', border: '1px solid #334155', borderRadius: 10, padding: '10px 18px', fontSize: 13, color: '#f1f5f9', zIndex: 9999, boxShadow: '0 8px 30px rgba(0,0,0,0.4)' }}>
+          {toast}
+        </div>
+      )}
+
+      <div className="card">
+        <h2 className="section-title">Refer & Earn</h2>
+        <p className="section-desc">Invite friends to FreeTrust. When they complete their first transaction, you earn <strong style={{ color: '#38bdf8' }}>₮50 trust tokens</strong>.</p>
+
+        {/* Stats grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+          <div style={{ background: '#0f172a', borderRadius: 10, padding: '14px 16px' }}>
+            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: '#f1f5f9' }}>{stats.total}</div>
+          </div>
+          <div style={{ background: '#0f172a', borderRadius: 10, padding: '14px 16px' }}>
+            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Pending</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: '#f59e0b' }}>{stats.pending}</div>
+          </div>
+          <div style={{ background: '#0f172a', borderRadius: 10, padding: '14px 16px' }}>
+            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Completed</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: '#34d399' }}>{stats.completed}</div>
+          </div>
+          <div style={{ background: '#0f172a', borderRadius: 10, padding: '14px 16px' }}>
+            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Earned</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: '#38bdf8' }}>₮{stats.tokens_earned}</div>
+          </div>
+        </div>
+
+        {/* Referral link + copy */}
+        <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6, display: 'block' }}>Your referral link</label>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+          <input
+            readOnly
+            value={inviteUrl}
+            onClick={e => (e.target as HTMLInputElement).select()}
+            style={{ flex: 1, minWidth: 220, background: '#0f172a', border: '1px solid #334155', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#f1f5f9', outline: 'none', fontFamily: 'monospace' }}
+          />
+          <button
+            onClick={handleCopy}
+            style={{ background: copied ? 'rgba(52,211,153,0.15)' : 'linear-gradient(135deg,#38bdf8,#0284c7)', border: copied ? '1px solid rgba(52,211,153,0.4)' : 'none', color: copied ? '#34d399' : '#0f172a', fontWeight: 700, fontSize: 13, padding: '12px 22px', borderRadius: 10, cursor: 'pointer' }}
+          >
+            {copied ? '✓ Copied' : '📋 Copy'}
+          </button>
+        </div>
+
+        {/* Share buttons */}
+        <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6, display: 'block' }}>Share</label>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ background: 'rgba(37,211,102,0.12)', border: '1px solid rgba(37,211,102,0.3)', color: '#25d366', fontSize: 13, fontWeight: 600, padding: '10px 16px', borderRadius: 10, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            💬 WhatsApp
+          </a>
+          <a
+            href={twitterUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ background: 'rgba(29,161,242,0.12)', border: '1px solid rgba(29,161,242,0.3)', color: '#1da1f2', fontSize: 13, fontWeight: 600, padding: '10px 16px', borderRadius: 10, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            🐦 Twitter
+          </a>
+          <a
+            href={emailUrl}
+            style={{ background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.3)', color: '#a78bfa', fontSize: 13, fontWeight: 600, padding: '10px 16px', borderRadius: 10, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            ✉️ Email
+          </a>
+          {typeof navigator !== 'undefined' && 'share' in navigator && (
+            <button
+              onClick={handleNativeShare}
+              style={{ background: 'rgba(148,163,184,0.1)', border: '1px solid rgba(148,163,184,0.25)', color: '#94a3b8', fontSize: 13, fontWeight: 600, padding: '10px 16px', borderRadius: 10, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'inherit' }}
+            >
+              ↗ More…
+            </button>
+          )}
+        </div>
+
+        {/* How it works */}
+        <div style={{ background: '#0f172a', borderRadius: 10, padding: '14px 16px', marginBottom: 20, border: '1px solid rgba(56,189,248,0.12)' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#38bdf8', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>How it works</div>
+          <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: '#94a3b8', lineHeight: 1.7 }}>
+            <li>Share your link with a friend</li>
+            <li>They sign up using your link</li>
+            <li>When they complete their first transaction, you earn ₮50 trust</li>
+          </ol>
+        </div>
+
+        {/* Referrals list */}
+        <h3 style={{ fontSize: 14, fontWeight: 600, color: '#94a3b8', marginBottom: 8 }}>Your referrals</h3>
+        {referrals.length === 0 ? (
+          <div style={{ color: '#64748b', fontSize: 13, padding: '12px 0' }}>
+            No referrals yet. Share your link above to get started!
+          </div>
+        ) : (
+          <div>
+            {referrals.map(r => (
+              <div key={r.id} className="ledger-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid rgba(51,65,85,0.5)' }}>
+                {r.referred_avatar
+                  ? <img src={r.referred_avatar} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                  : <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#0f172a', flexShrink: 0 }}>
+                      {(r.referred_name[0] ?? '?').toUpperCase()}
+                    </div>
+                }
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#f1f5f9' }}>{r.referred_name}</div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                    Joined {timeAgo(r.created_at)}
+                    {r.status === 'completed' && r.completed_at && ` · Rewarded ${timeAgo(r.completed_at)}`}
+                  </div>
+                </div>
+                {r.status === 'completed' ? (
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', borderRadius: 999, padding: '4px 10px' }}>
+                    +₮{r.reward_amount}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 999, padding: '4px 10px' }}>
+                    Pending
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET(
   req: NextRequest,
@@ -145,6 +146,60 @@ export async function PATCH(
           body: `Payment for "${order.item_title}" has been released. You earned ₮10 trust!`,
           link: `/orders/${id}`,
         })
+
+        // ── Referral reward ────────────────────────────────────────────────
+        // If this is the buyer's first completed order AND they were
+        // referred, credit the referrer with ₮50. Uses the admin client to
+        // bypass RLS on the referrals table (service-role only).
+        try {
+          const admin = createAdminClient()
+          const { data: pendingReferral } = await admin
+            .from('referrals')
+            .select('id, referrer_id, reward_amount, reward_credited')
+            .eq('referred_id', order.buyer_id)
+            .eq('status', 'pending')
+            .maybeSingle()
+
+          if (pendingReferral && !pendingReferral.reward_credited) {
+            // Mark referral complete first (idempotency — if we fail after this,
+            // the row says "credited" and we don't re-award on retry).
+            // The `eq('reward_credited', false)` guards against double-crediting
+            // if this code runs concurrently.
+            const { data: updated, error: updateErr } = await admin
+              .from('referrals')
+              .update({
+                status: 'completed',
+                reward_credited: true,
+                completed_at: new Date().toISOString(),
+              })
+              .eq('id', pendingReferral.id)
+              .eq('reward_credited', false)
+              .select('id')
+
+            if (!updateErr && updated && updated.length > 0) {
+              // Credit the referrer with ₮50 trust
+              await admin.rpc('issue_trust', {
+                p_user_id: pendingReferral.referrer_id,
+                p_amount: pendingReferral.reward_amount ?? 50,
+                p_type: 'referral_earned',
+                p_ref: id,
+                p_desc: `₮${pendingReferral.reward_amount ?? 50} earned — your referred member completed their first transaction!`,
+              })
+
+              // Notify the referrer
+              await admin.from('notifications').insert({
+                user_id: pendingReferral.referrer_id,
+                type: 'referral',
+                title: `🎉 Referral reward: ₮${pendingReferral.reward_amount ?? 50}!`,
+                body: 'Your referred member just completed their first transaction. Thanks for growing FreeTrust!',
+                link: '/settings?tab=referral',
+              })
+            }
+          }
+        } catch (err) {
+          // Non-critical — the main order flow must not fail because of referral logic
+          console.error('[orders/release_payment] referral reward error:', err)
+        }
 
         return NextResponse.json({ success: true, status: 'completed' })
       }

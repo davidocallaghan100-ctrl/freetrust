@@ -99,6 +99,54 @@ export async function GET(request: NextRequest) {
               // table may not exist yet — ignore
             }
 
+            // Link referral if a referral code cookie is present
+            try {
+              const refCode = cookieStore.get('ft_ref')?.value
+              if (refCode) {
+                const code = refCode.toUpperCase().trim()
+                // Look up referrer by code
+                const { data: referrer } = await supabase
+                  .from('profiles')
+                  .select('id')
+                  .eq('referral_code', code)
+                  .maybeSingle()
+
+                if (referrer && referrer.id !== user.id) {
+                  // Check we haven't already created a referral for this user
+                  const { data: existing } = await supabase
+                    .from('referrals')
+                    .select('id')
+                    .eq('referred_id', user.id)
+                    .maybeSingle()
+
+                  if (!existing) {
+                    await supabase.from('referrals').insert({
+                      referrer_id: referrer.id,
+                      referred_id: user.id,
+                      status: 'pending',
+                      reward_credited: false,
+                      reward_amount: 50,
+                    })
+                    await supabase
+                      .from('profiles')
+                      .update({ referred_by: referrer.id })
+                      .eq('id', user.id)
+                    await supabase.from('notifications').insert({
+                      user_id: referrer.id,
+                      type: 'referral',
+                      title: '🎉 New referral!',
+                      body: 'Someone joined FreeTrust using your referral link. Once they complete their first transaction, you\'ll earn ₮50 trust.',
+                      link: '/settings?tab=referral',
+                    })
+                  }
+                }
+                // Clear the cookie — referral has been processed
+                cookieStore.set('ft_ref', '', { maxAge: 0, path: '/' })
+              }
+            } catch (err) {
+              console.error('[auth/callback] Referral link error:', err)
+            }
+
             // Send welcome email via Resend
             try {
               const name = user.user_metadata?.full_name || user.user_metadata?.name || 'there'
