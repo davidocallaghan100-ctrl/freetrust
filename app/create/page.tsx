@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type PostType = 'article' | 'photo' | 'video' | 'short' | 'link' | 'job' | 'event' | 'service' | 'product' | 'poll'
+type PostType = 'text' | 'article' | 'photo' | 'video' | 'short' | 'link' | 'job' | 'event' | 'service' | 'product' | 'poll'
 type Visibility = 'public' | 'connections' | 'community'
 
 interface LinkPreview {
@@ -18,10 +18,11 @@ interface LinkPreview {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const POST_TYPES: { type: PostType; icon: string; label: string; desc: string }[] = [
-  { type: 'article',  icon: '✍️',  label: 'Article',      desc: 'Long-form writing'      },
+  { type: 'text',     icon: '💬',  label: 'Text Post',    desc: 'Share a thought'         },
   { type: 'photo',    icon: '📷',  label: 'Photo',        desc: 'Share images'            },
   { type: 'video',    icon: '🎥',  label: 'Video',        desc: 'Upload a video'          },
   { type: 'short',    icon: '📱',  label: 'Short Video',  desc: 'TikTok-style clip'       },
+  { type: 'article',  icon: '✍️',  label: 'Article',      desc: 'Long-form writing'      },
   { type: 'link',     icon: '🔗',  label: 'Shared Link',  desc: 'Share a URL'             },
   { type: 'job',      icon: '💼',  label: 'Job Posting',  desc: 'Post an opportunity'     },
   { type: 'event',    icon: '📅',  label: 'Event',        desc: 'Announce an event'       },
@@ -291,7 +292,49 @@ export default function CreatePage() {
     return { type: selectedType, data, visibility, location, taggedUsers, category }
   }
 
+  const validatePayload = (): string | null => {
+    if (!selectedType) return 'Pick a content type first'
+    const content = f('content').trim()
+    const title   = f('title').trim()
+
+    switch (selectedType) {
+      case 'text':
+        if (!content) return 'Text post needs some content'
+        break
+      case 'article':
+        if (!title) return 'Article needs a title'
+        if (!f('body').trim()) return 'Article needs body content'
+        break
+      case 'photo':
+      case 'video':
+      case 'short':
+        if (!uploadedMediaUrl) return 'Upload a file before publishing'
+        break
+      case 'link':
+        if (!f('url').trim()) return 'Enter a URL'
+        break
+      case 'job':
+      case 'event':
+      case 'service':
+      case 'product':
+        if (!title) return 'Title is required'
+        if (!f('description').trim()) return 'Description is required'
+        if (selectedType === 'event' && !f('start_date')) return 'Start date is required'
+        break
+      case 'poll':
+        if (!f('question').trim()) return 'Poll needs a question'
+        if (pollOptions.filter(o => o.trim()).length < 2) return 'Poll needs at least 2 options'
+        break
+    }
+    return null
+  }
+
   const handlePublish = async () => {
+    const validationError = validatePayload()
+    if (validationError) {
+      showToastMsg(`❌ ${validationError}`)
+      return
+    }
     const payload = buildPublishPayload()
     if (!payload) return
     setPublishing(true)
@@ -307,10 +350,12 @@ export default function CreatePage() {
         showToastMsg('✅ Published!')
         setTimeout(() => router.push(result.redirectUrl ?? '/feed'), 800)
       } else {
+        // Surface the actual server error message so users know what went wrong
         showToastMsg(`❌ ${result.error ?? 'Failed to publish'}`)
       }
-    } catch {
-      showToastMsg('❌ Network error')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Network error'
+      showToastMsg(`❌ ${message}`)
     }
     setPublishing(false)
   }
@@ -356,6 +401,23 @@ export default function CreatePage() {
 
   const renderTypeFields = () => {
     switch (selectedType) {
+      case 'text':
+        return (
+          <div style={s.fieldGroup}>
+            <label style={s.label}>What&apos;s on your mind?</label>
+            <textarea
+              style={{ ...s.textarea, minHeight: '160px' }}
+              placeholder="Share an update with your community…"
+              value={f('content')}
+              onChange={e => setField('content', e.target.value)}
+              maxLength={5000}
+            />
+            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem', textAlign: 'right' }}>
+              {(f('content') ?? '').length}/5000
+            </div>
+          </div>
+        )
+
       case 'article':
         return (
           <>
@@ -694,6 +756,15 @@ export default function CreatePage() {
 
   const renderPreview = () => {
     switch (selectedType) {
+      case 'text':
+        return (
+          <div style={s.previewCard}>
+            <div style={{ fontSize: '0.95rem', color: '#cbd5e1', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+              {f('content') || 'Your text post will appear here.'}
+            </div>
+          </div>
+        )
+
       case 'article':
         return (
           <div style={s.previewCard}>
