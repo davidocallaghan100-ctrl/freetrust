@@ -64,7 +64,26 @@ export default function ArticlesPage() {
           .order('published_at', { ascending: false })
           .limit(50)
         if (!error && data && data.length > 0) {
-          setDbArticles(data.map((a: Record<string, unknown>) => ({ ...a, author: a['profiles'] as { full_name: string | null } | null })) as DBArticle[])
+          // Don't trust the cached articles.comment_count column — it may be
+          // stale or seeded with junk values. Always count real rows in
+          // article_comments and override the count.
+          const articleIds = data.map((a: Record<string, unknown>) => a.id as string)
+          const realCommentCounts: Record<string, number> = {}
+          if (articleIds.length > 0) {
+            const { data: commentRows } = await supabase
+              .from('article_comments')
+              .select('article_id')
+              .in('article_id', articleIds)
+            for (const row of commentRows ?? []) {
+              const aid = (row as { article_id: string }).article_id
+              realCommentCounts[aid] = (realCommentCounts[aid] ?? 0) + 1
+            }
+          }
+          setDbArticles(data.map((a: Record<string, unknown>) => ({
+            ...a,
+            author: a['profiles'] as { full_name: string | null } | null,
+            comment_count: realCommentCounts[a.id as string] ?? 0,
+          })) as DBArticle[])
         }
       } catch { /* leave empty */ }
       finally { setLoading(false) }

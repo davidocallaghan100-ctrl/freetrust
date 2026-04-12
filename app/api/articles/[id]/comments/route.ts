@@ -66,9 +66,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: insertError.message }, { status: 500 })
     }
 
-    // Increment comment_count on article
-    const { data: art } = await supabase.from('articles').select('comment_count').eq('id', articleId).single()
-    await supabase.from('articles').update({ comment_count: (art?.comment_count ?? 0) + 1 }).eq('id', articleId)
+    // Sync articles.comment_count to the real count from article_comments.
+    // Don't trust the cached column — it may have drifted from seeded data
+    // or earlier buggy increments.
+    const { count: realCount } = await supabase
+      .from('article_comments')
+      .select('id', { count: 'exact', head: true })
+      .eq('article_id', articleId)
+    await supabase.from('articles').update({ comment_count: realCount ?? 0 }).eq('id', articleId)
 
     return NextResponse.json({ comment }, { status: 201 })
   } catch (err) {

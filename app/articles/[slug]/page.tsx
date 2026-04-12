@@ -165,7 +165,10 @@ export default function ArticlePage() {
       .single()
     if (!error && newComment) {
       setComments(prev => [...prev, { ...newComment, author: newComment.profiles as Author | null }])
-      await supabase.from('articles').update({ comment_count: article.comment_count + comments.length + 1 }).eq('id', article.id)
+      // Sync the cached articles.comment_count to the real total. The previous
+      // formula (article.comment_count + comments.length + 1) compounded any
+      // existing error in the cached column.
+      await supabase.from('articles').update({ comment_count: comments.length + 1 }).eq('id', article.id)
       setCommentText('')
     }
     setSubmittingComment(false)
