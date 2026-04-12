@@ -15,16 +15,24 @@ export default function RegisterPage() {
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  // True when signUp returned without a session — user must click the link in
+  // their confirmation email to activate the account. We show a distinct UI
+  // for this case and DON'T auto-redirect to /onboarding (which is gated by
+  // middleware and would bounce the user back to /login).
+  const [needsConfirmation, setNeedsConfirmation] = useState(false)
+  const [confirmationEmail, setConfirmationEmail] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [trustToast, setTrustToast] = useState(false)
 
-  // Auto-redirect to onboarding after success
+  // Auto-redirect to onboarding after success — ONLY when we have a session.
+  // With email confirmation enabled, signUp returns session=null and we show
+  // the confirmation UI instead.
   useEffect(() => {
-    if (!success) return
+    if (!success || needsConfirmation) return
     const t = setTimeout(() => router.push('/onboarding'), 1500)
     return () => clearTimeout(t)
-  }, [success, router])
+  }, [success, needsConfirmation, router])
 
   // Password strength
   const pwStrength = (() => {
@@ -98,7 +106,7 @@ export default function RegisterPage() {
       })
       if (error) {
         const msg = error.message || ''
-        if (msg.includes('already registered') || msg.includes('User already registered')) {
+        if (msg.includes('already registered') || msg.includes('User already registered') || msg.includes('already been registered')) {
           throw new Error('An account with this email already exists. Try signing in instead.')
         }
         if (msg.includes('rate limit') || msg.includes('over_email_send_rate_limit')) {
@@ -109,10 +117,33 @@ export default function RegisterPage() {
         }
         throw new Error(msg || 'Something went wrong. Please try again.')
       }
-      if (signUpData.user) {
-        void issueSignupBonus()
+
+      // Supabase anti-enumeration: for an already-registered email, signUp
+      // can silently return success with an empty identities array instead
+      // of an error. Detect that here so the user isn't left thinking they
+      // created a new account.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const identities = (signUpData.user as any)?.identities
+      if (signUpData.user && Array.isArray(identities) && identities.length === 0) {
+        throw new Error('An account with this email already exists. Try signing in instead.')
       }
-      setSuccess(true)
+
+      // Branch on whether signUp returned a live session:
+      //   - session present  → email confirmation disabled; auto-sign-in.
+      //     Award the ₮25 bonus now and redirect to /onboarding (handled by
+      //     the useEffect via setSuccess(true)).
+      //   - session missing  → email confirmation required. Show the
+      //     "check your email" UI and DON'T call the bonus route (it would
+      //     401 since there's no session); the auth/callback route awards
+      //     the bonus after the user clicks the confirmation link.
+      if (signUpData.session) {
+        void issueSignupBonus()
+        setSuccess(true)
+      } else {
+        setConfirmationEmail(form.email)
+        setNeedsConfirmation(true)
+        setSuccess(true)
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
@@ -396,7 +427,37 @@ export default function RegisterPage() {
             <span className="auth-logo-text">Free<span>Trust</span></span>
           </Link>
 
-          {success ? (
+          {success && needsConfirmation ? (
+            <div className="success-box">
+              <div className="success-icon">📬</div>
+              <div className="success-heading">Check your email</div>
+              <p className="success-sub">
+                We&rsquo;ve sent a confirmation link to
+                <br />
+                <strong style={{ color: '#f1f5f9' }}>{confirmationEmail}</strong>
+              </p>
+              <div style={{
+                background: 'rgba(56,189,248,0.06)',
+                border: '1px solid rgba(56,189,248,0.18)',
+                borderRadius: 10,
+                padding: '14px 16px',
+                margin: '20px 0 16px',
+                fontSize: 13,
+                color: '#cbd5e1',
+                lineHeight: 1.6,
+                textAlign: 'left',
+              }}>
+                <strong style={{ color: '#38bdf8' }}>Next step:</strong> click the link in that email
+                to activate your account. You&rsquo;ll then get <strong style={{ color: '#38bdf8' }}>₮25 Trust</strong>
+                {' '}as a founding member bonus and be redirected to onboarding.
+              </div>
+              <p style={{ fontSize: 12, color: '#64748b', textAlign: 'center', margin: 0 }}>
+                Can&rsquo;t find it? Check your spam folder or{' '}
+                <Link href="/login" style={{ color: '#38bdf8' }}>sign in</Link>
+                {' '}if you already have an account.
+              </p>
+            </div>
+          ) : success ? (
             <div className="success-box">
               <div className="success-icon">🎉</div>
               <div className="success-heading">You&apos;re in!</div>
@@ -406,9 +467,6 @@ export default function RegisterPage() {
               <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
                 <span className="spinner" style={{ width: '24px', height: '24px', borderWidth: '3px' }} />
               </div>
-              <p style={{ fontSize: '12px', color: '#475569', textAlign: 'center', marginTop: '1rem' }}>
-                📬 Check your inbox to verify your email.
-              </p>
             </div>
           ) : (
             <>
