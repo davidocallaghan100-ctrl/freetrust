@@ -17,9 +17,11 @@ const geistMono = localFont({
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://freetrust.co'
 
-// Absolute URL to the Next.js-generated OG image (app/opengraph-image.tsx).
-// Must be absolute so WhatsApp, Instagram, and other crawlers can fetch it.
-const OG_IMAGE = `${BASE_URL}/opengraph-image`
+// Absolute URL to the OG image generated on demand by app/og-image.png/route.tsx
+// (uses next/og under the hood — no binary file in the repo). The URL is the
+// stable literal /og-image.png so deep-links from WhatsApp, Twitter, LinkedIn,
+// Slack etc. all resolve cleanly.
+const OG_IMAGE = `${BASE_URL}/og-image.png`
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
@@ -27,7 +29,7 @@ export const metadata: Metadata = {
     default: 'FreeTrust – Trust-Based Social Commerce',
     template: '%s | FreeTrust',
   },
-  description: 'FreeTrust is the platform where trust is the currency. Buy, sell, and connect with verified community members. Earn Trust points on every transaction.',
+  description: 'Buy, sell and collaborate with people you can trust. Join the FreeTrust community.',
   keywords: ['social commerce', 'trust economy', 'marketplace', 'freelance', 'services', 'products', 'community'],
   authors: [{ name: 'FreeTrust' }],
   creator: 'FreeTrust',
@@ -43,13 +45,13 @@ export const metadata: Metadata = {
     url: BASE_URL,
     siteName: 'FreeTrust',
     title: 'FreeTrust – Trust-Based Social Commerce',
-    description: 'The platform where trust is the currency. Buy, sell, and connect with verified community members.',
+    description: 'Buy, sell and collaborate with people you can trust. Join the FreeTrust community.',
     images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: 'FreeTrust – Trust-Based Social Commerce' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'FreeTrust – Trust-Based Social Commerce',
-    description: 'The platform where trust is the currency. Buy, sell, and connect with verified community members.',
+    description: 'Buy, sell and collaborate with people you can trust. Join the FreeTrust community.',
     images: [OG_IMAGE],
     creator: '@freetrust',
   },
