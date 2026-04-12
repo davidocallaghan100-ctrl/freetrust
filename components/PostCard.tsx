@@ -1,9 +1,11 @@
 'use client'
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, type MouseEvent as ReactMouseEvent } from 'react'
 import Link from 'next/link'
 import Avatar from '@/components/Avatar'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+export type ReactionType = 'trust' | 'love' | 'insightful' | 'collab'
 
 export type FeedPost = {
   id: string
@@ -29,6 +31,9 @@ export type FeedPost = {
   liked?: boolean
   saved?: boolean
   trust_score?: number
+  reactions?: { trust: number; love: number; insightful: number; collab: number; total: number }
+  user_reaction?: ReactionType | null
+  top_comment?: { id: string; content: string; author_name: string | null } | null
   profiles: {
     id?: string
     full_name: string | null
@@ -37,6 +42,13 @@ export type FeedPost = {
     trust_balance?: number | null
   } | null
 }
+
+export const REACTIONS: { type: ReactionType; emoji: string; label: string; color: string }[] = [
+  { type: 'trust',      emoji: '👍', label: 'Trust',      color: '#38bdf8' },
+  { type: 'love',       emoji: '❤️', label: 'Love',       color: '#f472b6' },
+  { type: 'insightful', emoji: '💡', label: 'Insightful', color: '#fbbf24' },
+  { type: 'collab',     emoji: '🤝', label: 'Collab',     color: '#34d399' },
+]
 
 type Comment = {
   id: string
@@ -328,6 +340,57 @@ export default function PostCard({
   const [deleting,          setDeleting]          = useState(false)
   const [deleted,           setDeleted]           = useState(false)
 
+  // Reactions
+  const [showReactionPicker, setShowReactionPicker] = useState(false)
+  const [userReaction, setUserReaction]   = useState<ReactionType | null>(post.user_reaction ?? null)
+  const [reactionTotal, setReactionTotal] = useState(post.reactions?.total ?? 0)
+  const reactionPickerRef = useRef<HTMLDivElement | null>(null)
+
+  // Close reaction picker on outside click
+  useEffect(() => {
+    if (!showReactionPicker) return
+    const close = (e: MouseEvent) => {
+      if (reactionPickerRef.current && !reactionPickerRef.current.contains(e.target as Node)) {
+        setShowReactionPicker(false)
+      }
+    }
+    const timer = setTimeout(() => document.addEventListener('click', close), 0)
+    return () => { clearTimeout(timer); document.removeEventListener('click', close) }
+  }, [showReactionPicker])
+
+  const handleReact = async (type: ReactionType) => {
+    setShowReactionPicker(false)
+    // Optimistic update
+    const wasReacted = userReaction
+    if (wasReacted === type) {
+      setUserReaction(null)
+      setReactionTotal(t => Math.max(0, t - 1))
+    } else if (wasReacted === null) {
+      setUserReaction(type)
+      setReactionTotal(t => t + 1)
+    } else {
+      setUserReaction(type)
+      // total stays the same — switched type
+    }
+    try {
+      const res = await fetch(`/api/feed/posts/${post.id}/react`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type }),
+      })
+      if (res.ok) {
+        const data = await res.json() as { user_reaction: ReactionType | null; total: number }
+        setUserReaction(data.user_reaction)
+        setReactionTotal(data.total)
+      } else {
+        // Roll back
+        setUserReaction(wasReacted)
+      }
+    } catch {
+      setUserReaction(wasReacted)
+    }
+  }
+
   const isOwner = !!currentUserId && currentUserId === authorId
 
   const handleDelete = async () => {
@@ -530,14 +593,62 @@ export default function PostCard({
         )
       })() : null}
 
+      {/* ── Top comment preview (inline) ── */}
+      {post.top_comment && !showComments && (
+        <Link
+          href={`/feed/${post.id}`}
+          style={{ display: 'block', margin: '8px 16px 0', padding: '8px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(51,65,85,0.6)', borderRadius: 10, textDecoration: 'none' }}
+        >
+          <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, marginBottom: 2 }}>
+            {post.top_comment.author_name ?? 'A member'}
+          </div>
+          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+            {post.top_comment.content}
+          </div>
+        </Link>
+      )}
+
       {/* ── Action bar ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '10px 8px 10px', borderTop: '1px solid rgba(51,65,85,0.6)', marginTop: '10px', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
-        <ActionBtn
-          icon={liked ? '❤️' : '🤍'}
-          label={likeCount > 0 ? likeCount.toString() : 'Like'}
-          active={liked}
-          onClick={handleLike}
-        />
+        {/* React button + picker */}
+        <div ref={reactionPickerRef} style={{ position: 'relative' }}>
+          <ActionBtn
+            icon={userReaction
+              ? (REACTIONS.find(r => r.type === userReaction)?.emoji ?? '👍')
+              : '👍'}
+            label={reactionTotal > 0
+              ? reactionTotal.toString()
+              : (userReaction ? (REACTIONS.find(r => r.type === userReaction)?.label ?? 'React') : 'React')}
+            active={!!userReaction}
+            onClick={(e) => { e.stopPropagation(); setShowReactionPicker(v => !v) }}
+          />
+          {showReactionPicker && (
+            <div style={{ position: 'absolute', bottom: '100%', left: 0, marginBottom: 6, background: '#0f172a', border: '1px solid #334155', borderRadius: 999, padding: '6px 8px', display: 'flex', gap: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 50 }}>
+              {REACTIONS.map(r => {
+                const isActive = userReaction === r.type
+                return (
+                  <button
+                    key={r.type}
+                    onClick={(e) => { e.stopPropagation(); handleReact(r.type) }}
+                    title={r.label}
+                    style={{
+                      background: isActive ? `${r.color}22` : 'transparent',
+                      border: isActive ? `1px solid ${r.color}66` : '1px solid transparent',
+                      borderRadius: '50%', width: 36, height: 36, fontSize: 20, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'transform 0.12s',
+                      fontFamily: 'inherit',
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.25)' }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
+                  >
+                    {r.emoji}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
         <ActionBtn
           icon="💬"
           label={commentCount > 0 ? `${commentCount}` : 'Comment'}
@@ -695,7 +806,7 @@ function CommentRow({
 
 // ── Action button ─────────────────────────────────────────────────────────────
 
-function ActionBtn({ icon, label, active, onClick }: { icon: string; label: string; active: boolean; onClick: () => void }) {
+function ActionBtn({ icon, label, active, onClick }: { icon: string; label: string; active: boolean; onClick: (e?: ReactMouseEvent) => void }) {
   return (
     <>
       <style>{`

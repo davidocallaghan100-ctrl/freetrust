@@ -48,7 +48,13 @@ export async function GET(req: NextRequest) {
       return await fetchEvents(supabase, offset, limit)
     }
 
-    // ── feed_posts query (all / photos / videos / trending / following) ─────
+    // ── feed_posts query (all/discover / photos / videos / trending / following) ─────
+    // For 'discover' (default) we fetch a wider candidate set, then re-rank in
+    // memory using a smart score combining recency + engagement + author trust.
+    const isDiscover = filter === 'all' || filter === 'discover'
+    const candidateMultiplier = isDiscover ? 3 : 1
+    const fetchLimit = limit * candidateMultiplier
+
     let query = supabase
       .from('feed_posts')
       .select(`
@@ -58,10 +64,8 @@ export async function GET(req: NextRequest) {
       `)
 
     if (filter === 'photos') {
-      // Posts with image media — type='photo' or media_type='image'
       query = query.or('type.eq.photo,media_type.eq.image')
     } else if (filter === 'videos') {
-      // Posts with video media — type in (video, short) or media_type='video'
       query = query.or('type.eq.video,type.eq.short,media_type.eq.video')
     } else if (filter === 'trending') {
       // Posts from the last 24h, ordered by engagement (likes + comments)
@@ -71,26 +75,33 @@ export async function GET(req: NextRequest) {
         .order('likes_count', { ascending: false })
         .order('comments_count', { ascending: false })
     } else if (filter === 'following' && user) {
+      // Posts from users the current user follows (newest first)
       const { data: following } = await supabase
-        .from('follows')
+        .from('user_follows')
         .select('following_id')
         .eq('follower_id', user.id)
       const ids = (following ?? []).map((f: { following_id: string }) => f.following_id)
       if (ids.length > 0) {
         query = query.in('user_id', ids)
       } else {
-        return NextResponse.json({ posts: [], hasMore: false })
+        return NextResponse.json({ posts: [], hasMore: false, message: 'no_following' })
       }
     } else if (legacyType && legacyType !== 'all') {
-      // Backward compat with the old `type` param
       query = query.eq('type', legacyType)
     }
-    // 'all' falls through with no extra filter
+    // 'all'/'discover' falls through — re-ranked below
 
     if (filter !== 'trending') {
       query = query.order('created_at', { ascending: false })
     }
-    query = query.range(offset, offset + limit - 1)
+
+    if (isDiscover) {
+      // Fetch a wider candidate window for re-ranking. Pagination still uses
+      // offset/limit but we widen each page's candidate pool by the multiplier.
+      query = query.range(offset * candidateMultiplier, offset * candidateMultiplier + fetchLimit - 1)
+    } else {
+      query = query.range(offset, offset + limit - 1)
+    }
 
     const { data: posts, error } = await query
 
@@ -104,22 +115,48 @@ export async function GET(req: NextRequest) {
     const commentCountMap: Record<string, number> = {}
     const likeCountMap: Record<string, number> = {}
     const saveCountMap: Record<string, number> = {}
+    const reactionCountsMap: Record<string, { trust: number; love: number; insightful: number; collab: number; total: number }> = {}
+    const userReactionMap: Record<string, string> = {}
+    const topCommentMap: Record<string, { id: string; content: string; author_name: string | null } | null> = {}
+    let followingSet: Set<string> = new Set()
 
     if (posts && posts.length > 0) {
       const postIds = posts.map((p: { id: string }) => p.id)
 
       // Real engagement counts come from the junction tables, not the cached
-      // columns on feed_posts (which may have drifted). Fetch all rows for
-      // the visible post ids in parallel.
-      const [allLikesRes, allSavesRes, commentsRes, userLikesRes, userSavesRes] = await Promise.all([
+      // columns on feed_posts. Run everything in parallel.
+      const [
+        allLikesRes,
+        allSavesRes,
+        commentsRes,
+        userLikesRes,
+        userSavesRes,
+        allReactionsRes,
+        userReactionsRes,
+        topCommentsRes,
+        followingRes,
+      ] = await Promise.all([
         supabase.from('feed_likes').select('post_id').in('post_id', postIds),
         supabase.from('feed_saves').select('post_id').in('post_id', postIds),
         supabase.from('feed_comments').select('post_id').in('post_id', postIds),
         user ? supabase.from('feed_likes').select('post_id').eq('user_id', user.id).in('post_id', postIds) : Promise.resolve({ data: [] }),
         user ? supabase.from('feed_saves').select('post_id').eq('user_id', user.id).in('post_id', postIds) : Promise.resolve({ data: [] }),
+        // Reactions are optional — table may not exist yet. .catch handled below.
+        supabase.from('feed_reactions').select('post_id, reaction_type').in('post_id', postIds),
+        user ? supabase.from('feed_reactions').select('post_id, reaction_type').eq('user_id', user.id).in('post_id', postIds) : Promise.resolve({ data: [] }),
+        // Top comment per post (most recent for now). Limited to 1 per post via
+        // a single query that's grouped client-side.
+        supabase
+          .from('feed_comments')
+          .select('id, post_id, content, created_at, profiles:user_id(full_name)')
+          .in('post_id', postIds)
+          .order('created_at', { ascending: false }),
+        user
+          ? supabase.from('user_follows').select('following_id').eq('follower_id', user.id)
+          : Promise.resolve({ data: [] }),
       ])
 
-      // Build per-post total counts
+      // Per-post counts
       ;((allLikesRes.data ?? []) as { post_id: string }[]).forEach((l) => {
         likeCountMap[l.post_id] = (likeCountMap[l.post_id] ?? 0) + 1
       })
@@ -130,25 +167,112 @@ export async function GET(req: NextRequest) {
         commentCountMap[c.post_id] = (commentCountMap[c.post_id] ?? 0) + 1
       })
 
-      // Per-user flags (which posts the current user has liked/saved)
+      // Reactions per post (per-type counts). Silently ignore if table missing.
+      if (!allReactionsRes.error) {
+        ;((allReactionsRes.data ?? []) as { post_id: string; reaction_type: string }[]).forEach((r) => {
+          if (!reactionCountsMap[r.post_id]) {
+            reactionCountsMap[r.post_id] = { trust: 0, love: 0, insightful: 0, collab: 0, total: 0 }
+          }
+          const m = reactionCountsMap[r.post_id]
+          if (r.reaction_type in m) {
+            (m as Record<string, number>)[r.reaction_type]++
+            m.total++
+          }
+        })
+      }
+
+      if (userReactionsRes && !('error' in userReactionsRes && userReactionsRes.error)) {
+        ;((userReactionsRes.data ?? []) as { post_id: string; reaction_type: string }[]).forEach((r) => {
+          userReactionMap[r.post_id] = r.reaction_type
+        })
+      }
+
+      // Top comment per post — first comment encountered per post id (newest
+      // first because the query was ordered DESC).
+      const seen = new Set<string>()
+      ;((topCommentsRes.data ?? []) as Array<{ id: string; post_id: string; content: string; profiles: { full_name: string | null } | { full_name: string | null }[] | null }>).forEach((c) => {
+        if (seen.has(c.post_id)) return
+        seen.add(c.post_id)
+        const author = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles
+        topCommentMap[c.post_id] = {
+          id: c.id,
+          content: c.content,
+          author_name: author?.full_name ?? null,
+        }
+      })
+
+      // Per-user flags
       likedIds = ((userLikesRes as { data: { post_id: string }[] | null }).data ?? []).map((l) => l.post_id)
       savedIds = ((userSavesRes as { data: { post_id: string }[] | null }).data ?? []).map((s) => s.post_id)
+
+      // Followed users (boost their posts in Discover ranking)
+      followingSet = new Set(((followingRes.data ?? []) as { following_id: string }[]).map(f => f.following_id))
     }
 
-    const enriched = (posts ?? []).map((p: Record<string, unknown>) => ({
-      ...p,
-      // Override the cached count columns with real row counts. views_count
-      // has no junction table — left as the cached value (which is fine; it
-      // increments deterministically) and falls back to 0 if missing.
-      likes_count: likeCountMap[p.id as string] ?? 0,
-      saves_count: saveCountMap[p.id as string] ?? 0,
-      comments_count: commentCountMap[p.id as string] ?? 0,
-      views_count: Number((p as { views_count?: number }).views_count ?? 0),
-      liked: likedIds.includes(p.id as string),
-      saved: savedIds.includes(p.id as string),
-    }))
+    let enriched = (posts ?? []).map((p: Record<string, unknown>) => {
+      const realLikes = likeCountMap[p.id as string] ?? 0
+      const realComments = commentCountMap[p.id as string] ?? 0
+      const reactions = reactionCountsMap[p.id as string] ?? { trust: 0, love: 0, insightful: 0, collab: 0, total: 0 }
+      return {
+        ...p,
+        likes_count: realLikes,
+        saves_count: saveCountMap[p.id as string] ?? 0,
+        comments_count: realComments,
+        views_count: Number((p as { views_count?: number }).views_count ?? 0),
+        reactions,
+        user_reaction: userReactionMap[p.id as string] ?? null,
+        top_comment: topCommentMap[p.id as string] ?? null,
+        liked: likedIds.includes(p.id as string),
+        saved: savedIds.includes(p.id as string),
+      }
+    })
 
-    return NextResponse.json({ posts: enriched, hasMore: enriched.length === limit })
+    // ── Smart Discover ranking ───────────────────────────────────────────────
+    // Score = engagementWeight * (likes + 2*comments + reactions)
+    //       + recencyWeight * 1/(1 + ageHours)
+    //       + trustWeight * sqrt(authorTrust)
+    //       + followBoost (if author is followed by viewer)
+    if (isDiscover) {
+      const now = Date.now()
+      const W_ENGAGEMENT = 1.0
+      const W_RECENCY    = 80.0
+      const W_TRUST      = 0.4
+      const FOLLOW_BOOST = 25.0
+
+      enriched = enriched
+        .map((p: Record<string, unknown>) => {
+          const created = new Date(p.created_at as string).getTime()
+          const ageHours = Math.max(0.5, (now - created) / 3_600_000)
+          const recencyScore = 1 / (1 + ageHours / 6) // half-life ~6h
+          const likes = (p.likes_count as number) ?? 0
+          const comments = (p.comments_count as number) ?? 0
+          const reactionsTotal = ((p.reactions as { total?: number })?.total) ?? 0
+          const engagement = likes + 2 * comments + reactionsTotal
+          const profile = p.profiles as { trust_balance?: number } | { trust_balance?: number }[] | null
+          const author = Array.isArray(profile) ? profile[0] : profile
+          const trustScore = Math.sqrt(Math.max(0, author?.trust_balance ?? 0))
+          const isFollowed = user && followingSet.has(p.user_id as string)
+          const score =
+            W_ENGAGEMENT * engagement +
+            W_RECENCY    * recencyScore +
+            W_TRUST      * trustScore +
+            (isFollowed ? FOLLOW_BOOST : 0)
+          return { ...p, _score: score }
+        })
+        .sort((a, b) => (b._score as number) - (a._score as number))
+        .slice(0, limit)
+        .map((p: Record<string, unknown>) => {
+          // Strip internal score before sending to client
+          const { _score, ...rest } = p as Record<string, unknown> & { _score?: number }
+          void _score
+          return rest
+        })
+    }
+
+    return NextResponse.json({
+      posts: enriched,
+      hasMore: enriched.length === limit,
+    })
   } catch (err) {
     console.error('[feed/posts GET]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
