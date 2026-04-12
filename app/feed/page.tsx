@@ -11,18 +11,6 @@ import { createClient } from '@/lib/supabase/client'
 type FeedScope = 'discover' | 'following'
 type Filter = 'all' | 'photos' | 'videos' | 'articles' | 'services' | 'jobs' | 'events' | 'trending'
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-const COMPOSER_ACTIONS = [
-  { icon: '📷', label: 'Photo',   type: 'photo'   },
-  { icon: '🎥', label: 'Video',   type: 'video'   },
-  { icon: '🔗', label: 'Link',    type: 'link'    },
-  { icon: '📝', label: 'Article', type: 'article' },
-  { icon: '💼', label: 'Job',     type: 'job'     },
-  { icon: '📅', label: 'Event',   type: 'event'   },
-  { icon: '🛍',  label: 'Listing', type: 'service' },
-]
-
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'all',      label: 'All'      },
   { key: 'photos',   label: 'Photos'   },
@@ -48,6 +36,13 @@ const EMPTY_META: Record<Filter, { icon: string; title: string; sub: string }> =
 }
 
 // ── Composer ──────────────────────────────────────────────────────────────────
+// Note: the previous version of this card had a row of quick-action icons
+// (Photo / Video / Article / Job / Event / Listing) that navigated to
+// /create?type=X. Those labels were almost identical to the filter pills
+// rendered just below the composer, so users were clicking them expecting
+// to filter the feed and getting navigated to the create page instead.
+// We removed the icon row — the "What's on your mind?" button still goes
+// to /create where the type picker lives.
 
 function ComposerCard() {
   const router   = useRouter()
@@ -69,47 +64,34 @@ function ComposerCard() {
     load()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const goCreate = (type?: string) => router.push(type ? `/create?type=${type}` : '/create')
-
   return (
     <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '1rem 1.25rem', marginBottom: '0.85rem' }}>
-      {/* Avatar + fake text input */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <Avatar url={avatarUrl} name={userName} size={40} />
         <button
-          onClick={() => goCreate()}
+          onClick={() => router.push('/create')}
           style={{ flex: 1, textAlign: 'left', background: '#0f172a', border: '1px solid #334155', borderRadius: '999px', padding: '0.65rem 1.1rem', fontSize: '0.9rem', color: '#475569', cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}
         >
           What&apos;s on your mind?
         </button>
+        <button
+          onClick={() => router.push('/create')}
+          style={{ flexShrink: 0, background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 8, padding: '0.55rem 1rem', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+          title="Create a new post"
+        >
+          + Post
+        </button>
       </div>
-
-      {/* Divider */}
-      <div style={{ height: '1px', background: '#334155', margin: '0.85rem 0 0.65rem' }} />
-
-      {/* Quick-action icon row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around' }}>
-        {COMPOSER_ACTIONS.map(({ icon, label, type }) => (
-          <button
-            key={type}
-            onClick={() => goCreate(type)}
-            title={label}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.35rem 0.5rem', background: 'none', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#64748b', fontSize: '0.78rem', fontWeight: 500, transition: 'color 0.15s', fontFamily: 'inherit' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#38bdf8' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#64748b' }}
-          >
-            <span style={{ fontSize: '1.05rem', lineHeight: 1 }}>{icon}</span>
-            <span className="composer-label" style={{ display: 'none' }}>{label}</span>
-          </button>
-        ))}
-      </div>
-
-      <style>{`@media (min-width: 520px) { .composer-label { display: inline !important; } }`}</style>
     </div>
   )
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
+
+// Read initial filter from URL once on mount. Server-rendered first paint
+// always sees `all` to avoid hydration mismatches; the effect below restores
+// the URL filter on the client.
+const VALID_FILTERS: Filter[] = ['all', 'photos', 'videos', 'articles', 'services', 'jobs', 'events', 'trending']
 
 export default function FeedPage() {
   const [posts,         setPosts]         = useState<FeedPost[]>([])
@@ -123,6 +105,31 @@ export default function FeedPage() {
   const [newPostsAvailable, setNewPostsAvailable] = useState(0)
   const newestSeenAtRef = useRef<string | null>(null)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
+
+  // ── URL <-> filter sync ──
+  // On mount, restore filter from ?filter=X. After mount, every filter
+  // change writes back to the URL via replaceState (no navigation).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const fromUrl = params.get('filter') as Filter | null
+    if (fromUrl && VALID_FILTERS.includes(fromUrl)) {
+      setActiveFilter(fromUrl)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    if (activeFilter === 'all') {
+      params.delete('filter')
+    } else {
+      params.set('filter', activeFilter)
+    }
+    const qs = params.toString()
+    const newUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname
+    window.history.replaceState(null, '', newUrl)
+  }, [activeFilter])
 
   // Server param: when scope=following, override the filter param
   const apiFilter = scope === 'following' && activeFilter === 'all' ? 'following' : activeFilter
