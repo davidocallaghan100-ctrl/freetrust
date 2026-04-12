@@ -1,33 +1,63 @@
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sanitizeFilename } from '@/lib/security/sanitize'
 
-// Upload route for feed post media. Handles photos AND videos with different
-// size limits, uploads to the public `feed-media` bucket via the service-role
-// client so storage RLS never blocks the upload. Always returns JSON — the
-// frontend's res.json() can never receive an HTML error page.
+// Legacy server-side upload route. The primary upload path is now a direct
+// client-to-Supabase upload from app/create/page.tsx — this avoids Vercel's
+// 4.5 MB body size limit on Hobby plans and the serverless memory cost of
+// buffering large videos. This route is kept as a fallback for smaller
+// files and any legacy callers that still hit it.
+//
+// Every error path returns JSON so the client's res.json() can never crash
+// on an HTML error page. Every DB operation logs to console for easy
+// diagnosis in Vercel logs.
 
 const BUCKET = 'feed-media'
 
-const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v']
-const ALL_TYPES   = [...IMAGE_TYPES, ...VIDEO_TYPES]
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif']
+const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v', 'video/3gpp']
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024   //  10 MB
 const MAX_VIDEO_BYTES = 100 * 1024 * 1024  // 100 MB
 
 export async function POST(req: NextRequest) {
-  console.log('[upload/media] POST received')
+  const startedAt = Date.now()
+  console.log('[upload/media] POST received at', new Date().toISOString())
 
   try {
+    // ── 0. Env check ─────────────────────────────────────────────────────────
+    // Make a common misconfiguration really obvious in the logs instead of
+    // throwing a generic "Missing Supabase admin credentials" from deep
+    // inside createAdminClient().
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('[upload/media] SUPABASE_SERVICE_ROLE_KEY is not set in the environment')
+      return NextResponse.json(
+        { error: 'Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY is not set. Add it to Vercel env vars and redeploy.' },
+        { status: 500 }
+      )
+    }
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      console.error('[upload/media] NEXT_PUBLIC_SUPABASE_URL is not set')
+      return NextResponse.json(
+        { error: 'Server misconfiguration: NEXT_PUBLIC_SUPABASE_URL is not set.' },
+        { status: 500 }
+      )
+    }
+
     // ── 1. Auth (regular client) ─────────────────────────────────────────────
     const authClient = await createClient()
     const { data: { user }, error: authError } = await authClient.auth.getUser()
-    if (authError || !user) {
+    if (authError) {
+      console.error('[upload/media] auth error:', authError.message)
+    }
+    if (!user) {
+      console.warn('[upload/media] no user — returning 401')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    console.log('[upload/media] authed user:', user.id)
 
     // ── 2. Parse FormData ────────────────────────────────────────────────────
     let formData: FormData
@@ -86,44 +116,78 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer())
     console.log('[upload/media] buffer:', buffer.byteLength, 'bytes → path:', storagePath)
 
-    const admin = createAdminClient()
+    let admin
+    try {
+      admin = createAdminClient()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[upload/media] createAdminClient threw:', msg)
+      return NextResponse.json({ error: `Server misconfiguration: ${msg}` }, { status: 500 })
+    }
 
     // ── 5. Ensure bucket exists (idempotent) ─────────────────────────────────
-    // If the bucket is missing, create it with public access and the
-    // combined file-type allowlist. If it already exists we swallow the
-    // "already exists" / "duplicate" error.
+    // Do NOT set allowedMimeTypes here — bucket-level MIME restrictions cause
+    // silent upload rejections when a file doesn't match the hardcoded list
+    // (e.g. HEIC from iPhone). We validate MIME types in the application
+    // layer above. The canonical bucket setup lives in
+    // supabase/migrations/20260412_feed_media_bucket.sql which also sets up
+    // RLS policies for direct client uploads.
     const { error: bucketErr } = await admin.storage.createBucket(BUCKET, {
       public: true,
-      fileSizeLimit: MAX_VIDEO_BYTES, // use the larger limit for the bucket
-      allowedMimeTypes: ALL_TYPES,
+      fileSizeLimit: MAX_VIDEO_BYTES,
     })
     if (bucketErr) {
       const msg = bucketErr.message?.toLowerCase() ?? ''
-      if (!msg.includes('already exists') && !msg.includes('duplicate') && !msg.includes('resource already')) {
-        console.warn('[upload/media] createBucket warning (non-fatal):', bucketErr.message)
+      const isAlreadyExists =
+        msg.includes('already exists') ||
+        msg.includes('duplicate') ||
+        msg.includes('resource already') ||
+        msg.includes('violates row-level security') // bucket may exist but we can't see it
+      if (!isAlreadyExists) {
+        console.error('[upload/media] createBucket error:', bucketErr.message)
+      } else {
+        console.log('[upload/media] bucket already exists (ok)')
       }
     }
 
     // ── 6. Upload via service-role client ────────────────────────────────────
+    console.log('[upload/media] uploading to bucket', BUCKET, 'path', storagePath)
     const { data: uploadData, error: uploadError } = await admin.storage
       .from(BUCKET)
       .upload(storagePath, buffer, {
         contentType: file.type,
         upsert: false,
+        cacheControl: '31536000',
       })
 
-    console.log('[upload/media] result — data:', JSON.stringify(uploadData), 'error:', uploadError?.message ?? 'ok')
-
     if (uploadError) {
+      console.error('[upload/media] upload error:', JSON.stringify(uploadError))
+      const msg = uploadError.message || 'unknown error'
+      // Helpful hints for common failures
+      if (msg.toLowerCase().includes('bucket not found')) {
+        return NextResponse.json(
+          { error: 'Upload failed — feed-media bucket does not exist. Run supabase/migrations/20260412_feed_media_bucket.sql.' },
+          { status: 500 }
+        )
+      }
       return NextResponse.json(
-        { error: `Storage upload failed: ${uploadError.message}` },
+        { error: `Storage upload failed: ${msg}` },
         { status: 500 }
       )
     }
 
+    console.log('[upload/media] upload ok:', JSON.stringify(uploadData))
+
     // ── 7. Public URL ────────────────────────────────────────────────────────
     const { data: urlData } = admin.storage.from(BUCKET).getPublicUrl(storagePath)
-    console.log('[upload/media] public URL:', urlData.publicUrl)
+    if (!urlData?.publicUrl) {
+      console.error('[upload/media] getPublicUrl returned nothing')
+      return NextResponse.json(
+        { error: 'Upload succeeded but could not resolve public URL' },
+        { status: 500 }
+      )
+    }
+    console.log('[upload/media] ✓ done in', Date.now() - startedAt, 'ms:', urlData.publicUrl)
 
     return NextResponse.json({
       url: urlData.publicUrl,
@@ -134,7 +198,8 @@ export async function POST(req: NextRequest) {
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    console.error('[upload/media] unhandled:', message, err)
+    const stack    = err instanceof Error ? err.stack : undefined
+    console.error('[upload/media] unhandled:', message, stack)
     return NextResponse.json({ error: `Upload error: ${message}` }, { status: 500 })
   }
 }

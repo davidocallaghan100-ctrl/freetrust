@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -179,24 +180,105 @@ export default function CreatePage() {
   const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null)
   const [linkLoading, setLinkLoading] = useState(false)
 
-  const handleFileUpload = async (file: File, type: 'photo' | 'video' | 'short') => {
+  // Direct client-to-Supabase upload. Bypasses /api/upload/media and Vercel's
+  // 4.5 MB body size limit entirely — the file goes straight from the user's
+  // browser to the feed-media bucket using their authenticated session.
+  //
+  // Requires the feed-media bucket RLS policy from
+  // supabase/migrations/20260412_feed_media_bucket.sql which allows
+  // authenticated users to INSERT into feed-media under their own user id
+  // folder.
+  const handleFileUpload = async (file: File, _type: 'photo' | 'video' | 'short') => {
+    // `_type` is kept for call-site compatibility; the kind is re-derived from
+    // the actual MIME type below so we don't trust the UI's label.
     setUploadingMedia(true)
-    setUploadProgress('Uploading...')
+    setUploadProgress('Uploading…')
     setUploadedMediaUrl(null)
+
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      fd.append('type', type)
-      const res = await fetch('/api/upload/media', { method: 'POST', body: fd })
-      const data = await res.json() as { url?: string; error?: string }
-      if (data.url) {
-        setUploadedMediaUrl(data.url)
-        setUploadProgress('✓ Upload complete')
-      } else {
-        setUploadProgress('Upload failed — ' + (data.error ?? 'unknown error'))
+      // Client-side validation — same rules the API route would have enforced
+      const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif']
+      const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v', 'video/3gpp']
+      const MAX_IMAGE = 10 * 1024 * 1024
+      const MAX_VIDEO = 100 * 1024 * 1024
+
+      const isImage = IMAGE_TYPES.includes(file.type)
+      const isVideo = VIDEO_TYPES.includes(file.type)
+
+      if (!isImage && !isVideo) {
+        setUploadProgress(`Upload failed — unsupported file type: ${file.type || 'unknown'}`)
+        setUploadingMedia(false)
+        return
       }
-    } catch {
-      setUploadProgress('Upload failed')
+
+      const sizeLimit = isVideo ? MAX_VIDEO : MAX_IMAGE
+      if (file.size > sizeLimit) {
+        const mb = Math.round(sizeLimit / 1024 / 1024)
+        setUploadProgress(`Upload failed — file too large (max ${mb} MB)`)
+        setUploadingMedia(false)
+        return
+      }
+
+      // Get the signed-in user — bucket RLS allows inserts only under
+      // authenticated users' own folders
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setUploadProgress('Upload failed — please sign in and try again')
+        setUploadingMedia(false)
+        return
+      }
+
+      // Build a deterministic, safe storage path. Folder layout:
+      //   <kind>/<user_id>/<timestamp>-<random>.<ext>
+      // The second segment MUST be the user id to satisfy the RLS policy.
+      const kind = isVideo ? 'video' : 'photo'
+      const nameParts = (file.name || '').split('.')
+      const rawExt = nameParts.length > 1 ? nameParts.pop()!.toLowerCase() : (isVideo ? 'mp4' : 'jpg')
+      const safeExt = rawExt.replace(/[^a-z0-9]/g, '').slice(0, 5) || (isVideo ? 'mp4' : 'jpg')
+      const storagePath = `${kind}/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${safeExt}`
+
+      setUploadProgress(`Uploading ${(file.size / 1024 / 1024).toFixed(1)} MB…`)
+
+      const { error: uploadError } = await supabase
+        .storage
+        .from('feed-media')
+        .upload(storagePath, file, {
+          contentType: file.type,
+          upsert: false,
+          cacheControl: '31536000',
+        })
+
+      if (uploadError) {
+        // Surface the real Supabase error message so failures can be diagnosed
+        console.error('[create/upload] storage error:', uploadError)
+        const msg = uploadError.message || 'unknown storage error'
+        // Friendly messages for the most common failures
+        if (msg.toLowerCase().includes('bucket not found')) {
+          setUploadProgress('Upload failed — the feed-media bucket does not exist. Run the migration in Supabase SQL editor.')
+        } else if (msg.toLowerCase().includes('row-level security') || msg.toLowerCase().includes('policy')) {
+          setUploadProgress('Upload failed — storage policy blocked the upload. Run the feed-media RLS migration.')
+        } else {
+          setUploadProgress(`Upload failed — ${msg}`)
+        }
+        setUploadingMedia(false)
+        return
+      }
+
+      // Get the public URL — bucket is public so this returns a stable CDN URL
+      const { data: urlData } = supabase.storage.from('feed-media').getPublicUrl(storagePath)
+      if (!urlData?.publicUrl) {
+        setUploadProgress('Upload failed — could not resolve public URL')
+        setUploadingMedia(false)
+        return
+      }
+
+      setUploadedMediaUrl(urlData.publicUrl)
+      setUploadProgress('✓ Upload complete')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[create/upload] unhandled:', err)
+      setUploadProgress(`Upload failed — ${msg}`)
     } finally {
       setUploadingMedia(false)
     }
