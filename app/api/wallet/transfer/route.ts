@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendEmail } from '@/lib/email/send'
 
 export async function POST(req: NextRequest) {
   try {
@@ -225,6 +226,13 @@ export async function POST(req: NextRequest) {
       body: `${senderName} sent you ${symbol}${fmtAmount}${note ? ` — "${note}"` : ''}.`,
       link: '/wallet',
     })
+
+    // Fire-and-forget email (preference-checked, never throws)
+    sendEmail({
+      type: 'transfer_received',
+      userId: recipientId,
+      payload: { senderName, amount, currency, note: note || null },
+    }).catch(() => { /* safety net */ })
 
     return NextResponse.json({
       transfer: { id: transfer.id, amount, currency, recipient: recipient.full_name },

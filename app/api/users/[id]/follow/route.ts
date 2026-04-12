@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { sendEmail } from '@/lib/email/send'
 
 // POST /api/users/[id]/follow — toggle follow on a user
 export async function POST(
@@ -56,6 +57,19 @@ export async function POST(
       console.error('[user follow] insert error:', insertErr)
       return NextResponse.json({ error: insertErr.message }, { status: 500 })
     }
+
+    // Fire-and-forget new_follower email (non-critical; preference-checked)
+    const { data: follower } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .maybeSingle()
+    const followerName = follower?.full_name ?? 'Someone'
+    sendEmail({
+      type: 'new_follower',
+      userId: targetId,
+      payload: { followerName, followerId: user.id },
+    }).catch(() => { /* sendEmail already swallows, but safety net */ })
 
     return NextResponse.json({ following: true })
   } catch (err) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { sendWelcomeEmail } from '@/lib/resend'
+import { sendEmail } from '@/lib/email/send'
 
 // This route handles:
 // 1. Email confirmation links
@@ -138,6 +139,8 @@ export async function GET(request: NextRequest) {
                       body: 'Someone joined FreeTrust using your referral link. Once they complete their first transaction, you\'ll earn ₮50 trust.',
                       link: '/settings?tab=referral',
                     })
+                    // Email the referrer (preference-checked)
+                    sendEmail({ type: 'referral_joined', userId: referrer.id }).catch(() => {})
                   }
                 }
                 // Clear the cookie — referral has been processed

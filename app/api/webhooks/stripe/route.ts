@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendEmail } from "@/lib/email/send";
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-04-10" })
@@ -182,6 +183,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         body: `€${(amountCents / 100).toFixed(2)} has been added to your FreeTrust wallet.`,
         link: '/wallet',
       })
+
+      // Send transactional confirmation email (ignores preferences — payment receipt)
+      sendEmail({
+        type: 'wallet_topup',
+        userId,
+        payload: { amount: amountCents / 100 },
+      }).catch(() => {})
 
       console.log(`[Webhook] Wallet top-up complete: user=${userId} amount=€${amountCents / 100}`)
     } catch (err) {

@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { sendEmail } from '@/lib/email/send'
 
 export async function GET(
   req: NextRequest,
@@ -65,10 +66,10 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to add comment' }, { status: 500 })
     }
 
-    // Increment comments_count
+    // Increment comments_count + email the post author (if not self)
     const { data: postData } = await supabase
       .from('feed_posts')
-      .select('comments_count')
+      .select('user_id, comments_count')
       .eq('id', id)
       .single()
 
@@ -77,6 +78,22 @@ export async function POST(
         .from('feed_posts')
         .update({ comments_count: (postData.comments_count ?? 0) + 1 })
         .eq('id', id)
+
+      // Email the post author (preference-checked, skip self-comments)
+      if (postData.user_id && postData.user_id !== user.id) {
+        const { data: commenter } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .maybeSingle()
+        const commenterName = commenter?.full_name ?? 'Someone'
+        const preview = content.length > 200 ? content.slice(0, 200) + '…' : content
+        sendEmail({
+          type: 'new_comment',
+          userId: postData.user_id,
+          payload: { commenterName, preview, postId: id },
+        }).catch(() => {})
+      }
     }
 
     return NextResponse.json({ success: true, comment })

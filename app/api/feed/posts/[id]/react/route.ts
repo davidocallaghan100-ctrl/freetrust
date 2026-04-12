@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendEmail } from '@/lib/email/send'
 
 const VALID = new Set(['trust', 'love', 'insightful', 'collab'])
 
@@ -66,6 +67,28 @@ export async function POST(
         return NextResponse.json({ error: insertErr.message }, { status: 500 })
       }
       userReaction = type
+
+      // Notify the post author on a new reaction (fire-and-forget,
+      // preference-checked, skips self-reactions). Only fires on the
+      // initial insert path — not on switch-type updates.
+      const { data: postData } = await admin
+        .from('feed_posts')
+        .select('user_id')
+        .eq('id', postId)
+        .maybeSingle()
+      if (postData?.user_id && postData.user_id !== user.id) {
+        const { data: reactor } = await admin
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .maybeSingle()
+        const reactorName = reactor?.full_name ?? 'Someone'
+        sendEmail({
+          type: 'new_reaction',
+          userId: postData.user_id,
+          payload: { reactorName, reactionType: type, postId },
+        }).catch(() => {})
+      }
     }
 
     // Compute fresh counts per type

@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { sendEmail } from '@/lib/email/send'
 
 // GET /api/jobs/[id]/apply — get job detail + user's application status
 export async function GET(
@@ -133,6 +134,19 @@ export async function POST(
     } catch {
       // DB trigger handles this — API call is belt-and-suspenders
     }
+
+    // Notify the job poster by email (preference-checked, fire-and-forget)
+    const { data: applicant } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .maybeSingle()
+    const applicantName = applicant?.full_name ?? 'A member'
+    sendEmail({
+      type: 'new_job_application',
+      userId: job.poster_id,
+      payload: { applicantName, jobTitle: job.title, jobId },
+    }).catch(() => {})
 
     return NextResponse.json({ application, trust_earned: 5 }, { status: 201 })
   } catch (err) {

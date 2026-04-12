@@ -192,3 +192,156 @@ export async function sendWeeklyDigestEmail(to: string, name: string, stats: { n
   `)
   return getResend().emails.send({ from: FROM, to, subject: `Your FreeTrust weekly digest — week of ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`, html })
 }
+
+// ─── Wallet ────────────────────────────────────────────────────────────────────
+
+export async function sendWalletTopupEmail(to: string, name: string, amount: number) {
+  const html = wrap('Wallet topped up', `
+    ${h1('Funds added to your wallet 💳')}
+    ${p(`Hi ${name}, your FreeTrust wallet has been topped up successfully.`)}
+    <div style="background:rgba(56,189,248,0.07);border:1px solid rgba(56,189,248,0.15);border-radius:10px;padding:20px;margin:0 0 20px;text-align:center;">
+      <div style="font-size:13px;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">Amount added</div>
+      <div style="font-size:32px;font-weight:900;color:#38bdf8;">€${amount.toFixed(2)}</div>
+    </div>
+    ${p('You can now use your wallet balance to buy products, book services, transfer to other members, or tip creators.')}
+    <div style="text-align:center;">${btn('Open Wallet', `${BASE_URL}/wallet`)}</div>
+  `)
+  return getResend().emails.send({ from: FROM, to, subject: `€${amount.toFixed(2)} added to your FreeTrust wallet`, html })
+}
+
+export async function sendTransferReceivedEmail(to: string, name: string, senderName: string, amount: number, currency: 'EUR' | 'TRUST', note: string | null) {
+  const symbol = currency === 'EUR' ? '€' : '₮'
+  const fmtAmt = currency === 'EUR' ? amount.toFixed(2) : String(amount)
+  const html = wrap('Transfer received', `
+    ${h1(`${senderName} sent you ${symbol}${fmtAmt}`)}
+    ${p(`Hi ${name}, you just received a transfer on FreeTrust.`)}
+    <div style="background:rgba(56,189,248,0.07);border:1px solid rgba(56,189,248,0.15);border-radius:10px;padding:20px;margin:0 0 16px;text-align:center;">
+      <div style="font-size:13px;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">Received</div>
+      <div style="font-size:32px;font-weight:900;color:#38bdf8;">${symbol}${fmtAmt}</div>
+      <div style="font-size:13px;color:#64748b;margin-top:6px;">from ${senderName}</div>
+    </div>
+    ${note ? `<div style="background:rgba(148,163,184,0.07);border-left:3px solid #38bdf8;border-radius:0 8px 8px 0;padding:12px 16px;margin:0 0 20px;font-size:14px;color:#cbd5e1;font-style:italic;">"${note}"</div>` : ''}
+    <div style="text-align:center;">${btn('Open Wallet', `${BASE_URL}/wallet`)}</div>
+  `)
+  return getResend().emails.send({ from: FROM, to, subject: `${senderName} sent you ${symbol}${fmtAmt} on FreeTrust`, html })
+}
+
+// ─── Referrals ─────────────────────────────────────────────────────────────────
+
+export async function sendReferralJoinedEmail(to: string, name: string) {
+  const html = wrap('New referral', `
+    ${h1('Someone joined using your link 🎉')}
+    ${p(`Hi ${name}, great news — a new member just signed up to FreeTrust using your referral link.`)}
+    ${p('Once they complete their first transaction, you\'ll automatically earn <strong style="color:#38bdf8;">₮50 Trust</strong> as a thank-you from FreeTrust.')}
+    <div style="text-align:center;padding-top:8px;">${btn('View My Referrals', `${BASE_URL}/settings?tab=referral`)}</div>
+  `)
+  return getResend().emails.send({ from: FROM, to, subject: 'Someone joined FreeTrust using your referral link', html })
+}
+
+export async function sendReferralRewardEmail(to: string, name: string, amount: number) {
+  const html = wrap('Referral reward earned', `
+    ${h1(`You earned ₮${amount} Trust! 🎉`)}
+    ${p(`Hi ${name}, your referred member just completed their first transaction.`)}
+    ${trust(amount)}
+    ${p('Thanks for growing the FreeTrust community. Keep sharing your referral link to earn more rewards.')}
+    <div style="text-align:center;">${btn('View My Referrals', `${BASE_URL}/settings?tab=referral`)}</div>
+  `)
+  return getResend().emails.send({ from: FROM, to, subject: `You earned ₮${amount} Trust from a successful referral`, html })
+}
+
+// ─── Post engagement ───────────────────────────────────────────────────────────
+
+export async function sendNewCommentEmail(to: string, name: string, commenterName: string, preview: string, postId: string) {
+  const html = wrap('New comment', `
+    ${h1(`${commenterName} commented on your post`)}
+    ${p(`Hi ${name}, someone just commented on your post:`)}
+    <div style="background:rgba(148,163,184,0.07);border-left:3px solid #38bdf8;border-radius:0 8px 8px 0;padding:12px 16px;margin:0 0 20px;font-size:14px;color:#cbd5e1;font-style:italic;">"${preview}"</div>
+    <div style="text-align:center;">${btn('View Post', `${BASE_URL}/feed/${postId}`)}</div>
+  `)
+  return getResend().emails.send({ from: FROM, to, subject: `${commenterName} commented on your post`, html })
+}
+
+const REACTION_EMOJI: Record<string, string> = {
+  trust: '👍', love: '❤️', insightful: '💡', collab: '🤝',
+}
+
+export async function sendNewReactionEmail(to: string, name: string, reactorName: string, reactionType: string, postId: string) {
+  const emoji = REACTION_EMOJI[reactionType] ?? '❤️'
+  const label = reactionType.charAt(0).toUpperCase() + reactionType.slice(1)
+  const html = wrap('New reaction', `
+    ${h1(`${reactorName} reacted ${emoji} to your post`)}
+    ${p(`Hi ${name}, your post just got a new <strong style="color:#f1f5f9;">${label}</strong> reaction.`)}
+    <div style="text-align:center;">${btn('View Post', `${BASE_URL}/feed/${postId}`)}</div>
+  `)
+  return getResend().emails.send({ from: FROM, to, subject: `${reactorName} reacted to your post`, html })
+}
+
+// ─── Orders (status changes beyond placed/delivered) ──────────────────────────
+
+export async function sendOrderDispatchedEmail(to: string, name: string, orderTitle: string, orderId: string) {
+  const html = wrap('Order dispatched', `
+    ${h1('Your order is on the way 🚚')}
+    ${p(`Hi ${name}, the seller has dispatched your order:`)}
+    <div style="background:rgba(56,189,248,0.07);border:1px solid rgba(56,189,248,0.15);border-radius:10px;padding:16px;margin:0 0 20px;">
+      <div style="font-size:16px;font-weight:700;color:#f1f5f9;">${orderTitle}</div>
+    </div>
+    <div style="text-align:center;">${btn('Track Order', `${BASE_URL}/orders/${orderId}`)}</div>
+  `)
+  return getResend().emails.send({ from: FROM, to, subject: `Order dispatched: ${orderTitle}`, html })
+}
+
+export async function sendOrderCompletedEmail(to: string, name: string, orderTitle: string, orderId: string) {
+  const html = wrap('Order completed', `
+    ${h1('Order completed ✅')}
+    ${p(`Hi ${name}, your order <strong style="color:#f1f5f9;">${orderTitle}</strong> has been marked complete and payment has been released to the seller.`)}
+    ${p('Would you like to leave a review? Great reviews earn you ₮10 Trust and help other buyers.')}
+    <div style="text-align:center;">${btn('Leave a Review', `${BASE_URL}/orders/${orderId}/review`)}</div>
+  `)
+  return getResend().emails.send({ from: FROM, to, subject: `Order completed: ${orderTitle}`, html })
+}
+
+export async function sendOrderDisputedEmail(to: string, name: string, orderTitle: string, orderId: string, reason: string) {
+  const html = wrap('Order disputed', `
+    ${h1('An order has been disputed ⚠️')}
+    ${p(`Hi ${name}, a dispute has been raised on the following order:`)}
+    <div style="background:rgba(248,113,113,0.07);border:1px solid rgba(248,113,113,0.2);border-radius:10px;padding:16px;margin:0 0 16px;">
+      <div style="font-size:16px;font-weight:700;color:#f1f5f9;margin-bottom:8px;">${orderTitle}</div>
+      <div style="font-size:13px;color:#94a3b8;"><strong style="color:#f87171;">Reason:</strong> ${reason}</div>
+    </div>
+    ${p('Our team will review the dispute and contact you if we need more information. You can respond directly on the order page.')}
+    <div style="text-align:center;">${btn('View Order', `${BASE_URL}/orders/${orderId}`)}</div>
+  `)
+  return getResend().emails.send({ from: FROM, to, subject: `Dispute raised: ${orderTitle}`, html })
+}
+
+// ─── Jobs ──────────────────────────────────────────────────────────────────────
+
+export async function sendJobApplicationEmail(to: string, name: string, applicantName: string, jobTitle: string, jobId: string) {
+  const html = wrap('New job application', `
+    ${h1(`${applicantName} applied to your job`)}
+    ${p(`Hi ${name}, you have a new applicant for:`)}
+    <div style="background:rgba(56,189,248,0.07);border:1px solid rgba(56,189,248,0.15);border-radius:10px;padding:16px;margin:0 0 20px;">
+      <div style="font-size:16px;font-weight:700;color:#f1f5f9;">${jobTitle}</div>
+      <div style="font-size:13px;color:#94a3b8;margin-top:4px;">Applicant: ${applicantName}</div>
+    </div>
+    <div style="text-align:center;">${btn('Review Application', `${BASE_URL}/jobs/${jobId}/applications`)}</div>
+  `)
+  return getResend().emails.send({ from: FROM, to, subject: `New application for: ${jobTitle}`, html })
+}
+
+// ─── Badges ────────────────────────────────────────────────────────────────────
+
+export async function sendTrustBadgeEmail(to: string, name: string, badgeName: string, badgeDescription: string) {
+  const html = wrap('New badge earned', `
+    ${h1('You earned a new Trust Badge 🏅')}
+    ${p(`Congratulations ${name}! You just unlocked:`)}
+    <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);border-radius:12px;padding:24px;margin:0 0 20px;text-align:center;">
+      <div style="font-size:32px;margin-bottom:8px;">🏅</div>
+      <div style="font-size:20px;font-weight:800;color:#fbbf24;margin-bottom:6px;">${badgeName}</div>
+      <div style="font-size:13px;color:#94a3b8;">${badgeDescription}</div>
+    </div>
+    ${p('Badges appear on your profile and help build trust with other community members.')}
+    <div style="text-align:center;">${btn('View My Profile', `${BASE_URL}/profile`)}</div>
+  `)
+  return getResend().emails.send({ from: FROM, to, subject: `You earned the ${badgeName} badge on FreeTrust! 🏅`, html })
+}

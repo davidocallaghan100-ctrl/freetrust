@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendEmail } from '@/lib/email/send'
 
 export async function GET(
   req: NextRequest,
@@ -194,6 +195,12 @@ export async function PATCH(
                 body: 'Your referred member just completed their first transaction. Thanks for growing FreeTrust!',
                 link: '/settings?tab=referral',
               })
+              // Email the referrer
+              sendEmail({
+                type: 'referral_reward',
+                userId: pendingReferral.referrer_id,
+                payload: { amount: pendingReferral.reward_amount ?? 50 },
+              }).catch(() => {})
             }
           }
         } catch (err) {

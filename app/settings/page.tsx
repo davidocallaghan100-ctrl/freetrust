@@ -571,6 +571,127 @@ function NotificationsTab({ profile, onSaved }: { profile: Profile; onSaved: (p:
           </button>
         </div>
       </div>
+
+      {/* New: per-email-type preferences backed by notification_preferences table */}
+      <EmailPreferencesCard />
+
+      {toast && <div className="success-toast">{toast}</div>}
+    </div>
+  )
+}
+
+// ── Email preferences (per-type toggles) ──────────────────────────────────────
+
+interface EmailPreference {
+  type: string
+  label: string
+  description: string
+  category: string
+  email_enabled: boolean
+  push_enabled: boolean
+}
+
+const CATEGORY_META: Record<string, { label: string; icon: string }> = {
+  social:   { label: 'Social',       icon: '👥' },
+  commerce: { label: 'Commerce',     icon: '🛍' },
+  wallet:   { label: 'Wallet & Trust', icon: '💳' },
+  account:  { label: 'Account',      icon: '👤' },
+  digest:   { label: 'Digests',      icon: '📰' },
+}
+const CATEGORY_ORDER = ['social', 'commerce', 'wallet', 'account', 'digest']
+
+function EmailPreferencesCard() {
+  const [prefs, setPrefs] = useState<EmailPreference[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState<string | null>(null)
+  const [toast, setToast] = useState('')
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch('/api/settings/notifications')
+        if (res.ok) {
+          const data = await res.json() as { preferences: EmailPreference[] }
+          setPrefs(data.preferences ?? [])
+        }
+      } catch { /* silent */ }
+      finally { setLoading(false) }
+    }
+    load()
+  }, [])
+
+  const toggleEmail = async (type: string, next: boolean) => {
+    // Optimistic update
+    setPrefs(prev => prev.map(p => p.type === type ? { ...p, email_enabled: next } : p))
+    setSaving(type)
+    try {
+      const res = await fetch('/api/settings/notifications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, email_enabled: next }),
+      })
+      if (!res.ok) throw new Error()
+      setToast(next ? 'Notifications enabled' : 'Notifications disabled')
+      setTimeout(() => setToast(''), 2000)
+    } catch {
+      // Rollback
+      setPrefs(prev => prev.map(p => p.type === type ? { ...p, email_enabled: !next } : p))
+      setToast('Could not save — try again')
+      setTimeout(() => setToast(''), 3000)
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="card" style={{ marginTop: 16 }}>
+        <h2 className="section-title">Email notifications by type</h2>
+        <p style={{ color: '#64748b', fontSize: 13 }}>Loading preferences…</p>
+      </div>
+    )
+  }
+
+  const grouped = prefs.reduce((acc, p) => {
+    if (!acc[p.category]) acc[p.category] = []
+    acc[p.category].push(p)
+    return acc
+  }, {} as Record<string, EmailPreference[]>)
+
+  return (
+    <div className="card" style={{ marginTop: 16 }}>
+      <h2 className="section-title">Email notifications</h2>
+      <p className="section-desc">Choose exactly which emails you want to receive. Transactional emails like payment receipts and order confirmations will always be sent.</p>
+
+      {CATEGORY_ORDER.filter(cat => grouped[cat]?.length).map(cat => {
+        const meta = CATEGORY_META[cat]
+        return (
+          <div key={cat} style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>{meta?.icon ?? '•'}</span>
+              <span>{meta?.label ?? cat}</span>
+            </div>
+            {grouped[cat].map(p => (
+              <div key={p.type} className="toggle-row" style={{ opacity: saving === p.type ? 0.6 : 1 }}>
+                <div>
+                  <div className="toggle-label">{p.label}</div>
+                  <div className="toggle-desc">{p.description}</div>
+                </div>
+                <label className="toggle">
+                  <input
+                    type="checkbox"
+                    checked={p.email_enabled}
+                    disabled={saving === p.type}
+                    onChange={e => toggleEmail(p.type, e.target.checked)}
+                  />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+            ))}
+          </div>
+        )
+      })}
+
       {toast && <div className="success-toast">{toast}</div>}
     </div>
   )
