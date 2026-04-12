@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { detectInAppBrowser, type InAppBrowserInfo } from '@/lib/auth/in-app-browser'
+import OpenInBrowserModal from '@/components/OpenInBrowserModal'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -24,6 +26,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [trustToast, setTrustToast] = useState(false)
+  const [inAppInfo, setInAppInfo] = useState<InAppBrowserInfo | null>(null)
 
   // Auto-redirect to onboarding after success — ONLY when we have a session.
   // With email confirmation enabled, signUp returns session=null and we show
@@ -170,16 +173,41 @@ export default function RegisterPage() {
   }
 
   const handleGoogleSignup = async () => {
+    // Google returns Error 403: disallowed_useragent inside WebViews.
+    // Detect the in-app browser BEFORE starting OAuth and show an
+    // instructional modal instead — no code change makes OAuth work
+    // inside Facebook/Instagram/TikTok/etc. in-app browsers.
+    const info = detectInAppBrowser()
+    if (info.isInApp) {
+      console.warn('[register] blocked Google OAuth — in-app browser detected:', info.browserName)
+      setInAppInfo(info)
+      return
+    }
+
     setGoogleLoading(true)
     try {
-      await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
           queryParams: { prompt: 'select_account', access_type: 'offline' },
+          // Explicit default — Supabase performs the window.location.href
+          // navigation internally. We could set this to true to get the
+          // URL back and navigate ourselves, but the default works fine
+          // for normal browsers.
+          skipBrowserRedirect: false,
         },
       })
-    } finally {
+      if (error) {
+        console.error('[register] Google OAuth error:', error)
+        setError(error.message || 'Google sign-in failed. Please try again.')
+        setGoogleLoading(false)
+      }
+      // If no error, Supabase has already navigated away — nothing more to do
+    } catch (err) {
+      console.error('[register] Google OAuth threw:', err)
+      const msg = err instanceof Error ? err.message : 'Google sign-in failed'
+      setError(msg)
       setGoogleLoading(false)
     }
   }
@@ -433,6 +461,10 @@ export default function RegisterPage() {
           <span>₮</span>
           <span>₮25 Trust awarded! Welcome to FreeTrust 🎉</span>
         </div>
+      )}
+
+      {inAppInfo && (
+        <OpenInBrowserModal info={inAppInfo} onClose={() => setInAppInfo(null)} />
       )}
 
       <div className="auth-page">

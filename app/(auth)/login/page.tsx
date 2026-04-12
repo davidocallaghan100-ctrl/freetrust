@@ -4,6 +4,8 @@ import { useState, Suspense } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { detectInAppBrowser, type InAppBrowserInfo } from '@/lib/auth/in-app-browser'
+import OpenInBrowserModal from '@/components/OpenInBrowserModal'
 
 // useSearchParams() requires a Suspense boundary — inner component reads it,
 // outer default export wraps it so static prerendering doesn't fail.
@@ -23,6 +25,7 @@ function LoginForm() {
   const [resetLoading, setResetLoading] = useState(false)
   const [resetSent, setResetSent] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [inAppInfo, setInAppInfo] = useState<InAppBrowserInfo | null>(null)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -72,16 +75,36 @@ function LoginForm() {
   }
 
   const handleGoogleLogin = async () => {
+    // Google returns Error 403: disallowed_useragent inside WebViews
+    // (Facebook, Instagram, TikTok, Line, etc). Detect the in-app browser
+    // BEFORE starting OAuth and show an instructional modal instead.
+    const info = detectInAppBrowser()
+    if (info.isInApp) {
+      console.warn('[login] blocked Google OAuth — in-app browser detected:', info.browserName)
+      setInAppInfo(info)
+      return
+    }
+
     setGoogleLoading(true)
     try {
-      await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
           queryParams: { prompt: 'select_account', access_type: 'offline' },
+          skipBrowserRedirect: false,
         },
       })
-    } finally {
+      if (error) {
+        console.error('[login] Google OAuth error:', error)
+        setError(error.message || 'Google sign-in failed. Please try again.')
+        setGoogleLoading(false)
+      }
+      // If no error, Supabase has already navigated away — nothing more to do
+    } catch (err) {
+      console.error('[login] Google OAuth threw:', err)
+      const msg = err instanceof Error ? err.message : 'Google sign-in failed'
+      setError(msg)
       setGoogleLoading(false)
     }
   }
@@ -312,6 +335,10 @@ function LoginForm() {
           .btn-google { font-size: 14px; }
         }
       `}</style>
+
+      {inAppInfo && (
+        <OpenInBrowserModal info={inAppInfo} onClose={() => setInAppInfo(null)} />
+      )}
 
       <div className="auth-page">
         <div className="blob blob-1" />
