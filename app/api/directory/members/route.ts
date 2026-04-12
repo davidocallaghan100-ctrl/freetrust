@@ -6,11 +6,51 @@ export async function GET() {
   try {
     const supabase = createAdminClient()
 
-    // Fetch all registered profiles (not filtered by full_name — members
-    // who haven't set a name yet will show as "Anonymous" on the card)
+    // ── Backfill missing profiles from auth.users ──────────────────────────
+    // The handle_new_user trigger may not have fired for some users. Ensure
+    // every auth.user has a corresponding profiles row so they show up in
+    // the directory.
+    try {
+      const { data: authUsersData } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+      const authUsers = authUsersData?.users ?? []
+
+      if (authUsers.length > 0) {
+        const { data: existingProfiles } = await supabase
+          .from('profiles')
+          .select('id')
+          .in('id', authUsers.map(u => u.id))
+
+        const existingIds = new Set((existingProfiles ?? []).map((p: { id: string }) => p.id))
+        const missing = authUsers.filter(u => !existingIds.has(u.id))
+
+        if (missing.length > 0) {
+          const rows = missing.map(u => ({
+            id: u.id,
+            email: u.email ?? `${u.id}@placeholder.local`,
+            full_name:
+              (u.user_metadata as Record<string, unknown> | null)?.full_name as string ??
+              (u.user_metadata as Record<string, unknown> | null)?.name as string ??
+              null,
+          }))
+          const { error: insertErr } = await supabase
+            .from('profiles')
+            .upsert(rows, { onConflict: 'id', ignoreDuplicates: true })
+          if (insertErr) {
+            console.error('[members backfill] insert error:', insertErr.message)
+          } else {
+            console.log(`[members backfill] created ${missing.length} missing profile rows`)
+          }
+        }
+      }
+    } catch (backfillErr) {
+      // Non-fatal — continue to fetch what we have
+      console.error('[members backfill] error:', backfillErr)
+    }
+
+    // ── Fetch all profiles ──────────────────────────────────────────────────
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, avatar_url, bio, location, created_at')
+      .select('id, full_name, avatar_url, bio, location, role, created_at')
       .order('created_at', { ascending: false })
       .limit(1000)
 
@@ -45,6 +85,7 @@ export async function GET() {
     const members = (data ?? []).map((p: {
       id: string; full_name: string | null
       avatar_url: string | null; bio: string | null; location: string | null
+      role: string | null; created_at: string
     }) => ({
       id: p.id,
       type: 'individual' as const,
@@ -53,6 +94,8 @@ export async function GET() {
       avatar_url: p.avatar_url ?? null,
       bio: p.bio ?? null,
       location: p.location ?? null,
+      role: p.role ?? null,
+      created_at: p.created_at,
       trust_balance: balanceMap[p.id] ?? 0,
       follower_count: followerMap[p.id] ?? 0,
       skills: [] as string[],

@@ -136,23 +136,28 @@ function CollabPeopleInner() {
         const { data: { user } } = await supabase.auth.getUser()
         setCurrentUserId(user?.id ?? null)
 
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name, avatar_url, bio, location, role, created_at')
-          .is('deleted_at', null)
-          .order('created_at', { ascending: false })
-          .limit(100)
+        // Fetch ALL members via the directory API which uses the admin client,
+        // backfills missing profiles from auth.users, and returns real trust
+        // balances for every user.
+        const res = await fetch('/api/directory/members')
+        if (!res.ok) {
+          console.error('[collab/people] fetch failed:', res.status)
+          return
+        }
+        const { members: apiMembers } = await res.json() as {
+          members: Array<{
+            id: string
+            full_name: string | null
+            avatar_url: string | null
+            bio: string | null
+            location: string | null
+            role: string | null
+            trust_balance: number
+          }>
+        }
 
-        if (profiles && profiles.length > 0) {
-          const ids = profiles.map((p: Record<string, unknown>) => p.id as string)
-
-          // Fetch trust balances (relies on public-read RLS policy on trust_balances)
-          const { data: balances } = await supabase
-            .from('trust_balances')
-            .select('user_id, balance')
-            .in('user_id', ids)
-          const balanceMap: Record<string, number> = {}
-          for (const b of balances ?? []) balanceMap[(b as Record<string, unknown>).user_id as string] = Number((b as Record<string, unknown>).balance ?? 0)
+        if (apiMembers && apiMembers.length > 0) {
+          const ids = apiMembers.map(m => m.id)
 
           // Fetch which of these users the current user is following
           let followingIds = new Set<string>()
@@ -171,17 +176,20 @@ function CollabPeopleInner() {
           }
           setFollowStates(initialFollowStates)
 
-          setDbMembers(profiles
-            .filter((m: Record<string, unknown>) => String(m.id) !== user?.id)
-            .map((m: Record<string, unknown>) => ({
-              id: String(m.id),
-              full_name: m.full_name as string | null,
-              avatar_url: m.avatar_url as string | null,
-              bio: m.bio as string | null,
-              location: m.location as string | null,
-              role: m.role as string | null,
-              trust_balance: balanceMap[String(m.id)] ?? 0,
-            })).sort((a, b) => b.trust_balance - a.trust_balance))
+          setDbMembers(apiMembers
+            .filter(m => m.id !== user?.id)
+            .map(m => ({
+              id: m.id,
+              full_name: m.full_name,
+              avatar_url: m.avatar_url,
+              bio: m.bio,
+              location: m.location,
+              role: m.role,
+              trust_balance: m.trust_balance ?? 0,
+            }))
+            .sort((a, b) => b.trust_balance - a.trust_balance))
+        } else {
+          setDbMembers([])
         }
       } catch (err) {
         console.error('[collab/people] load error:', err)

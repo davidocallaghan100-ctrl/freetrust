@@ -40,11 +40,14 @@ const S: Record<string, React.CSSProperties> = {
   card: { background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', transition: 'border-color 0.15s, transform 0.15s', cursor: 'default' },
 }
 
+const PAGE_SIZE = 24
+
 export default function MemberDirectoryPage() {
   const [activeCategory, setActiveCategory] = useState('All')
   const [search, setSearch] = useState('')
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
   useEffect(() => {
     async function load() {
@@ -89,6 +92,12 @@ export default function MemberDirectoryPage() {
     const nameMatch = !q || (m.full_name ?? '').toLowerCase().includes(q) || (m.bio ?? '').toLowerCase().includes(q) || (m.location ?? '').toLowerCase().includes(q)
     return categoryMatch(m, activeCategory) && nameMatch
   })
+
+  // Reset pagination whenever the filter changes
+  useEffect(() => { setVisibleCount(PAGE_SIZE) }, [search, activeCategory])
+
+  const visible = filtered.slice(0, visibleCount)
+  const hasMore = visible.length < filtered.length
 
   return (
     <div style={S.page}>
@@ -149,7 +158,7 @@ export default function MemberDirectoryPage() {
           </div>
         )}
 
-        {filtered.map(member => {
+        {visible.map(member => {
           const name = member.full_name ?? 'Anonymous'
           return (
             <Link key={member.id} href={`/profile?id=${member.id}`} className="member-card" style={S.card}>
@@ -184,6 +193,17 @@ export default function MemberDirectoryPage() {
           )
         })}
       </div>
+
+      {hasMore && (
+        <div style={{ textAlign: 'center', padding: '0 1.5rem 2rem' }}>
+          <button
+            onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+            style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 10, padding: '0.75rem 2rem', color: '#38bdf8', fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', minHeight: 44 }}
+          >
+            Load more ({filtered.length - visible.length} remaining)
+          </button>
+        </div>
+      )}
     </div>
   )
 }
