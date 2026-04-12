@@ -9,6 +9,47 @@ const stripe = process.env.STRIPE_SECRET_KEY
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://freetrust.co'
 
+// Detect and surface the "Connect not enabled on this Stripe account" error
+// clearly. This is a COMMON setup gotcha: your STRIPE_SECRET_KEY is valid,
+// but the Stripe account that owns it hasn't enabled Connect in the
+// dashboard yet, so stripe.accounts.create() rejects with a message like:
+//
+//   "You can only create new accounts if you've signed up for Connect,
+//    which you can do on the dashboard at
+//    https://dashboard.stripe.com/account/applications/settings."
+//
+// If we get that error we return an actionable 503 so the frontend can
+// show the user a clear "payments are still being set up" toast and so
+// the server log prints the exact steps the operator needs to take.
+function isConnectNotEnabledError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err)
+  return (
+    msg.includes("signed up for Connect") ||
+    msg.includes('sign up for Connect') ||
+    msg.includes('Connect is not enabled') ||
+    msg.includes('connect/accounts/overview')
+  )
+}
+
+const CONNECT_SETUP_STEPS =
+  'Stripe Connect is not enabled on this Stripe account yet. ' +
+  'Operator: open https://dashboard.stripe.com/test/connect/accounts/overview ' +
+  '(or /connect/accounts/overview in live mode), click "Get started", ' +
+  'choose the Express platform type, and complete the Connect platform ' +
+  'application form. Once Connect is approved the Withdraw Earnings ' +
+  'button will work immediately — no code redeploy needed.'
+
+// Warn loudly if the key environment is obviously wrong, e.g. a live key
+// is being used in a preview deploy. We don't block — we just log — because
+// a legitimate production deploy will also use a live key.
+function keyEnvironmentDescription(): string {
+  const key = process.env.STRIPE_SECRET_KEY ?? ''
+  if (key.startsWith('sk_live_')) return 'live'
+  if (key.startsWith('sk_test_')) return 'test'
+  if (key.startsWith('sk_')) return 'unknown-sk'
+  return 'unknown'
+}
+
 // Fetch the Stripe-related profile fields, tolerating the case where the
 // stripe_onboarded migration hasn't been applied yet. If the combined query
 // fails (most likely because stripe_onboarded column is missing in the DB),
@@ -133,7 +174,25 @@ export async function GET() {
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
-        console.error('[GET /api/stripe/connect] stripe.accounts.create failed:', msg)
+        console.error(
+          `[GET /api/stripe/connect] stripe.accounts.create failed ` +
+          `(key_env=${keyEnvironmentDescription()}):`,
+          msg
+        )
+        if (isConnectNotEnabledError(err)) {
+          console.error('[GET /api/stripe/connect] ' + CONNECT_SETUP_STEPS)
+          return NextResponse.json(
+            {
+              error:
+                'Withdrawals are not available yet — Stripe Connect ' +
+                'is still being set up for this platform. Please try ' +
+                'again soon or contact support.',
+              code: 'connect_not_enabled',
+              setup_instructions: CONNECT_SETUP_STEPS,
+            },
+            { status: 503 }
+          )
+        }
         return NextResponse.json(
           { error: `Stripe account creation failed: ${msg}` },
           { status: 502 }
@@ -149,6 +208,20 @@ export async function GET() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error(`[GET /api/stripe/connect] stripe.accounts.retrieve(${accountId}) failed:`, msg)
+      if (isConnectNotEnabledError(err)) {
+        console.error('[GET /api/stripe/connect] ' + CONNECT_SETUP_STEPS)
+        return NextResponse.json(
+          {
+            error:
+              'Withdrawals are not available yet — Stripe Connect ' +
+              'is still being set up for this platform. Please try ' +
+              'again soon or contact support.',
+            code: 'connect_not_enabled',
+            setup_instructions: CONNECT_SETUP_STEPS,
+          },
+          { status: 503 }
+        )
+      }
       return NextResponse.json(
         { error: `Could not verify Stripe account: ${msg}` },
         { status: 502 }
@@ -199,6 +272,20 @@ export async function GET() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[GET /api/stripe/connect] stripe.accountLinks.create failed:', msg)
+      if (isConnectNotEnabledError(err)) {
+        console.error('[GET /api/stripe/connect] ' + CONNECT_SETUP_STEPS)
+        return NextResponse.json(
+          {
+            error:
+              'Withdrawals are not available yet — Stripe Connect ' +
+              'is still being set up for this platform. Please try ' +
+              'again soon or contact support.',
+            code: 'connect_not_enabled',
+            setup_instructions: CONNECT_SETUP_STEPS,
+          },
+          { status: 503 }
+        )
+      }
       return NextResponse.json(
         { error: `Could not start Stripe onboarding: ${msg}` },
         { status: 502 }
@@ -272,6 +359,20 @@ export async function POST(req: NextRequest) {
         `[POST /api/stripe/connect] stripe.accounts.retrieve(${profile.stripe_account_id}) failed:`,
         msg
       )
+      if (isConnectNotEnabledError(err)) {
+        console.error('[POST /api/stripe/connect] ' + CONNECT_SETUP_STEPS)
+        return NextResponse.json(
+          {
+            error:
+              'Withdrawals are not available yet — Stripe Connect ' +
+              'is still being set up for this platform. Please try ' +
+              'again soon or contact support.',
+            code: 'connect_not_enabled',
+            setup_instructions: CONNECT_SETUP_STEPS,
+          },
+          { status: 503 }
+        )
+      }
       return NextResponse.json(
         { error: `Could not verify Stripe account: ${msg}` },
         { status: 502 }
@@ -305,6 +406,20 @@ export async function POST(req: NextRequest) {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         console.error('[POST /api/stripe/connect] stripe.accounts.createLoginLink failed:', msg)
+        if (isConnectNotEnabledError(err)) {
+          console.error('[POST /api/stripe/connect] ' + CONNECT_SETUP_STEPS)
+          return NextResponse.json(
+            {
+              error:
+                'Withdrawals are not available yet — Stripe Connect ' +
+                'is still being set up for this platform. Please try ' +
+                'again soon or contact support.',
+              code: 'connect_not_enabled',
+              setup_instructions: CONNECT_SETUP_STEPS,
+            },
+            { status: 503 }
+          )
+        }
         return NextResponse.json(
           { error: `Could not open Stripe dashboard: ${msg}` },
           { status: 502 }

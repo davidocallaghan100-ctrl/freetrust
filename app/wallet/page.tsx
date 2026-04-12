@@ -453,7 +453,13 @@ function WalletPageInner() {
   const [withdrawing,   setWithdrawing]   = useState(false)
 
   const searchParams = useSearchParams()
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000) }
+  // Default toast duration is 4s, but callers can pass a longer one for
+  // messages the user actually needs to read (e.g. "withdrawals are still
+  // being set up" explanation for the Stripe Connect gate).
+  const showToast = (msg: string, durationMs = 4000) => {
+    setToast(msg)
+    setTimeout(() => setToast(null), durationMs)
+  }
 
   // Handle Stripe redirect back after top-up
   // The webhook may not have fired yet, so poll a few times until the deposit
@@ -582,9 +588,21 @@ function WalletPageInner() {
       // { onboarded: true } for an account Stripe confirms is fully
       // enabled. Any error comes back as { error } with a non-2xx status.
       const res = await fetch('/api/stripe/connect', { cache: 'no-store' })
-      const d = await res.json() as { url?: string; onboarded?: boolean; error?: string }
+      const d = await res.json() as {
+        url?: string
+        onboarded?: boolean
+        error?: string
+        code?: string
+      }
       console.log('[wallet] /api/stripe/connect GET response', { status: res.status, ...d })
       if (!res.ok) {
+        // Stripe Connect hasn't been enabled on the platform's Stripe
+        // account yet — not a user-level error. Show the message a bit
+        // longer so people actually read it.
+        if (d.code === 'connect_not_enabled') {
+          showToast(d.error ?? 'Withdrawals are still being set up', 8000)
+          return
+        }
         showToast(d.error ?? `Could not start withdrawal (HTTP ${res.status})`)
         return
       }
@@ -601,9 +619,17 @@ function WalletPageInner() {
           cache: 'no-store',
           body: JSON.stringify({ action: 'dashboard' }),
         })
-        const dashData = await dashRes.json() as { url?: string; error?: string }
+        const dashData = await dashRes.json() as {
+          url?: string
+          error?: string
+          code?: string
+        }
         console.log('[wallet] /api/stripe/connect POST response', { status: dashRes.status, ...dashData })
         if (!dashRes.ok) {
+          if (dashData.code === 'connect_not_enabled') {
+            showToast(dashData.error ?? 'Withdrawals are still being set up', 8000)
+            return
+          }
           showToast(dashData.error ?? `Could not open Stripe dashboard (HTTP ${dashRes.status})`)
           return
         }
