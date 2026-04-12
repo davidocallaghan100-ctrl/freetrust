@@ -36,7 +36,13 @@ const S: Record<string, React.CSSProperties> = {
   page: { minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64 },
   hero: { background: 'linear-gradient(180deg,rgba(56,189,248,0.07) 0%,transparent 100%)', padding: '2.5rem 1.5rem 2rem', borderBottom: '1px solid rgba(56,189,248,0.08)' },
   inner: { maxWidth: 1200, margin: '0 auto' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: '1.25rem', padding: '2rem 1.5rem', maxWidth: 1200, margin: '0 auto' },
+  // minmax(min(100%, 280px), 1fr) — the inner min() allows the column to
+  // shrink below 280px on narrow phones (iPhone SE is 320px wide, and after
+  // the 1rem mobile padding the grid only has 288px of space). Without this,
+  // a flat minmax(300px, 1fr) forces a 300px column that overflows the
+  // container, which on mobile Safari causes horizontal scroll and can clip
+  // newly-inserted rows at the top of the grid off-screen.
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '1.25rem', padding: '2rem 1.5rem', maxWidth: 1200, margin: '0 auto' },
   card: { background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', transition: 'border-color 0.15s, transform 0.15s', cursor: 'default' },
 }
 
@@ -243,16 +249,18 @@ export default function MemberDirectoryPage() {
         </div>
       )}
       {/*
-        Mobile bottom spacer — the app shell has a ~88px fixed bottom nav
-        on screens under 800px that would otherwise bury the last row of
-        cards and the Load More button. This invisible div pushes content
-        up by (88px + safe-area-inset-bottom) on mobile only, so every
-        member card and the Load More button remain tappable.
+        Mobile bottom spacer — the BottomNav component is position:fixed at
+        bottom:0 with height 64px + safe-area-inset-bottom, and is only
+        visible below 768px (matches BottomNav.tsx). globals.css already
+        reserves 72px via .ft-page-content padding-bottom, but that value
+        does NOT include env(safe-area-inset-bottom), so on phones with a
+        home indicator the last row of cards was being clipped by ~34px.
+        Add just enough extra room to clear the home indicator on mobile.
       */}
       <div aria-hidden className="member-mobile-spacer" style={{ height: 0 }} />
       <style>{`
-        @media (max-width: 800px) {
-          .member-mobile-spacer { height: calc(88px + env(safe-area-inset-bottom, 0px)) !important; }
+        @media (max-width: 767px) {
+          .member-mobile-spacer { height: env(safe-area-inset-bottom, 0px) !important; }
         }
       `}</style>
     </div>

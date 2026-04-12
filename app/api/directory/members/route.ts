@@ -2,49 +2,141 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+// Structured diagnostic info returned in the response body. Surfaced in the
+// browser Network tab as JSON so issues can be debugged without SSH access
+// to Vercel logs. `members` is the render data; `_diagnostic` is for
+// debugging only and can be ignored by callers.
+interface Diagnostic {
+  auth_users_fetched: number
+  auth_users_pages_fetched: number
+  profiles_existing: number
+  profiles_missing: number
+  profiles_upserted: number
+  profiles_upsert_error: string | null
+  profiles_total_after: number
+  duration_ms: number
+}
+
 export async function GET() {
+  const startedAt = Date.now()
+  const diag: Diagnostic = {
+    auth_users_fetched: 0,
+    auth_users_pages_fetched: 0,
+    profiles_existing: 0,
+    profiles_missing: 0,
+    profiles_upserted: 0,
+    profiles_upsert_error: null,
+    profiles_total_after: 0,
+    duration_ms: 0,
+  }
+
   try {
     const supabase = createAdminClient()
 
     // ── Backfill missing profiles from auth.users ──────────────────────────
-    // The handle_new_user trigger may not have fired for some users. Ensure
-    // every auth.user has a corresponding profiles row so they show up in
-    // the directory.
+    // Bug fix (42a9902 was incomplete): supabase.auth.admin.listUsers() is
+    // paginated and only returns one page at a time. The previous version
+    // fetched perPage: 1000 and assumed that covered everything. If the
+    // project has more than 1000 users, OR if the default sort order is
+    // created_at ASC (oldest first), newer users were never checked and
+    // never backfilled.
+    //
+    // Fix: iterate through every page until listUsers returns an empty
+    // page, collecting all user ids. Cap at 20 pages (20,000 users) as
+    // a safety net against runaway loops.
     try {
-      const { data: authUsersData } = await supabase.auth.admin.listUsers({ perPage: 1000 })
-      const authUsers = authUsersData?.users ?? []
+      const allAuthUsers: Array<{ id: string; email: string | null; user_metadata: Record<string, unknown> | null }> = []
+      const PER_PAGE = 1000
+      const MAX_PAGES = 20
 
-      if (authUsers.length > 0) {
-        const { data: existingProfiles } = await supabase
-          .from('profiles')
-          .select('id')
-          .in('id', authUsers.map(u => u.id))
+      for (let page = 1; page <= MAX_PAGES; page++) {
+        const { data: pageData, error: pageErr } = await supabase.auth.admin.listUsers({
+          page,
+          perPage: PER_PAGE,
+        })
+        if (pageErr) {
+          console.error(`[members backfill] listUsers page=${page} error:`, pageErr.message)
+          break
+        }
+        const pageUsers = pageData?.users ?? []
+        diag.auth_users_pages_fetched = page
+        if (pageUsers.length === 0) break
+        for (const u of pageUsers) {
+          allAuthUsers.push({
+            id: u.id,
+            email: u.email ?? null,
+            user_metadata: (u.user_metadata as Record<string, unknown> | null) ?? null,
+          })
+        }
+        // Last page — stop iterating
+        if (pageUsers.length < PER_PAGE) break
+      }
 
-        const existingIds = new Set((existingProfiles ?? []).map((p: { id: string }) => p.id))
-        const missing = authUsers.filter(u => !existingIds.has(u.id))
+      diag.auth_users_fetched = allAuthUsers.length
+      console.log(`[members backfill] auth users total: ${allAuthUsers.length} across ${diag.auth_users_pages_fetched} page(s)`)
+
+      if (allAuthUsers.length > 0) {
+        // Fetch the existing profile ids for THIS set of auth users
+        const authIds = allAuthUsers.map(u => u.id)
+
+        // Supabase's .in() can handle ~1000 values comfortably but struggles
+        // past that. Chunk the existence check so large user bases work.
+        const existingIds = new Set<string>()
+        const CHUNK = 500
+        for (let i = 0; i < authIds.length; i += CHUNK) {
+          const slice = authIds.slice(i, i + CHUNK)
+          const { data: existing, error: existErr } = await supabase
+            .from('profiles')
+            .select('id')
+            .in('id', slice)
+          if (existErr) {
+            console.error(`[members backfill] profiles existence check error:`, existErr.message)
+            continue
+          }
+          for (const row of existing ?? []) {
+            existingIds.add((row as { id: string }).id)
+          }
+        }
+
+        diag.profiles_existing = existingIds.size
+        const missing = allAuthUsers.filter(u => !existingIds.has(u.id))
+        diag.profiles_missing = missing.length
+
+        console.log(`[members backfill] existing profiles: ${existingIds.size}, missing: ${missing.length}`)
 
         if (missing.length > 0) {
           const rows = missing.map(u => ({
             id: u.id,
             email: u.email ?? `${u.id}@placeholder.local`,
             full_name:
-              (u.user_metadata as Record<string, unknown> | null)?.full_name as string ??
-              (u.user_metadata as Record<string, unknown> | null)?.name as string ??
+              (u.user_metadata?.full_name as string | undefined) ??
+              (u.user_metadata?.name as string | undefined) ??
               null,
           }))
-          const { error: insertErr } = await supabase
-            .from('profiles')
-            .upsert(rows, { onConflict: 'id', ignoreDuplicates: true })
-          if (insertErr) {
-            console.error('[members backfill] insert error:', insertErr.message)
-          } else {
-            console.log(`[members backfill] created ${missing.length} missing profile rows`)
+
+          // Chunk the upsert too — some Postgres drivers bail on very large
+          // VALUES lists.
+          let totalUpserted = 0
+          for (let i = 0; i < rows.length; i += CHUNK) {
+            const slice = rows.slice(i, i + CHUNK)
+            const { error: upsertErr } = await supabase
+              .from('profiles')
+              .upsert(slice, { onConflict: 'id', ignoreDuplicates: true })
+            if (upsertErr) {
+              console.error(`[members backfill] upsert chunk ${i}..${i + slice.length} error:`, upsertErr.message)
+              diag.profiles_upsert_error = upsertErr.message
+            } else {
+              totalUpserted += slice.length
+            }
           }
+          diag.profiles_upserted = totalUpserted
+          console.log(`[members backfill] upserted ${totalUpserted} / ${missing.length} missing profile rows`)
         }
       }
     } catch (backfillErr) {
-      // Non-fatal — continue to fetch what we have
-      console.error('[members backfill] error:', backfillErr)
+      const msg = backfillErr instanceof Error ? backfillErr.message : String(backfillErr)
+      console.error('[members backfill] top-level error:', msg)
+      diag.profiles_upsert_error = msg
     }
 
     // ── Fetch all profiles ──────────────────────────────────────────────────
@@ -56,8 +148,17 @@ export async function GET() {
 
     if (error) {
       console.error('[GET /api/directory/members] query error:', error.message)
-      return NextResponse.json({ members: [], error: error.message }, { status: 500 })
+      return NextResponse.json(
+        { members: [], error: error.message, _diagnostic: { ...diag, duration_ms: Date.now() - startedAt } },
+        {
+          status: 500,
+          headers: { 'Cache-Control': 'no-store, max-age=0, must-revalidate' },
+        }
+      )
     }
+
+    diag.profiles_total_after = data?.length ?? 0
+    diag.duration_ms = Date.now() - startedAt
 
     const ids = (data ?? []).map((p: { id: string }) => p.id)
 
@@ -101,22 +202,34 @@ export async function GET() {
       skills: [] as string[],
     }))
 
+    console.log(`[GET /api/directory/members] done: ${members.length} members, ${diag.profiles_upserted} backfilled, ${diag.duration_ms}ms`)
+
     return NextResponse.json(
-      { members },
+      { members, _diagnostic: diag },
       {
         // Prevent browser + CDN + service worker caching so new signups
         // show up the moment they appear in the profiles table. Mobile
-        // Safari caches GETs aggressively without this header, which was
-        // causing "new members not showing on mobile" reports.
+        // Safari caches GETs aggressively without this header.
         headers: {
           'Cache-Control': 'no-store, max-age=0, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
         },
       }
     )
   } catch (err) {
-    console.error('[GET /api/directory/members] unexpected error:', err)
-    return NextResponse.json({ members: [] }, {
-      headers: { 'Cache-Control': 'no-store, max-age=0, must-revalidate' },
-    })
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[GET /api/directory/members] unexpected error:', msg, err)
+    diag.duration_ms = Date.now() - startedAt
+    return NextResponse.json(
+      { members: [], error: msg, _diagnostic: diag },
+      {
+        headers: {
+          'Cache-Control': 'no-store, max-age=0, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      }
+    )
   }
 }

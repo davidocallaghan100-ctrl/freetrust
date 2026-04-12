@@ -9,6 +9,21 @@ const withPWA = nextPwa({
   // time a user visits each page; subsequent visits work offline.
   runtimeCaching: [
     {
+      // NEVER cache API routes — they have to hit the origin every time
+      // so backfills, preference updates, new member signups, wallet
+      // balance changes etc. are always fresh. Must be the first rule
+      // so it matches before anything else.
+      urlPattern: ({ url }) => {
+        try {
+          return new URL(url, 'http://x').pathname.startsWith('/api/')
+        } catch {
+          return false
+        }
+      },
+      handler: 'NetworkOnly',
+      method: 'GET',
+    },
+    {
       urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
       handler: 'CacheFirst',
       options: {

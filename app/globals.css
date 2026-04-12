@@ -1220,7 +1220,12 @@ input, textarea, select {
     margin-left: 0 !important;
     width: 100% !important;
     padding-top: 104px !important; /* same offset on mobile */
-    padding-bottom: 72px; /* space for bottom nav */
+    /* BottomNav is fixed at height 64px + env(safe-area-inset-bottom). The
+       previous flat 72px value ignored the safe-area inset, so on phones
+       with a home indicator (iPhone X+) the last row of any page's content
+       was being clipped by ~34px behind the nav. Include the inset so no
+       page ever has content hidden behind the BottomNav. */
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   }
 }
 
