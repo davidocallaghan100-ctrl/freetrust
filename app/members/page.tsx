@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 
 const CATEGORIES = ['All', 'Freelancers', 'Businesses', 'Developers', 'Designers', 'Marketers', 'Consultants']
@@ -47,33 +47,43 @@ export default function MemberDirectoryPage() {
   const [search, setSearch] = useState('')
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch('/api/directory/members')
-        if (res.ok) {
-          const { members: data } = await res.json()
-          setMembers((data ?? []).map((p: {
-            id: string; full_name: string | null; avatar_url: string | null
-            bio: string | null; location: string | null; trust_balance: number
-          }) => ({
-            id: p.id,
-            full_name: p.full_name,
-            avatar_url: p.avatar_url,
-            bio: p.bio,
-            location: p.location,
-            skills: [],
-            account_type: 'individual',
-            trust_balance: p.trust_balance ?? 0,
-          })))
-        }
-      } catch { /* empty */ }
-      finally { setLoading(false) }
+  // Fetch directory with aggressive cache-busting. Uses `cache: 'no-store'`
+  // AND a per-request timestamp query param so mobile Safari (which
+  // ignores Cache-Control on some requests) still gets a fresh response.
+  const load = useCallback(async (mode: 'initial' | 'refresh' = 'initial') => {
+    if (mode === 'refresh') setRefreshing(true)
+    try {
+      const res = await fetch(`/api/directory/members?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'cache-control': 'no-store' },
+      })
+      if (res.ok) {
+        const { members: data } = await res.json()
+        setMembers((data ?? []).map((p: {
+          id: string; full_name: string | null; avatar_url: string | null
+          bio: string | null; location: string | null; trust_balance: number
+        }) => ({
+          id: p.id,
+          full_name: p.full_name,
+          avatar_url: p.avatar_url,
+          bio: p.bio,
+          location: p.location,
+          skills: [],
+          account_type: 'individual',
+          trust_balance: p.trust_balance ?? 0,
+        })))
+      }
+    } catch { /* empty */ }
+    finally {
+      setLoading(false)
+      setRefreshing(false)
     }
-    load()
   }, [])
+
+  useEffect(() => { load('initial') }, [load])
 
   const categoryMatch = (member: Member, cat: string): boolean => {
     if (cat === 'All') return true
@@ -116,13 +126,41 @@ export default function MemberDirectoryPage() {
               👤 Your Profile
             </Link>
           </div>
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem', maxWidth: 500, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem', maxWidth: 500, flexWrap: 'wrap', alignItems: 'center' }}>
             <input
               placeholder="Search members…"
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{ flex: 1, minWidth: 200, background: '#1e293b', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.65rem 1rem', fontSize: '0.9rem', color: '#f1f5f9', outline: 'none' }}
             />
+            <button
+              type="button"
+              onClick={() => load('refresh')}
+              disabled={refreshing || loading}
+              aria-label="Refresh members list"
+              title="Refresh members list"
+              style={{
+                background: 'rgba(56,189,248,0.1)',
+                border: '1px solid rgba(56,189,248,0.25)',
+                borderRadius: 8,
+                padding: '0.65rem 0.85rem',
+                fontSize: '0.9rem',
+                color: '#38bdf8',
+                cursor: (refreshing || loading) ? 'wait' : 'pointer',
+                minHeight: 44,
+                minWidth: 44,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontFamily: 'inherit',
+                opacity: (refreshing || loading) ? 0.6 : 1,
+                transition: 'opacity 0.15s',
+              }}
+            >
+              <span style={{ display: 'inline-block', transform: refreshing ? 'rotate(360deg)' : 'none', transition: refreshing ? 'transform 0.8s linear' : 'none' }}>
+                ↻
+              </span>
+            </button>
             <span style={{ fontSize: '0.82rem', color: '#64748b', alignSelf: 'center' }}>
               {loading ? 'Loading…' : `${filtered.length} members`}
             </span>
@@ -198,12 +236,25 @@ export default function MemberDirectoryPage() {
         <div style={{ textAlign: 'center', padding: '0 1.5rem 2rem' }}>
           <button
             onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
-            style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 10, padding: '0.75rem 2rem', color: '#38bdf8', fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', minHeight: 44 }}
+            style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 10, padding: '0.75rem 2rem', color: '#38bdf8', fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', minHeight: 44, fontFamily: 'inherit' }}
           >
             Load more ({filtered.length - visible.length} remaining)
           </button>
         </div>
       )}
+      {/*
+        Mobile bottom spacer — the app shell has a ~88px fixed bottom nav
+        on screens under 800px that would otherwise bury the last row of
+        cards and the Load More button. This invisible div pushes content
+        up by (88px + safe-area-inset-bottom) on mobile only, so every
+        member card and the Load More button remain tappable.
+      */}
+      <div aria-hidden className="member-mobile-spacer" style={{ height: 0 }} />
+      <style>{`
+        @media (max-width: 800px) {
+          .member-mobile-spacer { height: calc(88px + env(safe-area-inset-bottom, 0px)) !important; }
+        }
+      `}</style>
     </div>
   )
 }

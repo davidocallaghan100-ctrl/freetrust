@@ -101,9 +101,22 @@ export async function GET() {
       skills: [] as string[],
     }))
 
-    return NextResponse.json({ members })
+    return NextResponse.json(
+      { members },
+      {
+        // Prevent browser + CDN + service worker caching so new signups
+        // show up the moment they appear in the profiles table. Mobile
+        // Safari caches GETs aggressively without this header, which was
+        // causing "new members not showing on mobile" reports.
+        headers: {
+          'Cache-Control': 'no-store, max-age=0, must-revalidate',
+        },
+      }
+    )
   } catch (err) {
     console.error('[GET /api/directory/members] unexpected error:', err)
-    return NextResponse.json({ members: [] })
+    return NextResponse.json({ members: [] }, {
+      headers: { 'Cache-Control': 'no-store, max-age=0, must-revalidate' },
+    })
   }
 }
