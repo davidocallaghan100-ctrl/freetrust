@@ -37,6 +37,14 @@ interface SupabaseJob {
   salary_currency: string
   created_at: string
   poster: { id: string; full_name: string | null } | null
+  // Globalisation fields (optional — null for legacy jobs)
+  country?: string | null
+  city?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  location_label?: string | null
+  is_remote?: boolean
+  distance_km?: number | null
 }
 
 const TYPE_LABELS: Record<string, string> = { full_time: 'Full Time', part_time: 'Part Time', contract: 'Contract', freelance: 'Freelance' }

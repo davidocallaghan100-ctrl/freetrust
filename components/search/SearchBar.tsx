@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { searchTypeahead } from "@/lib/search/searchTypeahead"
 import type { TypeaheadResult } from "@/lib/search/types"
+import { parseSearchQuery } from "@/lib/geo"
 
 interface SearchBarProps {
   initialQuery?: string
@@ -77,9 +78,19 @@ export default function SearchBar({
     debounceRef.current = setTimeout(() => fetchSuggestions(value), 250)
   }
 
+  // Parse location keywords from the free-text query. "web design near
+  // Cork" / "plumber in Dublin" / "graphic designer London" all resolve
+  // to ?q=<term>&loc=<city> so every browse page can pick up the
+  // location filter without extra work.
   const buildSearchUrl = (q: string) => {
+    const parsed = parseSearchQuery(q)
     const params = new URLSearchParams(searchParams.toString())
-    params.set("q", q)
+    params.set("q", parsed.term || q)
+    if (parsed.location) {
+      params.set("loc", parsed.location)
+    } else {
+      params.delete("loc")
+    }
     params.delete("page")
     return `/search?${params.toString()}`
   }

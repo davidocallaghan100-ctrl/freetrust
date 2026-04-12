@@ -16,11 +16,28 @@ export async function PATCH(request: NextRequest) {
 
     // full_name is kept in the allowlist for backward compat. The DB trigger
     // profiles_sync_full_name keeps it in sync with first_name + last_name.
-    const allowed = ['first_name', 'last_name', 'full_name', 'username', 'bio', 'location', 'website', 'avatar_url'] as const
+    //
+    // Globalisation fields (country, region, city, lat/lng, location_label,
+    // currency_code) are allowlisted so the settings page can persist the
+    // user's structured location + preferred currency.
+    const allowed = [
+      'first_name', 'last_name', 'full_name', 'username', 'bio', 'website', 'avatar_url',
+      // Legacy free-text
+      'location',
+      // Globalisation
+      'country', 'region', 'city', 'latitude', 'longitude', 'location_label', 'currency_code',
+    ] as const
     type AllowedKey = typeof allowed[number]
     const updates: Partial<Record<AllowedKey, unknown>> = {}
     for (const key of allowed) {
       if (key in body) updates[key] = body[key]
+    }
+    // Normalise country to uppercase ISO-alpha-2
+    if (typeof updates.country === 'string') {
+      updates.country = (updates.country as string).toUpperCase()
+    }
+    if (typeof updates.currency_code === 'string') {
+      updates.currency_code = (updates.currency_code as string).toUpperCase()
     }
 
     if (Object.keys(updates).length === 0) {

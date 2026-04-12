@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { StructuredLocation } from '@/lib/geo'
 
 // Map UI-friendly labels (from the create form) to the DB CHECK constraint
 // values defined in lib/supabase/jobs-schema.sql.
@@ -17,6 +18,61 @@ function fail(message: string, status = 500) {
   return NextResponse.json({ error: message }, { status })
 }
 
+// ── Globalisation helpers ──────────────────────────────────────────────────
+// The create forms may optionally attach a structured location object and
+// the listing's source currency. We normalise both here so every insert
+// path stores the same shape.
+interface ListingLocation extends Partial<StructuredLocation> {
+  is_remote?: boolean
+}
+
+function normaliseLocation(raw: unknown): ListingLocation {
+  if (!raw || typeof raw !== 'object') return {}
+  const r = raw as Record<string, unknown>
+  return {
+    country:        typeof r.country        === 'string' ? r.country.toUpperCase() : null,
+    region:         typeof r.region         === 'string' ? r.region  : null,
+    city:           typeof r.city           === 'string' ? r.city    : null,
+    latitude:       typeof r.latitude       === 'number' ? r.latitude  : null,
+    longitude:      typeof r.longitude      === 'number' ? r.longitude : null,
+    location_label: typeof r.location_label === 'string' ? r.location_label : null,
+    is_remote:      Boolean(r.is_remote),
+  }
+}
+
+// Fetch the latest EUR rate for `from` from frankfurter so every listing
+// is stored with a canonical `price_eur` value. Cached per-cold-start in a
+// module-level map keyed by source currency. Value is the multiplier to
+// go from `from` → EUR (e.g. 0.926 for USD → EUR).
+// Falls back to identity conversion if the API errors, which keeps writes
+// from failing on network issues.
+const EUR_MULTIPLIER_CACHE = new Map<string, { mult: number; at: number }>()
+const RATE_TTL_MS = 60 * 60 * 1000 // 1 hour
+
+async function toEur(amount: number, fromCurrency: string | null | undefined): Promise<number> {
+  if (!Number.isFinite(amount)) return 0
+  const from = (fromCurrency ?? 'EUR').toUpperCase()
+  if (from === 'EUR' || amount === 0) return Math.round(amount * 100) / 100
+
+  const cached = EUR_MULTIPLIER_CACHE.get(from)
+  if (cached && Date.now() - cached.at < RATE_TTL_MS) {
+    return Math.round(amount * cached.mult * 100) / 100
+  }
+  try {
+    const res = await fetch(`https://api.frankfurter.app/latest?from=${encodeURIComponent(from)}&to=EUR`, {
+      cache: 'no-store',
+    })
+    if (!res.ok) throw new Error(`frankfurter ${res.status}`)
+    const d = await res.json() as { rates?: { EUR?: number } }
+    const mult = d.rates?.EUR
+    if (typeof mult !== 'number' || !(mult > 0)) throw new Error('bad rate')
+    EUR_MULTIPLIER_CACHE.set(from, { mult, at: Date.now() })
+    return Math.round(amount * mult * 100) / 100
+  } catch {
+    return Math.round(amount * 100) / 100 // identity fallback
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient()
@@ -30,7 +86,10 @@ export async function POST(req: NextRequest) {
       type?: string
       data?: Record<string, unknown>
       visibility?: string
-      location?: string
+      location?: string                   // legacy free-text (still accepted)
+      structured_location?: unknown       // new: StructuredLocation from LocationPicker
+      is_remote?: boolean                 // new: remote toggle for services/jobs
+      currency_code?: string              // new: ISO 4217 e.g. "GBP"
       taggedUsers?: string
       category?: string
     } | null
@@ -41,6 +100,11 @@ export async function POST(req: NextRequest) {
 
     const { type, data, location, category } = body
     const admin = createAdminClient()
+
+    // Normalise the structured location once — every insert path uses it
+    const struct = normaliseLocation(body.structured_location)
+    const isRemote = Boolean(body.is_remote ?? struct.is_remote ?? false)
+    const currencyCode = (body.currency_code ?? 'EUR').toUpperCase()
 
     let redirectUrl = '/feed'
 
@@ -87,12 +151,19 @@ export async function POST(req: NextRequest) {
       const uiJobType = String(data.job_type ?? 'Full-time')
       const jobType = JOB_TYPE_MAP[uiJobType] ?? 'full_time'
 
-      // location_type is NOT NULL in the schema. Infer from the location
-      // string: empty / "remote" → remote, otherwise on_site.
-      const locText = String(data.location ?? location ?? '').toLowerCase()
-      const locationType =
-        !locText || locText.includes('remote') ? 'remote' :
-        locText.includes('hybrid') ? 'hybrid' : 'on_site'
+      // location_type is NOT NULL in the schema. Prefer explicit is_remote
+      // toggle; otherwise fall back to the legacy free-text inference.
+      const locText = String(data.location ?? location ?? struct.location_label ?? '').toLowerCase()
+      const locationType = isRemote
+        ? 'remote'
+        : locText.includes('hybrid') ? 'hybrid'
+        : struct.latitude != null   ? 'on_site'
+        : !locText || locText.includes('remote') ? 'remote' : 'on_site'
+
+      const salaryMin = data.salary_min ? Number(data.salary_min) : null
+      const salaryMax = data.salary_max ? Number(data.salary_max) : null
+      const salaryMinEur = salaryMin != null ? await toEur(salaryMin, currencyCode) : null
+      const salaryMaxEur = salaryMax != null ? await toEur(salaryMax, currencyCode) : null
 
       const { data: inserted, error } = await admin.from('jobs').insert({
         poster_id: user.id,
@@ -101,12 +172,23 @@ export async function POST(req: NextRequest) {
         requirements: data.requirements ?? null,
         job_type: jobType,
         location_type: locationType,
-        location: data.location ?? location ?? null,
-        salary_min: data.salary_min ? Number(data.salary_min) : null,
-        salary_max: data.salary_max ? Number(data.salary_max) : null,
-        salary_currency: 'GBP',
+        location: struct.location_label ?? data.location ?? location ?? null,
+        salary_min: salaryMin,
+        salary_max: salaryMax,
+        salary_currency: currencyCode,
         category: category ?? 'General',
         status: 'active', // NOT 'open' — schema CHECK expects active/closed/draft
+        // ── Globalisation fields ────────────────────────────────────────
+        country:        struct.country ?? null,
+        region:         struct.region ?? null,
+        city:           struct.city ?? null,
+        latitude:       struct.latitude ?? null,
+        longitude:      struct.longitude ?? null,
+        location_label: struct.location_label ?? null,
+        is_remote:      locationType === 'remote',
+        currency_code:  currencyCode,
+        salary_min_eur: salaryMinEur,
+        salary_max_eur: salaryMaxEur,
       }).select('id').single()
       if (error) {
         console.error('[publish job]', error)
@@ -126,21 +208,33 @@ export async function POST(req: NextRequest) {
       if (!title) return fail('Event title is required', 400)
       if (!startDate) return fail('Event start date is required', 400)
 
+      const ticketPrice = data.price ? Number(data.price) : 0
+      const ticketPriceEur = ticketPrice > 0 ? await toEur(ticketPrice, currencyCode) : 0
+
       const { data: inserted, error } = await admin.from('events').insert({
         creator_id: user.id,
         title,
         description,
         starts_at: startDate,
         ends_at: data.end_date ? String(data.end_date) : null,
-        venue_name: location || null,
-        is_online: false,
+        venue_name: struct.location_label ?? location ?? null,
+        is_online: isRemote,
         cover_image_url: data.cover_image_url ?? null,
-        ticket_price: data.price ? Number(data.price) : 0,
-        is_paid: Boolean(data.price && Number(data.price) > 0),
+        ticket_price: ticketPrice,
+        is_paid: ticketPrice > 0,
         max_attendees: data.max_attendees ? Number(data.max_attendees) : null,
         category: category ?? 'General',
         status: 'published',
         attendee_count: 0,
+        // ── Globalisation fields ────────────────────────────────────────
+        country:          struct.country ?? null,
+        region:           struct.region ?? null,
+        city:             struct.city ?? null,
+        latitude:         struct.latitude ?? null,
+        longitude:        struct.longitude ?? null,
+        location_label:   struct.location_label ?? null,
+        currency_code:    currencyCode,
+        ticket_price_eur: ticketPriceEur,
       }).select('id').single()
       if (error) {
         console.error('[publish event]', error)
@@ -158,14 +252,27 @@ export async function POST(req: NextRequest) {
       if (!title) return fail('Service title is required', 400)
       if (!description) return fail('Service description is required', 400)
 
+      const price = data.price ? Number(data.price) : 0
+      const priceEur = await toEur(price, currencyCode)
+
       const { data: inserted, error } = await admin.from('services').insert({
         seller_id: user.id,
         title,
         description,
-        price: data.price ? Number(data.price) : 0,
-        currency: 'GBP',
+        price,
+        currency: currencyCode,
         category: category ?? 'General',
         status: 'active',
+        // ── Globalisation fields ────────────────────────────────────────
+        country:        struct.country ?? null,
+        region:         struct.region ?? null,
+        city:           struct.city ?? null,
+        latitude:       isRemote ? null : struct.latitude ?? null,
+        longitude:      isRemote ? null : struct.longitude ?? null,
+        location_label: isRemote ? null : struct.location_label ?? null,
+        is_remote:      isRemote,
+        currency_code:  currencyCode,
+        price_eur:      priceEur,
       }).select('id').single()
       if (error) {
         console.error('[publish service]', error)
@@ -188,16 +295,29 @@ export async function POST(req: NextRequest) {
           ? rawImages.split('\n').map(s => s.trim()).filter(Boolean)
           : []
 
+      const price = data.price ? Number(data.price) : 0
+      const priceEur = await toEur(price, currencyCode)
+
       const { error } = await admin.from('listings').insert({
         seller_id: user.id,
         title,
         description,
-        price: data.price ? Number(data.price) : 0,
-        currency: 'GBP',
+        price,
+        currency: currencyCode,
         product_type: 'physical',
         status: 'active',
         images: parsedImages,
         tags: [],
+        // ── Globalisation fields ────────────────────────────────────────
+        country:        struct.country ?? null,
+        region:         struct.region ?? null,
+        city:           struct.city ?? null,
+        latitude:       struct.latitude ?? null,
+        longitude:      struct.longitude ?? null,
+        location_label: struct.location_label ?? null,
+        is_remote:      false,
+        currency_code:  currencyCode,
+        price_eur:      priceEur,
       })
       if (error) {
         console.error('[publish product]', error)

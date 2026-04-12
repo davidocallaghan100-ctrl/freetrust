@@ -2,6 +2,15 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+// GET /api/events — public list with location-aware filtering
+//
+// Query params:
+//   ?upcoming=true         Only events with starts_at >= now
+//   ?category=…            Filter by category
+//   ?country=IE            ISO country filter
+//   ?city=Cork             City (ilike)
+//   ?lat=&lng=&radius_km=  Proximity filter (haversine in JS)
+//   ?online_only=true      Only online events
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -9,27 +18,61 @@ export async function GET(request: NextRequest) {
     const upcoming = searchParams.get('upcoming') === 'true'
     const category = searchParams.get('category')
 
+    const country    = searchParams.get('country')
+    const city       = searchParams.get('city')
+    const latParam   = searchParams.get('lat')
+    const lngParam   = searchParams.get('lng')
+    const radiusParam= searchParams.get('radius_km')
+    const onlineOnly = searchParams.get('online_only') === 'true'
+
+    const lat = latParam ? Number(latParam) : null
+    const lng = lngParam ? Number(lngParam) : null
+    const radius = radiusParam ? Number(radiusParam) : 0
+    const hasGeo = Number.isFinite(lat) && Number.isFinite(lng)
+
     let query = supabase
       .from('events')
       .select(`*, profiles:creator_id(id, full_name, avatar_url)`)
       .eq('status', 'published')
       .order('starts_at', { ascending: true })
 
-    if (upcoming) {
-      query = query.gte('starts_at', new Date().toISOString())
-    }
-    if (category) {
-      query = query.eq('category', category)
-    }
+    if (upcoming)   query = query.gte('starts_at', new Date().toISOString())
+    if (category)   query = query.eq('category', category)
+    if (country)    query = query.eq('country', country.toUpperCase())
+    if (city)       query = query.ilike('city', `%${city}%`)
+    if (onlineOnly) query = query.eq('is_online', true)
 
-    const { data, error } = await query.limit(50)
+    const { data, error } = await query.limit(100)
 
     if (error) {
       // Table may not exist yet — return empty
       return NextResponse.json({ events: [] })
     }
 
-    return NextResponse.json({ events: data ?? [] })
+    let events = data ?? []
+    if (hasGeo && lat !== null && lng !== null) {
+      events = events.map((e: Record<string, unknown>) => {
+        const eLat = typeof e.latitude === 'number' ? e.latitude : null
+        const eLng = typeof e.longitude === 'number' ? e.longitude : null
+        if (eLat == null || eLng == null) return { ...e, distance_km: null }
+        const dLat = ((eLat - lat) * Math.PI) / 180
+        const dLng = ((eLng - lng) * Math.PI) / 180
+        const a =
+          Math.sin(dLat / 2) ** 2 +
+          Math.cos((lat * Math.PI) / 180) * Math.cos((eLat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2
+        const dist = 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        return { ...e, distance_km: dist }
+      })
+      if (radius > 0) {
+        events = events.filter((e: Record<string, unknown>) => {
+          if (e.is_online) return true
+          const d = e.distance_km
+          return typeof d === 'number' && d <= radius
+        })
+      }
+    }
+
+    return NextResponse.json({ events })
   } catch (err) {
     console.error('[GET /api/events]', err)
     return NextResponse.json({ events: [] })

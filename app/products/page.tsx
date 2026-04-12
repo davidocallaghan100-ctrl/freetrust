@@ -1,9 +1,12 @@
 'use client'
-import React, { useState, useEffect, Suspense } from 'react'
+import React, { useState, useEffect, Suspense, useMemo } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useCurrency, type CurrencyCode } from '@/context/CurrencyContext'
+import LocationFilter from '@/components/location/LocationFilter'
+import LocationBadge from '@/components/location/LocationBadge'
+import { EMPTY_LOCATION, haversineKm, type StructuredLocation, type RadiusValue } from '@/lib/geo'
 
 function DeleteModal({ title, onConfirm, onCancel, deleting }: {
   title: string; onConfirm: () => void; onCancel: () => void; deleting: boolean
@@ -50,6 +53,14 @@ interface Product {
   free_shipping?: boolean
   delivery?: string
   wishlist?: boolean
+  // ── Globalisation fields ───────────────────────────────────────────────
+  country?: string | null
+  city?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  location_label?: string | null
+  price_eur?: number | null
+  distance_km?: number | null
 }
 
 // ─── Category data ────────────────────────────────────────────────────────────
@@ -143,6 +154,11 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete }: {
         <div style={{ padding: '0.85rem 0.85rem 0', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
           <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.25 }}>{p.title}</div>
           <p style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.5, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.description}</p>
+          {(p.location_label || p.distance_km != null) && (
+            <div>
+              <LocationBadge label={p.location_label ?? null} distanceKm={p.distance_km ?? null} compact />
+            </div>
+          )}
         </div>
       </Link>
 
@@ -226,6 +242,10 @@ function ProductsInner() {
   const [maxPrice, setMaxPrice] = useState(500)
   const [minRating, setMinRating] = useState(0)
   const [wishlist, setWishlist] = useState<Set<string>>(new Set())
+  // Globalisation — location filter state
+  const [filterLoc, setFilterLoc] = useState<StructuredLocation>(EMPTY_LOCATION)
+  const [radiusKm, setRadiusKm] = useState<RadiusValue>(0)
+  const [countryFilter, setCountryFilter] = useState<string | null>(null)
   const [dbProducts, setDbProducts] = useState<Product[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
@@ -268,11 +288,11 @@ function ProductsInner() {
       try {
         const { data } = await supabase
           .from('listings')
-          .select('id, title, description, price, currency, product_type, tags, images, cover_image, avg_rating, review_count, seller_id, profiles!seller_id(id, full_name, avatar_url)')
+          .select('id, title, description, price, currency, product_type, tags, images, cover_image, avg_rating, review_count, seller_id, country, city, region, latitude, longitude, location_label, currency_code, price_eur, profiles!seller_id(id, full_name, avatar_url)')
           .eq('status', 'active')
           .neq('product_type', 'service')
           .order('created_at', { ascending: false })
-          .limit(100)
+          .limit(200)
         if (data && data.length > 0) {
           setDbProducts(data.map((d: Record<string, unknown>) => {
             const profile = d.profiles as Record<string, unknown> | null
@@ -300,7 +320,7 @@ function ProductsInner() {
               title: String(d.title ?? ''),
               description: String(d.description ?? ''),
               price: Number(d.price ?? 0),
-              currency: String(d.currency ?? 'EUR'),
+              currency: String(d.currency_code ?? d.currency ?? 'EUR'),
               category,
               type: d.product_type === 'digital' ? 'digital' as const : 'physical' as const,
               image: coverImage ?? images[0] ?? undefined,
@@ -308,11 +328,17 @@ function ProductsInner() {
               seller_avatar: profile?.avatar_url ? String(profile.avatar_url) : undefined,
               seller_id: profile?.id ? String(profile.id) : (d.seller_id ? String(d.seller_id) : null),
               seller_verified: true,
-              // Only show real FreeTrust reviews — avg_rating/review_count are 0 until a user leaves one
               rating: Number(d.avg_rating ?? 0),
               review_count: Number(d.review_count ?? 0),
               free_shipping: true,
               delivery: d.product_type === 'digital' ? 'Instant Download' : '3–7 business days',
+              // Globalisation fields
+              country:        (d.country as string | null | undefined) ?? null,
+              city:           (d.city as string | null | undefined) ?? null,
+              latitude:       typeof d.latitude  === 'number' ? (d.latitude as number)  : null,
+              longitude:      typeof d.longitude === 'number' ? (d.longitude as number) : null,
+              location_label: (d.location_label as string | null | undefined) ?? null,
+              price_eur:      typeof d.price_eur === 'number' ? (d.price_eur as number) : null,
             }
           }))
         }
@@ -324,18 +350,55 @@ function ProductsInner() {
 
   const products = dbProducts ?? ([] as Product[])
 
-  let filtered = products.filter(p => {
+  // Country options for the location filter dropdown — derived from the
+  // set of countries actually present in the current product list.
+  const countryOptions = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const p of products) {
+      if (!p.country) continue
+      counts.set(p.country, (counts.get(p.country) ?? 0) + 1)
+    }
+    return Array.from(counts.entries())
+      .map(([code, count]) => ({ code, label: code, count }))
+      .sort((a, b) => b.count - a.count)
+  }, [products])
+
+  // Compute distance_km per product when the filter has geocoords, then
+  // filter by radius and sort so local results show first.
+  let filtered = products.map(p => {
+    if (
+      filterLoc.latitude != null && filterLoc.longitude != null &&
+      p.latitude != null && p.longitude != null
+    ) {
+      return {
+        ...p,
+        distance_km: haversineKm(
+          { latitude: filterLoc.latitude, longitude: filterLoc.longitude },
+          { latitude: p.latitude, longitude: p.longitude }
+        ),
+      }
+    }
+    return p
+  }).filter(p => {
     if (typeFilter !== 'all' && p.type !== typeFilter) return false
     if (catFilter !== 'all' && p.category !== catFilter) return false
     if (p.price > maxPrice) return false
     if (p.rating > 0 && p.rating < minRating) return false
+    if (countryFilter && p.country !== countryFilter) return false
+    if (radiusKm > 0 && filterLoc.latitude != null) {
+      if (p.distance_km == null || p.distance_km > radiusKm) return false
+    }
     return true
   })
 
   filtered = [...filtered].sort((a, b) => {
-    if (sortBy === 'Price: Low') return a.price - b.price
+    if (sortBy === 'Price: Low')  return a.price - b.price
     if (sortBy === 'Price: High') return b.price - a.price
-    if (sortBy === 'Popular') return b.review_count - a.review_count
+    if (sortBy === 'Popular')     return b.review_count - a.review_count
+    // Default: if the user set a location, sort by distance (local-first)
+    if (filterLoc.latitude != null && a.distance_km != null && b.distance_km != null) {
+      return a.distance_km - b.distance_km
+    }
     return 0
   })
 
@@ -387,6 +450,19 @@ function ProductsInner() {
               + List Product
             </Link>
           </div>
+        </div>
+
+        {/* Globalisation — location filter */}
+        <div style={{ marginBottom: '0.75rem' }}>
+          <LocationFilter
+            location={filterLoc}
+            onLocationChange={setFilterLoc}
+            radiusKm={radiusKm}
+            onRadiusChange={setRadiusKm}
+            country={countryFilter}
+            onCountryChange={setCountryFilter}
+            countryOptions={countryOptions}
+          />
         </div>
 
         {/* Type filters */}

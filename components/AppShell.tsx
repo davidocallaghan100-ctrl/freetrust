@@ -1,4 +1,5 @@
 'use client'
+import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Nav from './Nav'
 import Sidebar from './Sidebar'
@@ -8,9 +9,29 @@ import TrustAssistant from './TrustAssistant'
 
 const AUTH_PATHS = ['/login', '/register', '/onboarding']
 
+// Per-session flag — we only trigger IP-based location init once per
+// browser tab to avoid hammering the ipapi.co endpoint.
+const GEO_INIT_SESSION_KEY = 'freetrust_geo_init_v1'
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isAuth = AUTH_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
+
+  // Globalisation: on first authenticated page load, fire the geo-init
+  // endpoint so new users get their country/city/currency defaulted from
+  // their IP. The server checks the profile first and no-ops if already
+  // set, so this is safe to call on every mount. We gate it on sessionStorage
+  // so we don't re-check within the same tab.
+  useEffect(() => {
+    if (isAuth) return
+    if (typeof window === 'undefined') return
+    try {
+      if (sessionStorage.getItem(GEO_INIT_SESSION_KEY)) return
+      sessionStorage.setItem(GEO_INIT_SESSION_KEY, '1')
+    } catch { /* session storage disabled — still fire once per mount */ }
+    // Fire-and-forget — never block the UI on this
+    fetch('/api/me/geo-init', { method: 'POST', cache: 'no-store' }).catch(() => {})
+  }, [isAuth])
 
   if (isAuth) {
     return (

@@ -55,6 +55,15 @@ interface Service {
   location?: string | null
   distance?: number | null
   deliveryTypes?: string[]
+  // Globalisation fields
+  country?: string | null
+  city?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  location_label?: string | null
+  is_remote?: boolean
+  price_eur?: number | null
+  distance_km?: number | null
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -264,11 +273,11 @@ export default function ServicesPage() {
       try {
         const { data } = await supabase
           .from('listings')
-          .select('id, title, description, price, currency, service_mode, tags, location, cover_image, avg_rating, review_count, seller:profiles!seller_id(id, full_name, avatar_url)')
+          .select('id, title, description, price, currency, service_mode, tags, location, cover_image, avg_rating, review_count, country, city, region, latitude, longitude, location_label, is_remote, currency_code, price_eur, seller:profiles!seller_id(id, full_name, avatar_url)')
           .eq('product_type', 'service')
           .eq('status', 'active')
           .order('created_at', { ascending: false })
-          .limit(100)
+          .limit(200)
         if (data) {
           const mapped: Service[] = data.map((s: Record<string, unknown>) => {
             const seller = s.seller as { id?: string; full_name?: string; avatar_url?: string } | null
@@ -286,7 +295,7 @@ export default function ServicesPage() {
               rating: Number(s.avg_rating ?? 4.8),
               reviews: Number(s.review_count ?? 0),
               price: Number(s.price ?? 0),
-              currency: '€',
+              currency: String(s.currency_code ?? s.currency ?? 'EUR'),
               delivery: mode === 'online' ? 'Online' : 'In-person',
               tags: (s.tags as string[]) ?? [],
               category: '',
@@ -295,8 +304,16 @@ export default function ServicesPage() {
               trust: 90,
               badge: Number(s.review_count ?? 0) > 50 ? 'Top Rated' : null,
               mode: mode as 'online' | 'offline' | 'both',
-              location: (s.location as string) ?? null,
+              location: (s.location as string) ?? (s.location_label as string) ?? null,
               distance: null,
+              // Globalisation fields
+              country:        (s.country as string | null | undefined) ?? null,
+              city:           (s.city as string | null | undefined) ?? null,
+              latitude:       typeof s.latitude  === 'number' ? (s.latitude as number)  : null,
+              longitude:      typeof s.longitude === 'number' ? (s.longitude as number) : null,
+              location_label: (s.location_label as string | null | undefined) ?? null,
+              is_remote:      Boolean(s.is_remote),
+              price_eur:      typeof s.price_eur === 'number' ? (s.price_eur as number) : null,
             }
           })
           setServices(mapped)

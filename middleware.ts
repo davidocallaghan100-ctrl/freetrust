@@ -17,19 +17,31 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
   response.headers.set('X-Frame-Options', 'SAMEORIGIN')
   response.headers.set('X-XSS-Protection', '1; mode=block')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+  // geolocation=(self) — allow same-origin access so the marketplace
+  // "Near Me" filter and the events map can detect the user's coordinates
+  // via navigator.geolocation. Camera + microphone stay blocked.
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)')
   response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
   // Content Security Policy
+  //
+  // Added for the globalisation feature:
+  //   * script-src  + https://unpkg.com — Leaflet library (events map)
+  //   * style-src   + https://unpkg.com — Leaflet base stylesheet
+  //   * img-src     already covers https: (OpenStreetMap tile PNGs)
+  //   * connect-src + https://nominatim.openstreetmap.org — location search
+  //                + https://api.frankfurter.app               — live FX rates
+  //                + https://ipapi.co                          — free IP geoloc
+  //                + https://tile.openstreetmap.org            — map tiles
   response.headers.set(
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://unpkg.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https: http:",
       "media-src 'self' https:",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://www.google-analytics.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://www.google-analytics.com https://nominatim.openstreetmap.org https://api.frankfurter.app https://ipapi.co https://tile.openstreetmap.org",
       "frame-src https://js.stripe.com https://hooks.stripe.com",
       "object-src 'none'",
       "base-uri 'self'",

@@ -1,12 +1,17 @@
 'use client'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import LocationFilter from '@/components/location/LocationFilter'
+import LocationBadge from '@/components/location/LocationBadge'
+import EventsMap, { type MapEvent } from '@/components/events/EventsMap'
+import { EMPTY_LOCATION, haversineKm, type StructuredLocation, type RadiusValue } from '@/lib/geo'
 
 type EventMode = 'online' | 'in-person'
 type TimeFilter = 'all' | 'this-week' | 'this-month'
 type ModeFilter = 'all' | 'online' | 'in-person'
 type PriceFilter = 'all' | 'free' | 'paid'
+type ViewMode = 'list' | 'map'
 
 interface EventItem {
   id: string
@@ -23,6 +28,13 @@ interface EventItem {
   organiserTrust?: number
   organiserAvatar?: string
   imageGradient?: string
+  // Globalisation fields
+  country?: string | null
+  city?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  location_label?: string | null
+  distance_km?: number | null
 }
 
 const CAT_COLORS: Record<string, string> = {
@@ -118,9 +130,13 @@ function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void
         </div>
 
         {/* Location */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: '#64748b' }}>
-          <span>📍</span>
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.location}</span>
+        <div>
+          <LocationBadge
+            label={ev.location_label ?? ev.location ?? null}
+            remote={ev.mode === 'online'}
+            distanceKm={ev.distance_km ?? null}
+            compact
+          />
         </div>
 
         {/* Description */}
@@ -172,29 +188,45 @@ export default function EventsPage() {
   const [rsvped, setRsvped] = useState<Set<string>>(new Set())
   const [dbEvents, setDbEvents] = useState<EventItem[] | null>(null)
   const [loading, setLoading] = useState(true)
+  // Globalisation — location filter + view toggle
+  const [filterLoc, setFilterLoc] = useState<StructuredLocation>(EMPTY_LOCATION)
+  const [radiusKm, setRadiusKm] = useState<RadiusValue>(0)
+  const [countryFilter, setCountryFilter] = useState<string | null>(null)
+  const [view, setView] = useState<ViewMode>('list')
 
   useEffect(() => {
     const supabase = createClient()
     async function load() {
       try {
+        // Read from the `events` table (the one the publish route writes
+        // to + the /api/events route reads from + the new globalisation
+        // migration added geo columns to). Previously this page read from
+        // community_events which has none of the new fields.
         const { data } = await supabase
-          .from('community_events')
-          .select('id, title, description, starts_at, ends_at, is_online, meeting_url, attendee_count')
+          .from('events')
+          .select('id, title, description, starts_at, ends_at, is_online, meeting_url, attendee_count, is_paid, ticket_price, country, region, city, latitude, longitude, location_label, venue_name, category')
+          .eq('status', 'published')
           .gte('starts_at', new Date().toISOString())
           .order('starts_at', { ascending: true })
-          .limit(50)
+          .limit(200)
         if (data && data.length > 0) {
           setDbEvents(data.map((e: Record<string, unknown>) => ({
             id: String(e.id),
             title: String(e.title ?? ''),
             date: new Date(String(e.starts_at ?? Date.now())),
             time: e.starts_at ? new Date(String(e.starts_at)).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : undefined,
-            location: e.is_online ? 'Online' : 'In Person',
+            location: (e.location_label as string | null | undefined) ?? (e.venue_name as string | null | undefined) ?? (e.is_online ? 'Online' : 'In Person'),
             mode: e.is_online ? 'online' : 'in-person',
-            price: null,
+            price: typeof e.ticket_price === 'number' ? (e.ticket_price as number) : null,
             rsvpCount: Number(e.attendee_count ?? 0),
             description: String(e.description ?? ''),
-            category: 'Community',
+            category: (e.category as string | null | undefined) ?? 'Community',
+            // Globalisation fields
+            country:        (e.country as string | null | undefined) ?? null,
+            city:           (e.city as string | null | undefined) ?? null,
+            latitude:       typeof e.latitude  === 'number' ? (e.latitude as number)  : null,
+            longitude:      typeof e.longitude === 'number' ? (e.longitude as number) : null,
+            location_label: (e.location_label as string | null | undefined) ?? null,
           })))
         }
       } catch { /* use mock */ }
@@ -205,15 +237,67 @@ export default function EventsPage() {
 
   const events = dbEvents ?? []
 
-  const filtered = events.filter(ev => {
+  // Country options for the LocationFilter dropdown
+  const countryOptions = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const e of events) {
+      if (!e.country) continue
+      counts.set(e.country, (counts.get(e.country) ?? 0) + 1)
+    }
+    return Array.from(counts.entries())
+      .map(([code, count]) => ({ code, label: code, count }))
+      .sort((a, b) => b.count - a.count)
+  }, [events])
+
+  // Compute distance_km, then filter
+  const filtered = events.map(ev => {
+    if (
+      filterLoc.latitude != null && filterLoc.longitude != null &&
+      ev.latitude != null && ev.longitude != null
+    ) {
+      return {
+        ...ev,
+        distance_km: haversineKm(
+          { latitude: filterLoc.latitude, longitude: filterLoc.longitude },
+          { latitude: ev.latitude, longitude: ev.longitude }
+        ),
+      }
+    }
+    return ev
+  }).filter(ev => {
     if (modeFilter !== 'all' && ev.mode !== modeFilter) return false
     if (priceFilter === 'free' && ev.price !== null && ev.price > 0) return false
     if (priceFilter === 'paid' && (ev.price === null || ev.price === 0)) return false
     if (timeFilter === 'this-week' && !isThisWeek(ev.date)) return false
     if (timeFilter === 'this-month' && !isThisMonth(ev.date)) return false
     if (catFilter !== 'All' && ev.category !== catFilter) return false
+    if (countryFilter && ev.country !== countryFilter) return false
+    if (radiusKm > 0 && filterLoc.latitude != null) {
+      // Online events always show through — distance is meaningless
+      if (ev.mode !== 'online' && (ev.distance_km == null || ev.distance_km > radiusKm)) return false
+    }
     return true
   })
+
+  // Sort: local first by distance when a location filter is set
+  const sorted = filterLoc.latitude != null
+    ? [...filtered].sort((a, b) => {
+        const da = typeof a.distance_km === 'number' ? a.distance_km : Number.MAX_VALUE
+        const db = typeof b.distance_km === 'number' ? b.distance_km : Number.MAX_VALUE
+        return da - db
+      })
+    : filtered
+
+  // Events shaped for the Leaflet map component
+  const mapEvents: MapEvent[] = sorted.map(ev => ({
+    id: ev.id,
+    title: ev.title,
+    latitude: ev.latitude ?? null,
+    longitude: ev.longitude ?? null,
+    starts_at: ev.date.toISOString(),
+    city: ev.city ?? null,
+    location_label: ev.location_label ?? null,
+  }))
 
   function handleRsvp(id: string) {
     setRsvped(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
@@ -246,12 +330,48 @@ export default function EventsPage() {
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 1.25rem 1.5rem' }}>
         <div className="ev-header-row" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.5rem' }}>
           <div>
-            <h1 style={{ fontSize: 'clamp(1.6rem,4vw,2.2rem)', fontWeight: 900, margin: '0 0 0.25rem', letterSpacing: '-0.5px' }}>Events</h1>
-            <p style={{ color: '#64748b', margin: 0, fontSize: '0.9rem' }}>{filtered.length} upcoming event{filtered.length !== 1 ? 's' : ''}</p>
+            <h1 style={{ fontSize: 'clamp(1.6rem,4vw,2.2rem)', fontWeight: 900, margin: '0 0 0.25rem', letterSpacing: '-0.5px' }}>🌍 Events</h1>
+            <p style={{ color: '#64748b', margin: 0, fontSize: '0.9rem' }}>{sorted.length} upcoming event{sorted.length !== 1 ? 's' : ''}</p>
           </div>
-          <Link href="/events/create" className="ev-create-btn">
-            + Create Event
-          </Link>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {/* List / Map view toggle */}
+            <div style={{ display: 'flex', background: '#1e293b', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 10, overflow: 'hidden' }}>
+              <button
+                onClick={() => setView('list')}
+                style={{
+                  padding: '8px 14px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                  background: view === 'list' ? '#38bdf8' : 'transparent',
+                  color: view === 'list' ? '#0f172a' : '#94a3b8',
+                  fontFamily: 'inherit',
+                }}
+              >📋 List</button>
+              <button
+                onClick={() => setView('map')}
+                style={{
+                  padding: '8px 14px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                  background: view === 'map' ? '#38bdf8' : 'transparent',
+                  color: view === 'map' ? '#0f172a' : '#94a3b8',
+                  fontFamily: 'inherit',
+                }}
+              >🗺 Map</button>
+            </div>
+            <Link href="/events/create" className="ev-create-btn">
+              + Create Event
+            </Link>
+          </div>
+        </div>
+
+        {/* Globalisation — location filter */}
+        <div style={{ marginBottom: '0.9rem' }}>
+          <LocationFilter
+            location={filterLoc}
+            onLocationChange={setFilterLoc}
+            radiusKm={radiusKm}
+            onRadiusChange={setRadiusKm}
+            country={countryFilter}
+            onCountryChange={setCountryFilter}
+            countryOptions={countryOptions}
+          />
         </div>
 
         {/* Filters */}
@@ -300,12 +420,12 @@ export default function EventsPage() {
               </div>
             ))}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : sorted.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
             <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>📅</div>
             <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.5rem', color: '#f1f5f9' }}>No events found</h2>
             <p style={{ color: '#64748b', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-              {catFilter !== 'All' || modeFilter !== 'all' || priceFilter !== 'all' || timeFilter !== 'all'
+              {catFilter !== 'All' || modeFilter !== 'all' || priceFilter !== 'all' || timeFilter !== 'all' || filterLoc.latitude != null || countryFilter
                 ? 'Try adjusting your filters — or be the first to create an event in this category.'
                 : 'No upcoming events yet — why not create one?'}
             </p>
@@ -313,9 +433,17 @@ export default function EventsPage() {
               Create an Event →
             </Link>
           </div>
+        ) : view === 'map' ? (
+          <EventsMap
+            events={mapEvents}
+            height={520}
+            center={filterLoc.latitude != null && filterLoc.longitude != null
+              ? { lat: filterLoc.latitude, lng: filterLoc.longitude, zoom: 8 }
+              : undefined}
+          />
         ) : (
           <div className="ev-grid">
-            {filtered.map(ev => (
+            {sorted.map(ev => (
               <EventCard key={ev.id} ev={ev} onRsvp={handleRsvp} />
             ))}
           </div>

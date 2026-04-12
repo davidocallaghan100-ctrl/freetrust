@@ -4,6 +4,9 @@ import { useEffect, useState, useRef, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
+import LocationPicker from '@/components/location/LocationPicker'
+import { EMPTY_LOCATION, type StructuredLocation } from '@/lib/geo'
+import { CURRENCIES, useCurrency, type CurrencyCode } from '@/context/CurrencyContext'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -20,6 +23,14 @@ interface Profile {
   privacy_settings: Record<string, unknown> | null
   notification_prefs: Record<string, unknown> | null
   stripe_account_id: string | null
+  // Globalisation fields
+  country?: string | null
+  region?: string | null
+  city?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  location_label?: string | null
+  currency_code?: string | null
 }
 
 interface TrustBalance {
@@ -254,11 +265,21 @@ function AccountTab({
     location: profile.location ?? '',
     website: profile.website ?? '',
   })
+  // Globalisation — structured location + preferred currency
+  const [structLoc, setStructLoc] = useState<StructuredLocation>({
+    country:        profile.country        ?? null,
+    region:         profile.region         ?? null,
+    city:           profile.city           ?? null,
+    latitude:       profile.latitude       ?? null,
+    longitude:      profile.longitude      ?? null,
+    location_label: profile.location_label ?? profile.location ?? null,
+  })
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url ?? '')
   const fileRef = useRef<HTMLInputElement>(null)
+  const { currency, setCurrency } = useCurrency()
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -275,7 +296,21 @@ function AccountTab({
       const res = await fetch('/api/settings/account', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, avatar_url: avatarUrl }),
+        body: JSON.stringify({
+          ...form,
+          avatar_url: avatarUrl,
+          // Globalisation: persist the structured location so browse
+          // pages can default to the user's home city, and the user's
+          // preferred display currency.
+          location:       structLoc.location_label ?? form.location,
+          country:        structLoc.country,
+          region:         structLoc.region,
+          city:           structLoc.city,
+          latitude:       structLoc.latitude,
+          longitude:      structLoc.longitude,
+          location_label: structLoc.location_label,
+          currency_code:  currency.code,
+        }),
       })
       if (res.ok) {
         const data = await res.json()
@@ -390,15 +425,31 @@ function AccountTab({
             placeholder="Tell the community about yourself…"
           />
         </div>
+        <div style={{ marginBottom: 16 }}>
+          <label className="field-label">🌍 Location</label>
+          <LocationPicker
+            value={structLoc}
+            onChange={setStructLoc}
+            placeholder="Dublin, Ireland"
+          />
+          <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+            Used to default your browse filters to listings near you.
+          </div>
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
           <div>
-            <label className="field-label">Location</label>
-            <input
+            <label className="field-label">💱 Preferred currency</label>
+            <select
               className="field-input"
-              value={form.location}
-              onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
-              placeholder="Dublin, Ireland"
-            />
+              value={currency.code}
+              onChange={e => setCurrency(e.target.value as CurrencyCode)}
+            >
+              {CURRENCIES.map(c => (
+                <option key={c.code} value={c.code}>
+                  {c.flag} {c.code} — {c.label}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="field-label">Website</label>
