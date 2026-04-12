@@ -92,12 +92,12 @@ export const EMAIL_TYPE_LABELS: Record<EmailType, { label: string; description: 
 }
 
 // Types that ignore preferences (critical — users always get these)
-const ALWAYS_SEND: Set<EmailType> = new Set([
+const ALWAYS_SEND = new Set<EmailType>([
   'welcome',           // onboarding
   'order_placed',      // transactional — required for receipt
   'order_disputed',    // dispute notice — legal/transactional
   'wallet_topup',      // transactional — payment confirmation
-])
+] as EmailType[])
 
 export type SendEmailParams =
   | { type: 'welcome';             userId: string }

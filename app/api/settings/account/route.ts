@@ -14,7 +14,9 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json()
 
-    const allowed = ['full_name', 'username', 'bio', 'location', 'website', 'avatar_url'] as const
+    // full_name is kept in the allowlist for backward compat. The DB trigger
+    // profiles_sync_full_name keeps it in sync with first_name + last_name.
+    const allowed = ['first_name', 'last_name', 'full_name', 'username', 'bio', 'location', 'website', 'avatar_url'] as const
     type AllowedKey = typeof allowed[number]
     const updates: Partial<Record<AllowedKey, unknown>> = {}
     for (const key of allowed) {

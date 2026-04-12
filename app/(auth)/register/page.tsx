@@ -9,7 +9,7 @@ export default function RegisterPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '', website_url: '' })
+  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', password: '', confirm: '', website_url: '' })
   const [agreeHuman, setAgreeHuman] = useState(false)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
@@ -63,7 +63,8 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    if (!form.name.trim()) { setError('Please enter your full name.'); return }
+    if (!form.first_name.trim()) { setError('Please enter your first name.'); return }
+    if (!form.last_name.trim())  { setError('Please enter your last name.');  return }
     if (!form.email) { setError('Please enter your email address.'); return }
     if (!form.password) { setError('Please choose a password.'); return }
     // Strong password enforcement
@@ -83,11 +84,15 @@ export default function RegisterPage() {
 
     setLoading(true)
     try {
+      const firstName = form.first_name.trim()
+      const lastName  = form.last_name.trim()
+      const fullName  = `${firstName} ${lastName}`.trim()
       const { data: signUpData, error } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
         options: {
-          data: { full_name: form.name.trim() },
+          // handle_new_user() reads all three from raw_user_meta_data
+          data: { first_name: firstName, last_name: lastName, full_name: fullName },
           emailRedirectTo: `${window.location.origin}/auth/callback?next=/feed`,
         },
       })
@@ -243,6 +248,8 @@ export default function RegisterPage() {
         .auth-divider-text { font-size: 12px; color: #475569; white-space: nowrap; }
 
         .auth-field { margin-bottom: 12px; }
+        .auth-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        @media (max-width: 420px) { .auth-row { grid-template-columns: 1fr; gap: 0; } }
         .auth-label { font-size: 13px; font-weight: 500; color: #94a3b8; display: block; margin-bottom: 5px; }
         .auth-input-wrap { position: relative; }
         .auth-input {
@@ -440,19 +447,37 @@ export default function RegisterPage() {
               </div>
 
               <form onSubmit={handleSubmit} noValidate>
-                <div className="auth-field">
-                  <label className="auth-label" htmlFor="reg-name">Full name</label>
-                  <input
-                    id="reg-name"
-                    className="auth-input"
-                    name="name"
-                    type="text"
-                    autoComplete="name"
-                    autoCapitalize="words"
-                    placeholder="David O'Callaghan"
-                    value={form.name}
-                    onChange={handleChange}
-                  />
+                <div className="auth-row">
+                  <div className="auth-field">
+                    <label className="auth-label" htmlFor="reg-first-name">First name</label>
+                    <input
+                      id="reg-first-name"
+                      className="auth-input"
+                      name="first_name"
+                      type="text"
+                      autoComplete="given-name"
+                      autoCapitalize="words"
+                      placeholder="David"
+                      value={form.first_name}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="auth-field">
+                    <label className="auth-label" htmlFor="reg-last-name">Last name</label>
+                    <input
+                      id="reg-last-name"
+                      className="auth-input"
+                      name="last_name"
+                      type="text"
+                      autoComplete="family-name"
+                      autoCapitalize="words"
+                      placeholder="O&rsquo;Callaghan"
+                      value={form.last_name}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
                 </div>
                 <div className="auth-field">
                   <label className="auth-label" htmlFor="reg-email">Email address</label>

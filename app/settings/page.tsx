@@ -10,6 +10,8 @@ import type { User } from '@supabase/supabase-js'
 interface Profile {
   id: string
   full_name: string | null
+  first_name: string | null
+  last_name: string | null
   username: string | null
   bio: string | null
   location: string | null
@@ -245,7 +247,8 @@ function AccountTab({
   onSaved: (p: Profile) => void
 }) {
   const [form, setForm] = useState({
-    full_name: profile.full_name ?? '',
+    first_name: profile.first_name ?? '',
+    last_name: profile.last_name ?? '',
     username: profile.username ?? '',
     bio: profile.bio ?? '',
     location: profile.location ?? '',
@@ -263,6 +266,10 @@ function AccountTab({
   }
 
   const handleSave = async () => {
+    if (!form.first_name.trim() || !form.last_name.trim()) {
+      showToast('First and last name are required.')
+      return
+    }
     setSaving(true)
     try {
       const res = await fetch('/api/settings/account', {
@@ -318,7 +325,7 @@ function AccountTab({
               <img src={avatarUrl} alt="Avatar" className="avatar-img" />
             ) : (
               <div className="avatar-fallback">
-                {getInitials(form.full_name, user.email)}
+                {getInitials(`${form.first_name} ${form.last_name}`.trim(), user.email)}
               </div>
             )}
             <div className="avatar-overlay">
@@ -327,7 +334,9 @@ function AccountTab({
           </div>
           <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
           <div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#f1f5f9' }}>{form.full_name || 'Your Name'}</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#f1f5f9' }}>
+              {`${form.first_name} ${form.last_name}`.trim() || 'Your Name'}
+            </div>
             <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{user.email}</div>
             <button
               onClick={() => fileRef.current?.click()}
@@ -338,26 +347,39 @@ function AccountTab({
           </div>
         </div>
 
-        {/* Fields */}
+        {/* Name fields */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
           <div>
-            <label className="field-label">Full name</label>
+            <label className="field-label">First name</label>
             <input
               className="field-input"
-              value={form.full_name}
-              onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
-              placeholder="Jane Doe"
+              value={form.first_name}
+              onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
+              placeholder="Jane"
+              required
             />
           </div>
           <div>
-            <label className="field-label">Username</label>
+            <label className="field-label">Last name</label>
             <input
               className="field-input"
-              value={form.username}
-              onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
-              placeholder="janedoe"
+              value={form.last_name}
+              onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
+              placeholder="Doe"
+              required
             />
           </div>
+        </div>
+
+        {/* Username */}
+        <div style={{ marginBottom: 16 }}>
+          <label className="field-label">Username</label>
+          <input
+            className="field-input"
+            value={form.username}
+            onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
+            placeholder="janedoe"
+          />
         </div>
         <div style={{ marginBottom: 16 }}>
           <label className="field-label">Bio</label>
