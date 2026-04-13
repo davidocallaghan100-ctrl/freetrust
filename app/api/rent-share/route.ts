@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { toPgUrlArray } from '@/lib/supabase/text-array'
 
 export async function GET(req: NextRequest) {
   try {
@@ -64,16 +65,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Category is required' }, { status: 400 })
     }
 
-    // Sanitise images: keep only http/https URL strings, then format as a
-    // PostgreSQL text[] literal so array_in() handles the cast directly.
-    // Relying on PostgREST's JSON→text[] coercion fails in some Supabase
-    // project versions with "The string did not match the expected pattern."
-    const imageUrls: string[] = Array.isArray(images)
-      ? images.filter((u: unknown): u is string => typeof u === 'string' && /^https?:\/\//.test(u))
-      : []
-    const imagesPg = imageUrls.length === 0
-      ? '{}'
-      : '{' + imageUrls.map(u => '"' + u.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"').join(',') + '}'
+    // Sanitise + encode images as a PostgreSQL text[] literal via the
+    // shared helper. See lib/supabase/text-array.ts for the bug history —
+    // this route used to have the inline implementation; it's been
+    // moved out so listings + products can reuse the same proven path.
+    const imagesPg = toPgUrlArray(images)
 
     const insertPayload = {
       user_id:       user.id,

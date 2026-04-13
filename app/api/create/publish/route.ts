@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { StructuredLocation } from '@/lib/geo'
+import { toPgUrlArray, toPgTagArray } from '@/lib/supabase/text-array'
 
 // Map UI-friendly labels (from the create form) to the DB CHECK constraint
 // values defined in lib/supabase/jobs-schema.sql.
@@ -298,6 +299,12 @@ export async function POST(req: NextRequest) {
       const price = data.price ? Number(data.price) : 0
       const priceEur = await toEur(price, currencyCode)
 
+      // Encode text[] columns as Postgres array literals — workaround
+      // for the "expected pattern" PostgREST coercion bug; see
+      // lib/supabase/text-array.ts for the history.
+      const imagesLiteral = toPgUrlArray(parsedImages)
+      const tagsLiteral   = toPgTagArray([])
+
       const { error } = await admin.from('listings').insert({
         seller_id: user.id,
         title,
@@ -306,8 +313,8 @@ export async function POST(req: NextRequest) {
         currency: currencyCode,
         product_type: 'physical',
         status: 'active',
-        images: parsedImages,
-        tags: [],
+        images: imagesLiteral,
+        tags:   tagsLiteral,
         // ── Globalisation fields ────────────────────────────────────────
         country:        struct.country ?? null,
         region:         struct.region ?? null,

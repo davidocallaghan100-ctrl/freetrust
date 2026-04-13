@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { toPgUrlArray, toPgTagArray } from '@/lib/supabase/text-array'
 
 // GET /api/listings — list active listings (public) or all own listings (authenticated)
 export async function GET(request: NextRequest) {
@@ -87,31 +88,81 @@ export async function POST(request: NextRequest) {
       ? product_type.trim()
       : 'physical'
 
-    const { data: listing, error } = await supabase
-      .from('listings')
-      .insert({
-        seller_id: user.id,
-        title: title.trim(),
-        description: description.trim(),
-        price,
-        currency,
-        product_type: resolvedProductType,
-        category_id: category_id ?? null,
-        category: category ?? null,
-        service_mode: service_mode,
-        location: location ?? null,
-        service_radius: service_radius ?? null,
-        delivery_types: Array.isArray(delivery_types) ? delivery_types : [],
-        tags: Array.isArray(tags) ? tags : [],
-        images: Array.isArray(images) ? images : [],
-        status: 'active',
-      })
-      .select()
-      .single()
+    // Encode every text[] column as a PostgreSQL array literal string
+    // BEFORE the insert. PostgREST's JSON → text[] coercion fails on
+    // some Supabase project versions with "The string did not match the
+    // expected pattern" (see lib/supabase/text-array.ts for the full
+    // history). Images are additionally filtered to http(s) URLs only
+    // so a bad client can't poison the column with garbage.
+    const imagesLiteral        = toPgUrlArray(images)
+    const tagsLiteral          = toPgTagArray(tags)
+    const deliveryTypesLiteral = toPgTagArray(delivery_types)
 
-    if (error) {
-      console.error('[POST /api/listings]', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    let listing
+    try {
+      const { data, error } = await supabase
+        .from('listings')
+        .insert({
+          seller_id: user.id,
+          title: title.trim(),
+          description: description.trim(),
+          price,
+          currency,
+          product_type: resolvedProductType,
+          category_id: category_id ?? null,
+          category: category ?? null,
+          service_mode: service_mode,
+          location: location ?? null,
+          service_radius: service_radius ?? null,
+          delivery_types: deliveryTypesLiteral,
+          tags: tagsLiteral,
+          images: imagesLiteral,
+          status: 'active',
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('[POST /api/listings] insert error:', error)
+        // Surface the PostgREST "expected pattern" case with a more
+        // actionable message. Falls through to the generic branch for
+        // any other error (duplicate key, RLS denial, NOT NULL, etc).
+        if (typeof error.message === 'string' && error.message.toLowerCase().includes('expected pattern')) {
+          return NextResponse.json(
+            {
+              error:
+                'Listing insert failed: PostgREST rejected the text[] cast ' +
+                '— tags/images/delivery_types may contain invalid characters. ' +
+                'Try removing emoji or non-ASCII characters from your input.',
+              detail: error.message,
+            },
+            { status: 500 }
+          )
+        }
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+      listing = data
+    } catch (insertErr) {
+      // Catches any exception the supabase-js client throws outside the
+      // returned { error } channel — including the DOMException-style
+      // "The string did not match the expected pattern" that some
+      // versions emit before the request even leaves the client.
+      const msg = insertErr instanceof Error ? insertErr.message : String(insertErr)
+      console.error('[POST /api/listings] insert threw:', msg)
+      if (msg.toLowerCase().includes('expected pattern')) {
+        return NextResponse.json(
+          {
+            error:
+              'Listing insert failed: the Supabase client rejected the payload ' +
+              'during serialisation. This is usually a bad image URL or an ' +
+              'unexpected character in tags. Try again with plain-text tags ' +
+              'and https:// image URLs only.',
+            detail: msg,
+          },
+          { status: 500 }
+        )
+      }
+      return NextResponse.json({ error: `Listing insert failed: ${msg}` }, { status: 500 })
     }
 
     return NextResponse.json({ listing }, { status: 201 })
