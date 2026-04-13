@@ -141,7 +141,6 @@ export default function EditListingPage() {
       tags,
       cover_image: form.cover_image || null,
       images: form.images,
-      updated_at: new Date().toISOString(),
     }
     if (productType === 'physical') {
       updates.stock_qty = parseInt(form.stock_qty) || 0
@@ -149,11 +148,40 @@ export default function EditListingPage() {
       updates.shipping_options = form.shipping_options.trim() || null
     }
 
-    const { error: saveErr } = await supabase.from('listings').update(updates).eq('id', id)
-    setSaving(false)
-    if (saveErr) { setError(saveErr.message); return }
-    setSaved(true)
-    setTimeout(() => { setSaved(false); router.back() }, 1200)
+    // Route through the PATCH endpoint so:
+    //   * text[] columns are pre-encoded server-side (avoids the
+    //     "expected pattern" PostgREST bug — see lib/supabase/text-array.ts)
+    //   * Supabase errors are logged in full to Vercel instead of being
+    //     swallowed by the client
+    //   * any column that isn't in the server allowlist is dropped
+    //     safely rather than causing a schema-cache miss
+    try {
+      const res = await fetch(`/api/listings/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      })
+      const data = await res.json().catch(() => ({}))
+      setSaving(false)
+      if (!res.ok) {
+        // Log the full error for diagnosis — the server returns `error`
+        // plus a `detail` object with code/details/hint from PostgREST.
+        console.error('[edit] PATCH failed:', res.status, data)
+        const detail = data?.detail
+        const extra = detail
+          ? ` (${[detail.code, detail.hint, detail.details].filter(Boolean).join(' · ')})`
+          : ''
+        setError(`${data?.error ?? 'Save failed'}${extra}`)
+        return
+      }
+      setSaved(true)
+      setTimeout(() => { setSaved(false); router.back() }, 1200)
+    } catch (err: unknown) {
+      setSaving(false)
+      const msg = err instanceof Error ? err.message : 'Network error while saving'
+      console.error('[edit] PATCH threw:', err)
+      setError(msg)
+    }
   }
 
   // ─── Theme ─────────────────────────────────────────────────────────────────
