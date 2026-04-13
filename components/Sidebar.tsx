@@ -21,6 +21,7 @@ const NAV_SECTIONS = [
       { href: '/browse', label: 'Browse', icon: '🛍️' },
       { href: '/services', label: 'Services', icon: '🎯' },
       { href: '/products', label: 'Products', icon: '📦' },
+      { href: '/grassroots', label: 'Grassroots', icon: '🌱' },
       { href: '/organisations', label: 'Organisations', icon: '🏢' },
       { href: '/rent-share', label: 'Rent & Share', icon: '♻️' },
     ],

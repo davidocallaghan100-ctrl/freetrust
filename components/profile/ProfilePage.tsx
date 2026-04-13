@@ -6,6 +6,11 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Avatar from '@/components/Avatar'
 import SocialLinks from '@/components/social/SocialLinks'
+import {
+  GRASSROOTS_CATEGORIES_BY_SLUG,
+  AVAILABILITY_BY_VALUE,
+  GRASSROOTS_GREEN,
+} from '@/lib/grassroots/categories'
 import type { User } from '@supabase/supabase-js'
 
 interface Profile {
@@ -51,6 +56,24 @@ interface ServiceListing {
   tags?: string[] | null
   avg_rating?: number | null
   review_count?: number | null
+  created_at: string
+}
+
+interface GrassrootsListing {
+  id: string
+  title: string
+  description: string | null
+  category: string
+  listing_type: 'offering' | 'seeking'
+  rate: number | null
+  rate_type: 'hourly' | 'daily' | 'fixed' | 'negotiable' | null
+  currency_code: string | null
+  rate_eur: number | null
+  availability: 'immediate' | 'this_week' | 'this_month' | 'flexible'
+  photos: string[] | null
+  city: string | null
+  location_label: string | null
+  trust_tokens_accepted: boolean
   created_at: string
 }
 
@@ -109,6 +132,8 @@ export default function ProfilePage() {
   const [loadingActivity, setLoadingActivity] = useState(false)
   const [services, setServices] = useState<ServiceListing[]>([])
   const [showAllServices, setShowAllServices] = useState(false)
+  const [grassroots, setGrassroots] = useState<GrassrootsListing[]>([])
+  const [showAllGrassroots, setShowAllGrassroots] = useState(false)
   const [bonusAwarded, setBonusAwarded] = useState(false)
   const [toast, setToast] = useState('')
   const [isOwnProfile, setIsOwnProfile] = useState(true)
@@ -190,6 +215,24 @@ export default function ProfilePage() {
       setServices(data ?? [])
     } catch (err) {
       console.error('loadServices error:', err)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load this user's active grassroots listings. Cast to unknown[] then
+  // GrassrootsListing[] because supabase-js generated types don't know
+  // about grassroots_listings yet — same untyped-row pattern services use.
+  const loadGrassroots = useCallback(async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from('grassroots_listings')
+        .select('id, title, description, category, listing_type, rate, rate_type, currency_code, rate_eur, availability, photos, city, location_label, trust_tokens_accepted, created_at')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+      setGrassroots((data ?? []) as unknown as GrassrootsListing[])
+    } catch (err) {
+      console.error('loadGrassroots error:', err)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -359,6 +402,7 @@ export default function ProfilePage() {
             loadTrust(viewingId),
             loadActivity(viewingId),
             loadServices(viewingId),
+            loadGrassroots(viewingId),
           ])
 
           // Get real follower count and check if current user follows them
@@ -381,7 +425,7 @@ export default function ProfilePage() {
         } else if (u) {
           // Own profile
           setIsOwnProfile(true)
-          await Promise.all([loadProfile(u.id), loadTrust(), loadActivity(u.id), loadServices(u.id)])
+          await Promise.all([loadProfile(u.id), loadTrust(), loadActivity(u.id), loadServices(u.id), loadGrassroots(u.id)])
 
           // Real follower count from user_follows
           const { count } = await supabase
@@ -896,6 +940,167 @@ export default function ProfilePage() {
                 style={{ marginTop: '0.75rem', width: '100%', background: 'transparent', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.5rem', fontSize: '0.82rem', color: '#38bdf8', cursor: 'pointer' }}
               >
                 {showAllServices ? 'Show less' : `Show all ${services.length} services`}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Grassroots Section — same shape as Services so the visual rhythm
+            stays consistent. Only renders when the user has at least one
+            active listing. Green accent matches the rest of the
+            grassroots section. */}
+        {grassroots.length > 0 && (
+          <div className="profile-card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.06em' }}>
+                🌱 GRASSROOTS ({grassroots.length})
+              </div>
+              {isOwnProfile && (
+                <Link
+                  href="/grassroots/new"
+                  style={{
+                    fontSize: '0.75rem',
+                    color: GRASSROOTS_GREEN.primary,
+                    textDecoration: 'none',
+                    border: `1px solid ${GRASSROOTS_GREEN.borderSoft}`,
+                    borderRadius: 6,
+                    padding: '0.25rem 0.6rem',
+                  }}
+                >
+                  + Post Work
+                </Link>
+              )}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {(showAllGrassroots ? grassroots : grassroots.slice(0, 4)).map(g => {
+                const cat = GRASSROOTS_CATEGORIES_BY_SLUG[g.category]
+                const avail = AVAILABILITY_BY_VALUE[g.availability]
+                const cover = g.photos?.[0] ?? null
+                return (
+                  <Link
+                    key={g.id}
+                    href={`/grassroots/${g.id}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '0.75rem',
+                      textDecoration: 'none',
+                      background: 'rgba(15,23,42,0.5)',
+                      border: '1px solid rgba(148,163,184,0.1)',
+                      borderRadius: 10,
+                      padding: '0.85rem 1rem',
+                      transition: 'border-color 0.15s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.borderColor = GRASSROOTS_GREEN.borderSoft)}
+                    onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(148,163,184,0.1)')}
+                  >
+                    {/* Thumbnail */}
+                    {cover ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={cover}
+                        alt={g.title}
+                        style={{
+                          width: 48, height: 48, borderRadius: 8,
+                          objectFit: 'cover', flexShrink: 0,
+                        }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: 48, height: 48, borderRadius: 8,
+                        background: `linear-gradient(135deg, ${GRASSROOTS_GREEN.primary}33, ${GRASSROOTS_GREEN.primaryDim}66)`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 22,
+                        flexShrink: 0,
+                      }}>
+                        {cat?.emoji ?? '🌱'}
+                      </div>
+                    )}
+
+                    {/* Body */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: '#f1f5f9', fontWeight: 600, fontSize: '0.88rem', lineHeight: 1.4, marginBottom: '0.3rem' }}>
+                        {g.title}
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {cat && (
+                          <span style={{
+                            fontSize: '0.68rem',
+                            color: GRASSROOTS_GREEN.primary,
+                            background: GRASSROOTS_GREEN.tint,
+                            border: `1px solid ${GRASSROOTS_GREEN.borderSoft}`,
+                            borderRadius: 4,
+                            padding: '0.1rem 0.4rem',
+                          }}>
+                            {cat.emoji} {cat.label.split(' & ')[0]}
+                          </span>
+                        )}
+                        {avail && (
+                          <span style={{
+                            fontSize: '0.68rem',
+                            color: avail.color,
+                            background: avail.bg,
+                            border: `1px solid ${avail.border}`,
+                            borderRadius: 4,
+                            padding: '0.1rem 0.4rem',
+                          }}>
+                            {avail.label}
+                          </span>
+                        )}
+                        {g.trust_tokens_accepted && (
+                          <span style={{
+                            fontSize: '0.68rem',
+                            color: '#38bdf8',
+                            background: 'rgba(56,189,248,0.08)',
+                            border: '1px solid rgba(56,189,248,0.2)',
+                            borderRadius: 4,
+                            padding: '0.1rem 0.4rem',
+                            fontWeight: 700,
+                          }}>
+                            ₮
+                          </span>
+                        )}
+                        {(g.location_label || g.city) && (
+                          <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                            📍 {g.location_label ?? g.city}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Rate */}
+                    <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                      {g.rate != null && g.rate_type !== 'negotiable' ? (
+                        <div style={{ fontSize: '0.95rem', fontWeight: 800, color: GRASSROOTS_GREEN.primary }}>
+                          €{Number(g.rate_eur ?? g.rate).toLocaleString('en-IE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '0.75rem', color: GRASSROOTS_GREEN.primary, fontWeight: 700 }}>
+                          💬
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+            {grassroots.length > 4 && (
+              <button
+                onClick={() => setShowAllGrassroots(s => !s)}
+                style={{
+                  marginTop: '0.75rem',
+                  width: '100%',
+                  background: 'transparent',
+                  border: `1px solid ${GRASSROOTS_GREEN.borderSoft}`,
+                  borderRadius: 8,
+                  padding: '0.5rem',
+                  fontSize: '0.82rem',
+                  color: GRASSROOTS_GREEN.primary,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                {showAllGrassroots ? 'Show less' : `Show all ${grassroots.length} listings`}
               </button>
             )}
           </div>

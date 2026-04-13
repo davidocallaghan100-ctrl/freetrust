@@ -170,6 +170,7 @@ export async function middleware(request: NextRequest) {
     '/articles/drafts',
     '/organisations/new',   // create organisation
     '/events/create',       // create event
+    '/grassroots/new',      // create grassroots listing
     '/community/new',       // create community
     '/seller',              // all seller pages (gigs, listings, etc.)
     '/jobs/new',
