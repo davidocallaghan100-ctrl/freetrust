@@ -5,6 +5,7 @@ import LocationFilter from '@/components/location/LocationFilter'
 import LocationBadge from '@/components/location/LocationBadge'
 import PriceDisplay from '@/components/currency/PriceDisplay'
 import SocialLinks, { type SocialUrls } from '@/components/social/SocialLinks'
+import CrossPromoBanner from '@/components/marketplace/CrossPromoBanner'
 import { EMPTY_LOCATION, type StructuredLocation, type RadiusValue } from '@/lib/geo'
 import { buildCountryOptions } from '@/lib/countries'
 import type { CurrencyCode } from '@/context/CurrencyContext'
@@ -145,7 +146,7 @@ export default function GrassrootsBrowsePage() {
                 🌱 Local Work. Real People.
               </h1>
               <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.95rem' }}>
-                Find and offer everyday work in your community
+                Local hands-on help — post a job or find work near you
               </p>
             </div>
             <Link href="/grassroots/new" style={{
@@ -162,6 +163,10 @@ export default function GrassrootsBrowsePage() {
               + Post Work
             </Link>
           </div>
+
+          {/* Cross-promo: send users looking for packaged / online work
+              to the Services marketplace. */}
+          <CrossPromoBanner target="services" />
 
           {/* Offering / Seeking toggle */}
           <div style={{

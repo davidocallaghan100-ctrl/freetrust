@@ -7,6 +7,7 @@ import LocationFilter from '@/components/location/LocationFilter'
 import LocationBadge from '@/components/location/LocationBadge'
 import PriceDisplay from '@/components/currency/PriceDisplay'
 import SocialLinks from '@/components/social/SocialLinks'
+import CrossPromoBanner from '@/components/marketplace/CrossPromoBanner'
 import { EMPTY_LOCATION, haversineKm, type StructuredLocation, type RadiusValue } from '@/lib/geo'
 import { buildCountryOptions } from '@/lib/countries'
 import type { CurrencyCode } from '@/context/CurrencyContext'
@@ -484,8 +485,12 @@ export default function ServicesPage() {
       {/* Hero */}
       <div style={{ background: 'linear-gradient(180deg,rgba(56,189,248,0.06) 0%,transparent 100%)', padding: '28px 16px 20px', borderBottom: '1px solid #1e293b' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <h1 style={{ fontSize: '26px', fontWeight: 800, margin: '0 0 4px' }}>🌍 Services Marketplace</h1>
-          <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 16px' }}>Online, local & global services from trusted FreeTrust members</p>
+          <h1 style={{ fontSize: '26px', fontWeight: 800, margin: '0 0 4px' }}>🎯 Services Marketplace</h1>
+          <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 16px' }}>Skilled & professional work — online or in-person</p>
+
+          {/* Cross-promo: send users looking for casual / local help
+              to the Grassroots marketplace. */}
+          <CrossPromoBanner target="grassroots" />
 
           {/* Globalisation — location filter */}
           <div style={{ marginBottom: '12px' }}>
