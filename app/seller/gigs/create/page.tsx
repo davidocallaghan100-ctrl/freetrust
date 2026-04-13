@@ -134,6 +134,10 @@ export default function CreateGigPage() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [selectedSubCategory, setSelectedSubCategory] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  // Image upload progress — 0 means idle, N means "uploading N/total".
+  // Drives the submit-button label so users see "Uploading 2/5..." →
+  // "Publishing..." instead of a single opaque spinner.
+  const [uploadingCount, setUploadingCount] = useState(0)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dragCounter = useRef(0)
@@ -256,6 +260,43 @@ export default function CreateGigPage() {
 
   const prevStep = () => setStep(s => Math.max(s - 1, 1))
 
+  // Parse "5km" / "25km" / "National" / "International" into a kilometre
+  // number the services.service_radius numeric column can store. Non-
+  // matching inputs return null so the DB column stays null for online
+  // gigs and edge cases.
+  const parseRadiusKm = (label: string): number | null => {
+    const t = label.trim().toLowerCase()
+    const kmMatch = t.match(/^(\d+(?:\.\d+)?)\s*km$/)
+    if (kmMatch) return Number(kmMatch[1])
+    if (t === 'national')      return 500
+    if (t === 'international') return 20000
+    return null
+  }
+
+  // Upload each File in form.images to /api/upload/media serially.
+  // Collects the returned public URLs and throws on the first failure
+  // so the caller can surface a clean error banner. Updates
+  // uploadingCount as each upload completes so the submit button can
+  // show "Uploading N/total..." progress.
+  const uploadGigImages = async (files: File[]): Promise<string[]> => {
+    if (files.length === 0) return []
+    setUploadingCount(files.length)
+    const uploaded: string[] = []
+    for (let i = 0; i < files.length; i++) {
+      const fd = new FormData()
+      fd.append('file', files[i])
+      fd.append('type', 'photo')
+      const res = await fetch('/api/upload/media', { method: 'POST', body: fd })
+      const data = await res.json().catch(() => null) as { url?: string; error?: string } | null
+      if (!res.ok || !data?.url) {
+        throw new Error(data?.error ?? `Image ${i + 1} upload failed (HTTP ${res.status})`)
+      }
+      uploaded.push(data.url)
+      setUploadingCount(c => c - 1)
+    }
+    return uploaded
+  }
+
   const handlePublish = async () => {
     // ── Pre-submit validation ──────────────────────────────────────────
     // Three required-field checks before hitting the API, so an obviously
@@ -321,29 +362,31 @@ export default function CreateGigPage() {
         }
       : null
 
-    // Log everything the services schema can't persist yet. Single
-    // console.warn so Vercel logs show exactly what was dropped per
-    // publish attempt — makes the silent-data-loss visible until the
-    // schema grows columns for packages / delivery / tags / etc.
-    console.warn(
-      '[gig publish] tiered packages not persisted — schema does not support packages yet:',
-      {
-        standard: form.packages.standard,
-        premium:  form.packages.premium,
-        basicExtras: {
-          deliveryTime: form.packages.basic.deliveryTime,
-          revisions:    form.packages.basic.revisions,
-          features:     form.packages.basic.features,
-        },
-        deliveryTypes: form.deliveryTypes,
-        serviceRadius: form.serviceRadius,
-        tags:          form.tags,
-        skills:        form.skills,
-        imagesCount:   form.images.length,
-      }
-    )
-
     try {
+      // ── Image upload ──────────────────────────────────────────────────
+      // Upload each File in form.images to /api/upload/media first. We
+      // have to do this BEFORE the publish POST because the publish
+      // route stores URLs, not raw files. Any upload failure aborts the
+      // publish cleanly with an inline error — the form state is
+      // preserved so the user can retry.
+      let imageUrls: string[] = []
+      try {
+        imageUrls = await uploadGigImages(form.images)
+      } catch (uploadErr) {
+        const msg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr)
+        console.error('[gig publish] image upload failed:', msg)
+        setErrors(prev => ({ ...prev, publish: `Could not upload images: ${msg}` }))
+        setIsSubmitting(false)
+        setUploadingCount(0)
+        return
+      }
+
+      // ── Publish POST ──────────────────────────────────────────────────
+      // Send the full gig data. The service branch of /api/create/publish
+      // now persists packages (jsonb), delivery_types/tags/skills/images
+      // (text[]), and service_radius (numeric) so every field is stored
+      // — no more silent data loss via console.warn.
+      const radiusKm = parseRadiusKm(form.serviceRadius)
       const res = await fetch('/api/create/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -353,6 +396,13 @@ export default function CreateGigPage() {
             title,
             description,
             price: priceNum,
+            // Rich-data fields — read by the service branch of the route
+            packages: form.packages,
+            delivery_types: form.deliveryTypes,
+            tags:           form.tags,
+            skills:         form.skills,
+            images:         imageUrls,
+            service_radius: isRemote ? null : radiusKm,
           },
           category: categoryLabel,
           location: form.location.trim() || undefined,
@@ -373,6 +423,7 @@ export default function CreateGigPage() {
         console.error('[gig publish]', msg)
         setErrors(prev => ({ ...prev, publish: msg }))
         setIsSubmitting(false)
+        setUploadingCount(0)
         return
       }
 
@@ -385,6 +436,7 @@ export default function CreateGigPage() {
       console.error('[gig publish] network error:', msg)
       setErrors(prev => ({ ...prev, publish: `Network error: ${msg}` }))
       setIsSubmitting(false)
+      setUploadingCount(0)
     }
   }
 
@@ -1079,7 +1131,9 @@ export default function CreateGigPage() {
               {isSubmitting ? (
                 <>
                   <span style={styles.spinner} />
-                  Publishing...
+                  {uploadingCount > 0
+                    ? `Uploading image ${form.images.length - uploadingCount + 1}/${form.images.length}…`
+                    : 'Publishing…'}
                 </>
               ) : (
                 <>

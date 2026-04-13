@@ -256,6 +256,36 @@ export async function POST(req: NextRequest) {
       const price = data.price ? Number(data.price) : 0
       const priceEur = await toEur(price, currencyCode)
 
+      // ── Gig-rich-data columns (added by 20260413000000_services_gig_columns.sql)
+      //
+      // The gig create form collects tiered packages, delivery types,
+      // tags, skills, images, and a service radius — everything that
+      // used to be dropped with a console.warn. Pull each out of the
+      // free-form `data` blob, validate / coerce, and send alongside
+      // the core fields.
+      //
+      // packages: jsonb — pass the whole { basic, standard, premium }
+      //   object through as-is. supabase-js serialises objects to
+      //   PostgREST as JSON, and PostgreSQL's jsonb type accepts the
+      //   payload natively (no text coercion bug here, unlike text[]).
+      //
+      // text[] columns: use toPgTagArray / toPgUrlArray so we dodge
+      //   the PostgREST JSON→text[] coercion bug (see
+      //   lib/supabase/text-array.ts for history).
+      //
+      // service_radius: numeric — parse to a Number if the client sent
+      //   a value, otherwise null. The client normalises the "5km" /
+      //   "National" labels to a km float before sending.
+      const rawPackages       = data.packages
+      const packages          = (rawPackages && typeof rawPackages === 'object') ? rawPackages : null
+      const deliveryTypesLit  = toPgTagArray(data.delivery_types)
+      const tagsLit           = toPgTagArray(data.tags)
+      const skillsLit         = toPgTagArray(data.skills)
+      const imagesLit         = toPgUrlArray(data.images)
+      const serviceRadius     = data.service_radius != null && data.service_radius !== ''
+        ? Number(data.service_radius)
+        : null
+
       const { data: inserted, error } = await admin.from('services').insert({
         seller_id: user.id,
         title,
@@ -274,6 +304,13 @@ export async function POST(req: NextRequest) {
         is_remote:      isRemote,
         currency_code:  currencyCode,
         price_eur:      priceEur,
+        // ── Gig-rich-data fields ────────────────────────────────────────
+        packages,
+        delivery_types: deliveryTypesLit,
+        tags:           tagsLit,
+        skills:         skillsLit,
+        images:         imagesLit,
+        service_radius: Number.isFinite(serviceRadius) ? serviceRadius : null,
       }).select('id').single()
       if (error) {
         console.error('[publish service]', error)
