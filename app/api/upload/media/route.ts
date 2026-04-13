@@ -3,7 +3,6 @@ export const maxDuration = 60
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sanitizeFilename } from '@/lib/security/sanitize'
 
 // Legacy server-side upload route. The primary upload path is now a direct
 // client-to-Supabase upload from app/create/page.tsx — this avoids Vercel's
@@ -136,9 +135,35 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 4. Build storage path ────────────────────────────────────────────────
-    const safeFilename = sanitizeFilename(file.name || `upload.${mediaKind === 'video' ? 'mp4' : 'jpg'}`)
-    const ext = safeFilename.split('.').pop()?.toLowerCase() ?? (mediaKind === 'video' ? 'mp4' : 'jpg')
-    const storagePath = `${mediaKind}/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`
+    // Do NOT trust file.name — mobile camera uploads often arrive with
+    // uppercase filenames ("IMG_1234.HEIC"), unicode filenames, spaces
+    // and parentheses ("Photo 2024-04-13 12.34.56 (1).heic"), or no
+    // extension at all. Supabase Storage's path validator rejects many
+    // of those patterns with a cryptic "The string did not match the
+    // expected pattern" error that only reproduces on the affected
+    // device — hence the "works on desktop, fails on mobile" report.
+    //
+    // Build a 100% synthetic filename instead. The extension is derived
+    // from the MIME type we already validated above (not from the raw
+    // filename) so we only ever produce ASCII, lowercase, no-space,
+    // no-punctuation names that Supabase Storage always accepts.
+    const MIME_TO_EXT: Record<string, string> = {
+      'image/jpeg':      'jpg',
+      'image/png':       'png',
+      'image/gif':       'gif',
+      'image/webp':      'webp',
+      'image/heic':      'heic',
+      'image/heif':      'heif',
+      'video/mp4':       'mp4',
+      'video/webm':      'webm',
+      'video/quicktime': 'mov',
+      'video/x-m4v':     'm4v',
+      'video/3gpp':      '3gp',
+    }
+    const resolvedExtension = MIME_TO_EXT[fileType]
+    const ext = resolvedExtension || (mediaKind === 'video' ? 'mp4' : 'jpg')
+    const safeName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const storagePath = `${mediaKind}/${user.id}/${safeName}`
 
     const buffer = Buffer.from(await file.arrayBuffer())
     console.log('[upload/media] buffer:', buffer.byteLength, 'bytes → path:', storagePath)
