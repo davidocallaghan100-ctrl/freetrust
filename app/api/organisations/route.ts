@@ -2,6 +2,10 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import {
+  computeOrgTrustScore,
+  collectTrustSignalsForOrgs,
+} from '@/lib/organisations/trust-score'
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,7 +30,37 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ organisations: [] })
     }
 
-    return NextResponse.json({ organisations: data ?? [] })
+    // Replace the static `trust_score` column with a value calculated
+    // from real signals (reviews, members, followers, profile completeness,
+    // verified, age). Without this the column is binary-ish (0 for newly
+    // created orgs, 100 for any org someone manually edited) — see
+    // lib/organisations/trust-score.ts for the formula.
+    //
+    // DEFENSIVE FALLBACK:
+    // The compute step is wrapped in its own try/catch so a failure in
+    // the batched helper queries (missing table, RLS denial, Supabase
+    // 503, whatever) silently degrades to the raw `trust_score` column
+    // value instead of 500-ing the whole endpoint. Log to console.error
+    // so the failure is visible in Vercel logs without being user-facing.
+    const rawOrgs = (data ?? []) as Array<Record<string, unknown> & { id: string }>
+    try {
+      const signalsMap = await collectTrustSignalsForOrgs(supabase, rawOrgs)
+      const organisations = rawOrgs.map(o => {
+        const sig = signalsMap.get(o.id)
+        const computed = sig ? computeOrgTrustScore(sig) : null
+        return {
+          ...o,
+          // If we got a signal row back we use the computed value;
+          // otherwise fall back to whatever the DB column held (or 0).
+          trust_score: computed ?? (typeof o.trust_score === 'number' ? o.trust_score : 0),
+        }
+      })
+      return NextResponse.json({ organisations })
+    } catch (scoreErr) {
+      const msg = scoreErr instanceof Error ? scoreErr.message : String(scoreErr)
+      console.error('[GET /api/organisations] trust_score compute failed, falling back to raw column:', msg)
+      return NextResponse.json({ organisations: rawOrgs })
+    }
   } catch (err) {
     console.error('[GET /api/organisations]', err)
     return NextResponse.json({ organisations: [] })

@@ -31,6 +31,7 @@ interface Org {
   website: string | null
   sector: string | null
   logo_url: string | null
+  cover_url: string | null
   members_count: number
   trust_score: number
   is_verified: boolean
@@ -42,7 +43,17 @@ const S: Record<string, React.CSSProperties> = {
   hero: { background: 'linear-gradient(180deg,rgba(56,189,248,0.07) 0%,transparent 100%)', padding: '2.5rem 1.5rem 2rem', borderBottom: '1px solid rgba(56,189,248,0.08)' },
   inner: { maxWidth: 1200, margin: '0 auto' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: '1.25rem', padding: '2rem 1.5rem', maxWidth: 1200, margin: '0 auto' },
-  card: { background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', textDecoration: 'none', color: 'inherit', transition: 'border-color 0.15s, transform 0.15s' },
+  // card is the outer <Link> — padding is 0 so the cover photo can sit
+  // flush against the card border radius. overflow: hidden clips the
+  // cover image's top corners to the card's rounded shape.
+  card: { background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column', textDecoration: 'none', color: 'inherit', transition: 'border-color 0.15s, transform 0.15s' },
+  // cardBody holds the padded content — the former `card` padding +
+  // flex + gap properties live here now.
+  cardBody: { padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1 },
+  // cover is a full-bleed 96px strip at the top of each card. Uses a
+  // hashGradient fallback when cover_url is null so the card always
+  // has a header visual, never an empty bar.
+  cover: { height: 96, width: '100%', flexShrink: 0, position: 'relative' },
 }
 
 export default function OrganisationsPage() {
@@ -137,6 +148,21 @@ export default function OrganisationsPage() {
           const name = org.name ?? 'Unknown'
           return (
             <Link key={org.id} href={`/organisations/${org.id}`} className="org-card" style={S.card}>
+              {/* Cover photo — 96px strip with hashGradient fallback.
+                  Orgs created before the cover upload feature existed
+                  still get a coloured header instead of an empty bar. */}
+              <div style={{ ...S.cover, background: hashGradient(name) }}>
+                {org.cover_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={org.cover_url}
+                    alt=""
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                )}
+              </div>
+
+              <div style={S.cardBody}>
               {/* Header */}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
                 {org.logo_url ? (
@@ -187,6 +213,7 @@ export default function OrganisationsPage() {
                   View →
                 </span>
               </div>
+              </div>{/* /S.cardBody */}
             </Link>
           )
         })}
