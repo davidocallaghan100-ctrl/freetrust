@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { toPgUrlArray, toPgTagArray } from '@/lib/supabase/text-array'
+import { toPgTagArray, toPgUrlArray } from '@/lib/supabase/text-array'
 
 // GET /api/listings/[id]
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -33,6 +33,18 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 // PATCH /api/listings/[id]
+//
+// Accepts partial updates to a listing the caller owns. The allowlist below
+// is the superset of every column the edit UI writes — any new writable
+// column needs to be added here or it'll be silently dropped.
+//
+// text[] columns (tags, images) are run through toPgTagArray / toPgUrlArray
+// to sidestep the PostgREST JSON → text[] coercion bug ("The string did not
+// match the expected pattern"). See lib/supabase/text-array.ts for history.
+//
+// Every supabase error is logged in full (code, details, hint, message) and
+// surfaced back to the client in a `detail` field so failures are diagnosable
+// from both Vercel logs and the browser without extra round-trips.
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const supabase = await createClient()
@@ -43,20 +55,42 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     }
 
     const body = await request.json()
-    const allowed = ['title', 'description', 'price', 'status', 'tags', 'images', 'category_id'] as const
+
+    // Superset of every column the edit form (app/products/[id]/edit/page.tsx)
+    // is allowed to write. Keep in sync with that form's `updates` object.
+    const allowed = [
+      'title',
+      'description',
+      'price',
+      'currency',
+      'status',
+      'tags',
+      'images',
+      'cover_image',
+      'category',
+      'category_id',
+      'product_type',
+      'stock_qty',
+      'condition',
+      'shipping_options',
+    ] as const
     type AllowedKey = typeof allowed[number]
     const updates: Partial<Record<AllowedKey, unknown>> = {}
     for (const key of allowed) {
       if (key in body) updates[key] = body[key]
     }
 
-    // Encode text[] columns as Postgres array literals to dodge the
-    // PostgREST JSON→text[] coercion bug. Only re-encode if the field
-    // was actually present in the body — otherwise we'd reset the
-    // column to '{}' on every PATCH, nuking whatever was stored.
-    // See lib/supabase/text-array.ts for the bug history.
-    if ('tags' in updates)   updates.tags   = toPgTagArray(updates.tags)
-    if ('images' in updates) updates.images = toPgUrlArray(updates.images)
+    // Re-encode text[] columns as Postgres array literals so the PostgREST
+    // JSON→text[] coercion path can't reject them with "expected pattern".
+    // Only re-encode if the field was actually present in the body —
+    // otherwise we'd reset the column to '{}' on every PATCH, nuking
+    // whatever was stored. See lib/supabase/text-array.ts for the bug history.
+    if ('tags' in updates) {
+      updates.tags = toPgTagArray(updates.tags as unknown[])
+    }
+    if ('images' in updates) {
+      updates.images = toPgUrlArray(updates.images)
+    }
 
     const { data: listing, error } = await supabase
       .from('listings')
@@ -67,7 +101,28 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      // Log every diagnostic field PostgREST / Supabase gives us so Vercel
+      // logs contain enough context to diagnose without re-running locally.
+      console.error('[PATCH /api/listings/[id]] supabase error', {
+        listingId: params.id,
+        userId: user.id,
+        updateKeys: Object.keys(updates),
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      })
+      return NextResponse.json(
+        {
+          error: error.message,
+          detail: {
+            code: error.code ?? null,
+            details: error.details ?? null,
+            hint: error.hint ?? null,
+          },
+        },
+        { status: 500 }
+      )
     }
     if (!listing) {
       return NextResponse.json({ error: 'Not found or not authorised' }, { status: 404 })
@@ -75,8 +130,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     return NextResponse.json({ listing })
   } catch (err) {
-    console.error('[PATCH /api/listings/[id]] Unexpected error:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const message = err instanceof Error ? err.message : String(err)
+    const stack   = err instanceof Error ? err.stack   : undefined
+    console.error('[PATCH /api/listings/[id]] Unexpected error:', message, stack)
+    return NextResponse.json({ error: `Internal server error: ${message}` }, { status: 500 })
   }
 }
 

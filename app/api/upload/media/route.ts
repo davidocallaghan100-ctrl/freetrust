@@ -78,16 +78,43 @@ export async function POST(req: NextRequest) {
     console.log('[upload/media] file:', file.name, file.type, file.size, 'bytes', 'as', typeParam)
 
     // ── 3. Validate ──────────────────────────────────────────────────────────
-    if (!file.type) {
-      return NextResponse.json({ error: 'File has no MIME type' }, { status: 400 })
+    // Mobile browsers (older iOS, some Android builds) sometimes report an
+    // empty `file.type` for HEIC and even plain JPEG camera uploads. Sniff
+    // the extension and synthesise a MIME so we don't reject a real image.
+    let fileType = file.type
+    if (!fileType) {
+      const ext = (file.name.split('.').pop() ?? '').toLowerCase()
+      const EXT_TO_MIME: Record<string, string> = {
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+        gif: 'image/gif',
+        webp: 'image/webp',
+        heic: 'image/heic',
+        heif: 'image/heif',
+        mp4: 'video/mp4',
+        mov: 'video/quicktime',
+        webm: 'video/webm',
+        m4v: 'video/x-m4v',
+        '3gp': 'video/3gpp',
+      }
+      if (ext in EXT_TO_MIME) {
+        fileType = EXT_TO_MIME[ext]
+        console.log('[upload/media] synthesised MIME from extension:', ext, '→', fileType)
+      } else {
+        return NextResponse.json(
+          { error: `File has no MIME type and unrecognised extension: .${ext || '(none)'}` },
+          { status: 400 }
+        )
+      }
     }
 
-    const isImage = IMAGE_TYPES.includes(file.type)
-    const isVideo = VIDEO_TYPES.includes(file.type)
+    const isImage = IMAGE_TYPES.includes(fileType)
+    const isVideo = VIDEO_TYPES.includes(fileType)
 
     if (!isImage && !isVideo) {
       return NextResponse.json(
-        { error: `Unsupported file type: ${file.type}. Allowed: jpg, png, gif, webp, mp4, webm, mov` },
+        { error: `Unsupported file type: ${fileType}. Allowed: jpg, png, gif, webp, heic, heif, mp4, webm, mov` },
         { status: 400 }
       )
     }
@@ -155,7 +182,7 @@ export async function POST(req: NextRequest) {
     const { data: uploadData, error: uploadError } = await admin.storage
       .from(BUCKET)
       .upload(storagePath, buffer, {
-        contentType: file.type,
+        contentType: fileType,
         upsert: false,
         cacheControl: '31536000',
       })
@@ -193,7 +220,7 @@ export async function POST(req: NextRequest) {
       url: urlData.publicUrl,
       path: storagePath,
       kind: mediaKind,
-      mime: file.type,
+      mime: fileType,
       size: file.size,
     })
   } catch (err) {

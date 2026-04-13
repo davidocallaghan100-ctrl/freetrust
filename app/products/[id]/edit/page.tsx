@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { toPgUrlArray, toPgTagArray } from '@/lib/supabase/text-array'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -134,20 +133,21 @@ export default function EditListingPage() {
     setError(null)
 
     const tags = form.tags.split(',').map(t => t.trim()).filter(Boolean)
-    // Encode text[] columns as Postgres array literals — workaround for
-    // the PostgREST JSON→text[] coercion bug. Same pattern as the fix
-    // landed in /api/listings and the product branch of
-    // /api/create/publish (commit 8576fc1). See lib/supabase/text-array.ts
-    // for the bug history.
+    // text[] columns are sent as raw JS arrays. The PATCH handler at
+    // app/api/listings/[id]/route.ts re-encodes them with
+    // toPgTagArray / toPgUrlArray on the server, which sidesteps the
+    // PostgREST JSON→text[] coercion bug. Encoding here too would
+    // double-encode: toPgTagArray('{}') hits `!Array.isArray` and
+    // returns '{}', wiping the value on every save.
+    // See lib/supabase/text-array.ts for the bug history.
     const updates: Record<string, unknown> = {
       title: form.title.trim(),
       description: form.description.trim() || null,
       price,
       currency: form.currency,
-      tags:        toPgTagArray(tags),
+      tags,
       cover_image: form.cover_image || null,
-      images:      toPgUrlArray(form.images),
-      updated_at:  new Date().toISOString(),
+      images: form.images,
     }
     if (productType === 'physical') {
       updates.stock_qty = parseInt(form.stock_qty) || 0
@@ -155,11 +155,40 @@ export default function EditListingPage() {
       updates.shipping_options = form.shipping_options.trim() || null
     }
 
-    const { error: saveErr } = await supabase.from('listings').update(updates).eq('id', id)
-    setSaving(false)
-    if (saveErr) { setError(saveErr.message); return }
-    setSaved(true)
-    setTimeout(() => { setSaved(false); router.back() }, 1200)
+    // Route through the PATCH endpoint so:
+    //   * text[] columns are pre-encoded server-side (avoids the
+    //     "expected pattern" PostgREST bug — see lib/supabase/text-array.ts)
+    //   * Supabase errors are logged in full to Vercel instead of being
+    //     swallowed by the client
+    //   * any column that isn't in the server allowlist is dropped
+    //     safely rather than causing a schema-cache miss
+    try {
+      const res = await fetch(`/api/listings/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      })
+      const data = await res.json().catch(() => ({}))
+      setSaving(false)
+      if (!res.ok) {
+        // Log the full error for diagnosis — the server returns `error`
+        // plus a `detail` object with code/details/hint from PostgREST.
+        console.error('[edit] PATCH failed:', res.status, data)
+        const detail = data?.detail
+        const extra = detail
+          ? ` (${[detail.code, detail.hint, detail.details].filter(Boolean).join(' · ')})`
+          : ''
+        setError(`${data?.error ?? 'Save failed'}${extra}`)
+        return
+      }
+      setSaved(true)
+      setTimeout(() => { setSaved(false); router.back() }, 1200)
+    } catch (err: unknown) {
+      setSaving(false)
+      const msg = err instanceof Error ? err.message : 'Network error while saving'
+      console.error('[edit] PATCH threw:', err)
+      setError(msg)
+    }
   }
 
   // ─── Theme ─────────────────────────────────────────────────────────────────

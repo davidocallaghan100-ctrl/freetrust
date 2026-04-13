@@ -64,7 +64,16 @@ export default function NewProductPage() {
     const arr = Array.from(files)
     const remaining = MAX_IMAGES - images.length
     if (remaining <= 0) return
-    const toAdd = arr.slice(0, remaining).filter(f => f.type.startsWith('image/'))
+    // Accept anything that looks like an image. Older iOS / Android builds
+    // report `file.type === ''` for HEIC photos, so we fall back on the
+    // file extension before dropping the file. Without this, mobile users
+    // tap their camera roll, pick an image, and see "nothing happened".
+    const IMG_EXT = /\.(jpe?g|png|gif|webp|heic|heif|bmp|tiff?)$/i
+    const toAdd = arr.slice(0, remaining).filter(f => {
+      if (f.type && f.type.startsWith('image/')) return true
+      if (!f.type && IMG_EXT.test(f.name)) return true
+      return false
+    })
     const newImages: NewImage[] = toAdd.map(f => ({
       type: 'new',
       file: f,
@@ -379,15 +388,20 @@ export default function NewProductPage() {
               >
                 <div style={{ fontSize: '1.5rem', marginBottom: 6 }}>🖼️</div>
                 <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: 3 }}>
-                  Drop images here or <span style={{ color: '#38bdf8' }}>click to browse</span>
+                  <span style={{ color: '#38bdf8' }}>Tap to select photos</span> — or drop them here
                 </div>
                 <div style={{ fontSize: '0.72rem', color: '#475569' }}>
-                  JPG, PNG, WEBP — up to 10MB each · {MAX_IMAGES - images.length} slot{MAX_IMAGES - images.length !== 1 ? 's' : ''} remaining
+                  JPG, PNG, WEBP, HEIC — up to 10MB each · {MAX_IMAGES - images.length} slot{MAX_IMAGES - images.length !== 1 ? 's' : ''} remaining
                 </div>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  // Include HEIC/HEIF so iPhone camera photos are pickable
+                  // (iOS 11+ saves camera shots as HEIC by default). Without
+                  // these, Android Chrome filters the files out of the picker
+                  // entirely and iOS Safari's auto-conversion behaviour is
+                  // inconsistent across versions.
+                  accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif"
                   multiple
                   style={{ display: 'none' }}
                   onChange={e => { if (e.target.files?.length) { addFiles(e.target.files); e.target.value = '' } }}
