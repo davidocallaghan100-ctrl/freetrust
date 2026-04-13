@@ -244,9 +244,17 @@ export async function POST(req: NextRequest) {
       redirectUrl = inserted?.id ? `/events/${inserted.id}` : '/events'
     }
 
-    // ── Service → services table (not listings) ────────────────────────────
-    // The feed's fetchServices reads from `services` with status='active'.
-    // Saving to `listings` would hide services from the feed's Services tab.
+    // ── Service → listings table with product_type='service' ───────────────
+    // Services live in the same table as products — distinguished by the
+    // product_type column. This matches the pattern already used by every
+    // read path in the codebase:
+    //   * app/services/page.tsx         — from('listings').eq('product_type','service')
+    //   * app/services/[id]/page.tsx    — same filter
+    //   * app/api/admin/content/route.ts — same filter for the services tab
+    //
+    // The publish route used to write to a separate `public.services`
+    // table, but that table has never existed in any committed migration
+    // — services there would have been invisible to every read path.
     else if (type === 'service') {
       const title = String(data.title ?? '').trim()
       const description = String(data.description ?? '').trim()
@@ -256,26 +264,15 @@ export async function POST(req: NextRequest) {
       const price = data.price ? Number(data.price) : 0
       const priceEur = await toEur(price, currencyCode)
 
-      // ── Gig-rich-data columns (added by 20260413000000_services_gig_columns.sql)
+      // ── Gig-rich-data columns (added to listings by
+      // 20260413000003_listings_gig_columns.sql — jsonb for packages,
+      // text[] for delivery_types / skills / images, numeric for
+      // service_radius).
       //
-      // The gig create form collects tiered packages, delivery types,
-      // tags, skills, images, and a service radius — everything that
-      // used to be dropped with a console.warn. Pull each out of the
-      // free-form `data` blob, validate / coerce, and send alongside
-      // the core fields.
-      //
-      // packages: jsonb — pass the whole { basic, standard, premium }
-      //   object through as-is. supabase-js serialises objects to
-      //   PostgREST as JSON, and PostgreSQL's jsonb type accepts the
-      //   payload natively (no text coercion bug here, unlike text[]).
-      //
-      // text[] columns: use toPgTagArray / toPgUrlArray so we dodge
-      //   the PostgREST JSON→text[] coercion bug (see
-      //   lib/supabase/text-array.ts for history).
-      //
-      // service_radius: numeric — parse to a Number if the client sent
-      //   a value, otherwise null. The client normalises the "5km" /
-      //   "National" labels to a km float before sending.
+      // text[] columns are encoded as Postgres array literals to dodge
+      // the PostgREST JSON→text[] coercion bug. jsonb can be passed
+      // through as a plain object — supabase-js serialises it natively.
+      // See lib/supabase/text-array.ts for the text[] bug history.
       const rawPackages       = data.packages
       const packages          = (rawPackages && typeof rawPackages === 'object') ? rawPackages : null
       const deliveryTypesLit  = toPgTagArray(data.delivery_types)
@@ -286,13 +283,21 @@ export async function POST(req: NextRequest) {
         ? Number(data.service_radius)
         : null
 
-      const { data: inserted, error } = await admin.from('services').insert({
+      // service_mode is the on-site/remote flag used by the services
+      // page's modeFilter ('all' | 'online' | 'offline'). Derive it
+      // from is_remote so the filter works for gigs published through
+      // this route. 'online' = remote, 'offline' = in-person.
+      const serviceMode = isRemote ? 'online' : 'offline'
+
+      const { data: inserted, error } = await admin.from('listings').insert({
         seller_id: user.id,
         title,
         description,
         price,
         currency: currencyCode,
+        product_type: 'service',
         category: category ?? 'General',
+        service_mode: serviceMode,
         status: 'active',
         // ── Globalisation fields ────────────────────────────────────────
         country:        struct.country ?? null,
@@ -310,6 +315,9 @@ export async function POST(req: NextRequest) {
         tags:           tagsLit,
         skills:         skillsLit,
         images:         imagesLit,
+        cover_image:    Array.isArray(data.images) && data.images.length > 0 && typeof data.images[0] === 'string'
+                          ? (data.images[0] as string)
+                          : null,
         service_radius: Number.isFinite(serviceRadius) ? serviceRadius : null,
       }).select('id').single()
       if (error) {

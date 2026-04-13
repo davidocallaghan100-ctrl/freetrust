@@ -29,14 +29,25 @@ export async function GET(req: NextRequest) {
         return qb
       })(),
 
+      // Services and products both live in the `listings` table,
+      // distinguished by product_type. Same canonical pattern used by
+      // app/services/page.tsx, app/services/[id]/page.tsx and
+      // app/api/admin/content/route.ts. There is no separate
+      // `services` or `products` table in this app.
       (() => {
-        let qb = supabase.from('services').select('id, title, category').eq('status', 'active').limit(browseMode ? 12 : perType)
+        let qb = supabase.from('listings').select('id, title, category')
+          .eq('product_type', 'service')
+          .eq('status', 'active')
+          .limit(browseMode ? 12 : perType)
         if (q) qb = qb.or(`title.ilike.%${q}%,description.ilike.%${q}%`)
         return qb
       })(),
 
       (() => {
-        let qb = supabase.from('products').select('id, title, category').eq('status', 'active').limit(browseMode ? 12 : perType)
+        let qb = supabase.from('listings').select('id, title, category')
+          .neq('product_type', 'service')
+          .eq('status', 'active')
+          .limit(browseMode ? 12 : perType)
         if (q) qb = qb.or(`title.ilike.%${q}%,description.ilike.%${q}%`)
         return qb
       })(),

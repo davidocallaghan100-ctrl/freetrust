@@ -345,12 +345,16 @@ async function fetchArticles(supabase: SupabaseLike, offset: number, limit: numb
 }
 
 async function fetchServices(supabase: SupabaseLike, offset: number, limit: number) {
+  // Services live in the `listings` table with product_type='service'.
+  // Same canonical pattern as app/services/page.tsx and
+  // app/api/admin/content/route.ts. There is no separate `services` table.
   const { data, error } = await supabase
-    .from('services')
+    .from('listings')
     .select(`
       id, seller_id, title, description, category, price, currency, cover_image, created_at,
       seller:profiles!seller_id(id, full_name, avatar_url, trust_balance)
     `)
+    .eq('product_type', 'service')
     .eq('status', 'active')
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
