@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import SocialLinks, { type SocialUrls } from '@/components/social/SocialLinks'
 
 const CATEGORIES = ['All', 'Freelancers', 'Businesses', 'Developers', 'Designers', 'Marketers', 'Consultants']
 
@@ -30,6 +31,9 @@ interface Member {
   skills: string[] | null
   account_type: string | null
   trust_balance: number
+  // Social link fields — surfaced under the avatar on each member card.
+  // Empty fields are filtered out by the SocialLinks component.
+  socials?: SocialUrls
 }
 
 const S: Record<string, React.CSSProperties> = {
@@ -71,6 +75,10 @@ export default function MemberDirectoryPage() {
         setMembers((data ?? []).map((p: {
           id: string; full_name: string | null; avatar_url: string | null
           bio: string | null; location: string | null; trust_balance: number
+          linkedin_url?: string | null; instagram_url?: string | null
+          twitter_url?: string | null; github_url?: string | null
+          tiktok_url?: string | null; youtube_url?: string | null
+          website_url?: string | null
         }) => ({
           id: p.id,
           full_name: p.full_name,
@@ -80,6 +88,15 @@ export default function MemberDirectoryPage() {
           skills: [],
           account_type: 'individual',
           trust_balance: p.trust_balance ?? 0,
+          socials: {
+            linkedin_url:  p.linkedin_url  ?? null,
+            instagram_url: p.instagram_url ?? null,
+            twitter_url:   p.twitter_url   ?? null,
+            github_url:    p.github_url    ?? null,
+            tiktok_url:    p.tiktok_url    ?? null,
+            youtube_url:   p.youtube_url   ?? null,
+            website_url:   p.website_url   ?? null,
+          },
         })))
       }
     } catch { /* empty */ }
@@ -226,6 +243,15 @@ export default function MemberDirectoryPage() {
                 <p style={{ fontSize: '0.83rem', color: '#64748b', lineHeight: 1.6, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>
                   {member.bio}
                 </p>
+              )}
+              {member.socials && (
+                <SocialLinks
+                  links={member.socials}
+                  size="sm"
+                  max={4}
+                  flat
+                  stopPropagation
+                />
               )}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(56,189,248,0.06)', paddingTop: '0.75rem', marginTop: 'auto' }}>
                 <span style={{ fontSize: '0.75rem', color: '#475569' }}>👤 Individual</span>

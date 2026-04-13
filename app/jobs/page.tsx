@@ -10,6 +10,7 @@ import LocationFilter from '@/components/location/LocationFilter'
 // present.
 import GeoLocationBadge from '@/components/location/LocationBadge'
 import PriceDisplay from '@/components/currency/PriceDisplay'
+import SocialLinks, { type SocialUrls } from '@/components/social/SocialLinks'
 import { EMPTY_LOCATION, haversineKm, type StructuredLocation, type RadiusValue } from '@/lib/geo'
 import { buildCountryOptions } from '@/lib/countries'
 import type { CurrencyCode } from '@/context/CurrencyContext'
@@ -45,6 +46,9 @@ interface RemoteJob {
   url: string
   description_snippet: string
   is_local?: boolean
+  // Poster social links — only populated for local FreeTrust jobs.
+  // Remotive remote jobs leave this undefined.
+  posterSocial?: SocialUrls
 }
 
 interface SupabaseJob {
@@ -60,7 +64,17 @@ interface SupabaseJob {
   salary_max: number | null
   salary_currency: string
   created_at: string
-  poster: { id: string; full_name: string | null } | null
+  poster: {
+    id: string
+    full_name: string | null
+    linkedin_url?:  string | null
+    instagram_url?: string | null
+    twitter_url?:   string | null
+    github_url?:    string | null
+    tiktok_url?:    string | null
+    youtube_url?:   string | null
+    website_url?:   string | null
+  } | null
   // Globalisation fields (optional — null for legacy jobs)
   country?: string | null
   region?: string | null
@@ -102,6 +116,19 @@ function formatSalary(min: number | null, max: number | null, currency: string):
 }
 
 function supabaseToRemoteJob(j: SupabaseJob): RemoteJob {
+  // Poster social links — passed through to <SocialLinks> on the card.
+  // Only present on local FreeTrust jobs (Remotive remote jobs don't have
+  // a Supabase profile so this stays undefined for them).
+  const posterSocial: SocialUrls | undefined = j.poster ? {
+    linkedin_url:  j.poster.linkedin_url  ?? null,
+    instagram_url: j.poster.instagram_url ?? null,
+    twitter_url:   j.poster.twitter_url   ?? null,
+    github_url:    j.poster.github_url    ?? null,
+    tiktok_url:    j.poster.tiktok_url    ?? null,
+    youtube_url:   j.poster.youtube_url   ?? null,
+    website_url:   j.poster.website_url   ?? null,
+  } : undefined
+
   return {
     id: `local-${j.id}`,
     title: j.title,
@@ -128,6 +155,7 @@ function supabaseToRemoteJob(j: SupabaseJob): RemoteJob {
     url: `/jobs/${j.id}`,
     description_snippet: j.description.slice(0, 200),
     is_local: true,
+    posterSocial,
   }
 }
 
@@ -564,6 +592,21 @@ export default function JobsPage() {
                         <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#94a3b8' }}>{job.company_name}</span>
                         {job.is_local && (
                           <div style={{ fontSize: '0.65rem', color: '#fb923c', fontWeight: 600, letterSpacing: '0.04em' }}>FreeTrust</div>
+                        )}
+                        {/* Poster social links — max 3, prioritised order
+                            from SocialLinks (LinkedIn → website → Instagram).
+                            Stop propagation so the icon click doesn't open
+                            the apply modal. */}
+                        {job.posterSocial && (
+                          <div style={{ marginTop: 4 }}>
+                            <SocialLinks
+                              links={job.posterSocial}
+                              size="sm"
+                              max={3}
+                              flat
+                              stopPropagation
+                            />
+                          </div>
                         )}
                       </div>
                     </div>

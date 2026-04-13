@@ -6,6 +6,7 @@ import { ONLINE_CATEGORIES, OFFLINE_CATEGORIES } from '@/lib/service-categories'
 import LocationFilter from '@/components/location/LocationFilter'
 import LocationBadge from '@/components/location/LocationBadge'
 import PriceDisplay from '@/components/currency/PriceDisplay'
+import SocialLinks from '@/components/social/SocialLinks'
 import { EMPTY_LOCATION, haversineKm, type StructuredLocation, type RadiusValue } from '@/lib/geo'
 import { buildCountryOptions } from '@/lib/countries'
 import type { CurrencyCode } from '@/context/CurrencyContext'
@@ -70,6 +71,16 @@ interface Service {
   is_remote?: boolean
   price_eur?: number | null
   distance_km?: number | null
+  // Seller social links — passed straight through to <SocialLinks>
+  sellerSocial?: {
+    linkedin_url?:  string | null
+    instagram_url?: string | null
+    twitter_url?:   string | null
+    github_url?:    string | null
+    tiktok_url?:    string | null
+    youtube_url?:   string | null
+    website_url?:   string | null
+  }
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -137,6 +148,17 @@ function ServiceCard({ svc, isOwner, onDelete }: { svc: Service; isOwner?: boole
                   remote={Boolean(svc.is_remote)}
                   distanceKm={svc.distance_km ?? null}
                   compact
+                />
+              </div>
+            )}
+            {svc.sellerSocial && (
+              <div style={{ marginTop: 4 }}>
+                <SocialLinks
+                  links={svc.sellerSocial}
+                  size="sm"
+                  max={3}
+                  flat
+                  stopPropagation
                 />
               </div>
             )}
@@ -292,14 +314,25 @@ export default function ServicesPage() {
       try {
         const { data } = await supabase
           .from('listings')
-          .select('id, title, description, price, currency, service_mode, tags, location, cover_image, avg_rating, review_count, country, city, region, latitude, longitude, location_label, is_remote, currency_code, price_eur, seller:profiles!seller_id(id, full_name, avatar_url)')
+          .select('id, title, description, price, currency, service_mode, tags, location, cover_image, avg_rating, review_count, country, city, region, latitude, longitude, location_label, is_remote, currency_code, price_eur, seller:profiles!seller_id(id, full_name, avatar_url, linkedin_url, instagram_url, twitter_url, github_url, tiktok_url, youtube_url, website_url)')
           .eq('product_type', 'service')
           .eq('status', 'active')
           .order('created_at', { ascending: false })
           .limit(200)
         if (data) {
           const mapped: Service[] = data.map((s: Record<string, unknown>) => {
-            const seller = s.seller as { id?: string; full_name?: string; avatar_url?: string } | null
+            const seller = s.seller as {
+              id?: string
+              full_name?: string
+              avatar_url?: string
+              linkedin_url?: string | null
+              instagram_url?: string | null
+              twitter_url?: string | null
+              github_url?: string | null
+              tiktok_url?: string | null
+              youtube_url?: string | null
+              website_url?: string | null
+            } | null
             const name = seller?.full_name ?? 'Unknown'
             const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
             const mode = (s.service_mode as string) ?? 'online'
@@ -333,6 +366,15 @@ export default function ServicesPage() {
               location_label: (s.location_label as string | null | undefined) ?? null,
               is_remote:      Boolean(s.is_remote),
               price_eur:      typeof s.price_eur === 'number' ? (s.price_eur as number) : null,
+              sellerSocial: seller ? {
+                linkedin_url:  seller.linkedin_url  ?? null,
+                instagram_url: seller.instagram_url ?? null,
+                twitter_url:   seller.twitter_url   ?? null,
+                github_url:    seller.github_url    ?? null,
+                tiktok_url:    seller.tiktok_url    ?? null,
+                youtube_url:   seller.youtube_url   ?? null,
+                website_url:   seller.website_url   ?? null,
+              } : undefined,
             }
           })
           setServices(mapped)

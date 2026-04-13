@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('jobs')
-      .select('*, poster:profiles!poster_id(id, full_name, bio, created_at)')
+      .select('*, poster:profiles!poster_id(id, full_name, bio, created_at, linkedin_url, instagram_url, twitter_url, github_url, tiktok_url, youtube_url, website_url)')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(100)

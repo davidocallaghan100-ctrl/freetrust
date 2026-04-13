@@ -142,7 +142,7 @@ export async function GET() {
     // ── Fetch all profiles ──────────────────────────────────────────────────
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, avatar_url, bio, location, role, created_at')
+      .select('id, full_name, avatar_url, bio, location, role, created_at, linkedin_url, instagram_url, twitter_url, github_url, tiktok_url, youtube_url, website_url')
       .order('created_at', { ascending: false })
       .limit(1000)
 
@@ -187,6 +187,10 @@ export async function GET() {
       id: string; full_name: string | null
       avatar_url: string | null; bio: string | null; location: string | null
       role: string | null; created_at: string
+      linkedin_url?: string | null; instagram_url?: string | null
+      twitter_url?: string | null; github_url?: string | null
+      tiktok_url?: string | null; youtube_url?: string | null
+      website_url?: string | null
     }) => ({
       id: p.id,
       type: 'individual' as const,
@@ -200,6 +204,15 @@ export async function GET() {
       trust_balance: balanceMap[p.id] ?? 0,
       follower_count: followerMap[p.id] ?? 0,
       skills: [] as string[],
+      // Social links — passed straight through. Empty strings/nulls are
+      // hidden by the SocialLinks component on the client.
+      linkedin_url:  p.linkedin_url  ?? null,
+      instagram_url: p.instagram_url ?? null,
+      twitter_url:   p.twitter_url   ?? null,
+      github_url:    p.github_url    ?? null,
+      tiktok_url:    p.tiktok_url    ?? null,
+      youtube_url:   p.youtube_url   ?? null,
+      website_url:   p.website_url   ?? null,
     }))
 
     console.log(`[GET /api/directory/members] done: ${members.length} members, ${diag.profiles_upserted} backfilled, ${diag.duration_ms}ms`)

@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Avatar from '@/components/Avatar'
+import SocialLinks from '@/components/social/SocialLinks'
 import type { User } from '@supabase/supabase-js'
 
 interface Profile {
@@ -20,6 +21,14 @@ interface Profile {
   follower_count?: number | null
   following_count?: number | null
   created_at?: string | null
+  // Social link fields (20260413_profiles_social_links.sql)
+  linkedin_url?:  string | null
+  instagram_url?: string | null
+  twitter_url?:   string | null
+  github_url?:    string | null
+  tiktok_url?:    string | null
+  youtube_url?:   string | null
+  website_url?:   string | null
 }
 
 interface ActivityItem {
@@ -716,13 +725,28 @@ export default function ProfilePage() {
               )}
               <span>🗓 Member since {new Date(profile?.created_at ?? user?.created_at ?? '').toLocaleDateString('en-IE', { month: 'long', year: 'numeric' })}</span>
             </div>
-            <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem', color: '#94a3b8' }}>
+            <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.6rem' }}>
               <span><strong style={{ color: '#f1f5f9' }}>{followerCount}</strong> followers</span>
               <span><strong style={{ color: '#f1f5f9' }}>{profile?.following_count ?? 0}</strong> following</span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: `${trustLevel.color}18`, border: `1px solid ${trustLevel.color}40`, borderRadius: 999, padding: '0.15rem 0.65rem', fontSize: '0.78rem', fontWeight: 700, color: trustLevel.color }}>
                 {trustLevel.icon} {trustLevel.label}
               </span>
             </div>
+            {/* Social Links — full row, all platforms with non-empty URLs.
+                Renders nothing if the user has zero social links, so the
+                spacing below the stats row collapses naturally. */}
+            <SocialLinks
+              links={{
+                linkedin_url:  profile?.linkedin_url,
+                instagram_url: profile?.instagram_url,
+                twitter_url:   profile?.twitter_url,
+                github_url:    profile?.github_url,
+                tiktok_url:    profile?.tiktok_url,
+                youtube_url:   profile?.youtube_url,
+                website_url:   profile?.website_url,
+              }}
+              size="md"
+            />
           </div>
         </div>
 

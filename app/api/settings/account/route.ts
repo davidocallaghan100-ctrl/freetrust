@@ -20,12 +20,21 @@ export async function PATCH(request: NextRequest) {
     // Globalisation fields (country, region, city, lat/lng, location_label,
     // currency_code) are allowlisted so the settings page can persist the
     // user's structured location + preferred currency.
+    //
+    // Social link fields (linkedin_url etc.) are allowlisted so the settings
+    // page can persist them — see migration 20260413_profiles_social_links.sql.
+    // Each is normalised at the source on the client (trim + prepend https://
+    // for bare hosts) before reaching the API, so we just trim whitespace
+    // here as a belt-and-braces guard.
     const allowed = [
       'first_name', 'last_name', 'full_name', 'username', 'bio', 'website', 'avatar_url',
       // Legacy free-text
       'location',
       // Globalisation
       'country', 'region', 'city', 'latitude', 'longitude', 'location_label', 'currency_code',
+      // Social links
+      'linkedin_url', 'instagram_url', 'twitter_url', 'github_url',
+      'tiktok_url', 'youtube_url', 'website_url',
     ] as const
     type AllowedKey = typeof allowed[number]
     const updates: Partial<Record<AllowedKey, unknown>> = {}
@@ -38,6 +47,21 @@ export async function PATCH(request: NextRequest) {
     }
     if (typeof updates.currency_code === 'string') {
       updates.currency_code = (updates.currency_code as string).toUpperCase()
+    }
+    // Normalise social URLs: trim whitespace, treat empty strings as null
+    // so the DB stores NULL (cleaner for `.is.not.null` queries).
+    const SOCIAL_FIELDS: AllowedKey[] = [
+      'linkedin_url', 'instagram_url', 'twitter_url', 'github_url',
+      'tiktok_url', 'youtube_url', 'website_url',
+    ]
+    for (const f of SOCIAL_FIELDS) {
+      if (f in updates) {
+        const v = updates[f]
+        if (typeof v === 'string') {
+          const trimmed = v.trim()
+          updates[f] = trimmed.length === 0 ? null : trimmed
+        }
+      }
     }
 
     if (Object.keys(updates).length === 0) {

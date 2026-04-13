@@ -7,6 +7,20 @@ import type { User } from '@supabase/supabase-js'
 import LocationPicker from '@/components/location/LocationPicker'
 import { EMPTY_LOCATION, type StructuredLocation } from '@/lib/geo'
 import { CURRENCIES, useCurrency, type CurrencyCode } from '@/context/CurrencyContext'
+import { SOCIAL_PLATFORMS, isValidSocialUrl, normaliseSocialUrl } from '@/components/social/SocialLinks'
+
+// Per-platform placeholder text shown in the social links form. Hardcoded
+// rather than embedded in the SocialLinks component so the public-facing
+// component stays free of "form" concerns.
+const SOCIAL_PLACEHOLDERS: Record<string, string> = {
+  linkedin_url:  'https://linkedin.com/in/yourname',
+  instagram_url: 'https://instagram.com/yourhandle',
+  twitter_url:   'https://x.com/yourhandle',
+  github_url:    'https://github.com/yourhandle',
+  tiktok_url:    'https://tiktok.com/@yourhandle',
+  youtube_url:   'https://youtube.com/@yourchannel',
+  website_url:   'https://yoursite.com',
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -31,6 +45,14 @@ interface Profile {
   longitude?: number | null
   location_label?: string | null
   currency_code?: string | null
+  // Social link fields (20260413_profiles_social_links.sql)
+  linkedin_url?:  string | null
+  instagram_url?: string | null
+  twitter_url?:   string | null
+  github_url?:    string | null
+  tiktok_url?:    string | null
+  youtube_url?:   string | null
+  website_url?:   string | null
 }
 
 interface TrustBalance {
@@ -265,6 +287,18 @@ function AccountTab({
     location: profile.location ?? '',
     website: profile.website ?? '',
   })
+  // Social links form — one entry per platform. Stored as raw user input
+  // (validated locally before save) so the user sees what they typed.
+  const [socials, setSocials] = useState({
+    linkedin_url:  profile.linkedin_url  ?? '',
+    instagram_url: profile.instagram_url ?? '',
+    twitter_url:   profile.twitter_url   ?? '',
+    github_url:    profile.github_url    ?? '',
+    tiktok_url:    profile.tiktok_url    ?? '',
+    youtube_url:   profile.youtube_url   ?? '',
+    website_url:   profile.website_url   ?? '',
+  })
+  type SocialField = keyof typeof socials
   // Globalisation — structured location + preferred currency
   const [structLoc, setStructLoc] = useState<StructuredLocation>({
     country:        profile.country        ?? null,
@@ -291,8 +325,22 @@ function AccountTab({
       showToast('First and last name are required.')
       return
     }
+    // Validate every non-empty social URL before contacting the server.
+    // The check is deliberately lenient — accepts bare hosts like
+    // "linkedin.com/in/foo" as well as full https:// URLs.
+    for (const key of Object.keys(socials) as SocialField[]) {
+      if (!isValidSocialUrl(socials[key])) {
+        const platform = SOCIAL_PLATFORMS.find(p => p.field === key)
+        showToast(`Invalid ${platform?.label ?? key} URL — please check the format.`)
+        return
+      }
+    }
     setSaving(true)
     try {
+      // Normalise: empty → null, bare host → https://...
+      const normalisedSocials = Object.fromEntries(
+        (Object.keys(socials) as SocialField[]).map(k => [k, normaliseSocialUrl(socials[k])])
+      )
       const res = await fetch('/api/settings/account', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -310,6 +358,8 @@ function AccountTab({
           longitude:      structLoc.longitude,
           location_label: structLoc.location_label,
           currency_code:  currency.code,
+          // Social links — normalised
+          ...normalisedSocials,
         }),
       })
       if (res.ok) {
@@ -464,6 +514,69 @@ function AccountTab({
 
         <button className="save-btn" onClick={handleSave} disabled={saving}>
           {saving ? 'Saving…' : 'Save changes'}
+        </button>
+      </div>
+
+      {/* ── Social Links ─────────────────────────────────────────────────
+          A separate card so the visual hierarchy mirrors how social links
+          appear on the public profile page. Each platform gets its own
+          input row with a brand-coloured icon prefix and a placeholder
+          showing the expected URL format. Validation runs on save (see
+          handleSave above) — empty fields are never validated. */}
+      <div className="card" style={{ marginTop: 24 }}>
+        <h2 className="section-title">🔗 Social Links</h2>
+        <p className="section-desc">Show the community where to find you. Empty fields are hidden on your public profile.</p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {SOCIAL_PLATFORMS.map(platform => {
+            const field = platform.field as SocialField
+            const value = socials[field]
+            const placeholder = SOCIAL_PLACEHOLDERS[field] ?? 'https://…'
+            const invalid = value.length > 0 && !isValidSocialUrl(value)
+            const Icon = platform.Icon
+            return (
+              <div key={platform.key}>
+                <label
+                  className="field-label"
+                  style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                >
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: 22, height: 22, borderRadius: 5,
+                    background: 'rgba(15,23,42,0.6)',
+                    border: '1px solid rgba(148,163,184,0.18)',
+                    color: platform.brand,
+                    flexShrink: 0,
+                  }}>
+                    <Icon size={13} />
+                  </span>
+                  {platform.label}
+                </label>
+                <input
+                  className="field-input"
+                  type="url"
+                  inputMode="url"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  value={value}
+                  onChange={e => setSocials(s => ({ ...s, [field]: e.target.value }))}
+                  placeholder={placeholder}
+                  style={invalid ? { borderColor: '#f87171' } : undefined}
+                  aria-invalid={invalid}
+                />
+                {invalid && (
+                  <div style={{ fontSize: 11, color: '#f87171', marginTop: 4 }}>
+                    Doesn&apos;t look like a valid URL — try {placeholder}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        <button className="save-btn" onClick={handleSave} disabled={saving} style={{ marginTop: 20 }}>
+          {saving ? 'Saving…' : 'Save social links'}
         </button>
       </div>
 
