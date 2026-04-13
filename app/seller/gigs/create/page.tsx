@@ -257,10 +257,135 @@ export default function CreateGigPage() {
   const prevStep = () => setStep(s => Math.max(s - 1, 1))
 
   const handlePublish = async () => {
+    // ── Pre-submit validation ──────────────────────────────────────────
+    // Three required-field checks before hitting the API, so an obviously
+    // incomplete gig never generates a 400 round-trip. All three also
+    // write into the existing per-field `errors` state so the user sees
+    // red outlines on the fields they need to fix.
+    const nextErrors: Record<string, string> = {}
+    const title = form.title.trim()
+    if (!title) nextErrors.title = 'Give your gig a title'
+
+    // Description falls back to the basic package description — some users
+    // only fill one or the other. The publish route rejects empty strings.
+    const description = form.description.trim() || form.packages.basic.description.trim()
+    if (!description) nextErrors.description = 'Add a description of what you offer'
+
+    const priceRaw = form.packages.basic.price.trim()
+    const priceNum = priceRaw ? Number(priceRaw) : NaN
+    if (!priceRaw || !Number.isFinite(priceNum) || priceNum <= 0) {
+      nextErrors.price = 'Set a basic package price greater than 0'
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(prev => ({ ...prev, ...nextErrors }))
+      return
+    }
+
+    // Clear any stale error banner from a previous failed attempt so the
+    // user doesn't see the old message while the new submit is in flight.
+    setErrors(prev => {
+      const { publish: _drop, ...rest } = prev
+      void _drop
+      return rest
+    })
     setIsSubmitting(true)
-    await new Promise(r => setTimeout(r, 1500))
-    setIsSubmitting(false)
-    router.push('/seller/gigs?published=true')
+
+    // ── Field mapping ──────────────────────────────────────────────────
+    // form state → /api/create/publish payload
+    //
+    // Top-level category: prefer the user-selected subcategory label
+    // (e.g. "Design & Creative") over the broad 'online'/'offline' slug
+    // because subcategories are what the services browse page actually
+    // filters on.
+    const categoryLabel = selectedSubCategory || form.category
+
+    // is_remote derives from the broad category: online gigs are remote,
+    // offline gigs are on-site. Drives both the top-level is_remote body
+    // field and the is_remote column on the services row.
+    const isRemote = form.category === 'online'
+
+    // structured_location: the form doesn't use LocationPicker, so we
+    // only have the free-text `form.location` string. Send it as the
+    // location_label so it at least appears on the listing card — lat/
+    // lng are null, country/city unknown until someone upgrades the
+    // form to Nominatim autocomplete.
+    const structuredLocation = form.location.trim()
+      ? {
+          country: null,
+          region: null,
+          city: null,
+          latitude: null,
+          longitude: null,
+          location_label: form.location.trim(),
+        }
+      : null
+
+    // Log everything the services schema can't persist yet. Single
+    // console.warn so Vercel logs show exactly what was dropped per
+    // publish attempt — makes the silent-data-loss visible until the
+    // schema grows columns for packages / delivery / tags / etc.
+    console.warn(
+      '[gig publish] tiered packages not persisted — schema does not support packages yet:',
+      {
+        standard: form.packages.standard,
+        premium:  form.packages.premium,
+        basicExtras: {
+          deliveryTime: form.packages.basic.deliveryTime,
+          revisions:    form.packages.basic.revisions,
+          features:     form.packages.basic.features,
+        },
+        deliveryTypes: form.deliveryTypes,
+        serviceRadius: form.serviceRadius,
+        tags:          form.tags,
+        skills:        form.skills,
+        imagesCount:   form.images.length,
+      }
+    )
+
+    try {
+      const res = await fetch('/api/create/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'service',
+          data: {
+            title,
+            description,
+            price: priceNum,
+          },
+          category: categoryLabel,
+          location: form.location.trim() || undefined,
+          structured_location: structuredLocation,
+          is_remote: isRemote,
+          currency_code: 'EUR',
+        }),
+      })
+
+      const d = await res.json().catch(() => null) as {
+        success?: boolean
+        redirectUrl?: string
+        error?: string
+      } | null
+
+      if (!res.ok) {
+        const msg = d?.error ?? `Publish failed (HTTP ${res.status})`
+        console.error('[gig publish]', msg)
+        setErrors(prev => ({ ...prev, publish: msg }))
+        setIsSubmitting(false)
+        return
+      }
+
+      // Success — redirect to the services browse page with a query
+      // param so the downstream page can fire a toast. Not resetting
+      // isSubmitting here because the navigation unmounts the component.
+      router.push('/services?published=true')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[gig publish] network error:', msg)
+      setErrors(prev => ({ ...prev, publish: `Network error: ${msg}` }))
+      setIsSubmitting(false)
+    }
   }
 
   const categories = form.category === 'online' ? ONLINE_CATEGORIES : OFFLINE_CATEGORIES
@@ -875,6 +1000,36 @@ export default function CreateGigPage() {
                   )}
                 </div>
               </div>
+
+              {/* Inline error banner — shown when handlePublish() surfaces
+                  an API or network failure. Form state is preserved, the
+                  user can fix and retry without losing work. */}
+              {errors.publish && (
+                <div
+                  role="alert"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                    padding: '12px 14px',
+                    marginTop: 16,
+                    background: 'rgba(239,68,68,0.08)',
+                    border: '1px solid rgba(239,68,68,0.35)',
+                    borderRadius: 10,
+                    color: '#fca5a5',
+                    fontSize: 13,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <strong style={{ color: '#f87171', display: 'block', marginBottom: 2 }}>
+                      Could not publish gig
+                    </strong>
+                    {errors.publish}
+                  </div>
+                </div>
+              )}
 
               {/* Publish CTA */}
               <div style={styles.publishNote}>
