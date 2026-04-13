@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { toPgUrlArray, toPgTagArray } from '@/lib/supabase/text-array'
 
 // GET /api/listings/[id]
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -48,6 +49,14 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     for (const key of allowed) {
       if (key in body) updates[key] = body[key]
     }
+
+    // Encode text[] columns as Postgres array literals to dodge the
+    // PostgREST JSON→text[] coercion bug. Only re-encode if the field
+    // was actually present in the body — otherwise we'd reset the
+    // column to '{}' on every PATCH, nuking whatever was stored.
+    // See lib/supabase/text-array.ts for the bug history.
+    if ('tags' in updates)   updates.tags   = toPgTagArray(updates.tags)
+    if ('images' in updates) updates.images = toPgUrlArray(updates.images)
 
     const { data: listing, error } = await supabase
       .from('listings')

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { toPgUrlArray, toPgTagArray } from '@/lib/supabase/text-array'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -133,15 +134,20 @@ export default function EditListingPage() {
     setError(null)
 
     const tags = form.tags.split(',').map(t => t.trim()).filter(Boolean)
+    // Encode text[] columns as Postgres array literals — workaround for
+    // the PostgREST JSON→text[] coercion bug. Same pattern as the fix
+    // landed in /api/listings and the product branch of
+    // /api/create/publish (commit 8576fc1). See lib/supabase/text-array.ts
+    // for the bug history.
     const updates: Record<string, unknown> = {
       title: form.title.trim(),
       description: form.description.trim() || null,
       price,
       currency: form.currency,
-      tags,
+      tags:        toPgTagArray(tags),
       cover_image: form.cover_image || null,
-      images: form.images,
-      updated_at: new Date().toISOString(),
+      images:      toPgUrlArray(form.images),
+      updated_at:  new Date().toISOString(),
     }
     if (productType === 'physical') {
       updates.stock_qty = parseInt(form.stock_qty) || 0
