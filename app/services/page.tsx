@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ONLINE_CATEGORIES, OFFLINE_CATEGORIES } from '@/lib/service-categories'
 import LocationFilter from '@/components/location/LocationFilter'
@@ -258,6 +259,26 @@ export default function ServicesPage() {
   const [onlineOpen, setOnlineOpen] = useState(true)
   const [offlineOpen, setOfflineOpen] = useState(true)
 
+  // ── Success toast ──────────────────────────────────────────────────
+  // Fires when the user arrives from /seller/gigs/create?published=true.
+  // Uses the same inline toast pattern as app/articles/new/page.tsx and
+  // components/profile/ProfilePage.tsx — no external library.
+  const [toast, setToast] = useState<string>('')
+  const router = useRouter()
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const q = new URLSearchParams(window.location.search)
+    if (q.get('published') !== 'true') return
+    // Fire the toast and clear the query param so a refresh doesn't
+    // re-trigger it. router.replace preserves scroll + history state
+    // better than window.history.replaceState in a Next.js app.
+    setToast('🎉 Gig published! It\u2019s now live on Services.')
+    router.replace('/services', { scroll: false })
+    const timer = setTimeout(() => setToast(''), 4500)
+    return () => clearTimeout(timer)
+  }, [router])
+
   // Deep-link support: if the user arrives via a CategoryOverlapBadge
   // from /grassroots with ?category=<id>, seed activeCatId from the URL
   // on first mount. Read via window.location to avoid needing a new
@@ -463,6 +484,45 @@ export default function ServicesPage() {
 
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif' }}>
+      {/* Success toast — fires when ?published=true is in the URL.
+          Fixed to the top of the viewport so it's visible regardless
+          of scroll position on the services browse page. Dismisses
+          itself after 4.5s via the useEffect timeout above. */}
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            top: 'calc(58px + 12px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'linear-gradient(135deg, #0f172a, #1e293b)',
+            border: '1px solid rgba(34,197,94,0.45)',
+            borderLeft: '4px solid #22c55e',
+            borderRadius: 12,
+            padding: '12px 20px',
+            fontSize: 14,
+            fontWeight: 700,
+            color: '#f1f5f9',
+            boxShadow: '0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(34,197,94,0.1)',
+            zIndex: 9999,
+            maxWidth: 'min(92vw, 460px)',
+            textAlign: 'center',
+            // Slide-down animation so the toast doesn't just pop in.
+            animation: 'ft-toast-in 0.3s ease-out',
+          }}
+        >
+          <style>{`
+            @keyframes ft-toast-in {
+              from { opacity: 0; transform: translate(-50%, -16px); }
+              to   { opacity: 1; transform: translate(-50%, 0); }
+            }
+          `}</style>
+          {toast}
+        </div>
+      )}
+
       {deleteTarget && (
         <DeleteModal
           title={deleteTarget.title}
