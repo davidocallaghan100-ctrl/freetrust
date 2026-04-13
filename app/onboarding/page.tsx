@@ -35,6 +35,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
   const photoInputRef = useRef<HTMLInputElement>(null)
+  const coverInputRef = useRef<HTMLInputElement>(null)
 
   // Form state
   const [accountType, setAccountType] = useState<'individual' | 'business'>('individual')
@@ -43,6 +44,13 @@ export default function OnboardingPage() {
   const [location, setLocation] = useState('')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [photoUploading, setPhotoUploading] = useState(false)
+  // Cover photo is OPTIONAL — users can skip it and continue. Uploaded
+  // via /api/upload/media (same pattern as products/gigs) so the file
+  // goes through the server-side MIME sniffing + HEIC-safe upload path
+  // instead of direct client-to-Supabase-storage like the avatar does.
+  const [coverUrl, setCoverUrl] = useState<string | null>(null)
+  const [coverUploading, setCoverUploading] = useState(false)
+  const [coverError, setCoverError] = useState<string | null>(null)
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
   const [selectedInterests, setSelectedInterests] = useState<string[]>([])
   const [selectedPurposes, setSelectedPurposes] = useState<string[]>([])
@@ -74,6 +82,46 @@ export default function OnboardingPage() {
     finally { setPhotoUploading(false) }
   }
 
+  // Cover photo upload — goes through /api/upload/media so it benefits
+  // from the HEIC-safe MIME sniffing and the synthetic-path sanitiser
+  // landed in 097ecd2. Does NOT block onboarding progression: if the
+  // upload fails we show an inline error but the Continue button stays
+  // enabled.
+  const handleCoverUpload = async (file: File) => {
+    setCoverUploading(true)
+    setCoverError(null)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('type', 'cover')
+      const res = await fetch('/api/upload/media', { method: 'POST', body: fd })
+      const data = await res.json().catch(() => ({} as { url?: string; error?: string }))
+      if (!res.ok || !data.url) {
+        throw new Error(data.error ?? `Upload failed (HTTP ${res.status})`)
+      }
+      setCoverUrl(data.url)
+      // Persist immediately so the cover survives even if the user bails
+      // out of onboarding before hitting "Continue".
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { error: updErr } = await supabase
+          .from('profiles')
+          .update({ cover_url: data.url })
+          .eq('id', user.id)
+        if (updErr) {
+          console.error('[onboarding] cover_url persist error:', updErr)
+        }
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Cover upload failed'
+      console.error('[onboarding] cover upload:', msg)
+      setCoverError(msg)
+    } finally {
+      setCoverUploading(false)
+      if (coverInputRef.current) coverInputRef.current.value = ''
+    }
+  }
+
   const complete = async (firstActionHref: string) => {
     setSaving(true)
     try {
@@ -89,6 +137,7 @@ export default function OnboardingPage() {
           interests: selectedInterests,
           purpose: selectedPurposes,
           avatar_url: avatarUrl,
+          cover_url: coverUrl,
         }),
       })
       const json = await res.json()
@@ -196,6 +245,76 @@ export default function OnboardingPage() {
                 accept="image/*"
                 style={{ display: 'none' }}
                 onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(f) }}
+              />
+            </div>
+
+            {/* Cover photo upload (optional — does NOT gate Continue) */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <div
+                onClick={() => !coverUploading && coverInputRef.current?.click()}
+                style={{
+                  position: 'relative',
+                  height: 110,
+                  borderRadius: 12,
+                  border: '2px dashed rgba(56,189,248,0.25)',
+                  background: coverUrl
+                    ? 'transparent'
+                    : 'linear-gradient(135deg, rgba(56,189,248,0.06), rgba(129,140,248,0.05))',
+                  cursor: coverUploading ? 'wait' : 'pointer',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'border-color 0.15s',
+                }}
+                title="Upload cover photo (optional)"
+              >
+                {coverUrl ? (
+                  <>
+                    <img
+                      src={coverUrl}
+                      alt="Cover"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    />
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'linear-gradient(180deg, transparent 60%, rgba(15,23,42,0.7))',
+                      display: 'flex',
+                      alignItems: 'flex-end',
+                      justifyContent: 'flex-end',
+                      padding: '0.5rem 0.75rem',
+                    }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#f1f5f9' }}>
+                        ✓ Change cover
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ textAlign: 'center', color: '#64748b' }}>
+                    <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>
+                      {coverUploading ? '⏳' : '🖼️'}
+                    </div>
+                    <div style={{ fontSize: '0.82rem', color: '#38bdf8', fontWeight: 600 }}>
+                      {coverUploading ? 'Uploading…' : 'Add cover photo'}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: '#475569', marginTop: '0.15rem' }}>
+                      Optional — can skip and add later
+                    </div>
+                  </div>
+                )}
+              </div>
+              {coverError && (
+                <div style={{ fontSize: '0.72rem', color: '#fca5a5', marginTop: '0.35rem' }}>
+                  ⚠️ {coverError}
+                </div>
+              )}
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif"
+                style={{ display: 'none' }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleCoverUpload(f) }}
               />
             </div>
 

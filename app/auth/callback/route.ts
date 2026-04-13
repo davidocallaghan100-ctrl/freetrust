@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { sendWelcomeEmail } from '@/lib/resend'
 import { sendEmail } from '@/lib/email/send'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 // This route handles:
 // 1. Email confirmation links
@@ -36,10 +37,21 @@ export async function GET(request: NextRequest) {
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
+          // Every write in this branch uses the admin (service-role) client.
+          // The user-session client hit RLS denial on trust_balances /
+          // trust_ledger INSERT and silently swallowed the error, which is
+          // exactly the bug fixed here. Admin client bypasses RLS cleanly.
+          //
+          // Migration 20260413000004_trust_welcome_grant.sql adds an
+          // explicit INSERT policy as belt-and-braces too, but we
+          // prefer the admin path so this route works even if that
+          // migration hasn't been applied yet.
+          const admin = createAdminClient()
+
           // Determine "new user" by whether a signup bonus has already been issued.
           // Time-based checks (e.g. 60s) fail for email signups — users typically
           // take 1–5+ minutes to confirm their email, blowing past any short window.
-          const { data: existingBalance } = await supabase
+          const { data: existingBalance } = await admin
             .from('trust_balances')
             .select('user_id')
             .eq('user_id', user.id)
@@ -53,7 +65,7 @@ export async function GET(request: NextRequest) {
               const fullName = meta.full_name ?? meta.name ?? null
               const avatarUrl = meta.avatar_url ?? meta.picture ?? null
               if (fullName || avatarUrl) {
-                await supabase.from('profiles').update({
+                await admin.from('profiles').update({
                   ...(fullName ? { full_name: fullName } : {}),
                   ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
                 }).eq('id', user.id)
@@ -62,10 +74,16 @@ export async function GET(request: NextRequest) {
               console.error('[auth/callback] Profile metadata sync error:', err)
             }
 
-            // Award ₮25 founding member signup bonus (idempotent — only reached when
-            // no trust_balances row exists yet, confirmed by the isNewUser check above)
+            // Award ₮25 founding member signup bonus (idempotent — only
+            // reached when no trust_balances row exists yet, confirmed by
+            // the isNewUser check above).
+            //
+            // NEVER silently swallow errors here — the original bug burned
+            // production signups for months because the catch block was
+            // empty. Every failure path now logs the full Supabase error
+            // object so the next investigation can see exactly what broke.
             try {
-              const { error: rpcError } = await supabase.rpc('issue_trust', {
+              const { error: rpcError } = await admin.rpc('issue_trust', {
                 p_user_id: user.id,
                 p_amount: 25,
                 p_type: 'signup_bonus',
@@ -73,20 +91,41 @@ export async function GET(request: NextRequest) {
                 p_desc: 'Welcome to FreeTrust! Founding Member bonus.',
               })
               if (rpcError) {
-                // Fallback: best-effort ledger insert (table may not exist yet — that's OK)
-                await supabase.from('trust_ledger').insert({
-                  user_id: user.id,
-                  amount: 25,
-                  type: 'signup_bonus',
-                  description: 'Welcome to FreeTrust! Founding Member bonus.',
+                console.error('[auth/callback] issue_trust RPC failed, falling back to direct insert:', {
+                  code: rpcError.code,
+                  message: rpcError.message,
+                  details: rpcError.details,
+                  hint: rpcError.hint,
                 })
-                // Always create the balance row — this is the source of truth the UI reads
-                await supabase.from('trust_balances').insert(
-                  { user_id: user.id, balance: 25, lifetime: 25 }
-                )
+
+                // Fallback: admin-client direct insert. Balance is the
+                // source of truth the UI reads, so we insert it first
+                // and flag a ledger failure as non-fatal.
+                const { error: balanceErr } = await admin
+                  .from('trust_balances')
+                  .insert({ user_id: user.id, balance: 25, lifetime: 25 })
+                if (balanceErr) {
+                  console.error('[auth/callback] trust_balances insert failed:', {
+                    code: balanceErr.code,
+                    message: balanceErr.message,
+                    details: balanceErr.details,
+                    hint: balanceErr.hint,
+                  })
+                } else {
+                  const { error: ledgerErr } = await admin.from('trust_ledger').insert({
+                    user_id: user.id,
+                    amount: 25,
+                    type: 'signup_bonus',
+                    description: 'Welcome to FreeTrust! Founding Member bonus.',
+                  })
+                  if (ledgerErr) {
+                    console.error('[auth/callback] trust_ledger insert failed (non-fatal):', ledgerErr.message)
+                  }
+                }
               }
-            } catch {
-              console.error('[auth/callback] Trust bonus error — continuing')
+            } catch (err) {
+              const message = err instanceof Error ? err.message : String(err)
+              console.error('[auth/callback] Trust bonus unexpected error — continuing:', message)
             }
 
             // Award founding member badge

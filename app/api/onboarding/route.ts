@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const {
       account_type, full_name, bio, location,
       skills, interests, purpose,
-      avatar_url,
+      avatar_url, cover_url,
     } = body
 
     // Read only base-schema columns that are guaranteed to exist.
@@ -52,15 +52,22 @@ export async function POST(request: NextRequest) {
     // These columns are added by the 20260410_profiles_extended_columns migration.
     // If it hasn't been applied yet the update will fail — that's acceptable
     // because the important fields (bio, location) were already saved above.
+    //
+    // cover_url is optional — the onboarding UI doesn't gate Continue on it.
+    // Only include it in the update when the client actually sent a value so
+    // we don't overwrite a cover the user set via the settings page with null.
+    const extendedUpdates: Record<string, unknown> = {
+      account_type: account_type ?? 'individual',
+      skills: skills ?? [],
+      interests: interests ?? [],
+      purpose: purpose ?? [],
+      onboarding_complete: true,
+    }
+    if (cover_url) extendedUpdates.cover_url = cover_url
+
     await supabase
       .from('profiles')
-      .update({
-        account_type: account_type ?? 'individual',
-        skills: skills ?? [],
-        interests: interests ?? [],
-        purpose: purpose ?? [],
-        onboarding_complete: true,
-      })
+      .update(extendedUpdates)
       .eq('id', user.id)
 
     // Read trust balance to confirm ₮25 was already issued at signup

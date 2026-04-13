@@ -61,13 +61,32 @@ export default function RegisterPage() {
   const issueSignupBonus = async () => {
     try {
       const res = await fetch('/api/auth/signup-bonus', { method: 'POST' })
-      const data = await res.json() as { issued?: boolean }
+      const data = await res.json().catch(() => ({})) as {
+        issued?: boolean
+        balance?: number
+        error?: string
+        detail?: { code?: string | null; message?: string | null; hint?: string | null }
+      }
+      if (!res.ok) {
+        // Log the full server response so future zero-coin bugs are
+        // diagnosable from the browser console instead of being silent.
+        // This was the original root cause of the production trust
+        // bug — the old catch {} swallowed everything.
+        console.error('[register] signup-bonus failed:', res.status, data)
+        return
+      }
       if (data.issued) {
         setTrustToast(true)
         setTimeout(() => setTrustToast(false), 4000)
+      } else {
+        // issued=false usually means "already awarded" (idempotent
+        // replay). Log for visibility but no UI noise.
+        console.log('[register] signup-bonus already issued, balance:', data.balance)
       }
-    } catch {
-      // Silently fail — trust bonus is non-critical
+    } catch (err) {
+      // Network error — still non-fatal to signup itself, but log so
+      // we can see it in the browser console. Used to be silent.
+      console.error('[register] signup-bonus network error:', err)
     }
   }
 
