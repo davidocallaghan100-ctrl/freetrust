@@ -6,6 +6,7 @@ import {
   computeOrgTrustScore,
   collectTrustSignalsForOrgs,
 } from '@/lib/organisations/trust-score'
+import { toPgTagArray } from '@/lib/supabase/text-array'
 
 export async function GET(request: NextRequest) {
   try {
@@ -123,7 +124,10 @@ export async function POST(request: NextRequest) {
         location: location?.trim() || null,
         website: normWebsite,
         sector: sector || null,
-        tags: Array.isArray(tags) ? tags : [],
+        // Encode tags as a Postgres text[] literal to work around the
+        // PostgREST JSON→text[] coercion bug. Same pattern as the
+        // listings + grassroots fixes.
+        tags: toPgTagArray(tags),
         logo_url: logo_url || null,
         is_verified: false,
         members_count: 1,

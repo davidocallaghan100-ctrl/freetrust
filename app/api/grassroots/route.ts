@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { GRASSROOTS_CATEGORIES_BY_SLUG } from '@/lib/grassroots/categories'
+import { toPgUrlArray } from '@/lib/supabase/text-array'
 
 // ────────────────────────────────────────────────────────────────────────────
 // /api/grassroots
@@ -213,7 +214,12 @@ export async function POST(request: NextRequest) {
         currency_code: currencyCode,
         rate_eur: rateEur,
         availability,
-        photos: Array.isArray(body.photos) ? body.photos.filter(p => typeof p === 'string').slice(0, 10) : [],
+        // Encode photos as a Postgres text[] literal via the shared
+        // helper so the insert works around PostgREST's JSON→text[]
+        // coercion bug. toPgUrlArray also filters to http(s) URLs only,
+        // so we no longer need the manual .filter + .slice — cap the
+        // array size to 10 here instead.
+        photos: toPgUrlArray(Array.isArray(body.photos) ? body.photos.slice(0, 10) : []),
         country: body.country ? body.country.toUpperCase() : null,
         region: body.region ?? null,
         city: body.city ?? null,
