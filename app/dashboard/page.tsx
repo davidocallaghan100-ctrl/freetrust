@@ -161,7 +161,7 @@ export default function DashboardPage() {
               <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Share with the community</div>
             </div>
           </Link>
-          <Link href="/services/new" style={{ textDecoration: 'none' }}>
+          <Link href="/seller/gigs/create" style={{ textDecoration: 'none' }}>
             <div style={{ background: 'linear-gradient(135deg, rgba(52,211,153,0.1), rgba(52,211,153,0.03))', border: '1px solid rgba(52,211,153,0.2)', borderRadius: '12px', padding: '1rem', cursor: 'pointer' }}>
               <div style={{ fontSize: '22px', marginBottom: '6px' }}>🛠</div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9' }}>List a service</div>
