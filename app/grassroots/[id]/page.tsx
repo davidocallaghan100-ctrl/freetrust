@@ -444,6 +444,29 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
                     💬 Negotiable
                   </div>
                 )}
+                {/* Primary ₮ payment pill — sits directly under the rate
+                    so users see "pay with Trust" the moment they look at
+                    the price, not buried in an explainer card below the
+                    fold. */}
+                {listing.trust_tokens_accepted && (
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    marginTop: 10,
+                    padding: '6px 12px',
+                    background: 'rgba(56,189,248,0.1)',
+                    border: '1px solid rgba(56,189,248,0.35)',
+                    borderRadius: 999,
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: '#38bdf8',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    <span style={{ fontSize: 14 }}>₮</span>
+                    Pay with Trust — primary payment
+                  </div>
+                )}
               </div>
               <button
                 onClick={handleContact}

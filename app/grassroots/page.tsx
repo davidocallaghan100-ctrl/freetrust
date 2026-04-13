@@ -6,6 +6,8 @@ import LocationBadge from '@/components/location/LocationBadge'
 import PriceDisplay from '@/components/currency/PriceDisplay'
 import SocialLinks, { type SocialUrls } from '@/components/social/SocialLinks'
 import CrossPromoBanner from '@/components/marketplace/CrossPromoBanner'
+import CategoryOverlapBadge from '@/components/marketplace/CategoryOverlapBadge'
+import { grassrootsToServicesLink } from '@/lib/marketplace/category-overlap'
 import { EMPTY_LOCATION, type StructuredLocation, type RadiusValue } from '@/lib/geo'
 import { buildCountryOptions } from '@/lib/countries'
 import type { CurrencyCode } from '@/context/CurrencyContext'
@@ -71,6 +73,20 @@ export default function GrassrootsBrowsePage() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [listingType, setListingType]       = useState<ListingTypeFilter>('offering')
   const [sort, setSort]                     = useState<SortKey>('nearest')
+
+  // Deep-link support: if the user arrives via a CategoryOverlapBadge
+  // from /services with ?category=<slug>, seed the activeCategory state
+  // from the URL on first mount. We read from window.location rather
+  // than useSearchParams() so we don't have to wrap this page in a
+  // Suspense boundary just for one-shot query-param init.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const q = new URLSearchParams(window.location.search)
+    const c = q.get('category')
+    if (c && GRASSROOTS_CATEGORIES_BY_SLUG[c]) setActiveCategory(c)
+    const lt = q.get('listing_type')
+    if (lt === 'offering' || lt === 'seeking') setListingType(lt)
+  }, [])
   // Location filter state
   const [filterLoc, setFilterLoc]           = useState<StructuredLocation>(EMPTY_LOCATION)
   const [radiusKm, setRadiusKm]             = useState<RadiusValue>(25)
@@ -252,6 +268,12 @@ export default function GrassrootsBrowsePage() {
             </button>
             {GRASSROOTS_CATEGORIES.map(cat => {
               const active = activeCategory === cat.slug
+              // Cross-link shown on categories that also exist on /services
+              // (e.g. Delivery, Childcare, Elder Care, Events, Trades…).
+              // Rendered as a tiny clickable pill inside the category card;
+              // clicks stopPropagation so they don't also toggle this
+              // category filter.
+              const crossLink = grassrootsToServicesLink(cat.slug)
               return (
                 <button
                   key={cat.slug}
@@ -269,11 +291,14 @@ export default function GrassrootsBrowsePage() {
                     textAlign: 'center',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                     transition: 'all 0.15s',
-                    minHeight: 88,
+                    minHeight: crossLink ? 106 : 88,
                   }}
                 >
                   <span style={{ fontSize: 22 }}>{cat.emoji}</span>
                   <span style={{ lineHeight: 1.2 }}>{cat.label.split(' & ')[0]}</span>
+                  {crossLink && (
+                    <CategoryOverlapBadge link={crossLink} flavor="services" />
+                  )}
                 </button>
               )
             })}
@@ -286,8 +311,12 @@ export default function GrassrootsBrowsePage() {
           flexWrap: 'wrap', gap: 8, marginBottom: '1rem',
         }}>
           <div style={{ fontSize: 13, color: '#64748b' }}>
-            {loading ? 'Loading…' : `${sorted.length} ${sorted.length === 1 ? 'listing' : 'listings'}`}
-            {activeCategory && ` in ${GRASSROOTS_CATEGORIES_BY_SLUG[activeCategory]?.label}`}
+            {loading
+              ? 'Loading…'
+              : sorted.length === 0
+                ? 'Nothing posted here yet'
+                : `${sorted.length} ${sorted.length === 1 ? 'listing' : 'listings'}`}
+            {!loading && sorted.length > 0 && activeCategory && ` in ${GRASSROOTS_CATEGORIES_BY_SLUG[activeCategory]?.label}`}
           </div>
           <select
             value={sort}
@@ -327,27 +356,43 @@ export default function GrassrootsBrowsePage() {
             ))}
           </div>
         ) : sorted.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
+          // Seed-state empty card. Renders instead of a bare "0 listings"
+          // line so the first visitor to a category / region sees a
+          // prominent, welcoming CTA rather than an empty page.
+          <div style={{
+            textAlign: 'center',
+            padding: '3rem 1.5rem',
+            background: 'linear-gradient(180deg, rgba(34,197,94,0.06) 0%, rgba(34,197,94,0.02) 100%)',
+            border: `1px dashed ${GRASSROOTS_GREEN.border}`,
+            borderRadius: 16,
+            maxWidth: 560,
+            margin: '0 auto',
+          }}>
             <div style={{ fontSize: '3.5rem', marginBottom: '0.75rem' }}>🌱</div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.5rem' }}>
-              No listings found
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#f1f5f9', marginBottom: '0.5rem' }}>
+              Be the first to post in your area
             </h2>
-            <p style={{ color: '#64748b', marginBottom: '1.5rem', fontSize: '0.9rem', maxWidth: 420, margin: '0 auto 1.5rem' }}>
+            <p style={{ color: '#94a3b8', marginBottom: '1.5rem', fontSize: '0.92rem', lineHeight: 1.55, maxWidth: 420, margin: '0 auto 1.5rem' }}>
               {activeCategory || countryFilter || filterLoc.latitude != null
-                ? 'Try clearing a filter — or be the first to post in this category.'
-                : `Be the first ${listingType === 'offering' ? 'worker' : 'client'} in your area.`}
+                ? 'No listings match your filters yet. Clear a filter or create the first one for this category — it only takes a minute.'
+                : `Grassroots is brand-new and local to you. Post a ${listingType === 'offering' ? 'listing offering your skills' : 'listing to find local help'} — the community grows one listing at a time.`}
             </p>
             <Link href="/grassroots/new" style={{
               display: 'inline-block',
               background: `linear-gradient(135deg, ${GRASSROOTS_GREEN.primary}, ${GRASSROOTS_GREEN.primaryDim})`,
               color: '#0f172a',
-              padding: '0.75rem 1.75rem',
+              padding: '0.85rem 2rem',
               borderRadius: 10,
               fontWeight: 800,
+              fontSize: '0.95rem',
               textDecoration: 'none',
+              boxShadow: '0 4px 14px rgba(34,197,94,0.35)',
             }}>
-              Post the first listing →
+              + Post a Grassroots listing
             </Link>
+            <div style={{ marginTop: 14, fontSize: 11, color: '#475569' }}>
+              It&apos;s free. Takes under a minute. Local-first.
+            </div>
           </div>
         ) : (
           <div style={{
@@ -526,29 +571,51 @@ function ListingCard({ listing: l }: { listing: Listing }) {
           )}
         </div>
 
-        {/* Rate footer */}
+        {/* Rate footer
+            When the listing accepts ₮ Trust tokens, we promote the "Pay
+            with ₮" affordance directly under the numeric rate so it
+            reads as a primary payment method rather than an afterthought
+            tucked in the card corner. The old ₮ chip on the photo
+            stays too — it's still useful as a scannability signal when
+            the cards are dense. */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           marginTop: 'auto', paddingTop: 8,
         }}>
-          {l.rate != null && l.rate_type !== 'negotiable' ? (
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-              <PriceDisplay
-                amountEur={l.rate_eur ?? l.rate}
-                sourceCode={(l.currency_code || 'EUR') as CurrencyCode}
-                sourceAmount={l.rate}
-                size="md"
-                layout="stacked"
-              />
-              {rateLabel && (
-                <span style={{ fontSize: 11, color: '#475569' }}>{rateLabel}</span>
-              )}
-            </div>
-          ) : (
-            <span style={{ fontSize: 13, fontWeight: 700, color: GRASSROOTS_GREEN.primary }}>
-              {l.rate_type === 'negotiable' ? '💬 Negotiable' : 'Ask for rate'}
-            </span>
-          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+            {l.rate != null && l.rate_type !== 'negotiable' ? (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                <PriceDisplay
+                  amountEur={l.rate_eur ?? l.rate}
+                  sourceCode={(l.currency_code || 'EUR') as CurrencyCode}
+                  sourceAmount={l.rate}
+                  size="md"
+                  layout="stacked"
+                />
+                {rateLabel && (
+                  <span style={{ fontSize: 11, color: '#475569' }}>{rateLabel}</span>
+                )}
+              </div>
+            ) : (
+              <span style={{ fontSize: 13, fontWeight: 700, color: GRASSROOTS_GREEN.primary }}>
+                {l.rate_type === 'negotiable' ? '💬 Negotiable' : 'Ask for rate'}
+              </span>
+            )}
+            {l.trust_tokens_accepted && (
+              <span style={{
+                fontSize: 10,
+                fontWeight: 700,
+                color: '#38bdf8',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 3,
+              }}>
+                <span style={{ fontSize: 12 }}>₮</span> Pay with Trust
+              </span>
+            )}
+          </div>
           <span style={{
             background: 'transparent',
             border: `1px solid ${GRASSROOTS_GREEN.border}`,

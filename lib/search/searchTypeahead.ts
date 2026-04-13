@@ -8,9 +8,12 @@ export async function searchTypeahead(query: string): Promise<TypeaheadResult[]>
   const q = query.toLowerCase().trim()
 
   // Static demo data — swap for Supabase/API query in production
+  // (the real /api/search route is already wired and includes grassroots)
   const DEMO: TypeaheadResult[] = [
     { id: "s1", title: "Web Development", subtitle: "Service", category: "service", href: "/services/web-development", trustScore: 92 },
     { id: "s2", title: "Logo Design", subtitle: "Service", category: "service", href: "/services/logo-design", trustScore: 88 },
+    { id: "g1", title: "Hedge cutting near Cork", subtitle: "Grassroots · Gardening", category: "grassroots", href: "/grassroots", trustScore: 76 },
+    { id: "g2", title: "Need someone to help move a sofa", subtitle: "Grassroots · Moving", category: "grassroots", href: "/grassroots", trustScore: 80 },
     { id: "p1", title: "FreeTrust Pro Plan", subtitle: "Product", category: "product", href: "/products/pro-plan", trustScore: 95 },
     { id: "e1", title: "Freelancer Meetup Dublin", subtitle: "Event · Apr 2026", category: "event", href: "/events/freelancer-meetup-dublin", trustScore: 78 },
     { id: "o1", title: "Tech Guild Ireland", subtitle: "Organisation", category: "organisation", href: "/organisations/tech-guild-ireland", trustScore: 85 },

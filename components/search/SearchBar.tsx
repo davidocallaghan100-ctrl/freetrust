@@ -21,6 +21,7 @@ const CATEGORY_ICONS: Record<string, string> = {
   organisation: "🏢",
   article: "📰",
   member: "👤",
+  grassroots: "🌱",
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -30,12 +31,13 @@ const CATEGORY_LABELS: Record<string, string> = {
   organisation: "Organisation",
   article: "Article",
   member: "Member",
+  grassroots: "Grassroots",
 }
 
 export default function SearchBar({
   initialQuery = "",
   large = false,
-  placeholder = "Search services, products, events…",
+  placeholder = "Search services, grassroots, members…",
 }: SearchBarProps) {
   const router = useRouter()
   const searchParams = useSearchParams()

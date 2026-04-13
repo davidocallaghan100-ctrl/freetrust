@@ -691,38 +691,69 @@ function Step4({ form, setForm, currencyCode, setCurrencyCode }: Step4Props) {
         </>
       )}
 
-      {/* Trust tokens accepted toggle */}
-      <label
-        style={{
+      {/* ── Trust tokens as PRIMARY payment method ─────────────────────
+          Promoted above the currency picker in the visual hierarchy so
+          users see ₮ first. The card has a "Recommended" pill when
+          off (to nudge opt-in) and a "✓ Active" pill when on. Same
+          colour palette as the rest of the ₮ UI (#38bdf8 cyan). */}
+      <div style={{ marginTop: 8 }}>
+        <div style={{
           display: 'flex',
-          alignItems: 'flex-start',
-          gap: 12,
-          padding: '14px 16px',
-          background: form.trust_tokens_accepted ? 'rgba(56,189,248,0.08)' : '#0f172a',
-          border: `1.5px solid ${form.trust_tokens_accepted ? 'rgba(56,189,248,0.35)' : '#334155'}`,
-          borderRadius: 12,
-          cursor: 'pointer',
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={form.trust_tokens_accepted}
-          onChange={e => setForm(f => ({ ...f, trust_tokens_accepted: e.target.checked }))}
-          style={{ width: 18, height: 18, accentColor: '#38bdf8', marginTop: 2, flexShrink: 0 }}
-        />
-        <div style={{ flex: 1 }}>
-          <div style={{
-            fontSize: 14, fontWeight: 700,
-            color: form.trust_tokens_accepted ? '#38bdf8' : '#f1f5f9',
-            marginBottom: 2,
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 8,
+        }}>
+          <label style={fieldLabelStyle}>Primary payment</label>
+          <span style={{
+            fontSize: 10,
+            color: form.trust_tokens_accepted ? '#38bdf8' : '#64748b',
+            fontWeight: 700,
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase',
           }}>
-            ₮ Accept FreeTrust Trust tokens
-          </div>
-          <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>
-            Let clients pay with Trust tokens as full or partial payment. Builds your reputation faster.
-          </div>
+            {form.trust_tokens_accepted ? '✓ Active' : 'Recommended'}
+          </span>
         </div>
-      </label>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 14,
+            padding: '16px 18px',
+            background: form.trust_tokens_accepted ? 'rgba(56,189,248,0.1)' : '#0f172a',
+            border: `2px solid ${form.trust_tokens_accepted ? '#38bdf8' : 'rgba(56,189,248,0.25)'}`,
+            borderRadius: 14,
+            cursor: 'pointer',
+            boxShadow: form.trust_tokens_accepted ? '0 0 0 3px rgba(56,189,248,0.08)' : 'none',
+            transition: 'all 0.15s',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={form.trust_tokens_accepted}
+            onChange={e => setForm(f => ({ ...f, trust_tokens_accepted: e.target.checked }))}
+            style={{ width: 20, height: 20, accentColor: '#38bdf8', marginTop: 2, flexShrink: 0 }}
+          />
+          <div style={{ flex: 1 }}>
+            <div style={{
+              fontSize: 15, fontWeight: 800,
+              color: form.trust_tokens_accepted ? '#38bdf8' : '#f1f5f9',
+              marginBottom: 4,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}>
+              <span style={{ fontSize: 18 }}>₮</span> Accept FreeTrust Trust tokens
+            </div>
+            <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.55 }}>
+              Trust is the primary payment rail on Grassroots — listings that
+              accept ₮ get boosted in search and tagged &ldquo;Pay with Trust&rdquo;
+              on every card. Clients can still pay in {currencyCode} as
+              full or partial top-up, so you never lose a sale by opting in.
+            </div>
+          </div>
+        </label>
+      </div>
     </div>
   )
 }

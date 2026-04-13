@@ -8,6 +8,8 @@ import LocationBadge from '@/components/location/LocationBadge'
 import PriceDisplay from '@/components/currency/PriceDisplay'
 import SocialLinks from '@/components/social/SocialLinks'
 import CrossPromoBanner from '@/components/marketplace/CrossPromoBanner'
+import CategoryOverlapBadge from '@/components/marketplace/CategoryOverlapBadge'
+import { servicesToGrassrootsLink } from '@/lib/marketplace/category-overlap'
 import { EMPTY_LOCATION, haversineKm, type StructuredLocation, type RadiusValue } from '@/lib/geo'
 import { buildCountryOptions } from '@/lib/countries'
 import type { CurrencyCode } from '@/context/CurrencyContext'
@@ -255,6 +257,19 @@ export default function ServicesPage() {
   // Collapsible sidebar sections — persisted to localStorage
   const [onlineOpen, setOnlineOpen] = useState(true)
   const [offlineOpen, setOfflineOpen] = useState(true)
+
+  // Deep-link support: if the user arrives via a CategoryOverlapBadge
+  // from /grassroots with ?category=<id>, seed activeCatId from the URL
+  // on first mount. Read via window.location to avoid needing a new
+  // Suspense boundary for useSearchParams().
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const q = new URLSearchParams(window.location.search)
+    const c = q.get('category')
+    if (!c) return
+    const found = [...ONLINE_CATEGORIES, ...OFFLINE_CATEGORIES].some(cat => cat.id === c)
+    if (found) setActiveCatId(c)
+  }, [])
 
   useEffect(() => {
     try {
@@ -573,11 +588,16 @@ export default function ServicesPage() {
                 </button>
                 {onlineOpen && ONLINE_CATEGORIES.map(cat => {
                   const count = services.filter(s => s.categoryId === cat.id).length
+                  const crossLink = servicesToGrassrootsLink(cat.id)
                   return (
                     <button key={cat.id} className="cat-btn" onClick={() => setActiveCatId(activeCatId === cat.id ? null : cat.id)}
                       style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 14px 8px 18px', background: activeCatId === cat.id ? 'rgba(56,189,248,0.1)' : 'transparent', border: 'none', borderLeft: activeCatId === cat.id ? '3px solid #38bdf8' : '3px solid transparent', color: activeCatId === cat.id ? '#38bdf8' : '#94a3b8', fontSize: '12px', fontWeight: activeCatId === cat.id ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span>{cat.icon}</span>{cat.label}</span>
-                      {count > 0 && <span style={{ fontSize: '10px', color: '#475569' }}>{count}</span>}
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
+                        <span>{cat.icon}</span>
+                        <span>{cat.label}</span>
+                        {crossLink && <CategoryOverlapBadge link={crossLink} flavor="grassroots" />}
+                      </span>
+                      {count > 0 && <span style={{ fontSize: '10px', color: '#475569', flexShrink: 0 }}>{count}</span>}
                     </button>
                   )
                 })}
@@ -596,11 +616,16 @@ export default function ServicesPage() {
                 </button>
                 {offlineOpen && OFFLINE_CATEGORIES.map(cat => {
                   const count = services.filter(s => s.categoryId === cat.id).length
+                  const crossLink = servicesToGrassrootsLink(cat.id)
                   return (
                     <button key={cat.id} className="cat-btn" onClick={() => setActiveCatId(activeCatId === cat.id ? null : cat.id)}
                       style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 14px 8px 18px', background: activeCatId === cat.id ? 'rgba(52,211,153,0.1)' : 'transparent', border: 'none', borderLeft: activeCatId === cat.id ? '3px solid #34d399' : '3px solid transparent', color: activeCatId === cat.id ? '#34d399' : '#94a3b8', fontSize: '12px', fontWeight: activeCatId === cat.id ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span>{cat.icon}</span>{cat.label}</span>
-                      {count > 0 && <span style={{ fontSize: '10px', color: '#475569' }}>{count}</span>}
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
+                        <span>{cat.icon}</span>
+                        <span>{cat.label}</span>
+                        {crossLink && <CategoryOverlapBadge link={crossLink} flavor="grassroots" />}
+                      </span>
+                      {count > 0 && <span style={{ fontSize: '10px', color: '#475569', flexShrink: 0 }}>{count}</span>}
                     </button>
                   )
                 })}

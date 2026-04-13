@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 
 interface SearchHit {
   id: string
-  type: 'member' | 'service' | 'product' | 'event' | 'article' | 'org'
+  type: 'member' | 'service' | 'product' | 'event' | 'article' | 'org' | 'grassroots'
   title: string
   subtitle?: string
   url: string
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     const perType = Math.max(3, Math.floor(limit / 5))
 
     // Parallel queries across all tables
-    const [membersRes, servicesRes, productsRes, eventsRes, articlesRes, orgsRes] = await Promise.allSettled([
+    const [membersRes, servicesRes, productsRes, eventsRes, articlesRes, orgsRes, grassrootsRes] = await Promise.allSettled([
       (() => {
         let qb = supabase.from('profiles').select('id, full_name, location').limit(browseMode ? 12 : perType)
         if (q) qb = qb.ilike('full_name', `%${q}%`)
@@ -56,6 +56,21 @@ export async function GET(req: NextRequest) {
       (() => {
         let qb = supabase.from('organisations').select('id, name, category, location').limit(browseMode ? 10 : perType)
         if (q) qb = qb.or(`name.ilike.%${q}%,description.ilike.%${q}%`)
+        return qb
+      })(),
+
+      // Grassroots — same shape as services. Filters to active+active and
+      // returns the title + category + city so the typeahead can show
+      // useful context. The category column stores slugs (farming,
+      // delivery, etc.) — the client renders them via
+      // GRASSROOTS_CATEGORIES_BY_SLUG if it wants pretty labels.
+      (() => {
+        let qb = supabase.from('grassroots_listings')
+          .select('id, title, category, city')
+          .eq('is_active', true)
+          .eq('status', 'active')
+          .limit(browseMode ? 10 : perType)
+        if (q) qb = qb.or(`title.ilike.%${q}%,description.ilike.%${q}%`)
         return qb
       })(),
     ])
@@ -136,6 +151,20 @@ export async function GET(req: NextRequest) {
           title: o.name,
           subtitle: [o.category, o.location].filter(Boolean).join(' · ') || undefined,
           url: `/organisations/${o.id}`,
+        })
+      }
+    }
+
+    // Grassroots listings — typed as 'grassroots' so the SearchBar UI
+    // can render the 🌱 icon + "Grassroots" group label.
+    if (grassrootsRes.status === 'fulfilled' && grassrootsRes.value.data) {
+      for (const g of grassrootsRes.value.data) {
+        hits.push({
+          id: g.id,
+          type: 'grassroots',
+          title: g.title,
+          subtitle: [g.category, g.city].filter(Boolean).join(' · ') || undefined,
+          url: `/grassroots/${g.id}`,
         })
       }
     }
