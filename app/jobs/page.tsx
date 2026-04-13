@@ -1,7 +1,18 @@
 'use client'
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import LocationFilter from '@/components/location/LocationFilter'
+// Aliased: the file already has a local `LocationBadge` for the
+// remote/hybrid/on_site location_type pill (see line ~88). Importing as
+// GeoLocationBadge keeps both names side-by-side without renaming the
+// existing one — the local pill is still useful even when geo data is
+// present.
+import GeoLocationBadge from '@/components/location/LocationBadge'
+import PriceDisplay from '@/components/currency/PriceDisplay'
+import { EMPTY_LOCATION, haversineKm, type StructuredLocation, type RadiusValue } from '@/lib/geo'
+import { buildCountryOptions } from '@/lib/countries'
+import type { CurrencyCode } from '@/context/CurrencyContext'
 
 type JobType = 'full_time' | 'part_time' | 'contract' | 'freelance' | 'all'
 type LocationType = 'all' | 'remote' | 'on_site' | 'hybrid'
@@ -15,6 +26,19 @@ interface RemoteJob {
   location_type: string
   location: string | null
   salary: string | null
+  // Globalisation fields (optional — Remotive remote-only feed has none of these)
+  salary_min?: number | null
+  salary_max?: number | null
+  salary_min_eur?: number | null
+  salary_max_eur?: number | null
+  salary_currency?: string | null
+  country?: string | null
+  city?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  location_label?: string | null
+  is_remote?: boolean
+  distance_km?: number | null
   tags: string[]
   category: string
   created_at: string
@@ -39,11 +63,15 @@ interface SupabaseJob {
   poster: { id: string; full_name: string | null } | null
   // Globalisation fields (optional — null for legacy jobs)
   country?: string | null
+  region?: string | null
   city?: string | null
   latitude?: number | null
   longitude?: number | null
   location_label?: string | null
   is_remote?: boolean
+  currency_code?: string | null
+  salary_min_eur?: number | null
+  salary_max_eur?: number | null
   distance_km?: number | null
 }
 
@@ -83,6 +111,17 @@ function supabaseToRemoteJob(j: SupabaseJob): RemoteJob {
     location_type: j.location_type,
     location: j.location,
     salary: formatSalary(j.salary_min, j.salary_max, j.salary_currency),
+    salary_min:      j.salary_min,
+    salary_max:      j.salary_max,
+    salary_currency: (j.currency_code ?? j.salary_currency) ?? null,
+    salary_min_eur:  typeof j.salary_min_eur === 'number' ? j.salary_min_eur : null,
+    salary_max_eur:  typeof j.salary_max_eur === 'number' ? j.salary_max_eur : null,
+    country:         j.country ?? null,
+    city:            j.city ?? null,
+    latitude:        typeof j.latitude  === 'number' ? j.latitude  : null,
+    longitude:       typeof j.longitude === 'number' ? j.longitude : null,
+    location_label:  j.location_label ?? null,
+    is_remote:       Boolean(j.is_remote ?? j.location_type === 'remote'),
     tags: j.tags ?? [],
     category: j.category,
     created_at: j.created_at,
@@ -267,6 +306,11 @@ export default function JobsPage() {
   const [locationType, setLocationType] = useState<LocationType>('all')
   const [category, setCategory] = useState('All')
   const [applyJob, setApplyJob] = useState<RemoteJob | null>(null)
+  // Globalisation — structured location filter state
+  const [filterLoc, setFilterLoc]           = useState<StructuredLocation>(EMPTY_LOCATION)
+  const [searchRadiusKm, setSearchRadiusKm] = useState<RadiusValue>(0)
+  const [countryFilter, setCountryFilter]   = useState<string | null>(null)
+  const [filterRemote, setFilterRemote]     = useState(false)
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 350)
@@ -312,9 +356,66 @@ export default function JobsPage() {
 
   useEffect(() => { void fetchJobs() }, [fetchJobs])
 
+  // Country options merged with the global ISO 3166-1 list — most-used
+  // first, then the rest of the world. Same pattern as products + services.
+  // Remotive jobs don't have country codes so the list is dominated by
+  // local FreeTrust postings, with the global fallback kicking in for
+  // any country the user wants to browse worldwide.
+  const countryOptions = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const j of jobs) {
+      if (!j.country) continue
+      counts.set(j.country, (counts.get(j.country) ?? 0) + 1)
+    }
+    return buildCountryOptions(counts)
+  }, [jobs])
+
   const filtered = jobs
+    .map(j => {
+      // Compute distance_km when both filter and listing have coordinates.
+      // Remotive jobs lack lat/lng so they fall back to the city/country
+      // text — they're treated as remote for distance-sort purposes.
+      if (
+        filterLoc.latitude != null && filterLoc.longitude != null &&
+        j.latitude != null && j.longitude != null
+      ) {
+        return {
+          ...j,
+          distance_km: haversineKm(
+            { latitude: filterLoc.latitude, longitude: filterLoc.longitude },
+            { latitude: j.latitude, longitude: j.longitude }
+          ),
+        }
+      }
+      return j
+    })
     .filter(j => locationType === 'all' || j.location_type === locationType)
     .filter(j => jobType === 'all' || j.job_type === jobType)
+    .filter(j => {
+      // ── Globalisation filters ───────────────────────────────────────
+      if (filterRemote && !j.is_remote && j.location_type !== 'remote') return false
+      if (countryFilter && j.country !== countryFilter) return false
+      if (searchRadiusKm > 0 && filterLoc.latitude != null) {
+        // Remote jobs always come through — they're available worldwide.
+        const isRemote = j.is_remote || j.location_type === 'remote'
+        if (!isRemote && (j.distance_km == null || j.distance_km > searchRadiusKm)) return false
+      }
+      return true
+    })
+    .sort((a, b) => {
+      // Default: when a location filter is active, sort local-first by
+      // distance with remote jobs at the very end so they don't dominate
+      // the top of the list when the user picked a specific city.
+      if (filterLoc.latitude != null) {
+        const aR = a.is_remote || a.location_type === 'remote' ? 1 : 0
+        const bR = b.is_remote || b.location_type === 'remote' ? 1 : 0
+        if (aR !== bR) return aR - bR
+        const da = typeof a.distance_km === 'number' ? a.distance_km : Number.MAX_VALUE
+        const db = typeof b.distance_km === 'number' ? b.distance_km : Number.MAX_VALUE
+        return da - db
+      }
+      return 0
+    })
 
   const btnBase: React.CSSProperties = {
     padding: '0.35rem 0.9rem', borderRadius: 999, fontSize: '0.8rem', cursor: 'pointer',
@@ -382,6 +483,21 @@ export default function JobsPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '1.5rem 1.5rem 3rem' }}>
         {/* Filters */}
         <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1rem 1.25rem', marginBottom: '1.5rem' }}>
+          {/* Globalisation — location filter */}
+          <div style={{ marginBottom: '0.85rem' }}>
+            <LocationFilter
+              location={filterLoc}
+              onLocationChange={setFilterLoc}
+              radiusKm={searchRadiusKm}
+              onRadiusChange={setSearchRadiusKm}
+              country={countryFilter}
+              onCountryChange={setCountryFilter}
+              countryOptions={countryOptions}
+              remote={filterRemote}
+              onRemoteChange={setFilterRemote}
+              showRemote
+            />
+          </div>
           <div className="jobs-filters">
             <span className="jobs-filter-label">Location:</span>
             {(['all', 'remote', 'on_site', 'hybrid'] as LocationType[]).map(l => (
@@ -457,15 +573,19 @@ export default function JobsPage() {
                   {/* Title + badges */}
                   <div>
                     <h3 style={{ fontSize: '1.02rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem', lineHeight: 1.3 }}>{job.title}</h3>
-                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
                       <span style={{ background: `${typeColor}18`, color: typeColor, border: `1px solid ${typeColor}30`, borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.72rem', fontWeight: 600 }}>
                         {typeLabel}
                       </span>
                       <LocationBadge locationType={job.location_type} />
-                      {job.location && job.location !== 'Worldwide' && (
-                        <span style={{ background: 'rgba(148,163,184,0.08)', color: '#94a3b8', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.72rem' }}>
-                          📍 {job.location}
-                        </span>
+                      {/* Structured location badge (city + country + distance) */}
+                      {(job.location_label || (job.location && job.location !== 'Worldwide')) && (
+                        <GeoLocationBadge
+                          label={job.location_label ?? job.location ?? null}
+                          remote={Boolean(job.is_remote || job.location_type === 'remote')}
+                          distanceKm={job.distance_km ?? null}
+                          compact
+                        />
                       )}
                     </div>
                   </div>
@@ -487,11 +607,48 @@ export default function JobsPage() {
                   )}
 
                   {/* Footer */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', borderTop: '1px solid rgba(56,189,248,0.06)', paddingTop: '0.75rem' }}>
-                    <span style={{ fontSize: '0.82rem', color: job.salary ? '#38bdf8' : '#475569', fontWeight: job.salary ? 600 : 400 }}>
-                      {job.salary ? `💰 ${job.salary}` : 'Salary not listed'}
-                    </span>
-                    <span style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#0f172a', borderRadius: 7, padding: '0.4rem 1rem', fontSize: '0.82rem', fontWeight: 700 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', borderTop: '1px solid rgba(56,189,248,0.06)', paddingTop: '0.75rem', gap: '0.5rem' }}>
+                    {(() => {
+                      // Prefer the canonical EUR salary range. For local
+                      // jobs the publish route writes salary_min_eur /
+                      // salary_max_eur; for Remotive remote jobs we fall
+                      // back to the pre-formatted `salary` string.
+                      const eurMin = job.salary_min_eur ?? null
+                      const eurMax = job.salary_max_eur ?? null
+                      if (eurMin != null || eurMax != null) {
+                        const sourceCode = (job.salary_currency ?? 'EUR') as CurrencyCode
+                        return (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                            <span style={{ fontSize: '0.7rem', color: '#475569' }}>💰</span>
+                            <PriceDisplay
+                              amountEur={eurMin ?? eurMax ?? 0}
+                              sourceCode={sourceCode}
+                              sourceAmount={job.salary_min ?? job.salary_max ?? null}
+                              size="sm"
+                              layout="stacked"
+                            />
+                            {eurMin != null && eurMax != null && eurMin !== eurMax && (
+                              <>
+                                <span style={{ fontSize: '0.7rem', color: '#475569' }}>–</span>
+                                <PriceDisplay
+                                  amountEur={eurMax}
+                                  sourceCode={sourceCode}
+                                  sourceAmount={job.salary_max ?? null}
+                                  size="sm"
+                                  layout="stacked"
+                                />
+                              </>
+                            )}
+                          </div>
+                        )
+                      }
+                      return (
+                        <span style={{ fontSize: '0.82rem', color: job.salary ? '#38bdf8' : '#475569', fontWeight: job.salary ? 600 : 400 }}>
+                          {job.salary ? `💰 ${job.salary}` : 'Salary not listed'}
+                        </span>
+                      )
+                    })()}
+                    <span style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#0f172a', borderRadius: 7, padding: '0.4rem 1rem', fontSize: '0.82rem', fontWeight: 700, flexShrink: 0 }}>
                       Apply →
                     </span>
                   </div>

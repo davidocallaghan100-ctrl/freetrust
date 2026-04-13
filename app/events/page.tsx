@@ -5,7 +5,10 @@ import { createClient } from '@/lib/supabase/client'
 import LocationFilter from '@/components/location/LocationFilter'
 import LocationBadge from '@/components/location/LocationBadge'
 import EventsMap, { type MapEvent } from '@/components/events/EventsMap'
+import PriceDisplay from '@/components/currency/PriceDisplay'
+import { useCurrency, type CurrencyCode } from '@/context/CurrencyContext'
 import { EMPTY_LOCATION, haversineKm, type StructuredLocation, type RadiusValue } from '@/lib/geo'
+import { buildCountryOptions } from '@/lib/countries'
 
 type EventMode = 'online' | 'in-person'
 type TimeFilter = 'all' | 'this-week' | 'this-month'
@@ -35,6 +38,8 @@ interface EventItem {
   longitude?: number | null
   location_label?: string | null
   distance_km?: number | null
+  price_eur?: number | null
+  currency_code?: string | null
 }
 
 const CAT_COLORS: Record<string, string> = {
@@ -85,6 +90,7 @@ function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void
   const { day, num, month, year } = formatEventDate(ev.date)
   const catColor = CAT_COLORS[ev.category] ?? '#38bdf8'
   const gradient = CAT_GRADIENTS[ev.category] ?? ev.imageGradient ?? 'linear-gradient(135deg,#0284c7,#1e40af)'
+  const { format: currencyFormat } = useCurrency()
 
   return (
     <Link href={`/events/${ev.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
@@ -109,7 +115,11 @@ function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void
           }
           {ev.price === null || ev.price === 0
             ? <span style={{ background: 'rgba(52,211,153,0.9)', color: '#0f172a', fontSize: '0.65rem', fontWeight: 800, padding: '2px 8px', borderRadius: 999 }}>FREE</span>
-            : <span style={{ background: 'rgba(245,158,11,0.9)', color: '#0f172a', fontSize: '0.65rem', fontWeight: 800, padding: '2px 8px', borderRadius: 999 }}>£{ev.price}</span>
+            : (
+              <span style={{ background: 'rgba(245,158,11,0.92)', color: '#0f172a', fontSize: '0.65rem', fontWeight: 800, padding: '2px 8px', borderRadius: 999 }}>
+                {currencyFormat(ev.price_eur ?? ev.price, (ev.currency_code ?? 'EUR') as CurrencyCode)}
+              </span>
+            )
           }
         </div>
 
@@ -160,11 +170,25 @@ function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void
             <span>👥</span>
             <span>{ev.rsvpCount.toLocaleString()} attending</span>
           </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.4rem' }}>
+          {/* Dual-currency price line — only shown for paid events. The
+              Buy button uses the user's selected currency rather than the
+              hardcoded GBP from the previous version. */}
+          {ev.price != null && ev.price > 0 && (
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <PriceDisplay
+                amountEur={ev.price_eur ?? ev.price}
+                sourceCode={(ev.currency_code ?? 'EUR') as CurrencyCode}
+                sourceAmount={ev.price}
+                size="sm"
+                layout="stacked"
+              />
+            </div>
+          )}
+          <div style={{ marginLeft: ev.price && ev.price > 0 ? 0 : 'auto', display: 'flex', gap: '0.4rem' }}>
             <button
               onClick={e => { e.preventDefault(); e.stopPropagation(); onRsvp(ev.id) }}
               style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.78rem', fontWeight: 700, color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 36 }}>
-              {ev.price ? `Buy · £${ev.price}` : 'RSVP Free'}
+              {ev.price ? `Buy · ${currencyFormat(ev.price_eur ?? ev.price, (ev.currency_code ?? 'EUR') as CurrencyCode)}` : 'RSVP Free'}
             </button>
             <button
               onClick={e => { e.preventDefault(); e.stopPropagation(); if (navigator.share) { navigator.share({ title: ev.title, url: `${window.location.origin}/events/${ev.id}` }) } else { navigator.clipboard.writeText(`${window.location.origin}/events/${ev.id}`) } }}
@@ -204,7 +228,7 @@ export default function EventsPage() {
         // community_events which has none of the new fields.
         const { data } = await supabase
           .from('events')
-          .select('id, title, description, starts_at, ends_at, is_online, meeting_url, attendee_count, is_paid, ticket_price, country, region, city, latitude, longitude, location_label, venue_name, category')
+          .select('id, title, description, starts_at, ends_at, is_online, meeting_url, attendee_count, is_paid, ticket_price, ticket_price_eur, currency_code, country, region, city, latitude, longitude, location_label, venue_name, category')
           .eq('status', 'published')
           .gte('starts_at', new Date().toISOString())
           .order('starts_at', { ascending: true })
@@ -227,6 +251,8 @@ export default function EventsPage() {
             latitude:       typeof e.latitude  === 'number' ? (e.latitude as number)  : null,
             longitude:      typeof e.longitude === 'number' ? (e.longitude as number) : null,
             location_label: (e.location_label as string | null | undefined) ?? null,
+            price_eur:      typeof e.ticket_price_eur === 'number' ? (e.ticket_price_eur as number) : null,
+            currency_code:  (e.currency_code as string | null | undefined) ?? null,
           })))
         }
       } catch { /* use mock */ }
@@ -237,16 +263,16 @@ export default function EventsPage() {
 
   const events = dbEvents ?? []
 
-  // Country options for the LocationFilter dropdown
+  // Country options merged with the global ISO 3166-1 reference list so
+  // users can browse events worldwide, not just countries already in the
+  // current data. See lib/countries.ts buildCountryOptions.
   const countryOptions = useMemo(() => {
     const counts = new Map<string, number>()
     for (const e of events) {
       if (!e.country) continue
       counts.set(e.country, (counts.get(e.country) ?? 0) + 1)
     }
-    return Array.from(counts.entries())
-      .map(([code, count]) => ({ code, label: code, count }))
-      .sort((a, b) => b.count - a.count)
+    return buildCountryOptions(counts)
   }, [events])
 
   // Compute distance_km, then filter

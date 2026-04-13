@@ -6,7 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import { useCurrency, type CurrencyCode } from '@/context/CurrencyContext'
 import LocationFilter from '@/components/location/LocationFilter'
 import LocationBadge from '@/components/location/LocationBadge'
+import PriceDisplay from '@/components/currency/PriceDisplay'
 import { EMPTY_LOCATION, haversineKm, type StructuredLocation, type RadiusValue } from '@/lib/geo'
+import { buildCountryOptions } from '@/lib/countries'
 
 function DeleteModal({ title, onConfirm, onCancel, deleting }: {
   title: string; onConfirm: () => void; onCancel: () => void; deleting: boolean
@@ -205,7 +207,13 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete }: {
 
         {/* Price + CTA */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
-          <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#f1f5f9' }}>{format(p.price, (p.currency || 'EUR') as CurrencyCode)}</span>
+          <PriceDisplay
+            amountEur={p.price_eur ?? p.price}
+            sourceCode={(p.currency || 'EUR') as CurrencyCode}
+            sourceAmount={p.price}
+            size="md"
+            layout="stacked"
+          />
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.35rem' }}>
             <Link
               href={`/products/${p.id}`}
@@ -350,17 +358,16 @@ function ProductsInner() {
 
   const products = dbProducts ?? ([] as Product[])
 
-  // Country options for the location filter dropdown — derived from the
-  // set of countries actually present in the current product list.
+  // Country options merged with the global ISO 3166-1 reference list:
+  // countries present in the data appear first (with counts), then every
+  // other country alphabetically — see lib/countries.ts buildCountryOptions.
   const countryOptions = useMemo(() => {
     const counts = new Map<string, number>()
     for (const p of products) {
       if (!p.country) continue
       counts.set(p.country, (counts.get(p.country) ?? 0) + 1)
     }
-    return Array.from(counts.entries())
-      .map(([code, count]) => ({ code, label: code, count }))
-      .sort((a, b) => b.count - a.count)
+    return buildCountryOptions(counts)
   }, [products])
 
   // Compute distance_km per product when the filter has geocoords, then

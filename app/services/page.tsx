@@ -1,8 +1,14 @@
 'use client'
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { ONLINE_CATEGORIES, OFFLINE_CATEGORIES, LOCATION_RADII, LOCATION_SCOPE } from '@/lib/service-categories'
+import { ONLINE_CATEGORIES, OFFLINE_CATEGORIES } from '@/lib/service-categories'
+import LocationFilter from '@/components/location/LocationFilter'
+import LocationBadge from '@/components/location/LocationBadge'
+import PriceDisplay from '@/components/currency/PriceDisplay'
+import { EMPTY_LOCATION, haversineKm, type StructuredLocation, type RadiusValue } from '@/lib/geo'
+import { buildCountryOptions } from '@/lib/countries'
+import type { CurrencyCode } from '@/context/CurrencyContext'
 
 // ─── Delete confirmation modal ────────────────────────────────────────────────
 function DeleteModal({ title, onConfirm, onCancel, deleting }: {
@@ -124,8 +130,15 @@ function ServiceCard({ svc, isOwner, onDelete }: { svc: Service; isOwner?: boole
               ? <Link href={`/profile?id=${svc.providerId}`} onClick={e => e.stopPropagation()} style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none' }}>{svc.provider}</Link>
               : <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svc.provider}</div>
             }
-            {svc.mode === 'offline' && svc.location && (
-              <div style={{ fontSize: '10px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📍 {svc.location}{svc.distance != null ? ` · ${svc.distance}km` : ''}</div>
+            {(svc.is_remote || svc.location_label || svc.location) && (
+              <div style={{ marginTop: 2 }}>
+                <LocationBadge
+                  label={svc.location_label ?? svc.location ?? null}
+                  remote={Boolean(svc.is_remote)}
+                  distanceKm={svc.distance_km ?? null}
+                  compact
+                />
+              </div>
             )}
           </div>
           {/* Mode + badge — right-aligned, shrinkable */}
@@ -169,9 +182,15 @@ function ServiceCard({ svc, isOwner, onDelete }: { svc: Service; isOwner?: boole
 
         {/* Price + CTA */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #334155', paddingTop: '10px', marginTop: 'auto', gap: '8px' }}>
-          <div style={{ minWidth: 0 }}>
-            <span style={{ fontSize: '18px', fontWeight: 800, color: '#38bdf8' }}>{svc.currency}{svc.price.toLocaleString()}</span>
-            <span style={{ fontSize: '11px', color: '#475569' }}> / project</span>
+          <div style={{ minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 4 }}>
+            <PriceDisplay
+              amountEur={svc.price_eur ?? svc.price}
+              sourceCode={(svc.currency || 'EUR') as CurrencyCode}
+              sourceAmount={svc.price}
+              size="md"
+              layout="stacked"
+            />
+            <span style={{ fontSize: '11px', color: '#475569' }}>/ project</span>
           </div>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
             <span style={{ background: '#38bdf8', borderRadius: '8px', padding: '7px 16px', fontSize: '12px', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', flexShrink: 0 }}>View</span>
@@ -198,13 +217,13 @@ export default function ServicesPage() {
   const [sort, setSort]           = useState('best')
   const [modeFilter, setModeFilter] = useState<'all' | 'online' | 'offline'>('all')
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
-  const [locationScope, setLocationScope] = useState<string>('')
-  const [radiusKm, setRadiusKm]   = useState<number>(25)
-  const [locationInput, setLocationInput] = useState('')
-  const [showLocationPanel, setShowLocationPanel] = useState(false)
   const [priceMin, setPriceMin]   = useState('')
   const [priceMax, setPriceMax]   = useState('')
-  const locationPanelRef = useRef<HTMLDivElement>(null)
+  // Globalisation — structured location filter state
+  const [filterLoc, setFilterLoc]       = useState<StructuredLocation>(EMPTY_LOCATION)
+  const [searchRadiusKm, setSearchRadiusKm] = useState<RadiusValue>(0)
+  const [countryFilter, setCountryFilter]   = useState<string | null>(null)
+  const [filterRemote, setFilterRemote]     = useState(false)
   const [userId, setUserId]       = useState<string | null>(null)
   const [isAdmin, setIsAdmin]     = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string | number; title: string } | null>(null)
@@ -322,37 +341,65 @@ export default function ServicesPage() {
     })()
   }, [])
 
-  // Close location panel on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (locationPanelRef.current && !locationPanelRef.current.contains(e.target as Node)) {
-        setShowLocationPanel(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
   // Filter & sort
   const allOnlineCats = ONLINE_CATEGORIES
   const allOfflineCats = OFFLINE_CATEGORIES
   const visibleCats = modeFilter === 'online' ? allOnlineCats : modeFilter === 'offline' ? allOfflineCats : [...allOnlineCats, ...allOfflineCats]
 
+  // Country options merged with the global ISO 3166-1 list — most-used
+  // first, then the rest of the world. Same pattern as products page.
+  const countryOptions = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const s of services) {
+      if (!s.country) continue
+      counts.set(s.country, (counts.get(s.country) ?? 0) + 1)
+    }
+    return buildCountryOptions(counts)
+  }, [services])
+
   const filtered = services
+    .map(s => {
+      // Compute distance_km when both the user filter and the listing
+      // have coordinates. Used for radius filtering + proximity sorting.
+      if (
+        filterLoc.latitude != null && filterLoc.longitude != null &&
+        s.latitude != null && s.longitude != null
+      ) {
+        return {
+          ...s,
+          distance_km: haversineKm(
+            { latitude: filterLoc.latitude, longitude: filterLoc.longitude },
+            { latitude: s.latitude, longitude: s.longitude }
+          ),
+        }
+      }
+      return s
+    })
     .filter(s => {
       if (modeFilter !== 'all' && s.mode !== modeFilter && s.mode !== 'both') return false
       if (activeCatId && s.categoryId !== activeCatId) return false
       if (search && !s.title.toLowerCase().includes(search.toLowerCase()) && !s.desc.toLowerCase().includes(search.toLowerCase()) && !s.category.toLowerCase().includes(search.toLowerCase())) return false
       if (priceMin && s.price < Number(priceMin)) return false
       if (priceMax && s.price > Number(priceMax)) return false
-      if (locationScope === 'local' && s.mode !== 'offline') return false
-      if (locationScope === 'remote' && s.mode !== 'online') return false
+      // ── Globalisation filters ───────────────────────────────────────
+      if (filterRemote && !s.is_remote) return false
+      if (countryFilter && s.country !== countryFilter) return false
+      if (searchRadiusKm > 0 && filterLoc.latitude != null) {
+        // Remote services bypass distance filtering — they're available worldwide
+        if (!s.is_remote && (s.distance_km == null || s.distance_km > searchRadiusKm)) return false
+      }
       return true
     })
     .sort((a, b) => {
       if (sort === 'price_asc') return a.price - b.price
       if (sort === 'price_desc') return b.price - a.price
       if (sort === 'rating') return b.rating - a.rating
+      // Default: when a location filter is active, sort local-first by distance.
+      if (filterLoc.latitude != null) {
+        const da = typeof a.distance_km === 'number' ? a.distance_km : Number.MAX_VALUE
+        const db = typeof b.distance_km === 'number' ? b.distance_km : Number.MAX_VALUE
+        return da - db
+      }
       return 0
     })
 
@@ -395,8 +442,24 @@ export default function ServicesPage() {
       {/* Hero */}
       <div style={{ background: 'linear-gradient(180deg,rgba(56,189,248,0.06) 0%,transparent 100%)', padding: '28px 16px 20px', borderBottom: '1px solid #1e293b' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <h1 style={{ fontSize: '26px', fontWeight: 800, margin: '0 0 4px' }}>Services Marketplace</h1>
+          <h1 style={{ fontSize: '26px', fontWeight: 800, margin: '0 0 4px' }}>🌍 Services Marketplace</h1>
           <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 16px' }}>Online, local & global services from trusted FreeTrust members</p>
+
+          {/* Globalisation — location filter */}
+          <div style={{ marginBottom: '12px' }}>
+            <LocationFilter
+              location={filterLoc}
+              onLocationChange={setFilterLoc}
+              radiusKm={searchRadiusKm}
+              onRadiusChange={setSearchRadiusKm}
+              country={countryFilter}
+              onCountryChange={setCountryFilter}
+              countryOptions={countryOptions}
+              remote={filterRemote}
+              onRemoteChange={setFilterRemote}
+              showRemote
+            />
+          </div>
 
           {/* Search + controls row */}
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -421,44 +484,6 @@ export default function ServicesPage() {
                   {lbl}
                 </button>
               ))}
-            </div>
-
-            {/* Location filter */}
-            <div ref={locationPanelRef} style={{ position: 'relative' }}>
-              <button
-                onClick={() => setShowLocationPanel(v => !v)}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 14px', background: locationScope ? '#38bdf8' : '#1e293b', border: `1px solid ${locationScope ? '#38bdf8' : '#334155'}`, borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, color: locationScope ? '#0f172a' : '#94a3b8', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
-                📍 {locationScope ? LOCATION_SCOPE.find(l => l.value === locationScope)?.label : 'Location'} ▾
-              </button>
-              {showLocationPanel && (
-                <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 100, background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '12px', width: '260px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Scope</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
-                    {LOCATION_SCOPE.map(s => (
-                      <button key={s.value} onClick={() => setLocationScope(locationScope === s.value ? '' : s.value)}
-                        style={{ padding: '5px 10px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit', fontWeight: locationScope === s.value ? 700 : 400, background: locationScope === s.value ? '#38bdf8' : 'rgba(56,189,248,0.07)', color: locationScope === s.value ? '#0f172a' : '#94a3b8', transition: 'all 0.15s' }}>
-                        {s.icon} {s.label}
-                      </button>
-                    ))}
-                  </div>
-                  {locationScope === 'local' && (
-                    <>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Radius</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
-                        {LOCATION_RADII.map(r => (
-                          <button key={r.value} onClick={() => setRadiusKm(r.value)}
-                            style={{ padding: '5px 10px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit', fontWeight: radiusKm === r.value ? 700 : 400, background: radiusKm === r.value ? '#38bdf8' : 'rgba(56,189,248,0.07)', color: radiusKm === r.value ? '#0f172a' : '#94a3b8', transition: 'all 0.15s' }}>
-                            {r.label}
-                          </button>
-                        ))}
-                      </div>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Your Location</div>
-                      <input value={locationInput} onChange={e => setLocationInput(e.target.value)} placeholder="City, postcode…"
-                        style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', padding: '8px 12px', fontSize: '13px', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box' }} />
-                    </>
-                  )}
-                </div>
-              )}
             </div>
 
             {/* Price filter */}
@@ -549,12 +574,24 @@ export default function ServicesPage() {
             <div style={{ fontSize: '13px', color: '#64748b' }}>
               {filtered.length} service{filtered.length !== 1 ? 's' : ''}
               {activeCatId && ` in ${visibleCats.find(c => c.id === activeCatId)?.label}`}
-              {locationScope && ` · ${LOCATION_SCOPE.find(l => l.value === locationScope)?.label}`}
-              {locationScope === 'local' && locationInput && ` near ${locationInput}`}
+              {filterLoc.location_label && ` · near ${filterLoc.location_label}`}
+              {countryFilter && ` · ${countryFilter}`}
+              {filterRemote && ' · Remote'}
             </div>
-            {(activeCatId || locationScope || priceMin || priceMax || search) && (
-              <button onClick={() => { setActiveCatId(null); setLocationScope(''); setPriceMin(''); setPriceMax(''); setSearch('') }}
-                style={{ background: 'none', border: '1px solid #334155', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', color: '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}>
+            {(activeCatId || filterLoc.latitude != null || countryFilter || filterRemote || priceMin || priceMax || search) && (
+              <button
+                onClick={() => {
+                  setActiveCatId(null)
+                  setFilterLoc(EMPTY_LOCATION)
+                  setSearchRadiusKm(0)
+                  setCountryFilter(null)
+                  setFilterRemote(false)
+                  setPriceMin('')
+                  setPriceMax('')
+                  setSearch('')
+                }}
+                style={{ background: 'none', border: '1px solid #334155', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', color: '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
                 ✕ Clear filters
               </button>
             )}

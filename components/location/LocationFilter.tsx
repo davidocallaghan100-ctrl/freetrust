@@ -257,15 +257,39 @@ export default function LocationFilter({
             padding: '9px 12px', background: '#0f172a',
             border: '1.5px solid #334155', borderRadius: 10, color: '#f1f5f9',
             fontSize: 12, fontFamily: 'inherit', cursor: 'pointer',
-            maxWidth: 200,
+            maxWidth: 220,
           }}
         >
           <option value="">All countries</option>
-          {countryOptions.map(c => (
-            <option key={c.code} value={c.code}>
-              {c.label}{typeof c.count === 'number' ? ` (${c.count})` : ''}
-            </option>
-          ))}
+          {/*
+            countryOptions are pre-sorted by buildCountryOptions() in
+            lib/countries.ts: data-derived entries (with counts) appear
+            FIRST, then every other ISO 3166-1 country alphabetically.
+            We insert an inert disabled separator once we cross from
+            counted to uncounted entries so the dropdown clearly shows
+            "available now" vs "browse the world".
+          */}
+          {(() => {
+            const nodes: React.ReactNode[] = []
+            let separatorEmitted = false
+            for (const c of countryOptions) {
+              const hasCount = typeof c.count === 'number'
+              if (!hasCount && !separatorEmitted) {
+                nodes.push(
+                  <option key="__divider__" disabled value="">
+                    ──────────  All countries  ──────────
+                  </option>
+                )
+                separatorEmitted = true
+              }
+              nodes.push(
+                <option key={c.code} value={c.code}>
+                  {c.label}{hasCount ? ` (${c.count})` : ''}
+                </option>
+              )
+            }
+            return nodes
+          })()}
         </select>
       )}
 
