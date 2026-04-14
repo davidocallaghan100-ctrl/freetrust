@@ -97,13 +97,16 @@ export async function GET() {
   // This is the ONLY query that determines who appears in the directory.
   // No filters. No joins. No WHERE clause. Just every row in profiles,
   // newest first. If this returns 13 rows, the response has 13 members.
+  //
+  // NOTE: the select string MUST be a single string literal (no `+`
+  // concatenation). Supabase's typed client infers the row type from the
+  // literal type of this argument; concatenating with `+` collapses it to
+  // plain `string` and the return type degrades to `GenericStringError`,
+  // which then breaks every `.id` / `.full_name` access below with
+  // TS2345 errors. Keep it on one line.
   const { data: profilesData, error: profilesError } = await supabase
     .from('profiles')
-    .select(
-      'id, full_name, avatar_url, bio, location, role, created_at, ' +
-      'linkedin_url, instagram_url, twitter_url, github_url, ' +
-      'tiktok_url, youtube_url, website_url',
-    )
+    .select('id, full_name, avatar_url, bio, location, role, created_at, linkedin_url, instagram_url, twitter_url, github_url, tiktok_url, youtube_url, website_url')
     .order('created_at', { ascending: false })
     .limit(1000)
 
