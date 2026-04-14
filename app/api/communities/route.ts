@@ -1,6 +1,8 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { awardTrust } from '@/lib/trust/award'
+import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 
 function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60)
@@ -127,7 +129,21 @@ export async function POST(request: NextRequest) {
       tier: 'owner',
     })
 
-    return NextResponse.json({ community }, { status: 201 })
+    // Award ₮ for creating a community — non-blocking. Biggest
+    // single reward in the earning schedule because creating a
+    // community is high-effort and high-value for the platform.
+    const trustResult = await awardTrust({
+      userId: user.id,
+      amount: TRUST_REWARDS.CREATE_COMMUNITY,
+      type:   TRUST_LEDGER_TYPES.CREATE_COMMUNITY,
+      ref:    community.id,
+      desc:   `Created community: ${community.name}`,
+    })
+
+    return NextResponse.json({
+      community,
+      trustAwarded: trustResult.ok ? trustResult.amount : 0,
+    }, { status: 201 })
   } catch (err) {
     console.error('[POST /api/communities] Unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

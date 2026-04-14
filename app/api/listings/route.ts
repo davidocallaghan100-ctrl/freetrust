@@ -2,6 +2,8 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { toPgUrlArray, toPgTagArray } from '@/lib/supabase/text-array'
+import { awardTrust } from '@/lib/trust/award'
+import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 
 // GET /api/listings — list active listings (public) or all own listings (authenticated)
 export async function GET(request: NextRequest) {
@@ -242,7 +244,32 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[listings POST] success, returning listing id:', (listing as { id?: string })?.id)
-    return NextResponse.json({ listing }, { status: 201 })
+
+    // Award ₮ for creating the listing. Non-blocking — if the
+    // award fails, the listing is still created and the user
+    // still sees success. Same bug-class as Cliff's missing-coins
+    // issue on /api/create/publish — this route ALSO had no trust
+    // award before the audit commit.
+    //
+    // Uses CREATE_SERVICE for service listings (product_type='service')
+    // and CREATE_PRODUCT otherwise, so the reward matches the type
+    // of listing the user created.
+    const listingRow = listing as { id?: string; product_type?: string; title?: string } | null
+    const isService = listingRow?.product_type === 'service'
+    const trustResult = await awardTrust({
+      userId: user.id,
+      amount: isService ? TRUST_REWARDS.CREATE_SERVICE : TRUST_REWARDS.CREATE_PRODUCT,
+      type:   isService ? TRUST_LEDGER_TYPES.CREATE_SERVICE : TRUST_LEDGER_TYPES.CREATE_PRODUCT,
+      ref:    listingRow?.id ?? null,
+      desc:   isService
+        ? `Published service: ${listingRow?.title ?? 'Untitled'}`
+        : `Listed product: ${listingRow?.title ?? 'Untitled'}`,
+    })
+
+    return NextResponse.json({
+      listing,
+      trustAwarded: trustResult.ok ? trustResult.amount : 0,
+    }, { status: 201 })
   } catch (err) {
     console.error('[POST /api/listings] Unexpected error:', err)
     const msg = err instanceof Error ? err.message : String(err)

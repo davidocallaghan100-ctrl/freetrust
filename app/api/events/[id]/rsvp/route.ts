@@ -1,6 +1,8 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { awardTrust } from '@/lib/trust/award'
+import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 
 interface RouteParams {
   params: { id: string }
@@ -70,7 +72,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .update({ attendee_count: (event.attendee_count || 0) + 1 })
       .eq('id', eventId)
 
-    return NextResponse.json({ success: true })
+    // Award ₮ for RSVPing — free path only. Paid event RSVPs go
+    // through the Stripe checkout flow which can award after
+    // payment confirmation.
+    const trustResult = await awardTrust({
+      userId: user.id,
+      amount: TRUST_REWARDS.RSVP_EVENT,
+      type:   TRUST_LEDGER_TYPES.RSVP_EVENT,
+      ref:    eventId,
+      desc:   `RSVPed to: ${event.title ?? 'an event'}`,
+    })
+
+    return NextResponse.json({
+      success: true,
+      trustAwarded: trustResult.ok ? trustResult.amount : 0,
+    })
   } catch (err) {
     console.error('[POST /api/events/[id]/rsvp]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

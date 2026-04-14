@@ -1,6 +1,8 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { awardTrust } from '@/lib/trust/award'
+import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 
 // GET /api/jobs — list active jobs (public)
 //
@@ -173,7 +175,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: insertError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ job }, { status: 201 })
+    // Award ₮ for posting a job — non-blocking. This was missing
+    // before the trust earning infrastructure audit (same bug class
+    // as Cliff's missing service listing coins).
+    const jobRow = job as { id?: string; title?: string } | null
+    const trustResult = await awardTrust({
+      userId: user.id,
+      amount: TRUST_REWARDS.CREATE_JOB,
+      type:   TRUST_LEDGER_TYPES.CREATE_JOB,
+      ref:    jobRow?.id ?? null,
+      desc:   `Posted job: ${jobRow?.title ?? 'Untitled'}`,
+    })
+
+    return NextResponse.json({
+      job,
+      trustAwarded: trustResult.ok ? trustResult.amount : 0,
+    }, { status: 201 })
   } catch (err) {
     console.error('[POST /api/jobs] Unexpected:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

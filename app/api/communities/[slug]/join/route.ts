@@ -1,6 +1,8 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { awardTrust } from '@/lib/trust/award'
+import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 import Stripe from 'stripe'
 
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -58,7 +60,21 @@ export async function POST(
         return NextResponse.json({ error: joinError.message }, { status: 500 })
       }
 
-      return NextResponse.json({ success: true })
+      // Award ₮ for joining — free path only. Paid-community joins
+      // go through the Stripe webhook which can award after payment
+      // is confirmed, so we don't double-award here.
+      const trustResult = await awardTrust({
+        userId: user.id,
+        amount: TRUST_REWARDS.JOIN_COMMUNITY,
+        type:   TRUST_LEDGER_TYPES.JOIN_COMMUNITY,
+        ref:    community.id,
+        desc:   `Joined community: ${community.name}`,
+      })
+
+      return NextResponse.json({
+        success: true,
+        trustAwarded: trustResult.ok ? trustResult.amount : 0,
+      })
     }
 
     // Paid community: create Stripe subscription checkout

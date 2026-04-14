@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { StructuredLocation } from '@/lib/geo'
 import { toPgUrlArray, toPgTagArray } from '@/lib/supabase/text-array'
+import { awardTrust } from '@/lib/trust/award'
+import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 
 // Map UI-friendly labels (from the create form) to the DB CHECK constraint
 // values defined in lib/supabase/jobs-schema.sql.
@@ -187,6 +189,16 @@ export async function POST(req: NextRequest) {
         console.error('[publish article]', error)
         return fail(`Could not save article: ${error.message}`)
       }
+      // Award ₮ for publishing — non-blocking. If this fails, the
+      // article is still live and the user still sees success; the
+      // failure is logged but we don't 500 the whole publish because
+      // of a trust bookkeeping hiccup.
+      await awardTrust({
+        userId: user.id,
+        amount: TRUST_REWARDS.PUBLISH_ARTICLE,
+        type:   TRUST_LEDGER_TYPES.PUBLISH_ARTICLE,
+        desc:   `Published article: ${title}`,
+      })
       redirectUrl = '/articles'
     }
 
@@ -245,6 +257,13 @@ export async function POST(req: NextRequest) {
         console.error('[publish job]', error)
         return fail(`Could not save job: ${error.message}`)
       }
+      await awardTrust({
+        userId: user.id,
+        amount: TRUST_REWARDS.CREATE_JOB,
+        type:   TRUST_LEDGER_TYPES.CREATE_JOB,
+        ref:    inserted?.id ?? null,
+        desc:   `Posted job: ${title}`,
+      })
       redirectUrl = inserted?.id ? `/jobs/${inserted.id}` : '/jobs'
     }
 
@@ -291,6 +310,13 @@ export async function POST(req: NextRequest) {
         console.error('[publish event]', error)
         return fail(`Could not save event: ${error.message}`)
       }
+      await awardTrust({
+        userId: user.id,
+        amount: TRUST_REWARDS.CREATE_EVENT,
+        type:   TRUST_LEDGER_TYPES.CREATE_EVENT,
+        ref:    inserted?.id ?? null,
+        desc:   `Created event: ${title}`,
+      })
       redirectUrl = inserted?.id ? `/events/${inserted.id}` : '/events'
     }
 
@@ -374,6 +400,18 @@ export async function POST(req: NextRequest) {
         console.error('[publish service]', error)
         return fail(`Could not save service: ${error.message}`)
       }
+      // THIS IS CLIFF'S BUG. Before this commit the service branch
+      // had NO trust award at all — users who published a service
+      // marketplace listing got zero coins, contradicting the
+      // product spec. Now awards TRUST_REWARDS.CREATE_SERVICE (50)
+      // non-blocking.
+      await awardTrust({
+        userId: user.id,
+        amount: TRUST_REWARDS.CREATE_SERVICE,
+        type:   TRUST_LEDGER_TYPES.CREATE_SERVICE,
+        ref:    inserted?.id ?? null,
+        desc:   `Published service: ${title}`,
+      })
       redirectUrl = inserted?.id ? `/services/${inserted.id}` : '/services'
     }
 
@@ -425,6 +463,16 @@ export async function POST(req: NextRequest) {
         console.error('[publish product]', error)
         return fail(`Could not save product: ${error.message}`)
       }
+      // Same bug class as the service branch above — the product
+      // branch also had no trust award before this commit. Fixing
+      // both in one pass so the /create → Publish flow is
+      // internally consistent across every listing type.
+      await awardTrust({
+        userId: user.id,
+        amount: TRUST_REWARDS.CREATE_PRODUCT,
+        type:   TRUST_LEDGER_TYPES.CREATE_PRODUCT,
+        desc:   `Listed product: ${title}`,
+      })
       redirectUrl = '/products'
     }
 

@@ -2,6 +2,8 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendReviewReceivedEmail } from '@/lib/resend'
+import { awardTrust } from '@/lib/trust/award'
+import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 
 // GET /api/reviews?profileId=&listingId=&page=
 export async function GET(request: NextRequest) {
@@ -89,15 +91,31 @@ export async function POST(request: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    // Award ₮10 Trust to reviewer (if not already awarded)
+    // Award ₮ to BOTH parties — reviewer gets LEAVE_REVIEW for
+    // taking the time to leave feedback, reviewee gets
+    // RECEIVE_REVIEW for the reputation signal. Before this
+    // commit the route called a `increment_trust` RPC that
+    // doesn't exist anywhere (grep across supabase/migrations/
+    // and lib/supabase/*.sql returns zero matches), so the
+    // ledger insert succeeded but the balance update silently
+    // failed with "function does not exist". The reviewee got
+    // nothing at all. Both fixed by routing through the
+    // standard awardTrust() helper + issue_trust RPC.
     if (!review.trust_issued) {
-      await supabase.from('trust_ledger').insert({
-        user_id: user.id,
-        amount: 10,
-        type: 'review_given',
-        description: 'Earned for leaving a review',
+      await awardTrust({
+        userId: user.id,
+        amount: TRUST_REWARDS.LEAVE_REVIEW,
+        type:   TRUST_LEDGER_TYPES.LEAVE_REVIEW,
+        ref:    review.id,
+        desc:   'Left a review',
       })
-      await supabase.rpc('increment_trust', { uid: user.id, delta: 10 }).maybeSingle()
+      await awardTrust({
+        userId: reviewee_id,
+        amount: TRUST_REWARDS.RECEIVE_REVIEW,
+        type:   TRUST_LEDGER_TYPES.RECEIVE_REVIEW,
+        ref:    review.id,
+        desc:   'Received a review',
+      })
       await supabase.from('reviews').update({ trust_issued: true }).eq('id', review.id)
     }
 
