@@ -68,6 +68,13 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
+  // Inline error for failed sends. Previously `catch { /* optimistic stays */ }`
+  // meant a failed INSERT left the optimistic bubble on screen with no
+  // indication it was never saved — users reloaded and the message was
+  // gone. Now we surface the real Supabase error in a banner above the
+  // input with a Retry button.
+  const [sendError, setSendError] = useState<string | null>(null)
+  const [pendingResend, setPendingResend] = useState<{ id: string; text: string } | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showNewModal, setShowNewModal] = useState(false)
   const [newRecipient, setNewRecipient] = useState('')
@@ -143,6 +150,43 @@ export default function MessagesPage() {
     return () => { supabase.removeChannel(channel) }
   }, [activeId, loadMessages])
 
+  // Mobile lifecycle — refetch messages and (effectively) re-subscribe
+  // whenever the tab comes back into view OR the page is restored from
+  // iOS Safari's back/forward cache. Mobile networks drop WebSocket
+  // connections aggressively (backgrounding, Wi-Fi handover, screen
+  // lock) and the Supabase realtime channel does not auto-recover in
+  // a way the old page ever used. Without this, a user who left the
+  // chat open, switched apps, and came back would miss every message
+  // that arrived in the meantime.
+  //
+  // We do a plain refetch via loadMessages rather than tearing down
+  // and rebuilding the channel — loadMessages pulls the authoritative
+  // history from the DB, and the existing subscription keeps firing
+  // for new messages as they land. If the channel itself is stale,
+  // the INSERT event will be missed once but the next pageshow /
+  // visibilitychange catches it.
+  useEffect(() => {
+    if (!activeId) return
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        console.log('[messages] pageshow persisted — refetching thread')
+        loadMessages(activeId)
+      }
+    }
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[messages] tab became visible — refetching thread')
+        loadMessages(activeId)
+      }
+    }
+    window.addEventListener('pageshow', onPageShow)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      window.removeEventListener('pageshow', onPageShow)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  }, [activeId, loadMessages])
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView()
   }, [messages])
@@ -154,15 +198,40 @@ export default function MessagesPage() {
     setConversations(prev => prev.map(c => c.id === id ? { ...c, unread_count: 0 } : c))
   }
 
+  const doSend = async (text: string, optimisticId: string) => {
+    if (!activeId || !userId) return
+    const supabase = createClient()
+    const { error } = await supabase.from('messages').insert({
+      conversation_id: activeId,
+      sender_id: userId,
+      content: text,
+      status: 'sent',
+    })
+    if (error) {
+      // Surface the real Supabase error instead of swallowing it.
+      // The optimistic bubble stays on screen (so the user doesn't
+      // lose what they typed), but we mark the send as failed and
+      // offer a Retry button so they know it never reached the DB.
+      console.error('[messages] insert failed:', error)
+      setSendError(error.message || 'Message failed to send')
+      setPendingResend({ id: optimisticId, text })
+      return
+    }
+    setSendError(null)
+    setPendingResend(null)
+  }
+
   const sendMessage = async () => {
     if (!input.trim() || !activeId || !userId) return
     const text = input.trim()
     setInput('')
     setSending(true)
+    setSendError(null)
 
     // Optimistic
+    const optimisticId = `opt_${Date.now()}`
     const optimistic: Message = {
-      id: `opt_${Date.now()}`,
+      id: optimisticId,
       conversation_id: activeId,
       sender_id: userId,
       content: text,
@@ -172,16 +241,31 @@ export default function MessagesPage() {
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
 
     try {
-      const supabase = createClient()
-      await supabase.from('messages').insert({
-        conversation_id: activeId,
-        sender_id: userId,
-        content: text,
-        status: 'sent',
-      })
-    } catch { /* optimistic stays */ }
+      await doSend(text, optimisticId)
+    } catch (err) {
+      // Network / runtime error — same treatment as the Supabase
+      // error branch above so the user can see the failure reason
+      // and retry.
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[messages] sendMessage threw:', msg)
+      setSendError(msg)
+      setPendingResend({ id: optimisticId, text })
+    }
     setSending(false)
     inputRef.current?.focus()
+  }
+
+  const retrySend = async () => {
+    if (!pendingResend) return
+    setSending(true)
+    setSendError(null)
+    try {
+      await doSend(pendingResend.text, pendingResend.id)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setSendError(msg)
+    }
+    setSending(false)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -195,10 +279,23 @@ export default function MessagesPage() {
   const totalUnread = conversations.reduce((a, c) => a + c.unread_count, 0)
 
   return (
-    <div style={{ height: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', display: 'flex', overflow: 'hidden' }}>
+    <div className="msg-root">
       <style>{`
+        /* Height — use 100dvh (dynamic viewport) instead of 100vh so
+           iOS Safari's collapsing URL bar doesn't hide the bottom of
+           the thread behind the browser chrome. 100vh fallback keeps
+           older browsers working. Subtract 58 px for the top nav. */
+        .msg-root {
+          height: calc(100vh - 58px);
+          height: calc(100dvh - 58px);
+          background: #0f172a;
+          color: #f1f5f9;
+          font-family: system-ui;
+          display: flex;
+          overflow: hidden;
+        }
         .msg-sidebar { width: 320px; flex-shrink: 0; border-right: 1px solid rgba(56,189,248,0.1); display: flex; flex-direction: column; background: #111827; }
-        .msg-thread { flex: 1; display: flex; flex-direction: column; }
+        .msg-thread { flex: 1; display: flex; flex-direction: column; min-height: 0; }
         .msg-conv-item { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.9rem 1rem; cursor: pointer; border-bottom: 1px solid rgba(56,189,248,0.05); transition: background 0.12s; }
         .msg-conv-item:hover { background: rgba(56,189,248,0.04); }
         .msg-conv-item.active { background: rgba(56,189,248,0.08); border-left: 2px solid #38bdf8; }
@@ -208,7 +305,15 @@ export default function MessagesPage() {
         .msg-bubble { max-width: 72%; padding: 0.6rem 0.9rem; border-radius: 14px; font-size: 0.88rem; line-height: 1.5; word-break: break-word; }
         .msg-bubble.sent { background: #38bdf8; color: #0f172a; border-bottom-right-radius: 4px; }
         .msg-bubble.recv { background: #1e293b; color: #e2e8f0; border-bottom-left-radius: 4px; border: 1px solid rgba(56,189,248,0.1); }
-        .msg-input-area { padding: 0.85rem 1rem; border-top: 1px solid rgba(56,189,248,0.1); display: flex; gap: 0.65rem; align-items: flex-end; background: #111827; }
+        .msg-input-area {
+          padding: 0.85rem 1rem;
+          border-top: 1px solid rgba(56,189,248,0.1);
+          display: flex;
+          gap: 0.65rem;
+          align-items: flex-end;
+          background: #111827;
+          flex-shrink: 0;
+        }
         .msg-textarea { flex: 1; background: #1e293b; border: 1px solid rgba(56,189,248,0.15); border-radius: 10px; color: #f1f5f9; font-family: inherit; font-size: 0.9rem; padding: 0.65rem 0.9rem; resize: none; outline: none; max-height: 120px; overflow-y: auto; }
         .msg-textarea:focus { border-color: rgba(56,189,248,0.35); }
         .msg-send-btn { background: #38bdf8; border: none; border-radius: 10px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: opacity 0.15s; }
@@ -218,6 +323,13 @@ export default function MessagesPage() {
           .msg-sidebar { width: 100%; border-right: none; }
           .msg-thread { width: 100%; }
           .msg-desktop-only { display: none !important; }
+          /* BottomNav is position:fixed at 64 px tall and only visible
+             below 768 px. Reserve space for it PLUS the iOS home
+             indicator safe area so the input area and last message
+             bubble aren't hidden behind the nav. */
+          .msg-input-area {
+            padding-bottom: calc(0.85rem + 64px + env(safe-area-inset-bottom, 0px));
+          }
         }
       `}</style>
 
@@ -338,6 +450,59 @@ export default function MessagesPage() {
               })}
               <div ref={bottomRef} />
             </div>
+
+            {/* Inline send-error banner. Shown above the input
+                whenever the last send failed — the optimistic bubble
+                stays in the thread (so the user can still see what
+                they typed) but this banner makes it clear that the
+                message never reached the DB, and offers a Retry
+                button that replays the same text. */}
+            {sendError && (
+              <div
+                role="alert"
+                style={{
+                  margin: '0 1rem',
+                  background: 'rgba(248,113,113,0.08)',
+                  border: '1px solid rgba(248,113,113,0.3)',
+                  borderRadius: 10,
+                  padding: '0.55rem 0.8rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.6rem',
+                  fontSize: '0.78rem',
+                  color: '#fca5a5',
+                  flexShrink: 0,
+                }}
+              >
+                <span>⚠️</span>
+                <div style={{ flex: 1, minWidth: 0, lineHeight: 1.4 }}>
+                  <div style={{ fontWeight: 700, color: '#f87171' }}>Message failed to send</div>
+                  <div style={{ wordBreak: 'break-word' }}>{sendError}</div>
+                </div>
+                {pendingResend && (
+                  <button
+                    type="button"
+                    onClick={retrySend}
+                    disabled={sending}
+                    style={{
+                      background: 'rgba(248,113,113,0.15)',
+                      border: '1px solid rgba(248,113,113,0.35)',
+                      borderRadius: 7,
+                      padding: '0.35rem 0.75rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      color: '#fca5a5',
+                      cursor: sending ? 'wait' : 'pointer',
+                      fontFamily: 'inherit',
+                      minHeight: 32,
+                      flexShrink: 0,
+                    }}
+                  >
+                    Retry
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Input */}
             <div className="msg-input-area">
