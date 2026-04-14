@@ -188,6 +188,21 @@ export default function CreatePage() {
   // supabase/migrations/20260412_feed_media_bucket.sql which allows
   // authenticated users to INSERT into feed-media under their own user id
   // folder.
+  //
+  // Hardening parity with /api/upload/media (the server-side upload route):
+  //   * MIME sniffing from extension when file.type is empty (older iOS
+  //     reports empty type for HEIC + sometimes plain JPEG camera shots)
+  //   * Synthetic filename built from the RESOLVED MIME (never from
+  //     file.name) so uppercase/unicode/spaces can't leak into the path
+  //   * user.id + random suffix aggressively sanitised so
+  //     @supabase/storage-js can't throw a synchronous "The string did not
+  //     match the expected pattern" DOMException on path validation
+  //   * .upload() wrapped in its own try/catch to capture sync throws
+  //     (storage-js throws DOMException *before* the HTTP call on some
+  //     code paths, bypassing the { data, error } return channel)
+  //   * .getPublicUrl() wrapped too, since it also builds URLs
+  //   * step breadcrumb surfaced in every error so the next mobile bug
+  //     report tells us exactly which line failed
   const handleFileUpload = async (file: File, _type: 'photo' | 'video' | 'short') => {
     // `_type` is kept for call-site compatibility; the kind is re-derived from
     // the actual MIME type below so we don't trust the UI's label.
@@ -195,22 +210,55 @@ export default function CreatePage() {
     setUploadProgress('Uploading…')
     setUploadedMediaUrl(null)
 
+    // Step breadcrumb — updated before every operation so a sync throw
+    // caught by the outer handler tells us WHICH line blew up rather than
+    // just echoing an opaque DOMException message.
+    let step = 'init'
+
     try {
-      // Client-side validation — same rules the API route would have enforced
+      // ── 1. Resolve MIME type (sniff from extension if empty) ────────────
+      step = 'resolve-mime'
       const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif']
       const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v', 'video/3gpp']
-      const MAX_IMAGE = 10 * 1024 * 1024
-      const MAX_VIDEO = 100 * 1024 * 1024
+      const EXT_TO_MIME: Record<string, string> = {
+        jpg:  'image/jpeg',
+        jpeg: 'image/jpeg',
+        png:  'image/png',
+        gif:  'image/gif',
+        webp: 'image/webp',
+        heic: 'image/heic',
+        heif: 'image/heif',
+        mp4:  'video/mp4',
+        mov:  'video/quicktime',
+        webm: 'video/webm',
+        m4v:  'video/x-m4v',
+        '3gp':'video/3gpp',
+      }
+      let fileType = file.type
+      if (!fileType) {
+        const ext = (file.name.split('.').pop() ?? '').toLowerCase()
+        if (ext in EXT_TO_MIME) {
+          fileType = EXT_TO_MIME[ext]
+          console.log('[create/upload] synthesised MIME from extension:', ext, '→', fileType)
+        } else {
+          setUploadProgress(`Upload failed — file has no MIME type and unrecognised extension: .${ext || '(none)'}`)
+          setUploadingMedia(false)
+          return
+        }
+      }
 
-      const isImage = IMAGE_TYPES.includes(file.type)
-      const isVideo = VIDEO_TYPES.includes(file.type)
-
+      const isImage = IMAGE_TYPES.includes(fileType)
+      const isVideo = VIDEO_TYPES.includes(fileType)
       if (!isImage && !isVideo) {
-        setUploadProgress(`Upload failed — unsupported file type: ${file.type || 'unknown'}`)
+        setUploadProgress(`Upload failed — unsupported file type: ${fileType}`)
         setUploadingMedia(false)
         return
       }
 
+      // ── 2. Size limit ───────────────────────────────────────────────────
+      step = 'size-check'
+      const MAX_IMAGE = 10 * 1024 * 1024   //  10 MB
+      const MAX_VIDEO = 100 * 1024 * 1024  // 100 MB
       const sizeLimit = isVideo ? MAX_VIDEO : MAX_IMAGE
       if (file.size > sizeLimit) {
         const mb = Math.round(sizeLimit / 1024 / 1024)
@@ -219,8 +267,9 @@ export default function CreatePage() {
         return
       }
 
-      // Get the signed-in user — bucket RLS allows inserts only under
-      // authenticated users' own folders
+      // ── 3. Auth (needed for RLS — the bucket policy allows inserts only
+      //        under folders named after the user's own id) ───────────────
+      step = 'auth'
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
@@ -229,35 +278,89 @@ export default function CreatePage() {
         return
       }
 
-      // Build a deterministic, safe storage path. Folder layout:
-      //   <kind>/<user_id>/<timestamp>-<random>.<ext>
+      // ── 4. Build a 100% synthetic storage path ──────────────────────────
+      // Folder layout: <kind>/<user_id>/<timestamp>-<random>.<ext>
       // The second segment MUST be the user id to satisfy the RLS policy.
-      const kind = isVideo ? 'video' : 'photo'
-      const nameParts = (file.name || '').split('.')
-      const rawExt = nameParts.length > 1 ? nameParts.pop()!.toLowerCase() : (isVideo ? 'mp4' : 'jpg')
-      const safeExt = rawExt.replace(/[^a-z0-9]/g, '').slice(0, 5) || (isVideo ? 'mp4' : 'jpg')
-      const storagePath = `${kind}/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${safeExt}`
+      // The extension is derived from the validated MIME (never from
+      // file.name) so we only ever produce ASCII, lowercase, no-space,
+      // no-punctuation names that Supabase Storage always accepts.
+      step = 'build-path'
+      const MIME_TO_EXT: Record<string, string> = {
+        'image/jpeg':      'jpg',
+        'image/png':       'png',
+        'image/gif':       'gif',
+        'image/webp':      'webp',
+        'image/heic':      'heic',
+        'image/heif':      'heif',
+        'video/mp4':       'mp4',
+        'video/webm':      'webm',
+        'video/quicktime': 'mov',
+        'video/x-m4v':     'm4v',
+        'video/3gpp':      '3gp',
+      }
+      const ext = MIME_TO_EXT[fileType] || (isVideo ? 'mp4' : 'jpg')
+      const kind: 'photo' | 'video' = isVideo ? 'video' : 'photo'
+
+      // Sanitise user.id defensively (Supabase UUIDs are already lowercase
+      // [0-9a-f-], but belt-and-braces in case something upstream mangles
+      // the session user object).
+      const uidSafe = (user.id || '').toLowerCase().replace(/[^a-z0-9-]/g, '') || 'anon'
+
+      // Sanitise the random suffix and fall back to a timestamp tail if the
+      // result collapses to empty (edge case of Math.random().toString(36)).
+      const rand = Math.random().toString(36).slice(2).replace(/[^a-z0-9]/g, '')
+      const randSafe = rand || Date.now().toString(36)
+
+      const storagePath = `${kind}/${uidSafe}/${Date.now()}-${randSafe}.${ext}`
+      console.log('[create/upload] storagePath:', storagePath, 'contentType:', fileType, 'originalName:', file.name)
 
       setUploadProgress(`Uploading ${(file.size / 1024 / 1024).toFixed(1)} MB…`)
 
-      const { error: uploadError } = await supabase
-        .storage
-        .from('feed-media')
-        .upload(storagePath, file, {
-          contentType: file.type,
-          upsert: false,
-          cacheControl: '31536000',
+      // ── 5. Upload ───────────────────────────────────────────────────────
+      // Wrapped in its own try/catch so a sync DOMException from storage-js
+      // (path/URL/header validation inside fetch) is captured with the
+      // step + storagePath intact rather than escaping to the outer handler
+      // as an opaque "Upload failed" string.
+      step = 'upload'
+      let uploadError: { message?: string } | null = null
+      try {
+        const result = await supabase
+          .storage
+          .from('feed-media')
+          .upload(storagePath, file, {
+            contentType: fileType,
+            upsert: false,
+            cacheControl: '31536000',
+          })
+        uploadError = result.error
+      } catch (thrown) {
+        const msg = thrown instanceof Error ? thrown.message : String(thrown)
+        console.error('[create/upload] storage.upload threw synchronously:', {
+          step,
+          message: msg,
+          storagePath,
+          contentType: fileType,
+          fileNameOriginal: file.name,
+          fileTypeRaw: file.type,
+          fileSize: file.size,
+          userId: user.id,
         })
+        setUploadProgress(`Upload failed [${step}] — ${msg}`)
+        setUploadingMedia(false)
+        return
+      }
 
       if (uploadError) {
-        // Surface the real Supabase error message so failures can be diagnosed
-        console.error('[create/upload] storage error:', uploadError)
+        console.error('[create/upload] storage error:', uploadError, 'step:', step, 'path:', storagePath)
         const msg = uploadError.message || 'unknown storage error'
-        // Friendly messages for the most common failures
         if (msg.toLowerCase().includes('bucket not found')) {
           setUploadProgress('Upload failed — the feed-media bucket does not exist. Run the migration in Supabase SQL editor.')
         } else if (msg.toLowerCase().includes('row-level security') || msg.toLowerCase().includes('policy')) {
           setUploadProgress('Upload failed — storage policy blocked the upload. Run the feed-media RLS migration.')
+        } else if (msg.toLowerCase().includes('expected pattern')) {
+          setUploadProgress(`Upload failed — storage validator rejected the path. Report this: ${storagePath}`)
+        } else if (msg.toLowerCase().includes('duplicate') || msg.toLowerCase().includes('already exists')) {
+          setUploadProgress('Upload failed — a file with this name already exists. Please try again.')
         } else {
           setUploadProgress(`Upload failed — ${msg}`)
         }
@@ -265,20 +368,33 @@ export default function CreatePage() {
         return
       }
 
-      // Get the public URL — bucket is public so this returns a stable CDN URL
-      const { data: urlData } = supabase.storage.from('feed-media').getPublicUrl(storagePath)
-      if (!urlData?.publicUrl) {
+      // ── 6. Public URL ───────────────────────────────────────────────────
+      // Also wrapped because getPublicUrl builds a URL internally — the
+      // same class of sync DOMException could in theory originate here.
+      step = 'public-url'
+      let publicUrl: string | undefined
+      try {
+        const { data: urlData } = supabase.storage.from('feed-media').getPublicUrl(storagePath)
+        publicUrl = urlData?.publicUrl
+      } catch (thrown) {
+        const msg = thrown instanceof Error ? thrown.message : String(thrown)
+        console.error('[create/upload] getPublicUrl threw synchronously:', msg, 'path:', storagePath)
+        setUploadProgress(`Upload failed [${step}] — ${msg}`)
+        setUploadingMedia(false)
+        return
+      }
+      if (!publicUrl) {
         setUploadProgress('Upload failed — could not resolve public URL')
         setUploadingMedia(false)
         return
       }
 
-      setUploadedMediaUrl(urlData.publicUrl)
+      setUploadedMediaUrl(publicUrl)
       setUploadProgress('✓ Upload complete')
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      console.error('[create/upload] unhandled:', err)
-      setUploadProgress(`Upload failed — ${msg}`)
+      console.error('[create/upload] unhandled at step', step, ':', err)
+      setUploadProgress(`Upload failed [${step}] — ${msg}`)
     } finally {
       setUploadingMedia(false)
     }
@@ -523,7 +639,13 @@ export default function CreatePage() {
           <>
             <div style={s.fieldGroup}>
               <label style={s.label}>Photo</label>
-              <input type="file" accept="image/*" style={{ ...s.input, padding: '0.5rem' }} onChange={e => {
+              {/* Explicit MIME list INCLUDING HEIC/HEIF — iOS Safari's
+                  `image/*` wildcard filters HEIC out of the picker on some
+                  builds, so iPhone users would tap their camera roll and
+                  see nothing happen. Listing the types explicitly is the
+                  only reliable fix. image/* stays at the end as a catch-all
+                  for anything else the browser might surface. */}
+              <input type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,image/*" style={{ ...s.input, padding: '0.5rem' }} onChange={e => {
                 const file = e.target.files?.[0]
                 if (file) {
                   setField('file_names', file.name)
@@ -555,7 +677,7 @@ export default function CreatePage() {
           <>
             <div style={s.fieldGroup}>
               <label style={s.label}>Video File</label>
-              <input type="file" accept="video/*" style={{ ...s.input, padding: '0.5rem' }} onChange={e => {
+              <input type="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,video/3gpp,video/*" style={{ ...s.input, padding: '0.5rem' }} onChange={e => {
                 const file = e.target.files?.[0]
                 if (file) {
                   setField('file_name', file.name)
@@ -587,7 +709,7 @@ export default function CreatePage() {
           <>
             <div style={s.fieldGroup}>
               <label style={s.label}>Short Video (vertical)</label>
-              <input type="file" accept="video/*" style={{ ...s.input, padding: '0.5rem' }} onChange={e => {
+              <input type="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,video/3gpp,video/*" style={{ ...s.input, padding: '0.5rem' }} onChange={e => {
                 const file = e.target.files?.[0]
                 if (file) {
                   setField('file_name', file.name)
