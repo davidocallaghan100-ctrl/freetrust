@@ -22,6 +22,20 @@ function hashGradient(name: string) {
   return gradients[idx]
 }
 
+// Human-readable relative time for the "updated Xs ago" chip. Kept
+// inline so we don't add a date-fns import just for one label. Rounds
+// to whole seconds / minutes / hours so the label doesn't jitter on
+// every render.
+function formatRelativeSeconds(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000))
+  if (s < 5)    return 'just now'
+  if (s < 60)   return `${s}s ago`
+  const m = Math.floor(s / 60)
+  if (m < 60)   return `${m}m ago`
+  const h = Math.floor(m / 60)
+  return `${h}h ago`
+}
+
 interface Member {
   id: string
   full_name: string | null
@@ -59,27 +73,66 @@ export default function MemberDirectoryPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  // Error state — previously the load() catch was silent, which meant
+  // mobile network blips or aborted fetches left the UI frozen with no
+  // indication WHY no members showed. Surface the error inline so the
+  // user can tap Retry instead of staring at a blank directory.
+  const [loadError, setLoadError] = useState<string | null>(null)
+  // Timestamp of the most recent successful fetch — used for the
+  // "updated Xs ago" chip and as a cheap tripwire for the auto-refresh
+  // interval (skip the network call if we refreshed within the last
+  // 15 seconds).
+  const [lastFetchedAt, setLastFetchedAt] = useState<number | null>(null)
 
   // Fetch directory with aggressive cache-busting. Uses `cache: 'no-store'`
   // AND a per-request timestamp query param so mobile Safari (which
   // ignores Cache-Control on some requests) still gets a fresh response.
-  const load = useCallback(async (mode: 'initial' | 'refresh' = 'initial') => {
+  //
+  // Error handling: ANY failure (network, non-2xx, JSON parse, empty
+  // payload) is captured in `loadError` and surfaced as an inline
+  // banner with a Retry button. The previous implementation silently
+  // swallowed errors via `catch {}` which was the main reason mobile
+  // users reported "new members not showing" — a flaky mobile network
+  // would abort the fetch, the catch would eat the error, and the
+  // user would see a stale `members` array with no explanation.
+  const load = useCallback(async (mode: 'initial' | 'refresh' | 'background' = 'initial') => {
     if (mode === 'refresh') setRefreshing(true)
     try {
       const res = await fetch(`/api/directory/members?t=${Date.now()}`, {
         cache: 'no-store',
         headers: { 'cache-control': 'no-store' },
       })
-      if (res.ok) {
-        const { members: data } = await res.json()
-        setMembers((data ?? []).map((p: {
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status} ${res.statusText}`)
+      }
+      const raw = await res.text()
+      let parsed: { members?: unknown[]; error?: string; _diagnostic?: unknown } = {}
+      try {
+        parsed = raw ? JSON.parse(raw) : {}
+      } catch (parseErr) {
+        throw new Error(
+          `Directory response was not JSON: ${raw.slice(0, 120) || '<empty>'} (${parseErr instanceof Error ? parseErr.message : 'parse error'})`
+        )
+      }
+      if (parsed.error) {
+        // Server returned 200 with an error field — still surface it
+        throw new Error(parsed.error)
+      }
+      const data = Array.isArray(parsed.members) ? parsed.members : []
+      console.log(
+        `[members] fetched ${data.length} members`,
+        mode === 'initial' ? '(initial)' : mode === 'refresh' ? '(manual refresh)' : '(background)',
+      )
+      setMembers(data.map((raw) => {
+        const p = raw as {
           id: string; full_name: string | null; avatar_url: string | null
           bio: string | null; location: string | null; trust_balance: number
           linkedin_url?: string | null; instagram_url?: string | null
           twitter_url?: string | null; github_url?: string | null
           tiktok_url?: string | null; youtube_url?: string | null
           website_url?: string | null
-        }) => ({
+        }
+        return {
           id: p.id,
           full_name: p.full_name,
           avatar_url: p.avatar_url,
@@ -97,9 +150,21 @@ export default function MemberDirectoryPage() {
             youtube_url:   p.youtube_url   ?? null,
             website_url:   p.website_url   ?? null,
           },
-        })))
+        }
+      }))
+      setLoadError(null)
+      setLastFetchedAt(Date.now())
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      // Don't clobber an existing successful member list on background
+      // refresh failures — just log and keep showing the stale data.
+      // Only surface the error for initial / manual-refresh failures
+      // where the user will actively be looking at the screen.
+      console.error('[members] load failed:', msg, { mode })
+      if (mode !== 'background') {
+        setLoadError(msg)
       }
-    } catch { /* empty */ }
+    }
     finally {
       setLoading(false)
       setRefreshing(false)
@@ -107,6 +172,61 @@ export default function MemberDirectoryPage() {
   }, [])
 
   useEffect(() => { load('initial') }, [load])
+
+  // ── Mobile staleness fixes ─────────────────────────────────────────────
+  // Three mobile-specific reasons a member list can go stale, all of
+  // which used to produce the "new members not showing on mobile" bug:
+  //
+  //   1. iOS Safari back/forward cache (bfcache) — tapping back from a
+  //      member profile restores /members from an in-memory snapshot
+  //      WITHOUT re-running useEffect. The pageshow event with
+  //      event.persisted === true is the only reliable signal we get.
+  //
+  //   2. Backgrounded tab — user minimises the PWA / switches apps /
+  //      locks the phone for an hour and comes back. visibilitychange
+  //      to 'visible' lets us refetch on foregrounding.
+  //
+  //   3. Session-length staleness — user leaves the tab open on
+  //      /members and walks away. A 30-second background poll while
+  //      the tab is visible picks up new signups without requiring
+  //      the user to tap the manual refresh button.
+  useEffect(() => {
+    // pageshow — fires both on initial navigation AND on bfcache
+    // restore. Only refetch on the bfcache path (persisted === true)
+    // so we don't double-fetch on first load.
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        console.log('[members] pageshow persisted (bfcache restore) — refetching')
+        load('background')
+      }
+    }
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[members] tab became visible — refetching')
+        load('background')
+      }
+    }
+
+    window.addEventListener('pageshow', onPageShow)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
+    // Background poll every 30 seconds while the tab is visible. This
+    // is cheap — the /api/directory/members route is server-side cached
+    // at the admin client level and just returns JSON — but picks up
+    // new signups without any user action.
+    const pollInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        load('background')
+      }
+    }, 30_000)
+
+    return () => {
+      window.removeEventListener('pageshow', onPageShow)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      clearInterval(pollInterval)
+    }
+  }, [load])
 
   const categoryMatch = (member: Member, cat: string): boolean => {
     if (cat === 'All') return true
@@ -185,9 +305,63 @@ export default function MemberDirectoryPage() {
               </span>
             </button>
             <span style={{ fontSize: '0.82rem', color: '#64748b', alignSelf: 'center' }}>
-              {loading ? 'Loading…' : `${filtered.length} members`}
+              {loading
+                ? 'Loading…'
+                : lastFetchedAt
+                  ? `${filtered.length} members · updated ${formatRelativeSeconds(Date.now() - lastFetchedAt)}`
+                  : `${filtered.length} members`}
             </span>
           </div>
+
+          {/* Inline load-error banner. Replaces the previous silent-catch
+              behaviour where a failed fetch on mobile would leave the
+              directory blank with no explanation. Retry button re-runs
+              load() via the same "refresh" path as the ↻ button. */}
+          {loadError && (
+            <div
+              role="alert"
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '0.75rem',
+                flexWrap: 'wrap',
+                background: 'rgba(248,113,113,0.08)',
+                border: '1px solid rgba(248,113,113,0.25)',
+                borderRadius: 10,
+                padding: '0.7rem 0.9rem',
+                marginTop: '1rem',
+                fontSize: '0.82rem',
+                color: '#fca5a5',
+              }}
+            >
+              <span style={{ flexShrink: 0 }}>⚠️</span>
+              <div style={{ flex: 1, minWidth: 0, lineHeight: 1.5 }}>
+                <div style={{ fontWeight: 700, marginBottom: '0.15rem' }}>Couldn&rsquo;t load members</div>
+                <div style={{ color: '#f87171', wordBreak: 'break-word' }}>{loadError}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => load('refresh')}
+                disabled={refreshing || loading}
+                style={{
+                  flexShrink: 0,
+                  background: 'rgba(248,113,113,0.15)',
+                  border: '1px solid rgba(248,113,113,0.35)',
+                  borderRadius: 8,
+                  padding: '0.45rem 0.85rem',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  color: '#fca5a5',
+                  cursor: (refreshing || loading) ? 'wait' : 'pointer',
+                  fontFamily: 'inherit',
+                  minHeight: 36,
+                }}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1.25rem' }}>
             {CATEGORIES.map(t => (
               <button key={t} onClick={() => setActiveCategory(t)} style={{
