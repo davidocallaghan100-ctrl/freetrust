@@ -8,16 +8,22 @@
 // manually set to 100 in the Supabase dashboard, which is why the UI
 // showed a binary 0/100 distribution.
 //
-// The formula is intentionally simple and transparent so every signal
-// caps at a fixed maximum and no single signal can push the score to
-// 100 by itself. Cap totals (max 100):
+// Scoring model:
 //
-//   Profile completeness   max 20  (logo + description = 20, one of = 10)
-//   Verified badge         max 15
-//   Member growth          max 20  (sqrt(members - 1) * 8, capped)
-//   Follower count         max 15  (sqrt(followers) * 3, capped)
-//   Average review rating  max 20  (avg_rating * 4, so 5★ = 20)
-//   Tenure                 max 10  (ageMonths, capped)
+//   BASE                   25   given to every org that exists
+//   Has description        +5   (description non-empty)
+//   Has cover photo        +5   (cover_url non-empty)
+//   Has category           +5   (type non-empty)
+//   Verified badge        +15
+//   Member growth      up to 20  (sqrt(members - 1) * 8, capped)
+//   Follower count     up to 15  (sqrt(followers) * 3, capped)
+//   Average rating     up to 25  (avg_rating * 5, so 5★ = 25; only when
+//                                 reviewCount > 0)
+//   Tenure             up to 10  (ageMonths, capped — 1 pt per month)
+//
+// Total is clamped to 100. New orgs land between 25 (bare minimum) and
+// ~55 (fully-filled profile, no community yet) so they no longer show
+// ₮0 on the directory — fixes the "binary 0/100 distribution" complaint.
 //
 // All weights are negotiable — bump the constants below if a particular
 // signal should matter more.
@@ -25,63 +31,85 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export interface TrustScoreSignals {
-  isVerified:    boolean
-  hasLogo:       boolean
+  isVerified:     boolean
   hasDescription: boolean
-  memberCount:   number
-  followerCount: number
-  reviewCount:   number
-  avgRating:     number   // 0–5 (raw rating average from organisation_reviews)
-  ageMonths:     number
+  hasCover:       boolean
+  hasCategory:    boolean
+  memberCount:    number
+  followerCount:  number
+  reviewCount:    number
+  avgRating:      number   // 0–5 (raw rating average from organisation_reviews)
+  ageMonths:      number
 }
 
-const PROFILE_BOTH      = 20
-const PROFILE_ONE       = 10
+const BASE              = 25
+const DESCRIPTION_PTS   = 5
+const COVER_PTS         = 5
+const CATEGORY_PTS      = 5
 const VERIFIED          = 15
 const MEMBER_CAP        = 20
 const FOLLOWER_CAP      = 15
-const RATING_CAP        = 20
+const RATING_CAP        = 25
 const TENURE_CAP        = 10
 
 /**
  * Pure 0-100 trust score from a set of signals. Returns a rounded
  * integer so the UI doesn't render half-points.
  *
+ * Every org starts from BASE (25). Layered bonuses then add up to a
+ * maximum of 100. Missing signals never subtract — a brand-new org
+ * with no reviews / followers / members just doesn't earn those
+ * specific bonuses and sits at 25–55 depending on profile completeness.
+ *
  * Edge cases:
  *   * NaN / negative inputs are clamped to 0 before being used
  *   * Empty review history → 0 contribution from the rating term
  *     (i.e. a brand-new org isn't punished for not having reviews,
- *     it just doesn't earn that 20 points yet)
+ *     it just doesn't earn that 25 points yet)
  */
 export function computeOrgTrustScore(s: TrustScoreSignals): number {
   const safe = (n: number) => (Number.isFinite(n) && n > 0 ? n : 0)
 
-  // 1. Profile completeness
-  const profilePts =
-    s.hasLogo && s.hasDescription ? PROFILE_BOTH
-    : s.hasLogo || s.hasDescription ? PROFILE_ONE
-    : 0
+  // 1. Base score — given to every org that exists. Prevents the UI
+  //    "₮0 for brand-new orgs" embarrassment.
+  const basePts = BASE
 
-  // 2. Verified
+  // 2. Profile completeness — three independent 5-pt bonuses. Matches
+  //    the POST handler's validation (description is required; cover
+  //    and category are optional but strongly encouraged).
+  const descriptionPts = s.hasDescription ? DESCRIPTION_PTS : 0
+  const coverPts       = s.hasCover       ? COVER_PTS       : 0
+  const categoryPts    = s.hasCategory    ? CATEGORY_PTS    : 0
+
+  // 3. Verified badge — proof the org passed manual review
   const verifiedPts = s.isVerified ? VERIFIED : 0
 
-  // 3. Member growth — sqrt curve so going from 1→2 members is rewarded
+  // 4. Member growth — sqrt curve so going from 1→2 members is rewarded
   //    more than going from 50→51. memberCount - 1 because the creator
   //    auto-counts as 1 and shouldn't earn points on their own.
   const memberPts = Math.min(MEMBER_CAP, Math.sqrt(safe(s.memberCount - 1)) * 8)
 
-  // 4. Followers — same sqrt curve, gentler slope
+  // 5. Followers — same sqrt curve, gentler slope
   const followerPts = Math.min(FOLLOWER_CAP, Math.sqrt(safe(s.followerCount)) * 3)
 
-  // 5. Reviews — only earn points if there's at least one review
+  // 6. Reviews — only earn points if there's at least one review.
+  //    25-point cap means a 5★ average fills the whole term.
   const ratingPts = s.reviewCount > 0
-    ? Math.min(RATING_CAP, Math.max(0, s.avgRating) * 4)
+    ? Math.min(RATING_CAP, Math.max(0, s.avgRating) * 5)
     : 0
 
-  // 6. Tenure — 1 point per month, capped at 10
+  // 7. Tenure — 1 point per month, capped at 10
   const tenurePts = Math.min(TENURE_CAP, safe(s.ageMonths))
 
-  const total = profilePts + verifiedPts + memberPts + followerPts + ratingPts + tenurePts
+  const total =
+    basePts +
+    descriptionPts + coverPts + categoryPts +
+    verifiedPts +
+    memberPts +
+    followerPts +
+    ratingPts +
+    tenurePts
+
   return Math.round(Math.min(100, Math.max(0, total)))
 }
 
@@ -92,7 +120,9 @@ export function computeOrgTrustScore(s: TrustScoreSignals): number {
 interface OrgRow {
   id: string
   logo_url?: string | null
+  cover_url?: string | null
   description?: string | null
+  type?: string | null           // org category / type slug
   is_verified?: boolean | null
   members_count?: number | null
   member_count?: number | null   // schema mismatch tolerance — accept either
@@ -167,8 +197,9 @@ export async function collectTrustSignalsForOrgs(supabase: SupabaseClient<any, a
     const ra = reviewAgg.get(o.id)
     map.set(o.id, {
       isVerified:     Boolean(o.is_verified),
-      hasLogo:        Boolean((o.logo_url ?? '').trim()),
       hasDescription: Boolean((o.description ?? '').trim()),
+      hasCover:       Boolean((o.cover_url ?? '').trim()),
+      hasCategory:    Boolean((o.type ?? '').trim()),
       memberCount:    memberCountFromRow(o),
       // Prefer a per-row follower_count column if present (faster, no
       // batched query needed), but fall back to the counted query.
@@ -190,7 +221,14 @@ export async function collectTrustSignalsForOrgs(supabase: SupabaseClient<any, a
 export async function collectTrustSignalsForOrg(supabase: SupabaseClient<any, any, any>, org: OrgRow): Promise<TrustScoreSignals> {
   const m = await collectTrustSignalsForOrgs(supabase, [org])
   return m.get(org.id) ?? {
-    isVerified: false, hasLogo: false, hasDescription: false,
-    memberCount: 0, followerCount: 0, reviewCount: 0, avgRating: 0, ageMonths: 0,
+    isVerified: false,
+    hasDescription: false,
+    hasCover: false,
+    hasCategory: false,
+    memberCount: 0,
+    followerCount: 0,
+    reviewCount: 0,
+    avgRating: 0,
+    ageMonths: 0,
   }
 }
