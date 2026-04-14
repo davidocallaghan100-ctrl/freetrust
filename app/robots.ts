@@ -1,5 +1,11 @@
 import { MetadataRoute } from 'next'
 
+// Canonical site URL — same fallback pattern as app/sitemap.ts and
+// app/layout.tsx. NEXT_PUBLIC_BASE_URL from the Vercel environment,
+// falling back to freetrust.co. Previously hardcoded to the
+// freetrust.vercel.app preview subdomain.
+const BASE = process.env.NEXT_PUBLIC_BASE_URL || 'https://freetrust.co'
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
@@ -23,6 +29,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/'],
       },
     ],
-    sitemap: 'https://freetrust.vercel.app/sitemap.xml',
+    sitemap: `${BASE}/sitemap.xml`,
   }
 }

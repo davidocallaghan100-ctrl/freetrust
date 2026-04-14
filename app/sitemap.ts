@@ -1,7 +1,12 @@
 import { MetadataRoute } from 'next'
 import { createClient } from '@/lib/supabase/server'
 
-const BASE = 'https://freetrust.vercel.app'
+// Canonical site URL for every link the sitemap emits. Uses the
+// NEXT_PUBLIC_BASE_URL env var (set on Vercel), falling back to the
+// production freetrust.co domain. Previously hardcoded to
+// freetrust.vercel.app which pointed search engines at the wrong
+// canonical URL after the launch domain was set up.
+const BASE = process.env.NEXT_PUBLIC_BASE_URL || 'https://freetrust.co'
 
 export const dynamic = 'force-dynamic'
 

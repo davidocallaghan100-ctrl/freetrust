@@ -62,7 +62,16 @@ export async function POST(req: NextRequest) {
     const { data: post, error: insertError } = await supabase
       .from('feed_posts')
       .insert({
-        author_id: user.id,
+        // feed_posts uses `user_id` as the author column (confirmed by
+        // the feed_posts_user_id_fkey FK referenced throughout the
+        // app — app/feed/[id]/page.tsx, app/api/feed/posts/route.ts,
+        // app/dashboard/page.tsx, app/api/admin/analytics/route.ts).
+        // Previously this endpoint wrote `author_id` which doesn't
+        // exist on the table — nothing in the UI calls this route
+        // (the /feed/new composer uses /api/feed/posts plural
+        // instead) so the bug was dormant, but a rogue API consumer
+        // would have hit a "column does not exist" error.
+        user_id: user.id,
         content,
         category,
         // Display override — null for personal, set for "as org"

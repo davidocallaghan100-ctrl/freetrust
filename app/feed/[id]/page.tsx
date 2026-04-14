@@ -3,6 +3,12 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import PostPageClient from './PostPageClient'
 
+// Canonical site URL. Previously hardcoded to freetrust.vercel.app
+// which made every shared feed post link preview point at the preview
+// subdomain instead of the launch domain — broke OG image previews
+// and the canonical URL for search engines.
+const BASE = process.env.NEXT_PUBLIC_BASE_URL || 'https://freetrust.co'
+
 // ── OG meta ───────────────────────────────────────────────────────────────────
 
 export const viewport: Viewport = {
@@ -34,7 +40,7 @@ export async function generateMetadata(
   const title  = (post.title ?? post.content?.slice(0, 80) ?? 'A post on FreeTrust')
   const description = post.content?.slice(0, 200) ?? `${authorName} shared something on FreeTrust`
   const mediaUrl = post.media_url as string | null
-  const postUrl  = `https://freetrust.vercel.app/feed/${id}`
+  const postUrl  = `${BASE}/feed/${id}`
 
   const images = mediaUrl ? [{ url: mediaUrl, width: 1200, height: 630, alt: title }] : []
 
@@ -57,7 +63,7 @@ export async function generateMetadata(
       images: mediaUrl ? [mediaUrl] : [],
       site: '@FreeTrust',
     },
-    metadataBase: new URL('https://freetrust.vercel.app'),
+    metadataBase: new URL(BASE),
     alternates: { canonical: postUrl },
   }
 }
