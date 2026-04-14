@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 // Qualifying actions and their Trust rewards
 const TRUST_ACTIONS: Record<string, { amount: number; label: string; repeatable?: boolean }> = {
@@ -21,6 +22,16 @@ const TRUST_ACTIONS: Record<string, { amount: number; label: string; repeatable?
 }
 
 // POST /api/trust/action — award trust for a qualifying action
+//
+// Previously did a non-atomic idempotency-check → insert-ledger →
+// read-balance → update-balance pattern that silently failed on the
+// final UPDATE because trust_balances has no UPDATE RLS policy.
+// See /api/trust/spend/route.ts for the full bug history and the
+// companion fix in 20260414000006_wallet_rls.sql.
+//
+// Fixed to use the issue_trust() SECURITY DEFINER RPC with the
+// admin client — same pattern as wallet/transfer, auth/callback,
+// signup-bonus, etc.
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient()
@@ -29,17 +40,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await req.json() as { action: string; ref?: string }
-    const { action, ref } = body
+    const body = await req.json().catch(() => null) as { action?: string; ref?: string } | null
+    const action = body?.action
+    const ref = body?.ref
+
+    if (!action) {
+      return NextResponse.json({ error: 'action is required' }, { status: 400 })
+    }
 
     const actionDef = TRUST_ACTIONS[action]
     if (!actionDef) {
-      return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
+      return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 })
     }
 
     const { amount, label, repeatable } = actionDef
 
-    // Idempotency check for non-repeatable actions
+    // Idempotency check for non-repeatable actions — look up any
+    // existing ledger entry with the same type. Uses the user-session
+    // client so RLS scopes the query to this user's own rows.
     if (!repeatable) {
       const { data: existing } = await supabase
         .from('trust_ledger')
@@ -52,51 +70,36 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Insert ledger entry
-    const { error: insertErr } = await supabase
-      .from('trust_ledger')
-      .insert({
-        user_id: user.id,
-        amount,
-        type: action,
-        description: label,
-        ref: ref ?? null,
-      })
+    // Atomic award via the SECURITY DEFINER RPC — bypasses the
+    // trust_balances UPDATE policy problem entirely.
+    const admin = createAdminClient()
+    const { error: rpcError } = await admin.rpc('issue_trust', {
+      p_user_id: user.id,
+      p_amount:  amount,
+      p_type:    action,
+      p_ref:     ref ?? null,
+      p_desc:    label,
+    })
 
-    if (insertErr) {
-      // Fall back: try without ref column
-      await supabase.from('trust_ledger').insert({
-        user_id: user.id,
-        amount,
-        type: action,
-        description: label,
+    if (rpcError) {
+      console.error('[POST /api/trust/action] issue_trust RPC failed:', {
+        message: rpcError.message,
+        code:    rpcError.code,
+        details: rpcError.details,
+        hint:    rpcError.hint,
+        action,
       })
+      return NextResponse.json(
+        { error: rpcError.message || 'Could not award trust' },
+        { status: 500 },
+      )
     }
 
-    // Upsert trust balance
-    const { data: current } = await supabase
-      .from('trust_balances')
-      .select('balance, lifetime')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (current) {
-      await supabase
-        .from('trust_balances')
-        .update({
-          balance:  (current.balance  ?? 0) + amount,
-          lifetime: (current.lifetime ?? 0) + amount,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', user.id)
-    } else {
-      await supabase
-        .from('trust_balances')
-        .insert({ user_id: user.id, balance: amount, lifetime: amount })
-    }
-
-    // Get new balance
-    const { data: newBal } = await supabase
+    // Read the new balance to echo back to the client so the UI can
+    // update without a separate /api/wallet round-trip. This is a
+    // SELECT which is allowed by the public-read RLS policy on
+    // trust_balances (added by 20260411_trust_balances_public_read.sql).
+    const { data: newBal } = await admin
       .from('trust_balances')
       .select('balance, lifetime')
       .eq('user_id', user.id)
@@ -107,12 +110,13 @@ export async function POST(req: NextRequest) {
       amount,
       action,
       label,
-      newBalance: newBal?.balance ?? amount,
+      newBalance:  newBal?.balance  ?? amount,
       newLifetime: newBal?.lifetime ?? amount,
     })
   } catch (err) {
-    console.error('[POST /api/trust/action]', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[POST /api/trust/action] unexpected error:', msg, err)
+    return NextResponse.json({ error: `Unexpected error: ${msg}` }, { status: 500 })
   }
 }
 

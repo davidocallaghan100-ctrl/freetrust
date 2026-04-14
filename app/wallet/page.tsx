@@ -559,6 +559,9 @@ function WalletPageInner() {
   }
 
   const spendTrust = async (action: string, cost: number, desc: string) => {
+    // Client-side balance precheck — cheap UX guard so the user
+    // doesn't see a server round-trip fail for a predictable reason.
+    // The server re-checks atomically inside spend_trust() anyway.
     if ((data?.trust.balance ?? 0) < cost) {
       showToast(`You need ₮${cost} — you have ₮${data?.trust.balance ?? 0}`)
       return
@@ -570,9 +573,46 @@ function WalletPageInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, amount: cost }),
       })
-      if (res.ok) { showToast(`✅ ${desc} activated!`); await load() }
-      else { showToast('Something went wrong — try again') }
-    } catch { showToast('Something went wrong — try again') }
+      const json = await res.json().catch(() => ({})) as {
+        success?: boolean
+        newBalance?: number | null
+        error?: string
+        code?: string
+        balance?: number
+        required?: number
+        hint?: string | null
+      }
+      if (!res.ok) {
+        // Surface the real server error instead of the old generic
+        // "Something went wrong" — the /api/trust/spend route now
+        // returns structured error payloads for insufficient funds,
+        // RPC failures, and unexpected errors. Log the full object
+        // to the browser console for diagnosis and show the user a
+        // readable toast.
+        console.error('[wallet] spend trust failed:', res.status, json)
+        if (json.code === 'insufficient_funds') {
+          const need = json.required ?? cost
+          const have = json.balance ?? (data?.trust.balance ?? 0)
+          showToast(`Need ₮${need} — you have ₮${have}`, 6000)
+        } else {
+          showToast(json.error ?? `Spend failed (HTTP ${res.status})`, 6000)
+        }
+        return
+      }
+      // On success, prefer the server-returned newBalance over a full
+      // /api/wallet refetch (saves a round-trip). Fall back to load()
+      // if the server didn't include it for some reason.
+      if (typeof json.newBalance === 'number' && data) {
+        setData({ ...data, trust: { ...data.trust, balance: json.newBalance } })
+      } else {
+        await load()
+      }
+      showToast(`✅ ${desc} activated!`)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[wallet] spendTrust threw:', msg)
+      showToast(`Network error: ${msg}`, 6000)
+    }
     finally { setSpendLoading(null) }
   }
 
