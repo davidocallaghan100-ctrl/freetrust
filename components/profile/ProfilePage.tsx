@@ -147,6 +147,11 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  // Save-error state — previously handleSave's catch just called
+  // console.error, so RLS denials / missing columns / trigger failures
+  // were invisible to the user (they clicked Save and "nothing happened").
+  // Surfaced as a red banner above the Save button when set.
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [trustBalance, setTrustBalance] = useState(0)
   const [form, setForm] = useState({ full_name: '', bio: '', location: '', website: '' })
   const [avatarUploading, setAvatarUploading] = useState(false)
@@ -490,24 +495,86 @@ export default function ProfilePage() {
   }, [profile, user, bonusAwarded])
 
   const handleSave = async () => {
-    if (!user) return
+    if (!user) {
+      setSaveError('You are not signed in. Refresh the page and try again.')
+      return
+    }
     setSaving(true)
+    setSaveError(null)
     try {
-      const { error } = await supabase
+      // IMPORTANT: chain .select() after .update(). PostgREST returns
+      // `{ error: null, data: null }` when an UPDATE is silently blocked
+      // by RLS (no matching row after the RLS USING check) — the update
+      // succeeds as a statement but affects 0 rows. Without .select(),
+      // the old code couldn't distinguish "saved successfully" from
+      // "RLS blocked you and nothing happened". This was the primary
+      // symptom of the "edit button doesn't work" bug report: the save
+      // silently did nothing and the user had no feedback.
+      const { data, error } = await supabase
         .from('profiles')
         .update({
           full_name: form.full_name || null,
-          bio: form.bio || null,
-          location: form.location || null,
-          website: form.website || null,
+          bio:       form.bio       || null,
+          location:  form.location  || null,
+          website:   form.website   || null,
         })
         .eq('id', user.id)
-      if (error) throw error
-      setProfile(prev => ({ ...prev!, ...form }))
+        .select('id, full_name, bio, location, website')
+
+      if (error) {
+        // Log the full PostgREST error object so the next debug cycle
+        // shows exactly what went wrong (code + details + hint).
+        // Supabase's PostgrestError has these fields; cast to read them.
+        const e = error as { message?: string; code?: string; details?: string; hint?: string }
+        console.error('[profile save] supabase error:', {
+          message: e.message,
+          code:    e.code,
+          details: e.details,
+          hint:    e.hint,
+        })
+        // Surface the message verbatim — users who report the bug can
+        // paste it and we'll have actionable info.
+        const extra = [e.code, e.hint].filter(Boolean).join(' · ')
+        setSaveError(`${e.message ?? 'Save failed'}${extra ? ` (${extra})` : ''}`)
+        return
+      }
+
+      if (!data || data.length === 0) {
+        // Classic RLS silent-block signal. The UPDATE statement ran,
+        // returned no error, but matched 0 rows — meaning either:
+        //   a) The "Users can update own profile" RLS policy is
+        //      missing on profiles in production (fixed by migration
+        //      20260414000004_profiles_update_policy.sql), OR
+        //   b) The caller has no profiles row at all (rare — the
+        //      handle_new_user trigger should create it at signup).
+        // Either way we need to tell the user instead of silently
+        // leaving the form in edit mode.
+        console.error('[profile save] update returned 0 rows — RLS block or missing profile row', { userId: user.id })
+        setSaveError(
+          'Your profile could not be saved — the database rejected the update. ' +
+          'This usually means the "Users can update own profile" RLS policy is missing on the profiles table. ' +
+          'Try again in a minute; if it persists, contact support.'
+        )
+        return
+      }
+
+      // Success — merge the server-returned row back into local state
+      // so the next edit starts from what's actually in the DB, not
+      // what was in the form a moment ago.
+      const updated = data[0] as Partial<Profile>
+      setProfile(prev => prev ? { ...prev, ...updated } : prev)
+      setForm({
+        full_name: updated.full_name ?? '',
+        bio:       updated.bio       ?? '',
+        location:  updated.location  ?? '',
+        website:   updated.website   ?? '',
+      })
       setEditing(false)
       showToast('Profile saved!')
     } catch (err) {
-      console.error('save error:', err)
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[profile save] threw:', msg, err)
+      setSaveError(`Unexpected error: ${msg}`)
     } finally {
       setSaving(false)
     }
@@ -746,7 +813,12 @@ export default function ProfilePage() {
           <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.75rem' }}>
             {isOwnProfile ? (
               <button
-                onClick={() => setEditing(!editing)}
+                onClick={() => {
+                  // Clear any stale save error from the previous edit
+                  // session so opening the form again starts clean.
+                  setSaveError(null)
+                  setEditing(!editing)
+                }}
                 style={{ background: editing ? 'rgba(148,163,184,0.1)' : 'rgba(56,189,248,0.1)', border: `1px solid ${editing ? 'rgba(148,163,184,0.2)' : 'rgba(56,189,248,0.3)'}`, borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.82rem', fontWeight: 600, color: editing ? '#94a3b8' : '#38bdf8', cursor: 'pointer' }}
               >
                 {editing ? 'Cancel' : '✏️ Edit Profile'}
@@ -899,6 +971,27 @@ export default function ProfilePage() {
                   />
                 </div>
               ))}
+              {saveError && (
+                <div
+                  role="alert"
+                  style={{
+                    background: 'rgba(248,113,113,0.08)',
+                    border: '1px solid rgba(248,113,113,0.3)',
+                    borderRadius: 8,
+                    padding: '0.7rem 0.85rem',
+                    fontSize: '0.82rem',
+                    color: '#fca5a5',
+                    lineHeight: 1.5,
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.6rem',
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  <span style={{ flexShrink: 0 }}>⚠️</span>
+                  <span style={{ flex: 1, minWidth: 0 }}>{saveError}</span>
+                </div>
+              )}
               <button
                 onClick={handleSave}
                 disabled={saving}
