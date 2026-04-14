@@ -29,6 +29,11 @@ export default function NewProductPage() {
   const [authChecking, setAuthChecking] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  // When an image upload fails, we offer the user an escape hatch:
+  // "Publish without photos" — creates the listing with no images so
+  // they can at least get the product live and add photos later via the
+  // edit page. `imageUploadFailed` gates the visibility of that button.
+  const [imageUploadFailed, setImageUploadFailed] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [uploadingCount, setUploadingCount] = useState(0)
 
@@ -106,17 +111,47 @@ export default function NewProductPage() {
       const fd = new FormData()
       fd.append('file', img.file)
       fd.append('type', 'listing')
-      const res = await fetch('/api/upload/media', { method: 'POST', body: fd })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Image upload failed')
+      let res: Response
+      try {
+        res = await fetch('/api/upload/media', { method: 'POST', body: fd })
+      } catch (netErr) {
+        // Network-layer failure (mobile data drop, CORS, etc.)
+        const msg = netErr instanceof Error ? netErr.message : String(netErr)
+        console.error('[new product] upload network error:', msg, { fileName: img.file.name })
+        throw new Error(`Network error uploading image: ${msg}`)
+      }
+      // res.json() can throw on invalid JSON (e.g. HTML error page from
+      // Vercel timeout). Default to {} so we always have SOMETHING to
+      // read, and fall back to res.status / res.statusText for context.
+      const data = await res.json().catch(() => ({} as {
+        url?: string
+        error?: string
+        detail?: unknown
+      }))
+      if (!res.ok || !data.url) {
+        // Log the full server response so the failure is diagnosable
+        // from the browser console on the affected mobile device.
+        console.error('[new product] upload failed:', {
+          status: res.status,
+          statusText: res.statusText,
+          body: data,
+          fileName: img.file.name,
+          fileType: img.file.type,
+          fileSize: img.file.size,
+        })
+        throw new Error(data.error ?? `Image upload failed (HTTP ${res.status})`)
+      }
       uploaded.push(data.url)
       setUploadingCount(c => c - 1)
     }
     return uploaded
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  // Core publish flow. `skipImages = true` is the "Publish without
+  // photos" escape hatch — if image uploads keep failing on mobile,
+  // the user can still get their product live without images and add
+  // them from the edit page later.
+  async function submitListing(skipImages: boolean) {
     if (!title.trim() || title.trim().length < 3) {
       setError('Title must be at least 3 characters.')
       return
@@ -134,9 +169,31 @@ export default function NewProductPage() {
     setLoading(true)
     setError('')
 
-    try {
-      const uploadedImages = await uploadImages()
+    // Step 1: Upload images (unless we're in the escape-hatch path).
+    // Upload failures are handled in their own try/catch so they can
+    // set imageUploadFailed=true and surface a dedicated error that
+    // unlocks the "Publish without photos" button. A failure here
+    // aborts the publish — the escape hatch re-invokes submitListing
+    // with skipImages=true to bypass this branch.
+    let uploadedImages: string[] = []
+    if (!skipImages) {
+      try {
+        uploadedImages = await uploadImages()
+        setImageUploadFailed(false)
+      } catch (uploadErr) {
+        const msg = uploadErr instanceof Error ? uploadErr.message : 'Image upload failed'
+        console.error('[new product] image upload aborted publish:', msg)
+        setError(msg)
+        setImageUploadFailed(true)
+        setLoading(false)
+        setUploadingCount(0)
+        return
+      }
+    }
 
+    // Step 2: Create the listing. This is its own try/catch so a
+    // listing insert failure doesn't mask an earlier upload failure.
+    try {
       const tagList = tags.split(',').map(t => t.trim()).filter(Boolean)
 
       const res = await fetch('/api/listings', {
@@ -156,15 +213,42 @@ export default function NewProductPage() {
         }),
       })
 
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Failed to create product')
+      const data = await res.json().catch(() => ({} as {
+        listing?: { id: string }
+        error?: string
+        detail?: unknown
+      }))
+      if (!res.ok) {
+        console.error('[new product] listings POST failed:', {
+          status: res.status,
+          statusText: res.statusText,
+          body: data,
+        })
+        throw new Error(data.error ?? `Failed to create product (HTTP ${res.status})`)
+      }
+      if (!data.listing?.id) {
+        throw new Error('Product created but server did not return a listing id')
+      }
       router.push(`/products/${data.listing.id}`)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.')
+      const msg = err instanceof Error ? err.message : 'Something went wrong.'
+      console.error('[new product] publish error:', err)
+      setError(msg)
     } finally {
       setLoading(false)
       setUploadingCount(0)
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    await submitListing(false)
+  }
+
+  async function handlePublishWithoutImages() {
+    // Called from the inline error banner when image uploads fail.
+    // Same flow as handleSubmit, but bypasses the upload step.
+    await submitListing(true)
   }
 
   if (authChecking) {
@@ -418,8 +502,32 @@ export default function NewProductPage() {
 
           {/* Error */}
           {error && (
-            <div style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 10, padding: '10px 14px', color: '#f87171', fontSize: '0.875rem' }}>
-              {error}
+            <div style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 10, padding: '12px 14px', color: '#f87171', fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ lineHeight: 1.5 }}>{error}</div>
+              {/* Escape hatch: if the image upload failed, let the user
+                  publish the listing without photos instead of getting
+                  stuck. They can add photos later from the edit page. */}
+              {imageUploadFailed && (
+                <button
+                  type="button"
+                  onClick={handlePublishWithoutImages}
+                  disabled={loading}
+                  style={{
+                    alignSelf: 'flex-start',
+                    background: 'rgba(56,189,248,0.12)',
+                    border: '1px solid rgba(56,189,248,0.4)',
+                    borderRadius: 8,
+                    padding: '8px 14px',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: '#38bdf8',
+                    cursor: loading ? 'wait' : 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  📦 Publish without photos →
+                </button>
+              )}
             </div>
           )}
 

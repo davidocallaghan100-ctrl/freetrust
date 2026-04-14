@@ -147,6 +147,15 @@ export async function POST(req: NextRequest) {
     // from the MIME type we already validated above (not from the raw
     // filename) so we only ever produce ASCII, lowercase, no-space,
     // no-punctuation names that Supabase Storage always accepts.
+    //
+    // IMPORTANT — @supabase/storage-js validates the full path client-side
+    // with a regex roughly equal to /^([a-zA-Z0-9!_\-.*'()]+\/)*[a-zA-Z0-9!_\-.*'()]+$/
+    // and throws a synchronous DOMException "The string did not match the
+    // expected pattern" BEFORE the HTTP call if anything in the path is
+    // outside that set. Every segment of the path we build below is
+    // aggressively sanitised so the regex can never fail — even if
+    // user.id somehow contains an uppercase letter or a weird character,
+    // or if Math.random().toString(36) collapses to empty on an edge case.
     const MIME_TO_EXT: Record<string, string> = {
       'image/jpeg':      'jpg',
       'image/png':       'png',
@@ -162,8 +171,21 @@ export async function POST(req: NextRequest) {
     }
     const resolvedExtension = MIME_TO_EXT[fileType]
     const ext = resolvedExtension || (mediaKind === 'video' ? 'mp4' : 'jpg')
-    const safeName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    const storagePath = `${mediaKind}/${user.id}/${safeName}`
+
+    // Sanitise user.id: Supabase UUIDs are always lowercase [0-9a-f-],
+    // but we lowercase + strip anything outside [a-z0-9-] defensively.
+    // If the result is empty (should never happen) fall back to 'anon'.
+    const uidSafe = (user.id || '').toLowerCase().replace(/[^a-z0-9-]/g, '') || 'anon'
+
+    // Sanitise the random suffix: Math.random().toString(36) is normally
+    // [0-9a-z.] but `.slice(2)` drops the leading "0." so we should be
+    // left with only [0-9a-z]. Strip anything else defensively, and fall
+    // back to a timestamp-based tail if the result is empty.
+    const rand = Math.random().toString(36).slice(2).replace(/[^a-z0-9]/g, '')
+    const randSafe = rand || Date.now().toString(36)
+
+    const safeName = `${Date.now()}-${randSafe}.${ext}`
+    const storagePath = `${mediaKind}/${uidSafe}/${safeName}`
 
     const buffer = Buffer.from(await file.arrayBuffer())
     console.log('[upload/media] buffer:', buffer.byteLength, 'bytes → path:', storagePath)
@@ -203,14 +225,62 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 6. Upload via service-role client ────────────────────────────────────
+    // The admin.storage.upload() call can fail in TWO distinct ways:
+    //
+    //   a) Returns { data, error } with error.message set — the HTTP
+    //      call succeeded but Supabase Storage rejected the upload
+    //      (wrong bucket, size limit, duplicate, RLS, etc.)
+    //
+    //   b) Throws synchronously — @supabase/storage-js runs a regex
+    //      on the path BEFORE any HTTP call and throws a DOMException
+    //      with message "The string did not match the expected pattern"
+    //      if anything fails its filename validation. This exception
+    //      bypasses the { data, error } channel entirely and lands in
+    //      our try/catch. We handle it explicitly below with the
+    //      storagePath in the diagnostic body so the next investigation
+    //      can see exactly which character leaked through.
+    //
+    // Path (a) is handled via the normal `if (uploadError)` branch
+    // below; path (b) is handled by the dedicated try/catch wrapper.
     console.log('[upload/media] uploading to bucket', BUCKET, 'path', storagePath)
-    const { data: uploadData, error: uploadError } = await admin.storage
-      .from(BUCKET)
-      .upload(storagePath, buffer, {
+    let uploadData: unknown = null
+    let uploadError: { message?: string } | null = null
+    try {
+      const result = await admin.storage
+        .from(BUCKET)
+        .upload(storagePath, buffer, {
+          contentType: fileType,
+          upsert: false,
+          cacheControl: '31536000',
+        })
+      uploadData = result.data
+      uploadError = result.error
+    } catch (thrownErr) {
+      // This is path (b): storage-js client-side path validation threw
+      // synchronously. The usual culprit is a non-ASCII character in
+      // the path — but we've sanitised everything we control, so if this
+      // fires it's a real diagnostic clue worth surfacing in full.
+      const msg = thrownErr instanceof Error ? thrownErr.message : String(thrownErr)
+      console.error('[upload/media] storage.upload threw synchronously:', {
+        message: msg,
+        storagePath,
+        bucket: BUCKET,
         contentType: fileType,
-        upsert: false,
-        cacheControl: '31536000',
+        fileNameOriginal: file.name,
+        userId: user.id,
       })
+      return NextResponse.json(
+        {
+          error: `Upload rejected by storage client: ${msg}`,
+          detail: {
+            reason: 'storage-js path validation failed',
+            hint: 'The synthesized path was rejected by @supabase/storage-js\'s internal regex. This usually means a non-ASCII or special character leaked into the path. Check Vercel logs for the exact storagePath value.',
+            storagePath,
+          },
+        },
+        { status: 500 }
+      )
+    }
 
     if (uploadError) {
       console.error('[upload/media] upload error:', JSON.stringify(uploadError))
@@ -219,6 +289,18 @@ export async function POST(req: NextRequest) {
       if (msg.toLowerCase().includes('bucket not found')) {
         return NextResponse.json(
           { error: 'Upload failed — feed-media bucket does not exist. Run supabase/migrations/20260412_feed_media_bucket.sql.' },
+          { status: 500 }
+        )
+      }
+      if (msg.toLowerCase().includes('expected pattern')) {
+        return NextResponse.json(
+          {
+            error: `Upload rejected: ${msg}. The storage path failed Supabase's validator.`,
+            detail: {
+              reason: 'storage path rejected',
+              storagePath,
+            },
+          },
           { status: 500 }
         )
       }
