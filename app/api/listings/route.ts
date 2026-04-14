@@ -68,10 +68,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
+    let body: Record<string, unknown>
+    try {
+      body = await request.json()
+    } catch (parseErr) {
+      const msg = parseErr instanceof Error ? parseErr.message : String(parseErr)
+      console.error('[POST /api/listings] body parse failed:', msg)
+      return NextResponse.json(
+        { error: `Request body is not valid JSON: ${msg}` },
+        { status: 400 }
+      )
+    }
+    console.log('[listings POST] incoming body:', JSON.stringify(body))
 
-    // Validate required fields
-    const { title, description, price, currency = 'EUR', product_type, category_id, category, service_mode = 'online', location, service_radius, delivery_types = [], tags = [], images = [] } = body
+    // Validate required fields. `cover_image` + `stock_qty` were previously
+    // missing from this destructure — the client sends them but they were
+    // silently dropped, leading to products that showed no cover image and
+    // always rendered "out of stock" on the detail page.
+    const {
+      title,
+      description,
+      price,
+      currency = 'EUR',
+      product_type,
+      category_id,
+      category,
+      service_mode = 'online',
+      location,
+      service_radius,
+      delivery_types = [],
+      tags = [],
+      images = [],
+      cover_image = null,
+      stock_qty = null,
+    } = body as Record<string, unknown>
 
     if (!title || typeof title !== 'string' || title.trim().length < 3) {
       return NextResponse.json({ error: 'Title must be at least 3 characters' }, { status: 400 })
@@ -98,29 +128,54 @@ export async function POST(request: NextRequest) {
     const tagsLiteral          = toPgTagArray(tags)
     const deliveryTypesLiteral = toPgTagArray(delivery_types)
 
+    // Normalise cover_image: accept an https URL or null; anything else
+    // falls back to the first uploaded image or null so we never write
+    // garbage into the column.
+    const coverImageResolved = (typeof cover_image === 'string' && /^https?:\/\//i.test(cover_image))
+      ? cover_image
+      : (Array.isArray(images) && typeof images[0] === 'string' && /^https?:\/\//i.test(images[0]))
+        ? images[0]
+        : null
+
+    // Normalise stock_qty: accept a non-negative integer or null. Reject
+    // negative / non-integer / non-number values quietly (fall back to null).
+    const stockResolved = (typeof stock_qty === 'number' && Number.isFinite(stock_qty) && stock_qty >= 0)
+      ? Math.floor(stock_qty)
+      : null
+
+    const insertPayload = {
+      seller_id: user.id,
+      title: (title as string).trim(),
+      description: (description as string).trim(),
+      price,
+      currency,
+      product_type: resolvedProductType,
+      category_id: (category_id as string | null) ?? null,
+      category: (category as string | null) ?? null,
+      service_mode: service_mode,
+      location: (location as string | null) ?? null,
+      service_radius: (service_radius as number | null) ?? null,
+      delivery_types: deliveryTypesLiteral,
+      tags: tagsLiteral,
+      images: imagesLiteral,
+      cover_image: coverImageResolved,
+      stock_qty: stockResolved,
+      status: 'active',
+    }
+    console.log('[listings POST] insertPayload:', JSON.stringify(insertPayload))
+
     let listing
     try {
       const { data, error } = await supabase
         .from('listings')
-        .insert({
-          seller_id: user.id,
-          title: title.trim(),
-          description: description.trim(),
-          price,
-          currency,
-          product_type: resolvedProductType,
-          category_id: category_id ?? null,
-          category: category ?? null,
-          service_mode: service_mode,
-          location: location ?? null,
-          service_radius: service_radius ?? null,
-          delivery_types: deliveryTypesLiteral,
-          tags: tagsLiteral,
-          images: imagesLiteral,
-          status: 'active',
-        })
+        .insert(insertPayload)
         .select()
         .single()
+
+      // Always log the insert result BEFORE any branch so we can see it
+      // in Vercel logs regardless of which path we take next. This is
+      // the main diagnostic for the "blank response" class of failure.
+      console.log('[listings POST] insert result:', { data, error })
 
       if (error) {
         console.error('[POST /api/listings] insert error:', error)
@@ -139,7 +194,28 @@ export async function POST(request: NextRequest) {
             { status: 500 }
           )
         }
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        return NextResponse.json(
+          { error: error.message || 'Listing insert failed with no error message', detail: error },
+          { status: 500 }
+        )
+      }
+
+      // Defensive: if supabase returns { data: null, error: null } (edge
+      // case — e.g. RLS allows INSERT but blocks SELECT on the returning
+      // row), we'd previously respond with `{ listing: null }` which the
+      // client translated to "Product created but server did not return
+      // a listing id" — a misleading, impossible-to-diagnose error.
+      if (!data) {
+        console.error('[POST /api/listings] insert succeeded but .single() returned null')
+        return NextResponse.json(
+          {
+            error:
+              'Listing insert returned no row — this usually means the SELECT ' +
+              'RLS policy blocks reading the row you just inserted. Check the ' +
+              '"Active listings are viewable by everyone" policy on the listings table.',
+          },
+          { status: 500 }
+        )
       }
       listing = data
     } catch (insertErr) {
@@ -165,9 +241,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Listing insert failed: ${msg}` }, { status: 500 })
     }
 
+    console.log('[listings POST] success, returning listing id:', (listing as { id?: string })?.id)
     return NextResponse.json({ listing }, { status: 201 })
   } catch (err) {
     console.error('[POST /api/listings] Unexpected error:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    return NextResponse.json(
+      { error: `Internal server error: ${msg}` },
+      { status: 500 }
+    )
   }
 }

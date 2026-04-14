@@ -120,14 +120,18 @@ export default function NewProductPage() {
         console.error('[new product] upload network error:', msg, { fileName: img.file.name })
         throw new Error(`Network error uploading image: ${msg}`)
       }
-      // res.json() can throw on invalid JSON (e.g. HTML error page from
-      // Vercel timeout). Default to {} so we always have SOMETHING to
-      // read, and fall back to res.status / res.statusText for context.
-      const data = await res.json().catch(() => ({} as {
-        url?: string
-        error?: string
-        detail?: unknown
-      }))
+      // Read raw text first so non-JSON responses (Vercel HTML error
+      // pages, empty bodies, middleware-wrapped blanks) are surfaced in
+      // the error message instead of silently disappearing.
+      const rawText = await res.text()
+      let data: { url?: string; error?: string; detail?: unknown } = {}
+      if (rawText) {
+        try {
+          data = JSON.parse(rawText)
+        } catch {
+          console.error('[new product] upload response was not JSON:', rawText.slice(0, 200))
+        }
+      }
       if (!res.ok || !data.url) {
         // Log the full server response so the failure is diagnosable
         // from the browser console on the affected mobile device.
@@ -135,11 +139,16 @@ export default function NewProductPage() {
           status: res.status,
           statusText: res.statusText,
           body: data,
+          rawText: rawText.slice(0, 500),
           fileName: img.file.name,
           fileType: img.file.type,
           fileSize: img.file.size,
         })
-        throw new Error(data.error ?? `Image upload failed (HTTP ${res.status})`)
+        throw new Error(
+          data.error ??
+            `Image upload failed (HTTP ${res.status} ${res.statusText}). ` +
+              `Server response: ${rawText.slice(0, 200) || '<empty body>'}`
+        )
       }
       uploaded.push(data.url)
       setUploadingCount(c => c - 1)
@@ -196,39 +205,79 @@ export default function NewProductPage() {
     try {
       const tagList = tags.split(',').map(t => t.trim()).filter(Boolean)
 
+      // Hoist the payload so we can log it BEFORE the fetch. Silent
+      // failures are much easier to diagnose with the exact JSON body
+      // the client shipped printed in the browser console on the
+      // affected device.
+      const payload = {
+        title: title.trim(),
+        description: description.trim(),
+        price: parsedPrice,
+        currency,
+        product_type: productType,
+        category,
+        tags: tagList,
+        images: uploadedImages,
+        cover_image: uploadedImages[0] ?? null,
+        // Renamed from `stock` → `stock_qty` to match the DB column. The
+        // previous shape was silently dropped by the server because the
+        // POST handler didn't destructure a `stock` field, leading to
+        // products always showing "out of stock" on the detail page.
+        ...(stock && productType === 'physical' ? { stock_qty: parseInt(stock) } : {}),
+      }
+      console.log('[product submit] payload:', JSON.stringify(payload))
+
       const res = await fetch('/api/listings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim(),
-          price: parsedPrice,
-          currency,
-          product_type: productType,
-          category,
-          tags: tagList,
-          images: uploadedImages,
-          cover_image: uploadedImages[0] ?? null,
-          ...(stock && productType === 'physical' ? { stock: parseInt(stock) } : {}),
-        }),
+        body: JSON.stringify(payload),
       })
 
-      const data = await res.json().catch(() => ({} as {
-        listing?: { id: string }
-        error?: string
-        detail?: unknown
-      }))
+      console.log('[product submit] response status:', res.status, res.statusText)
+
+      // Read the body as TEXT first so that ANY response (empty body,
+      // HTML error page, malformed JSON) is captured verbatim for logs.
+      // The previous `await res.json().catch(() => ({}))` silently
+      // swallowed parse failures and left the user staring at a form
+      // that did nothing — this is the "blank response after images
+      // are uploaded" bug the user reported.
+      const rawText = await res.text()
+      console.log('[product submit] response body (raw):', rawText)
+
+      let data: { listing?: { id: string }; error?: string; detail?: unknown } = {}
+      if (rawText) {
+        try {
+          data = JSON.parse(rawText)
+        } catch (parseErr) {
+          console.error('[product submit] failed to parse response JSON:', parseErr)
+          throw new Error(
+            `Server returned non-JSON (HTTP ${res.status}): ` +
+            (rawText.slice(0, 200) || '<empty body>')
+          )
+        }
+      }
+      console.log('[product submit] response body (parsed):', data)
+
       if (!res.ok) {
         console.error('[new product] listings POST failed:', {
           status: res.status,
           statusText: res.statusText,
           body: data,
+          rawText: rawText.slice(0, 500),
         })
-        throw new Error(data.error ?? `Failed to create product (HTTP ${res.status})`)
+        throw new Error(
+          data.error ??
+            `Failed to create product (HTTP ${res.status} ${res.statusText}). ` +
+              `Server response: ${rawText.slice(0, 200) || '<empty body>'}`
+        )
       }
       if (!data.listing?.id) {
-        throw new Error('Product created but server did not return a listing id')
+        throw new Error(
+          `Product created but server did not return a listing id. ` +
+            `Raw response: ${rawText.slice(0, 200) || '<empty body>'}`
+        )
       }
+      console.log('[product submit] success → /products/' + data.listing.id)
       router.push(`/products/${data.listing.id}`)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Something went wrong.'
