@@ -217,6 +217,12 @@ export default function EventsPage() {
   const [radiusKm, setRadiusKm] = useState<RadiusValue>(0)
   const [countryFilter, setCountryFilter] = useState<string | null>(null)
   const [view, setView] = useState<ViewMode>('list')
+  // Surface load failures instead of silently falling back to mock data.
+  // Previously a schema mismatch (e.g. a missing globalisation column in
+  // production) would throw inside the select, hit `catch { /* use mock */ }`,
+  // and leave the user staring at "No upcoming events" with zero clue
+  // that anything had gone wrong.
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -226,14 +232,30 @@ export default function EventsPage() {
         // to + the /api/events route reads from + the new globalisation
         // migration added geo columns to). Previously this page read from
         // community_events which has none of the new fields.
-        const { data } = await supabase
+        //
+        // Date filter — allow NULL starts_at (events without a fixed start
+        // date) AND events that started up to 24 hours ago (recurring /
+        // ongoing / just-started events shouldn't disappear the moment
+        // their start time passes). Previously `.gte('starts_at', now)`
+        // hid both cases, contributing to the "no events showing" report.
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+        const { data, error } = await supabase
           .from('events')
           .select('id, title, description, starts_at, ends_at, is_online, meeting_url, attendee_count, is_paid, ticket_price, ticket_price_eur, currency_code, country, region, city, latitude, longitude, location_label, venue_name, category')
           .eq('status', 'published')
-          .gte('starts_at', new Date().toISOString())
-          .order('starts_at', { ascending: true })
+          .or(`starts_at.is.null,starts_at.gte.${oneDayAgo}`)
+          .order('starts_at', { ascending: true, nullsFirst: false })
           .limit(200)
-        if (data && data.length > 0) {
+        if (error) {
+          // Surface the real Supabase error so schema mismatches, RLS
+          // denials, and missing columns are debuggable in the browser
+          // console AND in the visible error banner.
+          console.error('[events] supabase query failed:', error)
+          setLoadError(error.message || 'Failed to load events')
+          setDbEvents([])
+          return
+        }
+        if (data) {
           setDbEvents(data.map((e: Record<string, unknown>) => ({
             id: String(e.id),
             title: String(e.title ?? ''),
@@ -254,8 +276,17 @@ export default function EventsPage() {
             price_eur:      typeof e.ticket_price_eur === 'number' ? (e.ticket_price_eur as number) : null,
             currency_code:  (e.currency_code as string | null | undefined) ?? null,
           })))
+        } else {
+          setDbEvents([])
         }
-      } catch { /* use mock */ }
+      } catch (err) {
+        // Network / runtime error — surface it instead of silently
+        // falling back to "No events found" with no explanation.
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error('[events] load threw:', msg, err)
+        setLoadError(msg)
+        setDbEvents([])
+      }
       finally { setLoading(false) }
     }
     load()
@@ -432,6 +463,36 @@ export default function EventsPage() {
             ))}
           </div>
         </div>
+
+        {/* Load error banner — visible whenever the events query failed,
+            so schema drift / RLS / missing columns are surfaced instead
+            of producing a silent "No events found" dead-end. */}
+        {loadError && !loading && (
+          <div
+            role="alert"
+            style={{
+              background: 'rgba(248,113,113,0.08)',
+              border: '1px solid rgba(248,113,113,0.25)',
+              borderRadius: 12,
+              padding: '0.85rem 1rem',
+              marginBottom: '1rem',
+              color: '#fca5a5',
+              fontSize: '0.85rem',
+              lineHeight: 1.5,
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '0.65rem',
+            }}
+          >
+            <span style={{ flexShrink: 0, fontSize: '1.1rem' }}>⚠️</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700, marginBottom: '0.2rem', color: '#f87171' }}>
+                Couldn&rsquo;t load events
+              </div>
+              <div style={{ wordBreak: 'break-word' }}>{loadError}</div>
+            </div>
+          </div>
+        )}
 
         {/* Grid or empty state */}
         {loading ? (
