@@ -173,6 +173,15 @@ export default function ProfilePage() {
 
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
+  // Ref on the edit form's outer card so we can scroll it into view
+  // when the user clicks Edit. Without this, the form renders ~830px
+  // below the Edit button (below the cover photo, avatar block,
+  // social links, completeness bar, and Trust Economy card) — on
+  // any laptop viewport < 900px tall or any mobile viewport, the
+  // form is off-screen when the button is clicked. The user sees
+  // the button flip to "Cancel" but no form, so it looks broken.
+  // See the scroll-into-view useEffect below.
+  const editFormRef = useRef<HTMLDivElement>(null)
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -493,6 +502,32 @@ export default function ProfilePage() {
       })()
     }
   }, [profile, user, bonusAwarded])
+
+  // Scroll the edit form into view when the user clicks Edit Profile.
+  // Without this, the form renders ~830 px below the Edit button (cover
+  // photo + profile header + social links + completeness bar + Trust
+  // Economy card all sit above it) and users on any viewport smaller
+  // than ~900 px see the button flip to "Cancel" but no form anywhere.
+  // That was the reported "edit button not working" symptom.
+  //
+  // `block: 'start'` puts the top of the form near the top of the
+  // viewport; the CSS `scrollMarginTop: 80px` on the ref element keeps
+  // it clear of the fixed top nav. Behaviour: smooth scroll on user
+  // action, not on initial mount.
+  useEffect(() => {
+    if (!editing) return
+    // Defer one tick so the form has mounted before we scroll to it.
+    // Without this, the ref can still be null on the frame the state
+    // flip fires.
+    const id = window.setTimeout(() => {
+      editFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      // Auto-focus the first input so the user can start typing
+      // immediately without an extra tap.
+      const firstInput = editFormRef.current?.querySelector<HTMLInputElement>('input.profile-input')
+      firstInput?.focus({ preventScroll: true })
+    }, 50)
+    return () => window.clearTimeout(id)
+  }, [editing])
 
   const handleSave = async () => {
     if (!user) {
@@ -951,7 +986,15 @@ export default function ProfilePage() {
 
         {/* Edit form or About */}
         {editing ? (
-          <div className="profile-card">
+          <div
+            ref={editFormRef}
+            className="profile-card"
+            // scrollMarginTop clears the fixed top nav when the scroll
+            // effect above fires — without this the form's title lands
+            // UNDER the navbar and the user thinks the form still
+            // hasn't appeared.
+            style={{ scrollMarginTop: '80px' }}
+          >
             <h3 style={{ marginBottom: '1rem', fontWeight: 700, fontSize: '1rem' }}>Edit Profile</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {[
