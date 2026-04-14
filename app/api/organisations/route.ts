@@ -113,6 +113,13 @@ export async function POST(request: NextRequest) {
       orgSlug = `${baseSlug}-${attempt}`
     }
 
+    // Seed trust_score with the BASE value from computeOrgTrustScore
+    // (25, see lib/organisations/trust-score.ts). The list endpoint
+    // always overrides this with a live signal computation, and the
+    // detail endpoint now does too (app/api/organisations/[id]/route.ts),
+    // so the DB column is effectively just a fallback — but seeding it
+    // with 25 instead of 0 means even if the compute path fails for
+    // any reason, new orgs never show a misleading ₮0 in the UI.
     const { data: org, error: insertError } = await admin
       .from('organisations')
       .insert({
@@ -131,7 +138,7 @@ export async function POST(request: NextRequest) {
         logo_url: logo_url || null,
         is_verified: false,
         members_count: 1,
-        trust_score: 0,
+        trust_score: 25,
         status: 'active',
       })
       .select()
