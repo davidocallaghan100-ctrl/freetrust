@@ -92,20 +92,43 @@ export default function EditListingPage() {
     if (!file) return
     setUploading(true)
     setError(null)
+    // Route through /api/upload/media instead of direct client-to-Supabase
+    // upload. That route is the one we hardened for mobile in commits
+    // 1f9c98f + 097ecd2:
+    //   * MIME sniffing from the extension when file.type is empty
+    //     (older iOS / Android report '' for HEIC camera uploads)
+    //   * 100% synthetic lowercase filename built from Date.now() +
+    //     Math.random() + a MIME-derived extension, so Supabase Storage's
+    //     path validator can't reject on uppercase ".HEIC" / spaces /
+    //     parentheses / unicode filenames
+    //   * Admin (service-role) client bypasses any RLS weirdness on the
+    //     storage bucket
+    //   * Full error diagnostics (code, message, hint) surfaced back in
+    //     the response body instead of being swallowed
+    //
+    // Same pattern used by app/products/new/page.tsx, onboarding, and
+    // the gig create flow — now all four product/service upload paths
+    // route through the same hardened endpoint.
     try {
-      const ext = file.name.split('.').pop()
-      const path = `listings/${id}-${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage.from('media').upload(path, file, { upsert: true })
-      if (upErr) throw upErr
-      const { data: urlData } = supabase.storage.from('media').getPublicUrl(path)
-      const url = urlData.publicUrl
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('type', 'listing')
+      const res = await fetch('/api/upload/media', { method: 'POST', body: fd })
+      const data = await res.json().catch(() => ({} as { url?: string; error?: string }))
+      if (!res.ok || !data.url) {
+        console.error('[edit] image upload failed:', res.status, data)
+        throw new Error(data.error ?? `Upload failed (HTTP ${res.status})`)
+      }
+      const url = data.url
       setForm(f => ({
         ...f,
         cover_image: f.cover_image || url,
         images: f.images.includes(url) ? f.images : [...f.images, url],
       }))
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Upload failed')
+      const msg = err instanceof Error ? err.message : 'Upload failed'
+      console.error('[edit] handleImageUpload threw:', err)
+      setError(msg)
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -279,7 +302,17 @@ export default function EditListingPage() {
           <p style={{ fontSize: '0.75rem', color: muted, marginBottom: '0.75rem' }}>Tap a photo to set it as the cover image.</p>
 
           {/* Upload button */}
-          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
+          {/* accept list is explicit (not just image/*) so HEIC/HEIF
+              iPhone camera photos are pickable on Android Chrome, which
+              filters files not in the exact accept list. Matches the
+              app/products/new/page.tsx input. */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif"
+            onChange={handleImageUpload}
+            style={{ display: 'none' }}
+          />
           <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
             style={{ background: 'rgba(139,92,246,0.1)', border: `1.5px dashed ${border}`, borderRadius: 10, padding: '0.75rem 1.25rem', color: uploading ? muted : accent, fontSize: '0.85rem', fontWeight: 600, cursor: uploading ? 'wait' : 'pointer', width: '100%' }}>
             {uploading ? '⏳ Uploading…' : '+ Add photo'}
