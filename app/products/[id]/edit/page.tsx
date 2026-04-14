@@ -20,6 +20,28 @@ type ListingForm = {
   images: string[]
 }
 
+// ─── Hooks ────────────────────────────────────────────────────────────────────
+//
+// useIsNarrow — returns `true` when the viewport is narrower than
+// `breakpoint` pixels. Starts at `false` so the SSR render matches
+// desktop (avoids hydration mismatch), then flips on mount once we
+// can actually read window.innerWidth. Updates on resize.
+//
+// Used for the Price/Currency + Stock/Condition grids below, which
+// have no native CSS media query (the file uses inline styles, not
+// Tailwind or CSS modules). Without this hook the 1fr 1fr grid stays
+// fixed on mobile, producing cramped 130 px-wide inputs on iPhone SE.
+function useIsNarrow(breakpoint = 480): boolean {
+  const [narrow, setNarrow] = useState(false)
+  useEffect(() => {
+    const check = () => setNarrow(window.innerWidth < breakpoint)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [breakpoint])
+  return narrow
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function EditListingPage() {
@@ -27,6 +49,7 @@ export default function EditListingPage() {
   const router = useRouter()
   const id = typeof params.id === 'string' ? params.id : ''
   const supabase = createClient()
+  const isNarrow = useIsNarrow(480)
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -268,8 +291,9 @@ export default function EditListingPage() {
 
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 1.25rem' }}>
 
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+        {/* Header — flexWrap so the title drops to its own line on
+            very narrow viewports instead of overflowing or clipping. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
           <button onClick={() => router.back()} style={{ background: '#1f2937', border: `1px solid ${border}`, borderRadius: 10, padding: '0.5rem 1rem', color: text, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>
             ← Back
           </button>
@@ -297,8 +321,15 @@ export default function EditListingPage() {
                   {form.cover_image === url && (
                     <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: accent, color: '#fff', fontSize: '0.6rem', fontWeight: 700, textAlign: 'center', padding: '2px 0' }}>COVER</div>
                   )}
+                  {/* Remove button — 44x44 to meet the Apple/Google
+                      touch-target minimum. Was 22x22 which was
+                      essentially impossible to tap accurately with a
+                      finger and kept getting mis-tapped as a
+                      set-cover gesture on the thumbnail underneath.
+                      On mobile (isNarrow) we keep it always visible
+                      because there's no hover state to reveal it. */}
                   <button className="img-remove" onClick={(e) => { e.stopPropagation(); removeImage(url) }}
-                    style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(239,68,68,0.9)', border: 'none', borderRadius: '50%', width: 22, height: 22, color: '#fff', fontSize: '0.7rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.15s' }}>
+                    style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(239,68,68,0.9)', border: '2px solid rgba(15,23,42,0.65)', borderRadius: '50%', width: 44, height: 44, color: '#fff', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: isNarrow ? 1 : 0, transition: 'opacity 0.15s', lineHeight: 1, fontWeight: 700 }}>
                     ✕
                   </button>
                 </div>
@@ -339,7 +370,11 @@ export default function EditListingPage() {
             <textarea style={{ ...inputStyle, minHeight: 140, resize: 'vertical' }} value={form.description} onChange={e => set('description', e.target.value)} placeholder="Describe what you're offering…" maxLength={2000} />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          {/* Stack to 1 column below 480px so each input has the full
+              content width. The 1fr 1fr grid was cramped to ~130 px
+              per column on iPhone SE, making the number keypad touch
+              targets unusable. */}
+          <div style={{ display: 'grid', gridTemplateColumns: isNarrow ? '1fr' : '1fr 1fr', gap: '0.75rem' }}>
             <div>
               <label style={labelStyle}>Price *</label>
               <input style={inputStyle} type="number" min="0" step="0.01" value={form.price} onChange={e => set('price', e.target.value)} placeholder="0.00" />
@@ -365,7 +400,10 @@ export default function EditListingPage() {
           <section style={{ background: card, border: `1px solid ${border}`, borderRadius: 14, padding: '1.25rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <h3 style={{ fontWeight: 700, fontSize: '0.95rem', margin: 0, color: text }}>📦 Stock & Shipping</h3>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            {/* Same responsive stack as Price/Currency — one column
+                below 480 px so the stock number pad and condition
+                dropdown aren't squeezed. */}
+            <div style={{ display: 'grid', gridTemplateColumns: isNarrow ? '1fr' : '1fr 1fr', gap: '0.75rem' }}>
               <div>
                 <label style={labelStyle}>Stock quantity</label>
                 <input style={inputStyle} type="number" min="0" value={form.stock_qty} onChange={e => set('stock_qty', e.target.value)} placeholder="0" />
