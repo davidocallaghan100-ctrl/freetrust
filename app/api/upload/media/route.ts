@@ -26,7 +26,21 @@ export async function POST(req: NextRequest) {
   const startedAt = Date.now()
   console.log('[upload/media] POST received at', new Date().toISOString())
 
+  // Step breadcrumb — updated before every operation so that any sync throw
+  // caught by the outer try/catch tells us EXACTLY which line blew up. This
+  // is how we finally pin down the "The string did not match the expected
+  // pattern" DOMException that keeps hitting mobile despite multiple rounds
+  // of path sanitisation. The step is echoed into the client error response
+  // so the browser console on the affected device surfaces it without
+  // needing Vercel logs.
+  let step: string = 'init'
+  // Diagnostic context accumulated as we go — included in the outer catch
+  // response so we have the storage path, file info, etc. even when the
+  // throw happens outside the wrapped .upload() call.
+  const diag: Record<string, unknown> = {}
+
   try {
+    step = 'env-check'
     // ── 0. Env check ─────────────────────────────────────────────────────────
     // Make a common misconfiguration really obvious in the logs instead of
     // throwing a generic "Missing Supabase admin credentials" from deep
@@ -47,7 +61,9 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 1. Auth (regular client) ─────────────────────────────────────────────
+    step = 'auth-create-client'
     const authClient = await createClient()
+    step = 'auth-get-user'
     const { data: { user }, error: authError } = await authClient.auth.getUser()
     if (authError) {
       console.error('[upload/media] auth error:', authError.message)
@@ -57,8 +73,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     console.log('[upload/media] authed user:', user.id)
+    diag.userId = user.id
 
     // ── 2. Parse FormData ────────────────────────────────────────────────────
+    step = 'parse-formdata'
     let formData: FormData
     try {
       formData = await req.formData()
@@ -67,6 +85,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid upload — could not parse form data' }, { status: 400 })
     }
 
+    step = 'read-formdata-fields'
     const raw = formData.get('file')
     const typeParam = (formData.get('type') as string | null) ?? 'photo'
 
@@ -75,8 +94,13 @@ export async function POST(req: NextRequest) {
     }
     const file = raw as File
     console.log('[upload/media] file:', file.name, file.type, file.size, 'bytes', 'as', typeParam)
+    diag.fileName = file.name
+    diag.fileType = file.type
+    diag.fileSize = file.size
+    diag.typeParam = typeParam
 
     // ── 3. Validate ──────────────────────────────────────────────────────────
+    step = 'validate-file'
     // Mobile browsers (older iOS, some Android builds) sometimes report an
     // empty `file.type` for HEIC and even plain JPEG camera uploads. Sniff
     // the extension and synthesise a MIME so we don't reject a real image.
@@ -184,12 +208,37 @@ export async function POST(req: NextRequest) {
     const rand = Math.random().toString(36).slice(2).replace(/[^a-z0-9]/g, '')
     const randSafe = rand || Date.now().toString(36)
 
+    step = 'build-path'
     const safeName = `${Date.now()}-${randSafe}.${ext}`
     const storagePath = `${mediaKind}/${uidSafe}/${safeName}`
+    diag.storagePath = storagePath
+    diag.resolvedExtension = ext
+    diag.mediaKind = mediaKind
 
-    const buffer = Buffer.from(await file.arrayBuffer())
-    console.log('[upload/media] buffer:', buffer.byteLength, 'bytes → path:', storagePath)
+    // Read the file into a Uint8Array. We intentionally pass a Uint8Array
+    // (not a Node Buffer) to .upload() below. Buffer extends Uint8Array in
+    // Node, but some older undici builds choke on Buffer specifically in
+    // the fetch body path, while Uint8Array is always accepted. This also
+    // sidesteps one theory for the "expected pattern" DOMException — that
+    // Buffer detection in storage-js was falling through to an unhandled
+    // branch.
+    step = 'read-file-bytes'
+    let bodyBytes: Uint8Array
+    try {
+      const ab = await file.arrayBuffer()
+      bodyBytes = new Uint8Array(ab)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[upload/media] file.arrayBuffer() threw:', msg, diag)
+      return NextResponse.json(
+        { error: `Could not read file bytes: ${msg}`, step, detail: diag },
+        { status: 400 }
+      )
+    }
+    console.log('[upload/media] bytes:', bodyBytes.byteLength, '→ path:', storagePath)
+    diag.byteLength = bodyBytes.byteLength
 
+    step = 'admin-client'
     let admin
     try {
       admin = createAdminClient()
@@ -206,22 +255,38 @@ export async function POST(req: NextRequest) {
     // layer above. The canonical bucket setup lives in
     // supabase/migrations/20260412_feed_media_bucket.sql which also sets up
     // RLS policies for direct client uploads.
-    const { error: bucketErr } = await admin.storage.createBucket(BUCKET, {
-      public: true,
-      fileSizeLimit: MAX_VIDEO_BYTES,
-    })
-    if (bucketErr) {
-      const msg = bucketErr.message?.toLowerCase() ?? ''
-      const isAlreadyExists =
-        msg.includes('already exists') ||
-        msg.includes('duplicate') ||
-        msg.includes('resource already') ||
-        msg.includes('violates row-level security') // bucket may exist but we can't see it
-      if (!isAlreadyExists) {
-        console.error('[upload/media] createBucket error:', bucketErr.message)
-      } else {
-        console.log('[upload/media] bucket already exists (ok)')
+    //
+    // Wrapped in its own try/catch so a sync throw from the storage client
+    // (e.g. URL construction or header validation) is caught with our step
+    // breadcrumb intact rather than escaping to the outer catch-all as an
+    // opaque "Upload error: ..." response.
+    step = 'create-bucket'
+    try {
+      const { error: bucketErr } = await admin.storage.createBucket(BUCKET, {
+        public: true,
+        fileSizeLimit: MAX_VIDEO_BYTES,
+      })
+      if (bucketErr) {
+        const msg = bucketErr.message?.toLowerCase() ?? ''
+        const isAlreadyExists =
+          msg.includes('already exists') ||
+          msg.includes('duplicate') ||
+          msg.includes('resource already') ||
+          msg.includes('violates row-level security') // bucket may exist but we can't see it
+        if (!isAlreadyExists) {
+          console.error('[upload/media] createBucket error:', bucketErr.message)
+        } else {
+          console.log('[upload/media] bucket already exists (ok)')
+        }
       }
+    } catch (thrownErr) {
+      const msg = thrownErr instanceof Error ? thrownErr.message : String(thrownErr)
+      console.error('[upload/media] createBucket threw synchronously:', msg, diag)
+      // Non-fatal: bucket almost certainly already exists in production, so
+      // we log the throw for diagnostics but keep going to the upload step.
+      // The upload itself will surface a real "bucket not found" error if
+      // the bucket genuinely doesn't exist.
+      diag.createBucketThrew = msg
     }
 
     // ── 6. Upload via service-role client ────────────────────────────────────
@@ -242,13 +307,14 @@ export async function POST(req: NextRequest) {
     //
     // Path (a) is handled via the normal `if (uploadError)` branch
     // below; path (b) is handled by the dedicated try/catch wrapper.
+    step = 'upload'
     console.log('[upload/media] uploading to bucket', BUCKET, 'path', storagePath)
     let uploadData: unknown = null
     let uploadError: { message?: string } | null = null
     try {
       const result = await admin.storage
         .from(BUCKET)
-        .upload(storagePath, buffer, {
+        .upload(storagePath, bodyBytes, {
           contentType: fileType,
           upsert: false,
           cacheControl: '31536000',
@@ -261,8 +327,10 @@ export async function POST(req: NextRequest) {
       // the path — but we've sanitised everything we control, so if this
       // fires it's a real diagnostic clue worth surfacing in full.
       const msg = thrownErr instanceof Error ? thrownErr.message : String(thrownErr)
+      const stk = thrownErr instanceof Error ? thrownErr.stack : undefined
       console.error('[upload/media] storage.upload threw synchronously:', {
         message: msg,
+        stack: stk,
         storagePath,
         bucket: BUCKET,
         contentType: fileType,
@@ -271,11 +339,15 @@ export async function POST(req: NextRequest) {
       })
       return NextResponse.json(
         {
-          error: `Upload rejected by storage client: ${msg}`,
+          error: `Upload rejected by storage client [step=${step}]: ${msg}`,
+          step,
           detail: {
-            reason: 'storage-js path validation failed',
-            hint: 'The synthesized path was rejected by @supabase/storage-js\'s internal regex. This usually means a non-ASCII or special character leaked into the path. Check Vercel logs for the exact storagePath value.',
+            reason: 'storage-js upload threw synchronously',
+            hint: 'Either path validation or a URL/header construction step inside @supabase/storage-js threw. Check Vercel logs for the stack trace to identify the culprit.',
             storagePath,
+            bucket: BUCKET,
+            contentType: fileType,
+            fileNameOriginal: file.name,
           },
         },
         { status: 500 }
@@ -313,18 +385,41 @@ export async function POST(req: NextRequest) {
     console.log('[upload/media] upload ok:', JSON.stringify(uploadData))
 
     // ── 7. Public URL ────────────────────────────────────────────────────────
-    const { data: urlData } = admin.storage.from(BUCKET).getPublicUrl(storagePath)
-    if (!urlData?.publicUrl) {
-      console.error('[upload/media] getPublicUrl returned nothing')
+    // Wrapped in its own try/catch — getPublicUrl internally does an
+    // encodeURI() on the path and builds a URL with a template literal;
+    // in theory nothing here should throw (the path is already sanitised
+    // and the upload succeeded), but we keep the breadcrumb going so
+    // that IF this is where the DOMException originates, the next bug
+    // report tells us immediately rather than looping on more guesses.
+    step = 'public-url'
+    let publicUrl: string | undefined
+    try {
+      const { data: urlData } = admin.storage.from(BUCKET).getPublicUrl(storagePath)
+      publicUrl = urlData?.publicUrl
+    } catch (thrownErr) {
+      const msg = thrownErr instanceof Error ? thrownErr.message : String(thrownErr)
+      console.error('[upload/media] getPublicUrl threw synchronously:', msg, diag)
       return NextResponse.json(
-        { error: 'Upload succeeded but could not resolve public URL' },
+        {
+          error: `getPublicUrl failed [step=${step}]: ${msg}`,
+          step,
+          detail: { ...diag, reason: 'getPublicUrl threw' },
+        },
         { status: 500 }
       )
     }
-    console.log('[upload/media] ✓ done in', Date.now() - startedAt, 'ms:', urlData.publicUrl)
+    if (!publicUrl) {
+      console.error('[upload/media] getPublicUrl returned nothing')
+      return NextResponse.json(
+        { error: 'Upload succeeded but could not resolve public URL', step, detail: diag },
+        { status: 500 }
+      )
+    }
+    console.log('[upload/media] ✓ done in', Date.now() - startedAt, 'ms:', publicUrl)
 
+    step = 'respond'
     return NextResponse.json({
-      url: urlData.publicUrl,
+      url: publicUrl,
       path: storagePath,
       kind: mediaKind,
       mime: fileType,
@@ -333,7 +428,21 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     const stack    = err instanceof Error ? err.stack : undefined
-    console.error('[upload/media] unhandled:', message, stack)
-    return NextResponse.json({ error: `Upload error: ${message}` }, { status: 500 })
+    const name     = err instanceof Error ? err.name : 'UnknownError'
+    console.error('[upload/media] unhandled:', { step, message, name, stack, diag })
+    // Include the step breadcrumb in the user-facing error so the next
+    // failure report immediately tells us WHERE the throw happened. The
+    // previous "Upload error: ..." string was opaque — the user saw a
+    // cryptic DOMException with no indication of which line triggered it,
+    // which is why we've been guessing for multiple iterations.
+    return NextResponse.json(
+      {
+        error: `Upload error [step=${step}]: ${message}`,
+        step,
+        errorName: name,
+        detail: diag,
+      },
+      { status: 500 }
+    )
   }
 }
