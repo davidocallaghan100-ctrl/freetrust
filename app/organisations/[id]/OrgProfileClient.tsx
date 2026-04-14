@@ -124,21 +124,73 @@ function RoleBadge({ role }: { role: OrgMember["role"] }) {
   );
 }
 
-function MemberCard({ member }: { member: OrgMember }) {
+function MemberCard({
+  member,
+  canManage,
+  currentUserId,
+  creatorId,
+  onRemove,
+  removing,
+}: {
+  member: OrgMember;
+  canManage: boolean;
+  currentUserId: string | null;
+  creatorId: string | null;
+  onRemove: (userId: string, fullName: string) => void;
+  removing: boolean;
+}) {
+  // The org creator is protected from removal — removing the
+  // creator would leave the org ownerless. Admins can be removed
+  // by the creator/owners, but the creator themselves cannot be
+  // removed through this UI.
+  const isCreator = member.profile.id === creatorId;
+  const isSelf = member.profile.id === currentUserId;
+  const showRemove = canManage && !isCreator && !isSelf;
+
   return (
-    <Link href={`/profile?id=${member.profile.id}`} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 16, background: "rgba(15,23,42,0.6)", border: "1px solid #1e293b", textDecoration: "none" }}>
-      <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "#1e293b", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {member.profile.avatar_url
-          ? <img src={member.profile.avatar_url} alt={member.profile.full_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          : <UserIcon style={{ width: 20, height: 20, color: "#475569" }} />}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: "#f1f5f9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.profile.full_name}</div>
-        {member.title && <div style={{ fontSize: 12, color: "#64748b", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.title}</div>}
-        <div style={{ fontSize: 11, color: "#818cf8", marginTop: 2, fontWeight: 500 }}>₮{(member.profile.trust_balance ?? 0).toLocaleString()}</div>
-      </div>
+    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 16, background: "rgba(15,23,42,0.6)", border: "1px solid #1e293b" }}>
+      <Link href={`/profile?id=${member.profile.id}`} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0, textDecoration: "none" }}>
+        <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "#1e293b", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {member.profile.avatar_url
+            ? <img src={member.profile.avatar_url} alt={member.profile.full_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            : <UserIcon style={{ width: 20, height: 20, color: "#475569" }} />}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "#f1f5f9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.profile.full_name}</div>
+          {member.title && <div style={{ fontSize: 12, color: "#64748b", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.title}</div>}
+          <div style={{ fontSize: 11, color: "#818cf8", marginTop: 2, fontWeight: 500 }}>₮{(member.profile.trust_balance ?? 0).toLocaleString()}</div>
+        </div>
+      </Link>
       <RoleBadge role={member.role} />
-    </Link>
+      {showRemove && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onRemove(member.profile.id, member.profile.full_name);
+          }}
+          disabled={removing}
+          title={`Remove ${member.profile.full_name} from this organisation`}
+          aria-label={`Remove ${member.profile.full_name}`}
+          style={{
+            background: "rgba(239,68,68,0.12)",
+            border: "1px solid rgba(239,68,68,0.35)",
+            borderRadius: 8,
+            padding: "6px 10px",
+            color: "#fca5a5",
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: removing ? "wait" : "pointer",
+            flexShrink: 0,
+            minHeight: 32,
+            fontFamily: "inherit",
+          }}
+        >
+          {removing ? "…" : "Remove"}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -216,11 +268,78 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
   const [reviewContent, setReviewContent] = useState("");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  // Role of the current user within this org, if any. Used to
+  // decide whether to show the Edit button and the member Remove
+  // buttons. `null` means "not a member or still loading". The
+  // source of truth is the `organisation_members` table; the org
+  // creator is handled as a separate case via `org.creator_id`.
+  const [userMemberRole, setUserMemberRole] = useState<OrgMember["role"] | null>(null);
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
+  const [memberError, setMemberError] = useState<string | null>(null);
 
   useEffect(() => {
     const sb = createClient();
     sb.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id || null));
   }, []);
+
+  // Fetch the current user's membership role whenever we have both
+  // a user and an org loaded. Needed so admins / owners (who aren't
+  // the creator) can see the Edit button and the Remove controls.
+  useEffect(() => {
+    if (!currentUserId || !org) return;
+    const sb = createClient();
+    sb.from("organisation_members")
+      .select("role")
+      .eq("organisation_id", org.id)
+      .eq("user_id", currentUserId)
+      .maybeSingle()
+      .then(({ data }) => {
+        const role = data?.role as OrgMember["role"] | undefined;
+        setUserMemberRole(role ?? null);
+      });
+  }, [currentUserId, org]);
+
+  // Admins + owners + the creator can edit the org and manage
+  // members. This is the single source of truth for "can I do
+  // admin things here?" — reused for the Edit button visibility
+  // and the member Remove buttons below.
+  const canManageOrg = Boolean(
+    org && currentUserId &&
+    (currentUserId === org.creator_id ||
+     userMemberRole === "admin" ||
+     userMemberRole === "owner")
+  );
+
+  async function handleRemoveMember(userId: string, fullName: string) {
+    if (!org) return;
+    if (!window.confirm(`Remove ${fullName} from ${org.name}?`)) return;
+    setRemovingMemberId(userId);
+    setMemberError(null);
+    try {
+      const res = await fetch(`/api/organisations/${id}/members`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.error("[members] DELETE failed:", res.status, data);
+        setMemberError(data?.error ?? `Failed to remove member (HTTP ${res.status})`);
+        return;
+      }
+      // Optimistic UI — drop the member from the local list and
+      // decrement the org member count chip so the Members tab
+      // reflects the change immediately.
+      setMembers(prev => prev.filter(m => m.profile.id !== userId));
+      setOrg(prev => prev ? { ...prev, members_count: Math.max(0, prev.members_count - 1) } : prev);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[members] DELETE threw:", msg);
+      setMemberError(msg);
+    } finally {
+      setRemovingMemberId(null);
+    }
+  }
 
   useEffect(() => {
     if (!id) return;
@@ -398,7 +517,7 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
             <ChatBubbleLeftRightIcon style={{ width: 16, height: 16 }} />
             Message
           </button>
-          {currentUserId && org && currentUserId === org.creator_id && (
+          {canManageOrg && (
             <Link href={`/organisations/${id}/edit`}
               style={{ display: "flex", alignItems: "center", gap: 6, borderRadius: 12, padding: "9px 18px", fontSize: 14, fontWeight: 600, cursor: "pointer", background: "rgba(139,92,246,0.15)", color: "#8b5cf6", border: "1px solid rgba(139,92,246,0.35)", textDecoration: "none" }}>
               ✏️ Edit
@@ -590,6 +709,31 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
             <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 14 }}>
               {org.members_count} active member{org.members_count !== 1 ? "s" : ""}
             </div>
+            {/* Inline error for member-management failures — any
+                DELETE on /api/organisations/[id]/members that comes
+                back non-2xx surfaces here so the user isn't left
+                wondering why the Remove button did nothing. */}
+            {memberError && (
+              <div
+                role="alert"
+                style={{
+                  background: "rgba(248,113,113,0.08)",
+                  border: "1px solid rgba(248,113,113,0.25)",
+                  borderRadius: 10,
+                  padding: "0.6rem 0.85rem",
+                  marginBottom: 12,
+                  fontSize: 13,
+                  color: "#fca5a5",
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 8,
+                  lineHeight: 1.45,
+                }}
+              >
+                <span>⚠️</span>
+                <div style={{ flex: 1, minWidth: 0, wordBreak: "break-word" }}>{memberError}</div>
+              </div>
+            )}
             {membersLoading ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {[1, 2, 3].map(i => <div key={i} style={{ height: 72, borderRadius: 16, background: "#0f172a", border: "1px solid #1e293b" }} />)}
@@ -598,7 +742,17 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
               <EmptyState icon={<UserGroupIcon style={{ width: 28, height: 28, color: "#475569" }} />} title="No members listed yet" sub="Members will appear here once added to the organisation." />
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {members.map(m => <MemberCard key={m.id} member={m} />)}
+                {members.map(m => (
+                  <MemberCard
+                    key={m.id}
+                    member={m}
+                    canManage={canManageOrg}
+                    currentUserId={currentUserId}
+                    creatorId={org.creator_id}
+                    onRemove={handleRemoveMember}
+                    removing={removingMemberId === m.profile.id}
+                  />
+                ))}
               </div>
             )}
           </div>
