@@ -87,6 +87,13 @@ export async function POST(req: NextRequest) {
       type?: string
       data?: Record<string, unknown>
       visibility?: string
+      // Optional: publish this post under an organisation's identity
+      // instead of the caller's personal profile. Only honoured for
+      // type ∈ {text, article, photo} — other types have their own
+      // author context (product = seller, event = organiser, etc.).
+      // Server verifies the caller is the org creator or has role
+      // owner/admin in organisation_members.
+      organisation_id?: string
       location?: string                   // legacy free-text (still accepted)
       structured_location?: unknown       // new: StructuredLocation from LocationPicker
       is_remote?: boolean                 // new: remote toggle for services/jobs
@@ -106,6 +113,44 @@ export async function POST(req: NextRequest) {
     const struct = normaliseLocation(body.structured_location)
     const isRemote = Boolean(body.is_remote ?? struct.is_remote ?? false)
     const currencyCode = (body.currency_code ?? 'EUR').toUpperCase()
+
+    // ── Post-as-organisation auth check ─────────────────────────────────────
+    // Resolve once, reuse in the article + feed_posts branches below.
+    // Only allowed for text/article/photo per product spec; on every
+    // other type we silently drop the field so a stale client or a
+    // malicious caller can't smuggle an org byline onto a product/
+    // service/job listing where it would be misleading.
+    const ALLOWED_ORG_TYPES = new Set(['text', 'article', 'photo'])
+    let postedAsOrganisationId: string | null = null
+    if (body.organisation_id && ALLOWED_ORG_TYPES.has(type)) {
+      const orgId = body.organisation_id
+      // Membership row is the canonical check — the 20260414000001
+      // migration backfills an 'owner' row for every creator and a
+      // trigger maintains the invariant going forward. Still falls
+      // back to a creator_id check for dev environments where the
+      // migration hasn't been run yet.
+      const { data: membership } = await admin
+        .from('organisation_members')
+        .select('role')
+        .eq('organisation_id', orgId)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      const isMember = membership?.role === 'owner' || membership?.role === 'admin'
+      let authorised = isMember
+      if (!authorised) {
+        const { data: org } = await admin
+          .from('organisations')
+          .select('creator_id')
+          .eq('id', orgId)
+          .maybeSingle()
+        authorised = org?.creator_id === user.id
+      }
+      if (!authorised) {
+        console.warn('[publish] user', user.id, 'tried to post as org', orgId, '— not authorised')
+        return fail('You are not authorised to post as that organisation', 403)
+      }
+      postedAsOrganisationId = orgId
+    }
 
     let redirectUrl = '/feed'
 
@@ -132,6 +177,11 @@ export async function POST(req: NextRequest) {
         status: 'published',
         category: category ?? 'General',
         published_at: new Date().toISOString(),
+        // Display override — see postedAsOrganisationId resolution
+        // above. Null for a normal personal article, the org id for
+        // an "as org" publication. author_id stays set to user.id
+        // so ownership and moderation still anchor to a real human.
+        posted_as_organisation_id: postedAsOrganisationId,
       })
       if (error) {
         console.error('[publish article]', error)
@@ -412,6 +462,12 @@ export async function POST(req: NextRequest) {
         link_url: mapped.link_url ?? null,
         media_url: mapped.media_url ?? null,
         media_type: type === 'photo' ? 'image' : type === 'video' || type === 'short' ? 'video' : null,
+        // Display override — null for personal posts, set to an
+        // organisation id when the caller publishes as an org AND
+        // the type is allowed (text/photo; video/short/link/poll
+        // skip this because postedAsOrganisationId is only set for
+        // ALLOWED_ORG_TYPES above).
+        posted_as_organisation_id: postedAsOrganisationId,
       })
       if (error) {
         console.error('[publish feed_post]', error)

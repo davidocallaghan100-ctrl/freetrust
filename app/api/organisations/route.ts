@@ -149,6 +149,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: insertError.message }, { status: 500 })
     }
 
+    // Belt-and-braces owner membership row. The 20260414000001
+    // migration installs a DB trigger (handle_new_organisation) that
+    // inserts this row automatically, but we also do it explicitly
+    // here so the app works in environments that haven't run the
+    // migration yet (local dev, a fresh branch deploy, etc.). The
+    // trigger uses ON CONFLICT DO NOTHING and this insert uses the
+    // same, so there's no double-insert risk if both fire.
+    try {
+      const { error: memberErr } = await admin
+        .from('organisation_members')
+        .insert({
+          organisation_id: org.id,
+          user_id: user.id,
+          role: 'owner',
+          title: 'Founder',
+          joined_at: new Date().toISOString(),
+        })
+      if (memberErr && !/duplicate|conflict/i.test(memberErr.message)) {
+        // Duplicates are expected (the trigger already ran) — log
+        // anything else as a warning. Not fatal to the response.
+        console.warn('[POST /api/organisations] owner membership row not created:', memberErr.message)
+      }
+    } catch (memberErr) {
+      const msg = memberErr instanceof Error ? memberErr.message : String(memberErr)
+      console.warn('[POST /api/organisations] owner membership insert threw:', msg)
+    }
+
     return NextResponse.json({ organisation: org, created: true }, { status: 201 })
   } catch (err) {
     console.error('[POST /api/organisations]', err)

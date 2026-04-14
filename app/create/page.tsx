@@ -151,6 +151,17 @@ function SharedFields({
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
+// Orgs the current user can post on behalf of — populated on mount
+// from organisation_members (filtered to owner/admin) + organisations
+// (via the FK join). Used to render the "Post as" selector on
+// text/article/photo types.
+type ManageableOrg = {
+  id: string
+  name: string
+  logo_url: string | null
+  slug: string | null
+}
+
 export default function CreatePage() {
   const router = useRouter()
   const [selectedType, setSelectedType] = useState<PostType | null>(null)
@@ -166,6 +177,15 @@ export default function CreatePage() {
   const [category, setCategory] = useState('General')
   const [visibility, setVisibility] = useState<Visibility>('public')
 
+  // "Post as organisation" state.
+  //   manageableOrgs — the list of orgs the user can post under,
+  //     loaded once on mount. Empty array means "show no selector".
+  //   selectedOrgId  — null for "post as @me" (default), or the id
+  //     of one of the manageable orgs. Only sent in the publish
+  //     payload for text/article/photo types; other types ignore it.
+  const [manageableOrgs, setManageableOrgs] = useState<ManageableOrg[]>([])
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null)
+
   // Per-type form data
   const [formData, setFormData] = useState<Record<string, string>>({})
 
@@ -180,6 +200,67 @@ export default function CreatePage() {
   // Link preview
   const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null)
   const [linkLoading, setLinkLoading] = useState(false)
+
+  // Load the orgs the current user can post on behalf of, once on
+  // mount. Queries organisation_members filtered to owner/admin and
+  // joins the org row. Empty result is expected for most users —
+  // the selector UI below only renders when manageableOrgs.length > 0.
+  //
+  // The 20260414000001 migration ensures that every org creator has
+  // an 'owner' row in organisation_members (via trigger + backfill),
+  // so creators automatically appear in this list without a separate
+  // creator_id fallback query.
+  useEffect(() => {
+    let cancelled = false
+    async function loadManageableOrgs() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || cancelled) return
+      const { data, error } = await supabase
+        .from('organisation_members')
+        .select('role, organisation:organisations!organisation_id(id, name, logo_url, slug)')
+        .eq('user_id', user.id)
+        .in('role', ['owner', 'admin'])
+      if (error) {
+        console.warn('[create] manageable orgs fetch failed:', error.message)
+        return
+      }
+      if (cancelled) return
+      const orgs: ManageableOrg[] = []
+      for (const row of (data ?? []) as Array<{ organisation: unknown }>) {
+        // Supabase returns the nested relation as either a single
+        // object or a one-element array depending on version — handle
+        // both shapes.
+        const raw = row.organisation
+        const obj = Array.isArray(raw) ? raw[0] : raw
+        if (obj && typeof obj === 'object' && 'id' in obj) {
+          const o = obj as { id: string; name: string; logo_url: string | null; slug: string | null }
+          orgs.push({ id: o.id, name: o.name, logo_url: o.logo_url, slug: o.slug })
+        }
+      }
+      // De-dupe by id (in case the user has multiple roles in the
+      // same org somehow) and sort alphabetically for a stable list.
+      const seen = new Set<string>()
+      const unique = orgs.filter(o => {
+        if (seen.has(o.id)) return false
+        seen.add(o.id)
+        return true
+      }).sort((a, b) => a.name.localeCompare(b.name))
+      setManageableOrgs(unique)
+    }
+    loadManageableOrgs()
+    return () => { cancelled = true }
+  }, [])
+
+  // Reset the "post as org" selection when the user switches to a
+  // type that doesn't support it. Prevents a stale org id from
+  // being submitted if the user picks Text → Product → Text again.
+  useEffect(() => {
+    const ORG_POSTABLE_TYPES: PostType[] = ['text', 'article', 'photo']
+    if (selectedType && !ORG_POSTABLE_TYPES.includes(selectedType)) {
+      setSelectedOrgId(null)
+    }
+  }, [selectedType])
 
   // Direct client-to-Supabase upload. Bypasses /api/upload/media and Vercel's
   // 4.5 MB body size limit entirely — the file goes straight from the user's
@@ -495,7 +576,24 @@ export default function CreatePage() {
     if (['photo', 'video', 'short'].includes(selectedType) && uploadedMediaUrl) {
       data = { ...data, media_url: uploadedMediaUrl }
     }
-    return { type: selectedType, data, visibility, location, taggedUsers, category }
+    // Only include organisation_id for types where it's honoured
+    // server-side (text / article / photo). The publish route strips
+    // it for other types anyway, but sending it explicitly keeps the
+    // client + server in lockstep and avoids a confusing "why didn't
+    // my product post use the org byline?" question later.
+    const payload: Record<string, unknown> = {
+      type: selectedType,
+      data,
+      visibility,
+      location,
+      taggedUsers,
+      category,
+    }
+    const ORG_POSTABLE = new Set<PostType>(['text', 'article', 'photo'])
+    if (selectedOrgId && ORG_POSTABLE.has(selectedType)) {
+      payload.organisation_id = selectedOrgId
+    }
+    return payload
   }
 
   const validatePayload = (): string | null => {
@@ -585,6 +683,84 @@ export default function CreatePage() {
 
         {preview ? renderPreview() : (
           <>
+            {/* "Post as" selector — shown only when:
+                  1. The user manages at least one organisation, AND
+                  2. The selected type is text / article / photo
+                Other types (product/service/job/event/video/etc.)
+                have their own author context so we hide the chip. */}
+            {manageableOrgs.length > 0 && selectedType && ['text', 'article', 'photo'].includes(selectedType) && (
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.5rem' }}>
+                  Post as
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOrgId(null)}
+                    style={{
+                      padding: '0.55rem 1rem',
+                      borderRadius: 999,
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      border: selectedOrgId === null ? '1.5px solid rgba(56,189,248,0.45)' : '1px solid rgba(148,163,184,0.22)',
+                      background: selectedOrgId === null ? 'rgba(56,189,248,0.12)' : 'transparent',
+                      color: selectedOrgId === null ? '#38bdf8' : '#94a3b8',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                    }}
+                  >
+                    <span>👤</span>
+                    <span>@me</span>
+                  </button>
+                  {manageableOrgs.map(org => {
+                    const active = selectedOrgId === org.id
+                    return (
+                      <button
+                        key={org.id}
+                        type="button"
+                        onClick={() => setSelectedOrgId(org.id)}
+                        title={`Post as ${org.name}`}
+                        style={{
+                          padding: '0.55rem 1rem',
+                          borderRadius: 999,
+                          fontSize: '0.82rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                          border: active ? '1.5px solid rgba(139,92,246,0.5)' : '1px solid rgba(148,163,184,0.22)',
+                          background: active ? 'rgba(139,92,246,0.14)' : 'transparent',
+                          color: active ? '#c4b5fd' : '#94a3b8',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.45rem',
+                          maxWidth: 220,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {org.logo_url ? (
+                          <img
+                            src={org.logo_url}
+                            alt=""
+                            style={{ width: 18, height: 18, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: '0.95rem' }}>🏢</span>
+                        )}
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{org.name}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+                {selectedOrgId && (
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.45rem' }}>
+                    This post will appear in the feed under the organisation&rsquo;s name and logo. You&rsquo;ll still be recorded as the author for accountability.
+                  </div>
+                )}
+              </div>
+            )}
             {renderTypeFields()}
             <SharedFields
               location={location} setLocation={setLocation}

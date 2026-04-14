@@ -19,6 +19,18 @@ type FeedItem = {
   views_count: number
   created_at: string
   profiles: { id: string; full_name: string | null; avatar_url: string | null; trust_balance?: number | null } | null
+  // Display override for "post as organisation" — when set, PostCard
+  // renders the org's logo / name / slug in place of the author's
+  // profile block. Null for normal personal posts. The `posted_as_
+  // organisation_id` scalar stays alongside for the rare client that
+  // wants to handle the override manually.
+  posted_as_organisation_id?: string | null
+  posted_as_organisation?: {
+    id: string
+    name: string
+    slug: string | null
+    logo_url: string | null
+  } | null
 }
 
 export async function GET(req: NextRequest) {
@@ -55,12 +67,19 @@ export async function GET(req: NextRequest) {
     const candidateMultiplier = isDiscover ? 3 : 1
     const fetchLimit = limit * candidateMultiplier
 
+    // NOTE: keep this select list as a single template literal. Supabase's
+    // typed client infers the row type from the literal argument; splitting
+    // with + concatenation collapses it to `string` and the result type
+    // degrades to GenericStringError, breaking every downstream access.
+    // See commit 5a71dce for the bug history.
     let query = supabase
       .from('feed_posts')
       .select(`
         id, user_id, type, content, media_url, media_type, title, link_url,
         trust_reward, likes_count, comments_count, saves_count, views_count, created_at,
-        profiles!feed_posts_user_id_fkey(id, full_name, avatar_url, trust_balance)
+        posted_as_organisation_id,
+        profiles!feed_posts_user_id_fkey(id, full_name, avatar_url, trust_balance),
+        posted_as_organisation:organisations!posted_as_organisation_id(id, name, slug, logo_url)
       `)
 
     if (filter === 'photos') {
@@ -213,6 +232,11 @@ export async function GET(req: NextRequest) {
       const realLikes = likeCountMap[p.id as string] ?? 0
       const realComments = commentCountMap[p.id as string] ?? 0
       const reactions = reactionCountsMap[p.id as string] ?? { trust: 0, love: 0, insightful: 0, collab: 0, total: 0 }
+      // Normalise the posted_as_organisation join — Supabase returns
+      // either a single row or a one-element array depending on the
+      // relationship direction. PostCard expects a plain object or null.
+      const orgRaw = p.posted_as_organisation
+      const postedAsOrg = Array.isArray(orgRaw) ? (orgRaw[0] ?? null) : (orgRaw ?? null)
       return {
         ...p,
         likes_count: realLikes,
@@ -224,6 +248,7 @@ export async function GET(req: NextRequest) {
         top_comment: topCommentMap[p.id as string] ?? null,
         liked: likedIds.includes(p.id as string),
         saved: savedIds.includes(p.id as string),
+        posted_as_organisation: postedAsOrg,
       }
     })
 
@@ -291,7 +316,9 @@ async function fetchArticles(supabase: SupabaseLike, offset: number, limit: numb
     .select(`
       id, author_id, title, slug, excerpt, body, featured_image_url,
       created_at, published_at,
-      author:profiles!author_id(id, full_name, avatar_url, trust_balance)
+      posted_as_organisation_id,
+      author:profiles!author_id(id, full_name, avatar_url, trust_balance),
+      posted_as_organisation:organisations!posted_as_organisation_id(id, name, slug, logo_url)
     `)
     .eq('status', 'published')
     .order('published_at', { ascending: false })
@@ -324,22 +351,33 @@ async function fetchArticles(supabase: SupabaseLike, offset: number, limit: numb
     }
   }
 
-  const items: FeedItem[] = (data ?? []).map((a: Record<string, unknown>) => ({
-    id: `article-${a.id}`,
-    user_id: a.author_id as string,
-    type: 'article',
-    content: (a.excerpt as string) ?? null,
-    media_url: (a.featured_image_url as string) ?? null,
-    media_type: a.featured_image_url ? 'image' : null,
-    title: a.title as string,
-    link_url: `/articles/${a.slug}`,
-    likes_count: realClapCounts[a.id as string] ?? 0,
-    comments_count: realCommentCounts[a.id as string] ?? 0,
-    saves_count: 0,
-    views_count: 0,
-    created_at: (a.published_at as string) ?? (a.created_at as string),
-    profiles: Array.isArray(a.author) ? (a.author[0] ?? null) : ((a.author as FeedItem['profiles']) ?? null),
-  }))
+  const items: FeedItem[] = (data ?? []).map((a: Record<string, unknown>) => {
+    // Supabase returns foreign-key joins as EITHER a single row OR a
+    // one-element array depending on the relationship direction. We
+    // normalise both shapes so PostCard sees a plain object or null.
+    const orgRaw = a.posted_as_organisation
+    const postedAsOrg = Array.isArray(orgRaw)
+      ? (orgRaw[0] ?? null)
+      : (orgRaw as FeedItem['posted_as_organisation']) ?? null
+    return {
+      id: `article-${a.id}`,
+      user_id: a.author_id as string,
+      type: 'article',
+      content: (a.excerpt as string) ?? null,
+      media_url: (a.featured_image_url as string) ?? null,
+      media_type: a.featured_image_url ? 'image' : null,
+      title: a.title as string,
+      link_url: `/articles/${a.slug}`,
+      likes_count: realClapCounts[a.id as string] ?? 0,
+      comments_count: realCommentCounts[a.id as string] ?? 0,
+      saves_count: 0,
+      views_count: 0,
+      created_at: (a.published_at as string) ?? (a.created_at as string),
+      profiles: Array.isArray(a.author) ? (a.author[0] ?? null) : ((a.author as FeedItem['profiles']) ?? null),
+      posted_as_organisation_id: (a.posted_as_organisation_id as string | null) ?? null,
+      posted_as_organisation: postedAsOrg,
+    }
+  })
 
   return NextResponse.json({ posts: items, hasMore: items.length === limit })
 }

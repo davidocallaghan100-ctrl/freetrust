@@ -41,6 +41,19 @@ export type FeedPost = {
     username?: string | null
     trust_balance?: number | null
   } | null
+  // Display override — when present, the header renders the org's
+  // logo + name + link to /organisations/{slug} in place of the
+  // human author's profile block. `profiles` stays set so we can
+  // still show a "via @authorFirstName" subtitle for accountability.
+  // See supabase/migrations/20260414000001_feed_posts_posted_as_org.sql
+  // for the underlying column.
+  posted_as_organisation_id?: string | null
+  posted_as_organisation?: {
+    id: string
+    name: string
+    slug: string | null
+    logo_url: string | null
+  } | null
 }
 
 export const REACTIONS: { type: ReactionType; emoji: string; label: string; color: string }[] = [
@@ -404,9 +417,27 @@ export default function PostCard({
   }
 
   const typeInfo  = TYPE_META[post.type] ?? TYPE_META.text
-  const name      = post.profiles?.full_name ?? post.profiles?.username ?? 'Unknown'
-  const avatarUrl = post.profiles?.avatar_url ?? null
-  const trust     = post.profiles?.trust_balance ?? post.trust_score ?? null
+
+  // ── Author display — "post as organisation" override ─────────────────────
+  // When post.posted_as_organisation is set, the card renders with the
+  // org's branding (logo, name, link to /organisations/{slug}) in the
+  // header, and adds a small "via @humanName" subtitle so the author
+  // is still visible for accountability. When unset (default — every
+  // personal post), the header falls back to the author's profile as
+  // before.
+  const postedAsOrg = post.posted_as_organisation ?? null
+  const humanName   = post.profiles?.full_name ?? post.profiles?.username ?? 'Unknown'
+  const humanAvatar = post.profiles?.avatar_url ?? null
+  const humanId     = post.profiles?.id ?? null
+
+  const name      = postedAsOrg ? postedAsOrg.name : humanName
+  const avatarUrl = postedAsOrg ? postedAsOrg.logo_url : humanAvatar
+  const trust     = postedAsOrg ? null : (post.profiles?.trust_balance ?? post.trust_score ?? null)
+  // Link target — org profile for "as org" posts, personal profile
+  // otherwise. Org links prefer slug, fall back to id if missing.
+  const authorLinkHref = postedAsOrg
+    ? (postedAsOrg.slug ? `/organisations/${postedAsOrg.slug}` : `/organisations/${postedAsOrg.id}`)
+    : `/profile?id=${humanId ?? ''}`
 
   // Build media URL array
   const mediaUrls: string[] = (() => {
@@ -501,18 +532,40 @@ export default function PostCard({
 
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px 10px', minWidth: 0, overflow: 'hidden' }}>
-        <Link href={`/profile?id=${authorId}`} style={{ flexShrink: 0, textDecoration: 'none' }}>
+        <Link href={authorLinkHref} style={{ flexShrink: 0, textDecoration: 'none' }}>
           <Avatar url={avatarUrl} name={name} size={42} />
         </Link>
         <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
-            <Link href={`/profile?id=${authorId}`} style={{ fontWeight: 700, fontSize: '14px', color: '#f1f5f9', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}>{name}</Link>
+            <Link href={authorLinkHref} style={{ fontWeight: 700, fontSize: '14px', color: '#f1f5f9', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}>{name}</Link>
+            {postedAsOrg && (
+              // Small chip marking this as an org byline so readers
+              // can distinguish "a person posting" from "an org
+              // posting". Keeps the accountability signal strong.
+              <span style={{ fontSize: '10px', color: '#c4b5fd', background: 'rgba(139,92,246,0.18)', border: '1px solid rgba(139,92,246,0.35)', padding: '1px 7px', borderRadius: '20px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Org</span>
+            )}
             {trust !== null && trust > 0 && (
               <span style={{ fontSize: '11px', color: '#38bdf8', background: 'rgba(56,189,248,0.12)', padding: '1px 7px', borderRadius: '20px', fontWeight: 600 }}>₮{Math.round(trust)}</span>
             )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '1px' }}>
-            {post.profiles?.username && <span style={{ fontSize: '12px', color: '#475569' }}>@{post.profiles.username}</span>}
+            {/* Subtitle — for org posts, show "via @humanName" so the
+                real author is still visible for accountability.
+                For normal posts, show the author's @username. */}
+            {postedAsOrg ? (
+              humanId ? (
+                <Link
+                  href={`/profile?id=${humanId}`}
+                  style={{ fontSize: '12px', color: '#64748b', textDecoration: 'none' }}
+                >
+                  via {humanName}
+                </Link>
+              ) : (
+                <span style={{ fontSize: '12px', color: '#64748b' }}>via {humanName}</span>
+              )
+            ) : (
+              post.profiles?.username && <span style={{ fontSize: '12px', color: '#475569' }}>@{post.profiles.username}</span>
+            )}
             <span style={{ fontSize: '11px', color: '#334155' }}>·</span>
             <span style={{ fontSize: '12px', color: '#475569' }}>{formatTime(post.created_at)}</span>
           </div>
@@ -669,7 +722,7 @@ export default function PostCard({
         />
         <div style={{ flex: 1 }} />
         <Link
-          href={`/profile?id=${authorId}`}
+          href={authorLinkHref}
           style={{ flexShrink: 0, textDecoration: 'none', padding: '4px 4px 4px 8px' }}
           title={`View ${name}'s profile`}
         >
