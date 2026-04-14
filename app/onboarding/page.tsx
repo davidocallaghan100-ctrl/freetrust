@@ -6,6 +6,27 @@ import { compressImage } from '@/lib/image-compression'
 
 const SKILLS = ['Design','Development','Marketing','Writing','Sales','Finance','Operations','Photography','Video','Music','Coaching','Legal','Consulting','Education','Data','AI / Automation','Sustainability','Community','Healthcare','Trades']
 const CATEGORIES = ['Tech & Software','Design & Creative','Marketing & Growth','Finance & Business','Legal & Compliance','Education & Learning','Health & Wellness','Trades & Services','Food & Catering','Arts & Culture','Community & Charity','Events & Entertainment']
+// Hobbies presets — shown as tappable chips on the hobbies step.
+// Users can also type free-text entries via the custom input below the
+// grid. Both get stored in profiles.hobbies (text[]).
+const HOBBIES = [
+  { id: 'Music',            icon: '🎵' },
+  { id: 'Art',              icon: '🎨' },
+  { id: 'Fitness',          icon: '🏃' },
+  { id: 'Reading',          icon: '📚' },
+  { id: 'Cooking',          icon: '🍳' },
+  { id: 'Gardening',        icon: '🌱' },
+  { id: 'Travel',           icon: '✈️' },
+  { id: 'Gaming',           icon: '🎮' },
+  { id: 'Animals',          icon: '🐾' },
+  { id: 'Tech',             icon: '💻' },
+  { id: 'Theatre',          icon: '🎭' },
+  { id: 'Photography',      icon: '📸' },
+  { id: 'Outdoors',         icon: '🏄' },
+  { id: 'Wellness',         icon: '🧘' },
+  { id: 'Volunteering',     icon: '🤝' },
+  { id: 'Entrepreneurship', icon: '💼' },
+]
 const PURPOSES = [
   { id: 'buying', label: 'Buying', icon: '🛍️', desc: 'Find quality products and services' },
   { id: 'selling', label: 'Selling', icon: '💼', desc: 'Sell your skills, products or services' },
@@ -40,7 +61,13 @@ export default function OnboardingPage() {
 
   // Form state
   const [accountType, setAccountType] = useState<'individual' | 'business'>('individual')
-  const [displayName, setDisplayName] = useState('')
+  // Split display name into first + last so we can store to
+  // profiles.first_name / profiles.last_name. The full_name column
+  // gets auto-synced by the trigger in 20260412_profiles_first_last_name.sql.
+  // Both are REQUIRED before the user can leave step 2.
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [nameError, setNameError] = useState<string | null>(null)
   const [bio, setBio] = useState('')
   const [location, setLocation] = useState('')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
@@ -55,13 +82,32 @@ export default function OnboardingPage() {
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
   const [selectedInterests, setSelectedInterests] = useState<string[]>([])
   const [selectedPurposes, setSelectedPurposes] = useState<string[]>([])
+  // Hobbies step — preset chips + free-text custom entries.
+  // Optional; the "Skip" button on the step bypasses it.
+  const [selectedHobbies, setSelectedHobbies] = useState<string[]>([])
+  const [customHobby, setCustomHobby] = useState('')
   const [trustAwarded, setTrustAwarded] = useState(0)
 
   const toggleArr = (arr: string[], set: React.Dispatch<React.SetStateAction<string[]>>, val: string) => {
     set(prev => prev.includes(val) ? prev.filter(x => x !== val) : [...prev, val])
   }
 
-  const next = () => setStep(s => Math.min(s + 1, 5))
+  const addCustomHobby = () => {
+    const t = customHobby.trim()
+    if (!t) return
+    // De-dupe case-insensitively so "music" and "Music" don't both show
+    const alreadyPresent = selectedHobbies.some(h => h.toLowerCase() === t.toLowerCase())
+    if (!alreadyPresent) {
+      setSelectedHobbies(prev => [...prev, t])
+    }
+    setCustomHobby('')
+  }
+
+  // Total steps bumped 5 → 6 to make room for the hobbies step at
+  // position 4. Old step 4 (First Action) is now 5 and the welcome
+  // celebration is 6.
+  const TOTAL_STEPS = 6
+  const next = () => setStep(s => Math.min(s + 1, TOTAL_STEPS))
   const back = () => setStep(s => Math.max(s - 1, 1))
 
   const handlePhotoUpload = async (rawFile: File) => {
@@ -132,29 +178,40 @@ export default function OnboardingPage() {
     }
   }
 
-  const complete = async (firstActionHref: string) => {
+  // `firstActionHref` is unused inside `complete` — the welcome step
+  // renders its own first-action buttons. Kept in the signature for
+  // call-site compatibility.
+  const complete = async (_firstActionHref: string) => {
     setSaving(true)
     try {
+      // full_name is derived from first_name + last_name here so the
+      // profile has a full_name immediately even if the DB trigger
+      // that auto-syncs it hasn't run yet (trigger is installed by
+      // 20260412_profiles_first_last_name.sql — belt-and-braces).
+      const fullName = `${firstName.trim()} ${lastName.trim()}`.trim()
       const res = await fetch('/api/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           account_type: accountType,
-          full_name: displayName,
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          full_name: fullName,
           bio,
           location,
           skills: selectedSkills,
           interests: selectedInterests,
           purpose: selectedPurposes,
+          hobbies: selectedHobbies,
           avatar_url: avatarUrl,
           cover_url: coverUrl,
         }),
       })
       const json = await res.json()
       setTrustAwarded(json.trust_awarded ?? 0)
-      setStep(5)
+      setStep(TOTAL_STEPS)
     } catch {
-      setStep(5)
+      setStep(TOTAL_STEPS)
     } finally {
       setSaving(false)
     }
@@ -188,7 +245,7 @@ export default function OnboardingPage() {
       `}</style>
 
       <div className="ob-card">
-        <ProgressBar step={step} total={5} />
+        <ProgressBar step={step} total={TOTAL_STEPS} />
 
         {/* STEP 1 — Account Type */}
         {step === 1 && (
@@ -329,10 +386,41 @@ export default function OnboardingPage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
-              <div>
-                <label className="ob-label">Display Name *</label>
-                <input className="ob-input" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Your name or business name" />
+              {/* First + Last name — both REQUIRED. The old single
+                  "Display Name" field was ambiguous about whether users
+                  should enter a business or personal name and produced
+                  profiles with no parseable first/last for the name
+                  directory, messaging @mentions, and trust badge
+                  salutations. Splitting forces a consistent shape. */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label className="ob-label">First name *</label>
+                  <input
+                    className="ob-input"
+                    value={firstName}
+                    onChange={e => { setFirstName(e.target.value); setNameError(null) }}
+                    placeholder="David"
+                    autoComplete="given-name"
+                    autoCapitalize="words"
+                  />
+                </div>
+                <div>
+                  <label className="ob-label">Last name *</label>
+                  <input
+                    className="ob-input"
+                    value={lastName}
+                    onChange={e => { setLastName(e.target.value); setNameError(null) }}
+                    placeholder="O&rsquo;Callaghan"
+                    autoComplete="family-name"
+                    autoCapitalize="words"
+                  />
+                </div>
               </div>
+              {nameError && (
+                <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 10, padding: '0.55rem 0.8rem', fontSize: '0.78rem', color: '#fca5a5' }}>
+                  ⚠️ {nameError}
+                </div>
+              )}
               <div>
                 <label className="ob-label">Bio</label>
                 <textarea className="ob-input" value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell the community a bit about yourself…" rows={3} style={{ resize: 'vertical' }} maxLength={300} />
@@ -352,14 +440,28 @@ export default function OnboardingPage() {
               </div>
             </div>
 
-            {!avatarUrl && displayName.trim() && (
+            {!avatarUrl && firstName.trim() && lastName.trim() && (
               <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 10, padding: '0.6rem 0.85rem', fontSize: '0.8rem', color: '#fca5a5', marginBottom: '0.75rem' }}>
                 📷 Please upload a profile photo — it builds trust with other members.
               </div>
             )}
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button className="ob-btn-secondary" onClick={back}>Back</button>
-              <button className="ob-btn-primary" onClick={next} disabled={!displayName.trim() || !avatarUrl || photoUploading}>
+              <button
+                className="ob-btn-primary"
+                onClick={() => {
+                  // Hard gate — both names must be non-empty before we
+                  // can move past this step. Show an inline banner if
+                  // either is blank so the reason is obvious on mobile
+                  // where the disabled button can look like dead UI.
+                  if (!firstName.trim()) return setNameError('Please enter your first name.')
+                  if (!lastName.trim())  return setNameError('Please enter your last name.')
+                  if (!avatarUrl)        return setNameError('Please upload a profile photo to continue.')
+                  setNameError(null)
+                  next()
+                }}
+                disabled={!firstName.trim() || !lastName.trim() || !avatarUrl || photoUploading}
+              >
                 {photoUploading ? 'Uploading…' : 'Continue →'}
               </button>
             </div>
@@ -406,8 +508,114 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* STEP 4 — First Action */}
+        {/* STEP 4 — Hobbies (optional) */}
         {step === 4 && (
+          <div>
+            <div style={{ marginBottom: '1.75rem' }}>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f1f5f9', margin: '0 0 0.3rem' }}>What are your hobbies?</h2>
+              <p style={{ color: '#64748b', fontSize: '0.88rem', margin: 0 }}>Pick a few — they&apos;ll show on your profile so people with shared interests can find you. Optional.</p>
+            </div>
+
+            {/* Preset hobby chips — tap to toggle */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', marginBottom: '1.25rem' }}>
+              {HOBBIES.map(h => {
+                const active = selectedHobbies.includes(h.id)
+                return (
+                  <button
+                    key={h.id}
+                    type="button"
+                    className={`ob-chip${active ? ' active' : ''}`}
+                    onClick={() => toggleArr(selectedHobbies, setSelectedHobbies, h.id)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                  >
+                    <span>{h.icon}</span>
+                    <span>{h.id}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Custom free-text input */}
+            <div style={{ marginBottom: '1rem' }}>
+              <label className="ob-label">Add your own</label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  className="ob-input"
+                  value={customHobby}
+                  onChange={e => setCustomHobby(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      addCustomHobby()
+                    }
+                  }}
+                  placeholder="e.g. Beekeeping, Jiu-Jitsu, Chess…"
+                  maxLength={40}
+                  style={{ flex: 1 }}
+                />
+                <button
+                  type="button"
+                  onClick={addCustomHobby}
+                  disabled={!customHobby.trim()}
+                  style={{
+                    background: customHobby.trim() ? 'rgba(56,189,248,0.12)' : 'transparent',
+                    border: '1px solid rgba(56,189,248,0.3)',
+                    borderRadius: 10,
+                    padding: '0 1rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    color: customHobby.trim() ? '#38bdf8' : '#475569',
+                    cursor: customHobby.trim() ? 'pointer' : 'not-allowed',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  + Add
+                </button>
+              </div>
+            </div>
+
+            {/* Custom hobbies already added — shown as removable chips */}
+            {selectedHobbies.filter(h => !HOBBIES.some(preset => preset.id === h)).length > 0 && (
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label className="ob-label">Your custom hobbies</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.35rem' }}>
+                  {selectedHobbies
+                    .filter(h => !HOBBIES.some(preset => preset.id === h))
+                    .map(h => (
+                      <button
+                        key={h}
+                        type="button"
+                        className="ob-chip active"
+                        onClick={() => setSelectedHobbies(prev => prev.filter(x => x !== h))}
+                        title="Remove"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                      >
+                        <span>{h}</span>
+                        <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>✕</span>
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button className="ob-btn-secondary" onClick={back}>Back</button>
+              <button
+                className="ob-btn-secondary"
+                onClick={() => { setSelectedHobbies([]); setCustomHobby(''); next() }}
+                style={{ flex: 1 }}
+              >
+                Skip
+              </button>
+              <button className="ob-btn-primary" onClick={next} style={{ flex: 1 }}>
+                Continue →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 5 — First Action */}
+        {step === 5 && (
           <div>
             <div style={{ marginBottom: '1.75rem' }}>
               <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f1f5f9', margin: '0 0 0.3rem' }}>What do you want to do first?</h2>
@@ -428,8 +636,8 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* STEP 5 — Welcome / Celebration */}
-        {step === 5 && (
+        {/* STEP 6 — Welcome / Celebration */}
+        {step === 6 && (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
             <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#f1f5f9', margin: '0 0 0.5rem' }}>You&apos;re all set!</h2>

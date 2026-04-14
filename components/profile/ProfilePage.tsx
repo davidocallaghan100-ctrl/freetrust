@@ -26,6 +26,9 @@ interface Profile {
   follower_count?: number | null
   following_count?: number | null
   created_at?: string | null
+  // Hobbies text[] — added by 20260414000000_profiles_hobbies.sql.
+  // Shown on the public profile as pill chips (only when non-empty).
+  hobbies?: string[] | null
   // Social link fields (20260413_profiles_social_links.sql)
   linkedin_url?:  string | null
   instagram_url?: string | null
@@ -34,6 +37,28 @@ interface Profile {
   tiktok_url?:    string | null
   youtube_url?:   string | null
   website_url?:   string | null
+}
+
+// Map of preset hobby label → emoji icon. Kept in sync with the
+// HOBBIES list in app/onboarding/page.tsx. Custom hobbies (anything
+// not in this map) render as a text pill with no icon.
+const HOBBY_ICONS: Record<string, string> = {
+  'Music':            '🎵',
+  'Art':              '🎨',
+  'Fitness':          '🏃',
+  'Reading':          '📚',
+  'Cooking':          '🍳',
+  'Gardening':        '🌱',
+  'Travel':           '✈️',
+  'Gaming':           '🎮',
+  'Animals':          '🐾',
+  'Tech':             '💻',
+  'Theatre':          '🎭',
+  'Photography':      '📸',
+  'Outdoors':         '🏄',
+  'Wellness':         '🧘',
+  'Volunteering':     '🤝',
+  'Entrepreneurship': '💼',
 }
 
 interface ActivityItem {
@@ -889,6 +914,42 @@ export default function ProfilePage() {
             <p style={{ color: '#94a3b8', lineHeight: 1.7, fontSize: '0.9rem' }}>{profile.bio}</p>
           </div>
         ) : null}
+
+        {/* Hobbies — pill chips. Only shown if the user has at least one
+            hobby set. Presets (Music, Art, etc.) render with an emoji
+            icon from HOBBY_ICONS; custom free-text hobbies render as a
+            plain text pill. */}
+        {!editing && Array.isArray(profile?.hobbies) && profile.hobbies.length > 0 && (
+          <div className="profile-card">
+            <h3 style={{ marginBottom: '0.75rem', fontWeight: 700, fontSize: '1rem' }}>Hobbies</h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+              {profile.hobbies.map(h => {
+                const icon = HOBBY_ICONS[h]
+                return (
+                  <span
+                    key={h}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: '0.4rem 0.85rem',
+                      borderRadius: 999,
+                      background: 'rgba(56,189,248,0.08)',
+                      border: '1px solid rgba(56,189,248,0.22)',
+                      color: '#7dd3fc',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      lineHeight: 1,
+                    }}
+                  >
+                    {icon && <span>{icon}</span>}
+                    <span>{h}</span>
+                  </span>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Services Section */}
         {services.length > 0 && (
