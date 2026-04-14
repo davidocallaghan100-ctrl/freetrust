@@ -60,6 +60,14 @@ const ONLINE_CATEGORIES = [
   'SEO & Digital Marketing',
 ]
 
+// NOTE: this inline list must stay in sync with the OFFLINE_CATEGORIES
+// export in lib/service-categories.ts. That file is the canonical
+// source of truth for /services filters + /services/[id] lookups;
+// this inline copy is used here because the seller create form only
+// needs plain string labels, not the full ServiceCategory shape.
+// Any new entry added here must also be added there (and vice versa)
+// — category filter pills on /services would silently miss any
+// category that exists here but not there.
 const OFFLINE_CATEGORIES = [
   'Trades & Construction',
   'Home & Garden',
@@ -72,6 +80,8 @@ const OFFLINE_CATEGORIES = [
   'Pet Services',
   'Elder Care',
   'Community Services',
+  'Taxi Drivers',
+  'Energy Services',
 ]
 
 const DELIVERY_OPTIONS = [

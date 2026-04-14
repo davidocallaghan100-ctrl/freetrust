@@ -49,6 +49,15 @@ const SERVICES_TO_GRASSROOTS: Record<string, string[]> = {
   'elder-care':           ['elder_care'],
   'pet-services':         ['animal_care'],
   'community-services':   ['labour'],
+  // Taxi Drivers overlaps with grassroots 'delivery' (couriers,
+  // drivers, hauling) — same territory at different professionalism
+  // tiers. A user browsing the professional Taxi Drivers category
+  // can click through to casual / informal driving work on
+  // grassroots via the cross-link badge rendered by this map.
+  'taxi-drivers':         ['delivery'],
+  // Energy Services has no grassroots equivalent yet — solar / EV /
+  // heat pump work is professional-only in the current taxonomy.
+  // Intentionally NOT listed here so the badge renders nothing.
 }
 
 // ── Grassroots slug → Services id(s) ───────────────────────────────────────
@@ -61,7 +70,11 @@ const GRASSROOTS_TO_SERVICES: Record<string, string[]> = {
   home_repairs:  ['home-garden', 'trades-construction'],
   hospitality:   ['food-catering'],
   events_help:   ['events-entertainment'],
-  delivery:      ['transport-delivery'],
+  // delivery overlaps with BOTH transport-delivery (couriers, moves)
+  // and the new taxi-drivers category. Listing both lets the UI
+  // show two cross-link badges on the grassroots delivery
+  // category pill.
+  delivery:      ['transport-delivery', 'taxi-drivers'],
   moving:        ['transport-delivery'],
   childcare:     ['childcare-education'],
   tutoring:      ['childcare-education'],

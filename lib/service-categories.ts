@@ -204,6 +204,52 @@ export const OFFLINE_CATEGORIES: ServiceCategory[] = [
     mode: 'offline',
     subcategories: ['Volunteering', 'Local Projects', 'Charity Work', 'Community Events', 'Skill Sharing', 'Neighbourhood Help'],
   },
+  // Taxi Drivers — own top-level category rather than a subcategory of
+  // "Transport & Delivery" because the user set is large and well-
+  // defined (airport runs, school runs, wheelchair accessible, etc.)
+  // and users shopping for a ride don't want to wade through courier /
+  // removal / van-hire results first. Crosslinked to grassroots
+  // 'delivery' for the casual / informal end of the same work via
+  // lib/marketplace/category-overlap.ts.
+  {
+    id: 'taxi-drivers',
+    label: 'Taxi Drivers',
+    icon: '🚕',
+    mode: 'offline',
+    subcategories: [
+      'Airport Transfers',
+      'Local Rides',
+      'Long Distance',
+      'School Runs',
+      'Wheelchair Accessible',
+      'Wedding & Events',
+      'Executive / Chauffeur',
+      'Night Out & Pub Runs',
+    ],
+  },
+  // Energy Services — home + business energy-efficiency work.
+  // Subcategories reflect the Irish/UK green-grants landscape (SEAI,
+  // BUS): solar, EV chargers, heat pumps, insulation, audits. The
+  // category is marked 'offline' because every listed job is on-site
+  // at the customer's property — even an energy audit is a physical
+  // visit. If we later add remote consultancy (e.g. grant-application
+  // help) it fits under business-consulting, not here.
+  {
+    id: 'energy-services',
+    label: 'Energy Services',
+    icon: '⚡',
+    mode: 'offline',
+    subcategories: [
+      'Solar Panel Installation',
+      'EV Charger Installation',
+      'Heat Pump Installation',
+      'Home Insulation',
+      'Energy Audits',
+      'Boiler Servicing',
+      'Smart Meter & Thermostat',
+      'Battery Storage',
+    ],
+  },
 ]
 
 export const ALL_CATEGORIES: ServiceCategory[] = [...ONLINE_CATEGORIES, ...OFFLINE_CATEGORIES]
