@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { compressImage } from '@/lib/image-compression'
 
 const CATEGORIES = [
   { id: 'technology',     label: 'Technology',  icon: '💻' },
@@ -108,8 +109,13 @@ export default function NewProductPage() {
     setUploadingCount(images.length)
     const uploaded: string[] = []
     for (const img of images) {
+      // Client-side compression — mobile camera photos are 8–15 MB and
+      // exceed Vercel's 4.5 MB body limit, causing HTTP 413. Shrinks to
+      // ~2 MB before the request is even built. Falls back to the
+      // original file on any failure (HEIC without decoder, etc.).
+      const compressed = await compressImage(img.file, 2)
       const fd = new FormData()
-      fd.append('file', img.file)
+      fd.append('file', compressed)
       fd.append('type', 'listing')
       let res: Response
       try {

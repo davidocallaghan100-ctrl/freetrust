@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { compressImage } from '@/lib/image-compression'
 
 type OrgForm = {
   name: string
@@ -91,10 +92,12 @@ export default function EditOrgPage() {
   }
 
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const rawFile = e.target.files?.[0]
+    if (!rawFile) return
     setUploadingLogo(true)
     try {
+      // Org logo compression — 1 MB cap since logos display small.
+      const file = await compressImage(rawFile, 1)
       const ext = file.name.split('.').pop()
       const path = `${id}-logo.${ext}`
       await supabase.storage.from('org-logos').upload(path, file, { upsert: true })
@@ -105,10 +108,12 @@ export default function EditOrgPage() {
   }
 
   async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const rawFile = e.target.files?.[0]
+    if (!rawFile) return
     setUploadingCover(true)
     try {
+      // Cover photo compression — 2 MB cap (larger render area than logo).
+      const file = await compressImage(rawFile, 2)
       const ext = file.name.split('.').pop()
       const path = `orgs/${id}-cover.${ext}`
       await supabase.storage.from('covers').upload(path, file, { upsert: true })

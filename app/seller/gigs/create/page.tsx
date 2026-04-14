@@ -4,6 +4,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import { compressImage } from '@/lib/image-compression'
 
 type Category = 'online' | 'offline'
 
@@ -283,8 +284,13 @@ export default function CreateGigPage() {
     setUploadingCount(files.length)
     const uploaded: string[] = []
     for (let i = 0; i < files.length; i++) {
+      // Client-side compression — mobile camera photos are 8–15 MB and
+      // exceed Vercel's 4.5 MB body limit (HTTP 413). Shrinks to ~2 MB
+      // before the request is built. Falls back to the original file
+      // on any failure (HEIC without decoder, canvas error, etc.).
+      const compressed = await compressImage(files[i], 2)
       const fd = new FormData()
-      fd.append('file', files[i])
+      fd.append('file', compressed)
       fd.append('type', 'photo')
       const res = await fetch('/api/upload/media', { method: 'POST', body: fd })
       const data = await res.json().catch(() => null) as { url?: string; error?: string } | null

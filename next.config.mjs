@@ -65,6 +65,24 @@ const withPWA = nextPwa({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Body size limit — documented safety net for the HTTP 413 mobile
+  // upload bug. NOTE: this `api.bodyParser` config only applies to
+  // Pages Router routes under /pages/api/**. All our upload endpoints
+  // are App Router route handlers (app/api/upload/media/route.ts etc),
+  // which read the body via the Web Request API and do NOT consult this
+  // config. More importantly, Vercel itself enforces a 4.5 MB request
+  // body limit on Hobby plans at the edge, before any Next.js code runs
+  // — so this setting cannot actually lift the real ceiling on our
+  // deploy. The reliable fix is client-side image compression in
+  // lib/image-compression.ts, which shrinks camera photos to ~2 MB
+  // before they're sent. Keeping this block here as an intent marker
+  // so future devs know we deliberately target ≤10 MB uploads.
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+
   images: {
     remotePatterns: [
       {

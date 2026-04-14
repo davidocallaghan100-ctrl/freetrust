@@ -3,6 +3,7 @@ import React, { useState, useCallback, useRef, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { compressImage } from '@/lib/image-compression'
 import LocationPicker from '@/components/location/LocationPicker'
 import { EMPTY_LOCATION, type StructuredLocation } from '@/lib/geo'
 import { CURRENCIES, useCurrency, type CurrencyCode } from '@/context/CurrencyContext'
@@ -132,13 +133,23 @@ export default function GrassrootsNewPage() {
       const accepted = Array.from(files).slice(0, remaining)
       const uploaded: string[] = []
       for (let i = 0; i < accepted.length; i++) {
-        const file = accepted[i]
-        // Reject anything bigger than 8 MB on the client — Supabase storage
-        // also enforces this, but failing fast is nicer for the user.
+        // Client-side compression — mobile camera photos are 8–15 MB.
+        // This direct-to-Supabase path doesn't hit Vercel's 4.5 MB
+        // limit, but shrinking still helps with bandwidth, upload
+        // time on mobile data, and storage costs. Also makes the 8 MB
+        // client-side rejection below functionally dead for real
+        // camera photos — they'll always land under it.
+        const file = await compressImage(accepted[i], 2)
+        // Reject anything still bigger than 8 MB after compression
+        // (only really hits if compression fell back to the original,
+        // e.g. HEIC on Chrome).
         if (file.size > 8 * 1024 * 1024) {
           setError(`${file.name} is over 8 MB — please choose a smaller file.`)
           continue
         }
+        // Use .jpg extension since compression always outputs JPEG.
+        // Falls back to the original extension if compression was
+        // skipped (file already small enough, non-image, etc.).
         const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '')
         const path = `${user.id}/grassroots-${Date.now()}-${i}.${ext}`
         const { error: upErr } = await supabase.storage

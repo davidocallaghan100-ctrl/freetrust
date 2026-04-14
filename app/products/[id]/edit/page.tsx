@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { compressImage } from '@/lib/image-compression'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -110,8 +111,13 @@ export default function EditListingPage() {
     // the gig create flow — now all four product/service upload paths
     // route through the same hardened endpoint.
     try {
+      // Client-side compression — mobile camera photos are 8–15 MB and
+      // exceed Vercel's 4.5 MB body limit (HTTP 413). Shrinks to ~2 MB
+      // before the request is built. Falls back to the original file
+      // on any failure (HEIC without decoder, canvas error, etc.).
+      const compressed = await compressImage(file, 2)
       const fd = new FormData()
-      fd.append('file', file)
+      fd.append('file', compressed)
       fd.append('type', 'listing')
       const res = await fetch('/api/upload/media', { method: 'POST', body: fd })
       const data = await res.json().catch(() => ({} as { url?: string; error?: string }))

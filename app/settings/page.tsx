@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { compressImage } from '@/lib/image-compression'
 import type { User } from '@supabase/supabase-js'
 import LocationPicker from '@/components/location/LocationPicker'
 import { EMPTY_LOCATION, type StructuredLocation } from '@/lib/geo'
@@ -376,9 +377,12 @@ function AccountTab({
   }
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const rawFile = e.target.files?.[0]
+    if (!rawFile) return
     setAvatarUploading(true)
+    // Avatar compression — 1 MB cap since avatars render at ≤128 px.
+    // Also prevents HTTP 413 on mobile camera selfies (8–15 MB).
+    const file = await compressImage(rawFile, 1)
     try {
       const supabase = createClient()
       const ext = file.name.split('.').pop()

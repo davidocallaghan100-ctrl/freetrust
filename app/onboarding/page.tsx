@@ -2,6 +2,7 @@
 import React, { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { compressImage } from '@/lib/image-compression'
 
 const SKILLS = ['Design','Development','Marketing','Writing','Sales','Finance','Operations','Photography','Video','Music','Coaching','Legal','Consulting','Education','Data','AI / Automation','Sustainability','Community','Healthcare','Trades']
 const CATEGORIES = ['Tech & Software','Design & Creative','Marketing & Growth','Finance & Business','Legal & Compliance','Education & Learning','Health & Wellness','Trades & Services','Food & Catering','Arts & Culture','Community & Charity','Events & Entertainment']
@@ -63,11 +64,15 @@ export default function OnboardingPage() {
   const next = () => setStep(s => Math.min(s + 1, 5))
   const back = () => setStep(s => Math.max(s - 1, 1))
 
-  const handlePhotoUpload = async (file: File) => {
+  const handlePhotoUpload = async (rawFile: File) => {
     setPhotoUploading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+      // Avatars get an aggressive 1 MB cap — they're displayed at
+      // ≤128 px so anything bigger is pure waste. Also fixes HTTP 413
+      // on mobile camera selfies (8–15 MB originals).
+      const file = await compressImage(rawFile, 1)
       const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
       const path = `${user.id}/${Date.now()}.${ext}`
       const { error } = await supabase.storage
@@ -87,10 +92,15 @@ export default function OnboardingPage() {
   // landed in 097ecd2. Does NOT block onboarding progression: if the
   // upload fails we show an inline error but the Continue button stays
   // enabled.
-  const handleCoverUpload = async (file: File) => {
+  const handleCoverUpload = async (rawFile: File) => {
     setCoverUploading(true)
     setCoverError(null)
     try {
+      // Client-side compression — mobile camera photos are 8–15 MB and
+      // exceed Vercel's 4.5 MB body limit (HTTP 413). Shrinks to ~2 MB
+      // before the request is built. Falls back to the original file
+      // on any failure (HEIC without decoder, canvas error, etc.).
+      const file = await compressImage(rawFile, 2)
       const fd = new FormData()
       fd.append('file', file)
       fd.append('type', 'cover')

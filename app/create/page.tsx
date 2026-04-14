@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { compressImage } from '@/lib/image-compression'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -203,12 +204,19 @@ export default function CreatePage() {
   //   * .getPublicUrl() wrapped too, since it also builds URLs
   //   * step breadcrumb surfaced in every error so the next mobile bug
   //     report tells us exactly which line failed
-  const handleFileUpload = async (file: File, _type: 'photo' | 'video' | 'short') => {
+  const handleFileUpload = async (rawFile: File, _type: 'photo' | 'video' | 'short') => {
     // `_type` is kept for call-site compatibility; the kind is re-derived from
     // the actual MIME type below so we don't trust the UI's label.
     setUploadingMedia(true)
     setUploadProgress('Uploading…')
     setUploadedMediaUrl(null)
+
+    // Client-side image compression — no-op for videos because
+    // compressImage early-returns on non-image MIMEs. For camera
+    // photos (8–15 MB) this shrinks to ~2 MB so direct uploads are
+    // quick on mobile data even though the /create page bypasses
+    // Vercel's 4.5 MB body limit anyway.
+    const file = await compressImage(rawFile, 2)
 
     // Step breadcrumb — updated before every operation so a sync throw
     // caught by the outer handler tells us WHICH line blew up rather than
