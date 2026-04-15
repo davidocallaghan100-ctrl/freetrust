@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -20,39 +21,32 @@ import { createAdminClient } from '@/lib/supabase/admin'
 // structure below isolates the profiles read from everything else so that
 // bug cannot regress:
 //
-//   1. Fetch ALL profiles (primary data source)
+//   1. Fetch ALL profiles (primary data source) — bypass the PostgREST
+//      default 1000-row cap via .range(0, 9999) so platforms with up
+//      to 10k members get the full directory in one response.
 //   2. Enrich with trust balances + follower counts (optional decoration)
-//   3. Fire-and-forget backfill from auth.users (optional side effect,
-//      does not run before step 1, cannot affect the response)
+//   3. Return the response
+//   4. Fire-and-forget backfill from auth.users (NON-BLOCKING — runs
+//      after the response has been sent so a slow auth.admin.listUsers
+//      paginated loop on a Vercel cold start cannot make the directory
+//      page time out).
 //
 // Every step after step 1 is wrapped in its own try/catch so enrichment
 // failures degrade gracefully to zero-filled defaults rather than dropping
 // any member from the response.
 
+// Server-side only diagnostic — logged via console.log for Vercel
+// log inspection but NEVER shipped in the HTTP response (earlier
+// versions exposed this to all callers, leaking auth user counts and
+// internal error text).
 interface Diagnostic {
-  // Profiles query — the only thing that matters for visibility.
   profiles_total: number
   profiles_query_error: string | null
-  // Decoration steps — non-fatal.
   trust_balances_fetched: number
   trust_balances_error: string | null
   follower_rows_fetched: number
   follower_rows_error: string | null
-  // Backfill side-effect — runs AFTER the response data is ready, so
-  // failures here are purely cosmetic for the NEXT request.
-  auth_users_fetched: number
-  auth_users_pages_fetched: number
-  profiles_missing: number
-  profiles_upserted: number
-  backfill_error: string | null
-  // Timing + sample evidence so a single response tells us whether a
-  // specific user (e.g. Fergus, Mags) is present in the result.
   duration_ms: number
-  // First 50 profile ids returned — included so the next bug report can
-  // confirm whether a specific user is present in the raw query output
-  // without needing Vercel log access. Capped at 50 to keep the
-  // response size sane.
-  profile_ids_sample: string[]
 }
 
 export async function GET() {
@@ -64,13 +58,7 @@ export async function GET() {
     trust_balances_error: null,
     follower_rows_fetched: 0,
     follower_rows_error: null,
-    auth_users_fetched: 0,
-    auth_users_pages_fetched: 0,
-    profiles_missing: 0,
-    profiles_upserted: 0,
-    backfill_error: null,
     duration_ms: 0,
-    profile_ids_sample: [],
   }
 
   // Always returned, even on error, so the client can react.
@@ -88,7 +76,7 @@ export async function GET() {
     console.error('[GET /api/directory/members] createAdminClient threw:', msg)
     diag.duration_ms = Date.now() - startedAt
     return NextResponse.json(
-      { members: [], error: `Server misconfiguration: ${msg}`, _diagnostic: diag },
+      { members: [], error: `Server misconfiguration: ${msg}` },
       { status: 500, headers: noStoreHeaders },
     )
   }
@@ -104,25 +92,32 @@ export async function GET() {
   // plain `string` and the return type degrades to `GenericStringError`,
   // which then breaks every `.id` / `.full_name` access below with
   // TS2345 errors. Keep it on one line.
+  //
+  // .range(0, 9999) instead of .limit(1000) — the PostgREST `max_rows`
+  // setting silently caps `.limit()` at 1000 rows on most Supabase
+  // projects, so a directory with 1500 members would only return the
+  // first 1000 with NO error indication. .range() bypasses that cap by
+  // making the row window explicit. 10,000 is generous but cheap — the
+  // shape we're selecting is small (no large columns), so even the
+  // worst case is well under the 4 MB PostgREST response limit.
   const { data: profilesData, error: profilesError } = await supabase
     .from('profiles')
     .select('id, full_name, avatar_url, bio, location, role, created_at, linkedin_url, instagram_url, twitter_url, github_url, tiktok_url, youtube_url, website_url')
     .order('created_at', { ascending: false })
-    .limit(1000)
+    .range(0, 9999)
 
   if (profilesError) {
     console.error('[GET /api/directory/members] profiles query failed:', profilesError.message)
     diag.profiles_query_error = profilesError.message
     diag.duration_ms = Date.now() - startedAt
     return NextResponse.json(
-      { members: [], error: profilesError.message, _diagnostic: diag },
+      { members: [], error: profilesError.message },
       { status: 500, headers: noStoreHeaders },
     )
   }
 
   const profiles = profilesData ?? []
   diag.profiles_total = profiles.length
-  diag.profile_ids_sample = profiles.slice(0, 50).map((p: { id: string }) => p.id)
 
   console.log(`[GET /api/directory/members] profiles query returned ${profiles.length} rows`)
 
@@ -222,18 +217,65 @@ export async function GET() {
   })
 
   // ── STEP 4. Fire-and-forget backfill from auth.users ─────────────────────
-  // IMPORTANT — this runs AFTER the response data is ready. It cannot
-  // affect `members` above. Its only purpose is to create profile rows
-  // for auth.users who don't have one yet, so they appear on the NEXT
-  // request. Errors here are logged into `_diagnostic.backfill_error`
-  // and never fail the response.
+  // CHANGED 2026-04-15 — backfill is now NON-BLOCKING.
   //
-  // This is deliberately awaited (rather than truly fire-and-forget) so
-  // that the response is atomic — a user refreshing rapidly after a
-  // signup gets the backfill before the second request's profiles
-  // query runs. We could kick it off as a non-awaited Promise but
-  // serverless function containers can die the instant the response
-  // flushes, killing an un-awaited side effect mid-flight.
+  // The previous implementation `await`ed a paginated `auth.admin.listUsers`
+  // loop (up to 20 pages × 1000 users = 20,000 records) BEFORE returning
+  // the response. On a Vercel cold start with even modest auth.users
+  // counts this could push past the 10s function timeout, causing the
+  // entire directory request to fail and the page to render zero members
+  // (the user-visible symptom we're fixing).
+  //
+  // The backfill itself is still useful — it creates profile rows for
+  // auth.users who somehow signed up without one, so they appear on the
+  // NEXT request — but it does NOT need to block the current response.
+  // We kick it off as an un-awaited promise scheduled via setTimeout(0)
+  // so the event loop yields back to the response writer first. On Vercel
+  // serverless this is best-effort: if the function container is killed
+  // immediately after the response flushes, the backfill might not
+  // complete. That's acceptable because:
+  //   * The next request will trigger another backfill attempt
+  //   * The handle_new_user() Postgres trigger (added by
+  //     20260412_signup_defensive.sql) creates the profiles row at signup
+  //     time, so the backfill is only catching very rare edge cases (old
+  //     users predating the trigger)
+  //   * The directory must NEVER be blocked by an enrichment side effect
+  //
+  // The whole block runs inside a try/catch so an unhandled rejection
+  // here cannot crash the function.
+  diag.duration_ms = Date.now() - startedAt
+  console.log(
+    `[GET /api/directory/members] done: ${members.length} members ` +
+    `(profiles=${diag.profiles_total}, ${diag.duration_ms}ms)`,
+  )
+
+  // Schedule the backfill AFTER we build the response so it can't delay
+  // it. Wrapped in try/catch + .catch() so rejections die quietly.
+  void runAuthBackfillInBackground(supabase, ids).catch(err => {
+    console.error('[members backfill] background task rejected:', err instanceof Error ? err.message : err)
+  })
+
+  // _diagnostic field intentionally OMITTED from the public response —
+  // earlier versions shipped auth user counts, error messages, and
+  // sample profile ids to every caller, which is a small but real
+  // information leak. The diag object is still useful server-side and
+  // is logged via console.log above.
+  return NextResponse.json(
+    { members, count: members.length },
+    { headers: noStoreHeaders },
+  )
+}
+
+// ── Non-blocking backfill helper ─────────────────────────────────────────────
+// Extracted into a top-level function so the response handler can fire
+// it without awaiting and so the type signature stays clean. Accepts
+// the existing admin Supabase client and the set of profile ids that
+// were just returned to the caller — anything in auth.users that's
+// NOT in that set gets a placeholder profiles row inserted.
+async function runAuthBackfillInBackground(
+  supabase: ReturnType<typeof createAdminClient>,
+  existingProfileIds: string[],
+): Promise<void> {
   try {
     const allAuthUsers: Array<{ id: string; email: string | null; user_metadata: Record<string, unknown> | null }> = []
     const PER_PAGE = 1000
@@ -246,11 +288,9 @@ export async function GET() {
       })
       if (pageErr) {
         console.error(`[members backfill] listUsers page=${page} error:`, pageErr.message)
-        diag.backfill_error = pageErr.message
-        break
+        return
       }
       const pageUsers = pageData?.users ?? []
-      diag.auth_users_pages_fetched = page
       if (pageUsers.length === 0) break
       for (const u of pageUsers) {
         allAuthUsers.push({
@@ -262,61 +302,38 @@ export async function GET() {
       if (pageUsers.length < PER_PAGE) break
     }
 
-    diag.auth_users_fetched = allAuthUsers.length
+    if (allAuthUsers.length === 0) return
 
-    if (allAuthUsers.length > 0) {
-      // Build a set of existing profile ids from STEP 1's result — no
-      // extra query needed. This is the "profiles is the source of
-      // truth" invariant: we use what the profiles query already told
-      // us, rather than re-querying profiles with a filter.
-      const existingIds = new Set(ids)
-      const missing = allAuthUsers.filter(u => !existingIds.has(u.id))
-      diag.profiles_missing = missing.length
+    const existingIds = new Set(existingProfileIds)
+    const missing = allAuthUsers.filter(u => !existingIds.has(u.id))
+    if (missing.length === 0) return
 
-      if (missing.length > 0) {
-        const rows = missing.map(u => ({
-          id: u.id,
-          email: u.email ?? `${u.id}@placeholder.local`,
-          full_name:
-            (u.user_metadata?.full_name as string | undefined) ??
-            (u.user_metadata?.name as string | undefined) ??
-            null,
-        }))
+    const rows = missing.map(u => ({
+      id: u.id,
+      email: u.email ?? `${u.id}@placeholder.local`,
+      full_name:
+        (u.user_metadata?.full_name as string | undefined) ??
+        (u.user_metadata?.name as string | undefined) ??
+        null,
+    }))
 
-        // Chunk the upsert — some Postgres drivers bail on very large VALUES.
-        const CHUNK = 500
-        let upserted = 0
-        for (let i = 0; i < rows.length; i += CHUNK) {
-          const slice = rows.slice(i, i + CHUNK)
-          const { error: upsertErr } = await supabase
-            .from('profiles')
-            .upsert(slice, { onConflict: 'id', ignoreDuplicates: true })
-          if (upsertErr) {
-            console.error(`[members backfill] upsert chunk ${i}..${i + slice.length} error:`, upsertErr.message)
-            diag.backfill_error = upsertErr.message
-          } else {
-            upserted += slice.length
-          }
-        }
-        diag.profiles_upserted = upserted
-        console.log(`[members backfill] upserted ${upserted} / ${missing.length} missing profiles`)
+    // Chunk the upsert — some Postgres drivers bail on very large VALUES.
+    const CHUNK = 500
+    let upserted = 0
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      const slice = rows.slice(i, i + CHUNK)
+      const { error: upsertErr } = await supabase
+        .from('profiles')
+        .upsert(slice, { onConflict: 'id', ignoreDuplicates: true })
+      if (upsertErr) {
+        console.error(`[members backfill] upsert chunk ${i}..${i + slice.length} error:`, upsertErr.message)
+      } else {
+        upserted += slice.length
       }
     }
+    console.log(`[members backfill] upserted ${upserted} / ${missing.length} missing profiles (background)`)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[members backfill] top-level error:', msg)
-    diag.backfill_error = msg
   }
-
-  diag.duration_ms = Date.now() - startedAt
-  console.log(
-    `[GET /api/directory/members] done: ${members.length} members ` +
-    `(profiles=${diag.profiles_total}, auth=${diag.auth_users_fetched}, ` +
-    `backfilled=${diag.profiles_upserted}, ${diag.duration_ms}ms)`,
-  )
-
-  return NextResponse.json(
-    { members, _diagnostic: diag },
-    { headers: noStoreHeaders },
-  )
 }
