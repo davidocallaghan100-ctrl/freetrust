@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Avatar from '@/components/Avatar'
 import SocialLinks from '@/components/social/SocialLinks'
+import MessageButton from '@/components/messaging/MessageButton'
 import {
   GRASSROOTS_CATEGORIES_BY_SLUG,
   AVAILABILITY_BY_VALUE,
@@ -859,7 +860,7 @@ export default function ProfilePage() {
                 {editing ? 'Cancel' : '✏️ Edit Profile'}
               </button>
             ) : (
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                 {user && (
                   <button
                     onClick={isFollowing ? handleUnfollow : handleFollow}
@@ -879,6 +880,21 @@ export default function ProfilePage() {
                   >
                     {followLoading ? '…' : isFollowing ? 'Unfollow' : '+ Follow'}
                   </button>
+                )}
+                {/*
+                  Message button — only rendered when viewing another
+                  user's profile (isOwnProfile is false) AND the viewer
+                  is signed in. The MessageButton component handles
+                  find-or-create via POST /api/conversations and
+                  navigates to /messages/{conversationId} on success.
+                  Never creates duplicate threads.
+                */}
+                {user && profile?.id && (
+                  <MessageButton
+                    recipientId={profile.id}
+                    recipientName={profile.full_name ?? undefined}
+                    variant="ghost"
+                  />
                 )}
                 <Link href="/members" style={{ fontSize: '0.82rem', color: '#64748b', textDecoration: 'none', border: '1px solid rgba(100,116,139,0.25)', borderRadius: 8, padding: '0.45rem 1rem' }}>
                   ← Members

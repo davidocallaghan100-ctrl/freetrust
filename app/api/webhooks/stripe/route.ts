@@ -320,21 +320,72 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
 }
 
 async function handleAccountUpdated(account: Stripe.Account) {
-  // Auto-mark seller as onboarded when Stripe confirms charges + payouts enabled
-  if (!account.charges_enabled || !account.payouts_enabled) return;
+  // Sync the full Stripe Connect state to profiles every time the
+  // account.updated event fires. Before the audit fix, this handler
+  // only flipped `stripe_onboarded=true` when both flags went
+  // positive, and ignored every other transition — so a user whose
+  // account was downgraded (e.g. payouts_enabled flipped back to
+  // false after a verification issue) would still show as
+  // "onboarded" in the DB and hit a confusing error when they tried
+  // to withdraw.
+  //
+  // Now writes all four derived fields unconditionally:
+  //
+  //   stripe_charges_enabled     — Stripe's charges_enabled
+  //   stripe_payouts_enabled     — Stripe's payouts_enabled
+  //   stripe_onboarding_complete — both flags true
+  //   stripe_onboarded           — alias of onboarding_complete kept
+  //                                for backward compat with earlier
+  //                                migrations that only had this col
+  //
+  // The columns are added by 20260415000006_stripe_connect_columns.sql
+  // and default to false, so this UPDATE is guaranteed to find the
+  // row if stripe_account_id is set.
+  const chargesEnabled = Boolean(account.charges_enabled);
+  const payoutsEnabled = Boolean(account.payouts_enabled);
+  const complete = chargesEnabled && payoutsEnabled;
 
   try {
     const supabase = createAdminClient();
     const { error } = await supabase
       .from('profiles')
-      .update({ stripe_onboarded: true })
-      .eq('stripe_account_id', account.id)
-      .eq('stripe_onboarded', false); // only update if not already marked
+      .update({
+        stripe_charges_enabled:     chargesEnabled,
+        stripe_payouts_enabled:     payoutsEnabled,
+        stripe_onboarding_complete: complete,
+        stripe_onboarded:           complete, // legacy alias
+      })
+      .eq('stripe_account_id', account.id);
 
     if (error) {
-      console.error('[Webhook] handleAccountUpdated: failed to mark onboarded', error);
-    } else {
-      console.log(`[Webhook] Seller onboarded: stripe_account=${account.id}`);
+      console.error('[Webhook] handleAccountUpdated: failed to sync account state', error);
+      return;
+    }
+
+    console.log(
+      `[Webhook] account.updated synced: stripe_account=${account.id} ` +
+      `charges=${chargesEnabled} payouts=${payoutsEnabled} complete=${complete}`
+    );
+
+    // First-time onboarding — notify the user so they know they can
+    // now start accepting payments. Only fire when BOTH flags just
+    // went positive so we don't spam every account.updated event.
+    if (complete) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, stripe_onboarding_complete')
+        .eq('stripe_account_id', account.id)
+        .maybeSingle();
+
+      if (profile?.id) {
+        await supabase.from('notifications').insert({
+          user_id: profile.id,
+          type: 'wallet',
+          title: '✅ Bank account verified',
+          body: 'Your Stripe account is fully set up. You can now accept payments and withdraw earnings.',
+          link: '/wallet',
+        });
+      }
     }
   } catch (err) {
     console.error('[Webhook] handleAccountUpdated error:', err);
@@ -423,10 +474,17 @@ async function handlePayoutPaid(payout: Stripe.Payout, connectedAccountId: strin
     const exactMatch = candidates.find((w) => w.amount_cents === payout.amount);
     const target = exactMatch ?? candidates[0];
 
+    // Write both `status='paid'` (for the existing CHECK constraint
+    // defined in 20260414000008_withdrawals_table.sql) and
+    // `completed_at=now()` (the timestamp the audit spec asks for
+    // and the wallet UI displays). `arrival_estimate_epoch` stays
+    // too so the history feed can reconcile against Stripe's
+    // stated arrival date.
     const { error: updateErr } = await supabase
       .from('withdrawals')
       .update({
         status: 'paid',
+        completed_at: new Date().toISOString(),
         stripe_payout_id: payout.id,
         arrival_estimate_epoch: payout.arrival_date,
       })
@@ -446,7 +504,7 @@ async function handlePayoutPaid(payout: Stripe.Payout, connectedAccountId: strin
       user_id: target.user_id,
       type: 'wallet',
       title: '✅ Withdrawal complete',
-      body: `€${(target.amount_cents / 100).toFixed(2)} has arrived in your bank account.`,
+      body: `Your withdrawal of €${(target.amount_cents / 100).toFixed(2)} has been paid — it should arrive in 1–2 business days.`,
       link: '/wallet',
     });
   } catch (err) {
@@ -501,6 +559,7 @@ async function handlePayoutFailed(payout: Stripe.Payout, connectedAccountId: str
       .from('withdrawals')
       .update({
         status: 'failed',
+        failed_at: new Date().toISOString(),
         stripe_payout_id: payout.id,
         failure_reason: failureReason,
       })
@@ -519,7 +578,7 @@ async function handlePayoutFailed(payout: Stripe.Payout, connectedAccountId: str
       user_id: target.user_id,
       type: 'wallet',
       title: '⚠️ Withdrawal failed',
-      body: `Your €${(target.amount_cents / 100).toFixed(2)} withdrawal could not be paid out: ${failureReason}. Funds are back in your wallet.`,
+      body: `Your withdrawal of €${(target.amount_cents / 100).toFixed(2)} failed: ${failureReason}. Please check your bank details and try again.`,
       link: '/wallet',
     });
   } catch (err) {

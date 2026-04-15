@@ -10,25 +10,36 @@ const BASE = process.env.NEXT_PUBLIC_BASE_URL || 'https://freetrust.co'
 
 export const dynamic = 'force-dynamic'
 
+// Static page priorities — tuned per the SEO audit so the most
+// valuable commercial pages (marketplace, services, jobs) are
+// crawled first. Priority is a relative hint, not an absolute
+// ranking signal, but Google still uses it for crawl budget
+// allocation on large sitemaps.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date()
 
-  // Static pages
   const staticPages: MetadataRoute.Sitemap = [
-    { url: BASE, lastModified: now, changeFrequency: 'daily', priority: 1 },
-    { url: `${BASE}/services`, lastModified: now, changeFrequency: 'hourly', priority: 0.9 },
-    { url: `${BASE}/products`, lastModified: now, changeFrequency: 'hourly', priority: 0.9 },
-    { url: `${BASE}/jobs`, lastModified: now, changeFrequency: 'hourly', priority: 0.8 },
-    { url: `${BASE}/events`, lastModified: now, changeFrequency: 'daily', priority: 0.8 },
-    { url: `${BASE}/browse`, lastModified: now, changeFrequency: 'daily', priority: 0.7 },
-    { url: `${BASE}/community`, lastModified: now, changeFrequency: 'daily', priority: 0.7 },
-    { url: `${BASE}/articles`, lastModified: now, changeFrequency: 'daily', priority: 0.7 },
-    { url: `${BASE}/feed`, lastModified: now, changeFrequency: 'hourly', priority: 0.6 },
-    { url: `${BASE}/login`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
-    { url: `${BASE}/signup`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
+    { url: BASE,                      lastModified: now, changeFrequency: 'daily',   priority: 1.0 },
+    { url: `${BASE}/marketplace`,     lastModified: now, changeFrequency: 'daily',   priority: 0.9 },
+    { url: `${BASE}/services`,        lastModified: now, changeFrequency: 'daily',   priority: 0.9 },
+    { url: `${BASE}/products`,        lastModified: now, changeFrequency: 'daily',   priority: 0.9 },
+    { url: `${BASE}/jobs`,            lastModified: now, changeFrequency: 'daily',   priority: 0.9 },
+    { url: `${BASE}/events`,          lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
+    { url: `${BASE}/community`,       lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
+    { url: `${BASE}/communities`,     lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
+    { url: `${BASE}/members`,         lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
+    { url: `${BASE}/organisations`,   lastModified: now, changeFrequency: 'weekly',  priority: 0.7 },
+    { url: `${BASE}/browse`,          lastModified: now, changeFrequency: 'daily',   priority: 0.7 },
+    { url: `${BASE}/articles`,        lastModified: now, changeFrequency: 'daily',   priority: 0.7 },
+    { url: `${BASE}/feed`,            lastModified: now, changeFrequency: 'hourly',  priority: 0.6 },
+    { url: `${BASE}/impact`,          lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${BASE}/about`,           lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${BASE}/blog`,            lastModified: now, changeFrequency: 'weekly',  priority: 0.5 },
+    { url: `${BASE}/login`,           lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
+    { url: `${BASE}/register`,        lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
   ]
 
-  // Dynamic pages — listings
+  // Dynamic pages — listings, articles, events
   let listingUrls: MetadataRoute.Sitemap = []
   let articleUrls: MetadataRoute.Sitemap = []
   let eventUrls: MetadataRoute.Sitemap = []

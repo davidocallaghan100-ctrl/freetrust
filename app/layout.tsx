@@ -24,14 +24,33 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://freetrust.co'
 // Slack etc. all resolve cleanly.
 const OG_IMAGE = `${BASE_URL}/og-image.png`
 
+// Default site-wide metadata. Individual pages override the title,
+// description, and OG tags as needed (see app/page.tsx for the
+// landing-page-specific metadata and app/about/page.tsx for the
+// about page). The title template places the page title ahead of
+// " | FreeTrust" on every sub-page.
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: 'FreeTrust – Trust-Based Social Commerce',
+    default: "FreeTrust — Ireland's Community Economy Marketplace",
     template: '%s | FreeTrust',
   },
-  description: 'Buy, sell and collaborate with people you can trust. Join the FreeTrust community.',
-  keywords: ['social commerce', 'trust economy', 'marketplace', 'freelance', 'services', 'products', 'community'],
+  description:
+    "FreeTrust is Ireland's community economy marketplace for freelancers, small businesses, community organisers, and nonprofits. Earn TrustCoins (₮) for every contribution.",
+  keywords: [
+    'FreeTrust',
+    'community marketplace',
+    'TrustCoins',
+    'Ireland',
+    'freelancers',
+    'services',
+    'jobs',
+    'events',
+    'communities',
+    'nonprofits',
+    'sustainability fund',
+    'social commerce',
+  ],
   authors: [{ name: 'FreeTrust' }],
   creator: 'FreeTrust',
   publisher: 'FreeTrust',
@@ -42,17 +61,19 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: 'website',
-    locale: 'en_GB',
+    locale: 'en_IE',
     url: BASE_URL,
     siteName: 'FreeTrust',
-    title: 'FreeTrust – Trust-Based Social Commerce',
-    description: 'Buy, sell and collaborate with people you can trust. Join the FreeTrust community.',
-    images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: 'FreeTrust – Trust-Based Social Commerce' }],
+    title: "FreeTrust — Ireland's Community Economy Marketplace",
+    description:
+      'Buy, sell, hire, and collaborate. Earn TrustCoins (₮) for every contribution — lower fees, better visibility, support community impact.',
+    images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: "FreeTrust — Ireland's Community Economy Marketplace" }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'FreeTrust – Trust-Based Social Commerce',
-    description: 'Buy, sell and collaborate with people you can trust. Join the FreeTrust community.',
+    title: "FreeTrust — Ireland's Community Economy Marketplace",
+    description:
+      'Earn TrustCoins (₮) for every contribution. Ireland\'s community economy marketplace.',
     images: [OG_IMAGE],
     creator: '@freetrust',
   },
