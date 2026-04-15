@@ -91,31 +91,59 @@ export default function MessagesPage() {
     })
   }, [router])
 
-  const loadConversations = async (uid: string) => {
-    const supabase = createClient()
-    try {
-      const { data } = await supabase
-        .from('conversation_participants')
-        .select(`
-          conversation_id,
-          conversations(id, updated_at, last_message_at),
-          profile:profiles(id, full_name, avatar_url)
-        `)
-        .eq('user_id', uid)
-        .order('conversation_id', { ascending: false })
+  // Refresh the conversation list whenever the tab comes back into
+  // view so unread counts + last-message previews stay current.
+  // Without this, a user who backgrounds the app and comes back
+  // sees stale data until they navigate away and return.
+  useEffect(() => {
+    if (!userId) return
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void loadConversations(userId)
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [userId])
 
-      if (data && data.length > 0) {
-        // Build conversation items from real data
-        const items: ConversationItem[] = data.map((row: Record<string, unknown>) => ({
-          id: (row.conversations as Record<string, unknown>)?.id as string,
-          updated_at: ((row.conversations as Record<string, unknown>)?.updated_at as string) || new Date().toISOString(),
-          unread_count: 0,
-          other_user: row.profile as Profile,
-          last_message: null,
-        })).filter(item => item.id)
-        if (items.length > 0) setConversations(items)
+  // Fetch the conversation list via the /api/messages route, which
+  // already returns the correct shape (other_user profile, unread
+  // count, last message preview) sorted by last_message_at desc.
+  // Previously this page queried conversation_participants directly
+  // from the browser, which silently failed due to an infinite-
+  // recursion RLS policy on that table — the catch { /* use mock */ }
+  // at the end hid the error and the UI rendered an empty list.
+  // The RLS is fixed by 20260415000009_messaging_rls.sql, and this
+  // API-route path is kept as the canonical fetch so all enrichment
+  // (last message, unread count, sort order) lives on the server.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const loadConversations = async (_uid: string) => {
+    try {
+      const res = await fetch('/api/messages', { cache: 'no-store' })
+      if (!res.ok) {
+        console.error('[messages] loadConversations failed:', res.status)
+        return
       }
-    } catch { /* use mock */ }
+      const data = await res.json() as {
+        conversations: Array<{
+          id:           string
+          updated_at:   string
+          last_message: Message | null
+          unread_count: number
+          other_user:   Profile | null
+        }>
+      }
+      const items: ConversationItem[] = (data.conversations ?? [])
+        .filter(c => !!c.other_user)
+        .map(c => ({
+          id:           c.id,
+          updated_at:   c.updated_at,
+          last_message: c.last_message,
+          unread_count: c.unread_count ?? 0,
+          other_user:   c.other_user as Profile,
+        }))
+      setConversations(items)
+    } catch (err) {
+      console.error('[messages] loadConversations threw:', err)
+    }
   }
 
   const loadMessages = useCallback(async (convId: string) => {

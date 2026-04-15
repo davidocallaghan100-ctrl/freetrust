@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Avatar from '@/components/Avatar'
@@ -140,6 +140,7 @@ function calcCompleteness(profile: Profile | null, email: string | null): { pct:
 export default function ProfilePage() {
   const supabase = createClient()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const viewingId = searchParams.get('id') // null = own profile
 
   const [user, setUser] = useState<User | null>(null)
@@ -170,6 +171,10 @@ export default function ProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
   const [followerCount, setFollowerCount] = useState(0)
+  // Loading state for the "Message" button on other people's profiles.
+  // Held here (not next to the button markup) so the click handler can
+  // be a plain async function rather than a local closure.
+  const [messageLoading, setMessageLoading] = useState(false)
 
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
@@ -675,6 +680,37 @@ export default function ProfilePage() {
     }
   }
 
+  // Start (or resume) a 1:1 conversation with the profile owner.
+  // Calls POST /api/conversations which does the find-or-create
+  // dedup so clicking Message twice never creates a second thread,
+  // then navigates to the dedicated thread page. Failures surface
+  // via the existing showToast() helper.
+  const handleMessage = async () => {
+    if (!user || messageLoading || !viewingId) return
+    setMessageLoading(true)
+    try {
+      const res = await fetch('/api/conversations', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ recipientId: viewingId }),
+      })
+      const data = await res.json().catch(() => null) as
+        | { conversationId?: string; error?: string }
+        | null
+      if (!res.ok || !data?.conversationId) {
+        console.error('[profile] start conversation failed:', data)
+        showToast('Could not start conversation, please try again')
+        return
+      }
+      router.push(`/messages/${data.conversationId}`)
+    } catch (err) {
+      console.error('[profile] start conversation threw:', err)
+      showToast('Could not start conversation, please try again')
+    } finally {
+      setMessageLoading(false)
+    }
+  }
+
   const handleUnfollow = async () => {
     if (!user || followLoading || !viewingId) return
     setFollowLoading(true)
@@ -859,7 +895,7 @@ export default function ProfilePage() {
                 {editing ? 'Cancel' : '✏️ Edit Profile'}
               </button>
             ) : (
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                 {user && (
                   <button
                     onClick={isFollowing ? handleUnfollow : handleFollow}
@@ -878,6 +914,49 @@ export default function ProfilePage() {
                     }}
                   >
                     {followLoading ? '…' : isFollowing ? 'Unfollow' : '+ Follow'}
+                  </button>
+                )}
+                {user && (
+                  <button
+                    onClick={handleMessage}
+                    disabled={messageLoading}
+                    aria-label="Message this member"
+                    style={{
+                      display:        'inline-flex',
+                      alignItems:     'center',
+                      gap:            '0.4rem',
+                      background:     'rgba(52,211,153,0.12)',
+                      border:         '1px solid rgba(52,211,153,0.35)',
+                      borderRadius:   8,
+                      padding:        '0.45rem 1rem',
+                      fontSize:       '0.82rem',
+                      fontWeight:     700,
+                      color:          '#34d399',
+                      cursor:         messageLoading ? 'default' : 'pointer',
+                      opacity:        messageLoading ? 0.6 : 1,
+                      fontFamily:     'inherit',
+                      transition:     'all 0.15s',
+                    }}
+                  >
+                    {messageLoading ? (
+                      <>
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            width:        12,
+                            height:       12,
+                            border:       '2px solid rgba(52,211,153,0.35)',
+                            borderTopColor: '#34d399',
+                            borderRadius: '50%',
+                            animation:    'spin 0.7s linear infinite',
+                          }}
+                        />
+                        <span>Starting…</span>
+                        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+                      </>
+                    ) : (
+                      <>💬 Message</>
+                    )}
                   </button>
                 )}
                 <Link href="/members" style={{ fontSize: '0.82rem', color: '#64748b', textDecoration: 'none', border: '1px solid rgba(100,116,139,0.25)', borderRadius: 8, padding: '0.45rem 1rem' }}>
