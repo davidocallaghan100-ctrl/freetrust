@@ -2,8 +2,19 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 
-// POST /api/auth/signup-bonus — issue ₮25 welcome bonus (idempotent)
+// POST /api/auth/signup-bonus — issue the welcome bonus (idempotent)
+//
+// BUG FIX (2026-04-15): the amount was hardcoded to `25` in the RPC
+// call + the direct-insert fallback + the response messages. The
+// product spec (and lib/trust/rewards.ts) has had
+// SIGNUP_BONUS = 200 since the Cliff audit commit, but the signup
+// route was never migrated — so every new user got 1/8th of the
+// advertised welcome bonus. Evidence: homepage hero said "₮200 on
+// signup" but existing members had ₮25 balances. Now reads the
+// constant from lib/trust/rewards.ts so there is a single source
+// of truth and the two numbers can never drift again.
 //
 // Auth is done via the user-session client (so we know WHICH user is
 // requesting the bonus), but every write uses the admin (service-role)
@@ -63,12 +74,13 @@ export async function POST() {
     // owner's privileges and writes to both trust_ledger and
     // trust_balances atomically. Defined in
     // supabase/migrations/20260413000004_trust_welcome_grant.sql.
+    const bonusAmount = TRUST_REWARDS.SIGNUP_BONUS
     const { error: rpcError } = await admin.rpc('issue_trust', {
       p_user_id: user.id,
-      p_amount: 25,
-      p_type: 'signup_bonus',
+      p_amount: bonusAmount,
+      p_type: TRUST_LEDGER_TYPES.SIGNUP_BONUS,
       p_ref: null,
-      p_desc: 'Welcome to FreeTrust! Here are your first ₮25 Trust tokens.',
+      p_desc: `Welcome to FreeTrust! Here are your first ₮${bonusAmount} Trust tokens.`,
     })
 
     if (!rpcError) {
@@ -82,9 +94,9 @@ export async function POST() {
 
       return NextResponse.json({
         issued: true,
-        balance: balanceData?.balance ?? 25,
-        lifetime: balanceData?.lifetime ?? 25,
-        message: '₮25 Trust awarded!',
+        balance: balanceData?.balance ?? bonusAmount,
+        lifetime: balanceData?.lifetime ?? bonusAmount,
+        message: `₮${bonusAmount} Trust awarded!`,
       })
     }
 
@@ -102,7 +114,7 @@ export async function POST() {
     // RLS so this works even if the user-level INSERT policy is missing.
     const { error: balanceInsertErr } = await admin
       .from('trust_balances')
-      .insert({ user_id: user.id, balance: 25, lifetime: 25 })
+      .insert({ user_id: user.id, balance: bonusAmount, lifetime: bonusAmount })
 
     if (balanceInsertErr) {
       console.error('[POST /api/auth/signup-bonus] direct balance insert error:', {
@@ -132,9 +144,9 @@ export async function POST() {
     // don't fail the response.
     const { error: ledgerErr } = await admin.from('trust_ledger').insert({
       user_id: user.id,
-      amount: 25,
-      type: 'signup_bonus',
-      description: 'Welcome to FreeTrust! Here are your first ₮25 Trust tokens.',
+      amount: bonusAmount,
+      type: TRUST_LEDGER_TYPES.SIGNUP_BONUS,
+      description: `Welcome to FreeTrust! Here are your first ₮${bonusAmount} Trust tokens.`,
     })
     if (ledgerErr) {
       console.error('[POST /api/auth/signup-bonus] ledger insert error (non-fatal):', ledgerErr.message)
@@ -142,9 +154,9 @@ export async function POST() {
 
     return NextResponse.json({
       issued: true,
-      balance: 25,
-      lifetime: 25,
-      message: '₮25 Trust awarded!',
+      balance: bonusAmount,
+      lifetime: bonusAmount,
+      message: `₮${bonusAmount} Trust awarded!`,
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)

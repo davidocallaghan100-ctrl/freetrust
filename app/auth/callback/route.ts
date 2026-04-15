@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { sendWelcomeEmail } from '@/lib/resend'
 import { sendEmail } from '@/lib/email/send'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 
 // This route handles:
 // 1. Email confirmation links
@@ -74,21 +75,27 @@ export async function GET(request: NextRequest) {
               console.error('[auth/callback] Profile metadata sync error:', err)
             }
 
-            // Award ₮25 founding member signup bonus (idempotent — only
+            // Award the founding member signup bonus (idempotent — only
             // reached when no trust_balances row exists yet, confirmed by
             // the isNewUser check above).
+            //
+            // BUG FIX (2026-04-15): was hardcoded to ₮25 but the product
+            // spec and lib/trust/rewards.ts have SIGNUP_BONUS = 200. Now
+            // reads from the central constant so there is a single
+            // source of truth and the two can't drift again.
             //
             // NEVER silently swallow errors here — the original bug burned
             // production signups for months because the catch block was
             // empty. Every failure path now logs the full Supabase error
             // object so the next investigation can see exactly what broke.
+            const bonusAmount = TRUST_REWARDS.SIGNUP_BONUS
             try {
               const { error: rpcError } = await admin.rpc('issue_trust', {
                 p_user_id: user.id,
-                p_amount: 25,
-                p_type: 'signup_bonus',
+                p_amount: bonusAmount,
+                p_type: TRUST_LEDGER_TYPES.SIGNUP_BONUS,
                 p_ref: null,
-                p_desc: 'Welcome to FreeTrust! Founding Member bonus.',
+                p_desc: `Welcome to FreeTrust! Founding Member bonus — ₮${bonusAmount}.`,
               })
               if (rpcError) {
                 console.error('[auth/callback] issue_trust RPC failed, falling back to direct insert:', {
@@ -103,7 +110,7 @@ export async function GET(request: NextRequest) {
                 // and flag a ledger failure as non-fatal.
                 const { error: balanceErr } = await admin
                   .from('trust_balances')
-                  .insert({ user_id: user.id, balance: 25, lifetime: 25 })
+                  .insert({ user_id: user.id, balance: bonusAmount, lifetime: bonusAmount })
                 if (balanceErr) {
                   console.error('[auth/callback] trust_balances insert failed:', {
                     code: balanceErr.code,
@@ -114,9 +121,9 @@ export async function GET(request: NextRequest) {
                 } else {
                   const { error: ledgerErr } = await admin.from('trust_ledger').insert({
                     user_id: user.id,
-                    amount: 25,
-                    type: 'signup_bonus',
-                    description: 'Welcome to FreeTrust! Founding Member bonus.',
+                    amount: bonusAmount,
+                    type: TRUST_LEDGER_TYPES.SIGNUP_BONUS,
+                    description: `Welcome to FreeTrust! Founding Member bonus — ₮${bonusAmount}.`,
                   })
                   if (ledgerErr) {
                     console.error('[auth/callback] trust_ledger insert failed (non-fatal):', ledgerErr.message)

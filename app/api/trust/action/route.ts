@@ -30,7 +30,11 @@ const TRUST_ACTIONS: Record<string, {
   cooldown_seconds?: number
   client_callable?: boolean
 }> = {
-  signup_bonus:      { amount: 25,  label: 'Welcome bonus',                 client_callable: false },
+  // SIGNUP_BONUS is authoritatively 200 per lib/trust/rewards.ts.
+  // Hardcoded value kept as a fallback so this catalogue is readable
+  // without an import, but the signup path itself uses the constant
+  // directly in /api/auth/signup-bonus/route.ts.
+  signup_bonus:      { amount: 200, label: 'Welcome bonus',                 client_callable: false },
   complete_profile:  { amount: 10,  label: 'Profile completed to 100%' },
   first_sale:        { amount: 50,  label: 'First completed transaction' },
   receive_review:    { amount: 15,  label: 'Received a review',  repeatable: true, client_callable: false },
