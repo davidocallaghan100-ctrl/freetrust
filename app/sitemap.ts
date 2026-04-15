@@ -10,22 +10,39 @@ const BASE = process.env.NEXT_PUBLIC_BASE_URL || 'https://freetrust.co'
 
 export const dynamic = 'force-dynamic'
 
+// Priority + changeFrequency rationale:
+//   / (landing)                   1.0 daily    — most important page
+//   /marketplace /services /jobs  0.9 daily    — primary conversion surfaces
+//   /events /communities /members 0.8 weekly   — discovery surfaces
+//   /about /impact                0.6 monthly  — static-ish info pages
+//   /articles /feed               0.7 daily    — fresh content
+//   /browse /community            0.7 daily    — legacy aliases
+//   /login /signup                0.3 monthly  — terminal pages
+//
+// Everything else is dynamic (listings, articles, events, organisations)
+// and gets appended below with per-row lastModified timestamps from
+// Supabase.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date()
 
   // Static pages
   const staticPages: MetadataRoute.Sitemap = [
-    { url: BASE, lastModified: now, changeFrequency: 'daily', priority: 1 },
-    { url: `${BASE}/services`, lastModified: now, changeFrequency: 'hourly', priority: 0.9 },
-    { url: `${BASE}/products`, lastModified: now, changeFrequency: 'hourly', priority: 0.9 },
-    { url: `${BASE}/jobs`, lastModified: now, changeFrequency: 'hourly', priority: 0.8 },
-    { url: `${BASE}/events`, lastModified: now, changeFrequency: 'daily', priority: 0.8 },
-    { url: `${BASE}/browse`, lastModified: now, changeFrequency: 'daily', priority: 0.7 },
-    { url: `${BASE}/community`, lastModified: now, changeFrequency: 'daily', priority: 0.7 },
-    { url: `${BASE}/articles`, lastModified: now, changeFrequency: 'daily', priority: 0.7 },
-    { url: `${BASE}/feed`, lastModified: now, changeFrequency: 'hourly', priority: 0.6 },
-    { url: `${BASE}/login`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
-    { url: `${BASE}/signup`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
+    { url: BASE,                  lastModified: now, changeFrequency: 'daily',   priority: 1.0 },
+    { url: `${BASE}/marketplace`, lastModified: now, changeFrequency: 'daily',   priority: 0.9 },
+    { url: `${BASE}/services`,    lastModified: now, changeFrequency: 'daily',   priority: 0.9 },
+    { url: `${BASE}/products`,    lastModified: now, changeFrequency: 'daily',   priority: 0.9 },
+    { url: `${BASE}/jobs`,        lastModified: now, changeFrequency: 'daily',   priority: 0.9 },
+    { url: `${BASE}/events`,      lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
+    { url: `${BASE}/communities`, lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
+    { url: `${BASE}/members`,     lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
+    { url: `${BASE}/articles`,    lastModified: now, changeFrequency: 'daily',   priority: 0.7 },
+    { url: `${BASE}/feed`,        lastModified: now, changeFrequency: 'daily',   priority: 0.7 },
+    { url: `${BASE}/browse`,      lastModified: now, changeFrequency: 'daily',   priority: 0.7 },
+    { url: `${BASE}/community`,   lastModified: now, changeFrequency: 'daily',   priority: 0.7 },
+    { url: `${BASE}/about`,       lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${BASE}/impact`,      lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${BASE}/login`,       lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
+    { url: `${BASE}/signup`,      lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
   ]
 
   // Dynamic pages — listings
