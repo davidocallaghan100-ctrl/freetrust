@@ -57,6 +57,18 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      case "payout.paid": {
+        const payout = event.data.object as Stripe.Payout;
+        await handlePayoutPaid(payout, event.account ?? null);
+        break;
+      }
+
+      case "payout.failed": {
+        const payout = event.data.object as Stripe.Payout;
+        await handlePayoutFailed(payout, event.account ?? null);
+        break;
+      }
+
       case "account.updated": {
         const account = event.data.object as Stripe.Account;
         await handleAccountUpdated(account);
@@ -334,9 +346,184 @@ async function handleTransferCreated(transfer: Stripe.Transfer) {
     id: transfer.id,
     amount: transfer.amount,
     destination: transfer.destination,
+    metadata: transfer.metadata,
   });
 
-  // TODO: Update escrow status in your DB to "released".
-  // Notify buyer and seller that funds have been released.
+  // Withdrawals from /api/stripe/payout tag the transfer with
+  // metadata.withdrawal_id. If this transfer is one of ours, make
+  // sure the withdrawal row's stripe_transfer_id is set in case the
+  // POST handler updated it after the webhook arrived (rare race).
+  const withdrawalId = transfer.metadata?.withdrawal_id;
+  if (withdrawalId) {
+    try {
+      const supabase = createAdminClient();
+      const { error } = await supabase
+        .from('withdrawals')
+        .update({
+          stripe_transfer_id: transfer.id,
+          status: 'processing',
+        })
+        .eq('id', withdrawalId)
+        .in('status', ['pending', 'processing']);
+      if (error) {
+        console.error('[Webhook] handleTransferCreated: failed to update withdrawal', error);
+      } else {
+        console.log(`[Webhook] Withdrawal marked processing: id=${withdrawalId}`);
+      }
+    } catch (err) {
+      console.error('[Webhook] handleTransferCreated: unexpected error', err);
+    }
+  }
+}
+
+// ── payout.paid — money has arrived in the user's bank ──────────────────────
+// Fires on the connected account, so event.account is the user's
+// stripe_account_id. The Payout was created automatically by Stripe
+// as part of the connected account's payout schedule (Express
+// default: daily). We match it back to the originating withdrawal
+// row via the most recent processing/pending row for that
+// stripe_account_id, since Stripe doesn't propagate metadata from
+// our Transfer to the auto-generated Payout.
+async function handlePayoutPaid(payout: Stripe.Payout, connectedAccountId: string | null) {
+  console.log("[Webhook] payout.paid:", {
+    id: payout.id,
+    amount: payout.amount,
+    arrival_date: payout.arrival_date,
+    connectedAccountId,
+  });
+
+  if (!connectedAccountId) {
+    console.warn('[Webhook] payout.paid missing event.account, skipping');
+    return;
+  }
+
+  try {
+    const supabase = createAdminClient();
+
+    // Find the most recent in-flight withdrawal for this connected
+    // account whose amount matches the payout (defensive — multiple
+    // simultaneous withdrawals are rare but possible). If we can't
+    // pin it to a unique row, fall back to the oldest pending one.
+    const { data: candidates, error: lookupErr } = await supabase
+      .from('withdrawals')
+      .select('id, amount_cents, status, user_id')
+      .eq('stripe_account_id', connectedAccountId)
+      .in('status', ['pending', 'processing'])
+      .order('created_at', { ascending: true });
+
+    if (lookupErr) {
+      console.error('[Webhook] payout.paid lookup failed:', lookupErr);
+      return;
+    }
+    if (!candidates || candidates.length === 0) {
+      console.log(`[Webhook] payout.paid no matching withdrawal for account=${connectedAccountId}`);
+      return;
+    }
+
+    const exactMatch = candidates.find((w) => w.amount_cents === payout.amount);
+    const target = exactMatch ?? candidates[0];
+
+    const { error: updateErr } = await supabase
+      .from('withdrawals')
+      .update({
+        status: 'paid',
+        stripe_payout_id: payout.id,
+        arrival_estimate_epoch: payout.arrival_date,
+      })
+      .eq('id', target.id);
+
+    if (updateErr) {
+      console.error('[Webhook] payout.paid update failed:', updateErr);
+      return;
+    }
+
+    console.log(
+      `[Webhook] Withdrawal marked paid: id=${target.id} payout_id=${payout.id}`
+    );
+
+    // Notify the user that their withdrawal has landed.
+    await supabase.from('notifications').insert({
+      user_id: target.user_id,
+      type: 'wallet',
+      title: '✅ Withdrawal complete',
+      body: `€${(target.amount_cents / 100).toFixed(2)} has arrived in your bank account.`,
+      link: '/wallet',
+    });
+  } catch (err) {
+    console.error('[Webhook] handlePayoutPaid error:', err);
+  }
+}
+
+// ── payout.failed — money never arrived in the user's bank ──────────────────
+// Same connected-account matching as handlePayoutPaid. We mark the
+// withdrawal failed and surface Stripe's failure_message to the user
+// so they know whether to retry, fix their bank details, etc.
+async function handlePayoutFailed(payout: Stripe.Payout, connectedAccountId: string | null) {
+  console.error("[Webhook] payout.failed:", {
+    id: payout.id,
+    amount: payout.amount,
+    failure_code: payout.failure_code,
+    failure_message: payout.failure_message,
+    connectedAccountId,
+  });
+
+  if (!connectedAccountId) {
+    console.warn('[Webhook] payout.failed missing event.account, skipping');
+    return;
+  }
+
+  try {
+    const supabase = createAdminClient();
+
+    const { data: candidates, error: lookupErr } = await supabase
+      .from('withdrawals')
+      .select('id, amount_cents, status, user_id')
+      .eq('stripe_account_id', connectedAccountId)
+      .in('status', ['pending', 'processing'])
+      .order('created_at', { ascending: true });
+
+    if (lookupErr) {
+      console.error('[Webhook] payout.failed lookup failed:', lookupErr);
+      return;
+    }
+    if (!candidates || candidates.length === 0) {
+      console.log(`[Webhook] payout.failed no matching withdrawal for account=${connectedAccountId}`);
+      return;
+    }
+
+    const exactMatch = candidates.find((w) => w.amount_cents === payout.amount);
+    const target = exactMatch ?? candidates[0];
+
+    const failureReason =
+      payout.failure_message ?? payout.failure_code ?? 'Stripe payout failed';
+
+    const { error: updateErr } = await supabase
+      .from('withdrawals')
+      .update({
+        status: 'failed',
+        stripe_payout_id: payout.id,
+        failure_reason: failureReason,
+      })
+      .eq('id', target.id);
+
+    if (updateErr) {
+      console.error('[Webhook] payout.failed update failed:', updateErr);
+      return;
+    }
+
+    console.log(
+      `[Webhook] Withdrawal marked failed: id=${target.id} payout_id=${payout.id} reason=${failureReason}`
+    );
+
+    await supabase.from('notifications').insert({
+      user_id: target.user_id,
+      type: 'wallet',
+      title: '⚠️ Withdrawal failed',
+      body: `Your €${(target.amount_cents / 100).toFixed(2)} withdrawal could not be paid out: ${failureReason}. Funds are back in your wallet.`,
+      link: '/wallet',
+    });
+  } catch (err) {
+    console.error('[Webhook] handlePayoutFailed error:', err);
+  }
 }
 

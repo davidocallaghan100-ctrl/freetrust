@@ -15,7 +15,7 @@ export async function GET() {
     const admin = createAdminClient()
 
     // ── Trust balance ────────────────────────────────────────────────────────
-    const [trustBalRes, trustLedgerRes, ordersEarnedRes, ordersSpentRes, depositsRes, sentTransfersRes, receivedTransfersRes] = await Promise.all([
+    const [trustBalRes, trustLedgerRes, ordersEarnedRes, ordersSpentRes, depositsRes, sentTransfersRes, receivedTransfersRes, withdrawalsRes] = await Promise.all([
       supabase
         .from('trust_balances')
         .select('balance, lifetime, updated_at')
@@ -65,6 +65,17 @@ export async function GET() {
         .select('id, amount, currency, note, status, created_at, sender_id')
         .eq('recipient_id', user.id)
         .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(100),
+      // Withdrawals — both in-flight ('pending'/'processing') and
+      // completed ('paid') count against the available balance so a
+      // user can't double-withdraw funds that are already in transit.
+      // Failed/cancelled rows are excluded so the funds are returned
+      // to the available pool.
+      admin
+        .from('withdrawals')
+        .select('id, amount_cents, status, failure_reason, created_at')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(100),
     ])
@@ -186,6 +197,34 @@ export async function GET() {
       })
     }
 
+    // Withdrawals — render every non-cancelled row so the user sees
+    // their payout history in the wallet feed. Failed rows show with
+    // the Stripe error message inline so the user knows why a payout
+    // didn't land.
+    for (const w of withdrawalsRes.data ?? []) {
+      const wRow = w as { id: string; amount_cents: number; status: string; failure_reason: string | null; created_at: string }
+      if (wRow.status === 'cancelled') continue
+      const inFlight = wRow.status === 'pending' || wRow.status === 'processing'
+      const failed = wRow.status === 'failed'
+      const baseDesc = failed
+        ? `Withdrawal failed${wRow.failure_reason ? ` — ${wRow.failure_reason}` : ''}`
+        : inFlight
+          ? 'Withdrawal in progress — funds en route to your bank'
+          : 'Withdrawn to bank account'
+      txList.push({
+        id: `withdrawal-${wRow.id}`,
+        category: 'withdrawn',
+        // Negative for both in-flight and paid — both reduce available
+        // balance. Failed entries show as 0 so they don't visually
+        // misrepresent a deduction that didn't actually happen.
+        amount: failed ? 0 : -(wRow.amount_cents / 100),
+        currency: 'EUR',
+        description: baseDesc,
+        date: wRow.created_at,
+        status: wRow.status,
+      })
+    }
+
     // Trust ledger as trust transactions
     for (const entry of trustLedger) {
       txList.push({
@@ -225,13 +264,23 @@ export async function GET() {
       .filter((t: { currency: string }) => t.currency === 'EUR')
       .reduce((s: number, t: { amount: number }) => s + Number(t.amount), 0)
 
+    // Withdrawals: pending / processing / paid all reduce available
+    // balance (in-flight money is reserved). Failed and cancelled
+    // withdrawals are excluded so their funds return to the pool.
+    const withdrawnEur = (withdrawalsRes.data ?? [])
+      .filter((w: { status: string }) =>
+        w.status === 'pending' || w.status === 'processing' || w.status === 'paid'
+      )
+      .reduce((s: number, w: { amount_cents: number }) => s + (w.amount_cents / 100), 0)
+
     return NextResponse.json({
       money: {
-        available: totalDeposited + completedEarned - totalSpent - eurSent + eurReceived,
+        available: totalDeposited + completedEarned - totalSpent - eurSent + eurReceived - withdrawnEur,
         pendingPayout: pendingEarned,
         totalEarned: completedEarned,
         totalSpent,
         totalDeposited,
+        totalWithdrawn: withdrawnEur,
       },
       trust: {
         balance: trustBalance,

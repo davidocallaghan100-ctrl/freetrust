@@ -26,6 +26,7 @@ interface WalletData {
     totalEarned: number
     totalSpent: number
     totalDeposited: number
+    totalWithdrawn?: number
   }
   trust: {
     balance: number
@@ -33,6 +34,17 @@ interface WalletData {
     updatedAt: string | null
   }
   transactions: Tx[]
+}
+
+// Status payload returned by GET /api/stripe/connect when the user
+// has finished onboarding. Used to gate the WithdrawModal — until
+// payouts_enabled is true, the modal renders an "onboarding incomplete"
+// CTA instead of the amount input.
+interface ConnectStatus {
+  onboarded: boolean
+  charges_enabled?: boolean
+  payouts_enabled?: boolean
+  account_id?: string
 }
 
 interface TrustAction {
@@ -437,6 +449,334 @@ function TransferModal({ walletData, onClose, onSuccess }: { walletData: WalletD
   )
 }
 
+// ── Withdraw modal ───────────────────────────────────────────────────────────
+// Replaces the old "redirect to Stripe Express dashboard" flow. The
+// user enters an amount, the server validates against fresh Stripe
+// account state + a server-side balance recheck, and on success a
+// Stripe transfer is created and the modal shows a success state with
+// an estimated arrival time.
+//
+// The modal handles three Connect onboarding states up-front before
+// even rendering the amount input:
+//
+//   1. status='loading'     — querying GET /api/stripe/connect
+//   2. status='not_onboarded' — Stripe says charges_enabled or
+//                              payouts_enabled is false; show a CTA
+//                              that redirects the user to start /
+//                              finish onboarding (uses the same
+//                              endpoint to mint a fresh accountLink)
+//   3. status='ready'       — payouts_enabled === true; render the
+//                              amount input
+//
+// Errors are NEVER swallowed: every failure path renders a red error
+// banner inside the modal with the exact server message.
+const WITHDRAW_PRESETS = [1000, 2500, 5000, 10000, 25000] // cents
+
+function WithdrawModal({ walletData, onClose, onSuccess }: { walletData: WalletData | null; onClose: () => void; onSuccess: (msg: string) => void }) {
+  const [status, setStatus]               = useState<'loading' | 'not_onboarded' | 'ready'>('loading')
+  const [connectInfo, setConnectInfo]     = useState<ConnectStatus | null>(null)
+  const [onboardingUrl, setOnboardingUrl] = useState<string | null>(null)
+  const [statusError, setStatusError]     = useState<string | null>(null)
+  const [selected, setSelected]           = useState<number | null>(null)
+  const [custom, setCustom]               = useState('')
+  const [loading, setLoading]             = useState(false)
+  const [error, setError]                 = useState<string | null>(null)
+
+  const availableEur   = Math.max(walletData?.money.available ?? 0, 0)
+  const availableCents = Math.floor(availableEur * 100)
+  const amountCents    = selected ?? (custom ? Math.round(parseFloat(custom) * 100) : null)
+
+  // Probe Stripe Connect status as soon as the modal opens so we can
+  // either render the amount input or redirect to onboarding without
+  // making the user click "Withdraw" twice.
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      try {
+        const res = await fetch('/api/stripe/connect', { cache: 'no-store' })
+        const d = await res.json() as {
+          url?: string
+          onboarded?: boolean
+          charges_enabled?: boolean
+          payouts_enabled?: boolean
+          account_id?: string
+          error?: string
+          code?: string
+        }
+        if (cancelled) return
+        if (!res.ok) {
+          setStatusError(d.error ?? `Could not check Stripe status (HTTP ${res.status})`)
+          setStatus('not_onboarded')
+          return
+        }
+        if (d.url) {
+          setOnboardingUrl(d.url)
+          setStatus('not_onboarded')
+          return
+        }
+        if (d.onboarded && d.payouts_enabled) {
+          setConnectInfo({
+            onboarded: true,
+            charges_enabled: d.charges_enabled,
+            payouts_enabled: d.payouts_enabled,
+            account_id: d.account_id,
+          })
+          setStatus('ready')
+          return
+        }
+        // Account exists but isn't fully enabled (e.g. payouts_enabled
+        // is false because identity verification is incomplete). Tell
+        // the user and offer the onboarding link.
+        setConnectInfo({
+          onboarded: Boolean(d.onboarded),
+          charges_enabled: d.charges_enabled,
+          payouts_enabled: d.payouts_enabled,
+          account_id: d.account_id,
+        })
+        setStatus('not_onboarded')
+      } catch (err) {
+        if (cancelled) return
+        const msg = err instanceof Error ? err.message : String(err)
+        setStatusError(`Network error: ${msg}`)
+        setStatus('not_onboarded')
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [])
+
+  const handleWithdraw = async () => {
+    setError(null)
+    if (!amountCents || amountCents < 500) {
+      setError('Minimum withdrawal is €5.00')
+      return
+    }
+    if (amountCents > availableCents) {
+      setError(`You only have €${availableEur.toFixed(2)} available`)
+      return
+    }
+    setLoading(true)
+    try {
+      const res = await fetch('/api/stripe/payout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount_cents: amountCents }),
+      })
+      const data = await res.json() as {
+        success?: boolean
+        withdrawal_id?: string
+        amount_cents?: number
+        arrival_estimate?: string
+        error?: string
+        code?: string
+        detail?: string
+      }
+      if (!res.ok || !data.success) {
+        // Surface the exact server error — never a generic message.
+        // For Stripe-side errors include the underlying detail too.
+        const baseMsg = data.error ?? `Withdrawal failed (HTTP ${res.status})`
+        const msg = data.detail ? `${baseMsg} (${data.detail})` : baseMsg
+        console.error('[wallet] withdrawal failed', { status: res.status, ...data })
+        setError(msg)
+        setLoading(false)
+        return
+      }
+      const eur = ((data.amount_cents ?? amountCents) / 100).toFixed(2)
+      onSuccess(`✅ €${eur} on its way to your bank — arrives in ${data.arrival_estimate ?? '1–2 business days'}`)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[wallet] withdrawal threw', msg)
+      setError(`Network error: ${msg}`)
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: '480px', boxShadow: '0 -8px 40px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <div>
+            <div style={{ fontSize: '17px', fontWeight: 800, color: '#f1f5f9' }}>💸 Withdraw to Bank</div>
+            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>Powered by Stripe Connect</div>
+          </div>
+          <button onClick={onClose} style={{ background: '#0f172a', border: 'none', borderRadius: '50%', width: '32px', height: '32px', color: '#64748b', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+        </div>
+
+        {/* Loading state */}
+        {status === 'loading' && (
+          <div style={{ padding: '40px 20px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '3px solid #1e293b', borderTopColor: '#38bdf8', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
+            Checking your bank account…
+          </div>
+        )}
+
+        {/* Not onboarded — show CTA to finish setup */}
+        {status === 'not_onboarded' && (
+          <div>
+            <div style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: '12px', padding: '16px', marginBottom: '14px' }}>
+              <div style={{ fontSize: '24px', marginBottom: '6px' }}>🏦</div>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#fbbf24', marginBottom: '6px' }}>
+                {connectInfo?.onboarded === false || !connectInfo
+                  ? 'Connect your bank account'
+                  : 'Finish bank verification'}
+              </div>
+              <div style={{ fontSize: '12px', color: '#94a3b8', lineHeight: 1.6 }}>
+                {connectInfo?.onboarded
+                  ? 'Stripe still needs a few details before they can pay you out.' +
+                    (connectInfo.charges_enabled === false ? ' Charges aren\'t enabled yet.' : '') +
+                    (connectInfo.payouts_enabled === false ? ' Payouts aren\'t enabled yet.' : '')
+                  : 'You haven\'t set up Stripe yet. It takes about 5 minutes — Stripe will guide you through identity verification and bank linking.'}
+              </div>
+              {statusError && (
+                <div style={{ fontSize: '12px', color: '#f87171', marginTop: '8px' }}>{statusError}</div>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                if (onboardingUrl) {
+                  window.location.href = onboardingUrl
+                } else {
+                  // No URL was returned — try to mint a fresh one. The
+                  // GET /api/stripe/connect call will create the
+                  // account if one doesn't exist and return either a
+                  // url or an onboarded=true response.
+                  fetch('/api/stripe/connect', { cache: 'no-store' })
+                    .then(r => r.json())
+                    .then((d: { url?: string; error?: string }) => {
+                      if (d.url) window.location.href = d.url
+                      else setStatusError(d.error ?? 'Could not start Stripe onboarding')
+                    })
+                    .catch(err => setStatusError(err instanceof Error ? err.message : String(err)))
+                }
+              }}
+              style={{
+                width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
+                background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
+                color: '#0f172a', fontSize: '15px', fontWeight: 800, cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              {onboardingUrl ? 'Continue Stripe Setup →' : 'Start Stripe Setup →'}
+            </button>
+          </div>
+        )}
+
+        {/* Ready — show the amount input */}
+        {status === 'ready' && (
+          <div>
+            {/* Available balance */}
+            <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: '12px', padding: '14px 16px', marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Available</div>
+                <div style={{ fontSize: '20px', fontWeight: 800, color: '#38bdf8', lineHeight: 1.2 }}>€{availableEur.toFixed(2)}</div>
+              </div>
+              <div style={{ fontSize: '11px', color: '#34d399', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: '999px', padding: '4px 10px', fontWeight: 700 }}>
+                ✓ Bank verified
+              </div>
+            </div>
+
+            {/* Preset amounts */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '14px' }}>
+              {WITHDRAW_PRESETS.map(amt => {
+                const disabled = amt > availableCents
+                return (
+                  <button
+                    key={amt}
+                    disabled={disabled}
+                    onClick={() => { setSelected(amt); setCustom(''); setError(null) }}
+                    style={{
+                      padding: '12px 8px', borderRadius: '10px',
+                      border: `1.5px solid ${selected === amt ? '#38bdf8' : '#334155'}`,
+                      background: selected === amt ? 'rgba(56,189,248,0.12)' : '#0f172a',
+                      color: disabled ? '#475569' : (selected === amt ? '#38bdf8' : '#f1f5f9'),
+                      fontWeight: 700, fontSize: '15px',
+                      cursor: disabled ? 'not-allowed' : 'pointer',
+                      fontFamily: 'inherit', transition: 'all 0.15s',
+                      opacity: disabled ? 0.5 : 1,
+                    }}
+                  >
+                    €{(amt / 100).toFixed(0)}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Custom amount */}
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Or enter custom amount</label>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '15px', fontWeight: 600 }}>€</span>
+                <input
+                  type="number"
+                  min="5"
+                  max={Math.floor(availableEur)}
+                  step="0.01"
+                  placeholder="0.00"
+                  value={custom}
+                  onChange={e => { setCustom(e.target.value); setSelected(null); setError(null) }}
+                  style={{
+                    width: '100%', background: '#0f172a',
+                    border: `1.5px solid ${custom ? '#38bdf8' : '#334155'}`,
+                    borderRadius: '10px', padding: '12px 12px 12px 28px', fontSize: '15px',
+                    color: '#f1f5f9', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+              <button
+                onClick={() => { setCustom(availableEur.toFixed(2)); setSelected(null); setError(null) }}
+                disabled={availableCents <= 0}
+                style={{
+                  background: 'transparent', border: 'none', color: '#38bdf8',
+                  fontSize: '11px', fontWeight: 600, padding: '6px 0', cursor: availableCents > 0 ? 'pointer' : 'not-allowed',
+                  fontFamily: 'inherit', marginTop: '2px', opacity: availableCents > 0 ? 1 : 0.4,
+                }}
+              >
+                Withdraw all (€{availableEur.toFixed(2)})
+              </button>
+            </div>
+
+            {error && (
+              <div style={{ fontSize: '13px', color: '#f87171', marginBottom: '12px', padding: '10px 14px', background: 'rgba(248,113,113,0.08)', borderRadius: '8px', border: '1px solid rgba(248,113,113,0.2)' }}>
+                {error}
+              </div>
+            )}
+
+            {/* Summary */}
+            {amountCents !== null && amountCents >= 500 && amountCents <= availableCents && (
+              <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '14px', padding: '10px 14px', background: 'rgba(56,189,248,0.06)', borderRadius: '8px', border: '1px solid rgba(56,189,248,0.12)' }}>
+                Withdrawing <span style={{ color: '#38bdf8', fontWeight: 700 }}>€{(amountCents / 100).toFixed(2)}</span> · Arrives in 1–2 business days
+              </div>
+            )}
+
+            <button
+              onClick={handleWithdraw}
+              disabled={loading || !amountCents || amountCents < 500 || amountCents > availableCents}
+              style={{
+                width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
+                background: (!amountCents || amountCents < 500 || amountCents > availableCents)
+                  ? '#1e293b'
+                  : 'linear-gradient(135deg, #38bdf8, #0284c7)',
+                color: (!amountCents || amountCents < 500 || amountCents > availableCents) ? '#475569' : '#0f172a',
+                fontSize: '15px', fontWeight: 800,
+                cursor: (loading || !amountCents || amountCents < 500 || amountCents > availableCents) ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit', transition: 'all 0.15s', opacity: loading ? 0.7 : 1,
+              }}
+            >
+              {loading
+                ? '⏳ Sending to your bank…'
+                : `Withdraw €${amountCents && amountCents >= 500 ? (amountCents / 100).toFixed(2) : '0.00'}`}
+            </button>
+
+            <div style={{ textAlign: 'center', fontSize: '11px', color: '#334155', marginTop: '12px' }}>
+              🔒 Secure bank transfer · Powered by Stripe
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function WalletPageInner() {
   const { currency: curr } = useCurrency()
   const sym = curr.symbol
@@ -450,7 +790,7 @@ function WalletPageInner() {
   const [toast,       setToast]       = useState<string | null>(null)
   const [showAddFunds,  setShowAddFunds]  = useState(false)
   const [showTransfer,  setShowTransfer]  = useState(false)
-  const [withdrawing,   setWithdrawing]   = useState(false)
+  const [showWithdraw,  setShowWithdraw]  = useState(false)
 
   const searchParams = useSearchParams()
   // Default toast duration is 4s, but callers can pass a longer one for
@@ -616,77 +956,19 @@ function WalletPageInner() {
     finally { setSpendLoading(null) }
   }
 
-  const handleWithdraw = async () => {
-    console.log('[wallet] Withdraw Earnings clicked', { available: data?.money.available ?? 0 })
+  const handleWithdraw = () => {
+    console.log('[wallet] Withdraw clicked', { available: data?.money.available ?? 0 })
     if ((data?.money.available ?? 0) <= 0) {
       showToast('No available balance to withdraw')
       return
     }
-    setWithdrawing(true)
-    try {
-      // GET returns either { url } for a pending-onboarding account, or
-      // { onboarded: true } for an account Stripe confirms is fully
-      // enabled. Any error comes back as { error } with a non-2xx status.
-      const res = await fetch('/api/stripe/connect', { cache: 'no-store' })
-      const d = await res.json() as {
-        url?: string
-        onboarded?: boolean
-        error?: string
-        code?: string
-      }
-      console.log('[wallet] /api/stripe/connect GET response', { status: res.status, ...d })
-      if (!res.ok) {
-        // Stripe Connect hasn't been enabled on the platform's Stripe
-        // account yet — not a user-level error. Show the message a bit
-        // longer so people actually read it.
-        if (d.code === 'connect_not_enabled') {
-          showToast(d.error ?? 'Withdrawals are still being set up', 8000)
-          return
-        }
-        showToast(d.error ?? `Could not start withdrawal (HTTP ${res.status})`)
-        return
-      }
-      if (d.url) {
-        // Not onboarded yet — redirect to Stripe Connect onboarding
-        window.location.href = d.url
-        return
-      }
-      if (d.onboarded) {
-        // Already onboarded — open Stripe Express dashboard
-        const dashRes = await fetch('/api/stripe/connect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          cache: 'no-store',
-          body: JSON.stringify({ action: 'dashboard' }),
-        })
-        const dashData = await dashRes.json() as {
-          url?: string
-          error?: string
-          code?: string
-        }
-        console.log('[wallet] /api/stripe/connect POST response', { status: dashRes.status, ...dashData })
-        if (!dashRes.ok) {
-          if (dashData.code === 'connect_not_enabled') {
-            showToast(dashData.error ?? 'Withdrawals are still being set up', 8000)
-            return
-          }
-          showToast(dashData.error ?? `Could not open Stripe dashboard (HTTP ${dashRes.status})`)
-          return
-        }
-        if (dashData.url) {
-          window.location.href = dashData.url
-        } else {
-          showToast(dashData.error ?? 'Could not open Stripe dashboard')
-        }
-        return
-      }
-      showToast(d.error ?? 'Could not start withdrawal — please try again')
-    } catch (err) {
-      console.error('[wallet] handleWithdraw network error', err)
-      showToast('Network error — please try again')
-    } finally {
-      setWithdrawing(false)
-    }
+    // Open the in-app WithdrawModal. The modal itself probes Stripe
+    // Connect status (GET /api/stripe/connect) and either renders the
+    // amount input or prompts the user to finish Stripe onboarding.
+    // The actual payout happens via POST /api/stripe/payout from
+    // inside the modal — we no longer redirect users out to the
+    // Stripe Express dashboard to initiate payouts themselves.
+    setShowWithdraw(true)
   }
 
   const trustLevel   = getTrustLevel(data?.trust.balance ?? 0)
@@ -742,6 +1024,15 @@ function WalletPageInner() {
           walletData={data}
           onClose={() => setShowTransfer(false)}
           onSuccess={(msg) => { setShowTransfer(false); showToast(msg); load() }}
+        />
+      )}
+
+      {/* Withdraw Modal */}
+      {showWithdraw && (
+        <WithdrawModal
+          walletData={data}
+          onClose={() => setShowWithdraw(false)}
+          onSuccess={(msg) => { setShowWithdraw(false); showToast(msg, 7000); load() }}
         />
       )}
 
@@ -814,10 +1105,9 @@ function WalletPageInner() {
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <button
                   onClick={handleWithdraw}
-                  disabled={withdrawing}
-                  style={{ flex: 1, minWidth: '100px', padding: '11px 14px', background: withdrawing ? '#1e293b' : '#38bdf8', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 700, color: withdrawing ? '#475569' : '#0f172a', cursor: withdrawing ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: withdrawing ? 0.7 : 1 }}
+                  style={{ flex: 1, minWidth: '100px', padding: '11px 14px', background: '#38bdf8', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 700, color: '#0f172a', cursor: 'pointer', fontFamily: 'inherit' }}
                 >
-                  {withdrawing ? '⏳ Opening…' : '💸 Withdraw'}
+                  💸 Withdraw
                 </button>
                 <button
                   onClick={() => setShowTransfer(true)}
