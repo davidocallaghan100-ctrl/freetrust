@@ -82,6 +82,86 @@ export async function POST(req: NextRequest) {
     // reachable on projects where the SECURITY DEFINER setting
     // was accidentally removed.
     const admin = createAdminClient()
+
+    // ── Sustainability Fund donation — special-cased to also credit ───────
+    // the global impact_fund_balance pool. Before this fix, the
+    // donate_impact action just called spend_trust which debited the
+    // user but credited NOTHING — the trust simply disappeared. The
+    // /impact "Sustainability Fund Balance" never moved because
+    // there was no fund to update. Fixed by routing through the
+    // donate_to_impact_fund() RPC (added in
+    // 20260414000009_trust_economy_audit.sql) which atomically:
+    //
+    //   1. Locks the user's trust_balances row FOR UPDATE
+    //   2. Validates balance >= amount (raises insufficient_funds)
+    //   3. Debits user balance + inserts negative ledger entry
+    //   4. Locks impact_fund_balance row FOR UPDATE
+    //   5. Increments fund balance + lifetime
+    //   6. Inserts an impact_donations row for per-user history
+    //   7. Returns the new fund balance
+    //
+    // The RPC is the single source of truth for the fund pool so
+    // there's no longer any way for a /api/trust/spend donate_impact
+    // and a /api/impact/donate to disagree about the total.
+    if (action === 'donate_impact') {
+      const { data: newFundBalance, error: fundErr } = await admin.rpc('donate_to_impact_fund', {
+        p_user_id:    user.id,
+        p_amount:     def.cost,
+        p_project_id: null,
+        p_desc:       def.label,
+      })
+
+      if (fundErr) {
+        const msg = fundErr.message ?? ''
+        if (msg.includes('insufficient_funds')) {
+          const { data: bal } = await admin
+            .from('trust_balances')
+            .select('balance')
+            .eq('user_id', user.id)
+            .maybeSingle()
+          return NextResponse.json(
+            {
+              error: 'Insufficient trust balance',
+              code:  'insufficient_funds',
+              balance: bal?.balance ?? 0,
+              required: def.cost,
+            },
+            { status: 402 },
+          )
+        }
+        console.error('[POST /api/trust/spend] donate_to_impact_fund RPC failed:', {
+          message: fundErr.message,
+          code:    fundErr.code,
+          details: fundErr.details,
+          hint:    fundErr.hint,
+        })
+        return NextResponse.json(
+          { error: fundErr.message || 'Could not record impact donation', code: fundErr.code ?? null },
+          { status: 500 },
+        )
+      }
+
+      // Re-read the user's balance to echo back. We can't get it
+      // out of the donate RPC because that RPC returns the new
+      // fund balance, not the user's new trust balance.
+      const { data: bal } = await admin
+        .from('trust_balances')
+        .select('balance')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      return NextResponse.json({
+        success: true,
+        action,
+        cost:  def.cost,
+        label: def.label,
+        newBalance:    typeof bal?.balance === 'number' ? bal.balance : null,
+        fundBalance:   typeof newFundBalance === 'number' || typeof newFundBalance === 'string'
+                         ? Number(newFundBalance)
+                         : null,
+      })
+    }
+
     const { data: newBalance, error: rpcError } = await admin.rpc('spend_trust', {
       p_user_id: user.id,
       p_amount:  def.cost,
