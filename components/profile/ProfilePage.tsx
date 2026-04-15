@@ -727,7 +727,7 @@ export default function ProfilePage() {
         | null
       console.log('[profile] API response body:', data)
 
-      if (!res.ok || !data?.conversationId) {
+      if (!res.ok) {
         // Surface the real server error so the user reporting the
         // bug can see what went wrong in the toast — not a generic
         // "please try again".
@@ -737,7 +737,19 @@ export default function ProfilePage() {
         return
       }
 
-      const target = `/messages/${data.conversationId}`
+      // Defensive guard — refuse to route to /messages/undefined
+      // even if the API returns a 200 without the expected shape.
+      // Without this, a malformed response would send the user to
+      // /messages/undefined which the dynamic [id] route would
+      // render with id="undefined", silently broken.
+      const conversationId = data?.conversationId
+      if (typeof conversationId !== 'string' || conversationId.length === 0) {
+        console.error('[profile] API returned no conversationId:', data)
+        showToast('Could not start conversation: no conversation id returned')
+        return
+      }
+
+      const target = `/messages/${conversationId}`
       console.log('[profile] Routing to:', target)
       router.push(target)
     } catch (err) {

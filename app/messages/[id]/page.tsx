@@ -56,24 +56,36 @@ export default function ConversationPage() {
   const inputRef   = useRef<HTMLTextAreaElement>(null)
   const channelRef = useRef<RealtimeChannel | null>(null)
 
+  const [loadError, setLoadError] = useState<string | null>(null)
+
   // Fetch full message history via the GET /api/messages/:id route.
   // The route is wrapped in a participant check and also bumps
   // last_read_at, so calling it from here doubles as a "mark as
   // read" signal without needing a separate endpoint.
+  //
+  // IMPORTANT: do NOT router.push('/messages') on 403 — that was
+  // the bug where clicking "Message" on a profile appeared to go
+  // straight to the inbox. The brief visit to /messages/[id]
+  // bounced away before the page even painted. Instead, surface
+  // the error inline so the user (and the bug reporter) can see
+  // the real reason.
   const loadMessages = useCallback(async () => {
     try {
       const res = await fetch(`/api/messages/${conversationId}`, { cache: 'no-store' })
       if (!res.ok) {
         if (res.status === 401) { router.push('/login'); return }
-        if (res.status === 403) { router.push('/messages'); return }
-        const err = await res.json().catch(() => ({ error: 'Failed to load' })) as { error?: string }
-        console.error('[messages/:id] load failed:', err)
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string }
+        console.error('[messages/:id] load failed:', res.status, err)
+        setLoadError(err.error || `HTTP ${res.status}`)
         return
       }
+      setLoadError(null)
       const data = await res.json() as { messages: Message[] }
       setMessages(data.messages ?? [])
     } catch (err) {
-      console.error('[messages/:id] load threw:', err)
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[messages/:id] load threw:', msg)
+      setLoadError(msg)
     }
   }, [conversationId, router])
 
@@ -465,7 +477,30 @@ export default function ConversationPage() {
 
       {/* Messages */}
       <div className="conv-messages">
-        {messages.length === 0 && !loading && (
+        {loadError && (
+          <div
+            role="alert"
+            style={{
+              background:    'rgba(248,113,113,0.08)',
+              border:        '1px solid rgba(248,113,113,0.3)',
+              borderRadius:  10,
+              padding:       '0.85rem 1rem',
+              marginBottom:  '1rem',
+              fontSize:      '0.82rem',
+              color:         '#fca5a5',
+              lineHeight:    1.5,
+            }}
+          >
+            <div style={{ fontWeight: 700, color: '#f87171', marginBottom: 4 }}>
+              Couldn&apos;t load this conversation
+            </div>
+            <div style={{ wordBreak: 'break-word' }}>{loadError}</div>
+            <div style={{ marginTop: 6, fontSize: '0.75rem', color: '#94a3b8' }}>
+              Conversation id: <code style={{ color: '#cbd5e1' }}>{conversationId}</code>
+            </div>
+          </div>
+        )}
+        {messages.length === 0 && !loading && !loadError && (
           <div style={{ textAlign: 'center', color: '#475569', fontSize: '0.85rem', marginTop: '2rem' }}>
             No messages yet. Say hello! 👋
           </div>
