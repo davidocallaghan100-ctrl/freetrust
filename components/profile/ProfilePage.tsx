@@ -683,29 +683,67 @@ export default function ProfilePage() {
   // Start (or resume) a 1:1 conversation with the profile owner.
   // Calls POST /api/conversations which does the find-or-create
   // dedup so clicking Message twice never creates a second thread,
-  // then navigates to the dedicated thread page. Failures surface
-  // via the existing showToast() helper.
+  // then navigates to the dedicated thread page. Every step is
+  // console.log'd so a bug report can be diagnosed in the browser
+  // devtools without a redeploy. Failures surface the REAL API
+  // error message in the toast so the user reporting the bug can
+  // see what's going wrong (previously: a generic "could not
+  // start conversation" that hid everything).
   const handleMessage = async () => {
-    if (!user || messageLoading || !viewingId) return
+    // Prefer the loaded profile.id (authoritative) with a fallback
+    // to viewingId (URL query param). In practice they're the same
+    // string when the user is on /profile?id=XYZ, but the profile
+    // row is the source of truth if anything has drifted.
+    const recipientId = profile?.id ?? viewingId ?? null
+    console.log('[profile] handleMessage called, recipientId:', recipientId)
+
+    if (!user) {
+      console.warn('[profile] handleMessage: no authenticated user, redirecting to /login')
+      router.push('/login')
+      return
+    }
+    if (!recipientId) {
+      console.warn('[profile] handleMessage: no recipient id (profile not loaded yet)')
+      showToast('Profile not loaded yet, please wait')
+      return
+    }
+    if (messageLoading) {
+      console.warn('[profile] handleMessage: already loading, ignoring click')
+      return
+    }
+
     setMessageLoading(true)
     try {
+      console.log('[profile] POST /api/conversations', { recipientId })
       const res = await fetch('/api/conversations', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ recipientId: viewingId }),
+        body:    JSON.stringify({ recipientId }),
       })
+      console.log('[profile] API response status:', res.status)
+
       const data = await res.json().catch(() => null) as
         | { conversationId?: string; error?: string }
         | null
+      console.log('[profile] API response body:', data)
+
       if (!res.ok || !data?.conversationId) {
-        console.error('[profile] start conversation failed:', data)
-        showToast('Could not start conversation, please try again')
+        // Surface the real server error so the user reporting the
+        // bug can see what went wrong in the toast — not a generic
+        // "please try again".
+        const reason = data?.error || `HTTP ${res.status}`
+        console.error('[profile] start conversation failed:', reason, data)
+        showToast(`Could not start conversation: ${reason}`)
         return
       }
-      router.push(`/messages/${data.conversationId}`)
+
+      const target = `/messages/${data.conversationId}`
+      console.log('[profile] Routing to:', target)
+      router.push(target)
     } catch (err) {
-      console.error('[profile] start conversation threw:', err)
-      showToast('Could not start conversation, please try again')
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[profile] start conversation threw:', msg, err)
+      showToast(`Could not start conversation: ${msg}`)
     } finally {
       setMessageLoading(false)
     }
@@ -943,15 +981,15 @@ export default function ProfilePage() {
                         <span
                           aria-hidden="true"
                           style={{
-                            width:        12,
-                            height:       12,
-                            border:       '2px solid rgba(52,211,153,0.35)',
+                            width:          12,
+                            height:         12,
+                            border:         '2px solid rgba(52,211,153,0.35)',
                             borderTopColor: '#34d399',
-                            borderRadius: '50%',
-                            animation:    'spin 0.7s linear infinite',
+                            borderRadius:   '50%',
+                            animation:      'spin 0.7s linear infinite',
                           }}
                         />
-                        <span>Starting…</span>
+                        <span>Opening…</span>
                         <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
                       </>
                     ) : (
