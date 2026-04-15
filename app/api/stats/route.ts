@@ -13,6 +13,27 @@ export async function GET() {
     const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
     // Run all queries in parallel
+    //
+    // Trust figures come from a single SQL aggregate RPC (`trust_stats`
+    // in 20260415000007_trust_stats_rpc.sql) — NOT from two separate
+    // JS-summed selects like the old implementation used. The old
+    // approach had two compounding bugs:
+    //
+    //   1. Supabase's default 1000-row response limit silently
+    //      truncated the .select('balance') / .select('lifetime')
+    //      queries at any scale beyond that, so the two JS sums
+    //      were computed against different row subsets and could
+    //      return contradictory totals (e.g. circulation > issued).
+    //
+    //   2. Summing two independent columns on the same table had no
+    //      way to enforce the mathematical invariant that
+    //      circulation <= issued. The RPC now clamps
+    //      total_issued = GREATEST(gross_issued, circulation) so the
+    //      invariant holds even if the two source tables disagree.
+    //
+    // The RPC filters out transfer_* ledger types from the issued
+    // total so internal wallet transfers (which are zero-sum for
+    // platform-wide supply) are not double-counted.
     const [
       profilesRes,
       profilesWeekRes,
@@ -22,10 +43,8 @@ export async function GET() {
       eventsRes,
       articlesRes,
       communitiesRes,
-      trustSumRes,
+      trustStatsRes,
       trustWeekRes,
-      trustCirculationRes,
-      trustHoldersRes,
       recentProfilesRes,
       recentTrustRes,
       recentArticlesRes,
@@ -48,18 +67,31 @@ export async function GET() {
       supabase.from('articles').select('id', { count: 'exact', head: true }).eq('status', 'published'),
       // Communities
       supabase.from('communities').select('id', { count: 'exact', head: true }),
-      // Total trust issued (sum lifetime balances across all users)
-      supabase.from('trust_balances').select('lifetime'),
-      // Trust this week — use balances updated this week as proxy
-      supabase.from('trust_balances').select('lifetime').gte('updated_at', weekAgo),
-      // Total trust in circulation (sum of current balances)
-      supabase.from('trust_balances').select('balance'),
-      // Members holding trust (balance > 0)
-      supabase.from('trust_balances').select('user_id', { count: 'exact', head: true }).gt('balance', 0),
+      // Trust stats (total_issued + in_circulation + members_holding)
+      // from the authoritative SQL aggregate. Single source of truth.
+      supabase.rpc('trust_stats'),
+      // Trust this week — use the trust_ledger directly so the week
+      // figure is computed from the same authoritative source as the
+      // total. Summed over positive ledger entries in the last 7 days,
+      // excluding transfer_* types to match the RPC's filter.
+      supabase
+        .from('trust_ledger')
+        .select('amount, type, created_at')
+        .gte('created_at', weekAgo)
+        .gt('amount', 0)
+        .limit(10000),
       // Recent member joins (for ticker)
       supabase.from('profiles').select('id, full_name, location, created_at').order('created_at', { ascending: false }).limit(10),
-      // Recent trust events — pull from trust_balances (fallback: no ledger table)
-      supabase.from('trust_balances').select('user_id, lifetime, updated_at').order('updated_at', { ascending: false }).limit(10),
+      // Recent trust events — pull from the ledger directly so the
+      // ticker reflects real mint events, not stale balance row
+      // updated_at timestamps. Include the description so the ticker
+      // can show a meaningful label instead of a generic "trust earned".
+      supabase
+        .from('trust_ledger')
+        .select('id, user_id, amount, type, description, created_at')
+        .gt('amount', 0)
+        .order('created_at', { ascending: false })
+        .limit(10),
       // Recent articles (for ticker)
       supabase.from('articles').select('id, title, created_at').eq('status', 'published').order('created_at', { ascending: false }).limit(5),
       // Growth: last 30 profiles with created_at for sparkline
@@ -83,19 +115,51 @@ export async function GET() {
     const articlesPublished = getCount(articlesRes)
     const communitiesCount = getCount(communitiesRes)
 
-    // Sum trust from lifetime balances
-    const trustRows = getData<{ lifetime: number }>(trustSumRes)
-    const totalTrust = trustRows.reduce((sum, r) => sum + (r.lifetime ?? 0), 0)
+    // ── Trust stats from the authoritative RPC ──────────────────────────────
+    // trust_stats() returns a single JSONB object:
+    //   { total_issued, in_circulation, ledger_net, ledger_entries,
+    //     members_holding, computed_at }
+    //
+    // Defensive fallback: if the RPC is missing (fresh DB that hasn't
+    // run the 20260415000007 migration yet) we degrade to zero rather
+    // than crashing the endpoint — the old JS-summed path is NOT
+    // restored because its 1000-row truncation and column-drift bugs
+    // are exactly what we're fixing.
+    //
+    // Invariant clamp — GREATEST enforcement happens SQL-side in the
+    // RPC, but we also clamp in JS as a belt-and-braces so any future
+    // RPC regression can't leak a circulation > total number to the
+    // homepage. The UI cannot display the bug again.
+    interface TrustStatsPayload {
+      total_issued?: number | string
+      in_circulation?: number | string
+      ledger_net?: number | string
+      ledger_entries?: number | string
+      members_holding?: number | string
+    }
+    const trustStatsPayload: TrustStatsPayload | null =
+      trustStatsRes.status === 'fulfilled' && !trustStatsRes.value.error
+        ? (trustStatsRes.value.data as TrustStatsPayload | null)
+        : null
 
-    const trustWeekRows = getData<{ lifetime: number }>(trustWeekRes)
-    const trustThisWeek = trustWeekRows.reduce((sum, r) => sum + (r.lifetime ?? 0), 0)
+    if (trustStatsRes.status === 'fulfilled' && trustStatsRes.value.error) {
+      console.error('[GET /api/stats] trust_stats RPC failed:', trustStatsRes.value.error.message)
+    }
 
-    // Trust in circulation (sum of current balance held by all users)
-    const circulationRows = getData<{ balance: number }>(trustCirculationRes)
-    const trustInCirculation = circulationRows.reduce((sum, r) => sum + (r.balance ?? 0), 0)
+    const rawIssued      = Number(trustStatsPayload?.total_issued    ?? 0)
+    const rawCirculation = Number(trustStatsPayload?.in_circulation  ?? 0)
+    const totalTrust         = Math.max(rawIssued, rawCirculation)
+    const trustInCirculation = Math.min(rawCirculation, totalTrust)
+    const membersHoldingTrust = Number(trustStatsPayload?.members_holding ?? 0)
 
-    // Members currently holding trust (balance > 0)
-    const membersHoldingTrust = trustHoldersRes.status === 'fulfilled' ? (trustHoldersRes.value.count ?? 0) : 0
+    // Trust this week — sum of positive ledger entries in the last
+    // 7 days (excluding transfer types which are zero-sum internal
+    // movements). Matches the type filter used by trust_stats().
+    interface LedgerRow { amount: number; type: string; created_at: string }
+    const trustWeekRows = getData<LedgerRow>(trustWeekRes)
+    const trustThisWeek = trustWeekRows
+      .filter(r => r.type !== 'transfer_received' && r.type !== 'transfer_sent' && r.type !== 'transfer_rollback')
+      .reduce((sum, r) => sum + (r.amount ?? 0), 0)
 
     // Ticker feed — mix of recent joins, trust events, articles
     type TickerItem = {
@@ -113,9 +177,27 @@ export async function GET() {
       ticker.push({ id: p.id, type: 'join', text: `${name}${loc} just joined FreeTrust`, time: p.created_at })
     }
 
-    const recentTrust = getData<{ user_id: string; lifetime: number; updated_at: string }>(recentTrustRes)
+    // Recent trust events — pulled directly from trust_ledger so the
+    // ticker reflects real mint events with proper timestamps instead
+    // of stale trust_balances.updated_at values. Each ledger row has
+    // amount + type + description + created_at.
+    interface RecentLedgerRow {
+      id: string
+      user_id: string
+      amount: number
+      type: string
+      description: string | null
+      created_at: string
+    }
+    const recentTrust = getData<RecentLedgerRow>(recentTrustRes)
     for (const t of recentTrust) {
-      ticker.push({ id: t.user_id, type: 'trust', text: `₮${t.lifetime} Trust earned by a member`, time: t.updated_at })
+      const desc = t.description?.trim() || `₮${t.amount} trust earned`
+      ticker.push({
+        id: t.id,
+        type: 'trust',
+        text: `₮${t.amount} — ${desc}`,
+        time: t.created_at,
+      })
     }
 
     const recentArticles = getData<{ id: string; title: string; created_at: string }>(recentArticlesRes)
