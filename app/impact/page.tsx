@@ -28,10 +28,20 @@ interface ImpactStats {
   activeProjects: number
   memberCount: number
   fundBalance: number
+  fundLifetime: number
   quarterlyTotal: number
   quarterlyGoal: number
   quarterlyPct: number
 }
+
+// Discriminated donation target — either the general Sustainability
+// Fund or a specific impact project. Using a tagged union (instead of
+// `ImpactProject | null` plus a separate "fund mode" boolean) keeps
+// the rendering / API code from having to special-case fund donations
+// at every callsite.
+type DonateTarget =
+  | { kind: 'fund' }
+  | { kind: 'project'; project: ImpactProject }
 
 interface LeaderboardEntry {
   rank: number
@@ -126,11 +136,12 @@ export default function ImpactPage() {
   const [myVote, setMyVote] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeCat, setActiveCat] = useState('All Projects')
-  const [donateModal, setDonateModal] = useState<ImpactProject | null>(null)
+  const [donateTarget, setDonateTarget] = useState<DonateTarget | null>(null)
   const [donateAmount, setDonateAmount] = useState(10)
   const [customAmount, setCustomAmount] = useState('')
   const [donating, setDonating] = useState(false)
   const [donateSuccess, setDonateSuccess] = useState<string | null>(null)
+  const [donateError, setDonateError] = useState<string | null>(null)
   const [voting, setVoting] = useState(false)
   const [trustBalance, setTrustBalance] = useState(0)
   const [platformStats, setPlatformStats] = useState<{ members?: { total: number }; listings?: { services: number; products: number }; trust?: { total: number; inCirculation: number; membersHolding: number } } | null>(null)
@@ -178,24 +189,76 @@ export default function ImpactPage() {
   }
 
   const handleDonate = async () => {
-    if (!donateModal) return
-    const amount = customAmount ? parseInt(customAmount) : donateAmount
-    if (!amount || amount <= 0) return
+    if (!donateTarget) return
+    const parsedCustom = customAmount ? parseInt(customAmount, 10) : NaN
+    const amount = Number.isFinite(parsedCustom) && parsedCustom > 0 ? parsedCustom : donateAmount
+    if (!amount || amount <= 0) {
+      setDonateError('Enter a positive amount')
+      return
+    }
+    if (amount > trustBalance) {
+      setDonateError(`Insufficient ₮ balance. You have ₮${trustBalance.toLocaleString()}.`)
+      return
+    }
     setDonating(true)
+    setDonateError(null)
     try {
-      const res = await fetch('/api/impact/donate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project_id: donateModal.id, amount }) })
-      const data = await res.json() as { ok?: boolean; error?: string; trees_equivalent?: number }
-      if (res.ok) {
-        setDonateSuccess(`₮${amount} donated! 🌱${data.trees_equivalent ? ` ~${data.trees_equivalent} trees` : ''}`)
-        setTrustBalance(prev => prev - amount)
-        setProjects(prev => prev.map(p => p.id === donateModal.id ? { ...p, raised: p.raised + amount, backers: p.backers + 1 } : p))
-        setTimeout(() => { setDonateModal(null); setDonateSuccess(null); setCustomAmount('') }, 2500)
-      } else {
-        setDonateSuccess(data.error ?? 'Donation failed')
-        setTimeout(() => setDonateSuccess(null), 2500)
+      const projectId = donateTarget.kind === 'project' ? donateTarget.project.id : null
+      const res = await fetch('/api/impact/donate', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ amount, projectId }),
+      })
+      const data = await res.json() as {
+        ok?:               boolean
+        error?:            string
+        code?:             string
+        trees_equivalent?: number
+        new_fund_balance?: number
+        fund_lifetime?:    number
+        new_user_balance?: number
       }
-    } catch { setDonateSuccess('Error. Please try again.'); setTimeout(() => setDonateSuccess(null), 2000) }
-    finally { setDonating(false) }
+      if (!res.ok || !data.ok) {
+        // Surface the real server error instead of swallowing it.
+        setDonateError(data.error ?? 'Donation failed. Please try again.')
+        return
+      }
+
+      // Apply the authoritative new balances returned by the server
+      // immediately, so the UI shows fresh numbers without waiting on
+      // the loadAll re-fetch below.
+      if (typeof data.new_user_balance === 'number') {
+        setTrustBalance(data.new_user_balance)
+      }
+      if (typeof data.new_fund_balance === 'number') {
+        setStats(prev =>
+          prev
+            ? { ...prev, fundBalance: data.new_fund_balance!, fundLifetime: data.fund_lifetime ?? prev.fundLifetime }
+            : prev,
+        )
+      }
+
+      setDonateSuccess(
+        `₮${amount} donated! 🌱${data.trees_equivalent ? ` ~${data.trees_equivalent} trees` : ''}`,
+      )
+
+      // Re-fetch every data source so projects.raised / backers /
+      // leaderboard / stats all reflect the new state. This is the
+      // belt-and-braces guarantee that the UI never shows stale
+      // numbers after a successful donation.
+      void loadAll()
+
+      setTimeout(() => {
+        setDonateTarget(null)
+        setDonateSuccess(null)
+        setCustomAmount('')
+      }, 2500)
+    } catch (err) {
+      console.error('Impact donate error:', err)
+      setDonateError('Network error. Please try again.')
+    } finally {
+      setDonating(false)
+    }
   }
 
   if (loading) {
@@ -224,7 +287,7 @@ export default function ImpactPage() {
       `}</style>
 
       {/* Donate Modal */}
-      {donateModal && (
+      {donateTarget && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div style={{ background: '#1e293b', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 16, padding: '1.75rem', width: '100%', maxWidth: 440 }}>
             {donateSuccess ? (
@@ -236,24 +299,31 @@ export default function ImpactPage() {
               <>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
                   <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>Donate Trust Tokens</h3>
-                  <button onClick={() => setDonateModal(null)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '1.4rem', lineHeight: 1, padding: 0 }}>×</button>
+                  <button onClick={() => { setDonateTarget(null); setDonateError(null) }} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '1.4rem', lineHeight: 1, padding: 0 }}>×</button>
                 </div>
                 <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.35rem' }}>Contributing to:</div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#34d399', marginBottom: '0.75rem' }}>{donateModal.name}</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#34d399', marginBottom: '0.75rem' }}>
+                  {donateTarget.kind === 'project' ? donateTarget.project.name : 'Sustainability Fund (general)'}
+                </div>
                 <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.75rem' }}>Your Trust Balance: <strong style={{ color: '#38bdf8' }}>₮{trustBalance.toLocaleString()}</strong></div>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
                   {[5, 10, 25, 50].map(amt => (
-                    <button key={amt} onClick={() => { setDonateAmount(amt); setCustomAmount('') }}
+                    <button key={amt} onClick={() => { setDonateAmount(amt); setCustomAmount(''); setDonateError(null) }}
                       style={{ padding: '0.5rem 1rem', borderRadius: 8, border: donateAmount === amt && !customAmount ? '1px solid #34d399' : '1px solid rgba(148,163,184,0.2)', background: donateAmount === amt && !customAmount ? 'rgba(52,211,153,0.1)' : 'transparent', color: donateAmount === amt && !customAmount ? '#34d399' : '#94a3b8', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>
                       ₮{amt}
                     </button>
                   ))}
                 </div>
-                <input type="number" min="1" max={trustBalance} placeholder="Custom ₮ amount" value={customAmount} onChange={e => setCustomAmount(e.target.value)}
+                <input type="number" min="1" max={trustBalance} placeholder="Custom ₮ amount" value={customAmount} onChange={e => { setCustomAmount(e.target.value); setDonateError(null) }}
                   style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 8, padding: '0.65rem 1rem', color: '#f1f5f9', fontSize: '0.9rem', outline: 'none', marginBottom: '1rem' }} />
                 <div style={{ background: 'rgba(52,211,153,0.05)', border: '1px solid rgba(52,211,153,0.12)', borderRadius: 8, padding: '0.65rem', marginBottom: '1rem', fontSize: '0.8rem', color: '#64748b' }}>
                   🌳 Every ₮10 ≈ 1 tree planted (where applicable)
                 </div>
+                {donateError && (
+                  <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 8, padding: '0.65rem 0.85rem', marginBottom: '0.85rem', fontSize: '0.8rem', color: '#f87171' }}>
+                    {donateError}
+                  </div>
+                )}
                 <button onClick={handleDonate} disabled={donating || (customAmount ? parseInt(customAmount) > trustBalance : donateAmount > trustBalance)}
                   style={{ width: '100%', background: '#34d399', border: 'none', borderRadius: 8, padding: '0.75rem', fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', cursor: donating ? 'not-allowed' : 'pointer', opacity: donating ? 0.7 : 1 }}>
                   {donating ? 'Processing…' : `Donate ₮${customAmount || donateAmount}`}
@@ -273,6 +343,9 @@ export default function ImpactPage() {
           <div style={{ background: 'linear-gradient(135deg,rgba(52,211,153,0.1),rgba(56,189,248,0.06))', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 16, padding: '1.5rem 2rem', marginBottom: '1.5rem', display: 'inline-block', minWidth: 280, textAlign: 'left' }}>
             <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Sustainability Fund Balance</div>
             <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#34d399', lineHeight: 1 }}>₮{(stats?.fundBalance ?? 0).toLocaleString()}</div>
+            <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Lifetime donated: <strong style={{ color: '#94a3b8' }}>₮{(stats?.fundLifetime ?? 0).toLocaleString()}</strong>
+            </div>
             {(stats?.fundBalance ?? 0) === 0
               ? <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.4rem' }}>Grows with every transaction — be the first to contribute 🌱</div>
               : <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.4rem' }}>₮{(stats?.quarterlyTotal ?? 0).toLocaleString()} donated this quarter · {stats?.quarterlyPct ?? 0}% to goal</div>
@@ -298,12 +371,10 @@ export default function ImpactPage() {
             ))}
           </div>
           <div className="impact-hero-btns" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-            {projects.length > 0 && (
-              <button onClick={() => { setDonateModal(projects[0]); setDonateAmount(10); setCustomAmount('') }}
-                style={{ background: '#34d399', border: 'none', borderRadius: 8, padding: '0.75rem 2rem', fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer' }}>
-                Donate Trust Tokens
-              </button>
-            )}
+            <button onClick={() => { setDonateTarget({ kind: 'fund' }); setDonateAmount(10); setCustomAmount(''); setDonateError(null) }}
+              style={{ background: '#34d399', border: 'none', borderRadius: 8, padding: '0.75rem 2rem', fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer' }}>
+              Donate Trust Tokens
+            </button>
           </div>
         </div>
       </div>
@@ -542,7 +613,7 @@ export default function ImpactPage() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: '0.78rem', color: '#475569' }}>👥 {Number(proj.backers).toLocaleString()} backers</span>
-                  <button onClick={() => { setDonateModal(proj); setDonateAmount(10); setCustomAmount('') }}
+                  <button onClick={() => { setDonateTarget({ kind: 'project', project: proj }); setDonateAmount(10); setCustomAmount(''); setDonateError(null) }}
                     style={{ background: '#34d399', border: 'none', borderRadius: 7, padding: '0.45rem 1rem', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer' }}>
                     Donate ₮
                   </button>
