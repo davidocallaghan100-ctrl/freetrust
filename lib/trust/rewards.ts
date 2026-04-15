@@ -42,6 +42,16 @@ export const TRUST_REWARDS = {
   COMPLETE_ORDER:    100,  // Order marked complete (seller side)
   LEAVE_REVIEW:      10,   // User leaves a review on an order
   RECEIVE_REVIEW:    25,   // User receives a review (from their counterparty)
+
+  // ── Engagement (micro-rewards) ───────────────────────────────────
+  // Loyalty bonus awarded when a user donates ₮ to the Sustainability
+  // Fund via /api/impact/donate or /wallet → donate_impact. It is
+  // intentionally tiny relative to the donation size — the intent is
+  // a warm "thank you" acknowledgement, not a wash loop. The cap is
+  // enforced at the awardTrust() callsite (one bonus per donation
+  // event, dedupe by the ledger type + ref).
+  DONATE_IMPACT:     2,    // Bonus for donating to the Sustainability Fund
+  POST_LIKED:        2,    // Post reached likes_count threshold
 } as const
 
 // Type of valid reward keys — used by awardTrust() for autocomplete
@@ -72,6 +82,34 @@ export const TRUST_LEDGER_TYPES = {
   COMPLETE_ORDER:   'complete_order',
   LEAVE_REVIEW:     'leave_review',
   RECEIVE_REVIEW:   'receive_review',
+
+  DONATE_IMPACT:    'donate_impact_bonus',
+  POST_LIKED:       'post_liked',
 } as const
 
 export type TrustLedgerType = typeof TRUST_LEDGER_TYPES[keyof typeof TRUST_LEDGER_TYPES]
+
+// ────────────────────────────────────────────────────────────────────────────
+// Anti-abuse — daily earning caps by ledger type
+// ────────────────────────────────────────────────────────────────────────────
+//
+// Maps each cappable TRUST_LEDGER_TYPES slug to the maximum number
+// of awards a single user can receive for that type in a single
+// calendar day (UTC). Missing entries = no cap (CREATE_SERVICE,
+// CREATE_JOB, CREATE_EVENT etc. are legitimately unlimited — a
+// prolific listing seller should be rewarded for every listing).
+//
+// Enforced in `lib/trust/award.ts` via a `trust_ledger` row count
+// check BEFORE calling issue_trust(). Over-cap calls log the hit
+// and return { ok: false, reason: 'daily_cap_reached' } — the
+// calling route handler does NOT throw or surface to the user,
+// since a cap hit is a normal anti-abuse outcome (not a bug).
+export const MAX_DAILY: Partial<Record<TrustLedgerType, number>> = {
+  join_community:   1,
+  rsvp_event:       1,
+  leave_review:     3,
+  receive_review:   5,
+  complete_order:  10,
+  post_liked:      20,
+  donate_impact_bonus: 5,
+}

@@ -43,6 +43,7 @@
 //   return NextResponse.json({ listing: inserted, trustAwarded: trustResult.amount })
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { MAX_DAILY } from '@/lib/trust/rewards'
 
 export interface AwardTrustInput {
   userId: string
@@ -105,6 +106,34 @@ export async function awardTrust(input: AwardTrustInput): Promise<AwardTrustResu
 
   try {
     const admin = createAdminClient()
+
+    // ── Daily earning cap (anti-abuse) ─────────────────────────────────
+    // MAX_DAILY in lib/trust/rewards.ts defines a per-type, per-user,
+    // per-UTC-day limit. Missing entries = no cap. Over-cap calls
+    // return a non-blocking result so the route continues normally
+    // (e.g. a 4th review still posts, it just doesn't earn ₮).
+    const cap = MAX_DAILY[type as keyof typeof MAX_DAILY]
+    if (typeof cap === 'number' && cap > 0) {
+      const startOfDayIso = new Date().toISOString().slice(0, 10) + 'T00:00:00.000Z'
+      const { count, error: countErr } = await admin
+        .from('trust_ledger')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('type',    type)
+        .gte('created_at', startOfDayIso)
+      if (countErr) {
+        console.warn('[awardTrust] daily cap precheck failed:', countErr.message)
+        // Fall through — cap check failure is non-fatal, the award
+        // still proceeds. Better to occasionally grant extra trust
+        // than to silently drop every award on a DB hiccup.
+      } else if ((count ?? 0) >= cap) {
+        console.log(
+          `[awardTrust] daily cap hit: user=${userId} type=${type} count=${count}/${cap} — skipped`
+        )
+        return { ok: false, amount: 0, error: 'daily_cap_reached' }
+      }
+    }
+
     const { error } = await admin.rpc('issue_trust', {
       p_user_id: userId,
       p_amount:  Math.floor(amount),

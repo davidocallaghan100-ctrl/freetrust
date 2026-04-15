@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { applyApiRateLimit } from '@/lib/security/api-helpers'
 
 // GET /api/messages — list conversations for current user
 export async function GET() {
@@ -100,11 +101,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Rate limit — 100 req/min per user. Caps spam/flood from a
+    // compromised session without blocking legitimate fast-typers.
+    const rateLimitResponse = applyApiRateLimit(request, user.id)
+    if (rateLimitResponse) return rateLimitResponse
+
     const body = await request.json()
     const { recipientId, content, conversationId: existingConvId } = body
 
     if (!content?.trim()) {
       return NextResponse.json({ error: 'Message content is required' }, { status: 400 })
+    }
+    // Message max length — prevent 10MB messages being used as a
+    // storage abuse vector. 5000 chars is generous for conversation.
+    if (typeof content !== 'string' || content.length > 5000) {
+      return NextResponse.json({ error: 'Message too long (max 5000 chars)' }, { status: 400 })
     }
 
     let convId = existingConvId

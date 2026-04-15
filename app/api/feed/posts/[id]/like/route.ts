@@ -2,6 +2,8 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { awardTrust } from '@/lib/trust/award'
+import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 
 export async function GET(
   req: NextRequest,
@@ -86,33 +88,40 @@ export async function POST(
         const newCount = (postData.likes_count ?? 0) + 1
         await admin.from('feed_posts').update({ likes_count: newCount }).eq('id', id)
 
-        // Award ₮2 to post author on first 10 likes + send notification
+        // Award ₮2 to post author on first 10 likes + send notification.
+        //
+        // INTEGRITY AUDIT FIX (2026-04-15): Before this commit the
+        // route updated profiles.trust_balance directly and never
+        // touched trust_ledger or trust_balances. The ₮2 rewards
+        // were INVISIBLE to the wallet — they existed only as a
+        // denormalised number on profiles. Fixed by routing through
+        // awardTrust() which calls issue_trust() atomically. The
+        // denormalised profiles.trust_balance is now kept in sync
+        // by a database trigger installed in
+        // 20260415000003_trust_reconciliation.sql.
         if (newCount <= 10 && postData.user_id && postData.user_id !== user.id) {
           const { data: likerProfile } = await admin
             .from('profiles')
-            .select('full_name, username, trust_balance')
+            .select('full_name, username')
             .eq('id', user.id)
             .maybeSingle()
 
           const likerName = likerProfile?.full_name ?? likerProfile?.username ?? 'Someone'
 
-          // Award ₮2 trust to post author
-          const { data: authorProfile } = await admin
-            .from('profiles')
-            .select('trust_balance')
-            .eq('id', postData.user_id)
-            .maybeSingle()
+          await awardTrust({
+            userId: postData.user_id,
+            amount: TRUST_REWARDS.POST_LIKED,
+            type:   TRUST_LEDGER_TYPES.POST_LIKED,
+            ref:    id,
+            desc:   `Post liked by ${likerName}`,
+          })
 
-          if (authorProfile) {
-            await admin
-              .from('profiles')
-              .update({ trust_balance: (authorProfile.trust_balance ?? 0) + 2 })
-              .eq('id', postData.user_id)
-          }
-
+          // Keep the feed_posts.trust_reward denormalised counter in
+          // sync for UI display — this is a UI-only cache of the
+          // total trust this post has attracted, not a ledger.
           await admin
             .from('feed_posts')
-            .update({ trust_reward: (postData.trust_reward ?? 0) + 2 })
+            .update({ trust_reward: (postData.trust_reward ?? 0) + TRUST_REWARDS.POST_LIKED })
             .eq('id', id)
 
           // Send notification to post author (non-critical)

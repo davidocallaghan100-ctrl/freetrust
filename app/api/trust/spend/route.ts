@@ -2,6 +2,13 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { z } from 'zod'
+import { applyApiRateLimit } from '@/lib/security/api-helpers'
+import { parseBody } from '@/lib/security/validate'
+
+const SpendBodySchema = z.object({
+  action: z.string().min(1).max(64),
+})
 
 // Catalogue of spend actions. Costs are authoritative on the server —
 // the client sends the action key and we look up the real cost here
@@ -64,11 +71,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await req.json().catch(() => null) as { action?: string } | null
-    const action = body?.action
-    if (!action || typeof action !== 'string') {
-      return NextResponse.json({ error: 'action is required' }, { status: 400 })
+    // Rate limit — 100 req/min per user. Prevents a compromised
+    // client (or bot) from hammering the spend endpoint to drain
+    // a user's trust balance faster than the UI can block them.
+    const rateLimitResponse = applyApiRateLimit(req, user.id)
+    if (rateLimitResponse) return rateLimitResponse
+
+    const rawBody = await req.json().catch(() => null)
+    const parsed = parseBody(SpendBodySchema, rawBody)
+    if (!parsed.data) {
+      return NextResponse.json({ error: parsed.error ?? 'Invalid request' }, { status: 400 })
     }
+    const { action } = parsed.data
 
     const def = SPEND_ACTIONS[action]
     if (!def) {

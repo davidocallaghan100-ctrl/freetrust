@@ -1,7 +1,17 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { awardTrust } from '@/lib/trust/award'
+import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
+import { applyApiRateLimit } from '@/lib/security/api-helpers'
+import { parseBody } from '@/lib/security/validate'
+
+const DonateBodySchema = z.object({
+  project_id: z.string().uuid(),
+  amount:     z.number().int().positive().max(100_000),
+})
 
 // POST /api/impact/donate — donate trust to a specific impact project
 //
@@ -38,16 +48,17 @@ export async function POST(req: NextRequest) {
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body = await req.json().catch(() => null) as { project_id?: string; amount?: number } | null
-    const project_id = body?.project_id
-    const amount = Number(body?.amount ?? 0)
+    // Rate limit — 100 req/min per user. Prevents rapid-fire donation
+    // spam from a bot trying to drain a compromised account's balance.
+    const rateLimitResponse = applyApiRateLimit(req, user.id)
+    if (rateLimitResponse) return rateLimitResponse
 
-    if (!Number.isFinite(amount) || amount <= 0) {
-      return NextResponse.json({ error: 'Invalid amount' }, { status: 400 })
+    const rawBody = await req.json().catch(() => null)
+    const parsed = parseBody(DonateBodySchema, rawBody)
+    if (!parsed.data) {
+      return NextResponse.json({ error: parsed.error ?? 'Invalid request' }, { status: 400 })
     }
-    if (!project_id) {
-      return NextResponse.json({ error: 'Missing project_id' }, { status: 400 })
-    }
+    const { project_id, amount } = parsed.data
 
     // Atomic donation via the SECURITY DEFINER RPC. The RPC raises
     // `insufficient_funds` (SQLSTATE P0001) on overdraft so we don't
@@ -90,6 +101,21 @@ export async function POST(req: NextRequest) {
         { status: 500 },
       )
     }
+
+    // Loyalty bonus — award DONATE_IMPACT (₮2) back to the donor as
+    // a warm "thank you" acknowledgement. This is a small micro-reward
+    // intentionally much smaller than any reasonable donation so it
+    // can't be used as a wash loop (donate ₮10, get ₮10 back). The
+    // bonus is tagged with the donation's ledger ref so re-calls
+    // can be deduped by the ledger query. Failures here are logged
+    // but non-fatal — the main donation has already landed atomically.
+    await awardTrust({
+      userId: user.id,
+      amount: TRUST_REWARDS.DONATE_IMPACT,
+      type:   TRUST_LEDGER_TYPES.DONATE_IMPACT,
+      ref:    project_id,
+      desc:   `Thank you bonus for ₮${Math.floor(amount)} donation`,
+    })
 
     // Re-read the user balance for the response so the UI can show
     // the new total without a /api/wallet round-trip. The donation

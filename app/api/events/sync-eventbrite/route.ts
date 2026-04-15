@@ -139,7 +139,7 @@ interface EventbriteListResponse {
 // Row shape we insert into public.events. Kept explicit so TypeScript
 // catches drift between the field mapping and the table schema.
 interface MappedEventRow {
-  creator_id:         string
+  creator_id:         string | null
   title:              string
   description:        string | null
   category:           string | null
@@ -172,7 +172,7 @@ interface MappedEventRow {
   external_url:       string | null
 }
 
-function mapEvent(e: EventbriteEvent, creatorId: string): MappedEventRow | null {
+function mapEvent(e: EventbriteEvent, creatorId: string | null): MappedEventRow | null {
   // Eventbrite can return events with no title or no start time if the
   // organiser abandoned a draft. Skip them — we require a title for
   // UI sanity.
@@ -288,22 +288,43 @@ async function fetchAllEventbriteEvents(token: string, orgId: string): Promise<E
   return all
 }
 
-export async function POST() {
+export async function POST(req: Request) {
   const startedAt = Date.now()
   try {
-    // ── 1. Auth: admin only ─────────────────────────────────────────────
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle()
-    if (!profile || profile.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden — admin only' }, { status: 403 })
+    // ── 1. Auth: admin-session OR CRON_SECRET bearer token ──────────────
+    // The route has two callers:
+    //   * Admin UI button (authenticated via Supabase session, checked
+    //     against profiles.role = 'admin')
+    //   * Vercel cron / external scheduler (authenticated via a
+    //     shared bearer token — Authorization: Bearer <CRON_SECRET>)
+    //
+    // When CRON_SECRET is set, a request presenting the matching
+    // Authorization header bypasses the session lookup entirely and
+    // falls back to a placeholder user_id (NULL creator_id) for the
+    // events it upserts. Without this branch the cron endpoint would
+    // have no way to authenticate because it never carries a session
+    // cookie.
+    const cronSecret = process.env.CRON_SECRET
+    const authHeader = req.headers.get('authorization') ?? ''
+    const isCron = !!cronSecret && authHeader === `Bearer ${cronSecret}`
+
+    let userIdForCreator: string | null = null
+
+    if (!isCron) {
+      const supabase = await createClient()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (!profile || profile.role !== 'admin') {
+        return NextResponse.json({ error: 'Forbidden — admin only' }, { status: 403 })
+      }
+      userIdForCreator = user.id
     }
 
     // ── 2. Env check ────────────────────────────────────────────────────
@@ -346,7 +367,7 @@ export async function POST() {
     const mapped: MappedEventRow[] = []
     let skippedNoTitle = 0
     for (const raw of rawEvents) {
-      const row = mapEvent(raw, user.id)
+      const row = mapEvent(raw, userIdForCreator)
       if (row) mapped.push(row)
       else skippedNoTitle += 1
     }

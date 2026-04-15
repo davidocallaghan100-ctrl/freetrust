@@ -1,8 +1,18 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { applyApiRateLimit } from '@/lib/security/api-helpers'
+import { parseBody } from '@/lib/security/validate'
+
+// Zod schema — coerces string inputs, enforces integer, and rejects
+// anything beyond the hard cap. Beats raw typeof checks because the
+// error path is centralised + the schema is importable by tests.
+const PayoutBodySchema = z.object({
+  amount_cents: z.number().int().positive().max(500_000_000), // hard cap €5M
+})
 
 // ============================================================================
 // POST /api/stripe/payout
@@ -187,25 +197,31 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Rate limit — 100 req/min per user. Withdrawals are low-frequency
+    // but a bot spamming the endpoint could exhaust Stripe API quota
+    // or log noise. 100/min is generous for legitimate users.
+    const rateLimitResponse = applyApiRateLimit(req, user.id)
+    if (rateLimitResponse) return rateLimitResponse
+
     // ── Parse + validate the request body ──────────────────────────────────
-    let amountCents: number
+    let rawBody: unknown
     try {
-      const body = await req.json()
-      const raw = body?.amount_cents
-      amountCents = typeof raw === 'number' ? Math.floor(raw) : NaN
+      rawBody = await req.json()
     } catch {
       return NextResponse.json(
-        errBody('Invalid request — amount_cents is required.', 'invalid_amount'),
+        errBody('Invalid request body — expected JSON.', 'invalid_amount'),
         { status: 400 }
       )
     }
 
-    if (!Number.isFinite(amountCents) || amountCents <= 0) {
+    const parsed = parseBody(PayoutBodySchema, rawBody)
+    if (!parsed.data) {
       return NextResponse.json(
-        errBody('Enter a positive amount to withdraw.', 'invalid_amount'),
+        errBody(parsed.error ?? 'Invalid request', 'invalid_amount'),
         { status: 400 }
       )
     }
+    const amountCents = parsed.data.amount_cents
     if (amountCents < MIN_WITHDRAWAL_CENTS) {
       return NextResponse.json(
         errBody(
@@ -243,12 +259,16 @@ export async function POST(req: NextRequest) {
 
     const stripeAccountId = (profile?.stripe_account_id as string | null) ?? null
     if (!stripeAccountId) {
+      // 422 per audit spec: the request body is well-formed but the
+      // user's Connect account state makes the withdrawal
+      // semantically invalid. The client renders a "Connect bank
+      // account" CTA in response.
       return NextResponse.json(
         errBody(
           'Connect a bank account before withdrawing. Tap "Withdraw" again to start setup.',
           'no_stripe_account'
         ),
-        { status: 409 }
+        { status: 422 }
       )
     }
 
@@ -285,12 +305,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (!account.charges_enabled) {
+      // 422 per audit spec — unverified/incomplete account state.
       return NextResponse.json(
         errBody(
           'Your Stripe account is not yet allowed to receive charges. Finish onboarding to enable withdrawals.',
           'charges_disabled'
         ),
-        { status: 409 }
+        { status: 422 }
       )
     }
     if (!account.payouts_enabled) {
@@ -299,7 +320,7 @@ export async function POST(req: NextRequest) {
           'Your Stripe account is not yet allowed to receive payouts. Finish onboarding (or check your Stripe dashboard for any required documents).',
           'payouts_disabled'
         ),
-        { status: 409 }
+        { status: 422 }
       )
     }
 

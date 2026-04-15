@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { toPgUrlArray, toPgTagArray } from '@/lib/supabase/text-array'
 import { awardTrust } from '@/lib/trust/award'
+import { applyApiRateLimit } from '@/lib/security/api-helpers'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 
 // GET /api/listings — list active listings (public) or all own listings (authenticated)
@@ -69,6 +70,11 @@ export async function POST(request: NextRequest) {
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Rate limit — 100 req/min per user. Listings creation is low
+    // frequency but caps a runaway client loop or spam attack.
+    const rateLimitResponse = applyApiRateLimit(request, user.id)
+    if (rateLimitResponse) return rateLimitResponse
 
     let body: Record<string, unknown>
     try {
