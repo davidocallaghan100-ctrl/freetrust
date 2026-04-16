@@ -8,6 +8,10 @@ interface SearchHit {
   title: string
   subtitle?: string
   url: string
+  // Optional avatar for member hits — used by the /messages New
+  // Message dropdown to render a recognisable member list. All
+  // non-member hits omit this field.
+  avatarUrl?: string | null
 }
 
 export async function GET(req: NextRequest) {
@@ -24,7 +28,7 @@ export async function GET(req: NextRequest) {
     // Parallel queries across all tables
     const [membersRes, servicesRes, productsRes, eventsRes, articlesRes, orgsRes, grassrootsRes] = await Promise.allSettled([
       (() => {
-        let qb = supabase.from('profiles').select('id, full_name, location').limit(browseMode ? 12 : perType)
+        let qb = supabase.from('profiles').select('id, full_name, location, avatar_url').limit(browseMode ? 12 : perType)
         if (q) qb = qb.ilike('full_name', `%${q}%`)
         return qb
       })(),
@@ -92,11 +96,12 @@ export async function GET(req: NextRequest) {
     if (membersRes.status === 'fulfilled' && membersRes.value.data) {
       for (const m of membersRes.value.data) {
         hits.push({
-          id: m.id,
-          type: 'member',
-          title: m.full_name ?? 'Member',
-          subtitle: m.location || undefined,
-          url: `/profile?id=${m.id}`,
+          id:        m.id,
+          type:      'member',
+          title:     m.full_name ?? 'Member',
+          subtitle:  m.location || undefined,
+          url:       `/profile?id=${m.id}`,
+          avatarUrl: (m.avatar_url as string | null | undefined) ?? null,
         })
       }
     }

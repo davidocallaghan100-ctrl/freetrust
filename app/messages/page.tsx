@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import MessageDrawer from '@/components/profile/MessageDrawer'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface Profile {
@@ -77,7 +78,15 @@ export default function MessagesPage() {
   const [pendingResend, setPendingResend] = useState<{ id: string; text: string } | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showNewModal, setShowNewModal] = useState(false)
-  const [newRecipient, setNewRecipient] = useState('')
+  // New Message modal — live member search dropdown. Replaces the old
+  // dead-end "type a name/email" input that went nowhere.
+  const [newSearch,        setNewSearch]        = useState('')
+  const [newResults,       setNewResults]       = useState<Array<{ id: string; full_name: string | null; avatar_url: string | null; subtitle: string | null }>>([])
+  const [newSearchLoading, setNewSearchLoading] = useState(false)
+  // When a member is picked from the dropdown, open the inline drawer
+  // with that member as the recipient. Same drawer component used on
+  // profile pages — zero routing, conversation loads automatically.
+  const [drawerRecipient,  setDrawerRecipient]  = useState<{ id: string; full_name: string | null; avatar_url: string | null } | null>(null)
   const [mobileView, setMobileView] = useState<'list' | 'thread'>('list')
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -145,6 +154,69 @@ export default function MessagesPage() {
       console.error('[messages] loadConversations threw:', err)
     }
   }
+
+  // Live member search for the New Message modal.
+  //
+  // Debounced 250ms so fast typists don't fire a query per keystroke.
+  // Empty query → browse mode (first 12 members). Otherwise ilike
+  // match on full_name via the existing /api/search endpoint,
+  // filtered client-side to `type === 'member'`. Avatars come back
+  // in the `avatarUrl` field so the dropdown can render a recognisable
+  // list (much better UX than the old "type a name and figure it out"
+  // input which went nowhere).
+  useEffect(() => {
+    if (!showNewModal) return
+    let cancelled = false
+    const t = setTimeout(async () => {
+      setNewSearchLoading(true)
+      try {
+        const q = newSearch.trim()
+        const url = `/api/search?q=${encodeURIComponent(q)}&limit=30`
+        const res = await fetch(url, { cache: 'no-store' })
+        if (!res.ok) {
+          if (!cancelled) setNewResults([])
+          return
+        }
+        const data = await res.json() as {
+          hits: Array<{
+            id:        string
+            type:      string
+            title:     string
+            subtitle?: string
+            avatarUrl?: string | null
+          }>
+        }
+        const members = (data.hits ?? [])
+          .filter(h => h.type === 'member' && h.id !== userId)
+          .slice(0, 15)
+          .map(h => ({
+            id:         h.id,
+            full_name:  h.title || null,
+            avatar_url: h.avatarUrl ?? null,
+            subtitle:   h.subtitle ?? null,
+          }))
+        if (!cancelled) setNewResults(members)
+      } catch (err) {
+        console.error('[messages] member search failed:', err)
+        if (!cancelled) setNewResults([])
+      } finally {
+        if (!cancelled) setNewSearchLoading(false)
+      }
+    }, 250)
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+    }
+  }, [newSearch, showNewModal, userId])
+
+  // Reset the search state whenever the modal closes so reopening
+  // starts clean.
+  useEffect(() => {
+    if (!showNewModal) {
+      setNewSearch('')
+      setNewResults([])
+    }
+  }, [showNewModal])
 
   const loadMessages = useCallback(async (convId: string) => {
     const supabase = createClient()
@@ -553,31 +625,135 @@ export default function MessagesPage() {
         )}
       </div>
 
-      {/* New Message modal */}
+      {/* New Message modal — live member search dropdown */}
       {showNewModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-          <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 14, padding: '1.75rem', maxWidth: 380, width: '90%' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem' }}>New Message</h3>
-            <input
-              value={newRecipient}
-              onChange={e => setNewRecipient(e.target.value)}
-              placeholder="Search by name or email…"
-              style={{ width: '100%', background: '#0f172a', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, color: '#f1f5f9', padding: '0.65rem 0.9rem', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: '1rem' }}
-            />
-            <p style={{ fontSize: '0.82rem', color: '#475569', marginBottom: '1.25rem' }}>
-              To start a conversation, visit any member&apos;s profile and click &quot;Message&quot;.
-            </p>
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowNewModal(false)} style={{ background: 'transparent', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 7, padding: '0.5rem 1rem', fontSize: '0.85rem', color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit' }}>
-                Cancel
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '5vh 1rem', zIndex: 9999 }}
+          onClick={() => setShowNewModal(false)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 14, padding: '1.5rem', maxWidth: 440, width: '100%', display: 'flex', flexDirection: 'column', maxHeight: '80vh' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>New Message</h3>
+              <button
+                onClick={() => setShowNewModal(false)}
+                aria-label="Close"
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '1.5rem', cursor: 'pointer', lineHeight: 1, padding: '0.25rem 0.5rem' }}
+              >
+                ×
               </button>
-              <button onClick={() => { setShowNewModal(false); router.push('/browse') }} style={{ background: '#38bdf8', border: 'none', borderRadius: 7, padding: '0.5rem 1rem', fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer', fontFamily: 'inherit' }}>
-                Browse Members
+            </div>
+
+            <input
+              value={newSearch}
+              onChange={e => setNewSearch(e.target.value)}
+              placeholder="Search members by name…"
+              autoFocus
+              style={{ width: '100%', background: '#0f172a', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, color: '#f1f5f9', padding: '0.7rem 0.95rem', fontSize: '16px', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: '0.75rem' }}
+            />
+
+            {/* Results dropdown — scrolls independently inside the modal */}
+            <div style={{ flex: 1, overflowY: 'auto', margin: '0 -0.5rem', paddingRight: '0.25rem' }}>
+              {newSearchLoading && newResults.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '1.5rem 0', color: '#64748b', fontSize: '0.85rem' }}>
+                  Searching members…
+                </div>
+              )}
+
+              {!newSearchLoading && newResults.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '1.5rem 0', color: '#64748b', fontSize: '0.85rem' }}>
+                  {newSearch.trim().length > 0
+                    ? 'No members match your search.'
+                    : 'Start typing to search members, or browse all →'}
+                </div>
+              )}
+
+              {newResults.map(m => (
+                <button
+                  key={m.id}
+                  onClick={() => {
+                    setDrawerRecipient({
+                      id:         m.id,
+                      full_name:  m.full_name,
+                      avatar_url: m.avatar_url,
+                    })
+                    setShowNewModal(false)
+                  }}
+                  style={{
+                    display:        'flex',
+                    alignItems:     'center',
+                    gap:            '0.75rem',
+                    width:          '100%',
+                    padding:        '0.65rem 0.75rem',
+                    background:     'transparent',
+                    border:         'none',
+                    borderRadius:   8,
+                    textAlign:      'left',
+                    cursor:         'pointer',
+                    color:          '#f1f5f9',
+                    fontFamily:     'inherit',
+                    minHeight:      56,
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(56,189,248,0.08)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  {m.avatar_url ? (
+                    <img
+                      src={m.avatar_url}
+                      alt=""
+                      style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                      onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                    />
+                  ) : (
+                    <div
+                      aria-hidden="true"
+                      style={{ width: 40, height: 40, borderRadius: '50%', background: pickGradient(m.id), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: '#0f172a', flexShrink: 0 }}
+                    >
+                      {getInitials(m.full_name)}
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {m.full_name || 'Member'}
+                    </div>
+                    {m.subtitle && (
+                      <div style={{ fontSize: '0.75rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {m.subtitle}
+                      </div>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(56,189,248,0.1)' }}>
+              <button
+                onClick={() => { setShowNewModal(false); router.push('/browse') }}
+                style={{ width: '100%', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.6rem', fontSize: '0.85rem', fontWeight: 600, color: '#38bdf8', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                Or browse all members →
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Inline drawer for conversations opened from the New Message
+          dropdown. Uses the same MessageDrawer used on profile pages
+          so the conversation UX is identical everywhere. */}
+      <MessageDrawer
+        open={drawerRecipient !== null}
+        recipient={drawerRecipient}
+        currentUserId={userId}
+        onClose={() => {
+          setDrawerRecipient(null)
+          // Refresh the conversation list so the new thread shows
+          // up at the top without a page reload.
+          if (userId) void loadConversations(userId)
+        }}
+      />
     </div>
   )
 }
