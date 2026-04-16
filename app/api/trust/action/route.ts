@@ -2,23 +2,38 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { TRUST_REWARDS } from '@/lib/trust/rewards'
 
-// Qualifying actions and their Trust rewards
+// Qualifying actions and their Trust rewards.
+// Every `amount` here references the canonical catalogue in
+// lib/trust/rewards.ts so there is ONE source of truth for reward
+// values. Previously this map had drifted: signup_bonus was 25
+// (should be 200), complete_profile was 10 (should be 50),
+// receive_review was 15 (should be 25), refer_member was 100
+// (should be 150), post_article was 20 (should be 75), host_event
+// was 15 (should be 50), join_community was 5 (should be 20).
+// Every other trust-awarding code path already used TRUST_REWARDS;
+// this file was the last hold-out.
 const TRUST_ACTIONS: Record<string, { amount: number; label: string; repeatable?: boolean }> = {
-  signup_bonus:      { amount: 25,  label: 'Welcome bonus'            },
-  complete_profile:  { amount: 10,  label: 'Profile completed to 100%' },
-  first_sale:        { amount: 50,  label: 'First completed transaction' },
-  receive_review:    { amount: 15,  label: 'Received a review',  repeatable: true },
-  refer_member:      { amount: 100, label: 'Referred a new member', repeatable: true },
-  post_article:      { amount: 20,  label: 'Published an article', repeatable: true },
-  host_event:        { amount: 15,  label: 'Hosted an event', repeatable: true },
-  join_community:    { amount: 5,   label: 'Joined a community' },
-  get_10_followers:  { amount: 20,  label: 'Reached 10 followers' },
-  get_50_followers:  { amount: 30,  label: 'Reached 50 followers' },
-  get_100_followers: { amount: 50,  label: 'Reached 100 followers' },
-  make_purchase:     { amount: 5,   label: 'Made a purchase', repeatable: true },
-  leave_review:      { amount: 10,  label: 'Left a review', repeatable: true },
-  daily_login:       { amount: 1,   label: 'Daily check-in', repeatable: true },
+  signup_bonus:      { amount: TRUST_REWARDS.SIGNUP_BONUS,      label: 'Welcome bonus'                 },
+  complete_profile:  { amount: TRUST_REWARDS.COMPLETE_PROFILE,  label: 'Profile completed to 100%'     },
+  first_sale:        { amount: TRUST_REWARDS.COMPLETE_ORDER,    label: 'First completed transaction'   },
+  receive_review:    { amount: TRUST_REWARDS.RECEIVE_REVIEW,    label: 'Received a review',       repeatable: true },
+  refer_member:      { amount: TRUST_REWARDS.REFER_USER,        label: 'Referred a new member',   repeatable: true },
+  post_article:      { amount: TRUST_REWARDS.PUBLISH_ARTICLE,   label: 'Published an article',    repeatable: true },
+  host_event:        { amount: TRUST_REWARDS.CREATE_EVENT,      label: 'Hosted an event',         repeatable: true },
+  join_community:    { amount: TRUST_REWARDS.JOIN_COMMUNITY,    label: 'Joined a community'            },
+  leave_review:      { amount: TRUST_REWARDS.LEAVE_REVIEW,      label: 'Left a review',           repeatable: true },
+  donate_impact:     { amount: TRUST_REWARDS.DONATE_IMPACT,     label: 'Donated to the Sustainability Fund', repeatable: true },
+  post_liked:        { amount: TRUST_REWARDS.POST_LIKED,        label: 'Your post received a like',   repeatable: true },
+  // Actions below are gamification milestones — not in TRUST_REWARDS
+  // yet because the qualifying logic lives in the follower-count
+  // triggers. Keeping them here as a flat record for now.
+  get_10_followers:  { amount: 20,                              label: 'Reached 10 followers'          },
+  get_50_followers:  { amount: 30,                              label: 'Reached 50 followers'          },
+  get_100_followers: { amount: 50,                              label: 'Reached 100 followers'         },
+  make_purchase:     { amount: 5,                               label: 'Made a purchase',         repeatable: true },
+  daily_login:       { amount: 1,                               label: 'Daily check-in',          repeatable: true },
 }
 
 // POST /api/trust/action — award trust for a qualifying action

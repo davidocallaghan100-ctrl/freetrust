@@ -2,26 +2,40 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 
-// POST /api/auth/signup-bonus — issue ₮25 welcome bonus (idempotent)
+// POST /api/auth/signup-bonus — issue the welcome bonus (idempotent)
 //
-// Auth is done via the user-session client (so we know WHICH user is
-// requesting the bonus), but every write uses the admin (service-role)
-// client so RLS can't silently block the insert the way it did before
-// the fix in 20260413000004_trust_welcome_grant.sql.
+// The amount is read from TRUST_REWARDS.SIGNUP_BONUS (currently ₮200).
+// This file previously hardcoded `25` in ~10 places, which meant new
+// members received ₮25 even though the catalogue said ₮200. That bug
+// is fixed here — every amount is read from the single source of
+// truth in lib/trust/rewards.ts.
 //
-// Three layered attempts:
-//   1. RPC issue_trust() — atomic ledger + balance write, SECURITY
-//      DEFINER so it bypasses RLS cleanly.
-//   2. Direct admin insert into trust_balances + trust_ledger — fallback
-//      for the (vanishingly unlikely) case the RPC is missing.
-//   3. Explicit 500 with a detail field so the client sees SOMETHING
-//      instead of the old silent-failure behaviour.
+// Three idempotency / correction cases:
 //
-// Idempotency is based on whether a trust_balances row already exists for
-// the user — the register page and /auth/callback both hit this route
-// and we can't double-grant.
+//   CASE A — user already has a trust_balances row AND their signup
+//            grant total is >= TRUST_REWARDS.SIGNUP_BONUS. The bonus
+//            has already been fully issued. Return issued=false with
+//            the current balance.
+//
+//   CASE B — user has a trust_balances row but their signup grant
+//            total is < TRUST_REWARDS.SIGNUP_BONUS. They received the
+//            old ₮25 bonus (or partial amount). Issue a top-up for
+//            the difference via a 'signup_bonus_topup' ledger type
+//            so the audit trail shows what happened, and return
+//            issued=true with the corrected balance.
+//
+//   CASE C — user has no trust_balances row (first signup). Issue
+//            the full TRUST_REWARDS.SIGNUP_BONUS amount and return
+//            issued=true.
+//
+// In every success path the response includes `amount` so the frontend
+// toast can render the correct number instead of a hardcoded string.
+// Every write uses the admin (service-role) client so RLS can't block
+// the insert. Every failure path logs the full Supabase error object.
 export async function POST() {
+  const expectedAmount = TRUST_REWARDS.SIGNUP_BONUS
   try {
     const authClient = await createClient()
     const { data: { user }, error: authError } = await authClient.auth.getUser()
@@ -29,127 +43,200 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Writes bypass RLS — the user-session client would hit the same
-    // INSERT RLS failures that caused the original zero-coin bug.
     const admin = createAdminClient()
 
-    // Idempotency check: if a balance row already exists, the bonus has
-    // already been granted. Return the current balance so the caller can
-    // still update its UI (but with issued=false so we don't show the
-    // "₮25 awarded!" toast twice).
-    const { data: existingBalance, error: checkError } = await admin
-      .from('trust_balances')
-      .select('balance, lifetime')
-      .eq('user_id', user.id)
-      .maybeSingle()
+    // Look up the current balance + sum of all signup_bonus AND
+    // signup_bonus_topup ledger rows so we know whether the user is
+    // in Case A, B or C.
+    const [balanceRes, grantsRes] = await Promise.all([
+      admin
+        .from('trust_balances')
+        .select('balance, lifetime')
+        .eq('user_id', user.id)
+        .maybeSingle(),
+      admin
+        .from('trust_ledger')
+        .select('amount')
+        .eq('user_id', user.id)
+        .in('type', [
+          TRUST_LEDGER_TYPES.SIGNUP_BONUS,
+          'signup_bonus_topup',
+        ]),
+    ])
 
-    if (checkError) {
-      console.error('[POST /api/auth/signup-bonus] idempotency check error:', checkError)
-      // Don't fail outright — the check is best-effort, we'd rather try
-      // the grant and let the RPC's upsert handle double-spend safety.
-    }
+    const existingBalance = balanceRes.data
+    const grantTotal = (grantsRes.data ?? []).reduce(
+      (sum, row) => sum + Number(row.amount ?? 0),
+      0,
+    )
 
-    if (existingBalance) {
+    // ── CASE A: already fully granted ──────────────────────────────────
+    if (existingBalance && grantTotal >= expectedAmount) {
       return NextResponse.json({
-        issued: false,
-        balance: existingBalance.balance ?? 0,
-        lifetime: existingBalance.lifetime ?? 0,
-        message: 'Signup bonus already issued',
+        issued:         false,
+        amount:         expectedAmount,
+        balance:        existingBalance.balance  ?? 0,
+        lifetime:       existingBalance.lifetime ?? 0,
+        already_issued: true,
+        message:        'Signup bonus already issued',
       })
     }
 
-    // ── Attempt 1: RPC ──────────────────────────────────────────────────────
-    // issue_trust() is SECURITY DEFINER so it runs with the function
-    // owner's privileges and writes to both trust_ledger and
-    // trust_balances atomically. Defined in
-    // supabase/migrations/20260413000004_trust_welcome_grant.sql.
-    const { error: rpcError } = await admin.rpc('issue_trust', {
-      p_user_id: user.id,
-      p_amount: 25,
-      p_type: 'signup_bonus',
-      p_ref: null,
-      p_desc: 'Welcome to FreeTrust! Here are your first ₮25 Trust tokens.',
-    })
-
-    if (!rpcError) {
-      // RPC succeeded — read the written balance back so the UI toast
-      // can show the final number.
-      const { data: balanceData } = await admin
+    // ── CASE B: partial grant — issue the top-up ──────────────────────
+    if (existingBalance && grantTotal > 0 && grantTotal < expectedAmount) {
+      const topUp = expectedAmount - grantTotal
+      const { error: topupErr } = await admin.rpc('issue_trust', {
+        p_user_id: user.id,
+        p_amount:  topUp,
+        p_type:    'signup_bonus_topup',
+        p_ref:     null,
+        p_desc:    `Signup bonus top-up — corrected from ₮${grantTotal} to ₮${expectedAmount}`,
+      })
+      if (topupErr) {
+        console.error('[signup-bonus] top-up RPC failed:', {
+          code:    topupErr.code,
+          message: topupErr.message,
+          details: topupErr.details,
+          hint:    topupErr.hint,
+        })
+        return NextResponse.json(
+          {
+            error:  'Could not apply signup bonus top-up',
+            detail: {
+              code:    topupErr.code    ?? null,
+              message: topupErr.message ?? null,
+              hint:    topupErr.hint    ?? null,
+            },
+          },
+          { status: 500 },
+        )
+      }
+      const { data: newBal } = await admin
         .from('trust_balances')
         .select('balance, lifetime')
         .eq('user_id', user.id)
         .maybeSingle()
-
+      console.log(
+        `[signup-bonus] topped up user ${user.id}: +₮${topUp} ` +
+        `(was ₮${grantTotal}, now ₮${expectedAmount})`,
+      )
       return NextResponse.json({
-        issued: true,
-        balance: balanceData?.balance ?? 25,
-        lifetime: balanceData?.lifetime ?? 25,
-        message: '₮25 Trust awarded!',
+        issued:   true,
+        amount:   expectedAmount,
+        topup:    topUp,
+        balance:  newBal?.balance  ?? expectedAmount,
+        lifetime: newBal?.lifetime ?? expectedAmount,
+        message:  `Welcome to FreeTrust! You've received ₮${expectedAmount} to get started (corrected from ₮${grantTotal})`,
       })
     }
 
-    // RPC failed — log the full error so future investigations don't
-    // face the "silently swallowed" problem we just fixed.
-    console.error('[POST /api/auth/signup-bonus] issue_trust RPC failed, trying direct insert:', {
-      code: rpcError.code,
-      message: rpcError.message,
-      details: rpcError.details,
-      hint: rpcError.hint,
+    // ── CASE C: first-time grant ──────────────────────────────────────
+    const description = `Welcome to FreeTrust! Here are your first ₮${expectedAmount} Trust tokens.`
+    const { error: rpcError } = await admin.rpc('issue_trust', {
+      p_user_id: user.id,
+      p_amount:  expectedAmount,
+      p_type:    TRUST_LEDGER_TYPES.SIGNUP_BONUS,
+      p_ref:     null,
+      p_desc:    description,
     })
 
-    // ── Attempt 2: direct admin insert ──────────────────────────────────────
-    // Same shape the RPC would have written. The admin client bypasses
-    // RLS so this works even if the user-level INSERT policy is missing.
+    if (!rpcError) {
+      // Verify the ledger entry was actually written with the correct
+      // amount. If it isn't, log a loud warning — the next bug report
+      // can grep Vercel logs for '[signup-bonus] AMOUNT MISMATCH' and
+      // immediately know what happened.
+      const [{ data: ledgerCheck }, { data: balanceData }] = await Promise.all([
+        admin
+          .from('trust_ledger')
+          .select('amount')
+          .eq('user_id', user.id)
+          .eq('type', TRUST_LEDGER_TYPES.SIGNUP_BONUS)
+          .limit(1),
+        admin
+          .from('trust_balances')
+          .select('balance, lifetime')
+          .eq('user_id', user.id)
+          .maybeSingle(),
+      ])
+      const ledgerAmount = Number(ledgerCheck?.[0]?.amount ?? 0)
+      if (ledgerAmount !== expectedAmount) {
+        console.error(
+          `[signup-bonus] AMOUNT MISMATCH for user ${user.id}: ` +
+          `ledger has ₮${ledgerAmount}, expected ₮${expectedAmount}`,
+        )
+      }
+      return NextResponse.json({
+        issued:   true,
+        amount:   expectedAmount,
+        balance:  balanceData?.balance  ?? expectedAmount,
+        lifetime: balanceData?.lifetime ?? expectedAmount,
+        message:  `Welcome to FreeTrust! You've received ₮${expectedAmount} to get started`,
+      })
+    }
+
+    // RPC failed — log and fall back to a direct admin insert.
+    console.error('[signup-bonus] issue_trust RPC failed, trying direct insert:', {
+      code:    rpcError.code,
+      message: rpcError.message,
+      details: rpcError.details,
+      hint:    rpcError.hint,
+    })
+
     const { error: balanceInsertErr } = await admin
       .from('trust_balances')
-      .insert({ user_id: user.id, balance: 25, lifetime: 25 })
+      .insert({
+        user_id:  user.id,
+        balance:  expectedAmount,
+        lifetime: expectedAmount,
+      })
 
     if (balanceInsertErr) {
-      console.error('[POST /api/auth/signup-bonus] direct balance insert error:', {
-        code: balanceInsertErr.code,
+      console.error('[signup-bonus] direct balance insert error:', {
+        code:    balanceInsertErr.code,
         message: balanceInsertErr.message,
         details: balanceInsertErr.details,
-        hint: balanceInsertErr.hint,
+        hint:    balanceInsertErr.hint,
       })
       return NextResponse.json(
         {
-          error: 'Could not award bonus',
-          issued: false,
+          error:   'Could not award bonus',
+          issued:  false,
           balance: 0,
+          amount:  expectedAmount,
           detail: {
-            code: balanceInsertErr.code ?? null,
+            code:    balanceInsertErr.code    ?? null,
             message: balanceInsertErr.message ?? null,
-            hint: balanceInsertErr.hint ?? null,
+            hint:    balanceInsertErr.hint    ?? null,
           },
         },
-        { status: 500 }
+        { status: 500 },
       )
     }
 
-    // Best-effort ledger entry — atomicity is weaker here than in the
-    // RPC path but the balance (the source of truth the UI reads) is
-    // already correct, so a ledger failure is non-fatal. Log it but
-    // don't fail the response.
     const { error: ledgerErr } = await admin.from('trust_ledger').insert({
-      user_id: user.id,
-      amount: 25,
-      type: 'signup_bonus',
-      description: 'Welcome to FreeTrust! Here are your first ₮25 Trust tokens.',
+      user_id:     user.id,
+      amount:      expectedAmount,
+      type:        TRUST_LEDGER_TYPES.SIGNUP_BONUS,
+      description,
     })
     if (ledgerErr) {
-      console.error('[POST /api/auth/signup-bonus] ledger insert error (non-fatal):', ledgerErr.message)
+      console.error('[signup-bonus] ledger insert error (non-fatal):', ledgerErr.message)
     }
 
     return NextResponse.json({
-      issued: true,
-      balance: 25,
-      lifetime: 25,
-      message: '₮25 Trust awarded!',
+      issued:   true,
+      amount:   expectedAmount,
+      balance:  expectedAmount,
+      lifetime: expectedAmount,
+      message:  `Welcome to FreeTrust! You've received ₮${expectedAmount} to get started`,
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     const stack   = err instanceof Error ? err.stack   : undefined
-    console.error('[POST /api/auth/signup-bonus] Unexpected error:', message, stack)
-    return NextResponse.json({ error: `Internal server error: ${message}` }, { status: 500 })
+    console.error('[signup-bonus] Unexpected error:', message, stack)
+    return NextResponse.json(
+      { error: `Internal server error: ${message}`, amount: expectedAmount },
+      { status: 500 },
+    )
   }
 }

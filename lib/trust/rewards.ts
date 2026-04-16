@@ -42,6 +42,10 @@ export const TRUST_REWARDS = {
   COMPLETE_ORDER:    100,  // Order marked complete (seller side)
   LEAVE_REVIEW:      10,   // User leaves a review on an order
   RECEIVE_REVIEW:    25,   // User receives a review (from their counterparty)
+
+  // ── Engagement ───────────────────────────────────────────────────
+  DONATE_IMPACT:     2,    // User donates to the Sustainability Fund (per donation)
+  POST_LIKED:        2,    // User's feed post receives a like
 } as const
 
 // Type of valid reward keys — used by awardTrust() for autocomplete
@@ -72,6 +76,9 @@ export const TRUST_LEDGER_TYPES = {
   COMPLETE_ORDER:   'complete_order',
   LEAVE_REVIEW:     'leave_review',
   RECEIVE_REVIEW:   'receive_review',
+
+  DONATE_IMPACT:    'donate_impact',
+  POST_LIKED:       'post_liked',
 } as const
 
 export type TrustLedgerType = typeof TRUST_LEDGER_TYPES[keyof typeof TRUST_LEDGER_TYPES]
