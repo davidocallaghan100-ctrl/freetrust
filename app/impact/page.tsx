@@ -15,6 +15,13 @@ interface ImpactProject {
   tags: string[]
   avatar_initials: string
   avatar_gradient: string
+  // New (20260415000013_irish_impact_causes.sql):
+  //   emoji    — preferred over avatar_initials when present; shown
+  //              as a single glyph instead of the letter tile
+  //   featured — renders a "Most needed" pill, sorts first, used by
+  //              the new category-grouped layout
+  emoji?:    string | null
+  featured?: boolean
   raised: number
   goal: number
   currency: string
@@ -54,7 +61,29 @@ interface LeaderboardEntry {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const CATEGORIES = ['All Projects', 'Reforestation', 'Clean Energy', 'Ocean', 'Education', 'Food Security', 'Biodiversity']
+// Tabs at the top of the projects grid. "All Projects" triggers the
+// category-grouped view; any other tab filters to that one category.
+// Irish causes added by 20260415000013_irish_impact_causes.sql slot
+// into Housing, Mental Health, Food Poverty, Environment, Elderly
+// Care, Disability, Rural Development, Integration (plus the legacy
+// Education category reused by the School Meals Programme).
+const CATEGORIES = [
+  'All Projects',
+  'Housing',
+  'Mental Health',
+  'Food Poverty',
+  'Environment',
+  'Elderly Care',
+  'Disability',
+  'Rural Development',
+  'Integration',
+  'Education',
+  'Reforestation',
+  'Clean Energy',
+  'Ocean',
+  'Food Security',
+  'Biodiversity',
+]
 
 const VOTABLE_CAUSES = [
   { id: 'c1', name: 'Amazon Rainforest Protection', desc: 'Protect 100,000 hectares of primary Amazon rainforest', icon: '🌿' },
@@ -126,6 +155,162 @@ function UserAvatar({ url, name, size = 36 }: { url: string | null; name: string
   )
 }
 
+// ── Suggest a Cause form ─────────────────────────────────────────────────────
+// Bottom-of-page form that fires POST /api/impact/suggest. Works for
+// anons (no auth required) but carries the user_id when logged in.
+// Kept as a local component so it can stay in this single file
+// alongside the /impact page logic — no new file to maintain.
+
+function SuggestACauseForm() {
+  const [name,        setName]        = useState('')
+  const [description, setDescription] = useState('')
+  const [category,    setCategory]    = useState('')
+  const [email,       setEmail]       = useState('')
+  const [submitting,  setSubmitting]  = useState(false)
+  const [success,     setSuccess]     = useState<string | null>(null)
+  const [error,       setError]       = useState<string | null>(null)
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      const res = await fetch('/api/impact/suggest', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ name, description, category, email }),
+      })
+      const data = await res.json().catch(() => null) as { ok?: boolean; message?: string; error?: string } | null
+      if (!res.ok || !data?.ok) {
+        setError(data?.error || `Submission failed (HTTP ${res.status})`)
+        return
+      }
+      setSuccess(data.message || 'Thank you! Your suggestion has been submitted.')
+      setName('')
+      setDescription('')
+      setCategory('')
+      setEmail('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div style={{ background: '#1e293b', border: '1px solid rgba(52,211,153,0.18)', borderRadius: 16, padding: '1.75rem' }}>
+      <div style={{ display: 'inline-block', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', borderRadius: 999, padding: '0.25rem 0.75rem', fontSize: '0.7rem', color: '#34d399', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.8rem' }}>
+        ✦ Suggest a cause
+      </div>
+      <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f1f5f9', margin: '0 0 0.5rem' }}>
+        Know a cause that deserves support?
+      </h3>
+      <p style={{ fontSize: '0.88rem', color: '#94a3b8', margin: '0 0 1.25rem', lineHeight: 1.6 }}>
+        Suggest it and our community will vote on it. Successful suggestions are added to the fund next quarter.
+      </p>
+
+      <form onSubmit={submit} style={{ display: 'grid', gap: '0.75rem' }}>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '0.3rem' }}>
+            Cause name <span style={{ color: '#ef4444' }}>*</span>
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="e.g. Support for Dublin Simon Community"
+            required
+            minLength={3}
+            maxLength={120}
+            style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.6rem 0.85rem', color: '#f1f5f9', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
+          />
+        </div>
+
+        <div>
+          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '0.3rem' }}>
+            Category
+          </label>
+          <select
+            value={category}
+            onChange={e => setCategory(e.target.value)}
+            style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.6rem 0.85rem', color: '#f1f5f9', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
+          >
+            <option value="">Choose a category…</option>
+            <option value="Housing">Housing</option>
+            <option value="Mental Health">Mental Health</option>
+            <option value="Food Poverty">Food Poverty</option>
+            <option value="Education">Education</option>
+            <option value="Environment">Environment</option>
+            <option value="Elderly Care">Elderly Care</option>
+            <option value="Disability">Disability</option>
+            <option value="Rural Development">Rural Development</option>
+            <option value="Integration">Integration</option>
+            <option value="Reforestation">Reforestation</option>
+            <option value="Clean Energy">Clean Energy</option>
+            <option value="Ocean">Ocean</option>
+            <option value="Biodiversity">Biodiversity</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div>
+          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '0.3rem' }}>
+            Description <span style={{ color: '#ef4444' }}>*</span>
+          </label>
+          <textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            placeholder="Describe the cause, who it helps, and why it matters in Ireland…"
+            required
+            minLength={20}
+            maxLength={1000}
+            rows={4}
+            style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.6rem 0.85rem', color: '#f1f5f9', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit', resize: 'vertical' }}
+          />
+          <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.2rem', textAlign: 'right' }}>
+            {description.length}/1000
+          </div>
+        </div>
+
+        <div>
+          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '0.3rem' }}>
+            Your email <span style={{ color: '#64748b', fontWeight: 400 }}>(optional — we'll follow up if your cause is selected)</span>
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.6rem 0.85rem', color: '#f1f5f9', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
+          />
+        </div>
+
+        {error && (
+          <div role="alert" style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 8, padding: '0.6rem 0.85rem', fontSize: '0.82rem', color: '#fca5a5' }}>
+            {error}
+          </div>
+        )}
+        {success && (
+          <div role="status" style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.3)', borderRadius: 8, padding: '0.6rem 0.85rem', fontSize: '0.82rem', color: '#34d399' }}>
+            🌱 {success}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.25rem' }}>
+          <button
+            type="submit"
+            disabled={submitting}
+            style={{ background: '#34d399', border: 'none', borderRadius: 8, padding: '0.7rem 1.6rem', fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', cursor: submitting ? 'default' : 'pointer', opacity: submitting ? 0.65 : 1, fontFamily: 'inherit' }}
+          >
+            {submitting ? 'Submitting…' : 'Submit Suggestion'}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function ImpactPage() {
@@ -176,7 +361,62 @@ export default function ImpactPage() {
 
   useEffect(() => { loadAll() }, [loadAll])
 
-  const filtered = activeCat === 'All Projects' ? projects : projects.filter(p => p.category === activeCat)
+  // Filtered view. Within each bucket we sort featured-first (Most
+  // needed pills float to the top), then by sort_order. The grouped
+  // "All Projects" rendering below still reads this pre-sorted list.
+  const filtered = (activeCat === 'All Projects' ? projects : projects.filter(p => p.category === activeCat))
+    .slice()
+    .sort((a, b) => {
+      const fa = a.featured ? 1 : 0
+      const fb = b.featured ? 1 : 0
+      if (fa !== fb) return fb - fa
+      return (a.name || '').localeCompare(b.name || '')
+    })
+
+  // Ordered group list for the grouped view. Seeds the category
+  // header order so Housing / Mental Health / Food Poverty come
+  // first (where the "Most needed" causes live), then the rest.
+  // Categories not in this priority list tack on at the end in the
+  // order they first appear.
+  const CATEGORY_PRIORITY: string[] = [
+    'Housing',
+    'Mental Health',
+    'Food Poverty',
+    'Education',
+    'Environment',
+    'Elderly Care',
+    'Disability',
+    'Rural Development',
+    'Integration',
+    'Reforestation',
+    'Clean Energy',
+    'Ocean',
+    'Food Security',
+    'Biodiversity',
+  ]
+  const groupedByCategory: Array<{ category: string; items: ImpactProject[] }> = (() => {
+    if (activeCat !== 'All Projects') return []
+    const groups = new Map<string, ImpactProject[]>()
+    for (const p of filtered) {
+      if (!groups.has(p.category)) groups.set(p.category, [])
+      groups.get(p.category)!.push(p)
+    }
+    const ordered: Array<{ category: string; items: ImpactProject[] }> = []
+    for (const cat of CATEGORY_PRIORITY) {
+      const items = groups.get(cat)
+      if (items && items.length > 0) {
+        ordered.push({ category: cat, items })
+        groups.delete(cat)
+      }
+    }
+    // Anything left (future categories not yet in priority list) —
+    // append. Using Array.from to avoid depending on iterator
+    // downleveling in the current tsconfig.
+    Array.from(groups.entries()).forEach(([category, items]) => {
+      ordered.push({ category, items })
+    })
+    return ordered
+  })()
   const totalVotes = Math.max(Object.values(voteTallies).reduce((a, b) => a + b, 0), 1)
 
   const handleVote = async (causeId: string) => {
@@ -577,31 +817,52 @@ export default function ImpactPage() {
         </div>
       </div>
 
-      <div className="impact-grid">
-        {filtered.length === 0 && (
-          <div style={{ gridColumn: '1/-1', textAlign: 'center', color: '#64748b', padding: '3rem' }}>No projects in this category yet.</div>
-        )}
-        {filtered.map(proj => {
-          const pct = Math.min(Math.round((proj.raised / proj.goal) * 100), 100)
+      {/* Projects grid.
+          In the "All Projects" view we render category-grouped
+          sections with headers so it's easy to scan the entire list
+          of 18+ causes by theme. When a specific category filter is
+          active we render a single flat grid because the header
+          would be redundant. Within each bucket the filtered list
+          is already featured-first (see sort above).
+
+          Shared ProjectCard render inlined — keeps everything in
+          one file and avoids exporting new components for this. */}
+      {(() => {
+        const renderCard = (proj: ImpactProject) => {
+          const pct = Math.min(Math.round((proj.raised / (proj.goal || 1)) * 100), 100)
           return (
-            <div key={proj.id} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div key={proj.id} style={{ background: '#1e293b', border: proj.featured ? '1px solid rgba(248,113,113,0.25)' : '1px solid rgba(56,189,248,0.1)', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+              {proj.featured && (
+                <span style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.45)', color: '#fca5a5', fontSize: '0.64rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', borderRadius: 999, padding: '2px 8px', zIndex: 1 }}>
+                  ⭐ Most needed
+                </span>
+              )}
               <div style={{ padding: '1.25rem', flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.85rem', color: '#0f172a', flexShrink: 0, background: proj.avatar_gradient }}>{proj.avatar_initials}</div>
-                  <div>
-                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f1f5f9', lineHeight: 1.25 }}>{proj.name}</div>
+                  {/* Avatar tile. Prefer `emoji` when present (new
+                      Irish causes), fall back to avatar_initials
+                      (existing global projects with letter avatars). */}
+                  <div style={{ width: 48, height: 48, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: proj.emoji ? '1.6rem' : '0.85rem', color: '#0f172a', flexShrink: 0, background: proj.avatar_gradient || 'linear-gradient(135deg,#34d399,#059669)' }}>
+                    {proj.emoji || proj.avatar_initials}
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f1f5f9', lineHeight: 1.25, paddingRight: proj.featured ? 90 : 0 }}>{proj.name}</div>
                     <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>📍 {proj.location} · {proj.category}</div>
                   </div>
                 </div>
-                <div style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.8rem', color: '#34d399', marginBottom: '0.5rem' }}>🌱 {proj.impact_headline}</div>
+                <div style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.82rem', fontWeight: 700, color: '#34d399', marginBottom: '0.5rem' }}>{proj.impact_headline}</div>
                 {proj.source && <div style={{ fontSize: '0.68rem', color: '#475569', marginBottom: '0.75rem' }}>📊 Source: {proj.source}</div>}
-                <p style={{ fontSize: '0.83rem', color: '#64748b', lineHeight: 1.6, marginBottom: '0.75rem' }}>{proj.description}</p>
-                <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-                  {(proj.sdgs ?? []).map(n => <span key={n} style={{ borderRadius: 4, padding: '0.15rem 0.5rem', fontSize: '0.68rem', fontWeight: 700, color: '#fff', background: SDG_COLORS[n] ?? '#475569' }}>SDG {n}</span>)}
-                </div>
-                <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                  {(proj.tags ?? []).map(t => <span key={t} style={{ background: 'rgba(148,163,184,0.08)', borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.72rem', color: '#94a3b8' }}>{t}</span>)}
-                </div>
+                <p style={{ fontSize: '0.83rem', color: '#94a3b8', lineHeight: 1.6, marginBottom: '0.75rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>{proj.description}</p>
+                {(proj.sdgs ?? []).length > 0 && (
+                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                    {(proj.sdgs ?? []).map(n => <span key={n} style={{ borderRadius: 4, padding: '0.15rem 0.5rem', fontSize: '0.68rem', fontWeight: 700, color: '#fff', background: SDG_COLORS[n] ?? '#475569' }}>SDG {n}</span>)}
+                  </div>
+                )}
+                {(proj.tags ?? []).length > 0 && (
+                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                    {(proj.tags ?? []).map(t => <span key={t} style={{ background: 'rgba(148,163,184,0.08)', borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.72rem', color: '#94a3b8' }}>{t}</span>)}
+                  </div>
+                )}
               </div>
               <div style={{ background: 'rgba(15,23,42,0.5)', borderTop: '1px solid rgba(56,189,248,0.06)', padding: '1rem 1.25rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.4rem' }}>
@@ -609,7 +870,7 @@ export default function ImpactPage() {
                   <span style={{ color: '#475569' }}>of {proj.currency}{Number(proj.goal).toLocaleString()} · {pct}%</span>
                 </div>
                 <div style={{ height: 6, background: 'rgba(56,189,248,0.1)', borderRadius: 3, overflow: 'hidden', marginBottom: '0.75rem' }}>
-                  <div style={{ height: '100%', background: 'linear-gradient(90deg,#34d399,#38bdf8)', borderRadius: 3, width: `${pct}%` }} />
+                  <div style={{ height: '100%', background: proj.featured ? 'linear-gradient(90deg,#f87171,#fbbf24)' : 'linear-gradient(90deg,#34d399,#38bdf8)', borderRadius: 3, width: `${pct}%`, transition: 'width 0.4s ease' }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: '0.78rem', color: '#475569' }}>👥 {Number(proj.backers).toLocaleString()} backers</span>
@@ -621,8 +882,56 @@ export default function ImpactPage() {
               </div>
             </div>
           )
-        })}
-      </div>
+        }
+
+        // Empty-state
+        if (filtered.length === 0) {
+          return (
+            <div className="impact-grid">
+              <div style={{ gridColumn: '1/-1', textAlign: 'center', color: '#64748b', padding: '3rem' }}>
+                No projects in this category yet.
+              </div>
+            </div>
+          )
+        }
+
+        // Flat grid when a specific category is selected — no need
+        // for a header because the filter tab is already showing it.
+        if (activeCat !== 'All Projects') {
+          return (
+            <div className="impact-grid">
+              {filtered.map(renderCard)}
+            </div>
+          )
+        }
+
+        // Grouped view for "All Projects" — category headers + grid
+        // per category. Each section gets its own .impact-grid so the
+        // CSS grid auto-fill still works independently per group.
+        return (
+          <>
+            {groupedByCategory.map(({ category, items }) => (
+              <section key={category} style={{ maxWidth: 1200, margin: '0 auto', padding: '0.25rem 1.5rem 0.5rem' }}>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem', fontWeight: 800, color: '#f1f5f9', margin: '1.25rem 0 0.5rem', letterSpacing: '-0.25px' }}>
+                  <span style={{ width: 4, height: 18, background: '#34d399', borderRadius: 2 }} />
+                  {category}
+                  <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 500 }}>
+                    · {items.length} {items.length === 1 ? 'cause' : 'causes'}
+                  </span>
+                </h3>
+                <div className="impact-grid" style={{ padding: 0 }}>
+                  {items.map(renderCard)}
+                </div>
+              </section>
+            ))}
+          </>
+        )
+      })()}
+
+      {/* SUGGEST A CAUSE — bottom-of-page form, fires POST /api/impact/suggest */}
+      <section style={{ maxWidth: 880, margin: '2rem auto 1.5rem', padding: '0 1.5rem' }}>
+        <SuggestACauseForm />
+      </section>
 
       {/* Leaderboard */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '1.5rem' }}>
