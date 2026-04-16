@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Avatar from '@/components/Avatar'
 import SocialLinks from '@/components/social/SocialLinks'
+import MessageDrawer from '@/components/profile/MessageDrawer'
 import {
   GRASSROOTS_CATEGORIES_BY_SLUG,
   AVAILABILITY_BY_VALUE,
@@ -171,10 +172,12 @@ export default function ProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
   const [followerCount, setFollowerCount] = useState(0)
-  // Loading state for the "Message" button on other people's profiles.
-  // Held here (not next to the button markup) so the click handler can
-  // be a plain async function rather than a local closure.
-  const [messageLoading, setMessageLoading] = useState(false)
+  // Message drawer — opens inline on top of the profile instead of
+  // routing to /messages/[id]. The routing-based approach had a
+  // persistent production issue where clicking Message would end
+  // up on /messages (inbox) instead of the direct conversation.
+  // Opening inline bypasses every routing-layer failure mode.
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
@@ -680,85 +683,25 @@ export default function ProfilePage() {
     }
   }
 
-  // Start (or resume) a 1:1 conversation with the profile owner.
-  // Calls POST /api/conversations which does the find-or-create
-  // dedup so clicking Message twice never creates a second thread,
-  // then navigates to the dedicated thread page. Every step is
-  // console.log'd so a bug report can be diagnosed in the browser
-  // devtools without a redeploy. Failures surface the REAL API
-  // error message in the toast so the user reporting the bug can
-  // see what's going wrong (previously: a generic "could not
-  // start conversation" that hid everything).
-  const handleMessage = async () => {
-    // Prefer the loaded profile.id (authoritative) with a fallback
-    // to viewingId (URL query param). In practice they're the same
-    // string when the user is on /profile?id=XYZ, but the profile
-    // row is the source of truth if anything has drifted.
-    const recipientId = profile?.id ?? viewingId ?? null
-    console.log('[profile] handleMessage called, recipientId:', recipientId)
-
+  // Open the inline message drawer with this profile as the
+  // recipient. The drawer itself handles POST /api/conversations
+  // (find-or-create) and the conversation UI — we never call
+  // router.push from this handler, so there is zero chance of
+  // ending up on /messages (the inbox) or anywhere else. The
+  // profile URL stays visible behind the drawer.
+  //
+  // Only guard: redirect to /login if the viewer has no session.
+  // Everything else (profile not loaded, recipient missing) is
+  // handled inside the drawer's setup effect via an inline
+  // error banner — no silent bailouts.
+  const handleMessage = () => {
+    console.log('[profile] handleMessage — opening drawer for', profile?.id ?? viewingId)
     if (!user) {
       console.warn('[profile] handleMessage: no authenticated user, redirecting to /login')
       router.push('/login')
       return
     }
-    if (!recipientId) {
-      console.warn('[profile] handleMessage: no recipient id (profile not loaded yet)')
-      showToast('Profile not loaded yet, please wait')
-      return
-    }
-    if (messageLoading) {
-      console.warn('[profile] handleMessage: already loading, ignoring click')
-      return
-    }
-
-    setMessageLoading(true)
-    try {
-      console.log('[profile] POST /api/conversations', { recipientId })
-      const res = await fetch('/api/conversations', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ recipientId }),
-      })
-      console.log('[profile] API response status:', res.status)
-
-      const data = await res.json().catch(() => null) as
-        | { conversationId?: string; error?: string }
-        | null
-      console.log('[profile] API response body:', data)
-
-      if (!res.ok) {
-        // Surface the real server error so the user reporting the
-        // bug can see what went wrong in the toast — not a generic
-        // "please try again".
-        const reason = data?.error || `HTTP ${res.status}`
-        console.error('[profile] start conversation failed:', reason, data)
-        showToast(`Could not start conversation: ${reason}`)
-        return
-      }
-
-      // Defensive guard — refuse to route to /messages/undefined
-      // even if the API returns a 200 without the expected shape.
-      // Without this, a malformed response would send the user to
-      // /messages/undefined which the dynamic [id] route would
-      // render with id="undefined", silently broken.
-      const conversationId = data?.conversationId
-      if (typeof conversationId !== 'string' || conversationId.length === 0) {
-        console.error('[profile] API returned no conversationId:', data)
-        showToast('Could not start conversation: no conversation id returned')
-        return
-      }
-
-      const target = `/messages/${conversationId}`
-      console.log('[profile] Routing to:', target)
-      router.push(target)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error('[profile] start conversation threw:', msg, err)
-      showToast(`Could not start conversation: ${msg}`)
-    } finally {
-      setMessageLoading(false)
-    }
+    setDrawerOpen(true)
   }
 
   const handleUnfollow = async () => {
@@ -969,44 +912,24 @@ export default function ProfilePage() {
                 {user && (
                   <button
                     onClick={handleMessage}
-                    disabled={messageLoading}
                     aria-label="Message this member"
                     style={{
-                      display:        'inline-flex',
-                      alignItems:     'center',
-                      gap:            '0.4rem',
-                      background:     'rgba(52,211,153,0.12)',
-                      border:         '1px solid rgba(52,211,153,0.35)',
-                      borderRadius:   8,
-                      padding:        '0.45rem 1rem',
-                      fontSize:       '0.82rem',
-                      fontWeight:     700,
-                      color:          '#34d399',
-                      cursor:         messageLoading ? 'default' : 'pointer',
-                      opacity:        messageLoading ? 0.6 : 1,
-                      fontFamily:     'inherit',
-                      transition:     'all 0.15s',
+                      display:      'inline-flex',
+                      alignItems:   'center',
+                      gap:          '0.4rem',
+                      background:   'rgba(52,211,153,0.12)',
+                      border:       '1px solid rgba(52,211,153,0.35)',
+                      borderRadius: 8,
+                      padding:      '0.45rem 1rem',
+                      fontSize:     '0.82rem',
+                      fontWeight:   700,
+                      color:        '#34d399',
+                      cursor:       'pointer',
+                      fontFamily:   'inherit',
+                      transition:   'all 0.15s',
                     }}
                   >
-                    {messageLoading ? (
-                      <>
-                        <span
-                          aria-hidden="true"
-                          style={{
-                            width:          12,
-                            height:         12,
-                            border:         '2px solid rgba(52,211,153,0.35)',
-                            borderTopColor: '#34d399',
-                            borderRadius:   '50%',
-                            animation:      'spin 0.7s linear infinite',
-                          }}
-                        />
-                        <span>Opening…</span>
-                        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-                      </>
-                    ) : (
-                      <>💬 Message</>
-                    )}
+                    💬 Message
                   </button>
                 )}
                 <Link href="/members" style={{ fontSize: '0.82rem', color: '#64748b', textDecoration: 'none', border: '1px solid rgba(100,116,139,0.25)', borderRadius: 8, padding: '0.45rem 1rem' }}>
@@ -1483,6 +1406,24 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
+
+      {/* Inline message drawer — rendered last so it layers over
+          the profile content. Routing-free: clicking the Message
+          button sets drawerOpen, the drawer calls POST
+          /api/conversations and GET /api/messages/:id itself,
+          and the profile URL never changes. */}
+      {!isOwnProfile && profile && (
+        <MessageDrawer
+          open={drawerOpen}
+          recipient={{
+            id:         profile.id,
+            full_name:  profile.full_name ?? null,
+            avatar_url: profile.avatar_url ?? null,
+          }}
+          currentUserId={user?.id ?? null}
+          onClose={() => setDrawerOpen(false)}
+        />
+      )}
     </div>
   )
 }

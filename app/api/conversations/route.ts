@@ -28,16 +28,21 @@ import { createAdminClient } from '@/lib/supabase/admin'
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export async function POST(req: NextRequest) {
+  console.log('[conversations] POST called')
   try {
     const supabase = await createClient()
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) {
+      console.warn('[conversations] ERROR: unauthorized, no session')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    console.log('[conversations] authenticated as:', user.id)
 
     const body = await req.json().catch(() => null) as { recipientId?: unknown } | null
+    console.log('[conversations] body:', body)
     const recipientIdRaw = body?.recipientId
     if (typeof recipientIdRaw !== 'string' || !UUID_RE.test(recipientIdRaw)) {
+      console.warn('[conversations] ERROR: bad recipientId:', recipientIdRaw)
       return NextResponse.json(
         { error: 'recipientId must be a valid uuid' },
         { status: 400 },
@@ -46,6 +51,7 @@ export async function POST(req: NextRequest) {
     const recipientId = recipientIdRaw
 
     if (recipientId === user.id) {
+      console.warn('[conversations] ERROR: self-message attempt')
       return NextResponse.json(
         { error: 'Cannot start a conversation with yourself' },
         { status: 400 },
@@ -65,9 +71,10 @@ export async function POST(req: NextRequest) {
       .eq('user_id', user.id)
 
     if (myRowsErr) {
-      console.error('[POST /api/conversations] myRows fetch failed:', myRowsErr)
+      console.error('[conversations] ERROR: myRows fetch failed:', myRowsErr)
       return NextResponse.json({ error: myRowsErr.message }, { status: 500 })
     }
+    console.log('[conversations] myRows count:', myRows?.length ?? 0)
 
     const myConvIds = (myRows ?? []).map(r => r.conversation_id as string)
     if (myConvIds.length > 0) {
@@ -79,14 +86,16 @@ export async function POST(req: NextRequest) {
         .limit(1)
 
       if (sharedErr) {
-        console.error('[POST /api/conversations] shared fetch failed:', sharedErr)
+        console.error('[conversations] ERROR: shared fetch failed:', sharedErr)
         return NextResponse.json({ error: sharedErr.message }, { status: 500 })
       }
 
       if (shared && shared.length > 0) {
+        const conversationId = shared[0].conversation_id as string
+        console.log('[conversations] returning EXISTING conversationId:', conversationId)
         return NextResponse.json({
-          conversationId: shared[0].conversation_id as string,
-          created:        false,
+          conversationId,
+          created: false,
         })
       }
     }
@@ -108,12 +117,13 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (convErr || !newConv) {
-      console.error('[POST /api/conversations] create failed:', convErr)
+      console.error('[conversations] ERROR: create failed:', convErr)
       return NextResponse.json(
         { error: convErr?.message || 'Could not create conversation' },
         { status: 500 },
       )
     }
+    console.log('[conversations] created new conversation row:', newConv.id)
 
     // Add both participants atomically. If this fails we try to
     // roll back the conversation row so we don't leave an orphan
@@ -126,18 +136,20 @@ export async function POST(req: NextRequest) {
       ])
 
     if (partErr) {
-      console.error('[POST /api/conversations] participants insert failed:', partErr)
+      console.error('[conversations] ERROR: participants insert failed, rolling back:', partErr)
       await admin.from('conversations').delete().eq('id', newConv.id)
       return NextResponse.json({ error: partErr.message }, { status: 500 })
     }
+    console.log('[conversations] participants inserted for both users')
 
+    console.log('[conversations] returning NEW conversationId:', newConv.id)
     return NextResponse.json({
       conversationId: newConv.id as string,
       created:        true,
     })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    console.error('[POST /api/conversations] unexpected:', msg, err)
+    console.error('[conversations] ERROR: unexpected:', msg, err)
     return NextResponse.json(
       { error: `Unexpected error: ${msg}` },
       { status: 500 },
