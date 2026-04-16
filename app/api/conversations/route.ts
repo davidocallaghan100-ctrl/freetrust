@@ -38,7 +38,18 @@ export async function POST(req: NextRequest) {
     }
     console.log('[conversations] authenticated as:', user.id)
 
-    const body = await req.json().catch(() => null) as { recipientId?: unknown } | null
+    const body = await req.json().catch(() => null) as {
+      recipientId?: unknown
+      // Optional order/listing context — only included when the
+      // caller is explicitly tying the conversation to a purchase
+      // flow. Direct profile-to-profile messages leave these
+      // undefined and the conversation row is created with those
+      // columns NULL (see 20260416000004_conversations_nullable_cols.sql
+      // which drops the legacy NOT NULL constraints).
+      buyerId?:    unknown
+      sellerId?:   unknown
+      listingId?:  unknown
+    } | null
     console.log('[conversations] body:', body)
     const recipientIdRaw = body?.recipientId
     if (typeof recipientIdRaw !== 'string' || !UUID_RE.test(recipientIdRaw)) {
@@ -49,6 +60,12 @@ export async function POST(req: NextRequest) {
       )
     }
     const recipientId = recipientIdRaw
+
+    // Optional purchase-context ids. Validated as uuids when
+    // present; skipped entirely otherwise.
+    const buyerId    = typeof body?.buyerId    === 'string' && UUID_RE.test(body.buyerId)    ? body.buyerId    : null
+    const sellerId   = typeof body?.sellerId   === 'string' && UUID_RE.test(body.sellerId)   ? body.sellerId   : null
+    const listingId  = typeof body?.listingId  === 'string' && UUID_RE.test(body.listingId)  ? body.listingId  : null
 
     if (recipientId === user.id) {
       console.warn('[conversations] ERROR: self-message attempt')
@@ -106,13 +123,27 @@ export async function POST(req: NextRequest) {
     // SELECTs afterwards, so the caller still only sees their own
     // conversations from the client.
     const nowIso = new Date().toISOString()
+
+    // Only include purchase-context columns when the caller has
+    // explicitly supplied them. Direct profile-to-profile DMs omit
+    // buyer_id / seller_id / listing_id entirely — with the
+    // NOT NULL constraints removed by
+    // 20260416000004_conversations_nullable_cols.sql, the columns
+    // stay NULL and the row is valid. Including an undefined key
+    // would serialize as `"buyer_id": null` which is fine post-
+    // migration but we keep the insert payload clean for clarity.
+    const insertData: Record<string, unknown> = {
+      created_at:      nowIso,
+      updated_at:      nowIso,
+      last_message_at: nowIso,
+      ...(buyerId   ? { buyer_id:   buyerId   } : {}),
+      ...(sellerId  ? { seller_id:  sellerId  } : {}),
+      ...(listingId ? { listing_id: listingId } : {}),
+    }
+
     const { data: newConv, error: convErr } = await admin
       .from('conversations')
-      .insert({
-        created_at:      nowIso,
-        updated_at:      nowIso,
-        last_message_at: nowIso,
-      })
+      .insert(insertData)
       .select('id')
       .single()
 
