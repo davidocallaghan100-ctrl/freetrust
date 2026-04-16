@@ -123,12 +123,104 @@ export default function CartPage() {
   )
 
   return (
-    <main style={{ minHeight: '100vh', background: bg, color: text, fontFamily: 'system-ui, sans-serif', paddingTop: 64, paddingBottom: 80 }}>
+    <main
+      className="cart-main"
+      style={{
+        minHeight:    '100vh',
+        background:   bg,
+        color:        text,
+        fontFamily:   'system-ui, sans-serif',
+        paddingTop:   64,
+        // Desktop: just enough bottom padding for the footer.
+        // Mobile: extra space so content isn't hidden behind the
+        // sticky checkout bar — the @media rule below adds 96px
+        // plus env(safe-area-inset-bottom) on iOS.
+        paddingBottom: 80,
+        overflowX:    'hidden', // belt-and-braces — no stray element can cause horizontal scroll
+        maxWidth:     '100%',
+      }}
+    >
       <style>{`
-        @media (max-width: 900px) { .cart-grid { grid-template-columns: 1fr !important; } }
-        .cart-remove:hover { color: #f87171 !important; }
-        .cart-qty-btn:hover { background: rgba(56,189,248,0.1) !important; }
+        /* ── Grid ── */
+        /* Desktop two-column (items + sticky summary sidebar),
+           collapses to a single stacked column below 900px.
+           minmax(0, ...) on both tracks prevents a long line
+           in an item title from blowing the track out and
+           causing horizontal scroll. */
+        .cart-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
+          gap: 1.75rem;
+          align-items: start;
+        }
+        @media (max-width: 900px) {
+          .cart-grid { grid-template-columns: minmax(0, 1fr) !important; }
+          /* Sticky no longer makes sense when the summary is a
+             stacked block below the items — force static so it
+             scrolls with the page. */
+          .cart-summary-col { position: static !important; }
+          /* Reserve room for the mobile sticky checkout bar + iOS
+             home indicator safe area. 96 px is the bar height +
+             a little breathing room. */
+          .cart-main {
+            padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;
+          }
+        }
+
+        /* ── Hover states ── */
+        .cart-remove:hover   { color: #f87171 !important; }
+        .cart-qty-btn:hover  { background: rgba(56,189,248,0.1) !important; }
         .cart-checkout:hover { background: #0ea5e9 !important; }
+
+        /* ── Item card actions row ── */
+        /* Quantity stepper + unit price + Remove — wrap onto the
+           next line below ~360 px so Remove never collides with the
+           quantity pill at 375 px viewport. */
+        .cart-actions-row {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          flex-wrap: wrap;
+          row-gap: 0.5rem;
+        }
+
+        /* ── Product image ── */
+        /* 72 px on mobile, 84 px on desktop — keeps the two-column
+           card layout readable at 375 px without making the title
+           column tiny. */
+        .cart-item-image {
+          width: 72px; height: 72px;
+          border-radius: 10px;
+          overflow: hidden;
+          flex-shrink: 0;
+          border: 1px solid rgba(56,189,248,0.1);
+          background: #0f172a;
+        }
+        @media (min-width: 480px) {
+          .cart-item-image { width: 84px; height: 84px; }
+        }
+
+        /* ── Mobile sticky checkout bar ── */
+        /* Fixed to the viewport bottom below 900 px. Sits above
+           everything else so it stays tappable while the user
+           scrolls through items. iOS home-indicator safe area
+           is reserved via env(safe-area-inset-bottom). */
+        .cart-mobile-sticky {
+          display: none;
+          position: fixed;
+          left: 0; right: 0; bottom: 0;
+          background: #111827;
+          border-top: 1px solid rgba(56,189,248,0.2);
+          padding: 0.75rem 1rem;
+          padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+          align-items: center;
+          gap: 0.75rem;
+          z-index: 50;
+          box-shadow: 0 -6px 24px rgba(0,0,0,0.35);
+        }
+        @media (max-width: 900px) {
+          .cart-mobile-sticky { display: flex; }
+        }
       `}</style>
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 1.25rem' }}>
@@ -142,37 +234,57 @@ export default function CartPage() {
           <Link href="/products" style={{ color: accent, fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none' }}>← Continue shopping</Link>
         </div>
 
-        <div className="cart-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '1.75rem', alignItems: 'start' }}>
+        <div className="cart-grid">
 
           {/* ── Item list ── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', minWidth: 0 }}>
             {cart.map(item => (
-              <div key={item.id} style={{ background: card, border: `1px solid ${border}`, borderRadius: 14, padding: '1rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                {/* Image */}
+              <div key={item.id} style={{ background: card, border: `1px solid ${border}`, borderRadius: 14, padding: '1rem', display: 'flex', gap: '0.85rem', alignItems: 'flex-start', minWidth: 0 }}>
+                {/* Image — responsive 72/84 px via CSS class above */}
                 <Link href={`/products/${item.id}`}>
-                  <div style={{ width: 84, height: 84, borderRadius: 10, overflow: 'hidden', flexShrink: 0, border: `1px solid ${border}`, background: '#0f172a' }}>
+                  <div className="cart-item-image">
                     <img src={item.image} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                   </div>
                 </Link>
 
                 {/* Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <Link href={`/products/${item.id}`} style={{ color: text, textDecoration: 'none', fontWeight: 700, fontSize: '0.9rem', display: 'block', marginBottom: 4, lineHeight: 1.3 }}>
+                  <Link href={`/products/${item.id}`} style={{ color: text, textDecoration: 'none', fontWeight: 700, fontSize: '0.9rem', display: 'block', marginBottom: 4, lineHeight: 1.3, wordBreak: 'break-word' }}>
                     {item.title}
                   </Link>
                   <div style={{ fontSize: '1rem', fontWeight: 900, color: accent, marginBottom: '0.75rem' }}>
                     {fmt(item.price * item.qty, item.currency)}
                   </div>
 
-                  {/* Qty controls */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', border: `1px solid ${border}`, borderRadius: 8, overflow: 'hidden' }}>
-                      <button className="cart-qty-btn" onClick={() => updateQty(item.id, -1)} style={{ width: 32, height: 32, background: 'none', border: 'none', color: text, cursor: 'pointer', fontSize: '1rem', transition: 'background 0.15s' }}>−</button>
-                      <span style={{ width: 32, textAlign: 'center', fontSize: '0.85rem', fontWeight: 700 }}>{item.qty}</span>
-                      <button className="cart-qty-btn" onClick={() => updateQty(item.id, 1)} style={{ width: 32, height: 32, background: 'none', border: 'none', color: text, cursor: 'pointer', fontSize: '1rem', transition: 'background 0.15s' }}>+</button>
+                  {/* Qty controls — 44 px touch-friendly buttons,
+                      wraps below the price on narrow screens so
+                      "X.XX each" + Remove never push off-screen. */}
+                  <div className="cart-actions-row">
+                    <div style={{ display: 'flex', alignItems: 'center', border: `1px solid ${border}`, borderRadius: 10, overflow: 'hidden' }}>
+                      <button
+                        type="button"
+                        className="cart-qty-btn"
+                        onClick={() => updateQty(item.id, -1)}
+                        aria-label={`Decrease quantity of ${item.title}`}
+                        style={{ width: 44, height: 44, background: 'none', border: 'none', color: text, cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1, transition: 'background 0.15s' }}
+                      >−</button>
+                      <span style={{ width: 44, textAlign: 'center', fontSize: '0.9rem', fontWeight: 700 }} aria-label={`Quantity: ${item.qty}`}>{item.qty}</span>
+                      <button
+                        type="button"
+                        className="cart-qty-btn"
+                        onClick={() => updateQty(item.id, 1)}
+                        aria-label={`Increase quantity of ${item.title}`}
+                        style={{ width: 44, height: 44, background: 'none', border: 'none', color: text, cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1, transition: 'background 0.15s' }}
+                      >+</button>
                     </div>
                     <span style={{ fontSize: '0.75rem', color: muted }}>{fmt(item.price, item.currency)} each</span>
-                    <button className="cart-remove" onClick={() => removeItem(item.id)} style={{ background: 'none', border: 'none', color: muted, cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, marginLeft: 'auto', transition: 'color 0.15s', padding: 0 }}>
+                    <button
+                      type="button"
+                      className="cart-remove"
+                      onClick={() => removeItem(item.id)}
+                      aria-label={`Remove ${item.title} from cart`}
+                      style={{ background: 'none', border: 'none', color: muted, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, marginLeft: 'auto', transition: 'color 0.15s', padding: '0.5rem 0.25rem', minHeight: 44, display: 'inline-flex', alignItems: 'center' }}
+                    >
                       🗑 Remove
                     </button>
                   </div>
@@ -182,7 +294,10 @@ export default function CartPage() {
           </div>
 
           {/* ── Order summary ── */}
-          <div style={{ position: 'sticky', top: 112, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div
+            className="cart-summary-col"
+            style={{ position: 'sticky', top: 112, display: 'flex', flexDirection: 'column', gap: '1rem', minWidth: 0 }}
+          >
             <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 16, padding: '1.5rem' }}>
               <h2 style={{ fontSize: '1rem', fontWeight: 800, margin: '0 0 1.25rem', letterSpacing: '-0.3px' }}>Order Summary</h2>
 
@@ -226,9 +341,9 @@ export default function CartPage() {
                       value={promoCode}
                       onChange={e => { setPromoCode(e.target.value); setPromoError('') }}
                       placeholder="Promo code"
-                      style={{ flex: 1, background: '#0f172a', border: `1px solid ${border}`, borderRadius: 8, padding: '0.55rem 0.75rem', color: text, fontSize: '0.82rem', outline: 'none', fontFamily: 'system-ui' }}
+                      style={{ flex: 1, minWidth: 0, background: '#0f172a', border: `1px solid ${border}`, borderRadius: 8, padding: '0.65rem 0.75rem', color: text, fontSize: '16px', outline: 'none', fontFamily: 'system-ui' }}
                     />
-                    <button onClick={applyPromo} style={{ background: 'rgba(56,189,248,0.1)', border: `1px solid ${border}`, color: accent, borderRadius: 8, padding: '0.55rem 0.85rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                    <button type="button" onClick={applyPromo} style={{ background: 'rgba(56,189,248,0.1)', border: `1px solid ${border}`, color: accent, borderRadius: 8, padding: '0.65rem 0.9rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', minHeight: 44 }}>
                       Apply
                     </button>
                   </div>
@@ -239,17 +354,23 @@ export default function CartPage() {
               {promoApplied && (
                 <div style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 8, padding: '0.55rem 0.85rem', fontSize: '0.78rem', color: '#34d399', fontWeight: 600, marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>✓ FOUNDING25 applied (25% off)</span>
-                  <button onClick={() => { setPromoApplied(false); setPromoCode('') }} style={{ background: 'none', border: 'none', color: '#34d399', cursor: 'pointer', fontSize: '0.75rem', opacity: 0.7 }}>×</button>
+                  <button type="button" onClick={() => { setPromoApplied(false); setPromoCode('') }} style={{ background: 'none', border: 'none', color: '#34d399', cursor: 'pointer', fontSize: '0.95rem', opacity: 0.7, padding: '0.25rem 0.5rem', minHeight: 32 }}>×</button>
                 </div>
               )}
 
-              {/* Checkout button */}
-              <button className="cart-checkout" onClick={handleCheckout} disabled={checkoutLoading} style={{ width: '100%', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', border: 'none', borderRadius: 12, padding: '1rem', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 4px 20px rgba(56,189,248,0.3)', transition: 'background 0.2s' }}>
+              {/* Checkout button — 52 px tall, full width */}
+              <button
+                type="button"
+                className="cart-checkout"
+                onClick={handleCheckout}
+                disabled={checkoutLoading}
+                style={{ width: '100%', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', border: 'none', borderRadius: 12, padding: '1rem', minHeight: 52, fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 4px 20px rgba(56,189,248,0.3)', transition: 'background 0.2s' }}
+              >
                 {checkoutLoading ? 'Processing…' : `Checkout · ${fmt(total, currency)}`}
               </button>
 
               {/* Apple Pay / Google Pay note */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '0.75rem', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '0.68rem', color: muted }}>or pay with</span>
                 <span style={{ background: '#000', color: '#fff', borderRadius: 5, padding: '2px 8px', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.02em' }}>🍎 Apple Pay</span>
                 <span style={{ background: '#fff', color: '#000', borderRadius: 5, padding: '2px 8px', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.02em', border: '1px solid #e2e8f0' }}>G Pay</span>
@@ -275,6 +396,41 @@ export default function CartPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ── Mobile sticky checkout bar ── */}
+      {/* Only visible below 900 px (see CSS). Shows the running
+          total + a full-tap-target checkout button so the buyer
+          never has to scroll to find it. Accounts for iOS home
+          indicator via env(safe-area-inset-bottom). */}
+      <div className="cart-mobile-sticky" role="region" aria-label="Cart checkout">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '0.7rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</div>
+          <div style={{ fontSize: '1.15rem', fontWeight: 900, color: text, lineHeight: 1.1 }}>
+            {fmt(total, currency)}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleCheckout}
+          disabled={checkoutLoading}
+          style={{
+            background:   'linear-gradient(135deg,#38bdf8,#0284c7)',
+            color:        '#fff',
+            border:       'none',
+            borderRadius: 10,
+            padding:      '0 1.25rem',
+            minHeight:    48,
+            fontSize:     '0.92rem',
+            fontWeight:   800,
+            cursor:       'pointer',
+            flexShrink:   0,
+            opacity:      checkoutLoading ? 0.7 : 1,
+          }}
+          aria-label={`Proceed to checkout, total ${fmt(total, currency)}`}
+        >
+          {checkoutLoading ? 'Processing…' : 'Checkout →'}
+        </button>
       </div>
     </main>
   )
