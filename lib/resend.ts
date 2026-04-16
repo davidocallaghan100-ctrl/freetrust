@@ -58,12 +58,19 @@ function divider() { return `<hr style="border:none;border-top:1px solid rgba(56
 
 // ─── Email senders ─────────────────────────────────────────────────────────────
 
-export async function sendWelcomeEmail(to: string, name: string) {
+// Welcome email. `amount` defaults to the canonical signup bonus
+// (TRUST_REWARDS.SIGNUP_BONUS = 200) but the caller SHOULD pass the
+// real amount actually issued to the user — the number here must
+// match what they see in /wallet or it looks like a bug.
+// Previously hardcoded to 25, which was wrong after the bonus was
+// raised to 200.
+export async function sendWelcomeEmail(to: string, name: string, amount: number = 200) {
+  const amt = Math.max(0, Math.floor(amount))
   const html = wrap('Welcome to FreeTrust', `
     ${h1(`Welcome to FreeTrust, ${name}! 🎉`)}
     ${p('You\'ve joined a community built on trust. Your profile is live and you\'ve earned your founding member badge.')}
-    ${trust(25)}
-    ${p('₮25 Trust has been added to your wallet. Use it to unlock features, boost your listings, and build your reputation.')}
+    ${trust(amt)}
+    ${p(`₮${amt} Trust has been added to your wallet. Use it to unlock features, boost your listings, and build your reputation.`)}
     ${divider()}
     ${p('Start exploring:')}
     <ul style="color:#94a3b8;font-size:14px;padding-left:20px;line-height:2;">
@@ -72,9 +79,14 @@ export async function sendWelcomeEmail(to: string, name: string) {
       <li>Follow members in your field</li>
     </ul>
     ${divider()}
-    <div style="text-align:center;padding-top:8px;">${btn('Go to My Feed', `${BASE_URL}/feed`)}</div>
+    <div style="text-align:center;padding-top:8px;">${btn('Go to My Wallet', `${BASE_URL}/wallet`)}</div>
   `)
-  return getResend().emails.send({ from: FROM, to, subject: 'Welcome to FreeTrust — you\'ve earned ₮25 Trust!', html })
+  return getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `Welcome to FreeTrust — you've received ₮${amt}!`,
+    html,
+  })
 }
 
 export async function sendVerificationEmail(to: string, name: string, verifyUrl: string) {

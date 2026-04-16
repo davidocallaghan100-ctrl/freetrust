@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { sendReviewReceivedEmail } from '@/lib/resend'
 import { awardTrust } from '@/lib/trust/award'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
+import { insertNotification } from '@/lib/notifications/insert'
 
 // GET /api/reviews?profileId=&listingId=&page=
 export async function GET(request: NextRequest) {
@@ -167,7 +168,18 @@ export async function POST(request: NextRequest) {
           content?.slice(0, 120) ?? 'Left a review',
         )
       }
-    } catch { /* email failure non-fatal */ }
+
+      // In-app notification — separate from the email so it lands
+      // in the bell even if the email fails (e.g. user's mailbox
+      // full, Resend outage).
+      await insertNotification({
+        userId: reviewee_id,
+        type:   'review_received',
+        title:  `${reviewerProfile?.full_name ?? 'Someone'} left you a ${rating_overall}-star review`,
+        body:   content?.slice(0, 140) ?? null,
+        link:   `/profile?id=${reviewee_id}`,
+      })
+    } catch { /* email/notification failure non-fatal */ }
 
     // Mark order as reviewed
     if (order_id) {

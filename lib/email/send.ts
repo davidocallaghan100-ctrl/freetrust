@@ -100,7 +100,7 @@ const ALWAYS_SEND = new Set<EmailType>([
 ] as EmailType[])
 
 export type SendEmailParams =
-  | { type: 'welcome';             userId: string }
+  | { type: 'welcome';             userId: string; payload?: { amount?: number } }
   | { type: 'new_follower';        userId: string; payload: { followerName: string; followerId: string } }
   | { type: 'new_message';         userId: string; payload: { senderName: string; preview: string } }
   | { type: 'new_comment';         userId: string; payload: { commenterName: string; preview: string; postId: string } }
@@ -176,7 +176,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
     // 3. Dispatch
     switch (params.type) {
       case 'welcome':
-        await sendWelcomeEmail(to, name)
+        await sendWelcomeEmail(to, name, params.payload?.amount)
         break
       case 'new_follower':
         await sendNewFollowerEmail(to, name, params.payload.followerName, params.payload.followerId)

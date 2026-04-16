@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import NotificationDropdown from './NotificationDropdown'
+import { createClient } from '@/lib/supabase/client'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 
 export interface DBNotification {
   id: string
@@ -20,6 +22,11 @@ export default function NotificationBell() {
   const [loading, setLoading] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // Realtime channel for INSERT events on the notifications table.
+  // Held in a ref so we can tear it down on unmount and rebuild it
+  // on visibilitychange (mobile backgrounding kills WebSockets).
+  const channelRef = useRef<RealtimeChannel | null>(null)
+  const userIdRef  = useRef<string | null>(null)
 
   const fetchUnreadCount = useCallback(async () => {
     try {
@@ -78,14 +85,83 @@ export default function NotificationBell() {
     }
   }, [notifications])
 
-  // Initial fetch + poll every 30s
+  // Realtime subscription — INSTANT notification delivery.
+  //
+  // Subscribes to Postgres INSERT events on the notifications table
+  // filtered by user_id = <current user>. When a new row lands, we
+  // bump the unread count and, if the dropdown is open, prepend the
+  // new notification to the visible list so it appears without a
+  // refresh.
+  //
+  // We still keep the 30s poll as a belt-and-braces fallback for
+  // cases where the WebSocket has silently dropped (mobile Wi-Fi
+  // handover, backgrounding, etc.). The visibilitychange handler
+  // also triggers a refetch when the tab comes back into view.
+  const subscribeRealtime = useCallback((userId: string) => {
+    const supabase = createClient()
+
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current)
+      channelRef.current = null
+    }
+
+    const channel = supabase
+      .channel(`notif:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event:  'INSERT',
+          schema: 'public',
+          table:  'notifications',
+          filter: `user_id=eq.${userId}`,
+        },
+        payload => {
+          const n = payload.new as DBNotification
+          setNotifications(prev => {
+            if (prev.some(x => x.id === n.id)) return prev
+            return [n, ...prev].slice(0, 10)
+          })
+          if (!n.read) setUnreadCount(prev => prev + 1)
+        },
+      )
+      .subscribe()
+
+    channelRef.current = channel
+  }, [])
+
+  // Initial fetch + realtime subscribe + 30s poll (fallback).
   useEffect(() => {
-    fetchUnreadCount()
+    const supabase = createClient()
+    void supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      userIdRef.current = user.id
+      void fetchUnreadCount()
+      subscribeRealtime(user.id)
+    })
     intervalRef.current = setInterval(fetchUnreadCount, 30000)
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
     }
-  }, [fetchUnreadCount])
+  }, [fetchUnreadCount, subscribeRealtime])
+
+  // Rebuild the realtime channel + refetch unread count on tab
+  // foreground. Mobile Wi-Fi handovers and iOS Safari's BFCache
+  // kill the WebSocket silently; without this a user who leaves
+  // the tab backgrounded for a while would never see new
+  // notifications until the next 30s poll (or a hard reload).
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return
+      void fetchUnreadCount()
+      if (userIdRef.current) subscribeRealtime(userIdRef.current)
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange)
+  }, [fetchUnreadCount, subscribeRealtime])
 
   // Fetch full list when dropdown opens
   useEffect(() => {

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
+import { sendEmail } from '@/lib/email/send'
 
 // POST /api/auth/signup-bonus — issue the welcome bonus (idempotent)
 //
@@ -165,6 +166,21 @@ export async function POST() {
           `ledger has ₮${ledgerAmount}, expected ₮${expectedAmount}`,
         )
       }
+
+      // Fire the welcome email (non-blocking). sendEmail swallows
+      // its own errors so a Resend outage can't crash the signup
+      // flow — the bonus has already been credited, email is a
+      // nice-to-have on top. Only fires on the first-time-grant
+      // path (CASE C) so users don't get a fresh "Welcome!" email
+      // every time they revisit the site.
+      void sendEmail({
+        type:    'welcome',
+        userId:  user.id,
+        payload: { amount: expectedAmount },
+      }).catch(err => {
+        console.error('[signup-bonus] welcome email dispatch threw:', err)
+      })
+
       return NextResponse.json({
         issued:   true,
         amount:   expectedAmount,

@@ -2,6 +2,8 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { insertNotification } from '@/lib/notifications/insert'
+import { sendEmail } from '@/lib/email/send'
 
 // GET — returns { following: [...], followers: [...], followingIds: string[] }
 export async function GET(_req: NextRequest) {
@@ -53,7 +55,12 @@ export async function POST(req: NextRequest) {
       .from('user_follows')
       .insert({ follower_id: user.id, following_id: targetUserId })
 
-    if (error && error.code !== '23505') {
+    // Skip the notification on 23505 (duplicate — user was already
+    // following) so re-clicking Follow doesn't spam the target with
+    // duplicate notifications.
+    const wasAlreadyFollowing = error?.code === '23505'
+
+    if (error && !wasAlreadyFollowing) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
@@ -67,6 +74,34 @@ export async function POST(req: NextRequest) {
       admin.from('profiles').update({ following_count: myFollowingCount.count ?? 0 }).eq('id', user.id),
       admin.from('profiles').update({ follower_count: theirFollowerCount.count ?? 0 }).eq('id', targetUserId),
     ])
+
+    // Notify the followed user — only on a NEW follow, never on
+    // duplicate attempts. Non-blocking.
+    if (!wasAlreadyFollowing) {
+      void (async () => {
+        try {
+          const { data: follower } = await admin
+            .from('profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .maybeSingle()
+          const followerName = (follower?.full_name as string | null) ?? 'A member'
+          await insertNotification({
+            userId: targetUserId,
+            type:   'new_follower',
+            title:  `${followerName} started following you`,
+            link:   `/profile?id=${user.id}`,
+          })
+          await sendEmail({
+            type:    'new_follower',
+            userId:  targetUserId,
+            payload: { followerName, followerId: user.id },
+          }).catch(err => console.error('[connections] new_follower email threw:', err))
+        } catch (err) {
+          console.error('[connections] follow-notify threw:', err)
+        }
+      })()
+    }
 
     return NextResponse.json({ ok: true })
   } catch (err) {

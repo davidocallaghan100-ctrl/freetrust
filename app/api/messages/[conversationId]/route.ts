@@ -2,6 +2,8 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { insertNotification } from '@/lib/notifications/insert'
+import { sendEmail } from '@/lib/email/send'
 
 // Participation check uses the admin (service-role) client so it
 // bypasses RLS cleanly. We've already validated `user.id` from the
@@ -145,6 +147,54 @@ export async function POST(
         .eq('conversation_id', conversationId)
         .eq('user_id',         user.id),
     ])
+
+    // Notify the OTHER participant(s) of the conversation. In-app
+    // notification + email fan-out. Non-blocking via catch handlers
+    // so a Resend outage or notifications-table hiccup can't fail
+    // the send.
+    //
+    // Scoped to participants other than the sender. For 1:1 convs
+    // that's one user; for future group chats this naturally scales.
+    void (async () => {
+      try {
+        const [{ data: others }, { data: senderProfile }] = await Promise.all([
+          admin
+            .from('conversation_participants')
+            .select('user_id')
+            .eq('conversation_id', conversationId)
+            .neq('user_id', user.id),
+          admin
+            .from('profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .maybeSingle(),
+        ])
+
+        const senderName = (senderProfile?.full_name as string | null) ?? 'A member'
+        const preview   = content.slice(0, 140)
+        const link      = `/messages/${conversationId}`
+
+        await Promise.all(
+          (others ?? []).map(async row => {
+            const recipientId = row.user_id as string
+            await insertNotification({
+              userId: recipientId,
+              type:   'new_message',
+              title:  `New message from ${senderName}`,
+              body:   preview,
+              link,
+            })
+            await sendEmail({
+              type:    'new_message',
+              userId:  recipientId,
+              payload: { senderName, preview },
+            }).catch(err => console.error('[messages] new_message email threw:', err))
+          }),
+        )
+      } catch (err) {
+        console.error('[messages] notify fan-out threw:', err)
+      }
+    })()
 
     return NextResponse.json({ message })
   } catch (err) {
