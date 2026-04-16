@@ -77,6 +77,8 @@ export async function POST(req: NextRequest) {
           quantity: 1,
         }],
         payment_intent_data: {
+          // Escrow: hold funds until release_payment captures + transfers.
+          capture_method: 'manual',
           metadata: {
             order_id: order.id,
             order_type: 'service',
@@ -137,6 +139,8 @@ export async function POST(req: NextRequest) {
         quantity: 1,
       }],
       payment_intent_data: {
+        // Escrow: hold funds until release_payment captures + transfers.
+        capture_method: 'manual',
         application_fee_amount: feePence,
         metadata: {
           order_id: order.id,

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { toPgUrlArray, toPgTagArray } from '@/lib/supabase/text-array'
 import { awardTrust } from '@/lib/trust/award'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
+import { assertStripeConnectedForPaidListing } from '@/lib/stripe/connect-gate'
 
 // GET /api/listings — list active listings (public) or all own listings (authenticated)
 export async function GET(request: NextRequest) {
@@ -113,6 +114,17 @@ export async function POST(request: NextRequest) {
     }
     if (typeof price !== 'number' || price < 0) {
       return NextResponse.json({ error: 'Price must be a non-negative number' }, { status: 400 })
+    }
+
+    // Stripe Connect gate — paid listings require the seller's
+    // Stripe Connect account to be fully onboarded so funds can
+    // actually be paid out on order completion. Free listings
+    // (price === 0) bypass the gate. Returns 412 Precondition Failed
+    // with a machine-readable `stripe_not_connected` code + onboarding
+    // URL so the UI can route the seller to /wallet?connect=true.
+    const gate = await assertStripeConnectedForPaidListing(user.id, price)
+    if (!gate.ok) {
+      return NextResponse.json(gate.blockedResponse, { status: 412 })
     }
 
     // Ensure product_type is always set so services and products are kept separate

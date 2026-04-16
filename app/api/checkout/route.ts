@@ -85,14 +85,24 @@ export async function POST(req: NextRequest) {
         },
       ],
       payment_intent_data: {
+        // True escrow: hold the funds on FreeTrust's platform account
+        // in `requires_capture` state. The release_payment action on
+        // the order page calls stripe.paymentIntents.capture() +
+        // stripe.transfers.create() when the buyer confirms the work
+        // is complete. Dispute path cancels the intent, refunding
+        // the hold with zero platform or seller balance impact.
+        capture_method: "manual",
+        // Fee remains taken at capture via application_fee_amount,
+        // but the destination-charge auto-transfer was moved into
+        // the release_payment action in app/api/orders/[id]/route.ts
+        // so the money doesn't leave the platform until release.
+        // transfer_data REMOVED intentionally.
         application_fee_amount: platformFeeAmount,
-        transfer_data: {
-          destination: sellerId,
-        },
         metadata: {
           type,
           sellerId,
           escrow: "true",
+          captureMethod: "manual",
           platformFeeRate: String(feeRate),
           platformFeeAmount: String(platformFeeAmount),
           originalAmount: String(amountInCents),

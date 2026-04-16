@@ -208,14 +208,30 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   try {
     const supabase = createAdminClient();
 
-    // Update order status to in_progress and store payment intent
+    // Update order status to `paid` (funds held in escrow on the
+    // platform account via capture_method: 'manual') and store the
+    // PaymentIntent id on both the legacy `stripe_payment_intent`
+    // column and the canonical `stripe_payment_intent_id` so
+    // release_payment can read either.
+    //
+    // Status semantics:
+    //   pending / pending_escrow — checkout session created, buyer
+    //     hasn't paid yet
+    //   paid — buyer confirmed, PaymentIntent is in requires_capture;
+    //     funds held on the platform until release or cancellation
+    //   in_progress — seller started work (optional intermediate)
+    //   delivered — seller marked the work delivered
+    //   completed — buyer released payment; funds captured + transferred
+    //   cancelled — order cancelled, PaymentIntent cancelled, no charge
+    const piId = typeof session.payment_intent === 'string'
+      ? session.payment_intent
+      : String(session.payment_intent ?? '')
     const { error: updateError } = await supabase
       .from('orders')
       .update({
-        status: 'in_progress',
-        stripe_payment_intent: typeof session.payment_intent === 'string'
-          ? session.payment_intent
-          : String(session.payment_intent ?? ''),
+        status: 'paid',
+        stripe_payment_intent:    piId,
+        stripe_payment_intent_id: piId,
         updated_at: new Date().toISOString(),
       })
       .eq('id', orderId);

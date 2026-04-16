@@ -38,6 +38,14 @@ interface Profile {
   tiktok_url?:    string | null
   youtube_url?:   string | null
   website_url?:   string | null
+  // Stripe Connect onboarding flags — either one being true counts
+  // as "onboarded" for the paid-listing gate. stripe_onboarded is
+  // the legacy name, stripe_onboarding_complete is the canonical
+  // name post 20260416000003_escrow_columns.sql. A DB trigger keeps
+  // them in sync.
+  stripe_account_id?:          string | null
+  stripe_onboarded?:           boolean | null
+  stripe_onboarding_complete?: boolean | null
 }
 
 // Map of preset hobby label → emoji icon. Kept in sync with the
@@ -781,6 +789,42 @@ export default function ProfilePage() {
       {toast && (
         <div style={{ position: 'fixed', top: 70, right: 20, background: '#1e293b', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 10, padding: '12px 20px', fontSize: '0.88rem', color: '#f1f5f9', zIndex: 1000, boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
           {toast}
+        </div>
+      )}
+
+      {/* Connect Stripe banner — own profile, no Stripe Connect yet.
+          Paid listings require an onboarded Stripe account; this
+          surfaces the ask up-front so sellers don't discover the
+          412 gate only when they try to publish. Hidden once either
+          stripe_onboarded or stripe_onboarding_complete flips true
+          (the two columns are kept in sync by a DB trigger). */}
+      {isOwnProfile && user && profile && !(profile.stripe_onboarded || profile.stripe_onboarding_complete) && (
+        <div style={{ background: 'linear-gradient(90deg,rgba(251,191,36,0.08),rgba(251,146,60,0.05))', borderBottom: '1px solid rgba(251,191,36,0.2)', padding: '0.7rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '1.1rem' }}>💳</span>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f1f5f9' }}>
+              Connect Stripe to sell on FreeTrust
+            </div>
+            <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: 2 }}>
+              You need a connected Stripe account to publish a paid listing or receive payouts. Takes ~2 minutes.
+            </div>
+          </div>
+          <Link
+            href="/wallet?connect=true"
+            style={{
+              background:    'linear-gradient(135deg,#fbbf24,#f59e0b)',
+              color:         '#0f172a',
+              border:        'none',
+              borderRadius:  8,
+              padding:       '0.5rem 1rem',
+              fontSize:      '0.82rem',
+              fontWeight:    800,
+              textDecoration:'none',
+              flexShrink:    0,
+            }}
+          >
+            Connect Stripe →
+          </Link>
         </div>
       )}
 

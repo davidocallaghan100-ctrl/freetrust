@@ -6,6 +6,7 @@ import type { StructuredLocation } from '@/lib/geo'
 import { toPgUrlArray, toPgTagArray } from '@/lib/supabase/text-array'
 import { awardTrust } from '@/lib/trust/award'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
+import { assertStripeConnectedForPaidListing } from '@/lib/stripe/connect-gate'
 
 // Map UI-friendly labels (from the create form) to the DB CHECK constraint
 // values defined in lib/supabase/jobs-schema.sql.
@@ -340,6 +341,14 @@ export async function POST(req: NextRequest) {
       const price = data.price ? Number(data.price) : 0
       const priceEur = await toEur(price, currencyCode)
 
+      // Stripe Connect gate — paid services need a connected Stripe
+      // account before publish so buyers can actually pay out to the
+      // seller on completion. Free services (price === 0) skip.
+      const gate = await assertStripeConnectedForPaidListing(user.id, price)
+      if (!gate.ok) {
+        return NextResponse.json(gate.blockedResponse, { status: 412 })
+      }
+
       // ── Gig-rich-data columns (added to listings by
       // 20260413000003_listings_gig_columns.sql — jsonb for packages,
       // text[] for delivery_types / skills / images, numeric for
@@ -431,6 +440,13 @@ export async function POST(req: NextRequest) {
 
       const price = data.price ? Number(data.price) : 0
       const priceEur = await toEur(price, currencyCode)
+
+      // Stripe Connect gate — paid products require Stripe Connect
+      // onboarding. Free products skip.
+      const prodGate = await assertStripeConnectedForPaidListing(user.id, price)
+      if (!prodGate.ok) {
+        return NextResponse.json(prodGate.blockedResponse, { status: 412 })
+      }
 
       // Encode text[] columns as Postgres array literals — workaround
       // for the "expected pattern" PostgREST coercion bug; see
