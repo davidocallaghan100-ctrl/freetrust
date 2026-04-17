@@ -394,6 +394,18 @@ export default function FounderPage() {
             <p>Enter your expected annual sales to see how fast you break even — and what you save over five years.</p>
           </div>
           <div className="calc-card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 10, marginBottom: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 20, lineHeight: 1 }}>{tier.icon}</span>
+                <div>
+                  <div style={{ fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', color: '#94a3b8' }}>Calculating for</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: '#f1f5f9' }}>{tier.displayName} tier · €{tier.priceEur.toLocaleString()}</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: '#64748b', textAlign: 'right' }}>
+                {tier.serviceFeePercent}% / {tier.productFeePercent}%<br/>fees
+              </div>
+            </div>
             <div style={{ fontSize: 14, color: COLORS.textMuted, marginBottom: 10 }}>Expected annual sales</div>
             <div className="calc-input-row">
               <span className="calc-euro">€</span>
