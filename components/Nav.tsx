@@ -42,6 +42,13 @@ const DRAWER_SECTIONS = [
       { href: '/impact', label: 'Impact', icon: '🌍' },
     ],
   },
+  {
+    label: 'INVEST',
+    links: [
+      { href: '/invest',      label: 'Invest in FreeTrust', icon: '💰' },
+      { href: '/invest/deck', label: 'Investor Deck',       icon: '📊' },
+    ],
+  },
 ]
 
 export default function Nav() {
