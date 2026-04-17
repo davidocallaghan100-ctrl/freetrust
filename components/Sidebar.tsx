@@ -51,7 +51,7 @@ const NAV_SECTIONS = [
     ],
   },
   {
-    label: 'INVEST',
+    label: 'EARLY INVESTORS',
     links: [
       { href: '/invest', label: 'Invest', icon: '⭐' },
     ],

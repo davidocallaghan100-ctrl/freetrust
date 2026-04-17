@@ -43,9 +43,9 @@ const DRAWER_SECTIONS = [
     ],
   },
   {
-    label: 'INVEST',
+    label: 'EARLY INVESTORS',
     links: [
-      { href: '/invest',      label: 'Invest in FreeTrust', icon: '💰' },
+      { href: '/invest',      label: 'Early Investors', icon: '💰' },
       { href: '/invest/deck', label: 'Investor Deck',       icon: '📊' },
     ],
   },
