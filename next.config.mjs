@@ -104,6 +104,26 @@ const nextConfig = {
   // Hide Next.js version fingerprint
   poweredByHeader: false,
 
+  async redirects() {
+    return [
+      {
+        source: '/founder',
+        destination: '/invest',
+        permanent: true,
+      },
+      {
+        source: '/founder/success',
+        destination: '/invest/success',
+        permanent: true,
+      },
+      {
+        source: '/founder/:path*',
+        destination: '/invest/:path*',
+        permanent: true,
+      },
+    ];
+  },
+
   async headers() {
     return [
       {

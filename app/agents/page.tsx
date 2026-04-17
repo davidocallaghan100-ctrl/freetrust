@@ -227,7 +227,7 @@ export default function AgentsPage() {
                 <Link href="/login" className="topup-link">Sign in to see your balance</Link>
               </span>
             )}
-            <Link href="/founder" className="topup-link">Top up →</Link>
+            <Link href="/invest" className="topup-link">Top up →</Link>
           </div>
         </div>
       </section>

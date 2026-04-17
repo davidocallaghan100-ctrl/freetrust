@@ -53,7 +53,7 @@ const NAV_SECTIONS = [
   {
     label: 'INVEST',
     links: [
-      { href: '/founder', label: 'Founder', icon: '⭐' },
+      { href: '/invest', label: 'Invest', icon: '⭐' },
     ],
   },
 ]

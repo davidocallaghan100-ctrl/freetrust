@@ -615,7 +615,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
             ))}
           </div>
           <div style={{ textAlign: 'center', marginTop: '1.75rem' }}>
-            <Link href="/founder" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#fbbf24,#f59e0b)', color: '#0f172a', padding: '0.9rem 2rem', borderRadius: 10, fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none', boxShadow: '0 4px 20px rgba(251,191,36,0.3)' }}>
+            <Link href="/invest" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#fbbf24,#f59e0b)', color: '#0f172a', padding: '0.9rem 2rem', borderRadius: 10, fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none', boxShadow: '0 4px 20px rgba(251,191,36,0.3)' }}>
               Become a founder →
             </Link>
           </div>

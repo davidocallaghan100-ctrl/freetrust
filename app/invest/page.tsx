@@ -1,831 +1,427 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
-  ChevronDownIcon,
-  XMarkIcon,
-  CheckCircleIcon,
-  ArrowRightIcon,
-  UserGroupIcon,
-  CurrencyEuroIcon,
-  ChartBarIcon,
-  SparklesIcon,
-} from "@heroicons/react/24/outline";
+  FOUNDER_TIERS,
+  MIN_INVESTMENT_EUR,
+  MAX_INVESTMENT_EUR,
+  STANDARD_SERVICE_FEE_PERCENT,
+  STANDARD_PRODUCT_FEE_PERCENT,
+  getTierByAmount,
+  calculateAnnualSavings,
+  calculateBreakEvenMonths,
+  calculateFiveYearSavings,
+} from '@/lib/founder/tiers';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-type Tier = {
-  id: string;
-  name: string;
-  amount: string;
-  amountNum: number;
-  equity: string;
-  badge: string;
-  color: string;
-  border: string;
-  glow: string;
-  perks: string[];
-  popular?: boolean;
+const COLORS = {
+  bgBase: '#0f172a',
+  card: '#1e293b',
+  cardSoft: 'rgba(30,41,59,0.6)',
+  border: 'rgba(56,189,248,0.12)',
+  borderStrong: 'rgba(56,189,248,0.4)',
+  borderMuted: 'rgba(148,163,184,0.15)',
+  sky: '#38bdf8',
+  skyHover: '#7dd3fc',
+  text: '#f1f5f9',
+  textMuted: '#94a3b8',
+  textFaint: '#64748b',
+  success: '#34d399',
+  danger: '#f87171',
+  gold: '#fbbf24',
+  radius: 14,
 };
 
-type Investor = {
-  name: string;
-  role: string;
-  avatar: string;
-  amount: string;
-};
-
-type FaqItem = {
-  q: string;
-  a: string;
-};
-
-type FormData = {
-  name: string;
-  email: string;
-  tier: string;
-  amount: string;
-  message: string;
-};
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const TIERS: Tier[] = [
-  {
-    id: "explorer",
-    name: "Explorer",
-    amount: "€500",
-    amountNum: 500,
-    equity: "0.01%",
-    badge: "🔭",
-    color: "from-sky-400/20 to-sky-600/10",
-    border: "border-sky-500/30",
-    glow: "hover:shadow-sky-500/20",
-    perks: [
-      "0.01% equity stake",
-      "Early access to FreeTrust platform",
-      "Investor newsletter & updates",
-      "Explorer badge on profile",
-      "Community Discord access",
-    ],
-  },
-  {
-    id: "builder",
-    name: "Builder",
-    amount: "€2,500",
-    amountNum: 2500,
-    equity: "0.05%",
-    badge: "🏗️",
-    color: "from-indigo-400/20 to-indigo-600/10",
-    border: "border-indigo-500/30",
-    glow: "hover:shadow-indigo-500/20",
-    perks: [
-      "0.05% equity stake",
-      "All Explorer perks",
-      "Quarterly investor calls",
-      "Co-founder introductions",
-      "Beta feature access",
-      "Name in credits",
-    ],
-    popular: true,
-  },
-  {
-    id: "pioneer",
-    name: "Pioneer",
-    amount: "€10,000",
-    amountNum: 10000,
-    equity: "0.25%",
-    badge: "🚀",
-    color: "from-violet-400/20 to-violet-600/10",
-    border: "border-violet-500/30",
-    glow: "hover:shadow-violet-500/20",
-    perks: [
-      "0.25% equity stake",
-      "All Builder perks",
-      "Monthly 1-on-1 with founders",
-      "Advisory board invitation",
-      "Logo on investor page",
-      "Revenue share eligibility",
-      "Priority support SLA",
-    ],
-  },
-  {
-    id: "visionary",
-    name: "Visionary",
-    amount: "€25,000+",
-    amountNum: 25000,
-    equity: "1%+",
-    badge: "💎",
-    color: "from-amber-400/20 to-amber-600/10",
-    border: "border-amber-500/30",
-    glow: "hover:shadow-amber-500/20",
-    perks: [
-      "1%+ equity (negotiable)",
-      "All Pioneer perks",
-      "Board observer seat",
-      "Direct deal flow access",
-      "Custom due diligence pack",
-      "Co-investment rights",
-      "Dedicated relationship manager",
-      "Governance voting rights",
-    ],
-  },
+const PRESET_SALES: { label: string; value: number }[] = [
+  { label: '€5k', value: 5000 },
+  { label: '€25k', value: 25000 },
+  { label: '€100k', value: 100000 },
+  { label: '€500k', value: 500000 },
 ];
 
-const INVESTORS: Investor[] = [
-  { name: "Sarah M.", role: "Angel Investor, Berlin", avatar: "SM", amount: "€10,000" },
-  { name: "David K.", role: "Seed Fund Partner, Dublin", avatar: "DK", amount: "€25,000" },
-  { name: "Priya R.", role: "Tech Entrepreneur, London", avatar: "PR", amount: "€2,500" },
-  { name: "Marco F.", role: "VC Associate, Amsterdam", avatar: "MF", amount: "€10,000" },
-  { name: "Lena B.", role: "Impact Investor, Vienna", avatar: "LB", amount: "€5,000" },
-  { name: "James T.", role: "Startup Founder, Dublin", avatar: "JT", amount: "€500" },
-];
+export default function FounderPage() {
+  const [amount, setAmount] = useState<number>(999);
+  const [annualRevenue, setAnnualRevenue] = useState<number>(25000);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-const FAQS: FaqItem[] = [
-  {
-    q: "What type of equity is being offered?",
-    a: "We are offering SAFE (Simple Agreement for Future Equity) notes in this seed round. SAFEs convert to equity at a future priced round, giving you downside protection and upside participation. Full legal documentation is provided upon expression of interest.",
-  },
-  {
-    q: "Is there a minimum investment?",
-    a: "Our minimum investment is €500 (Explorer tier). We've structured it this way to allow a broad community of supporters to participate in FreeTrust's growth, not just institutional investors.",
-  },
-  {
-    q: "How is the €500K seed round structured?",
-    a: "The round is structured as a SAFE with a €5M valuation cap and a 20% discount. The round will close once fully subscribed or by our target date. Funds will be used for product development, regulatory compliance, and go-to-market.",
-  },
-  {
-    q: "When will I see a return on my investment?",
-    a: "FreeTrust is targeting a Series A within 18–24 months, at which point SAFEs will convert. We are also exploring revenue-share mechanics for certain tiers. Investment timelines vary; this is a high-risk, high-reward early-stage opportunity.",
-  },
-  {
-    q: "Is this investment regulated?",
-    a: "FreeTrust is in the process of obtaining relevant regulatory approvals for crowdfunding under EU Regulation 2020/1503. All investments are subject to applicable laws in your jurisdiction. We recommend consulting a financial advisor before investing.",
-  },
-  {
-    q: "What happens if the round doesn't close?",
-    a: "If the round does not reach its minimum threshold, all committed funds are returned in full. We believe strongly in transparency — it's in our name. You will be kept informed at every stage.",
-  },
-];
+  const tier = useMemo(() => getTierByAmount(amount), [amount]);
+  const annualSavings = useMemo(() => calculateAnnualSavings(tier, annualRevenue), [tier, annualRevenue]);
+  const breakEven = useMemo(() => calculateBreakEvenMonths(tier, annualRevenue), [tier, annualRevenue]);
+  const fiveYearSavings = useMemo(() => calculateFiveYearSavings(tier, annualRevenue), [tier, annualRevenue]);
 
-const TOTAL_TARGET = 500000;
-const TOTAL_RAISED = 312000;
-const TOTAL_INVESTORS_COUNT = 47;
+  const breakEvenLabel = useMemo(() => {
+    if (!Number.isFinite(breakEven)) return '—';
+    if (breakEven > 60) return '>5 yrs';
+    if (breakEven < 1) return '<1 mo';
+    return `${breakEven} mo`;
+  }, [breakEven]);
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function AnimatedCounter({ target, prefix = "", suffix = "" }: { target: number; prefix?: string; suffix?: string }) {
-  const [count, setCount] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-  const started = useRef(false);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !started.current) {
-          started.current = true;
-          const duration = 1800;
-          const steps = 60;
-          const increment = target / steps;
-          let current = 0;
-          const timer = setInterval(() => {
-            current += increment;
-            if (current >= target) {
-              setCount(target);
-              clearInterval(timer);
-            } else {
-              setCount(Math.floor(current));
-            }
-          }, duration / steps);
-        }
-      },
-      { threshold: 0.3 }
-    );
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [target]);
-
-  const formatted =
-    target >= 1000
-      ? count.toLocaleString("en-IE")
-      : count.toString();
-
-  return (
-    <span ref={ref}>
-      {prefix}{formatted}{suffix}
-    </span>
-  );
-}
-
-function ProgressBar({ percentage }: { percentage: number }) {
-  const [width, setWidth] = useState(0);
-
-  useEffect(() => {
-    const t = setTimeout(() => setWidth(percentage), 400);
-    return () => clearTimeout(t);
-  }, [percentage]);
-
-  return (
-    <div className="relative w-full h-4 bg-white/5 rounded-full overflow-hidden border border-white/10">
-      <div
-        className="h-full rounded-full bg-gradient-to-r from-sky-400 via-indigo-400 to-violet-500 transition-all duration-[2000ms] ease-out relative"
-        style={{ width: `${width}%` }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
-      </div>
-      <div
-        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-5 rounded-full bg-white border-2 border-indigo-400 shadow-lg shadow-indigo-500/50 transition-all duration-[2000ms] ease-out"
-        style={{ left: `${Math.min(width, 96)}%` }}
-      />
-    </div>
-  );
-}
-
-function TierCard({ tier, onSelect }: { tier: Tier; onSelect: (t: Tier) => void }) {
-  return (
-    <div
-      className={`relative flex flex-col rounded-2xl border ${tier.border} bg-gradient-to-br ${tier.color} backdrop-blur-sm p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl ${tier.glow} ${
-        tier.popular ? "ring-2 ring-indigo-500/60" : ""
-      }`}
-    >
-      {tier.popular && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-sky-500 text-xs font-bold text-white shadow-lg">
-          Most Popular
-        </div>
-      )}
-      <div className="flex items-center gap-3 mb-4">
-        <span className="text-3xl">{tier.badge}</span>
-        <div>
-          <h3 className="text-xl font-bold text-white">{tier.name}</h3>
-          <p className="text-sm text-white/50">Tier</p>
-        </div>
-      </div>
-
-      <div className="mb-4">
-        <span className="text-4xl font-black text-white">{tier.amount}</span>
-        <span className="ml-2 text-sm text-white/50">minimum</span>
-      </div>
-
-      <div className="mb-6 px-3 py-2 rounded-lg bg-white/5 border border-white/10 inline-flex items-center gap-2">
-        <SparklesIcon className="w-4 h-4 text-amber-400" />
-        <span className="text-sm font-semibold text-amber-300">{tier.equity} equity</span>
-      </div>
-
-      <ul className="flex-1 space-y-2 mb-6">
-        {tier.perks.map((perk, i) => (
-          <li key={i} className="flex items-start gap-2 text-sm text-white/70">
-            <CheckCircleIcon className="w-4 h-4 text-sky-400 mt-0.5 shrink-0" />
-            {perk}
-          </li>
-        ))}
-      </ul>
-
-      <button
-        onClick={() => onSelect(tier)}
-        className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
-          tier.popular
-            ? "bg-gradient-to-r from-indigo-500 to-sky-500 text-white hover:from-indigo-400 hover:to-sky-400 shadow-lg shadow-indigo-500/30"
-            : "bg-white/10 text-white hover:bg-white/20 border border-white/20"
-        }`}
-      >
-        Register Interest →
-      </button>
-    </div>
-  );
-}
-
-function FaqAccordion({ items }: { items: FaqItem[] }) {
-  const [open, setOpen] = useState<number | null>(null);
-
-  return (
-    <div className="space-y-3">
-      {items.map((item, i) => (
-        <div
-          key={i}
-          className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm overflow-hidden"
-        >
-          <button
-            className="w-full flex items-center justify-between p-5 text-left"
-            onClick={() => setOpen(open === i ? null : i)}
-          >
-            <span className="font-semibold text-white text-sm pr-4">{item.q}</span>
-            <ChevronDownIcon
-              className={`w-5 h-5 text-sky-400 shrink-0 transition-transform duration-300 ${
-                open === i ? "rotate-180" : ""
-              }`}
-            />
-          </button>
-          <div
-            className={`overflow-hidden transition-all duration-300 ${
-              open === i ? "max-h-64 opacity-100" : "max-h-0 opacity-0"
-            }`}
-          >
-            <p className="px-5 pb-5 text-sm text-white/60 leading-relaxed">{item.a}</p>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function Modal({
-  open,
-  onClose,
-  defaultTier,
-}: {
-  open: boolean;
-  onClose: () => void;
-  defaultTier: Tier | null;
-}) {
-  const [form, setForm] = useState<FormData>({
-    name: "",
-    email: "",
-    tier: defaultTier?.id ?? "explorer",
-    amount: defaultTier?.amount ?? "",
-    message: "",
-  });
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (defaultTier) {
-      setForm((f) => ({ ...f, tier: defaultTier.id, amount: defaultTier.amountNum.toString() }));
-    }
-  }, [defaultTier]);
-
-  useEffect(() => {
-    if (open) {
-      setSuccess(false);
-      setError("");
-    }
-  }, [open]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  async function handlePurchase() {
     setLoading(true);
-    setError("");
+    setError(null);
     try {
-      const res = await fetch("/api/invest/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+      const res = await fetch('/api/founder/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amountEur: tier.priceEur }),
       });
-      const data = await res.json();
-      if (data.success) {
-        setSuccess(true);
-      } else {
-        setError(data.message ?? "Something went wrong.");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: 'Checkout is coming soon.' }));
+        throw new Error(body.error ?? 'Checkout failed.');
       }
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
+      const { url } = await res.json();
+      if (!url) throw new Error('No checkout URL returned.');
+      window.location.href = url;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Checkout is coming soon.';
+      setError(message);
       setLoading(false);
     }
-  };
-
-  if (!open) return null;
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="relative w-full max-w-lg rounded-2xl border border-white/10 bg-[#0f172a] shadow-2xl shadow-black/50 overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-white/10">
-          <div>
-            <h2 className="text-xl font-bold text-white">Register Your Interest</h2>
-            <p className="text-sm text-white/50 mt-0.5">Join {TOTAL_INVESTORS_COUNT}+ investors backing FreeTrust</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
-          >
-            <XMarkIcon className="w-4 h-4 text-white" />
-          </button>
+    <div className="founder-page" style={{ color: COLORS.text, width: '100%' }}>
+      <style>{`
+        .founder-page { padding-bottom: 80px; }
+        .founder-container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+        .founder-hero { text-align: center; padding: 80px 20px 48px; }
+        .founder-hero h1 { font-size: 48px; line-height: 1.05; margin: 16px 0 20px; font-weight: 600; }
+        .founder-hero h1 .accent { color: ${COLORS.sky}; }
+        .founder-hero p { font-size: 18px; color: ${COLORS.textMuted}; line-height: 1.6; max-width: 640px; margin: 0 auto 24px; }
+        .pretitle { font-size: 11px; letter-spacing: 3px; color: ${COLORS.sky}; font-weight: 500; text-transform: uppercase; margin-bottom: 12px; }
+        .checks { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; font-size: 14px; color: ${COLORS.textMuted}; }
+        .check-item { display: inline-flex; align-items: center; gap: 6px; }
+        .check-mark { color: ${COLORS.success}; }
+        .section { padding: 56px 20px; border-top: 1px solid ${COLORS.borderMuted}; }
+        .section-head { text-align: center; margin-bottom: 40px; }
+        .section-head h2 { font-size: 32px; font-weight: 600; margin: 12px 0 8px; }
+        .section-head p { color: ${COLORS.textMuted}; max-width: 520px; margin: 0 auto; font-size: 16px; }
+        .invest-card { background: ${COLORS.card}; border: 1px solid ${COLORS.border}; border-radius: ${COLORS.radius}px; padding: 40px 32px; }
+        .invest-display { text-align: center; margin-bottom: 24px; }
+        .invest-label { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: ${COLORS.textFaint}; margin-bottom: 10px; }
+        .invest-value { font-size: 72px; font-weight: 600; line-height: 1; color: ${COLORS.text}; }
+        .slider { width: 100%; margin: 24px 0 8px; accent-color: ${COLORS.sky}; cursor: pointer; }
+        .slider-marks { display: flex; justify-content: space-between; font-size: 12px; color: ${COLORS.textFaint}; margin-bottom: 24px; }
+        .tier-pill { display: inline-flex; align-items: center; gap: 10px; padding: 10px 20px; background: rgba(56,189,248,0.1); border: 1px solid ${COLORS.borderStrong}; border-radius: 999px; font-size: 16px; font-weight: 500; }
+        .tier-pill-icon { font-size: 22px; line-height: 1; }
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 24px; }
+        .stat { background: rgba(15,23,42,0.6); border: 1px solid ${COLORS.borderMuted}; border-radius: 10px; padding: 14px 10px; text-align: center; }
+        .stat-accent { background: rgba(56,189,248,0.08); border-color: rgba(56,189,248,0.25); }
+        .stat-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: ${COLORS.textMuted}; margin-bottom: 6px; }
+        .stat-value { font-size: 18px; font-weight: 600; color: ${COLORS.text}; }
+        .stat-hint { font-size: 10px; color: ${COLORS.textFaint}; margin-top: 3px; }
+        .cta-btn { display: block; width: 100%; padding: 16px 24px; background: ${COLORS.sky}; color: ${COLORS.bgBase}; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.15s; margin-top: 20px; }
+        .cta-btn:hover:not(:disabled) { background: ${COLORS.skyHover}; }
+        .cta-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .cta-note { text-align: center; font-size: 12px; color: ${COLORS.textFaint}; margin-top: 14px; }
+        .error-box { margin-top: 16px; padding: 14px; background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); border-radius: 10px; color: ${COLORS.danger}; font-size: 14px; text-align: center; }
+        .tier-ladder { display: grid; grid-template-columns: 1fr; gap: 14px; }
+        .tier-card { text-align: left; background: ${COLORS.card}; border: 1px solid ${COLORS.borderMuted}; border-radius: ${COLORS.radius}px; padding: 20px; cursor: pointer; color: inherit; font: inherit; transition: border-color 0.15s; }
+        .tier-card:hover { border-color: rgba(148,163,184,0.35); }
+        .tier-card-active { background: rgba(56,189,248,0.08); border: 2px solid ${COLORS.sky}; padding: 19px; }
+        .tier-card-premium { border-color: rgba(251,191,36,0.25); }
+        .tier-card-premium.tier-card-active { border-color: ${COLORS.gold}; background: rgba(251,191,36,0.06); }
+        .tier-icon { font-size: 28px; line-height: 1; margin-bottom: 10px; }
+        .tier-name { font-size: 18px; font-weight: 600; margin-bottom: 2px; color: ${COLORS.text}; }
+        .tier-price { font-size: 20px; font-weight: 600; color: ${COLORS.sky}; margin-bottom: 14px; }
+        .tier-card-premium .tier-price { color: ${COLORS.gold}; }
+        .tier-rows { display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
+        .tier-row { display: flex; justify-content: space-between; }
+        .tier-row-label { color: ${COLORS.textMuted}; }
+        .tier-row-value { color: ${COLORS.text}; font-weight: 500; }
+        .calc-card { background: ${COLORS.card}; border: 1px solid ${COLORS.border}; border-radius: ${COLORS.radius}px; padding: 28px; max-width: 620px; margin: 0 auto; }
+        .calc-input-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+        .calc-euro { font-size: 22px; color: ${COLORS.textMuted}; }
+        .calc-input { flex: 1; background: rgba(15,23,42,0.6); border: 1px solid ${COLORS.borderMuted}; border-radius: 10px; padding: 12px 14px; color: ${COLORS.text}; font-size: 20px; font-weight: 600; outline: none; }
+        .calc-input:focus { border-color: ${COLORS.sky}; }
+        .calc-presets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+        .calc-preset { background: rgba(15,23,42,0.6); border: 1px solid ${COLORS.borderMuted}; color: ${COLORS.textMuted}; border-radius: 999px; padding: 6px 14px; font-size: 13px; cursor: pointer; transition: all 0.15s; }
+        .calc-preset:hover { border-color: ${COLORS.borderStrong}; color: ${COLORS.text}; }
+        .calc-preset-active { background: rgba(56,189,248,0.1); border-color: ${COLORS.sky}; color: ${COLORS.sky}; }
+        .calc-results { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+        .calc-note { text-align: center; font-size: 12px; color: ${COLORS.textFaint}; }
+        .faq-list { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+        .faq-item { background: ${COLORS.card}; border: 1px solid ${COLORS.borderMuted}; border-radius: 12px; overflow: hidden; }
+        .faq-summary { cursor: pointer; padding: 18px 20px; list-style: none; display: flex; justify-content: space-between; align-items: center; font-weight: 500; }
+        .faq-summary::-webkit-details-marker { display: none; }
+        .faq-plus { color: ${COLORS.sky}; font-size: 22px; transition: transform 0.15s; flex-shrink: 0; margin-left: 12px; }
+        .faq-item[open] .faq-plus { transform: rotate(45deg); }
+        .faq-body { padding: 0 20px 18px; color: ${COLORS.textMuted}; line-height: 1.6; font-size: 15px; }
+        .final-cta { text-align: center; padding: 64px 20px; }
+        .final-cta h2 { font-size: 32px; font-weight: 600; margin-bottom: 14px; }
+        .final-cta p { font-size: 18px; color: ${COLORS.textMuted}; margin-bottom: 28px; }
+        .final-cta-btn { display: inline-block; padding: 16px 40px; background: ${COLORS.sky}; color: ${COLORS.bgBase}; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+        .final-cta-btn:hover:not(:disabled) { background: ${COLORS.skyHover}; }
+        .final-cta-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .wallet-link { color: ${COLORS.sky}; text-decoration: none; font-size: 14px; }
+        .wallet-link:hover { color: ${COLORS.skyHover}; }
+
+        @media (min-width: 560px) {
+          .stats-grid { grid-template-columns: repeat(5, 1fr); }
+        }
+        @media (min-width: 640px) {
+          .tier-ladder { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (min-width: 900px) {
+          .tier-ladder { grid-template-columns: repeat(4, 1fr); }
+        }
+        @media (min-width: 1100px) {
+          .tier-ladder { grid-template-columns: repeat(7, 1fr); gap: 10px; }
+          .tier-card { padding: 16px 14px; }
+          .tier-card-active { padding: 15px 13px; }
+          .tier-icon { font-size: 24px; margin-bottom: 8px; }
+          .tier-name { font-size: 16px; }
+          .tier-price { font-size: 18px; margin-bottom: 10px; }
+          .tier-rows { font-size: 12px; gap: 4px; }
+        }
+        @media (max-width: 640px) {
+          .founder-hero { padding: 56px 20px 32px; }
+          .founder-hero h1 { font-size: 36px; }
+          .founder-hero p { font-size: 16px; }
+          .invest-value { font-size: 56px; }
+          .invest-card { padding: 28px 20px; }
+          .section { padding: 44px 16px; }
+          .section-head h2 { font-size: 26px; }
+          .final-cta h2 { font-size: 26px; }
+          .calc-results { grid-template-columns: 1fr; }
+        }
+      `}</style>
+
+      {/* HERO */}
+      <section className="founder-hero">
+        <div className="pretitle">✦ Founder investment</div>
+        <h1>
+          Invest once.
+          <br />
+          <span className="accent">Save forever.</span>
+        </h1>
+        <p>
+          Pay once, keep lower fees for life. From €99 to €5,000 — every tier pays back in months, not years. Then keeps paying forever.
+        </p>
+        <div className="checks">
+          <span className="check-item"><span className="check-mark">✓</span> One-time payment</span>
+          <span className="check-item"><span className="check-mark">✓</span> Lower fees for life</span>
+          <span className="check-item"><span className="check-mark">✓</span> Monthly AI refills</span>
+          <span className="check-item"><span className="check-mark">✓</span> 14-day refund</span>
         </div>
+      </section>
 
-        {success ? (
-          <div className="p-8 text-center">
-            <div className="w-16 h-16 rounded-full bg-sky-500/20 flex items-center justify-center mx-auto mb-4">
-              <CheckCircleIcon className="w-8 h-8 text-sky-400" />
-            </div>
-            <h3 className="text-xl font-bold text-white mb-2">You're on the list!</h3>
-            <p className="text-white/60 text-sm mb-6">
-              We'll be in touch within 48 hours with next steps and legal documentation.
-            </p>
-            <button
-              onClick={onClose}
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-semibold text-sm hover:from-sky-400 hover:to-indigo-400 transition-all"
-            >
-              Close
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-medium text-white/60 mb-1.5 block">Full Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Jane Smith"
-                  className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-sky-500/60 focus:bg-white/10 transition-all"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-white/60 mb-1.5 block">Email *</label>
-                <input
-                  type="email"
-                  required
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder="jane@example.com"
-                  className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-sky-500/60 focus:bg-white/10 transition-all"
-                />
-              </div>
+      {/* INTERACTIVE SCALE */}
+      <section style={{ padding: '0 20px 48px' }}>
+        <div className="founder-container" style={{ maxWidth: 820 }}>
+          <div className="invest-card">
+            <div className="invest-display">
+              <div className="invest-label">Your investment</div>
+              <div className="invest-value">€{amount.toLocaleString()}</div>
             </div>
 
-            <div>
-              <label className="text-xs font-medium text-white/60 mb-1.5 block">Investment Tier</label>
-              <select
-                value={form.tier}
-                onChange={(e) => {
-                  const t = TIERS.find((x) => x.id === e.target.value);
-                  setForm({ ...form, tier: e.target.value, amount: t?.amountNum.toString() ?? "" });
-                }}
-                className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-sky-500/60 transition-all appearance-none"
-              >
-                {TIERS.map((t) => (
-                  <option key={t.id} value={t.id} className="bg-[#0f172a]">
-                    {t.badge} {t.name} — {t.amount}
-                  </option>
-                ))}
-              </select>
+            <input
+              className="slider"
+              type="range"
+              min={MIN_INVESTMENT_EUR}
+              max={MAX_INVESTMENT_EUR}
+              step={1}
+              value={amount}
+              onChange={(e) => setAmount(parseInt(e.target.value, 10))}
+              aria-label="Investment amount"
+            />
+            <div className="slider-marks">
+              <span>€{MIN_INVESTMENT_EUR}</span>
+              <span>€{MAX_INVESTMENT_EUR.toLocaleString()}</span>
             </div>
 
-            <div>
-              <label className="text-xs font-medium text-white/60 mb-1.5 block">Amount Interested (€)</label>
-              <input
-                type="number"
-                min="500"
-                value={form.amount}
-                onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                placeholder="500"
-                className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-sky-500/60 focus:bg-white/10 transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-white/60 mb-1.5 block">Message (optional)</label>
-              <textarea
-                value={form.message}
-                onChange={(e) => setForm({ ...form, message: e.target.value })}
-                placeholder="Tell us about your background or questions..."
-                rows={3}
-                className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-sky-500/60 focus:bg-white/10 transition-all resize-none"
-              />
-            </div>
-
-            {error && (
-              <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
-                {error}
-              </p>
-            )}
-
-            <p className="text-xs text-white/30 leading-relaxed">
-              By submitting you agree this is an expression of interest only, not a binding commitment. Investment is subject to legal documentation and regulatory compliance.
-            </p>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-semibold text-sm hover:from-sky-400 hover:to-indigo-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  Submit Interest
-                  <ArrowRightIcon className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Page ────────────────────────────────────────────────────────────────────
-
-export default function InvestPage() {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedTier, setSelectedTier] = useState<Tier | null>(null);
-
-  const pct = Math.round((TOTAL_RAISED / TOTAL_TARGET) * 100);
-
-  const openModal = (tier?: Tier) => {
-    setSelectedTier(tier ?? null);
-    setModalOpen(true);
-  };
-
-  return (
-    <div className="min-h-screen bg-[#0f172a] text-white">
-      {/* Background blobs */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 -right-32 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 w-72 h-72 bg-violet-500/8 rounded-full blur-3xl" />
-      </div>
-
-      <div className="relative z-10">
-
-        {/* ── HERO ─────────────────────────────────────────────────────── */}
-        <section className="pt-24 pb-20 px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-xs font-semibold mb-8 uppercase tracking-widest">
-              <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
-              Seed Round Open — €500K
-            </div>
-
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-tight mb-6">
-              Invest in the{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-indigo-400 to-violet-400">
-                Trust Economy
+            <div style={{ textAlign: 'center', marginBottom: 8 }}>
+              <span className="tier-pill">
+                <span className="tier-pill-icon">{tier.icon}</span>
+                <span>{tier.displayName} tier</span>
               </span>
-            </h1>
+            </div>
 
-            <p className="text-xl text-white/60 max-w-2xl mx-auto mb-12 leading-relaxed">
-              FreeTrust is redefining social commerce with trust-first infrastructure.
-              Join our seed round and own a piece of the future of verified online trade.
-            </p>
-
-            {/* Funding progress */}
-            <div className="max-w-2xl mx-auto bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 mb-10">
-              <div className="flex justify-between items-end mb-3">
-                <div className="text-left">
-                  <p className="text-xs text-white/40 uppercase tracking-wider mb-1">Total Raised</p>
-                  <p className="text-3xl font-black text-white">
-                    <AnimatedCounter target={TOTAL_RAISED} prefix="€" />
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-white/40 uppercase tracking-wider mb-1">Target</p>
-                  <p className="text-lg font-bold text-white/60">€500,000</p>
-                </div>
+            <div className="stats-grid">
+              <div className="stat stat-accent">
+                <div className="stat-label">Service fee</div>
+                <div className="stat-value">{tier.serviceFeePercent}%</div>
+                <div className="stat-hint">was {STANDARD_SERVICE_FEE_PERCENT}%</div>
               </div>
-              <ProgressBar percentage={pct} />
-              <div className="flex justify-between mt-3">
-                <span className="text-xs text-sky-400 font-semibold">{pct}% funded</span>
-                <span className="text-xs text-white/40">{100 - pct}% remaining</span>
+              <div className="stat stat-accent">
+                <div className="stat-label">Product fee</div>
+                <div className="stat-value">{tier.productFeePercent}%</div>
+                <div className="stat-hint">was {STANDARD_PRODUCT_FEE_PERCENT}%</div>
+              </div>
+              <div className="stat">
+                <div className="stat-label">AI Credits</div>
+                <div className="stat-value">+{tier.aiCreditsBonus.toLocaleString()}</div>
+                <div className="stat-hint">one-time</div>
+              </div>
+              <div className="stat">
+                <div className="stat-label">₮ bonus</div>
+                <div className="stat-value">+{tier.trustBonus.toLocaleString()}</div>
+                <div className="stat-hint">one-time</div>
+              </div>
+              <div className="stat">
+                <div className="stat-label">Monthly refill</div>
+                <div className="stat-value">+{tier.monthlyAiCreditRefill}</div>
+                <div className="stat-hint">for life</div>
               </div>
             </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button
-                onClick={() => openModal()}
-                className="px-8 py-4 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-bold text-base hover:from-sky-400 hover:to-indigo-400 transition-all hover:scale-105 shadow-xl shadow-indigo-500/25 flex items-center justify-center gap-2"
-              >
-                Register Interest
-                <ArrowRightIcon className="w-4 h-4" />
-              </button>
-              <Link
-                href="/invest/deck"
-                className="px-8 py-4 rounded-2xl bg-white/10 border border-white/20 text-white font-bold text-base hover:bg-white/20 transition-all flex items-center justify-center gap-2"
-              >
-                View Investor Deck
-              </Link>
-            </div>
           </div>
-        </section>
 
-        {/* ── LIVE STATS ───────────────────────────────────────────────── */}
-        <section className="py-12 px-4 border-y border-white/5">
-          <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
-            {[
-              {
-                icon: UserGroupIcon,
-                label: "Total Investors",
-                value: TOTAL_INVESTORS_COUNT,
-                suffix: "",
-                color: "text-sky-400",
-              },
-              {
-                icon: CurrencyEuroIcon,
-                label: "Total Raised",
-                value: TOTAL_RAISED,
-                prefix: "€",
-                color: "text-indigo-400",
-              },
-              {
-                icon: ChartBarIcon,
-                label: "Round Closed",
-                value: pct,
-                suffix: "%",
-                color: "text-violet-400",
-              },
-              {
-                icon: SparklesIcon,
-                label: "Valuation Cap",
-                value: 5,
-                prefix: "€",
-                suffix: "M",
-                color: "text-amber-400",
-              },
-            ].map((stat, i) => (
-              <div
-                key={i}
-                className="flex flex-col items-center text-center p-5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/8 transition-colors"
-              >
-                <stat.icon className={`w-6 h-6 ${stat.color} mb-3`} />
-                <p className={`text-3xl font-black ${stat.color}`}>
-                  <AnimatedCounter
-                    target={stat.value}
-                    prefix={stat.prefix ?? ""}
-                    suffix={stat.suffix ?? ""}
-                  />
-                </p>
-                <p className="text-xs text-white/40 mt-1">{stat.label}</p>
-              </div>
-            ))}
+          <button type="button" className="cta-btn" onClick={handlePurchase} disabled={loading}>
+            {loading ? 'Redirecting to Stripe…' : `Become a ${tier.displayName} founder — €${tier.priceEur.toLocaleString()}`}
+          </button>
+          {error && <div className="error-box">{error}</div>}
+          <div className="cta-note">Secure payment by Stripe · 14-day refund if fewer than 50 AI Credits spent</div>
+        </div>
+      </section>
+
+      {/* TIER LADDER */}
+      <section className="section">
+        <div className="founder-container">
+          <div className="section-head">
+            <div className="pretitle">✦ Choose your tier</div>
+            <h2>Seven tiers. One community.</h2>
+            <p>From a no-brainer €99 entry to the €5,000 Legacy tier with lifetime 0.25% fees. Every tier is ROI-positive.</p>
           </div>
-        </section>
-
-        {/* ── INVESTMENT TIERS ─────────────────────────────────────────── */}
-        <section className="py-20 px-4" id="tiers">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-14">
-              <h2 className="text-4xl font-black text-white mb-3">Choose Your Tier</h2>
-              <p className="text-white/50 text-lg">Every amount matters. Find the right level of commitment for you.</p>
-            </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {TIERS.map((tier) => (
-                <TierCard key={tier.id} tier={tier} onSelect={openModal} />
-              ))}
-            </div>
-            <p className="text-center text-xs text-white/30 mt-8">
-              * Equity figures are indicative SAFE notes with €5M valuation cap. Legal documentation provided upon registration.
-            </p>
-          </div>
-        </section>
-
-        {/* ── SOCIAL PROOF ─────────────────────────────────────────────── */}
-        <section className="py-16 px-4 bg-white/2">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-black text-white mb-2">Who's Already In</h2>
-              <p className="text-white/50">Joining a growing community of early believers</p>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {INVESTORS.map((inv, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/8 transition-colors"
-                >
-                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-sm font-bold text-white shrink-0">
-                    {inv.avatar}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{inv.name}</p>
-                    <p className="text-xs text-white/40 truncate">{inv.role}</p>
-                    <p className="text-xs text-sky-400 font-medium mt-0.5">{inv.amount}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Trust indicators */}
-            <div className="mt-10 flex flex-wrap justify-center gap-6 text-center">
-              {[
-                { emoji: "🔐", text: "SAFE Notes" },
-                { emoji: "📋", text: "Full Legal Docs" },
-                { emoji: "🇪🇺", text: "EU Compliant" },
-                { emoji: "💼", text: "Audited Financials" },
-                { emoji: "📞", text: "Founder Access" },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-2 text-sm text-white/50">
-                  <span>{item.emoji}</span>
-                  <span>{item.text}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── WHY INVEST ───────────────────────────────────────────────── */}
-        <section className="py-20 px-4">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-14">
-              <h2 className="text-3xl font-black text-white mb-2">Why FreeTrust, Why Now</h2>
-              <p className="text-white/50">The numbers tell the story</p>
-            </div>
-            <div className="grid md:grid-cols-3 gap-6">
-              {[
-                {
-                  stat: "€50B",
-                  label: "Total Addressable Market",
-                  desc: "EU social commerce is projected to hit €50B by 2027, growing at 23% CAGR.",
-                  color: "from-sky-500/20 to-sky-700/10",
-                  border: "border-sky-500/20",
-                  badge: "🌍",
-                },
-                {
-                  stat: "€312K",
-                  label: "Community GMV (Pilot)",
-                  desc: "Our closed beta generated €312K in gross merchandise value in 8 weeks.",
-                  color: "from-indigo-500/20 to-indigo-700/10",
-                  border: "border-indigo-500/20",
-                  badge: "📈",
-                },
-                {
-                  stat: "4.9★",
-                  label: "Trust Score Average",
-                  desc: "Our proprietary TrustScore algorithm gives buyers and sellers unprecedented confidence.",
-                  color: "from-violet-500/20 to-violet-700/10",
-                  border: "border-violet-500/20",
-                  badge: "⭐",
-                },
-              ].map((item, i) => (
-                <div
-                  key={i}
-                  className={`p-6 rounded-2xl bg-gradient-to-br ${item.color} border ${item.border}`}
-                >
-                  <span className="text-3xl mb-3 block">{item.badge}</span>
-                  <p className="text-4xl font-black text-white mb-1">{item.stat}</p>
-                  <p className="text-sm font-semibold text-white/80 mb-2">{item.label}</p>
-                  <p className="text-sm text-white/50 leading-relaxed">{item.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── FAQ ──────────────────────────────────────────────────────── */}
-        <section className="py-20 px-4 bg-white/2">
-          <div className="max-w-3xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-black text-white mb-2">Frequently Asked Questions</h2>
-              <p className="text-white/50">Everything you need to know before you invest</p>
-            </div>
-            <FaqAccordion items={FAQS} />
-          </div>
-        </section>
-
-        {/* ── BOTTOM CTA ───────────────────────────────────────────────── */}
-        <section className="py-24 px-4">
-          <div className="max-w-2xl mx-auto text-center">
-            <div className="p-10 rounded-3xl bg-gradient-to-br from-sky-500/10 via-indigo-500/10 to-violet-500/10 border border-white/10 backdrop-blur-sm">
-              <span className="text-4xl block mb-4">🚀</span>
-              <h2 className="text-4xl font-black text-white mb-4">
-                Ready to Back the Future?
-              </h2>
-              <p className="text-white/60 text-lg mb-8 leading-relaxed">
-                The round is {pct}% subscribed. Secure your position now before it closes.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="tier-ladder">
+            {FOUNDER_TIERS.map((t) => {
+              const isActive = t.key === tier.key;
+              const isPremium = t.key === 'summit' || t.key === 'legacy';
+              const classes = [
+                'tier-card',
+                isActive ? 'tier-card-active' : '',
+                isPremium ? 'tier-card-premium' : '',
+              ].filter(Boolean).join(' ');
+              return (
                 <button
-                  onClick={() => openModal()}
-                  className="px-8 py-4 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-bold text-base hover:from-sky-400 hover:to-indigo-400 transition-all hover:scale-105 shadow-xl shadow-indigo-500/25"
+                  key={t.key}
+                  type="button"
+                  className={classes}
+                  onClick={() => setAmount(t.priceEur)}
                 >
-                  Register Interest Now
+                  <div className="tier-icon">{t.icon}</div>
+                  <div className="tier-name">{t.displayName}</div>
+                  <div className="tier-price">€{t.priceEur.toLocaleString()}</div>
+                  <div className="tier-rows">
+                    <div className="tier-row"><span className="tier-row-label">Service</span><span className="tier-row-value">{t.serviceFeePercent}%</span></div>
+                    <div className="tier-row"><span className="tier-row-label">Product</span><span className="tier-row-value">{t.productFeePercent}%</span></div>
+                    <div className="tier-row"><span className="tier-row-label">Credits</span><span className="tier-row-value">+{t.aiCreditsBonus.toLocaleString()}</span></div>
+                    <div className="tier-row"><span className="tier-row-label">₮</span><span className="tier-row-value">+{t.trustBonus.toLocaleString()}</span></div>
+                    <div className="tier-row"><span className="tier-row-label">Refill</span><span className="tier-row-value">+{t.monthlyAiCreditRefill}/mo</span></div>
+                  </div>
                 </button>
-                <Link
-                  href="/invest/deck"
-                  className="px-8 py-4 rounded-2xl bg-white/10 border border-white/20 text-white font-bold text-base hover:bg-white/20 transition-all"
-                >
-                  Read the Deck First
-                </Link>
-              </div>
-              <p className="text-xs text-white/30 mt-6">
-                This is not financial advice. Investment involves risk. Past performance does not guarantee future results.
-              </p>
-            </div>
+              );
+            })}
           </div>
-        </section>
+        </div>
+      </section>
 
-      </div>
+      {/* SAVINGS CALCULATOR */}
+      <section className="section">
+        <div className="founder-container">
+          <div className="section-head">
+            <div className="pretitle">✦ Calculate your ROI</div>
+            <h2>See your savings</h2>
+            <p>Enter your expected annual sales to see how fast you break even — and what you save over five years.</p>
+          </div>
+          <div className="calc-card">
+            <div style={{ fontSize: 14, color: COLORS.textMuted, marginBottom: 10 }}>Expected annual sales</div>
+            <div className="calc-input-row">
+              <span className="calc-euro">€</span>
+              <input
+                className="calc-input"
+                type="number"
+                min={0}
+                step={500}
+                value={annualRevenue}
+                onChange={(e) => setAnnualRevenue(Math.max(0, parseInt(e.target.value, 10) || 0))}
+              />
+            </div>
+            <div className="calc-presets">
+              {PRESET_SALES.map((preset) => {
+                const isActive = preset.value === annualRevenue;
+                return (
+                  <button
+                    key={preset.value}
+                    type="button"
+                    className={`calc-preset ${isActive ? 'calc-preset-active' : ''}`}
+                    onClick={() => setAnnualRevenue(preset.value)}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="calc-results">
+              <div className="stat stat-accent">
+                <div className="stat-label">Annual savings</div>
+                <div className="stat-value">€{Math.round(annualSavings).toLocaleString()}</div>
+                <div className="stat-hint">vs 8% / 5% standard</div>
+              </div>
+              <div className="stat">
+                <div className="stat-label">Break-even</div>
+                <div className="stat-value">{breakEvenLabel}</div>
+                <div className="stat-hint">€{tier.priceEur.toLocaleString()} paid back</div>
+              </div>
+              <div className="stat stat-accent">
+                <div className="stat-label">5-year net gain</div>
+                <div className="stat-value">€{Math.round(fiveYearSavings).toLocaleString()}</div>
+                <div className="stat-hint">after investment</div>
+              </div>
+            </div>
+            <div className="calc-note">Assumes a 60/40 mix of service and product sales.</div>
+          </div>
+        </div>
+      </section>
 
-      {/* ── MODAL ────────────────────────────────────────────────────────── */}
-      <Modal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        defaultTier={selectedTier}
-      />
+      {/* FAQ */}
+      <section className="section">
+        <div className="founder-container">
+          <div className="section-head">
+            <div className="pretitle">✦ Frequently asked</div>
+            <h2>Common questions</h2>
+          </div>
+          <div className="faq-list">
+            <FaqItem q="Is this a subscription?" a="No. One-time payment, lifetime benefits. Pay once and keep lower fees, monthly refills, and your TrustCoin bonus forever." />
+            <FaqItem q="Can I upgrade later?" a="Yes. Pay the difference between your current tier and the new one, and your benefits upgrade immediately. No double-paying." />
+            <FaqItem q="Which tier should I pick?" a="Seed (€99) if you're just starting. Tree (€499) if you sell €10k-€50k/year. Forest (€1,999) for €50k-€200k/year. Summit or Legacy if FreeTrust is your primary income channel." />
+            <FaqItem q="What does the Legacy tier get me that Summit doesn't?" a="Nearly zero fees forever (0.25% / 0%), 20,000 starting AI Credits, 5,000 ₮ bonus, and 1,200 AI Credits refilled every month for life. It's priced for people who've decided FreeTrust is their business." />
+            <FaqItem q="Does this stack with free Founding Member perks?" a="Yes. Free Founding Member perks are additive to any paid tier — you keep the badge and the 3-month zero fees." />
+            <FaqItem q="What happens if I go inactive?" a="Monthly refills accrue while your account is active. Return from a break and your balance is waiting. Fee tier never expires." />
+            <FaqItem q="Are refunds available?" a="Full refund within 14 days of purchase if fewer than 50 AI Credits have been spent. After that, non-refundable." />
+            <FaqItem q="Will my founder fees stay low forever?" a="Yes. Your tier rate is locked for life. Future fee reductions apply to you too — but your rate is never raised." />
+          </div>
+        </div>
+      </section>
+
+      {/* FINAL CTA */}
+      <section className="final-cta" style={{ borderTop: `1px solid ${COLORS.borderMuted}` }}>
+        <div className="founder-container">
+          <h2>Ready to invest in FreeTrust?</h2>
+          <p>
+            Currently viewing the <span style={{ color: COLORS.sky, fontWeight: 500 }}>{tier.displayName}</span> tier at{' '}
+            <span style={{ color: COLORS.text, fontWeight: 500 }}>€{tier.priceEur.toLocaleString()}</span>.
+          </p>
+          <button type="button" className="final-cta-btn" onClick={handlePurchase} disabled={loading}>
+            {loading ? 'Redirecting…' : `Become a ${tier.displayName} founder →`}
+          </button>
+          <div style={{ marginTop: 24 }}>
+            <Link href="/wallet" className="wallet-link">See your wallet →</Link>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
 
+function FaqItem({ q, a }: { q: string; a: string }) {
+  return (
+    <details className="faq-item">
+      <summary className="faq-summary">
+        <span>{q}</span>
+        <span className="faq-plus">+</span>
+      </summary>
+      <div className="faq-body">{a}</div>
+    </details>
+  );
+}

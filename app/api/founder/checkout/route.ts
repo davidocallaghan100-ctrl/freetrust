@@ -78,8 +78,8 @@ export async function POST(req: NextRequest) {
         trust_bonus: tier.trustBonus.toString(),
         monthly_refill: tier.monthlyAiCreditRefill.toString(),
       },
-      success_url: `${origin}/founder/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/founder?canceled=1`,
+      success_url: `${origin}/invest/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/invest?canceled=1`,
     });
 
     return NextResponse.json({ url: session.url });
