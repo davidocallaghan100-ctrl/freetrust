@@ -15,7 +15,7 @@ const C = {
   textFaint: '#64748b',
 };
 
-const SLIDES = ['cover','problem','insight','product','model','moat','traction','market','gtm','operating','roadmap','ask'] as const;
+const SLIDES = ['cover','problem','insight','product','model','moat','traction','market','gtm','roadmap','ask'] as const;
 type SlideKey = typeof SLIDES[number];
 interface Metrics { members: number; listings: number; orders: number; trustInCirculation: number; founderBuyers: number; aiCreditsUsed: number; }
 
@@ -304,19 +304,6 @@ function Slide({ k, metrics }: { k: SlideKey; metrics: Metrics | null }) {
           <div className="bu"><span className="bd">●</span><span><strong>Member referrals</strong> — every completed transaction rewards both sides in ₮, creating organic pull.</span></div>
           <div className="bu"><span className="bd">●</span><span><strong>Invest tier flywheel</strong> — paid members have permanent skin in the game, become natural evangelists.</span></div>
         </div>
-      </>);
-    case 'operating':
-      return (<>
-        <div className="pre">✦ How we operate</div>
-        <h1 className="h">One founder. An AI team.</h1>
-        <p className="sub">FreeTrust is built and operated in the model Gartner predicts will replace traditional RevOps by 2027: a solo technical founder orchestrating AI agents across every function.</p>
-        <div className="g2">
-          <div className="tile"><h3>Development</h3><p>Claude Code, Adaptive AI, Cursor. Full-stack Next.js, Supabase, Stripe. Shipped in months, not years.</p></div>
-          <div className="tile"><h3>Operations</h3><p>Personal AI Operating System via Slack. Ten divisions. Daily revenue alerts. Automated intelligence feeds.</p></div>
-          <div className="tile"><h3>Marketing</h3><p>Apify-driven lead research. AI-drafted outbound. Content stacked for LLM answer engine discovery.</p></div>
-          <div className="tile"><h3>Sales + Support</h3><p>Go High Level CRM. AI agents draft first-touch messages. Humans close, AI handles the rest.</p></div>
-        </div>
-        <p className="body" style={{ color: C.textFaint, fontSize: 13, marginTop: 18 }}>Result: capex-light operations with a fraction of the burn of a traditional startup at this stage.</p>
       </>);
     case 'roadmap':
       return (<>
