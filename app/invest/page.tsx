@@ -275,6 +275,75 @@ export default function FounderPage() {
         </div>
       </section>
 
+      {/* EARLY INVESTOR ROI */}
+      <section className="section" style={{ borderTop: `1px solid ${'rgba(148,163,184,0.15)'}` }}>
+        <div className="founder-container">
+          <div className="section-head">
+            <div className="pretitle">✦ First 100 investors</div>
+            <h2>Invest early. <span style={{ color: '#38bdf8' }}>Get more.</span></h2>
+            <p>The first 100 FreeTrust investors — at any tier — unlock permanent benefits that new members will never get, even if they pay more later.</p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 14, marginBottom: 28 }}>
+            <div className="invest-card" style={{ padding: 28 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 20, alignItems: 'start' }}>
+                <div style={{ fontSize: 36, lineHeight: 1 }}>🏅</div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 6, color: '#f1f5f9' }}>Permanent &quot;Founding Investor&quot; badge</div>
+                  <div style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.6 }}>Appears on your profile forever. Unmissable social proof that you believed in FreeTrust before anyone else.</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="invest-card" style={{ padding: 28 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 20, alignItems: 'start' }}>
+                <div style={{ fontSize: 36, lineHeight: 1 }}>🔒</div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 6, color: '#f1f5f9' }}>Fee + Credit rates locked forever</div>
+                  <div style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.6 }}>If we ever restructure tiers or raise prices, your original rates stay. The first 100 are immune to tier changes.</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="invest-card" style={{ padding: 28 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 20, alignItems: 'start' }}>
+                <div style={{ fontSize: 36, lineHeight: 1 }}>🚀</div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 6, color: '#f1f5f9' }}>Priority access to every new feature</div>
+                  <div style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.6 }}>New AI agents, marketplace features, organisation tools — first 100 get access weeks before anyone else. Every time.</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="invest-card" style={{ padding: 28 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 20, alignItems: 'start' }}>
+                <div style={{ fontSize: 36, lineHeight: 1 }}>🗳</div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 6, color: '#f1f5f9' }}>Governance vote weight</div>
+                  <div style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.6 }}>When FreeTrust introduces member-owned governance, first-100 investors get 2× vote weight on platform decisions, for life.</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="invest-card" style={{ padding: 28 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 20, alignItems: 'start' }}>
+                <div style={{ fontSize: 36, lineHeight: 1 }}>🎟</div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 6, color: '#f1f5f9' }}>Founding Investor annual event</div>
+                  <div style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.6 }}>Exclusive in-person gathering — Ireland, first year; rotates globally. Meet the founder, shape the roadmap, meet other founding investors.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ textAlign: 'center', padding: 20, background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 14 }}>
+            <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>Early-investor spots remaining</div>
+            <div style={{ fontSize: 32, fontWeight: 600, color: '#38bdf8' }}>— / 100</div>
+            <div style={{ fontSize: 12, color: '#64748b', marginTop: 6 }}>Applies at every tier from Seed (€99) to Legacy (€5,000)</div>
+          </div>
+        </div>
+      </section>
+
       {/* TIER LADDER */}
       <section className="section">
         <div className="founder-container">

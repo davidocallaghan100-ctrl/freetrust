@@ -5,7 +5,6 @@ import { useCurrency } from '@/context/CurrencyContext'
 import FAQAccordion from '@/components/marketing/FAQAccordion'
 import { FAQS } from '@/lib/faq'
 import { AGENT_LIST } from '@/lib/agents'
-import { FOUNDER_TIERS } from '@/lib/founder/tiers'
 
 export interface HomeClientProps {
   initialCounts: {
@@ -591,32 +590,6 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           <div style={{ textAlign: 'center', marginTop: '1.75rem' }}>
             <Link href="/agents" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.9rem 2rem', borderRadius: 10, fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.35)' }}>
               Explore all agents →
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ── FOUNDER INVESTMENT ── */}
-      <section style={{ borderBottom: '1px solid rgba(56,189,248,0.06)' }}>
-        <div className="lp-sec">
-          <div style={{ textAlign: 'center', marginBottom: '2.25rem' }}>
-            <div style={{ display: 'inline-block', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 999, padding: '0.3rem 0.9rem', fontSize: '0.72rem', color: '#fbbf24', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '0.85rem' }}>✦ FOUNDER INVESTMENT</div>
-            <h2 className="section-h2" style={{ fontSize: 'clamp(1.6rem,4vw,2.4rem)', fontWeight: 900, margin: '0 0 0.5rem', letterSpacing: '-0.5px' }}>Invest once. Save forever.</h2>
-            <p style={{ color: '#64748b', fontSize: '0.95rem', maxWidth: 560, margin: '0 auto' }}>Seven tiers from €99 to €5,000. Lower fees for life, starting AI Credits, TrustCoin bonus, and monthly AI Credit refills that never stop.</p>
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', justifyContent: 'center' }}>
-            {FOUNDER_TIERS.map(t => (
-              <div key={t.key} style={{ background: '#1e293b', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 12, padding: '0.85rem 1rem', textAlign: 'center', minWidth: 110, flex: '1 1 110px', maxWidth: 150 }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '0.3rem' }}>{t.icon}</div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.15rem' }}>{t.displayName}</div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#38bdf8', marginBottom: '0.3rem' }}>€{t.priceEur.toLocaleString()}</div>
-                <div style={{ fontSize: '0.65rem', color: '#64748b' }}>{t.serviceFeePercent}% / {t.productFeePercent}%</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ textAlign: 'center', marginTop: '1.75rem' }}>
-            <Link href="/invest" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#fbbf24,#f59e0b)', color: '#0f172a', padding: '0.9rem 2rem', borderRadius: 10, fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none', boxShadow: '0 4px 20px rgba(251,191,36,0.3)' }}>
-              Become a founder →
             </Link>
           </div>
         </div>
