@@ -59,6 +59,34 @@ const AGENT_INPUT_GUIDANCE: Record<string, { placeholder: string; example: strin
   },
 };
 
+const SALES_DEV_TASKS: { key: string; label: string; template: string }[] = [
+  {
+    key: 'icp',
+    label: 'ICP',
+    template: 'task: icp\n\nmy offer: [describe what you sell in one sentence]\n\ncontext: [who is this for? what market? any existing customer patterns?]',
+  },
+  {
+    key: 'cold_email',
+    label: 'Cold email',
+    template: 'task: cold_email\n\nmy offer: [one-line description of what you sell]\n\nprospect: [name, role, company]\n\nwhy them: [one specific reason this person is a good fit]',
+  },
+  {
+    key: 'linkedin_message',
+    label: 'LinkedIn',
+    template: 'task: linkedin_message\n\nmy offer: [one-line description]\n\nprospect: [name, role, company, relevant detail from their profile]\n\ngoal: [connection request / follow-up / warm intro ask]',
+  },
+  {
+    key: 'discovery_questions',
+    label: 'Discovery',
+    template: 'task: discovery_questions\n\nmy offer: [what you sell]\n\nprospect: [name, role, company]\n\ncall context: [first call / follow-up / demo — what do you need to learn?]',
+  },
+  {
+    key: 'objection_response',
+    label: 'Objection',
+    template: 'task: objection_response\n\nmy offer: [what you sell]\n\nobjection received: [paste the exact objection they raised]\n\nprospect context: [any relevant detail about them]',
+  },
+];
+
 const AGENT_GROUPS = {
   'Create & earn': ['listingCreator', 'articleDrafter', 'eventPromoter'],
   'Win work': ['salesDevelopment', 'applicationWriter', 'messageDrafter'],
@@ -184,6 +212,12 @@ export default function AgentsPage() {
         .modal-label { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: ${COLORS.textMuted}; margin-bottom: 8px; }
         .modal-example-btn { background: transparent; border: none; color: ${COLORS.sky}; font-size: 12px; cursor: pointer; padding: 0; font-weight: 500; }
         .modal-example-btn:hover { color: ${COLORS.skyHover}; }
+        .sales-dev-tasks { margin-bottom: 14px; }
+        .sales-dev-tasks-label { font-size: 12px; color: ${COLORS.textMuted}; margin-bottom: 8px; }
+        .sales-dev-tasks-row { display: flex; flex-wrap: wrap; gap: 8px; }
+        .sales-dev-task-btn { background: rgba(15,23,42,0.7); border: 1px solid ${COLORS.borderMuted}; color: ${COLORS.text}; font-size: 13px; padding: 8px 14px; border-radius: 999px; cursor: pointer; transition: border-color 0.15s, background 0.15s; -webkit-tap-highlight-color: transparent; min-height: 36px; }
+        .sales-dev-task-btn:hover:not(:disabled), .sales-dev-task-btn:active:not(:disabled) { border-color: ${COLORS.borderStrong}; background: rgba(56,189,248,0.1); }
+        .sales-dev-task-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .modal-textarea { width: 100%; min-height: 140px; background: rgba(15,23,42,0.7); border: 1px solid ${COLORS.borderMuted}; border-radius: 10px; padding: 14px; color: ${COLORS.text}; font-size: 16px; font-family: inherit; line-height: 1.5; outline: none; resize: vertical; box-sizing: border-box; -webkit-appearance: none; }
         .modal-textarea:focus { border-color: ${COLORS.sky}; }
         @media (min-width: 640px) { .modal-textarea { min-height: 120px; font-size: 14px; padding: 12px 14px; } }
@@ -288,6 +322,25 @@ export default function AgentsPage() {
             </div>
 
             <div className="modal-desc">{selectedAgent.oneLineDescription}</div>
+
+            {selectedAgent?.name === 'salesDevelopment' && (
+              <div className="sales-dev-tasks">
+                <div className="sales-dev-tasks-label">Pick a task to get started:</div>
+                <div className="sales-dev-tasks-row">
+                  {SALES_DEV_TASKS.map((task) => (
+                    <button
+                      key={task.key}
+                      type="button"
+                      className="sales-dev-task-btn"
+                      onClick={() => setInput(task.template)}
+                      disabled={running}
+                    >
+                      {task.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="modal-label">
               <span>What do you want this agent to do?</span>
