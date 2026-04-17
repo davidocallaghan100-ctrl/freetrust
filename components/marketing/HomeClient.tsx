@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { useCurrency } from '@/context/CurrencyContext'
 import FAQAccordion from '@/components/marketing/FAQAccordion'
 import { FAQS } from '@/lib/faq'
-import { AGENT_LIST } from '@/lib/agents'
 
 export interface HomeClientProps {
   initialCounts: {
@@ -561,36 +560,6 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
                 <div style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>{f.desc}</div>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── YOUR AI TEAM ── */}
-      <section style={{ borderBottom: '1px solid rgba(56,189,248,0.06)', background: 'rgba(56,189,248,0.02)' }}>
-        <div className="lp-sec">
-          <div style={{ textAlign: 'center', marginBottom: '2.25rem' }}>
-            <div style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 999, padding: '0.3rem 0.9rem', fontSize: '0.72rem', color: '#38bdf8', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '0.85rem' }}>✦ AGENTIC FRAMEWORK</div>
-            <h2 className="section-h2" style={{ fontSize: 'clamp(1.6rem,4vw,2.4rem)', fontWeight: 900, margin: '0 0 0.5rem', letterSpacing: '-0.5px' }}>Nine AI agents. On tap.</h2>
-            <p style={{ color: '#64748b', fontSize: '0.95rem', maxWidth: 620, margin: '0 auto' }}>Let AI write your listings, win you work outside FreeTrust, translate your content, match you with collaborators, coach your reputation and more. Each agent costs a small number of AI Credits.</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: '0.85rem' }}>
-            {AGENT_LIST.map(agent => (
-              <div key={agent.name} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1.1rem 1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '1.4rem' }}>{agent.icon}</span>
-                    <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f1f5f9' }}>{agent.displayName}</span>
-                  </div>
-                  <span style={{ fontSize: '0.68rem', color: '#94a3b8', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', padding: '2px 8px', borderRadius: 999 }}>{agent.creditCost} credits</span>
-                </div>
-                <div style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>{agent.oneLineDescription}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ textAlign: 'center', marginTop: '1.75rem' }}>
-            <Link href="/agents" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.9rem 2rem', borderRadius: 10, fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.35)' }}>
-              Explore all agents →
-            </Link>
           </div>
         </div>
       </section>
