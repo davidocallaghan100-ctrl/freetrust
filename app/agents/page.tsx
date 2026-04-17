@@ -157,8 +157,10 @@ export default function AgentsPage() {
         .agent-group { padding: 48px 20px 0; }
         .agent-group h2 { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: ${COLORS.textMuted}; font-weight: 500; margin-bottom: 16px; }
         .agent-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
-        .agent-card { text-align: left; background: ${COLORS.card}; border: 1px solid ${COLORS.borderMuted}; border-radius: ${COLORS.radius}px; padding: 20px; cursor: pointer; color: inherit; font: inherit; transition: border-color 0.15s; display: flex; flex-direction: column; gap: 8px; }
+        .agent-card { text-align: left; background: ${COLORS.card}; border: 1px solid ${COLORS.borderMuted}; border-radius: ${COLORS.radius}px; padding: 18px 16px; cursor: pointer; color: inherit; font: inherit; transition: border-color 0.15s, transform 0.1s; display: flex; flex-direction: column; gap: 8px; min-height: 120px; -webkit-tap-highlight-color: transparent; }
         .agent-card:hover { border-color: ${COLORS.borderStrong}; }
+        .agent-card:active { transform: scale(0.98); border-color: ${COLORS.borderStrong}; }
+        @media (min-width: 640px) { .agent-card { padding: 20px; } }
         .agent-head { display: flex; align-items: center; justify-content: space-between; }
         .agent-head-left { display: flex; align-items: center; gap: 10px; }
         .agent-icon { font-size: 26px; line-height: 1; }
@@ -166,37 +168,40 @@ export default function AgentsPage() {
         .agent-cost { font-size: 12px; color: ${COLORS.textMuted}; background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.2); padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
         .agent-desc { font-size: 14px; color: ${COLORS.textMuted}; line-height: 1.5; }
         .agent-run-hint { font-size: 12px; color: ${COLORS.sky}; margin-top: 4px; font-weight: 500; }
-        .modal-overlay { position: fixed; inset: 0; background: rgba(2,6,23,0.85); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 9999; }
-        .modal { background: ${COLORS.card}; border: 1px solid ${COLORS.border}; border-radius: 16px; padding: 28px; max-width: 640px; width: 100%; max-height: 90vh; overflow-y: auto; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(2,6,23,0.88); display: flex; align-items: flex-end; justify-content: center; padding: 0; z-index: 9999; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        @media (min-width: 640px) { .modal-overlay { align-items: center; padding: 20px; } }
+        .modal { background: ${COLORS.card}; border: 1px solid ${COLORS.border}; border-radius: 20px 20px 0 0; padding: 24px 20px calc(24px + env(safe-area-inset-bottom, 0px)); max-width: 640px; width: 100%; max-height: 92vh; overflow-y: auto; -webkit-overflow-scrolling: touch; animation: slideUp 0.25s ease-out; }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0.7; } to { transform: translateY(0); opacity: 1; } }
+        @media (min-width: 640px) { .modal { border-radius: 16px; padding: 28px; animation: none; } }
         .modal-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
         .modal-head-left { display: flex; align-items: center; gap: 12px; }
         .modal-icon { font-size: 32px; line-height: 1; }
         .modal-title { font-size: 22px; font-weight: 600; color: ${COLORS.text}; }
         .modal-cost { font-size: 12px; color: ${COLORS.textMuted}; margin-top: 2px; }
-        .modal-close { background: transparent; border: none; color: ${COLORS.textMuted}; font-size: 24px; cursor: pointer; padding: 4px 10px; border-radius: 8px; line-height: 1; }
-        .modal-close:hover { background: rgba(148,163,184,0.1); color: ${COLORS.text}; }
+        .modal-close { background: rgba(148,163,184,0.1); border: none; color: ${COLORS.textMuted}; font-size: 20px; cursor: pointer; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; line-height: 1; flex-shrink: 0; }
+        .modal-close:hover, .modal-close:active { background: rgba(148,163,184,0.2); color: ${COLORS.text}; }
         .modal-desc { font-size: 14px; color: ${COLORS.textMuted}; line-height: 1.5; margin-bottom: 18px; }
         .modal-label { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: ${COLORS.textMuted}; margin-bottom: 8px; }
         .modal-example-btn { background: transparent; border: none; color: ${COLORS.sky}; font-size: 12px; cursor: pointer; padding: 0; font-weight: 500; }
         .modal-example-btn:hover { color: ${COLORS.skyHover}; }
-        .modal-textarea { width: 100%; min-height: 120px; background: rgba(15,23,42,0.7); border: 1px solid ${COLORS.borderMuted}; border-radius: 10px; padding: 12px 14px; color: ${COLORS.text}; font-size: 14px; font-family: inherit; line-height: 1.5; outline: none; resize: vertical; box-sizing: border-box; }
+        .modal-textarea { width: 100%; min-height: 140px; background: rgba(15,23,42,0.7); border: 1px solid ${COLORS.borderMuted}; border-radius: 10px; padding: 14px; color: ${COLORS.text}; font-size: 16px; font-family: inherit; line-height: 1.5; outline: none; resize: vertical; box-sizing: border-box; -webkit-appearance: none; }
         .modal-textarea:focus { border-color: ${COLORS.sky}; }
-        .modal-run-btn { display: block; width: 100%; padding: 14px 20px; background: ${COLORS.sky}; color: ${COLORS.bgBase}; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.15s; margin-top: 14px; }
-        .modal-run-btn:hover:not(:disabled) { background: ${COLORS.skyHover}; }
+        @media (min-width: 640px) { .modal-textarea { min-height: 120px; font-size: 14px; padding: 12px 14px; } }
+        .modal-run-btn { display: block; width: 100%; padding: 16px 20px; background: ${COLORS.sky}; color: ${COLORS.bgBase}; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.15s; margin-top: 16px; min-height: 52px; }
+        .modal-run-btn:hover:not(:disabled), .modal-run-btn:active:not(:disabled) { background: ${COLORS.skyHover}; }
         .modal-run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .modal-error { margin-top: 14px; padding: 12px 14px; background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); border-radius: 10px; color: ${COLORS.danger}; font-size: 13px; }
         .modal-result { margin-top: 18px; padding: 16px; background: rgba(15,23,42,0.7); border: 1px solid ${COLORS.borderMuted}; border-radius: 10px; }
         .modal-result-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .modal-result-title { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: ${COLORS.success}; font-weight: 500; }
-        .modal-result-copy { background: transparent; border: 1px solid ${COLORS.borderMuted}; color: ${COLORS.textMuted}; font-size: 12px; padding: 4px 10px; border-radius: 6px; cursor: pointer; }
-        .modal-result-copy:hover { border-color: ${COLORS.borderStrong}; color: ${COLORS.text}; }
-        .modal-result pre { margin: 0; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 13px; line-height: 1.55; color: ${COLORS.text}; white-space: pre-wrap; word-break: break-word; max-height: 360px; overflow-y: auto; }
+        .modal-result-copy { background: transparent; border: 1px solid ${COLORS.borderMuted}; color: ${COLORS.textMuted}; font-size: 13px; padding: 8px 14px; border-radius: 8px; cursor: pointer; min-height: 36px; }
+        .modal-result-copy:hover, .modal-result-copy:active { border-color: ${COLORS.borderStrong}; color: ${COLORS.text}; }
+        .modal-result pre { margin: 0; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 13px; line-height: 1.55; color: ${COLORS.text}; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-height: 50vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
         @media (min-width: 640px) { .agent-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (min-width: 960px) { .agent-grid { grid-template-columns: repeat(3, 1fr); } }
         @media (max-width: 560px) {
           .agents-hero { padding: 48px 20px 24px; }
           .agents-hero h1 { font-size: 32px; }
-          .modal { padding: 20px; }
           .modal-title { font-size: 18px; }
         }
       `}</style>
