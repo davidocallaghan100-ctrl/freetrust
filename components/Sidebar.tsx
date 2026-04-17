@@ -47,7 +47,6 @@ const NAV_SECTIONS = [
     links: [
       { href: '/gig-economy', label: 'Gig Economy', icon: '💰' },
       { href: '/seller/gigs/create', label: 'Create Gig', icon: '➕' },
-      { href: '/agents', label: 'AI Agents', icon: '🤖' },
     ],
   },
   {
@@ -180,6 +179,7 @@ export default function Sidebar() {
                   label: walletBalance !== null ? `Wallet (₮${walletBalance.toFixed(0)})` : 'Wallet',
                   icon: '💎',
                 },
+                { href: '/agents', label: 'AI Agents', icon: '🤖' },
                 { href: '/profile', label: 'Profile', icon: '👤' },
                 { href: '/settings', label: 'Settings', icon: '⚙️' },
               ].map(({ href, label, icon }) => {
