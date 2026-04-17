@@ -1,4 +1,11 @@
-export type FounderTierKey = 'seed' | 'sapling' | 'tree' | 'grove' | 'forest';
+export type FounderTierKey =
+  | 'seed'
+  | 'sapling'
+  | 'tree'
+  | 'grove'
+  | 'forest'
+  | 'summit'
+  | 'legacy';
 
 export interface FounderTier {
   key: FounderTierKey;
@@ -26,10 +33,10 @@ export const FOUNDER_TIERS: readonly FounderTier[] = [
     maxInvestmentEur: 248,
     priceEur: 99,
     priceCents: 9900,
-    serviceFeeBps: 600,
-    productFeeBps: 350,
-    serviceFeePercent: 6,
-    productFeePercent: 3.5,
+    serviceFeeBps: 500,
+    productFeeBps: 300,
+    serviceFeePercent: 5,
+    productFeePercent: 3,
     aiCreditsBonus: 150,
     trustBonus: 100,
     monthlyAiCreditRefill: 20,
@@ -42,10 +49,10 @@ export const FOUNDER_TIERS: readonly FounderTier[] = [
     maxInvestmentEur: 498,
     priceEur: 249,
     priceCents: 24900,
-    serviceFeeBps: 500,
-    productFeeBps: 300,
-    serviceFeePercent: 5,
-    productFeePercent: 3,
+    serviceFeeBps: 400,
+    productFeeBps: 250,
+    serviceFeePercent: 4,
+    productFeePercent: 2.5,
     aiCreditsBonus: 500,
     trustBonus: 250,
     monthlyAiCreditRefill: 50,
@@ -55,13 +62,13 @@ export const FOUNDER_TIERS: readonly FounderTier[] = [
     icon: '🌳',
     displayName: 'Tree',
     minInvestmentEur: 499,
-    maxInvestmentEur: 748,
+    maxInvestmentEur: 998,
     priceEur: 499,
     priceCents: 49900,
-    serviceFeeBps: 400,
-    productFeeBps: 250,
-    serviceFeePercent: 4,
-    productFeePercent: 2.5,
+    serviceFeeBps: 300,
+    productFeeBps: 200,
+    serviceFeePercent: 3,
+    productFeePercent: 2,
     aiCreditsBonus: 1200,
     trustBonus: 500,
     monthlyAiCreditRefill: 100,
@@ -70,33 +77,65 @@ export const FOUNDER_TIERS: readonly FounderTier[] = [
     key: 'grove',
     icon: '🌲',
     displayName: 'Grove',
-    minInvestmentEur: 749,
-    maxInvestmentEur: 999,
-    priceEur: 749,
-    priceCents: 74900,
-    serviceFeeBps: 300,
-    productFeeBps: 200,
-    serviceFeePercent: 3,
-    productFeePercent: 2,
+    minInvestmentEur: 999,
+    maxInvestmentEur: 1998,
+    priceEur: 999,
+    priceCents: 99900,
+    serviceFeeBps: 200,
+    productFeeBps: 125,
+    serviceFeePercent: 2,
+    productFeePercent: 1.25,
     aiCreditsBonus: 2500,
-    trustBonus: 750,
-    monthlyAiCreditRefill: 175,
+    trustBonus: 1000,
+    monthlyAiCreditRefill: 200,
   },
   {
     key: 'forest',
     icon: '🏞️',
     displayName: 'Forest',
-    minInvestmentEur: 1000,
-    maxInvestmentEur: 1000,
-    priceEur: 1000,
-    priceCents: 100000,
-    serviceFeeBps: 200,
-    productFeeBps: 150,
-    serviceFeePercent: 2,
-    productFeePercent: 1.5,
-    aiCreditsBonus: 4000,
-    trustBonus: 1000,
-    monthlyAiCreditRefill: 300,
+    minInvestmentEur: 1999,
+    maxInvestmentEur: 3498,
+    priceEur: 1999,
+    priceCents: 199900,
+    serviceFeeBps: 100,
+    productFeeBps: 75,
+    serviceFeePercent: 1,
+    productFeePercent: 0.75,
+    aiCreditsBonus: 6000,
+    trustBonus: 2000,
+    monthlyAiCreditRefill: 400,
+  },
+  {
+    key: 'summit',
+    icon: '⛰️',
+    displayName: 'Summit',
+    minInvestmentEur: 3499,
+    maxInvestmentEur: 4999,
+    priceEur: 3499,
+    priceCents: 349900,
+    serviceFeeBps: 50,
+    productFeeBps: 50,
+    serviceFeePercent: 0.5,
+    productFeePercent: 0.5,
+    aiCreditsBonus: 12000,
+    trustBonus: 3500,
+    monthlyAiCreditRefill: 750,
+  },
+  {
+    key: 'legacy',
+    icon: '🌌',
+    displayName: 'Legacy',
+    minInvestmentEur: 5000,
+    maxInvestmentEur: 5000,
+    priceEur: 5000,
+    priceCents: 500000,
+    serviceFeeBps: 25,
+    productFeeBps: 0,
+    serviceFeePercent: 0.25,
+    productFeePercent: 0,
+    aiCreditsBonus: 20000,
+    trustBonus: 5000,
+    monthlyAiCreditRefill: 1200,
   },
 ];
 
@@ -105,7 +144,7 @@ export const STANDARD_PRODUCT_FEE_BPS = 500;
 export const STANDARD_SERVICE_FEE_PERCENT = 8;
 export const STANDARD_PRODUCT_FEE_PERCENT = 5;
 export const MIN_INVESTMENT_EUR = 99;
-export const MAX_INVESTMENT_EUR = 1000;
+export const MAX_INVESTMENT_EUR = 5000;
 
 export function getTierByKey(key: string): FounderTier | null {
   return FOUNDER_TIERS.find((t) => t.key === key) ?? null;
@@ -139,4 +178,8 @@ export function calculateBreakEvenMonths(tier: FounderTier, annualRevenueEur: nu
   const annualSavings = calculateAnnualSavings(tier, annualRevenueEur);
   if (annualSavings <= 0) return Infinity;
   return Math.round((tier.priceEur / annualSavings) * 12);
+}
+
+export function calculateFiveYearSavings(tier: FounderTier, annualRevenueEur: number): number {
+  return calculateAnnualSavings(tier, annualRevenueEur) * 5 - tier.priceEur;
 }

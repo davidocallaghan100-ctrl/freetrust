@@ -11,6 +11,7 @@ import {
   getTierByAmount,
   calculateAnnualSavings,
   calculateBreakEvenMonths,
+  calculateFiveYearSavings,
 } from '@/lib/founder/tiers';
 
 const COLORS = {
@@ -27,18 +28,27 @@ const COLORS = {
   textFaint: '#64748b',
   success: '#34d399',
   danger: '#f87171',
+  gold: '#fbbf24',
   radius: 14,
 };
 
+const PRESET_SALES: { label: string; value: number }[] = [
+  { label: '€5k', value: 5000 },
+  { label: '€25k', value: 25000 },
+  { label: '€100k', value: 100000 },
+  { label: '€500k', value: 500000 },
+];
+
 export default function FounderPage() {
-  const [amount, setAmount] = useState<number>(499);
-  const [annualRevenue, setAnnualRevenue] = useState<number>(10000);
+  const [amount, setAmount] = useState<number>(999);
+  const [annualRevenue, setAnnualRevenue] = useState<number>(25000);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const tier = useMemo(() => getTierByAmount(amount), [amount]);
-  const savings = useMemo(() => calculateAnnualSavings(tier, annualRevenue), [tier, annualRevenue]);
+  const annualSavings = useMemo(() => calculateAnnualSavings(tier, annualRevenue), [tier, annualRevenue]);
   const breakEven = useMemo(() => calculateBreakEvenMonths(tier, annualRevenue), [tier, annualRevenue]);
+  const fiveYearSavings = useMemo(() => calculateFiveYearSavings(tier, annualRevenue), [tier, annualRevenue]);
 
   const breakEvenLabel = useMemo(() => {
     if (!Number.isFinite(breakEven)) return '—';
@@ -74,7 +84,7 @@ export default function FounderPage() {
     <div className="founder-page" style={{ color: COLORS.text, width: '100%' }}>
       <style>{`
         .founder-page { padding-bottom: 80px; }
-        .founder-container { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+        .founder-container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
         .founder-hero { text-align: center; padding: 80px 20px 48px; }
         .founder-hero h1 { font-size: 48px; line-height: 1.05; margin: 16px 0 20px; font-weight: 600; }
         .founder-hero h1 .accent { color: ${COLORS.sky}; }
@@ -110,19 +120,26 @@ export default function FounderPage() {
         .tier-card { text-align: left; background: ${COLORS.card}; border: 1px solid ${COLORS.borderMuted}; border-radius: ${COLORS.radius}px; padding: 20px; cursor: pointer; color: inherit; font: inherit; transition: border-color 0.15s; }
         .tier-card:hover { border-color: rgba(148,163,184,0.35); }
         .tier-card-active { background: rgba(56,189,248,0.08); border: 2px solid ${COLORS.sky}; padding: 19px; }
+        .tier-card-premium { border-color: rgba(251,191,36,0.25); }
+        .tier-card-premium.tier-card-active { border-color: ${COLORS.gold}; background: rgba(251,191,36,0.06); }
         .tier-icon { font-size: 28px; line-height: 1; margin-bottom: 10px; }
-        .tier-name { font-size: 20px; font-weight: 600; margin-bottom: 2px; color: ${COLORS.text}; }
-        .tier-price { font-size: 22px; font-weight: 600; color: ${COLORS.sky}; margin-bottom: 14px; }
-        .tier-rows { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+        .tier-name { font-size: 18px; font-weight: 600; margin-bottom: 2px; color: ${COLORS.text}; }
+        .tier-price { font-size: 20px; font-weight: 600; color: ${COLORS.sky}; margin-bottom: 14px; }
+        .tier-card-premium .tier-price { color: ${COLORS.gold}; }
+        .tier-rows { display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
         .tier-row { display: flex; justify-content: space-between; }
         .tier-row-label { color: ${COLORS.textMuted}; }
         .tier-row-value { color: ${COLORS.text}; font-weight: 500; }
-        .calc-card { background: ${COLORS.card}; border: 1px solid ${COLORS.border}; border-radius: ${COLORS.radius}px; padding: 28px; max-width: 560px; margin: 0 auto; }
-        .calc-input-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .calc-card { background: ${COLORS.card}; border: 1px solid ${COLORS.border}; border-radius: ${COLORS.radius}px; padding: 28px; max-width: 620px; margin: 0 auto; }
+        .calc-input-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
         .calc-euro { font-size: 22px; color: ${COLORS.textMuted}; }
         .calc-input { flex: 1; background: rgba(15,23,42,0.6); border: 1px solid ${COLORS.borderMuted}; border-radius: 10px; padding: 12px 14px; color: ${COLORS.text}; font-size: 20px; font-weight: 600; outline: none; }
         .calc-input:focus { border-color: ${COLORS.sky}; }
-        .calc-results { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+        .calc-presets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+        .calc-preset { background: rgba(15,23,42,0.6); border: 1px solid ${COLORS.borderMuted}; color: ${COLORS.textMuted}; border-radius: 999px; padding: 6px 14px; font-size: 13px; cursor: pointer; transition: all 0.15s; }
+        .calc-preset:hover { border-color: ${COLORS.borderStrong}; color: ${COLORS.text}; }
+        .calc-preset-active { background: rgba(56,189,248,0.1); border-color: ${COLORS.sky}; color: ${COLORS.sky}; }
+        .calc-results { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
         .calc-note { text-align: center; font-size: 12px; color: ${COLORS.textFaint}; }
         .faq-list { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
         .faq-item { background: ${COLORS.card}; border: 1px solid ${COLORS.borderMuted}; border-radius: 12px; overflow: hidden; }
@@ -143,8 +160,20 @@ export default function FounderPage() {
         @media (min-width: 560px) {
           .stats-grid { grid-template-columns: repeat(5, 1fr); }
         }
-        @media (min-width: 760px) {
-          .tier-ladder { grid-template-columns: repeat(5, 1fr); }
+        @media (min-width: 640px) {
+          .tier-ladder { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (min-width: 900px) {
+          .tier-ladder { grid-template-columns: repeat(4, 1fr); }
+        }
+        @media (min-width: 1100px) {
+          .tier-ladder { grid-template-columns: repeat(7, 1fr); gap: 10px; }
+          .tier-card { padding: 16px 14px; }
+          .tier-card-active { padding: 15px 13px; }
+          .tier-icon { font-size: 24px; margin-bottom: 8px; }
+          .tier-name { font-size: 16px; }
+          .tier-price { font-size: 18px; margin-bottom: 10px; }
+          .tier-rows { font-size: 12px; gap: 4px; }
         }
         @media (max-width: 640px) {
           .founder-hero { padding: 56px 20px 32px; }
@@ -155,6 +184,7 @@ export default function FounderPage() {
           .section { padding: 44px 16px; }
           .section-head h2 { font-size: 26px; }
           .final-cta h2 { font-size: 26px; }
+          .calc-results { grid-template-columns: 1fr; }
         }
       `}</style>
 
@@ -167,19 +197,19 @@ export default function FounderPage() {
           <span className="accent">Save forever.</span>
         </h1>
         <p>
-          A one-time investment unlocks lifetime lower fees, an AI Credit grant, a TrustCoin bonus, and a monthly Credit refill that never stops.
+          Pay once, keep lower fees for life. From €99 to €5,000 — every tier pays back in months, not years. Then keeps paying forever.
         </p>
         <div className="checks">
           <span className="check-item"><span className="check-mark">✓</span> One-time payment</span>
           <span className="check-item"><span className="check-mark">✓</span> Lower fees for life</span>
-          <span className="check-item"><span className="check-mark">✓</span> Monthly refills</span>
+          <span className="check-item"><span className="check-mark">✓</span> Monthly AI refills</span>
           <span className="check-item"><span className="check-mark">✓</span> 14-day refund</span>
         </div>
       </section>
 
       {/* INTERACTIVE SCALE */}
       <section style={{ padding: '0 20px 48px' }}>
-        <div className="founder-container">
+        <div className="founder-container" style={{ maxWidth: 820 }}>
           <div className="invest-card">
             <div className="invest-display">
               <div className="invest-label">Your investment</div>
@@ -198,7 +228,7 @@ export default function FounderPage() {
             />
             <div className="slider-marks">
               <span>€{MIN_INVESTMENT_EUR}</span>
-              <span>€{MAX_INVESTMENT_EUR}</span>
+              <span>€{MAX_INVESTMENT_EUR.toLocaleString()}</span>
             </div>
 
             <div style={{ textAlign: 'center', marginBottom: 8 }}>
@@ -238,7 +268,7 @@ export default function FounderPage() {
           </div>
 
           <button type="button" className="cta-btn" onClick={handlePurchase} disabled={loading}>
-            {loading ? 'Redirecting to Stripe…' : `Become a ${tier.displayName} founder — €${tier.priceEur}`}
+            {loading ? 'Redirecting to Stripe…' : `Become a ${tier.displayName} founder — €${tier.priceEur.toLocaleString()}`}
           </button>
           {error && <div className="error-box">{error}</div>}
           <div className="cta-note">Secure payment by Stripe · 14-day refund if fewer than 50 AI Credits spent</div>
@@ -250,27 +280,33 @@ export default function FounderPage() {
         <div className="founder-container">
           <div className="section-head">
             <div className="pretitle">✦ Choose your tier</div>
-            <h2>Five tiers. One community.</h2>
-            <p>Every tier includes lifetime lower fees, a starting boost, and a monthly refill that never stops.</p>
+            <h2>Seven tiers. One community.</h2>
+            <p>From a no-brainer €99 entry to the €5,000 Legacy tier with lifetime 0.25% fees. Every tier is ROI-positive.</p>
           </div>
           <div className="tier-ladder">
             {FOUNDER_TIERS.map((t) => {
               const isActive = t.key === tier.key;
+              const isPremium = t.key === 'summit' || t.key === 'legacy';
+              const classes = [
+                'tier-card',
+                isActive ? 'tier-card-active' : '',
+                isPremium ? 'tier-card-premium' : '',
+              ].filter(Boolean).join(' ');
               return (
                 <button
                   key={t.key}
                   type="button"
-                  className={`tier-card ${isActive ? 'tier-card-active' : ''}`}
+                  className={classes}
                   onClick={() => setAmount(t.priceEur)}
                 >
                   <div className="tier-icon">{t.icon}</div>
                   <div className="tier-name">{t.displayName}</div>
-                  <div className="tier-price">€{t.priceEur}</div>
+                  <div className="tier-price">€{t.priceEur.toLocaleString()}</div>
                   <div className="tier-rows">
-                    <div className="tier-row"><span className="tier-row-label">Service fee</span><span className="tier-row-value">{t.serviceFeePercent}%</span></div>
-                    <div className="tier-row"><span className="tier-row-label">Product fee</span><span className="tier-row-value">{t.productFeePercent}%</span></div>
-                    <div className="tier-row"><span className="tier-row-label">AI Credits</span><span className="tier-row-value">+{t.aiCreditsBonus.toLocaleString()}</span></div>
-                    <div className="tier-row"><span className="tier-row-label">₮ bonus</span><span className="tier-row-value">+{t.trustBonus.toLocaleString()}</span></div>
+                    <div className="tier-row"><span className="tier-row-label">Service</span><span className="tier-row-value">{t.serviceFeePercent}%</span></div>
+                    <div className="tier-row"><span className="tier-row-label">Product</span><span className="tier-row-value">{t.productFeePercent}%</span></div>
+                    <div className="tier-row"><span className="tier-row-label">Credits</span><span className="tier-row-value">+{t.aiCreditsBonus.toLocaleString()}</span></div>
+                    <div className="tier-row"><span className="tier-row-label">₮</span><span className="tier-row-value">+{t.trustBonus.toLocaleString()}</span></div>
                     <div className="tier-row"><span className="tier-row-label">Refill</span><span className="tier-row-value">+{t.monthlyAiCreditRefill}/mo</span></div>
                   </div>
                 </button>
@@ -286,7 +322,7 @@ export default function FounderPage() {
           <div className="section-head">
             <div className="pretitle">✦ Calculate your ROI</div>
             <h2>See your savings</h2>
-            <p>Enter your expected annual sales to see how fast you break even.</p>
+            <p>Enter your expected annual sales to see how fast you break even — and what you save over five years.</p>
           </div>
           <div className="calc-card">
             <div style={{ fontSize: 14, color: COLORS.textMuted, marginBottom: 10 }}>Expected annual sales</div>
@@ -301,16 +337,36 @@ export default function FounderPage() {
                 onChange={(e) => setAnnualRevenue(Math.max(0, parseInt(e.target.value, 10) || 0))}
               />
             </div>
+            <div className="calc-presets">
+              {PRESET_SALES.map((preset) => {
+                const isActive = preset.value === annualRevenue;
+                return (
+                  <button
+                    key={preset.value}
+                    type="button"
+                    className={`calc-preset ${isActive ? 'calc-preset-active' : ''}`}
+                    onClick={() => setAnnualRevenue(preset.value)}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
+            </div>
             <div className="calc-results">
               <div className="stat stat-accent">
                 <div className="stat-label">Annual savings</div>
-                <div className="stat-value">€{Math.round(savings).toLocaleString()}</div>
+                <div className="stat-value">€{Math.round(annualSavings).toLocaleString()}</div>
                 <div className="stat-hint">vs 8% / 5% standard</div>
               </div>
               <div className="stat">
                 <div className="stat-label">Break-even</div>
                 <div className="stat-value">{breakEvenLabel}</div>
-                <div className="stat-hint">€{tier.priceEur} paid back</div>
+                <div className="stat-hint">€{tier.priceEur.toLocaleString()} paid back</div>
+              </div>
+              <div className="stat stat-accent">
+                <div className="stat-label">5-year net gain</div>
+                <div className="stat-value">€{Math.round(fiveYearSavings).toLocaleString()}</div>
+                <div className="stat-hint">after investment</div>
               </div>
             </div>
             <div className="calc-note">Assumes a 60/40 mix of service and product sales.</div>
@@ -326,10 +382,12 @@ export default function FounderPage() {
             <h2>Common questions</h2>
           </div>
           <div className="faq-list">
-            <FaqItem q="Is this a subscription?" a="No. One-time payment, lifetime benefits. You pay once and keep the lower fees, monthly refills, and TrustCoin bonus forever." />
-            <FaqItem q="Can I upgrade later?" a="Yes. Pay the difference between your current tier and the new one, and your benefits upgrade immediately." />
+            <FaqItem q="Is this a subscription?" a="No. One-time payment, lifetime benefits. Pay once and keep lower fees, monthly refills, and your TrustCoin bonus forever." />
+            <FaqItem q="Can I upgrade later?" a="Yes. Pay the difference between your current tier and the new one, and your benefits upgrade immediately. No double-paying." />
+            <FaqItem q="Which tier should I pick?" a="Seed (€99) if you're just starting. Tree (€499) if you sell €10k-€50k/year. Forest (€1,999) for €50k-€200k/year. Summit or Legacy if FreeTrust is your primary income channel." />
+            <FaqItem q="What does the Legacy tier get me that Summit doesn't?" a="Nearly zero fees forever (0.25% / 0%), 20,000 starting AI Credits, 5,000 ₮ bonus, and 1,200 AI Credits refilled every month for life. It's priced for people who've decided FreeTrust is their business." />
             <FaqItem q="Does this stack with free Founding Member perks?" a="Yes. Free Founding Member perks are additive to any paid tier — you keep the badge and the 3-month zero fees." />
-            <FaqItem q="What happens to refills if I go inactive?" a="Refills accrue monthly while your account is active. Return from a break and your balance is waiting." />
+            <FaqItem q="What happens if I go inactive?" a="Monthly refills accrue while your account is active. Return from a break and your balance is waiting. Fee tier never expires." />
             <FaqItem q="Are refunds available?" a="Full refund within 14 days of purchase if fewer than 50 AI Credits have been spent. After that, non-refundable." />
             <FaqItem q="Will my founder fees stay low forever?" a="Yes. Your tier rate is locked for life. Future fee reductions apply to you too — but your rate is never raised." />
           </div>
@@ -342,7 +400,7 @@ export default function FounderPage() {
           <h2>Ready to invest in FreeTrust?</h2>
           <p>
             Currently viewing the <span style={{ color: COLORS.sky, fontWeight: 500 }}>{tier.displayName}</span> tier at{' '}
-            <span style={{ color: COLORS.text, fontWeight: 500 }}>€{tier.priceEur}</span>.
+            <span style={{ color: COLORS.text, fontWeight: 500 }}>€{tier.priceEur.toLocaleString()}</span>.
           </p>
           <button type="button" className="final-cta-btn" onClick={handlePurchase} disabled={loading}>
             {loading ? 'Redirecting…' : `Become a ${tier.displayName} founder →`}
