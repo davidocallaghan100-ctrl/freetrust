@@ -247,7 +247,7 @@ export default function AgentsPage() {
             Nine agents. <span className="accent">On-demand.</span>
           </h1>
           <p>
-            Every agent runs on Claude and works on your behalf — writing listings, drafting outreach, translating, matching, coaching. Each run costs a small number of AI Credits.
+            Every agent works on your behalf — writing listings, drafting outreach, translating, matching, coaching. Each run costs a small number of AI Credits.
           </p>
           <div className="balance-bar">
             {balance !== null ? (
