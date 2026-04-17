@@ -69,11 +69,16 @@ export default function JobDetailPage() {
   const [cvFile, setCvFile] = useState<File | null>(null)
   const [cvUploading, setCvUploading] = useState(false)
   const [cvFileName, setCvFileName] = useState('')
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   useEffect(() => {
     const load = async () => {
       try {
         const supabase = createClient()
+        // Get current user for poster check
+        supabase.auth.getUser().then(({ data }) => {
+          setCurrentUserId(data.user?.id ?? null)
+        })
         const { data } = await supabase
           .from('jobs')
           .select('*, poster:profiles!poster_id(id, full_name, bio, created_at, trust_balance)')
@@ -232,6 +237,11 @@ export default function JobDetailPage() {
               <span style={{ color: '#38bdf8', fontWeight: 600 }}>💰 {formatSalary(job.salary_min, job.salary_max, job.salary_currency, job.job_type)}</span>
               {job.location && <span>📍 {job.location}</span>}
               <span>👥 {job.applicant_count} applicant{job.applicant_count !== 1 ? 's' : ''}</span>
+              {currentUserId && job.poster?.id === currentUserId && job.applicant_count > 0 && (
+                <Link href={`/jobs/${id}/applications`} style={{ color: '#38bdf8', textDecoration: 'none', fontWeight: 600, fontSize: '0.82rem' }}>
+                  View applications →
+                </Link>
+              )}
               {job.application_deadline && (
                 <span style={{ color: new Date(job.application_deadline) < new Date() ? '#ef4444' : '#fbbf24', fontWeight: 600 }}>
                   ⏰ {daysUntil(job.application_deadline)}
