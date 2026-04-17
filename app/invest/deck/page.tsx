@@ -245,13 +245,17 @@ function SectionHeading({
 function GlassCard({
   children,
   className = "",
+  onClick,
 }: {
   children: React.ReactNode;
   className?: string;
+  onClick?: () => void;
 }) {
   return (
     <div
       className={`bg-white/[0.04] border border-white/10 rounded-2xl backdrop-blur-sm ${className}`}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
     >
       {children}
     </div>
