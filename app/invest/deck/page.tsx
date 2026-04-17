@@ -45,6 +45,46 @@ export default function InvestorDeckPage() {
     return () => { c = true; };
   }, []);
 
+  useEffect(() => {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+    const MIN_SWIPE_DISTANCE = 50;
+    const MAX_SWIPE_TIME = 600;
+    const MAX_VERTICAL_DRIFT = 80;
+
+    function onTouchStart(e: TouchEvent) {
+      const t = e.touches[0];
+      touchStartX = t.clientX;
+      touchStartY = t.clientY;
+      touchStartTime = Date.now();
+    }
+
+    function onTouchEnd(e: TouchEvent) {
+      const t = e.changedTouches[0];
+      const dx = t.clientX - touchStartX;
+      const dy = t.clientY - touchStartY;
+      const dt = Date.now() - touchStartTime;
+
+      if (dt > MAX_SWIPE_TIME) return;
+      if (Math.abs(dy) > MAX_VERTICAL_DRIFT) return;
+      if (Math.abs(dx) < MIN_SWIPE_DISTANCE) return;
+
+      if (dx < 0) {
+        next();
+      } else {
+        prev();
+      }
+    }
+
+    document.addEventListener('touchstart', onTouchStart, { passive: true });
+    document.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      document.removeEventListener('touchstart', onTouchStart);
+      document.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [next, prev]);
+
   return (
     <div style={{ background: C.bg, color: C.text, minHeight: '100vh', overflowX: 'hidden' }}>
       <style>{`
@@ -57,7 +97,8 @@ export default function InvestorDeckPage() {
         .btn-p { background: ${C.sky}; color: ${C.bg}; border-color: ${C.sky}; font-weight: 600; }
         .btn-p:hover { background: #7dd3fc; color: ${C.bg}; }
         .ct { font-size: 12px; color: ${C.textFaint}; font-family: ui-monospace, monospace; }
-        .ss { min-height: calc(100vh - 120px); padding: 48px 20px 80px; display: flex; align-items: center; justify-content: center; }
+        .ss { min-height: calc(100vh - 120px); padding: 48px 20px 80px; display: flex; align-items: center; justify-content: center; animation: slideFade 0.28s ease-out; }
+        @keyframes slideFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .sl { width: 100%; max-width: 1040px; }
         .pre { font-size: 11px; letter-spacing: 3px; color: ${C.sky}; text-transform: uppercase; font-weight: 500; margin-bottom: 14px; }
         .h { font-size: 44px; font-weight: 600; line-height: 1.1; margin: 0 0 18px; color: ${C.text}; }
@@ -79,7 +120,7 @@ export default function InvestorDeckPage() {
         .qc { background: ${C.card}; border-left: 3px solid ${C.sky}; border-radius: 0 14px 14px 0; padding: 20px 24px; margin: 20px 0; font-style: italic; color: ${C.textMuted}; font-size: 16px; line-height: 1.6; }
         .qa { display: block; margin-top: 10px; font-style: normal; font-size: 13px; color: ${C.textFaint}; }
         .dn { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; padding: 10px 14px; background: rgba(15,23,42,0.9); border: 1px solid ${C.border}; border-radius: 999px; z-index: 40; }
-        .dot-b { width: 8px; height: 8px; border-radius: 50%; background: ${C.textFaint}; border: none; cursor: pointer; padding: 0; }
+        .dot-b { width: 8px; height: 8px; border-radius: 50%; background: ${C.textFaint}; border: none; cursor: pointer; padding: 10px; box-sizing: content-box; -webkit-tap-highlight-color: transparent; background-clip: content-box; }
         .dot-a { background: ${C.sky}; width: 24px; border-radius: 4px; }
         .en { position: fixed; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; border-radius: 50%; background: ${C.card}; border: 1px solid ${C.border}; color: ${C.text}; font-size: 20px; cursor: pointer; z-index: 40; display: flex; align-items: center; justify-content: center; }
         .en:hover:not(:disabled) { border-color: ${C.borderStrong}; }
@@ -104,6 +145,12 @@ export default function InvestorDeckPage() {
           .sv { font-size: 24px; }
           .en { display: none; }
         }
+
+        .swipe-hint { display: none; margin-top: 40px; font-size: 12px; color: ${C.textFaint}; letter-spacing: 1px; text-transform: uppercase; align-items: center; gap: 10px; animation: hintPulse 2s ease-in-out infinite; }
+        .swipe-arrow { display: inline-block; animation: hintSlide 2s ease-in-out infinite; }
+        @keyframes hintPulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+        @keyframes hintSlide { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(6px); } }
+        @media (max-width: 720px) { .swipe-hint { display: inline-flex; } }
 
         @media print {
           .dt, .dn, .en { display: none !important; }
@@ -153,6 +200,10 @@ function Slide({ k, metrics }: { k: SlideKey; metrics: Metrics | null }) {
         <h1 className="h">Trust is the <span className="a">new pricing model.</span></h1>
         <p className="sub">FreeTrust is a community economy marketplace where every transaction, review, and AI agent action builds reputation. Reputation lowers fees. Lower fees attract sellers. Sellers bring liquidity. Liquidity brings buyers.</p>
         <p className="body" style={{ color: C.textFaint, fontSize: 14 }}>Founded in Ireland · freetrust.co · 2026</p>
+        <div className="swipe-hint" aria-hidden="true">
+          <span>swipe or use arrows</span>
+          <span className="swipe-arrow">→</span>
+        </div>
       </>);
     case 'problem':
       return (<>
