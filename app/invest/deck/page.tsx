@@ -1,1176 +1,303 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import Link from "next/link";
-import {
-  ArrowDownTrayIcon,
-  CalendarDaysIcon,
-  ChartBarIcon,
-  CurrencyEuroIcon,
-  LightBulbIcon,
-  RocketLaunchIcon,
-  ShieldCheckIcon,
-  UserGroupIcon,
-  ArrowTrendingUpIcon,
-  BuildingStorefrontIcon,
-  CheckCircleIcon,
-  ChevronLeftIcon,
-} from "@heroicons/react/24/outline";
+import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 
-// ── Types ──────────────────────────────────────────────────────────────────────
-
-type TeamMember = {
-  name: string;
-  role: string;
-  bg: string;
-  initials: string;
-  bio: string;
-  tags: string[];
+const C = {
+  bg: '#0f172a',
+  bgSoft: '#1e293b',
+  card: 'rgba(30,41,59,0.6)',
+  border: 'rgba(148,163,184,0.15)',
+  borderStrong: 'rgba(56,189,248,0.35)',
+  sky: '#38bdf8',
+  text: '#f1f5f9',
+  textMuted: '#94a3b8',
+  textFaint: '#64748b',
 };
 
-type Metric = {
-  label: string;
-  value: string;
-  sub: string;
-  icon: React.ReactNode;
-  color: string;
-};
+const SLIDES = ['cover','problem','insight','product','model','moat','traction','market','gtm','operating','roadmap','ask'] as const;
+type SlideKey = typeof SLIDES[number];
+interface Metrics { members: number; listings: number; orders: number; trustInCirculation: number; founderBuyers: number; aiCreditsUsed: number; }
 
-type FundSlice = {
-  label: string;
-  pct: number;
-  color: string;
-  detail: string;
-};
+export default function InvestorDeckPage() {
+  const [i, setI] = useState(0);
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const next = useCallback(() => setI(n => Math.min(n + 1, SLIDES.length - 1)), []);
+  const prev = useCallback(() => setI(n => Math.max(n - 1, 0)), []);
 
-// ── Mock Data ─────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+      else if (e.key === 'Home') setI(0);
+      else if (e.key === 'End') setI(SLIDES.length - 1);
+    };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [next, prev]);
 
-const team: TeamMember[] = [
-  {
-    name: "Ava Moreau",
-    role: "CEO & Co-Founder",
-    bg: "from-sky-500 to-indigo-600",
-    initials: "AM",
-    bio: "Former Trust & Safety lead at a top-5 marketplace. Built compliance infra handling €2B+ in transactions.",
-    tags: ["Product", "Strategy", "Fundraising"],
-  },
-  {
-    name: "Luca Ferretti",
-    role: "CTO & Co-Founder",
-    bg: "from-indigo-500 to-purple-600",
-    initials: "LF",
-    bio: "Ex-Staff Engineer at Stripe. Architect of distributed escrow and fraud-detection pipelines.",
-    tags: ["Engineering", "Security", "Infra"],
-  },
-  {
-    name: "Sophie Käfer",
-    role: "Chief Growth Officer",
-    bg: "from-purple-500 to-pink-600",
-    initials: "SK",
-    bio: "Grew Depop's European community from 0 to 4M users. Community-led growth specialist.",
-    tags: ["Growth", "Community", "Partnerships"],
-  },
-  {
-    name: "Kwame Asante",
-    role: "Head of Finance",
-    bg: "from-emerald-500 to-teal-600",
-    initials: "KA",
-    bio: "Previously CFO at two Series A fintech startups. Expertise in EU financial regulation and FX.",
-    tags: ["Finance", "Compliance", "M&A"],
-  },
-];
-
-const metrics: Metric[] = [
-  {
-    label: "Registered Members",
-    value: "42,800+",
-    sub: "+18% MoM",
-    icon: <UserGroupIcon className="w-6 h-6" />,
-    color: "sky",
-  },
-  {
-    label: "Gross Merchandise Value",
-    value: "€3.2M",
-    sub: "Last 12 months",
-    icon: <CurrencyEuroIcon className="w-6 h-6" />,
-    color: "indigo",
-  },
-  {
-    label: "Trust Scores Issued",
-    value: "128,400",
-    sub: "Verified interactions",
-    icon: <ShieldCheckIcon className="w-6 h-6" />,
-    color: "purple",
-  },
-  {
-    label: "Avg. Transaction Value",
-    value: "€74",
-    sub: "+23% YoY",
-    icon: <ArrowTrendingUpIcon className="w-6 h-6" />,
-    color: "emerald",
-  },
-  {
-    label: "Dispute Resolution Rate",
-    value: "98.6%",
-    sub: "Without escalation",
-    icon: <CheckCircleIcon className="w-6 h-6" />,
-    color: "teal",
-  },
-  {
-    label: "NPS Score",
-    value: "71",
-    sub: "Industry avg: 32",
-    icon: <ChartBarIcon className="w-6 h-6" />,
-    color: "sky",
-  },
-];
-
-const fundSlices: FundSlice[] = [
-  {
-    label: "Product & Engineering",
-    pct: 40,
-    color: "bg-sky-400",
-    detail: "Core platform, mobile apps, trust algorithm v2",
-  },
-  {
-    label: "Sales & Marketing",
-    pct: 25,
-    color: "bg-indigo-400",
-    detail: "EU expansion, community growth, brand campaigns",
-  },
-  {
-    label: "Operations & Compliance",
-    pct: 20,
-    color: "bg-purple-400",
-    detail: "Regulatory licensing, payment infra, customer success",
-  },
-  {
-    label: "G&A / Reserve",
-    pct: 15,
-    color: "bg-emerald-400",
-    detail: "Legal, finance, strategic reserve",
-  },
-];
-
-const problems = [
-  {
-    icon: "🔓",
-    title: "Trust is Broken in Peer Commerce",
-    body: "€18B is lost annually in the EU to peer-to-peer fraud. Buyers can't verify sellers, and sellers have no portable reputation — so every transaction starts from zero trust.",
-  },
-  {
-    icon: "💸",
-    title: "Payment Protection is Fragmented",
-    body: "Existing escrow and dispute solutions are slow, expensive, or platform-locked. Small sellers can't afford enterprise-grade protection.",
-  },
-  {
-    icon: "🏝️",
-    title: "Reputation Doesn't Travel",
-    body: "A seller with 500 five-star reviews on one platform is a stranger on another. There's no portable, verifiable identity layer for commerce.",
-  },
-];
-
-const solutions = [
-  {
-    icon: "🛡️",
-    title: "Universal Trust Score",
-    body: "A cryptographically-signed, portable reputation layer that aggregates verified interactions across platforms, forming the credit score of peer commerce.",
-  },
-  {
-    icon: "⚡",
-    title: "Smart Escrow in 60 Seconds",
-    body: "One-click escrow protection with automated dispute resolution powered by AI evidence analysis and a community jury system.",
-  },
-  {
-    icon: "🔗",
-    title: "Open Trust API",
-    body: "Any marketplace or app can embed FreeTrust scores, enabling a network effect that grows the value of every participant's reputation.",
-  },
-];
-
-const revenueStreams = [
-  {
-    name: "Transaction Fees",
-    desc: "0.8–1.5% on escrow-protected transactions",
-    pct: 55,
-    color: "sky",
-  },
-  {
-    name: "Premium Membership",
-    desc: "€9.99–€29.99/mo for advanced trust features",
-    pct: 28,
-    color: "indigo",
-  },
-  {
-    name: "API Licensing",
-    desc: "Per-call or volume-based Trust Score API access",
-    pct: 12,
-    color: "purple",
-  },
-  {
-    name: "Verification Services",
-    desc: "ID, business & credential verification bundles",
-    pct: 5,
-    color: "emerald",
-  },
-];
-
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-function SectionBadge({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold tracking-widest uppercase bg-sky-400/10 text-sky-400 border border-sky-400/20 mb-4">
-      {children}
-    </span>
-  );
-}
-
-function SectionHeading({
-  children,
-  sub,
-}: {
-  children: React.ReactNode;
-  sub?: string;
-}) {
-  return (
-    <div className="mb-10">
-      <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3 leading-tight">
-        {children}
-      </h2>
-      {sub && <p className="text-slate-400 text-lg max-w-2xl">{sub}</p>}
-    </div>
-  );
-}
-
-function GlassCard({
-  children,
-  className = "",
-  onClick,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  onClick?: () => void;
-}) {
-  return (
-    <div
-      className={`bg-white/[0.04] border border-white/10 rounded-2xl backdrop-blur-sm ${className}`}
-      onClick={onClick}
-      role={onClick ? 'button' : undefined}
-    >
-      {children}
-    </div>
-  );
-}
-
-function ColorBar({
-  pct,
-  colorClass,
-}: {
-  pct: number;
-  colorClass: string;
-}) {
-  return (
-    <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-      <div
-        className={`h-full rounded-full transition-all duration-1000 ${colorClass}`}
-        style={{ width: `${pct}%` }}
-      />
-    </div>
-  );
-}
-
-// ── Page ──────────────────────────────────────────────────────────────────────
-
-export default function InvestDeckPage() {
-  const [activeFundSlice, setActiveFundSlice] = useState<number | null>(null);
-
-  const colorMap: Record<string, string> = {
-    sky: "text-sky-400",
-    indigo: "text-indigo-400",
-    purple: "text-purple-400",
-    emerald: "text-emerald-400",
-    teal: "text-teal-400",
-  };
-
-  const bgColorMap: Record<string, string> = {
-    sky: "bg-sky-400/10 border-sky-400/20",
-    indigo: "bg-indigo-400/10 border-indigo-400/20",
-    purple: "bg-purple-400/10 border-purple-400/20",
-    emerald: "bg-emerald-400/10 border-emerald-400/20",
-    teal: "bg-teal-400/10 border-teal-400/20",
-  };
+  useEffect(() => {
+    let c = false;
+    fetch('/api/invest/metrics', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (!c && d) setMetrics(d); })
+      .catch(() => {});
+    return () => { c = true; };
+  }, []);
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-white antialiased">
-      {/* Ambient background blobs */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-        <div className="absolute top-[-200px] left-[-100px] w-[600px] h-[600px] rounded-full bg-sky-600/10 blur-[120px]" />
-        <div className="absolute top-[40%] right-[-150px] w-[500px] h-[500px] rounded-full bg-indigo-600/10 blur-[100px]" />
-        <div className="absolute bottom-[-100px] left-[30%] w-[400px] h-[400px] rounded-full bg-purple-600/8 blur-[100px]" />
+    <div style={{ background: C.bg, color: C.text, minHeight: '100vh', overflowX: 'hidden' }}>
+      <style>{`
+        .dt { position: sticky; top: 0; z-index: 50; background: rgba(15,23,42,0.92); backdrop-filter: blur(8px); border-bottom: 1px solid ${C.border}; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .db { font-weight: 600; font-size: 15px; color: ${C.text}; display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
+        .db .dot { width: 10px; height: 10px; background: ${C.sky}; border-radius: 50%; }
+        .da { display: flex; gap: 10px; align-items: center; }
+        .btn { background: transparent; border: 1px solid ${C.border}; color: ${C.textMuted}; padding: 8px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; text-decoration: none; }
+        .btn:hover { color: ${C.text}; border-color: ${C.borderStrong}; }
+        .btn-p { background: ${C.sky}; color: ${C.bg}; border-color: ${C.sky}; font-weight: 600; }
+        .btn-p:hover { background: #7dd3fc; color: ${C.bg}; }
+        .ct { font-size: 12px; color: ${C.textFaint}; font-family: ui-monospace, monospace; }
+        .ss { min-height: calc(100vh - 120px); padding: 48px 20px 80px; display: flex; align-items: center; justify-content: center; }
+        .sl { width: 100%; max-width: 1040px; }
+        .pre { font-size: 11px; letter-spacing: 3px; color: ${C.sky}; text-transform: uppercase; font-weight: 500; margin-bottom: 14px; }
+        .h { font-size: 44px; font-weight: 600; line-height: 1.1; margin: 0 0 18px; color: ${C.text}; }
+        .h .a { color: ${C.sky}; }
+        .sub { font-size: 19px; color: ${C.textMuted}; line-height: 1.55; margin: 0 0 28px; max-width: 720px; }
+        .body { font-size: 16px; color: ${C.text}; line-height: 1.7; }
+        .g2 { display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 12px; }
+        .g3 { display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 12px; }
+        .g4 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+        .tile { background: ${C.card}; border: 1px solid ${C.border}; border-radius: 14px; padding: 20px; }
+        .tile h3 { font-size: 17px; font-weight: 600; margin: 0 0 8px; color: ${C.text}; }
+        .tile p { font-size: 14px; color: ${C.textMuted}; line-height: 1.6; margin: 0; }
+        .stat { background: ${C.card}; border: 1px solid ${C.border}; border-radius: 14px; padding: 18px 16px; text-align: center; }
+        .sl1 { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: ${C.textMuted}; margin-bottom: 8px; }
+        .sv { font-size: 30px; font-weight: 600; color: ${C.text}; line-height: 1; }
+        .sh { font-size: 11px; color: ${C.textFaint}; margin-top: 6px; }
+        .bu { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; }
+        .bd { color: ${C.sky}; font-size: 18px; line-height: 1.4; flex-shrink: 0; }
+        .qc { background: ${C.card}; border-left: 3px solid ${C.sky}; border-radius: 0 14px 14px 0; padding: 20px 24px; margin: 20px 0; font-style: italic; color: ${C.textMuted}; font-size: 16px; line-height: 1.6; }
+        .qa { display: block; margin-top: 10px; font-style: normal; font-size: 13px; color: ${C.textFaint}; }
+        .dn { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; padding: 10px 14px; background: rgba(15,23,42,0.9); border: 1px solid ${C.border}; border-radius: 999px; z-index: 40; }
+        .dot-b { width: 8px; height: 8px; border-radius: 50%; background: ${C.textFaint}; border: none; cursor: pointer; padding: 0; }
+        .dot-a { background: ${C.sky}; width: 24px; border-radius: 4px; }
+        .en { position: fixed; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; border-radius: 50%; background: ${C.card}; border: 1px solid ${C.border}; color: ${C.text}; font-size: 20px; cursor: pointer; z-index: 40; display: flex; align-items: center; justify-content: center; }
+        .en:hover:not(:disabled) { border-color: ${C.borderStrong}; }
+        .en:disabled { opacity: 0.3; cursor: not-allowed; }
+        .ep { left: 16px; }
+        .enx { right: 16px; }
+        .lr { display: flex; align-items: baseline; gap: 16px; padding: 14px 0; border-bottom: 1px solid ${C.border}; }
+        .lr:last-child { border-bottom: none; }
+        .ln { font-size: 12px; font-weight: 600; color: ${C.sky}; min-width: 56px; }
+        .lt { font-weight: 600; color: ${C.text}; margin-right: 12px; }
+        .ld { color: ${C.textMuted}; font-size: 14px; }
+
+        @media (min-width: 720px) {
+          .g2 { grid-template-columns: 1fr 1fr; }
+          .g3 { grid-template-columns: 1fr 1fr 1fr; }
+          .g4 { grid-template-columns: repeat(4, 1fr); }
+          .h { font-size: 56px; }
+        }
+        @media (max-width: 560px) {
+          .h { font-size: 32px; }
+          .sub { font-size: 16px; }
+          .sv { font-size: 24px; }
+          .en { display: none; }
+        }
+
+        @media print {
+          .dt, .dn, .en { display: none !important; }
+          body, .ss { background: white !important; color: black !important; }
+          .ss { min-height: auto; page-break-after: always; padding: 40px; display: flex !important; }
+          .h { color: #0f172a !important; }
+          .h .a { color: #0284c7 !important; }
+          .sub, .body, .tile p, .ld { color: #475569 !important; }
+          .tile, .stat { background: white !important; border: 1px solid #cbd5e1 !important; }
+          .sv, .lt { color: #0f172a !important; }
+          .pre, .ln { color: #0284c7 !important; }
+        }
+      `}</style>
+
+      <div className="dt">
+        <Link href="/" className="db"><span className="dot"></span>FreeTrust · Investor deck</Link>
+        <div className="da">
+          <span className="ct">{String(i + 1).padStart(2, '0')} / {String(SLIDES.length).padStart(2, '0')}</span>
+          <button type="button" className="btn" onClick={() => window.print()}>Download PDF</button>
+          <a className="btn btn-p" href="mailto:hello@freetrust.co?subject=FreeTrust%20investor%20conversation">Get in touch</a>
+        </div>
       </div>
 
-      {/* Top nav bar */}
-      <nav className="sticky top-0 z-50 bg-[#0f172a]/80 backdrop-blur-xl border-b border-white/10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/invest"
-              className="flex items-center gap-1.5 text-slate-400 hover:text-white text-sm transition-colors"
-            >
-              <ChevronLeftIcon className="w-4 h-4" />
-              Back to Invest
-            </Link>
-            <span className="text-white/20">|</span>
-            <span className="text-white font-semibold text-sm">
-              FreeTrust Investor Deck
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <a
-              href="#"
-              className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-sm font-medium transition-all"
-            >
-              <ArrowDownTrayIcon className="w-4 h-4" />
-              Download PDF
-            </a>
-            <a
-              href="#book-call"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-white text-sm font-semibold transition-all shadow-lg shadow-sky-500/20"
-            >
-              <CalendarDaysIcon className="w-4 h-4" />
-              Book a Call
-            </a>
-          </div>
+      {SLIDES.map((k, idx) => (
+        <div key={k} className="ss" style={{ display: idx === i ? 'flex' : 'none' }}>
+          <div className="sl"><Slide k={k} metrics={metrics} /></div>
         </div>
+      ))}
+
+      <button type="button" className="en ep" onClick={prev} disabled={i === 0} aria-label="Previous">‹</button>
+      <button type="button" className="en enx" onClick={next} disabled={i === SLIDES.length - 1} aria-label="Next">›</button>
+
+      <nav className="dn" aria-label="Slide navigation">
+        {SLIDES.map((_, idx) => (
+          <button key={idx} type="button" className={`dot-b ${idx === i ? 'dot-a' : ''}`} onClick={() => setI(idx)} aria-label={`Go to slide ${idx + 1}`} />
+        ))}
       </nav>
-
-      {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <section className="relative py-24 sm:py-32 px-4 sm:px-6 text-center overflow-hidden">
-        <div className="max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-400/10 border border-sky-400/20 text-sky-400 text-xs font-semibold tracking-widest uppercase mb-8">
-            <ShieldCheckIcon className="w-3.5 h-3.5" />
-            Confidential · Seed Round · 2024
-          </div>
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] mb-6">
-            <span className="bg-gradient-to-r from-sky-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
-              FreeTrust
-            </span>
-            <br />
-            <span className="text-white">Investor Deck</span>
-          </h1>
-          <p className="text-slate-400 text-xl sm:text-2xl max-w-2xl mx-auto mb-10 leading-relaxed">
-            The trust infrastructure layer for the{" "}
-            <span className="text-white font-semibold">
-              €50B European peer commerce
-            </span>{" "}
-            economy.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="#book-call"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-white font-bold text-base transition-all shadow-2xl shadow-sky-500/30 hover:shadow-sky-500/50 hover:-translate-y-0.5"
-            >
-              <CalendarDaysIcon className="w-5 h-5" />
-              Schedule Investor Meeting
-            </a>
-            <a
-              href="#"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold text-base transition-all hover:-translate-y-0.5"
-            >
-              <ArrowDownTrayIcon className="w-5 h-5" />
-              Download Full Deck
-            </a>
-          </div>
-        </div>
-
-        {/* Key numbers strip */}
-        <div className="max-w-4xl mx-auto mt-16 grid grid-cols-3 gap-4">
-          {[
-            { label: "Seed Round", value: "€500K", sub: "SAFE note" },
-            { label: "Valuation Cap", value: "€4M", sub: "Pre-money" },
-            { label: "Discount Rate", value: "20%", sub: "Early investors" },
-          ].map((s) => (
-            <GlassCard key={s.label} className="p-6 text-center">
-              <div className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent mb-1">
-                {s.value}
-              </div>
-              <div className="text-white font-semibold text-sm mb-0.5">
-                {s.label}
-              </div>
-              <div className="text-slate-500 text-xs">{s.sub}</div>
-            </GlassCard>
-          ))}
-        </div>
-      </section>
-
-      {/* ── PROBLEM ──────────────────────────────────────────────────────── */}
-      <section className="py-20 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-4">
-            <SectionBadge>
-              <LightBulbIcon className="w-3.5 h-3.5" /> The Problem
-            </SectionBadge>
-          </div>
-          <SectionHeading
-            sub="Three compounding failures make peer-to-peer commerce broken, expensive, and untrustworthy at scale."
-          >
-            <span className="text-center block">
-              Trust is{" "}
-              <span className="bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
-                the missing layer
-              </span>{" "}
-              in peer commerce
-            </span>
-          </SectionHeading>
-          <div className="grid md:grid-cols-3 gap-6">
-            {problems.map((p) => (
-              <GlassCard
-                key={p.title}
-                className="p-7 group hover:border-white/20 transition-all"
-              >
-                <div className="text-4xl mb-5">{p.icon}</div>
-                <h3 className="text-white font-bold text-lg mb-3 leading-snug">
-                  {p.title}
-                </h3>
-                <p className="text-slate-400 text-sm leading-relaxed">{p.body}</p>
-              </GlassCard>
-            ))}
-          </div>
-
-          {/* Stat callout */}
-          <GlassCard className="mt-8 p-8 sm:p-10 text-center">
-            <div className="text-5xl sm:text-6xl font-black text-red-400 mb-3">
-              €18B
-            </div>
-            <p className="text-slate-300 text-lg">
-              lost annually to peer-to-peer fraud in the EU alone —
-              <span className="text-white font-semibold">
-                {" "}
-                a problem growing 22% year-over-year
-              </span>
-            </p>
-          </GlassCard>
-        </div>
-      </section>
-
-      {/* ── SOLUTION ─────────────────────────────────────────────────────── */}
-      <section className="py-20 px-4 sm:px-6 bg-gradient-to-b from-transparent via-sky-950/20 to-transparent">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-4">
-            <SectionBadge>
-              <RocketLaunchIcon className="w-3.5 h-3.5" /> The Solution
-            </SectionBadge>
-          </div>
-          <SectionHeading
-            sub="FreeTrust is not another marketplace. It's the trust infrastructure that all marketplaces will run on."
-          >
-            <span className="text-center block">
-              We built the{" "}
-              <span className="bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">
-                trust layer
-              </span>{" "}
-              commerce is missing
-            </span>
-          </SectionHeading>
-          <div className="grid md:grid-cols-3 gap-6">
-            {solutions.map((s) => (
-              <GlassCard
-                key={s.title}
-                className="p-7 relative overflow-hidden group hover:border-sky-400/30 transition-all"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="text-4xl mb-5">{s.icon}</div>
-                <h3 className="text-white font-bold text-lg mb-3 leading-snug">
-                  {s.title}
-                </h3>
-                <p className="text-slate-400 text-sm leading-relaxed relative z-10">
-                  {s.body}
-                </p>
-              </GlassCard>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── MARKET SIZE ──────────────────────────────────────────────────── */}
-      <section className="py-20 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-4">
-            <SectionBadge>
-              <ChartBarIcon className="w-3.5 h-3.5" /> Market Opportunity
-            </SectionBadge>
-          </div>
-          <SectionHeading
-            sub="We're entering a massive, underserved market at the perfect inflection point."
-          >
-            <span className="text-center block">
-              A{" "}
-              <span className="bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">
-                €50B
-              </span>{" "}
-              addressable market
-            </span>
-          </SectionHeading>
-
-          <div className="grid md:grid-cols-3 gap-6 mb-10">
-            {[
-              {
-                label: "TAM",
-                value: "€50B",
-                sub: "EU social & peer commerce",
-                desc: "Total addressable: all peer-to-peer commerce transactions requiring trust verification in the EU.",
-                color: "sky",
-              },
-              {
-                label: "SAM",
-                value: "€8B",
-                sub: "Serviceable addressable",
-                desc: "Online peer transactions in our initial 6 target markets: DE, FR, NL, ES, IT, PL.",
-                color: "indigo",
-              },
-              {
-                label: "SOM",
-                value: "€240M",
-                sub: "5-year capture target",
-                desc: "3% share of SAM — achievable with our current growth trajectory and planned expansion.",
-                color: "purple",
-              },
-            ].map((m) => (
-              <GlassCard
-                key={m.label}
-                className={`p-7 border-${m.color}-400/20 hover:border-${m.color}-400/40 transition-all`}
-              >
-                <span
-                  className={`text-xs font-bold tracking-widest uppercase ${colorMap[m.color]} mb-3 block`}
-                >
-                  {m.label}
-                </span>
-                <div
-                  className={`text-4xl font-black ${colorMap[m.color]} mb-1`}
-                >
-                  {m.value}
-                </div>
-                <div className="text-slate-300 text-sm font-semibold mb-3">
-                  {m.sub}
-                </div>
-                <p className="text-slate-500 text-xs leading-relaxed">{m.desc}</p>
-              </GlassCard>
-            ))}
-          </div>
-
-          {/* Market tailwinds */}
-          <GlassCard className="p-7">
-            <h3 className="text-white font-bold text-base mb-5">
-              Market Tailwinds
-            </h3>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                {
-                  stat: "+34%",
-                  label: "YoY growth in EU peer commerce",
-                  color: "sky",
-                },
-                {
-                  stat: "63%",
-                  label: "of Gen-Z prefer peer buying over retail",
-                  color: "indigo",
-                },
-                {
-                  stat: "€1.2B",
-                  label: "invested in trust & safety globally in 2023",
-                  color: "purple",
-                },
-                {
-                  stat: "2026",
-                  label: "EU Digital Services Act full enforcement",
-                  color: "emerald",
-                },
-              ].map((t) => (
-                <div
-                  key={t.label}
-                  className="bg-white/[0.03] rounded-xl p-4 border border-white/5"
-                >
-                  <div
-                    className={`text-2xl font-black ${colorMap[t.color]} mb-1`}
-                  >
-                    {t.stat}
-                  </div>
-                  <div className="text-slate-400 text-xs leading-relaxed">
-                    {t.label}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </GlassCard>
-        </div>
-      </section>
-
-      {/* ── BUSINESS MODEL ───────────────────────────────────────────────── */}
-      <section className="py-20 px-4 sm:px-6 bg-gradient-to-b from-transparent via-indigo-950/20 to-transparent">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-4">
-            <SectionBadge>
-              <CurrencyEuroIcon className="w-3.5 h-3.5" /> Business Model
-            </SectionBadge>
-          </div>
-          <SectionHeading
-            sub="Multiple, compounding revenue streams with high retention and expanding margins."
-          >
-            <span className="text-center block">
-              Four{" "}
-              <span className="bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">
-                revenue streams
-              </span>
-              , one platform
-            </span>
-          </SectionHeading>
-
-          <div className="grid md:grid-cols-2 gap-6 mb-10">
-            {revenueStreams.map((r) => (
-              <GlassCard
-                key={r.name}
-                className="p-6 hover:border-white/20 transition-all"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-white font-bold text-base mb-1">
-                      {r.name}
-                    </h3>
-                    <p className="text-slate-400 text-sm">{r.desc}</p>
-                  </div>
-                  <span
-                    className={`text-2xl font-black ${colorMap[r.color]} ml-4 shrink-0`}
-                  >
-                    {r.pct}%
-                  </span>
-                </div>
-                <ColorBar
-                  pct={r.pct}
-                  colorClass={`bg-gradient-to-r from-${r.color}-500 to-${r.color}-400`}
-                />
-              </GlassCard>
-            ))}
-          </div>
-
-          {/* Unit economics */}
-          <GlassCard className="p-7">
-            <h3 className="text-white font-bold text-base mb-5">
-              Unit Economics
-            </h3>
-            <div className="grid sm:grid-cols-3 gap-6">
-              {[
-                {
-                  label: "CAC (Blended)",
-                  value: "€4.20",
-                  sub: "Customer acquisition cost",
-                  color: "sky",
-                },
-                {
-                  label: "LTV (24-month)",
-                  value: "€38.60",
-                  sub: "Lifetime value",
-                  color: "indigo",
-                },
-                {
-                  label: "LTV:CAC Ratio",
-                  value: "9.2×",
-                  sub: "Target: >3× at Series A",
-                  color: "emerald",
-                },
-              ].map((u) => (
-                <div key={u.label} className="text-center">
-                  <div
-                    className={`text-3xl font-black ${colorMap[u.color]} mb-1`}
-                  >
-                    {u.value}
-                  </div>
-                  <div className="text-white font-semibold text-sm mb-1">
-                    {u.label}
-                  </div>
-                  <div className="text-slate-500 text-xs">{u.sub}</div>
-                </div>
-              ))}
-            </div>
-          </GlassCard>
-        </div>
-      </section>
-
-      {/* ── TRACTION ─────────────────────────────────────────────────────── */}
-      <section className="py-20 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-4">
-            <SectionBadge>
-              <ArrowTrendingUpIcon className="w-3.5 h-3.5" /> Traction
-            </SectionBadge>
-          </div>
-          <SectionHeading
-            sub="Real numbers from real users. We haven't spent a cent on paid acquisition."
-          >
-            <span className="text-center block">
-              Growing{" "}
-              <span className="bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">
-                18% month-over-month
-              </span>{" "}
-              organically
-            </span>
-          </SectionHeading>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {metrics.map((m) => (
-              <GlassCard
-                key={m.label}
-                className={`p-6 border hover:border-white/20 transition-all ${bgColorMap[m.color]}`}
-              >
-                <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${colorMap[m.color]} bg-white/5`}
-                >
-                  {m.icon}
-                </div>
-                <div
-                  className={`text-3xl font-black ${colorMap[m.color]} mb-1`}
-                >
-                  {m.value}
-                </div>
-                <div className="text-white font-semibold text-sm mb-1">
-                  {m.label}
-                </div>
-                <div className="text-slate-500 text-xs">{m.sub}</div>
-              </GlassCard>
-            ))}
-          </div>
-
-          {/* Growth chart placeholder */}
-          <GlassCard className="mt-8 p-7">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-white font-bold text-base">
-                Monthly Active Users — 12-Month Trend
-              </h3>
-              <span className="text-emerald-400 text-sm font-semibold">
-                +18% MoM avg
-              </span>
-            </div>
-            <div className="flex items-end gap-2 h-32">
-              {[18, 22, 26, 28, 32, 34, 38, 42, 46, 50, 56, 64].map(
-                (h, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                    <div
-                      className="w-full rounded-t-md bg-gradient-to-t from-sky-600/60 to-sky-400/60 border-t border-sky-400/40 transition-all"
-                      style={{ height: `${(h / 64) * 100}%` }}
-                    />
-                  </div>
-                )
-              )}
-            </div>
-            <div className="flex justify-between text-slate-600 text-xs mt-2">
-              <span>Jan</span>
-              <span>Feb</span>
-              <span>Mar</span>
-              <span>Apr</span>
-              <span>May</span>
-              <span>Jun</span>
-              <span>Jul</span>
-              <span>Aug</span>
-              <span>Sep</span>
-              <span>Oct</span>
-              <span>Nov</span>
-              <span>Dec</span>
-            </div>
-          </GlassCard>
-        </div>
-      </section>
-
-      {/* ── TEAM ─────────────────────────────────────────────────────────── */}
-      <section className="py-20 px-4 sm:px-6 bg-gradient-to-b from-transparent via-purple-950/20 to-transparent">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-4">
-            <SectionBadge>
-              <UserGroupIcon className="w-3.5 h-3.5" /> The Team
-            </SectionBadge>
-          </div>
-          <SectionHeading
-            sub="Founder-led. Operator-built. We've done this before at scale."
-          >
-            <span className="text-center block">
-              The{" "}
-              <span className="bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">
-                right people
-              </span>{" "}
-              for this problem
-            </span>
-          </SectionHeading>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {team.map((m) => (
-              <GlassCard
-                key={m.name}
-                className="p-6 hover:border-white/20 transition-all group"
-              >
-                <div
-                  className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${m.bg} flex items-center justify-center text-white text-xl font-black mb-5 shadow-lg`}
-                >
-                  {m.initials}
-                </div>
-                <h3 className="text-white font-bold text-base mb-0.5">
-                  {m.name}
-                </h3>
-                <p className="text-sky-400 text-xs font-semibold mb-4">
-                  {m.role}
-                </p>
-                <p className="text-slate-400 text-xs leading-relaxed mb-4">
-                  {m.bio}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {m.tags.map((t) => (
-                    <span
-                      key={t}
-                      className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-slate-400 text-xs"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </GlassCard>
-            ))}
-          </div>
-
-          {/* Advisors note */}
-          <GlassCard className="mt-6 p-6">
-            <p className="text-center text-slate-400 text-sm">
-              <span className="text-white font-semibold">
-                Strategic Advisors:
-              </span>{" "}
-              Former CCO of Vinted · Ex-Trustpilot Head of Product · Partner at
-              a top-3 EU fintech VC ·{" "}
-              <span className="text-sky-400 cursor-pointer hover:underline">
-                + 3 more (disclosed to qualified investors)
-              </span>
-            </p>
-          </GlassCard>
-        </div>
-      </section>
-
-      {/* ── USE OF FUNDS ─────────────────────────────────────────────────── */}
-      <section className="py-20 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-4">
-            <SectionBadge>
-              <BuildingStorefrontIcon className="w-3.5 h-3.5" /> Use of Funds
-            </SectionBadge>
-          </div>
-          <SectionHeading
-            sub="Every euro of this €500K seed is deployed against product-market fit and EU market expansion."
-          >
-            <span className="text-center block">
-              How we deploy the{" "}
-              <span className="bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">
-                €500K seed
-              </span>
-            </span>
-          </SectionHeading>
-
-          <div className="grid lg:grid-cols-2 gap-8 items-center">
-            {/* Pie-style visual using CSS */}
-            <div className="flex flex-col items-center justify-center">
-              <div className="relative w-64 h-64 sm:w-72 sm:h-72">
-                {/* Stacked conic gradient ring */}
-                <div
-                  className="w-full h-full rounded-full"
-                  style={{
-                    background: `conic-gradient(
-                      #38bdf8 0% 40%,
-                      #818cf8 40% 65%,
-                      #c084fc 65% 85%,
-                      #34d399 85% 100%
-                    )`,
-                    boxShadow:
-                      "0 0 60px rgba(56,189,248,0.2), 0 0 30px rgba(99,102,241,0.15)",
-                  }}
-                />
-                {/* Center hole */}
-                <div className="absolute inset-[20%] rounded-full bg-[#0f172a] flex flex-col items-center justify-center">
-                  <div className="text-2xl font-black text-white">€500K</div>
-                  <div className="text-xs text-slate-500">Seed Round</div>
-                </div>
-              </div>
-
-              {/* Legend */}
-              <div className="mt-6 flex flex-col gap-2 w-full max-w-xs">
-                {fundSlices.map((s) => (
-                  <div key={s.label} className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-sm shrink-0 ${s.color}`} />
-                    <span className="text-slate-300 text-sm flex-1">
-                      {s.label}
-                    </span>
-                    <span className="text-white font-bold text-sm">
-                      {s.pct}%
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Detail cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {fundSlices.map((s, i) => (
-                <GlassCard
-                  key={s.label}
-                  className={`p-5 cursor-pointer transition-all hover:border-white/25 ${
-                    activeFundSlice === i ? "border-white/30 bg-white/[0.07]" : ""
-                  }`}
-                  onClick={() =>
-                    setActiveFundSlice(activeFundSlice === i ? null : i)
-                  }
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className={`w-2.5 h-2.5 rounded-sm ${s.color}`} />
-                    <span className="text-white font-bold text-sm">
-                      {s.pct}%
-                    </span>
-                  </div>
-                  <div className="text-slate-300 font-semibold text-sm mb-2">
-                    {s.label}
-                  </div>
-                  <div className="text-slate-500 text-xs leading-relaxed">
-                    {s.detail}
-                  </div>
-                  <div className="mt-3">
-                    <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${s.color}`}
-                        style={{ width: `${s.pct * 2}%` }}
-                      />
-                    </div>
-                  </div>
-                </GlassCard>
-              ))}
-            </div>
-          </div>
-
-          {/* 18-month milestones */}
-          <GlassCard className="mt-10 p-7">
-            <h3 className="text-white font-bold text-base mb-6">
-              18-Month Milestones (Post-Seed)
-            </h3>
-            <div className="relative">
-              <div className="absolute left-4 top-0 bottom-0 w-px bg-white/10" />
-              <div className="space-y-6 pl-12">
-                {[
-                  {
-                    q: "Q1",
-                    milestone:
-                      "Launch Trust Score v2 + mobile app (iOS & Android)",
-                    color: "sky",
-                  },
-                  {
-                    q: "Q2",
-                    milestone:
-                      "Expand to Germany & France — target 100K registered users",
-                    color: "indigo",
-                  },
-                  {
-                    q: "Q3",
-                    milestone:
-                      "Open Trust API beta with 5 partner marketplace integrations",
-                    color: "purple",
-                  },
-                  {
-                    q: "Q4",
-                    milestone:
-                      "€500K MRR run-rate — Series A raise (€2.5M target)",
-                    color: "emerald",
-                  },
-                ].map((item) => (
-                  <div key={item.q} className="relative">
-                    <div
-                      className={`absolute -left-8 w-4 h-4 rounded-full border-2 border-${item.color}-400 bg-[#0f172a] -translate-x-1/2`}
-                    />
-                    <div className="flex items-start gap-3">
-                      <span
-                        className={`text-xs font-bold ${colorMap[item.color]} tracking-widest uppercase shrink-0 pt-0.5`}
-                      >
-                        {item.q}
-                      </span>
-                      <p className="text-slate-300 text-sm leading-relaxed">
-                        {item.milestone}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </GlassCard>
-        </div>
-      </section>
-
-      {/* ── COMPETITIVE LANDSCAPE ────────────────────────────────────────── */}
-      <section className="py-20 px-4 sm:px-6 bg-gradient-to-b from-transparent via-sky-950/10 to-transparent">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-4">
-            <SectionBadge>Competitive Landscape</SectionBadge>
-          </div>
-          <SectionHeading
-            sub="No one else is building portable, cross-platform trust infrastructure at this layer."
-          >
-            <span className="text-center block">
-              We occupy a{" "}
-              <span className="bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">
-                unique position
-              </span>
-            </span>
-          </SectionHeading>
-
-          <GlassCard className="overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="text-left text-slate-400 font-semibold px-6 py-4">
-                      Feature
-                    </th>
-                    {["FreeTrust", "Trustpilot", "Vinted", "PayPal"].map(
-                      (c) => (
-                        <th
-                          key={c}
-                          className={`text-center px-6 py-4 font-semibold ${
-                            c === "FreeTrust"
-                              ? "text-sky-400"
-                              : "text-slate-400"
-                          }`}
-                        >
-                          {c}
-                        </th>
-                      )
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    ["Portable Trust Score", true, false, false, false],
-                    ["Peer-to-peer escrow", true, false, true, true],
-                    ["AI dispute resolution", true, false, false, false],
-                    ["Open API for marketplaces", true, false, false, false],
-                    ["Peer commerce focus", true, false, true, false],
-                    ["EU-first & GDPR-native", true, true, true, false],
-                  ].map(([feat, ...vals]) => (
-                    <tr
-                      key={String(feat)}
-                      className="border-b border-white/5 hover:bg-white/[0.02] transition-colors"
-                    >
-                      <td className="text-slate-300 px-6 py-4">{feat}</td>
-                      {vals.map((v, i) => (
-                        <td key={i} className="text-center px-6 py-4">
-                          {v ? (
-                            <span className="text-emerald-400 text-lg">✓</span>
-                          ) : (
-                            <span className="text-slate-700 text-lg">✗</span>
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </GlassCard>
-        </div>
-      </section>
-
-      {/* ── CTA / BOOK A CALL ────────────────────────────────────────────── */}
-      <section
-        id="book-call"
-        className="py-24 px-4 sm:px-6"
-      >
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="mb-4">
-            <SectionBadge>
-              <CalendarDaysIcon className="w-3.5 h-3.5" /> Get Involved
-            </SectionBadge>
-          </div>
-          <h2 className="text-4xl sm:text-5xl font-black text-white mb-5 leading-tight">
-            Ready to invest in the{" "}
-            <span className="bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">
-              Trust Economy?
-            </span>
-          </h2>
-          <p className="text-slate-400 text-lg mb-10 max-w-xl mx-auto leading-relaxed">
-            We're closing the €500K seed round with a select group of aligned
-            investors. Book a 30-minute intro call or jump straight to the
-            investment page.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-            <a
-              href="#"
-              className="inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-white font-bold text-base transition-all shadow-2xl shadow-sky-500/30 hover:shadow-sky-500/50 hover:-translate-y-0.5"
-            >
-              <CalendarDaysIcon className="w-5 h-5" />
-              Book 30-Minute Call
-            </a>
-            <Link
-              href="/invest"
-              className="inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold text-base transition-all hover:-translate-y-0.5"
-            >
-              View Investment Tiers
-              <ChevronLeftIcon className="w-4 h-4 rotate-180" />
-            </Link>
-          </div>
-
-          <a
-            href="#"
-            className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors"
-          >
-            <ArrowDownTrayIcon className="w-4 h-4" />
-            Download Full Pitch Deck (PDF)
-          </a>
-
-          {/* Trust signals */}
-          <div className="mt-14 grid grid-cols-3 gap-4">
-            {[
-              { val: "€500K", label: "Round size", color: "sky" },
-              { val: "€4M", label: "Valuation cap", color: "indigo" },
-              { val: "20%", label: "Investor discount", color: "purple" },
-            ].map((s) => (
-              <GlassCard key={s.label} className="p-5 text-center">
-                <div
-                  className={`text-2xl font-black ${colorMap[s.color]} mb-1`}
-                >
-                  {s.val}
-                </div>
-                <div className="text-slate-500 text-xs">{s.label}</div>
-              </GlassCard>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── FOOTER ───────────────────────────────────────────────────────── */}
-      <footer className="border-t border-white/10 py-10 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center">
-              <ShieldCheckIcon className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-white font-bold">FreeTrust</span>
-          </div>
-          <p className="text-slate-600 text-xs text-center max-w-md">
-            This document contains forward-looking statements and is for
-            informational purposes only. It does not constitute an offer to sell
-            or a solicitation of an offer to buy securities.
-          </p>
-          <div className="flex items-center gap-4 text-slate-500 text-xs">
-            <Link href="/invest" className="hover:text-white transition-colors">
-              Invest
-            </Link>
-            <a href="#" className="hover:text-white transition-colors">
-              Privacy
-            </a>
-            <a href="#" className="hover:text-white transition-colors">
-              Legal
-            </a>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
 
+function Slide({ k, metrics }: { k: SlideKey; metrics: Metrics | null }) {
+  switch (k) {
+    case 'cover':
+      return (<>
+        <div className="pre">✦ FreeTrust · Investor deck · 2026</div>
+        <h1 className="h">Trust is the <span className="a">new pricing model.</span></h1>
+        <p className="sub">FreeTrust is a community economy marketplace where every transaction, review, and AI agent action builds reputation. Reputation lowers fees. Lower fees attract sellers. Sellers bring liquidity. Liquidity brings buyers.</p>
+        <p className="body" style={{ color: C.textFaint, fontSize: 14 }}>Founded in Ireland · freetrust.co · 2026</p>
+      </>);
+    case 'problem':
+      return (<>
+        <div className="pre">✦ Problem</div>
+        <h1 className="h">Marketplaces extract. Per-seat SaaS is dying.</h1>
+        <p className="sub">The incumbent marketplace model charges 15–30% of every transaction. Software&apos;s per-seat model is collapsing as AI replaces users. Community economies have no infrastructure built for them.</p>
+        <div className="g3">
+          <div className="tile"><h3>Fee extraction</h3><p>Fiverr, Upwork, Etsy take 15–30% per transaction. Sellers rent their own customer relationships.</p></div>
+          <div className="tile"><h3>Per-seat collapse</h3><p>SaaSpocalypse Feb 2026: $285B wiped in 48h. Atlassian declines. The human user is no longer the unit of work.</p></div>
+          <div className="tile"><h3>Community void</h3><p>Local economies, solo founders, creators and charities have no platform built for trust, reputation, and fair exchange.</p></div>
+        </div>
+      </>);
+    case 'insight':
+      return (<>
+        <div className="pre">✦ Insight</div>
+        <h1 className="h">The moat is the <span className="a">data and orchestration layer.</span></h1>
+        <p className="sub">AI agents commoditise UI. What stays valuable is the proprietary data, workflow permissions, and transaction graph that agents need to function. Whoever owns the connective tissue captures value from every layer above.</p>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '8px 20px', marginTop: 20 }}>
+          <div className="lr"><div className="ln">Layer 1</div><div><span className="lt">Copilots</span><span className="ld">AI bolted on. Commoditised.</span></div></div>
+          <div className="lr"><div className="ln">Layer 2</div><div><span className="lt">Credits</span><span className="ld">Transitional. Moderate defensibility.</span></div></div>
+          <div className="lr"><div className="ln">Layer 3</div><div><span className="lt">Autonomous agents</span><span className="ld">Digital labour.</span></div></div>
+          <div className="lr"><div className="ln">Layer 4</div><div><span className="lt">Outcome-as-a-service</span><span className="ld">Pay for results.</span></div></div>
+          <div className="lr" style={{ background: 'rgba(56,189,248,0.06)', borderRadius: 10, padding: '14px 10px' }}>
+            <div className="ln">Layer 5</div>
+            <div><span className="lt" style={{ color: C.sky }}>Data + orchestration ← FreeTrust</span><span className="ld">Highest defensibility.</span></div>
+          </div>
+        </div>
+      </>);
+    case 'product':
+      return (<>
+        <div className="pre">✦ Product</div>
+        <h1 className="h">Live and shipped.</h1>
+        <p className="sub">Not a pitch for what we&apos;ll build. A look at what already works, today, at freetrust.co.</p>
+        <div className="g2">
+          <div className="tile"><h3>Marketplace + social graph</h3><p>Services, products, jobs, events, communities, organisations, articles. Stripe Connect for payouts. GDPR-compliant. Live.</p></div>
+          <div className="tile"><h3>Trust Coin (₮) economy</h3><p>Reputation currency earned through every contribution. Lowers fees. Unlocks visibility. Stored in every member&apos;s wallet.</p></div>
+          <div className="tile"><h3>Nine AI agents</h3><p>Listing Creator, Match Finder, Message Drafter, Sales Development, Article Drafter, Event Promoter, Application Writer, Reputation Coach, Translator.</p></div>
+          <div className="tile"><h3>Invest tiers</h3><p>Seven paid tiers from €99 to €5,000. Lifetime lower fees, AI Credits, ₮ bonuses, monthly refills. Live revenue stream.</p></div>
+        </div>
+      </>);
+    case 'model':
+      return (<>
+        <div className="pre">✦ Business model</div>
+        <h1 className="h">Four revenue streams. Aligned incentives.</h1>
+        <p className="sub">FreeTrust only earns when members earn. No subscriptions, no ads, no data sales.</p>
+        <div className="g2">
+          <div className="tile"><h3>01 · Transaction fees</h3><p>8% services / 5% products standard. Drops to 0.25% / 0% at top tier. Volume × avg fee × member count.</p></div>
+          <div className="tile"><h3>02 · AI Credit purchases</h3><p>Members buy credits in packs (€10–€150). ~95% margin after API costs. Cross-sells into every feature.</p></div>
+          <div className="tile"><h3>03 · Invest tiers</h3><p>One-time payments €99–€5,000. Instant revenue, lifetime lower fees. Captures high-intent members.</p></div>
+          <div className="tile"><h3>04 · Sponsorships + organisations</h3><p>Charities, community groups, sponsors pay for featured placements and organisation pages.</p></div>
+        </div>
+      </>);
+    case 'moat':
+      return (<>
+        <div className="pre">✦ Moat</div>
+        <h1 className="h">The reputation graph <span className="a">compounds.</span></h1>
+        <p className="sub">Every listing, order, review, agent run, and invest purchase writes to a single graph we control. That graph is what AI agents need to function.</p>
+        <div className="g3">
+          <div className="tile"><h3>Proprietary data</h3><p>Transaction history, reputation scores, matching signals, behavioural patterns — none of it replicable from outside.</p></div>
+          <div className="tile"><h3>Integrated workflow</h3><p>Agents run on our infrastructure, read from our DB, write to our ledger. External agents can&apos;t substitute.</p></div>
+          <div className="tile"><h3>Network effects</h3><p>More members → more listings → more matches → more transactions → more reputation data → better agents.</p></div>
+        </div>
+      </>);
+    case 'traction':
+      return (<>
+        <div className="pre">✦ Traction · Live metrics</div>
+        <h1 className="h">Early. Honest. Compounding.</h1>
+        <p className="sub">Figures update from the live database. Built solo with AI operating tooling in under 6 months.</p>
+        <div className="g4">
+          <div className="stat"><div className="sl1">Members</div><div className="sv">{metrics?.members ?? '—'}</div><div className="sh">verified humans</div></div>
+          <div className="stat"><div className="sl1">Listings</div><div className="sv">{metrics?.listings ?? '—'}</div><div className="sh">services + products</div></div>
+          <div className="stat"><div className="sl1">Orders</div><div className="sv">{metrics?.orders ?? '—'}</div><div className="sh">completed</div></div>
+          <div className="stat"><div className="sl1">₮ in circulation</div><div className="sv">{metrics?.trustInCirculation ?? '—'}</div><div className="sh">reputation stock</div></div>
+          <div className="stat"><div className="sl1">Invest tier buyers</div><div className="sv">{metrics?.founderBuyers ?? '—'}</div><div className="sh">paid tier members</div></div>
+          <div className="stat"><div className="sl1">AI agent runs</div><div className="sv">{metrics?.aiCreditsUsed ?? '—'}</div><div className="sh">credits spent</div></div>
+        </div>
+        <p className="body" style={{ marginTop: 20, color: C.textFaint, fontSize: 13 }}>Metrics refresh on every page load. The graph builds from here.</p>
+      </>);
+    case 'market':
+      return (<>
+        <div className="pre">✦ Market</div>
+        <h1 className="h">Ireland first. Europe next. Global by design.</h1>
+        <p className="sub">Community economy is a €150B+ opportunity across services, creator economy, and local commerce.</p>
+        <div className="g3">
+          <div className="tile"><h3>Ireland beachhead</h3><p>5m population, €12B SME economy, strong community identity, no incumbent trust-based marketplace.</p></div>
+          <div className="tile"><h3>EU expansion</h3><p>€2T+ creator + services economy. GDPR-native. Stripe Connect covers 47 countries out of the box.</p></div>
+          <div className="tile"><h3>Global architecture</h3><p>Multi-currency, universal translation agent, reputation graph language-agnostic. No rebuild per region.</p></div>
+        </div>
+      </>);
+    case 'gtm':
+      return (<>
+        <div className="pre">✦ Go-to-market</div>
+        <h1 className="h">Bottom-up. <span className="a">Member-led.</span></h1>
+        <p className="sub">Individual sellers and creators adopt first — they bring their networks, their orgs, their charities.</p>
+        <div style={{ marginTop: 20 }}>
+          <div className="bu"><span className="bd">●</span><span><strong>Content-led discovery</strong> — AI-parseable product copy means FreeTrust surfaces in LLM answer engines, where 89% of B2B research now begins.</span></div>
+          <div className="bu"><span className="bd">●</span><span><strong>Community anchors</strong> — sponsorships with Irish charities, community groups, and local events drive early trust-building.</span></div>
+          <div className="bu"><span className="bd">●</span><span><strong>Member referrals</strong> — every completed transaction rewards both sides in ₮, creating organic pull.</span></div>
+          <div className="bu"><span className="bd">●</span><span><strong>Invest tier flywheel</strong> — paid members have permanent skin in the game, become natural evangelists.</span></div>
+        </div>
+      </>);
+    case 'operating':
+      return (<>
+        <div className="pre">✦ How we operate</div>
+        <h1 className="h">One founder. An AI team.</h1>
+        <p className="sub">FreeTrust is built and operated in the model Gartner predicts will replace traditional RevOps by 2027: a solo technical founder orchestrating AI agents across every function.</p>
+        <div className="g2">
+          <div className="tile"><h3>Development</h3><p>Claude Code, Adaptive AI, Cursor. Full-stack Next.js, Supabase, Stripe. Shipped in months, not years.</p></div>
+          <div className="tile"><h3>Operations</h3><p>Personal AI Operating System via Slack. Ten divisions. Daily revenue alerts. Automated intelligence feeds.</p></div>
+          <div className="tile"><h3>Marketing</h3><p>Apify-driven lead research. AI-drafted outbound. Content stacked for LLM answer engine discovery.</p></div>
+          <div className="tile"><h3>Sales + Support</h3><p>Go High Level CRM. AI agents draft first-touch messages. Humans close, AI handles the rest.</p></div>
+        </div>
+        <p className="body" style={{ color: C.textFaint, fontSize: 13, marginTop: 18 }}>Result: capex-light operations with a fraction of the burn of a traditional startup at this stage.</p>
+      </>);
+    case 'roadmap':
+      return (<>
+        <div className="pre">✦ Roadmap · Next 18 months</div>
+        <h1 className="h">From Ireland to the graph.</h1>
+        <p className="sub">Concrete milestones. Outcome-focused, not feature-focused.</p>
+        <div className="g2">
+          <div className="tile"><h3>0–6 months</h3><p>1,000 Irish members · first 100 invest tier buyers · €50k+ transaction volume · 10+ agents per DAU.</p></div>
+          <div className="tile"><h3>6–12 months</h3><p>Organisation tier launch · UK + EU members · 10k members · €500k transaction volume · community governance v1.</p></div>
+          <div className="tile"><h3>12–18 months</h3><p>Member-to-member ₮ trading · API for third-party agents · member-owned governance · sponsorships at scale.</p></div>
+          <div className="tile"><h3>North star</h3><p>Become the trust + settlement layer for community economies globally — the Stripe of reputation-based commerce.</p></div>
+        </div>
+      </>);
+    case 'ask':
+      return (<>
+        <div className="pre">✦ The ask</div>
+        <h1 className="h">Invest in the <span className="a">infrastructure</span>, not the application.</h1>
+        <p className="sub">FreeTrust is shipped, live, and compounding. The raise funds a focused growth push and the first strategic hires without compromising solo-founder-plus-AI economics.</p>
+        <div className="g2">
+          <div className="tile"><h3>Structure</h3><p>SAFE or convertible note. Contact for current terms. Flexible on ticket size and structure for strategic partners.</p></div>
+          <div className="tile"><h3>Use of funds</h3><p>18-month runway · engineering hire · UK/EU expansion · community partnerships · paid acquisition testing.</p></div>
+        </div>
+        <div className="qc" style={{ marginTop: 28 }}>
+          <span>If you believe trust is the new pricing model — and that whoever owns the data and orchestration layer wins the next decade of commerce — we should talk.</span>
+          <span className="qa">— David O&apos;Callaghan, Founder, FreeTrust</span>
+        </div>
+        <div style={{ marginTop: 28, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <a href="mailto:hello@freetrust.co?subject=FreeTrust%20investor%20conversation" style={{ padding: '14px 28px', background: C.sky, color: C.bg, borderRadius: 12, fontWeight: 600, textDecoration: 'none' }}>hello@freetrust.co</a>
+          <Link href="/" style={{ padding: '14px 28px', border: `1px solid ${C.border}`, color: C.text, borderRadius: 12, fontWeight: 500, textDecoration: 'none' }}>See FreeTrust live →</Link>
+        </div>
+      </>);
+    default:
+      return null;
+  }
+}
