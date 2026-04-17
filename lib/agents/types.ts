@@ -6,7 +6,8 @@ export type AgentName =
   | 'articleDrafter'
   | 'eventPromoter'
   | 'applicationWriter'
-  | 'gaeilgeTranslator';
+  | 'salesDevelopment'
+  | 'translator';
 
 export interface AgentConfig {
   name: AgentName;

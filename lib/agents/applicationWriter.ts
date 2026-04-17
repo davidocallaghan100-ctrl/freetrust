@@ -13,7 +13,7 @@ Output a JSON object:
 - closing_line (one sentence inviting a quick call or message)
 
 Rules:
-- Use UK/Irish English.
+- Use UK/Irish English by default; match the job post spelling if different.
 - Never inflate the member's experience or claim skills they haven't demonstrated.
 - Reference at least one specific detail from the job post to prove it wasn't copy-pasted.
 - Max 220 words total across all fields.

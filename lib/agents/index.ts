@@ -6,7 +6,8 @@ import { reputationCoachConfig } from './reputationCoach';
 import { articleDrafterConfig } from './articleDrafter';
 import { eventPromoterConfig } from './eventPromoter';
 import { applicationWriterConfig } from './applicationWriter';
-import { gaeilgeTranslatorConfig } from './gaeilgeTranslator';
+import { salesDevelopmentConfig } from './salesDevelopment';
+import { translatorConfig } from './translator';
 
 export const AGENT_REGISTRY: Record<AgentName, AgentConfig> = {
   listingCreator: listingCreatorConfig,
@@ -16,7 +17,8 @@ export const AGENT_REGISTRY: Record<AgentName, AgentConfig> = {
   articleDrafter: articleDrafterConfig,
   eventPromoter: eventPromoterConfig,
   applicationWriter: applicationWriterConfig,
-  gaeilgeTranslator: gaeilgeTranslatorConfig,
+  salesDevelopment: salesDevelopmentConfig,
+  translator: translatorConfig,
 };
 
 export const AGENT_LIST: AgentConfig[] = Object.values(AGENT_REGISTRY);

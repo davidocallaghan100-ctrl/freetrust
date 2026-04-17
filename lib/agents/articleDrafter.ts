@@ -14,10 +14,10 @@ Output a JSON object:
 - call_to_action (one sentence inviting readers to connect, hire, or discuss)
 
 Rules:
-- Use UK/Irish English.
+- Use UK/Irish English by default; match the member's stated spelling preference if different.
 - Never fabricate stats, studies, or quotes. If the member hasn't provided a source, speak from experience, not authority.
 - No stock phrases ("in today's fast-paced world", "at the end of the day").
-- Assume the reader is Irish and switched-on. Don't over-explain local references.
+- Assume the reader is intelligent and switched-on. Don't over-explain.
 
 Respond with JSON only.`;
 

@@ -14,7 +14,7 @@ Output a JSON object:
 - thank_you_message (one message to send attendees after, max 80 words)
 
 Rules:
-- Use UK/Irish English.
+- Use UK/Irish English by default.
 - Never invent speakers, sponsors, or attendee numbers.
 - Time and location details must match the input exactly.
 - No hashtag spam. Max 3 hashtags per social post.
