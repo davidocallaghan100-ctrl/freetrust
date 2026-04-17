@@ -83,6 +83,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   const type = session.metadata?.type;
 
+  // ── Founder Investment payment confirmed ──────────────────────────────────
+  if (type === 'founder_investment') {
+    await handleFounderInvestment(session);
+    return;
+  }
+
   // ── Community membership payment confirmed ────────────────────────────────
   if (type === 'community_membership') {
     const community_id = session.metadata?.community_id;
@@ -354,5 +360,62 @@ async function handleTransferCreated(transfer: Stripe.Transfer) {
 
   // TODO: Update escrow status in your DB to "released".
   // Notify buyer and seller that funds have been released.
+}
+
+async function handleFounderInvestment(session: Stripe.Checkout.Session) {
+  if (session.payment_status !== 'paid') {
+    console.log('[Founder] Skipped — not paid:', session.id);
+    return;
+  }
+
+  const meta = session.metadata ?? {};
+  const userId = meta.user_id;
+  const tierKey = meta.tier_key;
+  const investmentAmount = meta.investment_amount_eur;
+  const serviceFeeBps = meta.service_fee_bps;
+  const productFeeBps = meta.product_fee_bps;
+  const aiCreditsBonus = meta.ai_credits_bonus;
+  const trustBonus = meta.trust_bonus;
+  const monthlyRefill = meta.monthly_refill;
+
+  if (
+    !userId ||
+    !tierKey ||
+    !investmentAmount ||
+    !serviceFeeBps ||
+    !productFeeBps ||
+    !aiCreditsBonus ||
+    !trustBonus ||
+    !monthlyRefill
+  ) {
+    console.error('[Founder] Missing required metadata:', session.id, meta);
+    return;
+  }
+
+  const paymentIntentId =
+    typeof session.payment_intent === 'string'
+      ? session.payment_intent
+      : session.payment_intent?.id ?? null;
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc('grant_founder_investment', {
+    p_user_id: userId,
+    p_tier: tierKey,
+    p_investment_amount_eur: parseInt(investmentAmount, 10),
+    p_service_fee_bps: parseInt(serviceFeeBps, 10),
+    p_product_fee_bps: parseInt(productFeeBps, 10),
+    p_ai_credits_bonus: parseInt(aiCreditsBonus, 10),
+    p_trust_bonus: parseInt(trustBonus, 10),
+    p_monthly_refill: parseInt(monthlyRefill, 10),
+    p_stripe_session_id: session.id,
+    p_stripe_payment_intent_id: paymentIntentId,
+  });
+
+  if (error) {
+    console.error('[Founder] grant_founder_investment RPC error:', error);
+    throw new Error(`Founder grant failed: ${error.message}`);
+  }
+
+  console.log('[Founder] Granted:', session.id, data);
 }
 

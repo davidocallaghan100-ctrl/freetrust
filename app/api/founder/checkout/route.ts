@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
       client_reference_id: user.id,
       customer_email: user.email,
       metadata: {
+        type: 'founder_investment',
         user_id: user.id,
         tier_key: tier.key,
         tier_display_name: tier.displayName,
