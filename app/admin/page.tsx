@@ -207,6 +207,15 @@ export default function AdminPage() {
     init()
   }, [router])
 
+  // Load content when tab becomes active — must be before any early returns (Rules of Hooks)
+  useEffect(() => {
+    if (!authorized) return
+    if (activeTab === 'content' && contentListings.length === 0 && contentServices.length === 0) {
+      loadContent()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, authorized])
+
   if (loading) {
     return (
       <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -216,14 +225,6 @@ export default function AdminPage() {
   }
 
   if (!authorized) return null
-
-  // Load content when tab becomes active
-  React.useEffect(() => {
-    if (activeTab === 'content' && contentListings.length === 0 && contentServices.length === 0) {
-      loadContent()
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab])
 
   const filteredUsers = users.filter(u =>
     !userSearch || (u.full_name?.toLowerCase().includes(userSearch.toLowerCase()) || u.email.toLowerCase().includes(userSearch.toLowerCase()))
