@@ -69,10 +69,11 @@ interface TrustLedgerEntry {
   created_at: string
 }
 
-type Tab = 'account' | 'privacy' | 'notifications' | 'trust' | 'referral' | 'stripe' | 'security' | 'danger'
+type Tab = 'account' | 'content' | 'privacy' | 'notifications' | 'trust' | 'referral' | 'stripe' | 'security' | 'danger'
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'account',       label: 'Account',        icon: '👤' },
+  { id: 'content',       label: 'Your Content',   icon: '⚙️' },
   { id: 'privacy',       label: 'Privacy',         icon: '🔒' },
   { id: 'notifications', label: 'Notifications',   icon: '🔔' },
   { id: 'trust',         label: 'Trust Breakdown', icon: '₮'  },
@@ -241,6 +242,9 @@ function SettingsPageInner() {
         <main className="settings-main">
           {activeTab === 'account' && (
             <AccountTab user={user} profile={profile} onSaved={setProfile} />
+          )}
+          {activeTab === 'content' && (
+            <ContentTab />
           )}
           {activeTab === 'privacy' && (
             <PrivacyTab profile={profile} onSaved={setProfile} />
@@ -590,6 +594,40 @@ function AccountTab({
 }
 
 // ── Privacy Tab ────────────────────────────────────────────────────────────────
+
+function ContentTab() {
+  return (
+    <div className="card">
+      <h2 className="section-title">Your Content</h2>
+      <p className="section-desc">Manage everything you&apos;ve posted on FreeTrust.</p>
+
+      <a
+        href="/profile/manage"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          padding: '14px 16px',
+          background: 'rgba(56,189,248,0.04)',
+          border: '1px solid rgba(56,189,248,0.15)',
+          borderRadius: 12,
+          textDecoration: 'none',
+          color: 'inherit',
+          transition: 'border-color 0.15s',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(56,189,248,0.4)')}
+        onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(56,189,248,0.15)')}
+      >
+        <span style={{ fontSize: 22 }}>⚙️</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 600, fontSize: 14, color: '#f1f5f9' }}>Manage listings</div>
+          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>Edit or delete your services, products, and rent &amp; share items</div>
+        </div>
+        <span style={{ color: '#38bdf8', fontSize: 14, fontWeight: 600 }}>→</span>
+      </a>
+    </div>
+  )
+}
 
 function PrivacyTab({ profile, onSaved }: { profile: Profile; onSaved: (p: Profile) => void }) {
   const priv = (profile.privacy_settings ?? {}) as Record<string, unknown>
