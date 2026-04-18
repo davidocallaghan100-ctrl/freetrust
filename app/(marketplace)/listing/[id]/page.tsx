@@ -27,21 +27,10 @@ export default function ListingDetailPage({ params }: Props) {
   const contactAuthor = async () => {
     setMsgLoading(true)
     try {
-      const res = await fetch('/api/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: `Hi, I'm interested in your listing: ${listing?.name}`,
-        }),
-      })
-      if (res.status === 401) {
-        router.push('/login')
-        return
-      }
-      if (res.ok) {
-        setMsgSent(true)
-        setTimeout(() => router.push('/messages'), 800)
-      }
+      // This is a demo/showcase page — the "author" field is a string
+      // handle, not a real user_id. Route to the messages inbox where
+      // the user can start a conversation via the "New Message" search.
+      router.push('/messages')
     } catch {
       // silent fail
     } finally {

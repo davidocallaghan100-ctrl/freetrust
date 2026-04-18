@@ -1,7 +1,7 @@
 'use client'
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import MessageDrawer from '@/components/profile/MessageDrawer'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -62,7 +62,16 @@ function formatTime(iso: string): string {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function MessagesPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>Loading messages…</div>}>
+      <MessagesPageInner />
+    </Suspense>
+  )
+}
+
+function MessagesPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [userId, setUserId] = useState<string | null>(null)
   const [conversations, setConversations] = useState<ConversationItem[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -99,6 +108,34 @@ export default function MessagesPage() {
       loadConversations(user.id)
     })
   }, [router])
+
+  // Auto-open a conversation when ?to=userId is present in the URL.
+  // Several pages link to /messages?to=X (job applications, grassroots,
+  // connections). The MessageDrawer handles the full lifecycle once
+  // we set drawerRecipient.
+  useEffect(() => {
+    const toUserId = searchParams.get('to')
+    if (!toUserId || !userId) return
+
+    const supabase = createClient()
+    supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url')
+      .eq('id', toUserId)
+      .maybeSingle()
+      .then(({ data: profile }) => {
+        if (profile) {
+          setDrawerRecipient({
+            id: profile.id as string,
+            full_name: (profile.full_name as string | null) ?? null,
+            avatar_url: (profile.avatar_url as string | null) ?? null,
+          })
+        }
+      })
+
+    // Clean up the URL so the back button doesn't re-trigger the drawer
+    router.replace('/messages')
+  }, [searchParams, userId, router])
 
   // Refresh the conversation list whenever the tab comes back into
   // view so unread counts + last-message previews stay current.

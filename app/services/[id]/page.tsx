@@ -25,8 +25,13 @@ function useMessageSeller() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recipientId: sellerId, content: `Hi, I'm interested in your listing: ${listingTitle}` }),
       })
-      if (res.ok) router.push('/messages')
-    } catch { /* silent */ } finally {
+      if (res.ok) {
+        const data = await res.json()
+        router.push(data.conversation_id ? `/messages/${data.conversation_id}` : '/messages')
+      }
+    } catch {
+      alert('Could not send message. Please try again.')
+    } finally {
       setMsgLoading(false)
     }
   }

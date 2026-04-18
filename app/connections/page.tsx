@@ -392,7 +392,7 @@ function MemberCard({ member, isFollowing, isMutual, onFollow, onUnfollow, showF
       )}
 
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
-        <Link href="/messages" style={{ flex: 1, textDecoration: 'none' }}>
+        <Link href={`/messages?to=${member.id}`} style={{ flex: 1, textDecoration: 'none' }}>
           <button className="conn-btn conn-btn-outline" style={{ width: '100%' }}>Message</button>
         </Link>
         {showFollowBack && !localFollowing ? (
