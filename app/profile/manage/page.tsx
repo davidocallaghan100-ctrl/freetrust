@@ -4,25 +4,31 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-type ItemType = 'service' | 'product' | 'rent_share'
-type TabKey = 'services' | 'products' | 'rentShare'
+type ItemType = 'service' | 'product' | 'rent_share' | 'job'
+type TabKey = 'services' | 'products' | 'rentShare' | 'jobs'
 
 interface ListingItem {
   id: string
   title: string
   price?: number | null
   price_per_day?: number | null
-  currency: string
-  thumbnail_url: string | null
+  currency?: string
+  thumbnail_url?: string | null
   status: string
   created_at: string
   type: ItemType
+  job_type?: string
+  location_type?: string
+  location?: string | null
+  applicant_count?: number
+  tags?: string[]
 }
 
 const TAB_CONFIG: { key: TabKey; label: string; icon: string; createHref: string; createLabel: string }[] = [
   { key: 'services',  label: 'Services',     icon: '🛠', createHref: '/seller/gigs/create', createLabel: 'Post your first service →' },
   { key: 'products',  label: 'Products',     icon: '📦', createHref: '/products/new',       createLabel: 'List your first product →' },
   { key: 'rentShare', label: 'Rent & Share', icon: '♻️', createHref: '/rent-share/new',     createLabel: 'Share your first item →' },
+  { key: 'jobs',      label: 'Jobs',         icon: '💼', createHref: '/jobs/new',           createLabel: 'Post your first job →' },
 ]
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }> = {
@@ -30,6 +36,7 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }>
   draft:    { bg: 'rgba(251,191,36,0.2)',  color: '#fbbf24', label: 'Draft' },
   archived: { bg: 'rgba(148,163,184,0.2)', color: '#cbd5e1', label: 'Archived' },
   closed:   { bg: 'rgba(148,163,184,0.2)', color: '#cbd5e1', label: 'Closed' },
+  filled:   { bg: 'rgba(56,189,248,0.2)',  color: '#38bdf8', label: 'Filled' },
   rented:   { bg: 'rgba(56,189,248,0.2)',  color: '#38bdf8', label: 'Rented' },
   inactive: { bg: 'rgba(148,163,184,0.2)', color: '#cbd5e1', label: 'Inactive' },
 }
@@ -55,28 +62,35 @@ function formatPrice(item: ListingItem): string {
 function detailHref(item: ListingItem): string {
   if (item.type === 'service') return `/services/${item.id}`
   if (item.type === 'product') return `/products/${item.id}`
+  if (item.type === 'job') return `/jobs/${item.id}`
   return `/rent-share/${item.id}`
 }
 
 function editHref(item: ListingItem): string {
   if (item.type === 'rent_share') return `/rent-share/${item.id}/edit`
+  if (item.type === 'job') return `/jobs/${item.id}/edit`
   return `/products/${item.id}/edit`
 }
 
 function deleteEndpoint(item: ListingItem): string {
   if (item.type === 'rent_share') return `/api/rent-share/${item.id}`
+  if (item.type === 'job') return `/api/jobs/${item.id}`
   return `/api/listings/${item.id}`
 }
 
 function typeLabel(item: ListingItem): string {
   if (item.type === 'service') return 'service'
   if (item.type === 'product') return 'product'
+  if (item.type === 'job') return 'job'
   return 'item'
 }
 
+const JOB_TYPE_LABELS: Record<string, string> = { full_time: 'Full-time', part_time: 'Part-time', contract: 'Contract', freelance: 'Freelance', internship: 'Internship' }
+const LOC_TYPE_LABELS: Record<string, string> = { remote: 'Remote', hybrid: 'Hybrid', on_site: 'On-site' }
+
 export default function ManageListingsPage() {
   const router = useRouter()
-  const [data, setData] = useState<Record<TabKey, ListingItem[]>>({ services: [], products: [], rentShare: [] })
+  const [data, setData] = useState<Record<TabKey, ListingItem[]>>({ services: [], products: [], rentShare: [], jobs: [] })
   const [activeTab, setActiveTab] = useState<TabKey>('services')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -93,8 +107,8 @@ export default function ManageListingsPage() {
       const res = await fetch('/api/me/listings', { cache: 'no-store' })
       if (res.status === 401) { router.push('/login?redirect=/profile/manage'); return }
       if (!res.ok) { setError('Failed to load listings'); setLoading(false); return }
-      const d = await res.json() as { services: ListingItem[]; products: ListingItem[]; rentShare: ListingItem[] }
-      setData({ services: d.services ?? [], products: d.products ?? [], rentShare: d.rentShare ?? [] })
+      const d = await res.json() as { services: ListingItem[]; products: ListingItem[]; rentShare: ListingItem[]; jobs: ListingItem[] }
+      setData({ services: d.services ?? [], products: d.products ?? [], rentShare: d.rentShare ?? [], jobs: d.jobs ?? [] })
     } catch {
       setError('Network error')
     } finally {
@@ -116,7 +130,7 @@ export default function ManageListingsPage() {
         return
       }
       setData(prev => {
-        const key = deleteTarget.type === 'service' ? 'services' : deleteTarget.type === 'product' ? 'products' : 'rentShare'
+        const key: TabKey = deleteTarget.type === 'service' ? 'services' : deleteTarget.type === 'product' ? 'products' : deleteTarget.type === 'job' ? 'jobs' : 'rentShare'
         return { ...prev, [key]: prev[key].filter(i => i.id !== deleteTarget.id) }
       })
       showToast('Deleted')
@@ -208,6 +222,7 @@ export default function ManageListingsPage() {
               {activeTab === 'services' && "You haven't posted any services yet."}
               {activeTab === 'products' && "No products yet."}
               {activeTab === 'rentShare' && "No items to rent yet."}
+              {activeTab === 'jobs' && "No jobs posted yet."}
             </div>
             <Link href={tabConfig.createHref} style={{ color: '#38bdf8', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
               {tabConfig.createLabel}
@@ -239,7 +254,9 @@ export default function ManageListingsPage() {
                     </Link>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#38bdf8' }}>{formatPrice(item)}</span>
+                      {item.type !== 'job' && <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#38bdf8' }}>{formatPrice(item)}</span>}
+                      {item.type === 'job' && item.job_type && <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{JOB_TYPE_LABELS[item.job_type] ?? item.job_type} · {LOC_TYPE_LABELS[item.location_type ?? ''] ?? item.location_type}</span>}
+                      {item.type === 'job' && <span style={{ fontSize: '0.72rem', color: '#64748b' }}>👥 {item.applicant_count ?? 0}</span>}
                       <span style={{ fontSize: '0.68rem', fontWeight: 600, color: st.color, background: st.bg, padding: '2px 8px', borderRadius: 999 }}>{st.label}</span>
                       <span style={{ fontSize: '0.72rem', color: '#64748b', marginLeft: 'auto' }}>{relativeTime(item.created_at)}</span>
                     </div>

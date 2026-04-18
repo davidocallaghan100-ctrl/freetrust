@@ -22,7 +22,7 @@ export async function GET() {
     // own items.
     const admin = createAdminClient()
 
-    const [servicesRes, productsRes, rentShareRes] = await Promise.all([
+    const [servicesRes, productsRes, rentShareRes, jobsRes] = await Promise.all([
       admin
         .from('listings')
         .select('id, title, price, currency, cover_image, status, created_at, product_type')
@@ -40,6 +40,11 @@ export async function GET() {
         .select('id, title, price_per_day, images, status, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
+      admin
+        .from('jobs')
+        .select('id, title, job_type, location_type, location, status, applicant_count, created_at, tags')
+        .eq('poster_id', user.id)
+        .order('created_at', { ascending: false }),
     ])
 
     // Log any per-query errors so silent failures are visible in
@@ -48,6 +53,7 @@ export async function GET() {
     if (servicesRes.error) console.error('[me/listings] services error:', servicesRes.error.message)
     if (productsRes.error) console.error('[me/listings] products error:', productsRes.error.message)
     if (rentShareRes.error) console.error('[me/listings] rentShare error:', rentShareRes.error.message)
+    if (jobsRes.error) console.error('[me/listings] jobs error:', jobsRes.error.message)
 
     const services = (servicesRes.data ?? []).map(s => ({
       id: s.id,
@@ -85,10 +91,24 @@ export async function GET() {
       }
     })
 
+    const jobs = (jobsRes.data ?? []).map(j => ({
+      id: j.id as string,
+      title: j.title as string,
+      job_type: j.job_type as string,
+      location_type: j.location_type as string,
+      location: (j.location as string | null) ?? null,
+      status: (j.status as string) ?? 'active',
+      applicant_count: (j.applicant_count as number) ?? 0,
+      created_at: j.created_at as string,
+      tags: (j.tags as string[]) ?? [],
+      type: 'job' as const,
+    }))
+
     return NextResponse.json({
       services,
       products,
       rentShare,
+      jobs,
       _debug: {
         rentShareError: rentShareRes.error?.message ?? null,
         rentShareCount: rentShareRes.data?.length ?? 0,

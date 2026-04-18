@@ -70,6 +70,8 @@ export default function JobDetailPage() {
   const [cvUploading, setCvUploading] = useState(false)
   const [cvFileName, setCvFileName] = useState('')
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -241,6 +243,16 @@ export default function JobDetailPage() {
                 <Link href={`/jobs/${id}/applications`} style={{ color: '#38bdf8', textDecoration: 'none', fontWeight: 600, fontSize: '0.82rem' }}>
                   View applications →
                 </Link>
+              )}
+              {currentUserId && job.poster?.id === currentUserId && (
+                <Link href={`/jobs/${id}/edit`} style={{ color: '#a78bfa', textDecoration: 'none', fontWeight: 600, fontSize: '0.82rem' }}>
+                  ✏️ Edit
+                </Link>
+              )}
+              {currentUserId && job.poster?.id === currentUserId && (
+                <button type="button" onClick={() => setShowDeleteModal(true)} style={{ background: 'none', border: 'none', color: '#f87171', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                  🗑 Delete
+                </button>
               )}
               {job.application_deadline && (
                 <span style={{ color: new Date(job.application_deadline) < new Date() ? '#ef4444' : '#fbbf24', fontWeight: 600 }}>
@@ -444,6 +456,33 @@ export default function JobDetailPage() {
                 </button>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete modal */}
+      {showDeleteModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 9999 }} onClick={() => !deleteLoading && setShowDeleteModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#1e293b', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 16, padding: 28, maxWidth: 400, width: '100%' }}>
+            <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 8, color: '#f1f5f9' }}>Delete this job?</div>
+            <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>This cannot be undone. All applications for this job will also be deleted.</div>
+            <div style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>&ldquo;{job?.title}&rdquo;</div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setShowDeleteModal(false)} disabled={deleteLoading} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(148,163,184,0.2)', background: 'transparent', color: '#94a3b8', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button type="button" disabled={deleteLoading} onClick={async () => {
+                setDeleteLoading(true)
+                try {
+                  const res = await fetch(`/api/jobs/${id}`, { method: 'DELETE' })
+                  if (res.ok) { window.location.href = '/jobs' } else {
+                    const d = await res.json().catch(() => ({}))
+                    alert((d as { error?: string }).error ?? 'Delete failed')
+                    setDeleteLoading(false)
+                  }
+                } catch { setDeleteLoading(false) }
+              }} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(248,113,113,0.35)', background: 'rgba(248,113,113,0.15)', color: '#f87171', fontSize: 13, fontWeight: 600, cursor: deleteLoading ? 'not-allowed' : 'pointer', opacity: deleteLoading ? 0.6 : 1 }}>
+                {deleteLoading ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
           </div>
         </div>
       )}
