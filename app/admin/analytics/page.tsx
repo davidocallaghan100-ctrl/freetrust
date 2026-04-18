@@ -209,7 +209,7 @@ function PostTypesChart({ breakdown }: { breakdown: Record<string, number> }) {
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(56,189,248,0.07)" horizontal={false} />
         <XAxis type="number" tick={{ fill: '#475569', fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
         <YAxis type="category" dataKey="type" tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={false} width={64} />
-        <Tooltip content={({ active, payload }) => {
+        <Tooltip content={({ active, payload }: { active?: boolean; payload?: Array<{ value?: number }> }) => {
           if (!active || !payload?.length) return null
           return (
             <div style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, padding: '0.5rem 0.75rem', fontSize: '0.78rem', color: '#a78bfa', fontWeight: 700 }}>
