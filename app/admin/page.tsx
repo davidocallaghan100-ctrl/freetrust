@@ -184,7 +184,7 @@ export default function AdminPage() {
         if (listingsRes.status === 'fulfilled' && listingsRes.value.count != null)
           setStats(s => ({ ...s, activeListings: listingsRes.value.count! }))
         if (ledgerRes.status === 'fulfilled' && ledgerRes.value.data)
-          setLedger(ledgerRes.value.data as TrustLedgerRow[])
+          setLedger(ledgerRes.value.data as unknown as TrustLedgerRow[])
       } catch { /* use mock */ }
 
       // Load users
