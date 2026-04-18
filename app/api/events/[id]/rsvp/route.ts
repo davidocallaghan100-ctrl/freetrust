@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { awardTrust } from '@/lib/trust/award'
 import { insertNotification } from '@/lib/notifications/insert'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
-import { insertNotification } from '@/lib/notifications/insert'
 
 interface RouteParams {
   params: { id: string }
