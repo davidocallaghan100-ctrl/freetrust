@@ -72,9 +72,15 @@ export async function sendWelcomeEmail(to: string, name: string, amount: number 
     ${trust(amt)}
     ${p(`₮${amt} Trust has been added to your wallet. Use it to unlock features, boost your listings, and build your reputation.`)}
     ${divider()}
+    <div style="background:rgba(56,189,248,0.07);border:1px solid rgba(56,189,248,0.15);border-radius:12px;padding:20px 24px;margin:0 0 20px;">
+      <div style="font-size:13px;font-weight:700;color:#38bdf8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Your profile is your reputation</div>
+      <p style="margin:0 0 12px;font-size:14px;color:#94a3b8;line-height:1.6;">Members with a real photo and complete profile get <strong style="color:#f1f5f9;">3x more engagement</strong>. Take 60 seconds to add your face and a short bio — it's the single biggest thing you can do to get your first sale.</p>
+      <div style="text-align:center;">${btn('Complete My Profile →', `${BASE_URL}/profile`)}</div>
+    </div>
+    ${divider()}
     ${p('Start exploring:')}
     <ul style="color:#94a3b8;font-size:14px;padding-left:20px;line-height:2;">
-      <li>Complete your profile to earn more Trust</li>
+      <li>Add your first listing to earn ₮25 Trust</li>
       <li>Browse the marketplace to discover products and services</li>
       <li>Follow members in your field</li>
     </ul>
@@ -356,4 +362,99 @@ export async function sendTrustBadgeEmail(to: string, name: string, badgeName: s
     <div style="text-align:center;">${btn('View My Profile', `${BASE_URL}/profile`)}</div>
   `)
   return getResend().emails.send({ from: FROM, to, subject: `You earned the ${badgeName} badge on FreeTrust! 🏅`, html })
+}
+
+// ─── Onboarding Sequence ───────────────────────────────────────────────────────
+
+// Email 2 — sent 24h after signup.
+// Nudges the user to add their first listing and explains the three listing types.
+export async function sendFirstListingNudgeEmail(to: string, name: string) {
+  const html = wrap('Your creator journey starts here', `
+    ${h1('Your first listing is waiting to go live')}
+    ${p('FreeTrust is a creator economy — the more you put in, the more Trust you earn. Add your first product, service, or gig today.')}
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+      ${[
+        { emoji: '🛍️', label: 'Products',  desc: 'Physical or digital goods you make or sell' },
+        { emoji: '🎯', label: 'Services',  desc: 'Design, coaching, writing, development — what you offer' },
+        { emoji: '🤝', label: 'Gigs',      desc: 'Short tasks, commissions, or one-off jobs' },
+      ].map(item => `
+        <tr><td style="padding:6px 0;">
+          <div style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.12);border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;">
+            <span style="font-size:20px;margin-right:12px;line-height:1;">${item.emoji}</span>
+            <div>
+              <div style="font-size:14px;font-weight:700;color:#f1f5f9;margin-bottom:2px;">${item.label}</div>
+              <div style="font-size:13px;color:#94a3b8;">${item.desc}</div>
+            </div>
+          </div>
+        </td></tr>
+      `).join('')}
+    </table>
+    <div style="background:rgba(56,189,248,0.1);border-radius:8px;padding:12px 16px;margin:0 0 20px;text-align:center;">
+      <span style="font-size:14px;font-weight:700;color:#38bdf8;">Each listing earns you ₮25 Trust just for going live.</span>
+    </div>
+    ${divider()}
+    <div style="text-align:center;padding-top:4px;">${btn('Add My First Listing →', `${BASE_URL}/create`)}</div>
+    <div style="text-align:center;margin-top:14px;">
+      <a href="${BASE_URL}/browse" style="font-size:13px;color:#64748b;text-decoration:underline;">Browse the marketplace first →</a>
+    </div>
+  `)
+  return getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `${name}, your creator journey starts here 🚀`,
+    html,
+  })
+}
+
+// Email 3 — sent 48h after signup, only if no profile photo is set.
+// Encourages users to upload a real face photo to increase trust and conversion.
+export async function sendProfilePhotoNudgeEmail(to: string, name: string) {
+  const html = wrap('Members want to see who they\'re buying from', `
+    ${h1('Put a face to your name')}
+    ${p('You\'re more likely to get your first sale when people can see who they\'re dealing with. FreeTrust is built on trust — and trust starts with a real photo.')}
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+      <tr>
+        ${[
+          { value: '3x', label: 'More profile visits',      color: '#38bdf8' },
+          { value: '5x', label: 'More messages received',   color: '#a78bfa' },
+          { value: '2x', label: 'Higher listing conversion', color: '#34d399' },
+        ].map(s => `
+          <td width="33%" style="padding:4px;">
+            <div style="background:rgba(148,163,184,0.07);border-radius:10px;padding:14px 10px;text-align:center;">
+              <div style="font-size:24px;font-weight:900;color:${s.color};">${s.value}</div>
+              <div style="font-size:11px;color:#64748b;margin-top:3px;line-height:1.4;">${s.label}</div>
+            </div>
+          </td>
+        `).join('')}
+      </tr>
+    </table>
+    ${p('It takes 30 seconds. Open your profile, tap your avatar, and upload a photo that shows your face clearly.')}
+    ${divider()}
+    <div style="text-align:center;padding-top:4px;">${btn('Update My Photo →', `${BASE_URL}/settings/profile`)}</div>
+    <p style="text-align:center;margin-top:12px;font-size:12px;color:#475569;">Your photo is only shown to other FreeTrust members.</p>
+  `)
+  return getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `${name}, members want to see who they're buying from`,
+    html,
+  })
+}
+
+// ─── Outbound Campaigns ────────────────────────────────────────────────────────
+
+// sendCampaignEmail — used for broadcast/drip campaigns from the admin panel.
+// bodyHtml is the raw HTML content of the campaign body (can include tags, lists, links).
+// The subject is rendered both in the email subject line and as an h1 heading.
+export async function sendCampaignEmail(to: string, name: string, subject: string, bodyHtml: string) {
+  const html = wrap(subject, `
+    ${h1(subject)}
+    <div style="color:#94a3b8;font-size:15px;line-height:1.7;">${bodyHtml}</div>
+    ${divider()}
+    <p style="font-size:11px;color:#475569;text-align:center;margin:0;">
+      You're receiving this because you're a member of FreeTrust.&nbsp;
+      <a href="${BASE_URL}/settings/notifications" style="color:#64748b;text-decoration:underline;">Unsubscribe</a>
+    </p>
+  `)
+  return getResend().emails.send({ from: FROM, to, subject, html })
 }

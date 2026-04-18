@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { awardTrust } from '@/lib/trust/award'
 import { insertNotification } from '@/lib/notifications/insert'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
+import { insertNotification } from '@/lib/notifications/insert'
 
 interface RouteParams {
   params: { id: string }
@@ -99,6 +100,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       ref:    eventId,
       desc:   `RSVPed to: ${event.title ?? 'an event'}`,
     })
+
+    // Fire RSVP confirmation notification (non-blocking)
+    insertNotification({
+      userId: user.id,
+      type: 'event',
+      title: `RSVP confirmed: ${event.title ?? 'Event'}`,
+      body: `You're going! We'll remind you 24 hours before the event starts.`,
+      link: `/events/${eventId}`,
+    }).catch(err => console.error('[RSVP] notification error:', err))
 
     return NextResponse.json({
       success: true,

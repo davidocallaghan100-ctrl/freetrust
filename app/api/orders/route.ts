@@ -1,6 +1,9 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { sendEmail } from '@/lib/email/send'
+import { insertNotification } from '@/lib/notifications/insert'
 
 export async function GET(req: NextRequest) {
   try {
@@ -50,6 +53,90 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ orders: orders || [] })
   } catch (err) {
     console.error('[Orders GET] Unexpected error:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+// POST /api/orders — create a new order and fire email + in-app notifications
+export async function POST(req: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await req.json() as {
+      listing_id?: string
+      seller_id?: string
+      item_title?: string
+      amount?: number
+      currency?: string
+      type?: string
+      notes?: string
+    }
+
+    if (!body.seller_id || !body.item_title || body.amount == null) {
+      return NextResponse.json({ error: 'Missing required fields: seller_id, item_title, amount' }, { status: 400 })
+    }
+
+    const admin = createAdminClient()
+
+    // Insert the order
+    const { data: order, error: insertErr } = await admin
+      .from('orders')
+      .insert({
+        buyer_id: user.id,
+        seller_id: body.seller_id,
+        listing_id: body.listing_id ?? null,
+        item_title: body.item_title,
+        amount: body.amount,
+        currency: body.currency ?? 'EUR',
+        type: body.type ?? 'product',
+        notes: body.notes ?? null,
+        status: 'pending',
+      })
+      .select()
+      .single()
+
+    if (insertErr || !order) {
+      console.error('[Orders POST] insert error:', insertErr)
+      return NextResponse.json({ error: insertErr?.message ?? 'Failed to create order' }, { status: 500 })
+    }
+
+    // Fire notifications + emails non-blocking after response is ready
+    Promise.all([
+      // Buyer notification + email
+      insertNotification({
+        userId: user.id,
+        type: 'order',
+        title: `Order placed: ${body.item_title}`,
+        body: `Your order for "${body.item_title}" (€${body.amount.toFixed(2)}) has been placed.`,
+        link: `/orders/${order.id}`,
+      }),
+      sendEmail({
+        type: 'order_placed',
+        userId: user.id,
+        payload: { orderTitle: body.item_title, amount: body.amount, orderId: order.id },
+      }),
+      // Seller notification + email
+      insertNotification({
+        userId: body.seller_id,
+        type: 'order',
+        title: `New order: ${body.item_title}`,
+        body: `You received a new order for "${body.item_title}" (€${body.amount.toFixed(2)}).`,
+        link: `/orders/${order.id}`,
+      }),
+      sendEmail({
+        type: 'order_placed',
+        userId: body.seller_id,
+        payload: { orderTitle: body.item_title, amount: body.amount, orderId: order.id },
+      }),
+    ]).catch(err => console.error('[Orders POST] notification/email error:', err))
+
+    return NextResponse.json({ order }, { status: 201 })
+  } catch (err) {
+    console.error('[Orders POST] Unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
