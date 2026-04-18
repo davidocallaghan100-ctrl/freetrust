@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { awardTrust } from '@/lib/trust/award'
+import { insertNotification } from '@/lib/notifications/insert'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 
 interface RouteParams {
@@ -71,6 +72,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .from('events')
       .update({ attendee_count: (event.attendee_count || 0) + 1 })
       .eq('id', eventId)
+
+    // Notify the event creator (skip if the RSVPer IS the creator)
+    if (event.creator_id && event.creator_id !== user.id) {
+      try {
+        const { data: rsvper } = await supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle()
+        await insertNotification({
+          userId: event.creator_id as string,
+          type: 'event_rsvp',
+          title: `${(rsvper?.full_name as string | null) ?? 'Someone'} is attending ${event.title ?? 'your event'}`,
+          body: 'Tap to see the full attendee list.',
+          link: `/events/${eventId}`,
+        })
+      } catch (e) {
+        console.error('[events/rsvp] notification failed:', e)
+      }
+    }
 
     // Award ₮ for RSVPing — free path only. Paid event RSVPs go
     // through the Stripe checkout flow which can award after

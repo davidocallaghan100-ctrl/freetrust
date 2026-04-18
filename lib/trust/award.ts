@@ -43,6 +43,7 @@
 //   return NextResponse.json({ listing: inserted, trustAwarded: trustResult.amount })
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { insertNotification } from '@/lib/notifications/insert'
 
 export interface AwardTrustInput {
   userId: string
@@ -136,6 +137,24 @@ export async function awardTrust(input: AwardTrustInput): Promise<AwardTrustResu
     // award — useful for auditing "did Cliff's listing award land?"
     // without hitting the DB.
     console.log(`[awardTrust] +₮${amount} → ${userId} (${type})${ref ? ` ref=${ref}` : ''}`)
+
+    // Skip notification for signup bonuses — the welcome notification
+    // (Trigger 1 in signup-bonus route) already covers that event.
+    const SKIP_NOTIF_TYPES = ['signup_bonus', 'signup_bonus_topup']
+    if (!SKIP_NOTIF_TYPES.includes(type)) {
+      try {
+        await insertNotification({
+          userId,
+          type: 'trust_earned',
+          title: `₮${Math.floor(amount)} earned`,
+          body: desc || 'You earned TrustCoins for platform activity.',
+          link: '/wallet',
+        })
+      } catch (e) {
+        console.error('[awardTrust] notification failed:', e)
+      }
+    }
+
     return { ok: true, amount: Math.floor(amount), error: null }
   } catch (err) {
     // createAdminClient() or the RPC call itself threw before we got

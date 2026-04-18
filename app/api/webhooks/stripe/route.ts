@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
+import { insertNotification } from "@/lib/notifications/insert";
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-04-10" })
@@ -417,5 +418,17 @@ async function handleFounderInvestment(session: Stripe.Checkout.Session) {
   }
 
   console.log('[Founder] Granted:', session.id, data);
+
+  try {
+    await insertNotification({
+      userId,
+      type: 'founder_investment',
+      title: `🏅 ${tierKey.charAt(0).toUpperCase() + tierKey.slice(1)} Early Investor tier activated!`,
+      body: 'Your lifetime lower fees, AI Credits, and TrustCoin bonus are live.',
+      link: '/wallet',
+    });
+  } catch (e) {
+    console.error('[Founder] notification failed:', e);
+  }
 }
 

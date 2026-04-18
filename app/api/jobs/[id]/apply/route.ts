@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendEmail } from '@/lib/email/send'
+import { insertNotification } from '@/lib/notifications/insert'
 
 // GET /api/jobs/[id]/apply — get job detail + user's application status
 export async function GET(
@@ -147,6 +148,18 @@ export async function POST(
       userId: job.poster_id,
       payload: { applicantName, jobTitle: job.title, jobId },
     }).catch(() => {})
+
+    try {
+      await insertNotification({
+        userId: job.poster_id,
+        type: 'job_application',
+        title: `New application: ${job.title}`,
+        body: `${applicantName} has applied to your job.`,
+        link: `/jobs/${jobId}/applications`,
+      })
+    } catch (e) {
+      console.error('[jobs/apply] notification failed:', e)
+    }
 
     return NextResponse.json({ application, trust_earned: 5 }, { status: 201 })
   } catch (err) {

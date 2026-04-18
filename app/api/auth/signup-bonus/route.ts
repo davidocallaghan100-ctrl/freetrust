@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 import { sendEmail } from '@/lib/email/send'
+import { insertNotification } from '@/lib/notifications/insert'
 
 // POST /api/auth/signup-bonus — issue the welcome bonus (idempotent)
 //
@@ -180,6 +181,18 @@ export async function POST() {
       }).catch(err => {
         console.error('[signup-bonus] welcome email dispatch threw:', err)
       })
+
+      try {
+        await insertNotification({
+          userId: user.id,
+          type: 'welcome',
+          title: 'Welcome to FreeTrust! 🎉',
+          body: `₮${expectedAmount} TrustCoins added to your wallet. Explore the marketplace to start earning more.`,
+          link: '/wallet',
+        })
+      } catch (e) {
+        console.error('[signup-bonus] welcome notification failed:', e)
+      }
 
       return NextResponse.json({
         issued:   true,
