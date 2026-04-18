@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET() {
   try {
@@ -12,20 +13,29 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Use the admin (service-role) client for all three queries so
+    // RLS on rent_share_listings (which may not have a SELECT policy
+    // for auth.uid() = user_id if the schema init file was never
+    // applied) can't silently return zero rows. We've already
+    // validated user.id from the session above, so filtering by it
+    // via the admin client is safe — the caller can only see their
+    // own items.
+    const admin = createAdminClient()
+
     const [servicesRes, productsRes, rentShareRes] = await Promise.all([
-      supabase
+      admin
         .from('listings')
         .select('id, title, price, currency, cover_image, status, created_at, product_type')
         .eq('seller_id', user.id)
         .eq('product_type', 'service')
         .order('created_at', { ascending: false }),
-      supabase
+      admin
         .from('listings')
         .select('id, title, price, currency, cover_image, status, created_at, product_type')
         .eq('seller_id', user.id)
         .neq('product_type', 'service')
         .order('created_at', { ascending: false }),
-      supabase
+      admin
         .from('rent_share_listings')
         .select('id, title, price_per_day, currency, images, status, created_at')
         .eq('user_id', user.id)
