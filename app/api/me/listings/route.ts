@@ -37,7 +37,7 @@ export async function GET() {
         .order('created_at', { ascending: false }),
       admin
         .from('rent_share_listings')
-        .select('id, title, price_per_day, currency, images, status, created_at')
+        .select('id, title, price_per_day, images, status, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
     ])
@@ -70,7 +70,7 @@ export async function GET() {
         id: r.id,
         title: r.title,
         price_per_day: r.price_per_day,
-        currency: (r.currency as string | null) ?? 'EUR',
+        currency: 'EUR',
         thumbnail_url: imgs?.[0] ?? null,
         status: r.status ?? 'active',
         created_at: r.created_at,
