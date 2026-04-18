@@ -42,6 +42,13 @@ export async function GET() {
         .order('created_at', { ascending: false }),
     ])
 
+    // Log any per-query errors so silent failures are visible in
+    // Vercel logs. The ?? [] fallback keeps the response shape
+    // consistent even when one query fails.
+    if (servicesRes.error) console.error('[me/listings] services error:', servicesRes.error.message)
+    if (productsRes.error) console.error('[me/listings] products error:', productsRes.error.message)
+    if (rentShareRes.error) console.error('[me/listings] rentShare error:', rentShareRes.error.message)
+
     const services = (servicesRes.data ?? []).map(s => ({
       id: s.id,
       title: s.title,
@@ -78,7 +85,17 @@ export async function GET() {
       }
     })
 
-    return NextResponse.json({ services, products, rentShare })
+    return NextResponse.json({
+      services,
+      products,
+      rentShare,
+      _debug: {
+        rentShareError: rentShareRes.error?.message ?? null,
+        rentShareCount: rentShareRes.data?.length ?? 0,
+        servicesCount: servicesRes.data?.length ?? 0,
+        productsCount: productsRes.data?.length ?? 0,
+      },
+    })
   } catch (err) {
     console.error('[GET /api/me/listings]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
