@@ -441,6 +441,101 @@ export async function sendProfilePhotoNudgeEmail(to: string, name: string) {
   })
 }
 
+// ─── Community Welcome Campaign ───────────────────────────────────────────────
+
+// sendWelcomeCommunityEmail — a visionary community welcome email with
+// 4 action cards. Used as the welcome campaign template for both:
+//  1. New user auto-trigger (fired from auth/callback after the community
+//     email campaign is wired in)
+//  2. Monday broadcast campaign to all existing users (2026-04-21 08:00 UTC)
+//
+// `referralCode` is the user's personal invite code shown in card 4.
+export async function sendWelcomeCommunityEmail(to: string, name: string, referralCode: string) {
+  const referralUrl = `${BASE_URL}/invite/${referralCode}`
+  const firstName = name.split(' ')[0] || name
+
+  const actionCard = (
+    emoji: string,
+    title: string,
+    description: string,
+    ctaText: string,
+    ctaUrl: string,
+    accentColor: string,
+  ) => `
+    <td width="50%" style="padding:6px;vertical-align:top;">
+      <div style="background:rgba(30,41,59,0.8);border:1px solid ${accentColor}33;border-radius:14px;padding:20px;height:100%;box-sizing:border-box;">
+        <div style="font-size:28px;margin-bottom:10px;line-height:1;">${emoji}</div>
+        <div style="font-size:14px;font-weight:800;color:#f1f5f9;margin-bottom:6px;letter-spacing:-0.2px;">${title}</div>
+        <div style="font-size:12px;color:#64748b;line-height:1.55;margin-bottom:14px;">${description}</div>
+        <a href="${ctaUrl}" style="display:inline-block;background:${accentColor};color:#0f172a;font-weight:700;font-size:12px;padding:8px 16px;border-radius:7px;text-decoration:none;white-space:nowrap;">${ctaText}</a>
+      </div>
+    </td>
+  `
+
+  const html = wrap(`Welcome to the FreeTrust Community, ${firstName}!`, `
+    <!-- Hero -->
+    <div style="text-align:center;padding:8px 0 24px;">
+      <div style="font-size:42px;margin-bottom:12px;">🌍</div>
+      <h1 style="margin:0 0 10px;font-size:24px;font-weight:900;color:#f1f5f9;letter-spacing:-0.5px;">
+        FreeTrust is bigger than a marketplace.
+      </h1>
+      <p style="margin:0;font-size:15px;color:#94a3b8;line-height:1.65;max-width:440px;margin:0 auto;">
+        Hi <strong style="color:#38bdf8;">${firstName}</strong> — you're part of something rare: a platform built entirely on real people, real trust, and real relationships. No bots. No fake reviews. No dark patterns.
+      </p>
+    </div>
+
+    ${divider()}
+
+    <!-- Vision statement -->
+    <div style="background:linear-gradient(135deg,rgba(56,189,248,0.08),rgba(52,211,153,0.06));border:1px solid rgba(56,189,248,0.2);border-radius:14px;padding:22px 24px;margin:0 0 24px;text-align:center;">
+      <div style="font-size:13px;font-weight:700;color:#38bdf8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Our Mission</div>
+      <p style="margin:0;font-size:15px;color:#cbd5e1;line-height:1.7;font-style:italic;">
+        "To create the world's most trustworthy commerce community — where every transaction is backed by verified reputation and every connection is genuine."
+      </p>
+    </div>
+
+    <!-- 4 Action Cards — 2×2 grid -->
+    <div style="font-size:13px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:12px;">Get started in 4 steps</div>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 8px;">
+      <tr>
+        ${actionCard('👤', 'Add Your Real Photo', 'Profiles with a real face get 3× more engagement. It\'s the single biggest trust signal on the platform.', 'Upload Photo →', `${BASE_URL}/settings/profile`, '#38bdf8')}
+        ${actionCard('💬', 'Ask Us Anything', 'Have a question about selling, buying, or trust? Reach the team directly — we read every message.', 'Start a Chat →', `${BASE_URL}/messages`, '#a78bfa')}
+      </tr>
+      <tr>
+        ${actionCard('🚀', 'Launch Your First Listing', 'Add a product, service, or gig. Each listing earns you ₮25 Trust and opens the door to your first buyer.', 'Create Listing →', `${BASE_URL}/create`, '#34d399')}
+        ${actionCard('🎁', 'Invite Someone You Trust', 'FreeTrust grows one genuine person at a time. Share your link and earn ₮50 Trust when they transact.', 'Copy My Link →', referralUrl, '#fbbf24')}
+      </tr>
+    </table>
+
+    <!-- Referral code highlight -->
+    <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:12px;padding:16px 20px;margin:16px 0 24px;display:flex;align-items:center;gap:12px;">
+      <div style="font-size:22px;">🔗</div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px;">Your Personal Invite Link</div>
+        <a href="${referralUrl}" style="font-size:13px;color:#38bdf8;text-decoration:underline;word-break:break-all;">${referralUrl}</a>
+      </div>
+    </div>
+
+    ${divider()}
+
+    <!-- Closing -->
+    <p style="margin:0 0 6px;font-size:14px;color:#94a3b8;line-height:1.65;text-align:center;">
+      You joined a movement, not just a marketplace. We're grateful you're here.
+    </p>
+    <p style="margin:0 0 20px;font-size:14px;color:#94a3b8;line-height:1.65;text-align:center;">
+      — The FreeTrust Team 🤝
+    </p>
+    <div style="text-align:center;">${btn('Explore FreeTrust →', BASE_URL)}</div>
+  `)
+
+  return getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `${firstName}, welcome to the FreeTrust community 🌍`,
+    html,
+  })
+}
+
 // ─── Outbound Campaigns ────────────────────────────────────────────────────────
 
 // sendCampaignEmail — used for broadcast/drip campaigns from the admin panel.

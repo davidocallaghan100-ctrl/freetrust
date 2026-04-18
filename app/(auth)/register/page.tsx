@@ -11,6 +11,25 @@ export default function RegisterPage() {
   const router = useRouter()
   const supabase = createClient()
 
+  // Re-stamp the ft_ref cookie from the ?ref= URL param if it's present.
+  // This recovers referral attribution when the user opens the confirmation
+  // email link in a different tab/session (where the original cookie is gone).
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const ref = params.get('ref')
+      if (ref) {
+        const code = ref.toUpperCase().trim()
+        // Cookie — 30 days, read by auth/callback server-side
+        document.cookie = `ft_ref=${code}; max-age=${30 * 24 * 60 * 60}; path=/; samesite=lax${window.location.protocol === 'https:' ? '; secure' : ''}`
+        // localStorage backup — read by onboarding page client-side
+        localStorage.setItem('ft_ref', code)
+      }
+    } catch {
+      // Non-fatal — cookie/localStorage may be blocked (e.g. private browsing)
+    }
+  }, [])
+
   const [form, setForm] = useState({ first_name: '', last_name: '', email: '', password: '', confirm: '', website_url: '' })
   const [agreeHuman, setAgreeHuman] = useState(false)
   const [loading, setLoading] = useState(false)

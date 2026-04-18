@@ -184,6 +184,25 @@ export default function OnboardingPage() {
   const complete = async (_firstActionHref: string) => {
     setSaving(true)
     try {
+      // Backup referral link path: if auth/callback didn't see the ft_ref
+      // cookie (because the user confirmed their email in a different tab),
+      // check localStorage and call /api/referrals/link to link it now.
+      // This is safe to call even if the referral was already linked —
+      // the API route is idempotent.
+      try {
+        const storedRef = localStorage.getItem('ft_ref')
+        if (storedRef) {
+          await fetch('/api/referrals/link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: storedRef }),
+          })
+          localStorage.removeItem('ft_ref')
+        }
+      } catch {
+        // Non-fatal — referral link failure never blocks onboarding
+      }
+
       // full_name is derived from first_name + last_name here so the
       // profile has a full_name immediately even if the DB trigger
       // that auto-syncs it hasn't run yet (trigger is installed by

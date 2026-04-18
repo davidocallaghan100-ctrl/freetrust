@@ -24,6 +24,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
   sendWelcomeEmail,
+  sendWelcomeCommunityEmail,
   sendNewMessageEmail,
   sendOrderPlacedEmail,
   sendOrderDeliveredEmail,
@@ -49,6 +50,7 @@ import {
 
 export type EmailType =
   | 'welcome'
+  | 'welcome_community'
   | 'new_follower'
   | 'new_message'
   | 'order_placed'
@@ -74,6 +76,7 @@ export type EmailType =
 // Human-readable labels used by the settings UI
 export const EMAIL_TYPE_LABELS: Record<EmailType, { label: string; description: string; category: string }> = {
   welcome:              { label: 'Welcome',                    description: 'One-off welcome email when you join',            category: 'account' },
+  welcome_community:    { label: 'Community welcome',          description: 'Visionary community welcome with 4 action cards', category: 'account' },
   new_follower:         { label: 'New follower',               description: 'Someone started following you',                   category: 'social' },
   new_message:          { label: 'New message',                description: 'You have a new direct message',                   category: 'social' },
   new_comment:          { label: 'New comment',                description: 'Someone commented on your post or article',       category: 'social' },
@@ -99,14 +102,16 @@ export const EMAIL_TYPE_LABELS: Record<EmailType, { label: string; description: 
 
 // Types that ignore preferences (critical — users always get these)
 const ALWAYS_SEND = new Set<EmailType>([
-  'welcome',           // onboarding
-  'order_placed',      // transactional — required for receipt
-  'order_disputed',    // dispute notice — legal/transactional
-  'wallet_topup',      // transactional — payment confirmation
+  'welcome',            // onboarding
+  'welcome_community',  // community welcome campaign
+  'order_placed',       // transactional — required for receipt
+  'order_disputed',     // dispute notice — legal/transactional
+  'wallet_topup',       // transactional — payment confirmation
 ] as EmailType[])
 
 export type SendEmailParams =
   | { type: 'welcome';             userId: string; payload?: { amount?: number } }
+  | { type: 'welcome_community';   userId: string }
   | { type: 'new_follower';        userId: string; payload: { followerName: string; followerId: string } }
   | { type: 'new_message';         userId: string; payload: { senderName: string; preview: string } }
   | { type: 'new_comment';         userId: string; payload: { commenterName: string; preview: string; postId: string } }
@@ -186,6 +191,17 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
       case 'welcome':
         await sendWelcomeEmail(to, name, params.payload?.amount)
         break
+      case 'welcome_community': {
+        // Look up referral_code for the user so we can include their personal invite link
+        const { data: profileWithRef } = await admin
+          .from('profiles')
+          .select('referral_code')
+          .eq('id', userId)
+          .maybeSingle()
+        const referralCode = (profileWithRef?.referral_code as string | null) ?? ''
+        await sendWelcomeCommunityEmail(to, name, referralCode)
+        break
+      }
       case 'new_follower':
         await sendNewFollowerEmail(to, name, params.payload.followerName, params.payload.followerId)
         break
