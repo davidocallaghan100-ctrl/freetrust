@@ -920,6 +920,7 @@ export default function ProfilePage() {
           {/* Edit button — own profile only */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.75rem' }}>
             {isOwnProfile ? (
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
               <button
                 onClick={() => {
                   // Clear any stale save error from the previous edit
@@ -931,6 +932,13 @@ export default function ProfilePage() {
               >
                 {editing ? 'Cancel' : '✏️ Edit Profile'}
               </button>
+              <Link
+                href="/profile/manage"
+                style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.82rem', fontWeight: 600, color: '#38bdf8', textDecoration: 'none' }}
+              >
+                ⚙️ Manage listings
+              </Link>
+              </div>
             ) : (
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                 {user && (
