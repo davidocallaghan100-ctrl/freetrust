@@ -20,6 +20,8 @@ interface TrustLedgerRow {
   type: string
   description: string
   created_at: string
+  profiles?: { full_name: string | null; email: string; avatar_url?: string | null } | null
+  // legacy alias kept for compat
   profile?: { full_name: string | null; email: string }
 }
 
@@ -175,7 +177,7 @@ export default function AdminPage() {
         const [membersRes, listingsRes, ledgerRes] = await Promise.allSettled([
           supabase.from('profiles').select('id', { count: 'exact', head: true }),
           supabase.from('listings').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-          supabase.from('trust_ledger').select('amount, type, description, created_at, user_id').order('created_at', { ascending: false }).limit(20),
+          supabase.from('trust_ledger').select('amount, type, description, created_at, user_id, profiles:user_id(full_name, email, avatar_url)').order('created_at', { ascending: false }).limit(20),
         ])
         if (membersRes.status === 'fulfilled' && membersRes.value.count != null)
           setStats(s => ({ ...s, totalMembers: membersRes.value.count! }))
@@ -370,10 +372,13 @@ export default function AdminPage() {
                         <tr key={row.id}>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <div style={{ width: 28, height: 28, borderRadius: '50%', background: pickGradient(row.user_id), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700, color: '#0f172a', flexShrink: 0 }}>
-                                {getInitials(row.profile?.full_name)}
-                              </div>
-                              <span style={{ fontSize: '0.82rem' }}>{row.profile?.full_name || row.user_id.slice(0, 8)}</span>
+                              {row.profiles?.avatar_url
+                                ? <img src={row.profiles.avatar_url} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                                : <div style={{ width: 28, height: 28, borderRadius: '50%', background: pickGradient(row.user_id), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700, color: '#0f172a', flexShrink: 0 }}>
+                                    {getInitials(row.profiles?.full_name ?? row.profile?.full_name)}
+                                  </div>
+                              }
+                              <span style={{ fontSize: '0.82rem' }}>{row.profiles?.full_name ?? row.profile?.full_name ?? row.user_id.slice(0, 8)}</span>
                             </div>
                           </td>
                           <td style={{ color: row.amount >= 0 ? '#34d399' : '#f87171', fontWeight: 700 }}>
@@ -635,7 +640,7 @@ export default function AdminPage() {
                       <table className="admin-table">
                         <thead>
                           <tr>
-                            <th>User ID</th>
+                            <th>User</th>
                             <th>Amount</th>
                             <th>Type</th>
                             <th>Description</th>
@@ -645,7 +650,7 @@ export default function AdminPage() {
                         <tbody>
                           {analyticsData.recentLedger.slice(0, 15).map(row => (
                             <tr key={row.id}>
-                              <td style={{ fontSize: '0.75rem', color: '#475569', fontFamily: 'monospace' }}>{row.user_id?.slice(0, 8)}…</td>
+                              <td style={{ fontSize: '0.82rem' }}>{row.profiles?.full_name ?? row.profile?.full_name ?? row.user_id?.slice(0, 8)}</td>
                               <td style={{ color: (row.amount ?? 0) >= 0 ? '#34d399' : '#f87171', fontWeight: 700 }}>
                                 {(row.amount ?? 0) >= 0 ? '+' : ''}₮{row.amount}
                               </td>
