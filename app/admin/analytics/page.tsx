@@ -137,12 +137,13 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
 
 // ── Tooltip ────────────────────────────────────────────────────────────────────
 
-function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) {
   if (!active || !payload?.length) return null
   return (
     <div style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, padding: '0.5rem 0.75rem', fontSize: '0.78rem' }}>
       <div style={{ color: '#94a3b8', marginBottom: '0.35rem' }}>{fmtDate(label ?? '')}</div>
-      {payload.map(p => (
+      {payload.map((p: { name: string; value: number; color: string }) => (
         <div key={p.name} style={{ color: p.color, fontWeight: 700 }}>{p.name}: {p.value}</div>
       ))}
     </div>
@@ -209,11 +210,11 @@ function PostTypesChart({ breakdown }: { breakdown: Record<string, number> }) {
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(56,189,248,0.07)" horizontal={false} />
         <XAxis type="number" tick={{ fill: '#475569', fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
         <YAxis type="category" dataKey="type" tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={false} width={64} />
-        <Tooltip content={({ active, payload }: { active?: boolean; payload?: Array<{ value?: number }> }) => {
-          if (!active || !payload?.length) return null
+        <Tooltip content={(props) => {
+          if (!props.active || !props.payload?.length) return null
           return (
             <div style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, padding: '0.5rem 0.75rem', fontSize: '0.78rem', color: '#a78bfa', fontWeight: 700 }}>
-              {payload[0]?.value} posts
+              {props.payload[0]?.value} posts
             </div>
           )
         }} />
