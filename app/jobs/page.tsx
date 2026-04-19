@@ -349,7 +349,7 @@ export default function JobsPage() {
     setLoading(true)
     setError('')
     try {
-      const remoteParams = new URLSearchParams({ limit: '80' })
+      const remoteParams = new URLSearchParams({ limit: '150' })
       if (category !== 'All') remoteParams.set('category', category)
       if (debouncedSearch) remoteParams.set('search', debouncedSearch)
 

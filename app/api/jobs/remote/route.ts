@@ -6,7 +6,7 @@
  * Query params:
  *   category  — remotive category slug (e.g. software-development, design, marketing)
  *   search    — free text search
- *   limit     — max results (default 50, max 150)
+ *   limit     — max results (default 150, max 300)
  */
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const category = searchParams.get('category') ?? 'All'
     const search   = searchParams.get('search') ?? ''
-    const limit    = Math.min(150, parseInt(searchParams.get('limit') ?? '50'))
+    const limit    = Math.min(300, parseInt(searchParams.get('limit') ?? '150'))
 
     const remotiveSlug = CAT_MAP[category] ?? ''
     const cacheKey = remotiveSlug || 'all'
@@ -69,8 +69,8 @@ export async function GET(req: NextRequest) {
 
     // Fetch from Remotive
     const url = remotiveSlug
-      ? `${REMOTIVE_BASE}?category=${remotiveSlug}&limit=100`
-      : `${REMOTIVE_BASE}?limit=100`
+      ? `${REMOTIVE_BASE}?category=${remotiveSlug}&limit=200`
+      : `${REMOTIVE_BASE}?limit=200`
 
     const res = await fetch(url, {
       headers: { 'User-Agent': 'FreeTrust/1.0 (freetrust.co)' },

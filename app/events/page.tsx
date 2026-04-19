@@ -231,71 +231,7 @@ export default function EventsPage() {
   // that anything had gone wrong.
   const [loadError, setLoadError] = useState<string | null>(null)
 
-  // Admin-only Eventbrite sync button state. Hidden for all non-admin
-  // users. Admin check mirrors the existing pattern used across
-  // /admin, /services, /products etc: profiles.role === 'admin'.
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [syncing, setSyncing] = useState(false)
-  const [syncResult, setSyncResult] = useState<string | null>(null)
 
-  // Detect admin on mount. Non-admin users get nothing — no button,
-  // no network traffic for the sync endpoint, nothing.
-  useEffect(() => {
-    let cancelled = false
-    async function checkAdmin() {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user || cancelled) return
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle()
-      if (!cancelled && profile?.role === 'admin') {
-        setIsAdmin(true)
-      }
-    }
-    checkAdmin()
-    return () => { cancelled = true }
-  }, [])
-
-  // Trigger the Eventbrite sync. POSTs to /api/events/sync-eventbrite,
-  // shows the result inline, and triggers a reload of the event list
-  // so the newly-imported events appear without a manual refresh.
-  const handleSyncEventbrite = async () => {
-    setSyncing(true)
-    setSyncResult(null)
-    try {
-      const res = await fetch('/api/events/sync-eventbrite', {
-        method: 'POST',
-        cache: 'no-store',
-      })
-      const data = await res.json().catch(() => ({} as {
-        ok?: boolean; inserted?: number; updated?: number; skipped?: number
-        total?: number; error?: string; hint?: string
-      }))
-      if (!res.ok || !data.ok) {
-        console.error('[events sync] failed:', res.status, data)
-        const hint = data.hint ? ` — ${data.hint}` : ''
-        setSyncResult(`❌ ${data.error ?? `Sync failed (HTTP ${res.status})`}${hint}`)
-        return
-      }
-      const parts: string[] = []
-      if (typeof data.inserted === 'number' && data.inserted > 0) parts.push(`${data.inserted} new`)
-      if (typeof data.updated  === 'number' && data.updated  > 0) parts.push(`${data.updated} updated`)
-      if (parts.length === 0) parts.push('no changes')
-      setSyncResult(`✅ Synced ${data.total ?? 0} from Eventbrite (${parts.join(', ')})`)
-      // Refresh the event list so the new rows appear immediately.
-      // Cheapest way is a full reload — the effect is idempotent.
-      window.location.reload()
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error('[events sync] threw:', msg)
-      setSyncResult(`❌ Network error: ${msg}`)
-    } finally {
-      setSyncing(false)
-    }
-  }
 
   useEffect(() => {
     const supabase = createClient()
@@ -488,61 +424,7 @@ export default function EventsPage() {
             <Link href="/events/create" className="ev-create-btn">
               + Create Event
             </Link>
-            {/* Admin-only Eventbrite sync. Hidden entirely for
-                non-admin users — no DOM, no loading spinner, no
-                network traffic. `isAdmin` starts false (matches SSR
-                render) and flips on mount after the profile.role
-                lookup. See the useEffect + handleSyncEventbrite above. */}
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={handleSyncEventbrite}
-                disabled={syncing}
-                title="Pull latest events from Eventbrite"
-                style={{
-                  background: 'rgba(139,92,246,0.12)',
-                  border: '1px solid rgba(139,92,246,0.35)',
-                  borderRadius: 10,
-                  padding: '0.6rem 1rem',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  color: syncing ? '#64748b' : '#c4b5fd',
-                  cursor: syncing ? 'wait' : 'pointer',
-                  fontFamily: 'inherit',
-                  minHeight: 44,
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                }}
-              >
-                <span style={{ display: 'inline-block', transform: syncing ? 'rotate(360deg)' : 'none', transition: syncing ? 'transform 0.8s linear' : 'none' }}>🔄</span>
-                <span>{syncing ? 'Syncing…' : 'Sync Eventbrite'}</span>
-              </button>
-            )}
           </div>
-          {/* Inline result line for the sync. Only rendered for admins
-              (isAdmin check is implicit — syncResult can only be set
-              by handleSyncEventbrite, which is only called from the
-              admin-only button). */}
-          {isAdmin && syncResult && (
-            <div
-              role="status"
-              style={{
-                marginTop: '0.5rem',
-                fontSize: '0.82rem',
-                color: syncResult.startsWith('✅') ? '#86efac' : '#fca5a5',
-                background: syncResult.startsWith('✅') ? 'rgba(34,197,94,0.08)' : 'rgba(248,113,113,0.08)',
-                border: syncResult.startsWith('✅') ? '1px solid rgba(34,197,94,0.25)' : '1px solid rgba(248,113,113,0.25)',
-                borderRadius: 8,
-                padding: '0.55rem 0.8rem',
-                lineHeight: 1.4,
-              }}
-            >
-              {syncResult}
-            </div>
-          )}
         </div>
 
         {/* Globalisation — location filter */}
