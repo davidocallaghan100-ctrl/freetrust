@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 const OrgTrustSummary = dynamic(() => import("@/components/organisation/OrgTrustSummary"), { ssr: false });
+import VerifiedBadge from "@/components/organisation/VerifiedBadge";
 import Avatar from "@/components/Avatar";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -45,6 +46,7 @@ interface Organisation {
   logo_url: string | null;
   cover_url: string | null;
   is_verified: boolean;
+  verified_at: string | null;
   members_count: number;
   trust_score: number;
   status: string;
@@ -492,7 +494,7 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <h1 style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9", margin: 0, lineHeight: 1.2 }}>{org.name}</h1>
               {org.is_verified && (
-                <CheckBadgeIcon style={{ width: 20, height: 20, color: "#7c3aed", flexShrink: 0 }} title="Verified" />
+                <VerifiedBadge verifiedAt={org.verified_at} compact />
               )}
             </div>
             {org.tagline && (
@@ -628,9 +630,8 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
                   <div style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9" }}>{label} Trust</div>
                   <div style={{ fontSize: 12, color: "#475569", marginTop: 2 }}>Based on reviews & compliance</div>
                   {org.is_verified && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 6, background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 8, padding: "3px 8px" }}>
-                      <ShieldCheckIcon style={{ width: 13, height: 13, color: "#10b981" }} />
-                      <span style={{ fontSize: 11, fontWeight: 600, color: "#10b981" }}>Verified Organisation</span>
+                    <div style={{ marginTop: 6 }}>
+                      <VerifiedBadge verifiedAt={org.verified_at} />
                     </div>
                   )}
                 </div>
