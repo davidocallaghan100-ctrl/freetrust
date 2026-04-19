@@ -14,7 +14,7 @@ export async function GET() {
       .select(`
         id,
         title,
-        listing_type,
+        product_type,
         price,
         currency,
         cover_image,
@@ -45,7 +45,7 @@ export async function GET() {
     type RawRow = {
       id: string
       title: string
-      listing_type: string | null
+      product_type: string | null
       price: number | null
       currency: string | null
       cover_image: string | null
@@ -66,7 +66,7 @@ export async function GET() {
       return {
         id: r.id,
         title: r.title,
-        type: r.listing_type === 'product' ? 'product' : 'service',
+        type: r.product_type === 'service' ? 'service' : 'product',
         price: r.price ?? 0,
         currency: r.currency ?? 'EUR',
         image_url: imageUrl,
