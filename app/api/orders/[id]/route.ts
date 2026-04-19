@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail } from '@/lib/email/send'
 import { insertNotification } from '@/lib/notifications/insert'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
+import { logActivity } from '@/lib/activity/logActivity'
 
 // Stripe client — optional at module load so the route can still
 // return clean errors (not crash) on environments without a key.
@@ -141,6 +142,16 @@ export async function PATCH(
         p_order_id: id,
         p_status:   'delivered',
         p_actor_id: user.id,
+      })
+
+      // Log to activity feed (non-blocking)
+      void logActivity({
+        orderId:    id,
+        actorId:    user.id,
+        actorRole:  'seller',
+        eventType:  'delivery_completed',
+        title:      'Seller marked as delivered',
+        body:       delivery_notes || undefined,
       })
 
       await insertNotification({
@@ -297,6 +308,16 @@ export async function PATCH(
         p_order_id: id,
         p_status:   'completed',
         p_actor_id: user.id,
+      })
+
+      // Log to activity feed (non-blocking)
+      void logActivity({
+        orderId:   id,
+        actorId:   user.id,
+        actorRole: 'buyer',
+        eventType: 'buyer_confirmed',
+        title:     'Buyer confirmed receipt',
+        body:      'Payment released from escrow to seller.',
       })
 
       // ── 4. Trust reward to seller (₮COMPLETE_ORDER = 100) ────────────
@@ -466,6 +487,16 @@ export async function PATCH(
         p_order_id: id,
         p_status:   'cancelled',
         p_actor_id: user.id,
+      })
+
+      // Log to activity feed (non-blocking)
+      void logActivity({
+        orderId:   id,
+        actorId:   user.id,
+        actorRole: 'buyer',
+        eventType: 'status_changed',
+        title:     'Order cancelled',
+        body:      'Payment was not taken.',
       })
 
       // Notify both parties. If the buyer earned ₮5 purchase_reward
