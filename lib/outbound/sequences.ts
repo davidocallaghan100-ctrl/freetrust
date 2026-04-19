@@ -442,10 +442,110 @@ No fees. No card. 2 minutes.
   return { icp_category: cfg.name, emails: [email1, email2, email3] }
 }
 
+// ── Property Owners — custom sequence (different angle: tenant trust, not service fees) ──
+const PROPERTY_OWNERS_SEQUENCE: IcpSequence = {
+  icp_category: 'Property Owners',
+  emails: [
+    {
+      subject: 'A better way to find trusted tenants in Ireland',
+      delay_days: 0,
+      body_html: wrap(`
+        ${p(`Hi {first_name},`)}
+        ${p(`Every Irish landlord I speak to has the same problem.`)}
+        ${p(`${strong('Unreliable tenants.')} Late payments. No way to vet someone before handing over the keys.`)}
+        ${p(`The platforms you're using — Daft, Rent.ie — show you a CV. They don't show you ${strong('trust.')}`)}
+        ${p(`FreeTrust is a new Irish platform where every member has a verified Trust score — built from real transactions, reviews, and community reputation.`)}
+        ${p(`For landlords, that means you can see ${strong('how trustworthy a tenant actually is')} before you ever meet them.`)}
+        ${p(`Worth a look? It's free: <a href="https://freetrust.co" style="color:#38bdf8;font-weight:700;">freetrust.co</a>`)}
+        ${p(`— David`)}
+      `),
+      body_text: `Hi {first_name},
+
+Every Irish landlord I speak to has the same problem.
+
+Unreliable tenants. Late payments. No way to vet someone before handing over the keys.
+
+The platforms you're using — Daft, Rent.ie — show you a CV. They don't show you trust.
+
+FreeTrust is a new Irish platform where every member has a verified Trust score — built from real transactions, reviews, and community reputation.
+
+For landlords, that means you can see how trustworthy a tenant actually is before you ever meet them.
+
+Worth a look? It's free: https://freetrust.co
+
+— David`,
+    },
+    {
+      subject: 'How FreeTrust protects Irish landlords',
+      delay_days: 3,
+      body_html: wrap(`
+        ${p(`Hi {first_name},`)}
+        ${p(`Following up from my last message — wanted to give you the full picture of what FreeTrust offers landlords specifically.`)}
+        ${divider()}
+        ${bullet([
+          `${strong('Tenant Trust Scores')} — every member builds a verified reputation from real activity`,
+          `${strong('₮ Trust Tokens as deposits')} — tenants stake tokens as a trust deposit, redeemable on good behaviour`,
+          `${strong('Zero platform fees')} — list your property for free, no commission on transactions`,
+          `${strong('Irish community')} — verified Irish members only, not anonymous profiles`,
+          `${strong('Dispute resolution')} — built-in process if something goes wrong`,
+        ])}
+        ${tokenBadge('₮ Tokens = verifiable on-chain trust')}
+        ${p(`We're building something the Irish property market has never had — a trust layer between landlords and tenants.`)}
+        ${p(`You'd be one of the first landlords on the platform. That means ${strong('first pick of verified tenants')} when listings go live.`)}
+        ${btn('List My Property Free →', 'https://freetrust.co')}
+      `),
+      body_text: `Hi {first_name},
+
+Following up — here's what FreeTrust offers landlords:
+
+✓ Tenant Trust Scores — verified reputation from real activity
+✓ ₮ Trust Tokens as deposits — tenants stake tokens as a trust deposit
+✓ Zero platform fees — list your property for free
+✓ Irish community — verified Irish members only
+✓ Dispute resolution — built-in process if something goes wrong
+
+We're building the trust layer the Irish property market has never had.
+
+You'd be one of the first landlords on the platform — first pick of verified tenants when listings go live.
+
+List your property free: https://freetrust.co
+
+— David`,
+    },
+    {
+      subject: 'Founding landlord spots on FreeTrust — open this week',
+      delay_days: 7,
+      body_html: wrap(`
+        ${p(`Hi {first_name},`)}
+        ${p(`Last message from me, I promise.`)}
+        ${urgencyBox(`⏰ We're onboarding a limited number of founding landlords on FreeTrust. Early members get priority placement and a ₮200 Trust bonus to get started.`)}
+        ${p(`If you'd like to list ${strong('{business_name}')} — or any other property — and be matched with verified, trust-scored tenants:`)}
+        ${btn('Claim Founding Landlord Spot →', 'https://freetrust.co')}
+        ${p(`No fees. No card needed. 2 minutes to list.`)}
+        ${p(`— David, FreeTrust`)}
+      `),
+      body_text: `Hi {first_name},
+
+Last message from me, I promise.
+
+We're onboarding a limited number of founding landlords on FreeTrust. Early members get priority placement and a ₮200 Trust bonus.
+
+If you'd like to list your property and be matched with verified, trust-scored tenants:
+
+freetrust.co
+
+No fees. No card needed. 2 minutes to list.
+
+— David, FreeTrust`,
+    },
+  ],
+}
+
 // ── Exports ────────────────────────────────────────────────────────────────────
-export const ALL_SEQUENCES: Record<string, IcpSequence> = Object.fromEntries(
-  ICP_CONFIGS.map(cfg => [cfg.name, buildSequence(cfg)])
-)
+export const ALL_SEQUENCES: Record<string, IcpSequence> = {
+  ...Object.fromEntries(ICP_CONFIGS.map(cfg => [cfg.name, buildSequence(cfg)])),
+  'Property Owners': PROPERTY_OWNERS_SEQUENCE,
+}
 
 export function getSequenceForIcp(icpCategory: string): IcpSequence | null {
   return ALL_SEQUENCES[icpCategory] ?? null
@@ -470,5 +570,5 @@ export function interpolate(template: string, vars: Record<string, string>): str
   return template.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
 }
 
-export const ICP_CATEGORIES = ICP_CONFIGS.map(c => c.name)
+export const ICP_CATEGORIES = [...ICP_CONFIGS.map(c => c.name), 'Property Owners']
 export const ICP_SLUGS = ICP_CONFIGS.map(c => ({ slug: c.slug, name: c.name }))
