@@ -43,9 +43,11 @@ interface EventItem {
 }
 
 const CAT_COLORS: Record<string, string> = {
-  Community: '#38bdf8', Business: '#a78bfa', Technology: '#34d399',
-  Design: '#f472b6', Finance: '#fbbf24', Sustainability: '#34d399',
-  FreeTrust: '#38bdf8', Health: '#fb923c', Education: '#a78bfa',
+  Community:    '#38bdf8', Business:    '#a78bfa', Technology:  '#34d399',
+  Design:       '#f472b6', Finance:     '#fbbf24', Sustainability: '#4ade80',
+  FreeTrust:    '#38bdf8', Health:      '#fb923c', Education:   '#a78bfa',
+  AI:           '#e879f9', Startup:     '#38bdf8', Marketing:   '#fb923c',
+  Web3:         '#818cf8', 'E-commerce':'#f59e0b',
 }
 
 const CAT_GRADIENTS: Record<string, string> = {
@@ -58,9 +60,14 @@ const CAT_GRADIENTS: Record<string, string> = {
   FreeTrust:    'linear-gradient(135deg,#0284c7,#1e40af)',
   Health:       'linear-gradient(135deg,#ea580c,#c2410c)',
   Education:    'linear-gradient(135deg,#7c3aed,#4338ca)',
+  AI:           'linear-gradient(135deg,#a855f7,#6d28d9)',
+  Startup:      'linear-gradient(135deg,#0284c7,#1e40af)',
+  Marketing:    'linear-gradient(135deg,#ea580c,#c2410c)',
+  Web3:         'linear-gradient(135deg,#4f46e5,#3730a3)',
+  'E-commerce': 'linear-gradient(135deg,#d97706,#b45309)',
 }
 
-const CATEGORIES = ['All', 'Community', 'Business', 'Technology', 'Design', 'Finance', 'Sustainability', 'Education', 'Health']
+const CATEGORIES = ['All', 'Startup', 'Technology', 'AI', 'Business', 'Design', 'Marketing', 'Web3', 'E-commerce', 'Sustainability', 'Community', 'Finance', 'Education', 'Health']
 
 
 
