@@ -354,7 +354,19 @@ export default function ProductDetailPage() {
       )}
       <style>{`
         @media (max-width: 1024px) { .pd-grid { grid-template-columns: 1fr !important; } }
-        @media (max-width: 768px)  { .pd-ctas { flex-direction: column !important; } .pd-ship { grid-template-columns: 1fr !important; } }
+        @media (max-width: 768px) {
+          .pd-ctas { flex-direction: column !important; }
+          .pd-ship { grid-template-columns: 1fr !important; }
+          .pd-img-wrap { aspect-ratio: 4/3 !important; max-height: 300px !important; }
+          .pd-thumbs { gap: 6px !important; }
+          .pd-thumb { width: 52px !important; height: 52px !important; }
+          .pd-sticky { position: static !important; }
+          .pd-grid { gap: 1rem !important; }
+          .pd-main { padding: 0 0.75rem !important; }
+          .pd-breadcrumb { padding: 0 0.75rem !important; margin-bottom: 0.6rem !important; }
+          .ft-page-content { padding-top: 68px !important; }
+          .pd-reviews-grid { grid-template-columns: 1fr !important; }
+        }
         .pd-thumb:hover { border-color: ${accent} !important; }
         .pd-tab:hover { color: #94a3b8 !important; }
         .pd-tag:hover { background: rgba(139,92,246,0.12) !important; color: ${accent} !important; }
@@ -362,12 +374,12 @@ export default function ProductDetailPage() {
         .pd-btn-sec:hover { background: rgba(139,92,246,0.08) !important; border-color: ${accent} !important; }
         .pd-img-nav { opacity: 0; transition: opacity 0.15s; }
         .pd-img-wrap:hover .pd-img-nav { opacity: 1; }
+        @media (max-width: 768px) { .pd-img-nav { opacity: 1 !important; } }
         .pd-seller-msg:hover { background: rgba(139,92,246,0.15) !important; }
-        @media (max-width: 768px) { .pd-reviews-grid { grid-template-columns: 1fr !important; } }
       `}</style>
 
       {/* ── Breadcrumb ── */}
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 1.25rem', marginBottom: '1.5rem' }}>
+      <div className="pd-breadcrumb" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 1.25rem', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: muted, flexWrap: 'wrap' }}>
           <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: muted, cursor: 'pointer', padding: 0, fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: 4 }}>
             ← Back
@@ -398,12 +410,12 @@ export default function ProductDetailPage() {
       </div>
 
       {/* ── Main grid ── */}
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 1.25rem' }}>
+      <div className="pd-main" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 1.25rem' }}>
         <div className="pd-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2.5rem', alignItems: 'start' }}>
 
           {/* ── Left: Gallery ── */}
-          <div style={{ position: 'sticky', top: 112 }}>
-            <div className="pd-img-wrap" style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', border: `1px solid ${border}`, background: card, aspectRatio: '1/1' }}>
+          <div className="pd-sticky" style={{ position: 'sticky', top: 112 }}>
+            <div className="pd-img-wrap" style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', border: `1px solid ${border}`, background: card, aspectRatio: '4/3' }}>
               <img
                 src={images[safeImgIdx]}
                 alt={listing.title}
@@ -437,7 +449,7 @@ export default function ProductDetailPage() {
             </div>
             {/* Thumbnails */}
             {images.length > 1 && (
-              <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.75rem', overflowX: 'auto', paddingBottom: 4 }}>
+              <div className="pd-thumbs" style={{ display: 'flex', gap: '0.6rem', marginTop: '0.75rem', overflowX: 'auto', paddingBottom: 4 }}>
                 {images.map((url, i) => (
                   <button key={i} className="pd-thumb" onClick={() => setImgIdx(i)} style={{ flexShrink: 0, width: 64, height: 64, borderRadius: 10, overflow: 'hidden', border: `2px solid ${i === safeImgIdx ? accent : 'rgba(139,92,246,0.15)'}`, cursor: 'pointer', padding: 0 }}>
                     <img src={url} alt={`${listing.title} image ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
