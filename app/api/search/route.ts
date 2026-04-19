@@ -25,11 +25,20 @@ export async function GET(req: NextRequest) {
 
     const perType = Math.max(3, Math.floor(limit / 5))
 
+    // Build a tsquery from the user's search term.
+    // Convert to prefix-match so partial words work (e.g. "plumb" → "plumb:*").
+    // Fall back to ilike when the query is too short for a meaningful tsquery.
+    const tsq = q.length >= 2
+      ? q.trim().split(/\s+/).map(w => `${w}:*`).join(' & ')
+      : null
+
     // Parallel queries across all tables
     const [membersRes, servicesRes, productsRes, eventsRes, articlesRes, orgsRes, grassrootsRes] = await Promise.allSettled([
       (() => {
         let qb = supabase.from('profiles').select('id, full_name, location, avatar_url').limit(browseMode ? 12 : perType)
-        if (q) qb = qb.ilike('full_name', `%${q}%`)
+        if (tsq) {
+          qb = qb.textSearch('search_vector', tsq, { type: 'websearch', config: 'english' })
+        }
         return qb
       })(),
 
@@ -43,7 +52,9 @@ export async function GET(req: NextRequest) {
           .eq('product_type', 'service')
           .eq('status', 'active')
           .limit(browseMode ? 12 : perType)
-        if (q) qb = qb.or(`title.ilike.%${q}%,description.ilike.%${q}%`)
+        if (tsq) {
+          qb = qb.textSearch('search_vector', tsq, { type: 'websearch', config: 'english' })
+        }
         return qb
       })(),
 
@@ -52,25 +63,33 @@ export async function GET(req: NextRequest) {
           .neq('product_type', 'service')
           .eq('status', 'active')
           .limit(browseMode ? 12 : perType)
-        if (q) qb = qb.or(`title.ilike.%${q}%,description.ilike.%${q}%`)
+        if (tsq) {
+          qb = qb.textSearch('search_vector', tsq, { type: 'websearch', config: 'english' })
+        }
         return qb
       })(),
 
       (() => {
         let qb = supabase.from('events').select('id, title, starts_at, category').eq('status', 'published').gte('starts_at', new Date().toISOString()).limit(browseMode ? 8 : perType)
-        if (q) qb = qb.or(`title.ilike.%${q}%,description.ilike.%${q}%`)
+        if (tsq) {
+          qb = qb.textSearch('search_vector', tsq, { type: 'websearch', config: 'english' })
+        }
         return qb
       })(),
 
       (() => {
         let qb = supabase.from('articles').select('id, title, slug').limit(browseMode ? 8 : perType)
-        if (q) qb = qb.or(`title.ilike.%${q}%`)
+        if (tsq) {
+          qb = qb.textSearch('search_vector', tsq, { type: 'websearch', config: 'english' })
+        }
         return qb
       })(),
 
       (() => {
         let qb = supabase.from('organisations').select('id, name, category, location').limit(browseMode ? 10 : perType)
-        if (q) qb = qb.or(`name.ilike.%${q}%,description.ilike.%${q}%`)
+        if (tsq) {
+          qb = qb.textSearch('search_vector', tsq, { type: 'websearch', config: 'english' })
+        }
         return qb
       })(),
 
@@ -85,7 +104,9 @@ export async function GET(req: NextRequest) {
           .eq('is_active', true)
           .eq('status', 'active')
           .limit(browseMode ? 10 : perType)
-        if (q) qb = qb.or(`title.ilike.%${q}%,description.ilike.%${q}%`)
+        if (tsq) {
+          qb = qb.textSearch('search_vector', tsq, { type: 'websearch', config: 'english' })
+        }
         return qb
       })(),
     ])

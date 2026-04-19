@@ -34,4 +34,6 @@ export const bulkListingGeneratorConfig: AgentConfig = {
   systemPrompt: BULK_LISTING_GENERATOR_PROMPT,
   model: 'claude-sonnet-4-6',
   maxTokens: 4000,
+  // Large output — stream to avoid Vercel's 60-second response timeout
+  streaming: true,
 };
