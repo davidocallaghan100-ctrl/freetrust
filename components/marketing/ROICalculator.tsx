@@ -163,6 +163,8 @@ export default function ROICalculator() {
         <div style={{
           padding: '24px 28px',
           borderRight: '1px solid rgba(255,255,255,0.06)',
+          display: 'flex',
+          flexDirection: 'column',
         }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 20 }}>
             Your Activity
@@ -170,58 +172,73 @@ export default function ROICalculator() {
 
           {mode === 'seller' ? (
             <>
-              <Slider
-                label="Listings per month"
-                value={listings} min={1} max={20}
-                onChange={setListings}
-              />
-              <Slider
-                label="Avg order value"
-                value={orderValue} min={10} max={500} step={5}
-                format={v => `€${v}`}
-                onChange={setOrderValue}
-              />
-              <Slider
-                label="Orders per month"
-                value={orders} min={1} max={30}
-                onChange={setOrders}
-              />
-              {/* On-time toggle */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                <span style={{ fontSize: 13, color: '#94a3b8' }}>Deliver on time?</span>
-                <button
-                  onClick={() => setOnTime(v => !v)}
-                  style={{
-                    width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
-                    position: 'relative', transition: 'background 0.2s',
-                    background: onTime ? '#10b981' : 'rgba(255,255,255,0.1)',
-                  }}
-                >
-                  <div style={{
-                    position: 'absolute', top: 3, width: 18, height: 18,
-                    borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
-                    left: onTime ? 23 : 3,
-                  }} />
-                </button>
+              {/* Sliders group */}
+              <div>
+                <Slider
+                  label="Listings per month"
+                  value={listings} min={1} max={20}
+                  onChange={setListings}
+                />
+                <Slider
+                  label="Avg order value"
+                  value={orderValue} min={10} max={500} step={5}
+                  format={v => `€${v}`}
+                  onChange={setOrderValue}
+                />
+                <Slider
+                  label="Orders per month"
+                  value={orders} min={1} max={30}
+                  onChange={setOrders}
+                />
+                {/* On-time toggle */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                  <span style={{ fontSize: 13, color: '#94a3b8' }}>Deliver on time?</span>
+                  <button
+                    onClick={() => setOnTime(v => !v)}
+                    style={{
+                      width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+                      position: 'relative', transition: 'background 0.2s',
+                      background: onTime ? '#10b981' : 'rgba(255,255,255,0.1)',
+                    }}
+                  >
+                    <div style={{
+                      position: 'absolute', top: 3, width: 18, height: 18,
+                      borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
+                      left: onTime ? 23 : 3,
+                    }} />
+                  </button>
+                </div>
               </div>
-              <div style={{ fontSize: 11, color: '#475569', marginTop: 6 }}>
-                {onTime ? '⚡ On-time = +150₮ per delivery' : '📦 Late = +50₮ per delivery'}
+              {/* Tip card pinned to bottom */}
+              <div style={{ marginTop: 'auto', paddingTop: 16 }}>
+                <div style={{ padding: '12px 14px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.15)', borderRadius: 10, fontSize: 12, color: '#6ee7b7', lineHeight: 1.6 }}>
+                  {onTime
+                    ? <>⚡ On-time deliveries earn <strong>+150₮</strong> per order</>
+                    : <>📦 Late deliveries earn <strong>+50₮</strong> per order</>
+                  }
+                </div>
               </div>
             </>
           ) : (
             <>
-              <Slider
-                label="Purchases per month"
-                value={purchases} min={1} max={10}
-                onChange={setPurchases}
-              />
-              <Slider
-                label="Reviews left per month"
-                value={reviews} min={0} max={10}
-                onChange={setReviews}
-              />
-              <div style={{ marginTop: 16, padding: '12px 14px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 10, fontSize: 12, color: '#93c5fd', lineHeight: 1.6 }}>
-                💡 5-star reviews earn <strong>+55₮</strong> bonus (vs +30₮ for standard reviews)
+              {/* Sliders group */}
+              <div>
+                <Slider
+                  label="Purchases per month"
+                  value={purchases} min={1} max={10}
+                  onChange={setPurchases}
+                />
+                <Slider
+                  label="Reviews left per month"
+                  value={reviews} min={0} max={10}
+                  onChange={setReviews}
+                />
+              </div>
+              {/* Tip card pinned to bottom */}
+              <div style={{ marginTop: 'auto', paddingTop: 16 }}>
+                <div style={{ padding: '12px 14px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 10, fontSize: 12, color: '#93c5fd', lineHeight: 1.6 }}>
+                  💡 5-star reviews earn <strong>+55₮</strong> bonus (vs +30₮ for standard reviews)
+                </div>
               </div>
             </>
           )}
