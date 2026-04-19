@@ -613,11 +613,6 @@ export default function JobsPage() {
                       </div>
                       <div>
                         <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#94a3b8' }}>{job.company_name}</span>
-                        {job.is_local && (
-                          <div style={{ fontSize: '0.65rem', color: '#fb923c', fontWeight: 600, letterSpacing: '0.04em' }}>
-                            {job.job_source === 'remotive' ? 'via Remotive' : job.job_source === 'arbeitnow' ? 'via Arbeitnow' : 'FreeTrust'}
-                          </div>
-                        )}
                         {/* Poster social links — max 3, prioritised order
                             from SocialLinks (LinkedIn → website → Instagram).
                             Stop propagation so the icon click doesn't open
@@ -726,11 +721,9 @@ export default function JobsPage() {
           </div>
         )}
 
-        {/* Attribution */}
+        {/* Post a job CTA */}
         {!loading && filtered.length > 0 && (
           <div style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.75rem', color: '#334155' }}>
-            Remote listings powered by <a href="https://remotive.com" target="_blank" rel="noopener noreferrer" style={{ color: '#475569', textDecoration: 'none' }}>Remotive</a>
-            {' · '}
             <Link href="/jobs/new" style={{ color: '#475569', textDecoration: 'none' }}>Post your own job on FreeTrust →</Link>
           </div>
         )}
