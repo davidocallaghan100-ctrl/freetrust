@@ -120,29 +120,37 @@ export async function POST(request: NextRequest) {
       await supabase.from('reviews').update({ trust_issued: true }).eq('id', review.id)
     }
 
-    // Update reviewee avg_rating + review_count
-    const { data: allReviews } = await supabase
+    // Update reviewee avg_rating + review_count — DB-side aggregate (no full fetch)
+    const { data: profileStats } = await supabase
       .from('reviews')
-      .select('rating_overall')
+      .select('rating_overall.avg(), rating_overall.count()')
       .eq('reviewee_id', reviewee_id)
-    if (allReviews && allReviews.length > 0) {
-      const avg = allReviews.reduce((s, r) => s + r.rating_overall, 0) / allReviews.length
-      await supabase.from('profiles')
-        .update({ avg_rating: Math.round(avg * 100) / 100, review_count: allReviews.length })
-        .eq('id', reviewee_id)
+      .single()
+    if (profileStats) {
+      const avg = profileStats['avg'] as number | null
+      const count = profileStats['count'] as number | null
+      if (avg !== null && count !== null) {
+        await supabase.from('profiles')
+          .update({ avg_rating: Math.round(avg * 100) / 100, review_count: count })
+          .eq('id', reviewee_id)
+      }
     }
 
-    // Update listing avg_rating if applicable
+    // Update listing avg_rating if applicable — DB-side aggregate (no full fetch)
     if (listing_id) {
-      const { data: listingReviews } = await supabase
+      const { data: listingStats } = await supabase
         .from('reviews')
-        .select('rating_overall')
+        .select('rating_overall.avg(), rating_overall.count()')
         .eq('listing_id', listing_id)
-      if (listingReviews && listingReviews.length > 0) {
-        const avg = listingReviews.reduce((s, r) => s + r.rating_overall, 0) / listingReviews.length
-        await supabase.from('listings')
-          .update({ avg_rating: Math.round(avg * 100) / 100, review_count: listingReviews.length })
-          .eq('id', listing_id)
+        .single()
+      if (listingStats) {
+        const avg = listingStats['avg'] as number | null
+        const count = listingStats['count'] as number | null
+        if (avg !== null && count !== null) {
+          await supabase.from('listings')
+            .update({ avg_rating: Math.round(avg * 100) / 100, review_count: count })
+            .eq('id', listing_id)
+        }
       }
     }
 
