@@ -56,8 +56,8 @@ export async function GET(req: NextRequest) {
   // ── Fetch all completed/delivered orders from prior month ───────────────────
   const { data: orders, error: ordersError } = await admin
     .from('orders')
-    .select('id, seller_id, buyer_id, item_title, item_type, amount_pence, created_at, invoice_number')
-    .in('status', ['completed', 'delivered'])
+    .select('id, seller_id, buyer_id, title, amount, created_at, invoice_number')
+    .in('status', ['completed', 'delivered', 'paid'])
     .gte('updated_at', rangeStart)
     .lt('updated_at', rangeEnd)
 
@@ -140,10 +140,8 @@ export async function GET(req: NextRequest) {
     let netCents   = 0
 
     const statementOrders: MonthlyStatementOrder[] = sellerOrders.map(o => {
-      const gross    = Number(o.amount_pence ?? 0)
-      const feeRate  = String(o.item_type ?? '').toLowerCase() === 'product'
-        ? FEE_RATE_PRODUCT
-        : FEE_RATE_SERVICE
+      const gross    = Number(o.amount ?? 0)
+      const feeRate  = FEE_RATE_SERVICE // item_type column not present in live DB
       const fee  = Math.round(gross * feeRate)
       const net  = gross - fee
 
@@ -154,7 +152,7 @@ export async function GET(req: NextRequest) {
       return {
         invoiceNumber: o.invoice_number as string | null,
         date:          o.created_at as string,
-        itemTitle:     o.item_title as string,
+        itemTitle:     (o.title as string) ?? 'Order',
         grossCents:    gross,
         netCents:      net,
       }

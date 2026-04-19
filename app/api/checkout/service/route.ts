@@ -48,12 +48,9 @@ export async function POST(req: NextRequest) {
         .insert({
           buyer_id: user.id,
           seller_id: user.id, // fallback for mock
-          item_type: 'service',
-          item_id: service_id,
-          item_title: `Service ${service_id}`,
-          amount_pence: mockPrice,
-          platform_fee_pence: feePence,
-          seller_payout_pence: payoutPence,
+          listing_id: service_id,
+          title: `Service ${service_id}`,
+          amount: mockPrice,
           status: 'pending_escrow',
         })
         .select()
@@ -107,12 +104,9 @@ export async function POST(req: NextRequest) {
       .insert({
         buyer_id: user.id,
         seller_id: service.user_id || service.seller_id || user.id,
-        item_type: 'service',
-        item_id: service.id,
-        item_title: service.title,
-        amount_pence: amountPence,
-        platform_fee_pence: feePence,
-        seller_payout_pence: payoutPence,
+        listing_id: service.id,
+        title: service.title,
+        amount: amountPence,
         status: 'pending_escrow',
       })
       .select()

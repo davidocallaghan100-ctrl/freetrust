@@ -69,15 +69,18 @@ export async function POST(req: NextRequest) {
     const body = await req.json() as {
       listing_id?: string
       seller_id?: string
-      item_title?: string
+      title?: string
+      item_title?: string // legacy alias — accepted but mapped to title
       amount?: number
       currency?: string
       type?: string
       notes?: string
     }
 
-    if (!body.seller_id || !body.item_title || body.amount == null) {
-      return NextResponse.json({ error: 'Missing required fields: seller_id, item_title, amount' }, { status: 400 })
+    const orderTitle = body.title ?? body.item_title
+
+    if (!body.seller_id || !orderTitle || body.amount == null) {
+      return NextResponse.json({ error: 'Missing required fields: seller_id, title, amount' }, { status: 400 })
     }
 
     const admin = createAdminClient()
@@ -89,7 +92,7 @@ export async function POST(req: NextRequest) {
         buyer_id: user.id,
         seller_id: body.seller_id,
         listing_id: body.listing_id ?? null,
-        item_title: body.item_title,
+        title: orderTitle,
         amount: body.amount,
         currency: body.currency ?? 'EUR',
         type: body.type ?? 'product',
@@ -110,27 +113,27 @@ export async function POST(req: NextRequest) {
       insertNotification({
         userId: user.id,
         type: 'order',
-        title: `Order placed: ${body.item_title}`,
-        body: `Your order for "${body.item_title}" (€${body.amount.toFixed(2)}) has been placed.`,
+        title: `Order placed: ${orderTitle}`,
+        body: `Your order for "${orderTitle}" (€${body.amount.toFixed(2)}) has been placed.`,
         link: `/orders/${order.id}`,
       }),
       sendEmail({
         type: 'order_placed',
         userId: user.id,
-        payload: { orderTitle: body.item_title, amount: body.amount, orderId: order.id },
+        payload: { orderTitle, amount: body.amount, orderId: order.id },
       }),
       // Seller notification + email
       insertNotification({
         userId: body.seller_id,
         type: 'order',
-        title: `New order: ${body.item_title}`,
-        body: `You received a new order for "${body.item_title}" (€${body.amount.toFixed(2)}).`,
+        title: `New order: ${orderTitle}`,
+        body: `You received a new order for "${orderTitle}" (€${body.amount.toFixed(2)}).`,
         link: `/orders/${order.id}`,
       }),
       sendEmail({
         type: 'order_placed',
         userId: body.seller_id,
-        payload: { orderTitle: body.item_title, amount: body.amount, orderId: order.id },
+        payload: { orderTitle, amount: body.amount, orderId: order.id },
       }),
     ]).catch(err => console.error('[Orders POST] notification/email error:', err))
 

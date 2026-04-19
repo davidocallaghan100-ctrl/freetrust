@@ -21,7 +21,10 @@ export default function EditOrgPage() {
   const params = useParams()
   const router = useRouter()
   const id = typeof params.id === 'string' ? params.id : ''
-  const supabase = createClient()
+
+  // Stable Supabase client — created once on mount to avoid infinite re-render loops
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -43,11 +46,13 @@ export default function EditOrgPage() {
 
   useEffect(() => {
     if (!id) return
+    const timer = setTimeout(() => setLoading(false), 10000)
     async function load() {
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) { setNotAllowed(true); return }
 
+        // Fetch the organisation
         const { data: org } = await supabase
           .from('organisations')
           .select('*')
@@ -56,18 +61,30 @@ export default function EditOrgPage() {
 
         if (!org) { setNotAllowed(true); return }
 
-        // Check if user is creator or admin member
+        // Fetch the caller's profile to check for platform admin role
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        const isPlatformAdmin = (profile as { role?: string } | null)?.role === 'admin'
         const isCreator = org.creator_id === user.id
-        if (!isCreator) {
+
+        // Check org membership role (org-level admin/owner)
+        let isOrgAdmin = false
+        if (!isCreator && !isPlatformAdmin) {
           const { data: membership } = await supabase
             .from('organisation_members')
             .select('role')
             .eq('organisation_id', id)
             .eq('user_id', user.id)
             .single()
-          if (!membership || !['admin', 'owner'].includes(membership.role)) {
-            setNotAllowed(true); return
-          }
+          isOrgAdmin = membership != null && ['admin', 'owner'].includes((membership as { role: string }).role)
+        }
+
+        if (!isCreator && !isPlatformAdmin && !isOrgAdmin) {
+          setNotAllowed(true); return
         }
 
         setLogoUrl(org.logo_url || '')
@@ -87,11 +104,12 @@ export default function EditOrgPage() {
         console.error('[org-edit] load error:', err)
         setError('Could not load organisation. Please try again.')
       } finally {
+        clearTimeout(timer)
         setLoading(false)
       }
     }
     load()
-  }, [id])
+  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function set(field: keyof OrgForm, value: string) {
     setForm(f => ({ ...f, [field]: value }))
@@ -134,22 +152,34 @@ export default function EditOrgPage() {
     setSaving(true); setError(null)
 
     const tags = form.tags.split(',').map(t => t.trim()).filter(Boolean)
-    const { error: saveErr } = await supabase.from('organisations').update({
-      name: form.name.trim(),
-      tagline: form.tagline.trim() || null,
-      description: form.description.trim() || null,
-      website: form.website.trim() || null,
-      location: form.location.trim() || null,
-      sector: form.sector.trim() || null,
-      founded_year: form.founded_year ? parseInt(form.founded_year) : null,
-      impact_statement: form.impact_statement.trim() || null,
-      tags,
-      logo_url: logoUrl || null,
-      cover_url: coverUrl || null,
-    }).eq('id', id)
+
+    // Use the PATCH API route — this verifies authorisation server-side
+    // and uses the admin client to bypass RLS, so both org creators AND
+    // platform admins can save changes without RLS blocking the write.
+    const res = await fetch(`/api/organisations/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: form.name.trim(),
+        tagline: form.tagline.trim() || null,
+        description: form.description.trim() || null,
+        website: form.website.trim() || null,
+        location: form.location.trim() || null,
+        sector: form.sector.trim() || null,
+        founded_year: form.founded_year ? parseInt(form.founded_year) : null,
+        impact_statement: form.impact_statement.trim() || null,
+        tags,
+        logo_url: logoUrl || null,
+        cover_url: coverUrl || null,
+      }),
+    })
 
     setSaving(false)
-    if (saveErr) { setError(saveErr.message); return }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setError((data as { error?: string }).error ?? 'Could not save. Please try again.')
+      return
+    }
     setSaved(true)
     setTimeout(() => { setSaved(false); router.back() }, 1200)
   }
@@ -186,7 +216,7 @@ export default function EditOrgPage() {
         <div style={{ textAlign: 'center', padding: '2rem' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🔒</div>
           <h2 style={{ fontWeight: 800, margin: '0 0 0.5rem' }}>Not authorised</h2>
-          <p style={{ color: muted, marginBottom: '1.5rem' }}>Only the organisation creator or admin can edit this.</p>
+          <p style={{ color: muted, marginBottom: '1.5rem' }}>Only the organisation creator, admin or platform administrator can edit this.</p>
           <button onClick={() => router.back()} style={{ background: accent, color: '#fff', border: 'none', borderRadius: 10, padding: '0.65rem 1.5rem', fontWeight: 700, cursor: 'pointer' }}>Go back</button>
         </div>
       </main>

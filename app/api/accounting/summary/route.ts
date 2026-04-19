@@ -30,9 +30,9 @@ export async function GET(req: NextRequest) {
 
     const { data: orders, error } = await admin
       .from('orders')
-      .select('id, item_title, item_type, amount_pence, created_at, status, buyer_id, invoice_number')
+      .select('id, title, amount, created_at, status, buyer_id, invoice_number')
       .eq('seller_id', user.id)
-      .in('status', ['completed', 'delivered'])
+      .in('status', ['completed', 'delivered', 'paid'])
       .gte('created_at', startOfYear)
       .lt('created_at', endOfYear)
       .order('created_at', { ascending: true })
@@ -74,8 +74,9 @@ export async function GET(req: NextRequest) {
 
     for (const o of orders ?? []) {
       const month = new Date(o.created_at as string).getMonth() // 0-indexed
-      const gross = Number(o.amount_pence ?? 0)
-      const feeRate = String(o.item_type ?? '').toLowerCase() === 'product' ? FEE_RATE_PRODUCT : FEE_RATE_SERVICE
+      // amount is stored in cents (pence) in the live DB
+      const gross = Number(o.amount ?? 0)
+      const feeRate = FEE_RATE_SERVICE // default; item_type column not present in live DB
       const fee  = Math.round(gross * feeRate)
       const net  = gross - fee
 
@@ -101,15 +102,15 @@ export async function GET(req: NextRequest) {
       .slice(-10)
       .reverse()
       .map((o) => {
-        const gross = Number(o.amount_pence ?? 0)
-        const feeRate = String(o.item_type ?? '').toLowerCase() === 'product' ? FEE_RATE_PRODUCT : FEE_RATE_SERVICE
+        const gross = Number(o.amount ?? 0)
+        const feeRate = FEE_RATE_SERVICE
         const fee  = Math.round(gross * feeRate)
         const net  = gross - fee
         return {
           id:            o.id,
           invoiceNumber: o.invoice_number ?? null,
           date:          o.created_at,
-          itemTitle:     o.item_title,
+          itemTitle:     (o.title as string) ?? 'Order',
           buyerName:     buyerMap[o.buyer_id as string] ?? 'Unknown',
           grossCents:    gross,
           feeCents:      fee,

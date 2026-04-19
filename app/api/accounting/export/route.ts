@@ -42,9 +42,9 @@ export async function GET(req: NextRequest) {
 
     const { data: orders, error } = await admin
       .from('orders')
-      .select('id, item_title, item_type, amount_pence, created_at, status, buyer_id, invoice_number')
+      .select('id, title, amount, created_at, status, buyer_id, invoice_number')
       .eq('seller_id', user.id)
-      .in('status', ['completed', 'delivered'])
+      .in('status', ['completed', 'delivered', 'paid'])
       .gte('created_at', startDate)
       .lt('created_at', endDate)
       .order('created_at', { ascending: true })
@@ -90,8 +90,8 @@ export async function GET(req: NextRequest) {
     ]
 
     const rows = (orders ?? []).map((o) => {
-      const gross    = Number(o.amount_pence ?? 0)
-      const feeRate  = String(o.item_type ?? '').toLowerCase() === 'product' ? FEE_RATE_PRODUCT : FEE_RATE_SERVICE
+      const gross    = Number(o.amount ?? 0)
+      const feeRate  = FEE_RATE_SERVICE // item_type column not present in live DB
       const fee      = Math.round(gross * feeRate)
       const net      = gross - fee
       const vat      = isVat ? Math.round(net * VAT_RATE) : 0
@@ -103,8 +103,8 @@ export async function GET(req: NextRequest) {
         date,
         (o.id as string).slice(0, 8).toUpperCase(),
         buyerMap[o.buyer_id as string] ?? 'Unknown',
-        `"${String(o.item_title ?? '').replace(/"/g, '""')}"`,
-        String(o.item_type ?? ''),
+        `"${String(o.title ?? 'Order').replace(/"/g, '""')}"`,
+        'service',
         euroFormat(gross),
         euroFormat(fee),
         euroFormat(net),

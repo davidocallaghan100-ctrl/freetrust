@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
   // Find orders delivered but not yet confirmed and not yet nudged
   const { data: orders, error } = await admin
     .from('orders')
-    .select('id, buyer_id, item_title, updated_at')
+    .select('id, buyer_id, title, updated_at')
     .eq('status', 'delivered')
     .lt('updated_at', cutoff)           // delivered > 30 min ago
     .is('buyer_nudged_at', null)        // not yet nudged (column added below)
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
       await sendPushNotification({
         userId:  order.buyer_id,
         title:   '⏰ Don\'t forget to confirm your delivery!',
-        message: `"${order.item_title}" is waiting for your confirmation. Confirm receipt to release payment to the seller.`,
+        message: `"${order.title}" is waiting for your confirmation. Confirm receipt to release payment to the seller.`,
         url:     `/orders/${order.id}`,
       })
 
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
         userId: order.buyer_id,
         type:   'order',
         title:  'Confirm your delivery',
-        body:   `Please confirm receipt of "${order.item_title}" to release payment to the seller.`,
+        body:   `Please confirm receipt of "${order.title}" to release payment to the seller.`,
         link:   `/orders/${order.id}`,
       })
 

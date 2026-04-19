@@ -252,7 +252,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     // Fetch order to issue trust reward to buyer + get listing_id for delivery deadline
     const { data: order } = await supabase
       .from('orders')
-      .select('buyer_id, item_title, listing_id')
+      .select('buyer_id, title, listing_id')
       .eq('id', orderId)
       .single();
 
@@ -292,7 +292,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         p_amount: 5,
         p_type: 'purchase_reward',
         p_ref: orderId,
-        p_desc: `₮5 trust reward for purchasing: ${order.item_title}`,
+        p_desc: `₮5 trust reward for purchasing: ${(order as any).title}`,
       });
 
       // Notify buyer
@@ -300,7 +300,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         user_id: order.buyer_id,
         type: 'order',
         title: 'Order confirmed!',
-        body: `Your order for "${order.item_title}" is confirmed. You earned ₮5 trust!`,
+        body: `Your order for "${(order as any).title}" is confirmed. You earned ₮5 trust!`,
         link: `/orders/${orderId}`,
       });
     }
@@ -399,7 +399,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
           buyer_id: userId,
           seller_id: event.creator_id ?? userId,
           listing_id: null,
-          item_title: event.title,
+          title: event.title,
           amount: amountCents,
           status: 'paid',
           stripe_payment_intent: piId,
@@ -476,8 +476,8 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         .insert({
           buyer_id: userId,
           seller_id: listing.seller_id,
-          listing_id: listingId,
-          item_title: listing.title,
+           listing_id: listingId,
+          title: listing.title,
           amount: amountCents,
           status: 'paid',
           stripe_payment_intent: piId,
@@ -558,8 +558,8 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         .insert({
           buyer_id: userId,
           seller_id: listing.seller_id,
-          listing_id: serviceId,
-          item_title: listing.title,
+           listing_id: serviceId,
+          title: listing.title,
           amount: amountCents,
           status: 'paid',
           stripe_payment_intent: piId,
@@ -620,7 +620,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
           buyer_id: userId,
           seller_id: userId, // platform handles multi-seller cart
           listing_id: null,
-          item_title: `Cart order (${itemCount} item${itemCount !== 1 ? 's' : ''})`,
+          title: `Cart order (${itemCount} item${itemCount !== 1 ? 's' : ''})`,
           amount: amountCents,
           status: 'paid',
           stripe_payment_intent: piId,
@@ -682,7 +682,7 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
 
     const { data: order } = await supabase
       .from('orders')
-      .select('buyer_id, item_title')
+      .select('buyer_id, title')
       .eq('id', orderId)
       .single();
 
@@ -691,7 +691,7 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
         user_id: order.buyer_id,
         type: 'order',
         title: 'Payment failed',
-        body: `Payment for "${order.item_title}" failed. Please try again.`,
+        body: `Payment for "${(order as any).title}" failed. Please try again.`,
         link: `/orders/${orderId}`,
       });
     }
@@ -744,7 +744,7 @@ async function handleTransferCreated(transfer: Stripe.Transfer) {
     // Fetch order for notification context
     const { data: order } = await supabase
       .from('orders')
-      .select('buyer_id, seller_id, item_title, status')
+      .select('buyer_id, seller_id, title, status')
       .eq('id', orderId)
       .single()
 
@@ -765,7 +765,7 @@ async function handleTransferCreated(transfer: Stripe.Transfer) {
         user_id: order.seller_id,
         type: 'order',
         title: '💸 Payment received!',
-        body: `Payment for "${order.item_title}" has been transferred to your Stripe account.`,
+        body: `Payment for "${(order as any).title}" has been transferred to your Stripe account.`,
         link: `/orders/${orderId}`,
       })
     }
@@ -776,7 +776,7 @@ async function handleTransferCreated(transfer: Stripe.Transfer) {
         user_id: order.buyer_id,
         type: 'order',
         title: '✅ Order complete',
-        body: `Your order for "${order.item_title}" is now complete. Funds released to seller.`,
+        body: `Your order for "${(order as any).title}" is now complete. Funds released to seller.`,
         link: `/orders/${orderId}`,
       })
     }

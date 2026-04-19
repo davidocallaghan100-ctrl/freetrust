@@ -47,12 +47,9 @@ export async function POST(req: NextRequest) {
         .insert({
           buyer_id: user.id,
           seller_id: user.id,
-          item_type: 'product',
-          item_id: product_id,
-          item_title: `Product ${product_id}`,
-          amount_pence: mockPrice,
-          platform_fee_pence: feePence,
-          seller_payout_pence: payoutPence,
+          listing_id: product_id,
+          title: `Product ${product_id}`,
+          amount: mockPrice,
           status: 'pending_escrow',
         })
         .select()
@@ -104,12 +101,9 @@ export async function POST(req: NextRequest) {
       .insert({
         buyer_id: user.id,
         seller_id: product.user_id || product.seller_id || user.id,
-        item_type: 'product',
-        item_id: product.id,
-        item_title: product.title,
-        amount_pence: amountPence,
-        platform_fee_pence: feePence,
-        seller_payout_pence: payoutPence,
+        listing_id: product.id,
+        title: product.title,
+        amount: amountPence,
         status: 'pending_escrow',
       })
       .select()

@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import {
   computeOrgTrustScore,
   collectTrustSignalsForOrg,
@@ -84,6 +85,162 @@ export async function GET(
     })
   } catch (err) {
     console.error('[GET /api/organisations/[id]] unexpected:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+// PATCH /api/organisations/[id]
+// Updates an organisation. Caller must be:
+//   - the org creator, OR
+//   - an organisation member with role 'admin' or 'owner', OR
+//   - a platform admin (profiles.role = 'admin')
+// Platform admin and org-member admins use the service-role client to bypass RLS.
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    if (!id) return NextResponse.json({ error: 'Missing org id' }, { status: 400 })
+
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+
+    const adminClient = createAdminClient()
+
+    // Fetch org
+    const { data: org, error: orgErr } = await adminClient
+      .from('organisations')
+      .select('id, creator_id')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (orgErr || !org) return NextResponse.json({ error: 'Organisation not found' }, { status: 404 })
+
+    // Check caller's profile role (platform admin)
+    const { data: callerProfile } = await adminClient
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    const isPlatformAdmin = (callerProfile as { role?: string } | null)?.role === 'admin'
+    const isCreator = org.creator_id === user.id
+
+    // Check org membership role (org-level admin/owner)
+    let isOrgAdmin = false
+    if (!isCreator && !isPlatformAdmin) {
+      const { data: membership } = await adminClient
+        .from('organisation_members')
+        .select('role')
+        .eq('organisation_id', id)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      isOrgAdmin = membership != null && ['admin', 'owner'].includes((membership as { role: string }).role)
+    }
+
+    if (!isCreator && !isPlatformAdmin && !isOrgAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const body = await req.json().catch(() => ({}))
+
+    // Whitelist updatable fields
+    const allowed = [
+      'name', 'tagline', 'description', 'website', 'location',
+      'sector', 'founded_year', 'impact_statement', 'tags',
+      'logo_url', 'cover_url',
+    ]
+    const payload: Record<string, unknown> = {}
+    for (const key of allowed) {
+      if (key in body) payload[key] = body[key]
+    }
+
+    if (Object.keys(payload).length === 0) {
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+    }
+
+    // Always use admin client for the write — bypasses RLS cleanly
+    // since we've already verified authorisation above.
+    const { error: updateErr } = await adminClient
+      .from('organisations')
+      .update(payload)
+      .eq('id', id)
+
+    if (updateErr) {
+      console.error('[PATCH /api/organisations/[id]]', updateErr)
+      return NextResponse.json({ error: updateErr.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    console.error('[PATCH /api/organisations/[id]] unexpected:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+// DELETE /api/organisations/[id]
+// Deletes an organisation. Same access rules as PATCH.
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    if (!id) return NextResponse.json({ error: 'Missing org id' }, { status: 400 })
+
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+
+    const adminClient = createAdminClient()
+
+    const { data: org, error: orgErr } = await adminClient
+      .from('organisations')
+      .select('id, creator_id')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (orgErr || !org) return NextResponse.json({ error: 'Organisation not found' }, { status: 404 })
+
+    const { data: callerProfile } = await adminClient
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    const isPlatformAdmin = (callerProfile as { role?: string } | null)?.role === 'admin'
+    const isCreator = org.creator_id === user.id
+
+    let isOrgAdmin = false
+    if (!isCreator && !isPlatformAdmin) {
+      const { data: membership } = await adminClient
+        .from('organisation_members')
+        .select('role')
+        .eq('organisation_id', id)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      isOrgAdmin = membership != null && ['admin', 'owner'].includes((membership as { role: string }).role)
+    }
+
+    if (!isCreator && !isPlatformAdmin && !isOrgAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const { error: deleteErr } = await adminClient
+      .from('organisations')
+      .delete()
+      .eq('id', id)
+
+    if (deleteErr) {
+      console.error('[DELETE /api/organisations/[id]]', deleteErr)
+      return NextResponse.json({ error: deleteErr.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    console.error('[DELETE /api/organisations/[id]] unexpected:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
