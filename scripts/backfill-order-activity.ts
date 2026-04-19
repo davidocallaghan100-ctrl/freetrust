@@ -17,7 +17,7 @@ async function backfill() {
   console.log('Fetching all orders...')
   const { data: orders, error } = await supabase
     .from('orders')
-    .select('id, buyer_id, seller_id, status, created_at, item_title')
+    .select('id, buyer_id, seller_id, status, created_at')
     .order('created_at', { ascending: true })
 
   if (error) {
@@ -51,7 +51,7 @@ async function backfill() {
       actor_role: 'buyer',
       event_type: 'order_placed',
       title:      'Order placed',
-      body:       order.item_title ? `"${order.item_title}"` : null,
+      body:       null,
       metadata:   {},
       created_at: order.created_at,
     })
