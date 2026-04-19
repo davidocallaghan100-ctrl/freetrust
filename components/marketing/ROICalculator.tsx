@@ -154,14 +154,14 @@ export default function ROICalculator() {
         ))}
       </div>
 
-      <div style={{
+      <div className="roi-grid" style={{
         display: 'grid',
         gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)',
         gap: 0,
       }}>
         {/* ── Left: Inputs ── */}
-        <div style={{
-          padding: '24px 28px',
+        <div className="roi-left" style={{
+          padding: '24px 16px',
           borderRight: '1px solid rgba(255,255,255,0.06)',
           display: 'flex',
           flexDirection: 'column',
@@ -245,7 +245,7 @@ export default function ROICalculator() {
         </div>
 
         {/* ── Right: Output ── */}
-        <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="roi-right" style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
             Your Earnings
           </div>
@@ -264,22 +264,24 @@ export default function ROICalculator() {
           {/* Annual */}
           <div style={{
             background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.12)',
-            borderRadius: 12, padding: '12px 16px',
+            borderRadius: 12, padding: '12px 14px',
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            gap: 8, minWidth: 0,
           }}>
-            <div>
+            <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: 11, color: '#64748b', marginBottom: 3 }}>Annual projection</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#34d399' }}>
+              <div style={{ fontSize: 20, fontWeight: 800, color: '#34d399', whiteSpace: 'nowrap' }}>
                 <AnimatedNum value={result.annual} suffix="₮" />
               </div>
             </div>
-            {/* Tier badge */}
+            {/* Tier badge — compact, never overflows */}
             <div style={{
               background: `${tier.color}18`, border: `1px solid ${tier.color}40`,
-              borderRadius: 10, padding: '6px 12px', textAlign: 'center',
+              borderRadius: 8, padding: '5px 8px', textAlign: 'center',
+              flexShrink: 0,
             }}>
-              <div style={{ fontSize: 18 }}>{tier.emoji}</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: tier.color, letterSpacing: '0.06em' }}>
+              <div style={{ fontSize: 16, lineHeight: 1 }}>{tier.emoji}</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: tier.color, letterSpacing: '0.04em', marginTop: 2, whiteSpace: 'nowrap' }}>
                 {tier.label}
               </div>
             </div>
@@ -347,8 +349,13 @@ export default function ROICalculator() {
 
       {/* Mobile responsive override */}
       <style>{`
+        @media (min-width: 561px) {
+          .roi-left { padding: 24px 24px !important; }
+          .roi-right { padding: 24px 24px !important; }
+        }
         @media (max-width: 560px) {
           .roi-grid { grid-template-columns: 1fr !important; }
+          .roi-left { border-right: none !important; border-bottom: 1px solid rgba(255,255,255,0.06) !important; }
         }
       `}</style>
     </div>
