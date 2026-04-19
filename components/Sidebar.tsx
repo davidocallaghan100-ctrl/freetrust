@@ -47,6 +47,7 @@ const NAV_SECTIONS = [
     links: [
       { href: '/gig-economy', label: 'Gig Economy', icon: '💰' },
       { href: '/seller/gigs/create', label: 'Create Gig', icon: '➕' },
+      { href: '/accounting', label: 'Accounting', icon: '📊' },
     ],
   },
   {

@@ -685,6 +685,29 @@ export default function OrderDetailPage() {
                 <div style={{ fontSize: '0.875rem', color: '#34d399' }}>🏷 +₮10 for seller on completion</div>
               </div>
             </div>
+
+            {/* Invoice download — seller only, completed/delivered orders */}
+            {isSeller && (order.status === 'completed' || order.status === 'delivered') && (
+              <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, padding: '1rem' }}>
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.6rem' }}>Documents</div>
+                <a
+                  href={`/api/orders/${order.id}/invoice`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                    padding: '0.65rem 1rem', background: '#10b981', color: '#0f172a',
+                    border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer',
+                    fontSize: '0.875rem', textDecoration: 'none', width: '100%', boxSizing: 'border-box',
+                  }}
+                >
+                  📄 Download Invoice (PDF)
+                </a>
+                <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#64748b', textAlign: 'center' }}>
+                  Tax invoice for your accounting records
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

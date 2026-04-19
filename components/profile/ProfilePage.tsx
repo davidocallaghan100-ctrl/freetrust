@@ -47,6 +47,9 @@ interface Profile {
   stripe_account_id?:          string | null
   stripe_onboarded?:           boolean | null
   stripe_onboarding_complete?: boolean | null
+  // VAT / accounting fields (20260419000006_seller_accounting.sql)
+  vat_registered?: boolean | null
+  vat_number?:     string | null
 }
 
 // Map of preset hobby label → emoji icon. Kept in sync with the
@@ -189,6 +192,11 @@ export default function ProfilePage() {
   // up on /messages (inbox) instead of the direct conversation.
   // Opening inline bypasses every routing-layer failure mode.
   const [drawerOpen, setDrawerOpen] = useState(false)
+  // VAT settings state — own profile only
+  const [vatRegistered, setVatRegistered] = useState(false)
+  const [vatNumber, setVatNumber] = useState('')
+  const [vatSaving, setVatSaving] = useState(false)
+  const [vatSaved, setVatSaved] = useState(false)
 
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
@@ -222,6 +230,8 @@ export default function ProfilePage() {
           location: prof.location ?? '',
           website: prof.website ?? '',
         })
+        setVatRegistered(!!(prof as Profile & { vat_registered?: boolean }).vat_registered)
+        setVatNumber(String((prof as Profile & { vat_number?: string }).vat_number ?? ''))
       }
     } catch (err) {
       console.error('loadProfile error:', err)
@@ -639,6 +649,30 @@ export default function ProfilePage() {
       setSaveError(`Unexpected error: ${msg}`)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleVatSave = async () => {
+    if (!user) return
+    setVatSaving(true)
+    setVatSaved(false)
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vat_registered: vatRegistered,
+          vat_number: vatRegistered ? vatNumber.trim() || null : null,
+        }),
+      })
+      if (res.ok) {
+        setVatSaved(true)
+        setTimeout(() => setVatSaved(false), 3000)
+      }
+    } catch (err) {
+      console.error('[vat save]', err)
+    } finally {
+      setVatSaving(false)
     }
   }
 
@@ -1486,6 +1520,77 @@ export default function ProfilePage() {
             </div>
           )}
         </div>
+
+        {/* Seller Tools — own profile only */}
+        {isOwnProfile && (
+          <div className="profile-card">
+            <h3 style={{ marginBottom: '1rem', fontWeight: 700, fontSize: '1rem' }}>🏪 Seller Tools</h3>
+            {/* Accounting link */}
+            <Link
+              href="/accounting"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '0.75rem 1rem', background: 'rgba(16,185,129,0.07)',
+                border: '1px solid rgba(16,185,129,0.2)', borderRadius: 10,
+                textDecoration: 'none', marginBottom: '1rem',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#10b981' }}>📊 My Accounting</div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: 2 }}>Sales records, invoices & CSV exports</div>
+              </div>
+              <span style={{ color: '#10b981', fontSize: '1rem' }}>→</span>
+            </Link>
+            {/* VAT settings */}
+            <div style={{ borderTop: '1px solid rgba(148,163,184,0.1)', paddingTop: '1rem' }}>
+              <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tax & VAT</div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', marginBottom: '0.75rem' }}>
+                <div
+                  onClick={() => setVatRegistered(v => !v)}
+                  style={{
+                    width: 40, height: 22, borderRadius: 11,
+                    background: vatRegistered ? '#10b981' : '#334155',
+                    position: 'relative', cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0,
+                  }}
+                >
+                  <div style={{
+                    width: 16, height: 16, borderRadius: '50%', background: '#fff',
+                    position: 'absolute', top: 3, left: vatRegistered ? 21 : 3,
+                    transition: 'left 0.2s',
+                  }} />
+                </div>
+                <span style={{ fontSize: '0.875rem', color: '#f1f5f9' }}>I am VAT registered</span>
+              </label>
+              {vatRegistered && (
+                <input
+                  type="text"
+                  value={vatNumber}
+                  onChange={e => setVatNumber(e.target.value)}
+                  placeholder="VAT Number (e.g. IE1234567T)"
+                  style={{
+                    width: '100%', padding: '0.6rem 0.75rem', background: '#0f172a',
+                    border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8,
+                    color: '#f1f5f9', fontSize: '0.875rem', outline: 'none',
+                    boxSizing: 'border-box', marginBottom: '0.75rem',
+                  }}
+                />
+              )}
+              <button
+                onClick={handleVatSave}
+                disabled={vatSaving}
+                style={{
+                  padding: '0.5rem 1rem', background: vatSaved ? '#10b981' : '#1e293b',
+                  color: vatSaved ? '#0f172a' : '#f1f5f9',
+                  border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8,
+                  fontWeight: 700, cursor: vatSaving ? 'not-allowed' : 'pointer',
+                  fontSize: '0.825rem', transition: 'all 0.2s',
+                }}
+              >
+                {vatSaving ? 'Saving…' : vatSaved ? '✅ Saved!' : 'Save VAT Settings'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Account info — own profile only */}
         {isOwnProfile && user && (
