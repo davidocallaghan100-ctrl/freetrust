@@ -174,7 +174,11 @@ export default function ProfilePage() {
   const [trustBalance, setTrustBalance] = useState(0)
   const [buyingCount, setBuyingCount] = useState<number | null>(null)
   const [sellingCount, setSellingCount] = useState<number | null>(null)
-  const [form, setForm] = useState({ full_name: '', bio: '', location: '', website: '' })
+  const [form, setForm] = useState({
+    full_name: '', bio: '', location: '', website: '',
+    linkedin_url: '', instagram_url: '', twitter_url: '', github_url: '',
+    tiktok_url: '', youtube_url: '', website_url: '',
+  })
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [coverUploading, setCoverUploading] = useState(false)
   const [coverHover, setCoverHover] = useState(false)
@@ -234,6 +238,13 @@ export default function ProfilePage() {
           bio: prof.bio ?? '',
           location: prof.location ?? '',
           website: prof.website ?? '',
+          linkedin_url:  (prof as Profile & { linkedin_url?: string }).linkedin_url  ?? '',
+          instagram_url: (prof as Profile & { instagram_url?: string }).instagram_url ?? '',
+          twitter_url:   (prof as Profile & { twitter_url?: string }).twitter_url   ?? '',
+          github_url:    (prof as Profile & { github_url?: string }).github_url    ?? '',
+          tiktok_url:    (prof as Profile & { tiktok_url?: string }).tiktok_url    ?? '',
+          youtube_url:   (prof as Profile & { youtube_url?: string }).youtube_url   ?? '',
+          website_url:   (prof as Profile & { website_url?: string }).website_url   ?? '',
         })
         setVatRegistered(!!(prof as Profile & { vat_registered?: boolean }).vat_registered)
         setVatNumber(String((prof as Profile & { vat_number?: string }).vat_number ?? ''))
@@ -579,72 +590,50 @@ export default function ProfilePage() {
     setSaving(true)
     setSaveError(null)
     try {
-      // IMPORTANT: chain .select() after .update(). PostgREST returns
-      // `{ error: null, data: null }` when an UPDATE is silently blocked
-      // by RLS (no matching row after the RLS USING check) — the update
-      // succeeds as a statement but affects 0 rows. Without .select(),
-      // the old code couldn't distinguish "saved successfully" from
-      // "RLS blocked you and nothing happened". This was the primary
-      // symptom of the "edit button doesn't work" bug report: the save
-      // silently did nothing and the user had no feedback.
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({
-          full_name: form.full_name || null,
-          bio:       form.bio       || null,
-          location:  form.location  || null,
-          website:   form.website   || null,
-        })
-        .eq('id', user.id)
-        .select('id, full_name, bio, location, website')
+      // Route through API (server-side, admin client write) to avoid any RLS edge cases.
+      // This also ensures all whitelisted fields — including social links — are saved.
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name:     form.full_name     || null,
+          bio:           form.bio           || null,
+          location:      form.location      || null,
+          website:       form.website       || null,
+          linkedin_url:  form.linkedin_url  || null,
+          instagram_url: form.instagram_url || null,
+          twitter_url:   form.twitter_url   || null,
+          github_url:    form.github_url    || null,
+          tiktok_url:    form.tiktok_url    || null,
+          youtube_url:   form.youtube_url   || null,
+          website_url:   form.website_url   || null,
+        }),
+      })
 
-      if (error) {
-        // Log the full PostgREST error object so the next debug cycle
-        // shows exactly what went wrong (code + details + hint).
-        // Supabase's PostgrestError has these fields; cast to read them.
-        const e = error as { message?: string; code?: string; details?: string; hint?: string }
-        console.error('[profile save] supabase error:', {
-          message: e.message,
-          code:    e.code,
-          details: e.details,
-          hint:    e.hint,
-        })
-        // Surface the message verbatim — users who report the bug can
-        // paste it and we'll have actionable info.
-        const extra = [e.code, e.hint].filter(Boolean).join(' · ')
-        setSaveError(`${e.message ?? 'Save failed'}${extra ? ` (${extra})` : ''}`)
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        const msg = (errData as { error?: string }).error ?? 'Save failed'
+        console.error('[profile save] API error:', msg)
+        setSaveError(msg)
         return
       }
 
-      if (!data || data.length === 0) {
-        // Classic RLS silent-block signal. The UPDATE statement ran,
-        // returned no error, but matched 0 rows — meaning either:
-        //   a) The "Users can update own profile" RLS policy is
-        //      missing on profiles in production (fixed by migration
-        //      20260414000004_profiles_update_policy.sql), OR
-        //   b) The caller has no profiles row at all (rare — the
-        //      handle_new_user trigger should create it at signup).
-        // Either way we need to tell the user instead of silently
-        // leaving the form in edit mode.
-        console.error('[profile save] update returned 0 rows — RLS block or missing profile row', { userId: user.id })
-        setSaveError(
-          'Your profile could not be saved — the database rejected the update. ' +
-          'This usually means the "Users can update own profile" RLS policy is missing on the profiles table. ' +
-          'Try again in a minute; if it persists, contact support.'
-        )
-        return
-      }
+      const { profile: updated } = await res.json() as { profile: Partial<Profile> }
 
       // Success — merge the server-returned row back into local state
-      // so the next edit starts from what's actually in the DB, not
-      // what was in the form a moment ago.
-      const updated = data[0] as Partial<Profile>
       setProfile(prev => prev ? { ...prev, ...updated } : prev)
       setForm({
-        full_name: updated.full_name ?? '',
-        bio:       updated.bio       ?? '',
-        location:  updated.location  ?? '',
-        website:   updated.website   ?? '',
+        full_name:     (updated.full_name     ?? ''),
+        bio:           (updated.bio           ?? ''),
+        location:      (updated.location      ?? ''),
+        website:       (updated.website       ?? ''),
+        linkedin_url:  (updated.linkedin_url  ?? ''),
+        instagram_url: (updated.instagram_url ?? ''),
+        twitter_url:   (updated.twitter_url   ?? ''),
+        github_url:    (updated.github_url    ?? ''),
+        tiktok_url:    (updated.tiktok_url    ?? ''),
+        youtube_url:   (updated.youtube_url   ?? ''),
+        website_url:   (updated.website_url   ?? ''),
       })
       setEditing(false)
       showToast('Profile saved!')
@@ -1206,6 +1195,33 @@ export default function ProfilePage() {
                   />
                 </div>
               ))}
+              {/* Social links */}
+              <div style={{ borderTop: '1px solid rgba(148,163,184,0.12)', paddingTop: '0.75rem' }}>
+                <label className="profile-label" style={{ marginBottom: '0.75rem', display: 'block' }}>🔗 Social Links</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  {[
+                    { key: 'linkedin_url',  placeholder: 'https://linkedin.com/in/…',  icon: '💼' },
+                    { key: 'instagram_url', placeholder: 'https://instagram.com/…',    icon: '📸' },
+                    { key: 'twitter_url',   placeholder: 'https://twitter.com/…',      icon: '🐦' },
+                    { key: 'github_url',    placeholder: 'https://github.com/…',       icon: '🐙' },
+                    { key: 'tiktok_url',    placeholder: 'https://tiktok.com/@…',      icon: '🎵' },
+                    { key: 'youtube_url',   placeholder: 'https://youtube.com/@…',     icon: '▶️' },
+                    { key: 'website_url',   placeholder: 'https://yoursite.com',       icon: '🌐' },
+                  ].map(({ key, placeholder, icon }) => (
+                    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 16, flexShrink: 0 }}>{icon}</span>
+                      <input
+                        className="profile-input"
+                        type="url"
+                        placeholder={placeholder}
+                        value={form[key as keyof typeof form]}
+                        onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+                        style={{ flex: 1 }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
               {saveError && (
                 <div
                   role="alert"
