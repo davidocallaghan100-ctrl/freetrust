@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
+const OrgTrustSummary = dynamic(() => import("@/components/organisation/OrgTrustSummary"), { ssr: false });
 import Avatar from "@/components/Avatar";
 import { createClient } from "@/lib/supabase/client";
 import {
