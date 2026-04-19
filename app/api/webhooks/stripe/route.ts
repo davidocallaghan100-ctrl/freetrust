@@ -310,17 +310,357 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 }
 
 async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
-  console.log("[Escrow] PaymentIntent succeeded:", {
-    id: paymentIntent.id,
-    amount: paymentIntent.amount,
-    type: paymentIntent.metadata?.type,
-    sellerId: paymentIntent.metadata?.sellerId,
-    platformFeeAmount: paymentIntent.metadata?.platformFeeAmount,
-    platformFeeRate: paymentIntent.metadata?.platformFeeRate,
-  });
+  const meta = paymentIntent.metadata ?? {}
+  const piId = paymentIntent.id
+  const amountCents = paymentIntent.amount
+  const type = meta.type
+  const userId = meta.user_id
 
-  // TODO: Update escrow status in your DB to "funds_held".
-  // Funds are held on the platform until service/product is confirmed delivered.
+  console.log("[PaymentIntent] succeeded:", { id: piId, amount: amountCents, type, userId })
+
+  if (!type || !userId) {
+    console.log("[PaymentIntent] no type/userId in metadata — skipping (not a FreeTrust pay flow)")
+    return
+  }
+
+  const supabase = createAdminClient()
+
+  // ── Wallet top-up (Apple/Google Pay path) ────────────────────────────────
+  if (type === 'wallet_topup') {
+    try {
+      // Create a completed deposit record (bypasses the Checkout Session deposit row)
+      const { data: deposit, error: depErr } = await supabase
+        .from('money_deposits')
+        .insert({
+          user_id: userId,
+          amount_cents: amountCents,
+          currency: (paymentIntent.currency ?? 'eur').toLowerCase(),
+          status: 'completed',
+          stripe_payment_intent: piId,
+          updated_at: new Date().toISOString(),
+        })
+        .select('id')
+        .single()
+
+      if (depErr) {
+        console.error('[PaymentIntent] wallet_topup deposit insert error:', depErr)
+      } else {
+        console.log(`[PaymentIntent] wallet_topup deposit created: ${deposit?.id}`)
+      }
+
+      // Notify user
+      await supabase.from('notifications').insert({
+        user_id: userId,
+        type: 'wallet',
+        title: '💰 Funds added!',
+        body: `€${(amountCents / 100).toFixed(2)} has been added to your FreeTrust wallet.`,
+        link: '/wallet',
+      })
+
+      // Send email receipt (non-blocking)
+      sendEmail({
+        type: 'wallet_topup',
+        userId,
+        payload: { amount: amountCents / 100 },
+      }).catch(() => {})
+
+      console.log(`[PaymentIntent] wallet_topup complete: user=${userId} amount=€${(amountCents / 100).toFixed(2)}`)
+    } catch (err) {
+      console.error('[PaymentIntent] wallet_topup handler error:', err)
+    }
+    return
+  }
+
+  // ── Event ticket purchase (Apple/Google Pay path) ─────────────────────────
+  if (type === 'event_ticket') {
+    const eventId = meta.event_id
+    if (!eventId) {
+      console.error('[PaymentIntent] event_ticket missing event_id')
+      return
+    }
+
+    try {
+      // Fetch event details
+      const { data: event } = await supabase
+        .from('events')
+        .select('title, creator_id, price, capacity, attendee_count')
+        .eq('id', eventId)
+        .single()
+
+      if (!event) {
+        console.error('[PaymentIntent] event_ticket: event not found', eventId)
+        return
+      }
+
+      // Create order for ticket
+      const { data: order, error: orderErr } = await supabase
+        .from('orders')
+        .insert({
+          buyer_id: userId,
+          seller_id: event.creator_id ?? userId,
+          listing_id: null,
+          item_title: event.title,
+          amount: amountCents,
+          status: 'paid',
+          stripe_payment_intent: piId,
+          stripe_payment_intent_id: piId,
+          type: 'event_ticket',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select('id')
+        .single()
+
+      if (orderErr) {
+        console.error('[PaymentIntent] event_ticket order insert error:', orderErr)
+      }
+
+      // Increment attendee_count
+      await supabase
+        .from('events')
+        .update({ attendee_count: (event.attendee_count ?? 0) + 1 })
+        .eq('id', eventId)
+
+      // Notify buyer
+      await supabase.from('notifications').insert({
+        user_id: userId,
+        type: 'order',
+        title: '🎟️ Ticket confirmed!',
+        body: `Your ticket for "${event.title}" has been confirmed.`,
+        link: order?.id ? `/orders/${order.id}` : '/orders',
+      })
+
+      // Issue ₮5 trust reward to buyer
+      await supabase.rpc('issue_trust', {
+        p_user_id: userId,
+        p_amount: 5,
+        p_type: 'purchase_reward',
+        p_ref: order?.id ?? piId,
+        p_desc: `₮5 trust reward for purchasing ticket: ${event.title}`,
+      })
+
+      console.log(`[PaymentIntent] event_ticket complete: user=${userId} event=${eventId} order=${order?.id}`)
+    } catch (err) {
+      console.error('[PaymentIntent] event_ticket handler error:', err)
+    }
+    return
+  }
+
+  // ── Product purchase (Apple/Google Pay path) ──────────────────────────────
+  if (type === 'product_purchase') {
+    const listingId = meta.listing_id
+    if (!listingId) {
+      console.error('[PaymentIntent] product_purchase missing listing_id')
+      return
+    }
+
+    try {
+      // Fetch listing details
+      const { data: listing } = await supabase
+        .from('listings')
+        .select('title, seller_id, delivery_days')
+        .eq('id', listingId)
+        .single()
+
+      if (!listing) {
+        console.error('[PaymentIntent] product_purchase: listing not found', listingId)
+        return
+      }
+
+      const expectedDeliveryAt = listing.delivery_days
+        ? new Date(Date.now() + listing.delivery_days * 86400000).toISOString()
+        : null
+
+      const { data: order, error: orderErr } = await supabase
+        .from('orders')
+        .insert({
+          buyer_id: userId,
+          seller_id: listing.seller_id,
+          listing_id: listingId,
+          item_title: listing.title,
+          amount: amountCents,
+          status: 'paid',
+          stripe_payment_intent: piId,
+          stripe_payment_intent_id: piId,
+          type: 'product',
+          expected_delivery_at: expectedDeliveryAt,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select('id')
+        .single()
+
+      if (orderErr) {
+        console.error('[PaymentIntent] product_purchase order insert error:', orderErr)
+        return
+      }
+
+      // Log activity
+      void logActivity({
+        orderId: order!.id,
+        actorRole: 'system',
+        eventType: 'payment_confirmed',
+        title: 'Payment confirmed',
+        body: 'Funds held in escrow until delivery is confirmed.',
+      })
+
+      // Notify buyer
+      await supabase.from('notifications').insert({
+        user_id: userId,
+        type: 'order',
+        title: 'Order confirmed!',
+        body: `Your order for "${listing.title}" is confirmed. You earned ₮5 trust!`,
+        link: `/orders/${order!.id}`,
+      })
+
+      // Issue ₮5 trust reward
+      await supabase.rpc('issue_trust', {
+        p_user_id: userId,
+        p_amount: 5,
+        p_type: 'purchase_reward',
+        p_ref: order!.id,
+        p_desc: `₮5 trust reward for purchasing: ${listing.title}`,
+      })
+
+      console.log(`[PaymentIntent] product_purchase complete: user=${userId} listing=${listingId} order=${order!.id}`)
+    } catch (err) {
+      console.error('[PaymentIntent] product_purchase handler error:', err)
+    }
+    return
+  }
+
+  // ── Service purchase (Apple/Google Pay path) ──────────────────────────────
+  if (type === 'service_purchase') {
+    const serviceId = meta.service_id
+    if (!serviceId) {
+      console.error('[PaymentIntent] service_purchase missing service_id')
+      return
+    }
+
+    try {
+      const { data: listing } = await supabase
+        .from('listings')
+        .select('title, seller_id, delivery_days')
+        .eq('id', serviceId)
+        .single()
+
+      if (!listing) {
+        console.error('[PaymentIntent] service_purchase: listing not found', serviceId)
+        return
+      }
+
+      const expectedDeliveryAt = listing.delivery_days
+        ? new Date(Date.now() + listing.delivery_days * 86400000).toISOString()
+        : null
+
+      const { data: order, error: orderErr } = await supabase
+        .from('orders')
+        .insert({
+          buyer_id: userId,
+          seller_id: listing.seller_id,
+          listing_id: serviceId,
+          item_title: listing.title,
+          amount: amountCents,
+          status: 'paid',
+          stripe_payment_intent: piId,
+          stripe_payment_intent_id: piId,
+          type: 'service',
+          expected_delivery_at: expectedDeliveryAt,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select('id')
+        .single()
+
+      if (orderErr) {
+        console.error('[PaymentIntent] service_purchase order insert error:', orderErr)
+        return
+      }
+
+      void logActivity({
+        orderId: order!.id,
+        actorRole: 'system',
+        eventType: 'payment_confirmed',
+        title: 'Payment confirmed',
+        body: 'Funds held in escrow until delivery is confirmed.',
+      })
+
+      await supabase.from('notifications').insert({
+        user_id: userId,
+        type: 'order',
+        title: 'Service order confirmed!',
+        body: `Your order for "${listing.title}" is confirmed. You earned ₮5 trust!`,
+        link: `/orders/${order!.id}`,
+      })
+
+      await supabase.rpc('issue_trust', {
+        p_user_id: userId,
+        p_amount: 5,
+        p_type: 'purchase_reward',
+        p_ref: order!.id,
+        p_desc: `₮5 trust reward for purchasing service: ${listing.title}`,
+      })
+
+      console.log(`[PaymentIntent] service_purchase complete: user=${userId} service=${serviceId} order=${order!.id}`)
+    } catch (err) {
+      console.error('[PaymentIntent] service_purchase handler error:', err)
+    }
+    return
+  }
+
+  // ── Cart checkout (Apple/Google Pay path) ─────────────────────────────────
+  if (type === 'cart_checkout') {
+    // Cart items were client-side only; create a single consolidated cart order
+    const itemCount = parseInt(meta.item_count ?? '1', 10)
+
+    try {
+      const { data: order, error: orderErr } = await supabase
+        .from('orders')
+        .insert({
+          buyer_id: userId,
+          seller_id: userId, // platform handles multi-seller cart
+          listing_id: null,
+          item_title: `Cart order (${itemCount} item${itemCount !== 1 ? 's' : ''})`,
+          amount: amountCents,
+          status: 'paid',
+          stripe_payment_intent: piId,
+          stripe_payment_intent_id: piId,
+          type: 'cart',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select('id')
+        .single()
+
+      if (orderErr) {
+        console.error('[PaymentIntent] cart_checkout order insert error:', orderErr)
+        return
+      }
+
+      await supabase.from('notifications').insert({
+        user_id: userId,
+        type: 'order',
+        title: 'Cart order confirmed!',
+        body: `Your cart order (${itemCount} item${itemCount !== 1 ? 's' : ''}) is confirmed. You earned ₮5 trust!`,
+        link: `/orders/${order!.id}`,
+      })
+
+      await supabase.rpc('issue_trust', {
+        p_user_id: userId,
+        p_amount: 5,
+        p_type: 'purchase_reward',
+        p_ref: order!.id,
+        p_desc: `₮5 trust reward for cart purchase`,
+      })
+
+      console.log(`[PaymentIntent] cart_checkout complete: user=${userId} items=${itemCount} order=${order!.id}`)
+    } catch (err) {
+      console.error('[PaymentIntent] cart_checkout handler error:', err)
+    }
+    return
+  }
+
+  console.log(`[PaymentIntent] unhandled type="${type}" — no action taken`)
 }
 
 async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
@@ -389,8 +729,62 @@ async function handleTransferCreated(transfer: Stripe.Transfer) {
     destination: transfer.destination,
   });
 
-  // TODO: Update escrow status in your DB to "released".
-  // Notify buyer and seller that funds have been released.
+  // Transfers are created by our release_payment endpoint (POST /api/orders/[id]/release).
+  // The transfer metadata includes the order_id so we can update the order to 'completed'
+  // and notify both buyer and seller.
+  const orderId = (transfer.metadata as Record<string, string> | null)?.order_id
+  if (!orderId) {
+    console.log("[Escrow] Transfer has no order_id in metadata — nothing to update")
+    return
+  }
+
+  try {
+    const supabase = createAdminClient()
+
+    // Fetch order for notification context
+    const { data: order } = await supabase
+      .from('orders')
+      .select('buyer_id, seller_id, item_title, status')
+      .eq('id', orderId)
+      .single()
+
+    if (!order) {
+      console.error('[Escrow] Transfer: order not found', orderId)
+      return
+    }
+
+    // Mark order as completed (funds released to seller)
+    await supabase
+      .from('orders')
+      .update({ status: 'completed', updated_at: new Date().toISOString() })
+      .eq('id', orderId)
+
+    // Notify seller that funds have been transferred
+    if (order.seller_id) {
+      await supabase.from('notifications').insert({
+        user_id: order.seller_id,
+        type: 'order',
+        title: '💸 Payment received!',
+        body: `Payment for "${order.item_title}" has been transferred to your Stripe account.`,
+        link: `/orders/${orderId}`,
+      })
+    }
+
+    // Notify buyer that the order is complete
+    if (order.buyer_id) {
+      await supabase.from('notifications').insert({
+        user_id: order.buyer_id,
+        type: 'order',
+        title: '✅ Order complete',
+        body: `Your order for "${order.item_title}" is now complete. Funds released to seller.`,
+        link: `/orders/${orderId}`,
+      })
+    }
+
+    console.log(`[Escrow] Transfer complete: order=${orderId} amount=€${(transfer.amount / 100).toFixed(2)}`)
+  } catch (err) {
+    console.error('[Escrow] handleTransferCreated error:', err)
+  }
 }
 
 async function handleFounderInvestment(session: Stripe.Checkout.Session) {
