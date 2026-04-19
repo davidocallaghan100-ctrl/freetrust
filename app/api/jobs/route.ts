@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     if (category)  query = query.eq('category', category)
     if (salaryMin) query = query.gte('salary_min', parseInt(salaryMin))
     if (search)    query = query.ilike('title', `%${search}%`)
-    if (country)   query = query.eq('country', country.toUpperCase())
+    if (country)   query = query.ilike('country', country)
     if (city)      query = query.ilike('city', `%${city}%`)
     if (remoteOnly) query = query.eq('is_remote', true)
 
