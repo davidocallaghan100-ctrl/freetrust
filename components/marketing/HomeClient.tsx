@@ -266,13 +266,13 @@ type HomeEvent = {
 type HomeJob = {
   id: string
   title: string
-  company: string | null
+  company_name: string | null
   city: string | null
   country: string | null
   location_type: string | null
   salary_min: number | null
   salary_max: number | null
-  currency: string | null
+  salary_currency: string | null
   job_type: string | null
 }
 
@@ -341,7 +341,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           .eq('status', 'published')
           .gte('starts_at', now)
           .order('starts_at', { ascending: true })
-          .limit(3)
+          .limit(6)
         setHomeEvents((data as HomeEvent[]) ?? [])
       } catch { setHomeEvents([]) }
     }
@@ -354,10 +354,10 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
         const supabase = createClient()
         const { data } = await supabase
           .from('jobs')
-          .select('id, title, company, city, country, location_type, salary_min, salary_max, currency, job_type')
+          .select('id, title, company_name, city, country, location_type, salary_min, salary_max, salary_currency, job_type')
           .eq('status', 'active')
           .order('created_at', { ascending: false })
-          .limit(3)
+          .limit(6)
         setHomeJobs((data as HomeJob[]) ?? [])
       } catch { setHomeJobs([]) }
     }
@@ -828,15 +828,15 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           </div>
           {homeEvents === null ? (
             // Skeleton
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: '1rem' }}>
+            <div className="hscroll">
               {[0,1,2].map(i => (
-                <div key={i} style={{ height: 110, background: '#1e293b', borderRadius: 14, border: '1px solid rgba(56,189,248,0.08)', animation: 'shimmer 1.4s infinite', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%' }} />
+                <div key={i} style={{ flexShrink: 0, width: 280, height: 120, background: '#1e293b', borderRadius: 14, border: '1px solid rgba(56,189,248,0.08)', animation: 'shimmer 1.4s infinite', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%' }} />
               ))}
             </div>
           ) : homeEvents.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '0.88rem' }}>No upcoming events yet — <Link href="/events/create" style={{ color: '#38bdf8' }}>create one</Link>.</div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: '1rem' }}>
+            <div className="hscroll">
               {homeEvents.map(ev => {
                 const cat = ev.category ?? 'Technology'
                 const catColor = CAT_COLORS_HOME[cat] ?? '#38bdf8'
@@ -845,9 +845,9 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
                   : 'Date TBC'
                 const location = ev.is_online ? 'Online' : [ev.city, ev.country].filter(Boolean).join(', ') || 'In Person'
                 return (
-                  <Link key={ev.id} href={`/events/${ev.id}`} style={{ textDecoration: 'none' }}>
+                  <Link key={ev.id} href={`/events/${ev.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 280 }}>
                     <div
-                      style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '1.1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer' }}
+                      style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '1.1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer', height: '100%' }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.12)' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}
                     >
@@ -883,49 +883,49 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
             <Link href="/jobs" style={{ fontSize: '0.82rem', color: '#38bdf8', textDecoration: 'none', fontWeight: 600, flexShrink: 0 }}>Browse all jobs →</Link>
           </div>
           {homeJobs === null ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div className="hscroll">
               {[0,1,2].map(i => (
-                <div key={i} style={{ height: 70, background: '#1e293b', borderRadius: 12, border: '1px solid rgba(56,189,248,0.08)', animation: 'shimmer 1.4s infinite', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%' }} />
+                <div key={i} style={{ flexShrink: 0, width: 280, height: 90, background: '#1e293b', borderRadius: 12, border: '1px solid rgba(56,189,248,0.08)', animation: 'shimmer 1.4s infinite', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%' }} />
               ))}
             </div>
           ) : homeJobs.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '0.88rem' }}>No jobs posted yet — <Link href="/jobs/new" style={{ color: '#38bdf8' }}>post one</Link>.</div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div className="hscroll">
               {homeJobs.map(job => {
                 const isRemote = job.location_type === 'remote'
                 const location = isRemote ? 'Remote' : [job.city, job.country].filter(Boolean).join(', ') || 'On-site'
-                const salaryStr = job.salary_min && job.salary_max && job.currency
-                  ? `${job.currency} ${(job.salary_min / 1000).toFixed(0)}k–${(job.salary_max / 1000).toFixed(0)}k`
+                const salaryStr = job.salary_min && job.salary_max && job.salary_currency
+                  ? `${job.salary_currency} ${(job.salary_min / 1000).toFixed(0)}k–${(job.salary_max / 1000).toFixed(0)}k`
                   : null
                 const jobTypeLabel = job.job_type === 'full_time' ? 'Full-time' : job.job_type === 'part_time' ? 'Part-time' : job.job_type === 'contract' ? 'Contract' : 'Freelance'
                 return (
-                  <Link key={job.id} href={`/jobs/${job.id}`} style={{ textDecoration: 'none' }}>
+                  <Link key={job.id} href={`/jobs/${job.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 280 }}>
                     <div
-                      style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer', flexWrap: 'wrap' }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 4px 18px rgba(56,189,248,0.1)' }}
+                      style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer', height: '100%' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.12)' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}
                     >
-                      {/* Company initial avatar */}
-                      <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,rgba(56,189,248,0.2),rgba(129,140,248,0.2))', border: '1px solid rgba(56,189,248,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 900, color: '#38bdf8', flexShrink: 0 }}>
-                        {(job.company ?? 'J')[0].toUpperCase()}
-                      </div>
-                      {/* Job details */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
-                        <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                          <span style={{ color: '#94a3b8', fontWeight: 600 }}>{job.company ?? 'Company'}</span>
-                          <span>·</span>
-                          <span>📍 {location}</span>
-                          {salaryStr && <><span>·</span><span style={{ color: '#34d399', fontWeight: 600 }}>{salaryStr}</span></>}
+                      {/* Top row: avatar + title */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 8, background: 'linear-gradient(135deg,rgba(56,189,248,0.2),rgba(129,140,248,0.2))', border: '1px solid rgba(56,189,248,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 900, color: '#38bdf8', flexShrink: 0 }}>
+                          {(job.company_name ?? 'J')[0].toUpperCase()}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.company_name ?? 'Company'}</div>
                         </div>
                       </div>
+                      {/* Location + salary */}
+                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                        📍 {location}{salaryStr ? ` · ${salaryStr}` : ''}
+                      </div>
                       {/* Badges */}
-                      <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
-                        <span style={{ fontSize: '0.62rem', fontWeight: 800, background: isRemote ? 'rgba(56,189,248,0.12)' : 'rgba(148,163,184,0.12)', color: isRemote ? '#38bdf8' : '#94a3b8', border: `1px solid ${isRemote ? 'rgba(56,189,248,0.3)' : 'rgba(148,163,184,0.2)'}`, padding: '2px 7px', borderRadius: 999 }}>
+                      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.6rem', fontWeight: 800, background: isRemote ? 'rgba(56,189,248,0.12)' : 'rgba(148,163,184,0.12)', color: isRemote ? '#38bdf8' : '#94a3b8', border: `1px solid ${isRemote ? 'rgba(56,189,248,0.3)' : 'rgba(148,163,184,0.2)'}`, padding: '2px 6px', borderRadius: 999 }}>
                           {isRemote ? '🌐 Remote' : '🏢 On-site'}
                         </span>
-                        <span style={{ fontSize: '0.62rem', fontWeight: 800, background: 'rgba(167,139,250,0.1)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.25)', padding: '2px 7px', borderRadius: 999 }}>
+                        <span style={{ fontSize: '0.6rem', fontWeight: 800, background: 'rgba(167,139,250,0.1)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.25)', padding: '2px 6px', borderRadius: 999 }}>
                           {jobTypeLabel}
                         </span>
                       </div>
