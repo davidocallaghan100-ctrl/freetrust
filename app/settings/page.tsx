@@ -155,7 +155,7 @@ function SettingsPageInner() {
       }
     }
     load()
-  }, [router])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (
@@ -1310,7 +1310,12 @@ function StripeTab({ profile }: { profile: Profile }) {
 // ── Security Tab ───────────────────────────────────────────────────────────────
 
 function SecurityTab({ user }: { user: { email?: string } }) {
-  const supabase = createClient()
+  // IMPORTANT: createClient() must be called once per mount via useRef.
+  // Calling it directly in the component body creates a new instance on every
+  // render, which registers new auth listeners each time → triggers state
+  // updates → re-renders → infinite loop. The ref ensures a single stable client.
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
   const [mfaFactors, setMfaFactors] = useState<{ id: string; friendly_name?: string; factor_type: string; status: string }[]>([])
   const [mfaLoading, setMfaLoading] = useState(true)
   const [enrolling, setEnrolling] = useState(false)
@@ -1335,7 +1340,7 @@ function SecurityTab({ user }: { user: { email?: string } }) {
       } catch { /* ignore */ } finally { setMfaLoading(false) }
     }
     loadFactors()
-  }, [supabase])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const startEnroll = async () => {
     setEnrolling(true)
