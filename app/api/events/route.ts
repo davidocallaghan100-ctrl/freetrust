@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     if (city)       query = query.ilike('city', `%${city}%`)
     if (onlineOnly) query = query.eq('is_online', true)
 
-    const { data, error } = await query.limit(100)
+    const { data, error } = await query.limit(200)
 
     if (error) {
       // Table may not exist yet — return empty
