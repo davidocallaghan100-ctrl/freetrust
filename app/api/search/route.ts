@@ -93,15 +93,13 @@ export async function GET(req: NextRequest) {
         return qb
       })(),
 
-      // Grassroots — same shape as services. Filters to active+active and
-      // returns the title + category + city so the typeahead can show
-      // useful context. The category column stores slugs (farming,
-      // delivery, etc.) — the client renders them via
-      // GRASSROOTS_CATEGORIES_BY_SLUG if it wants pretty labels.
+      // Grassroots — listings with product_type='grassroots' in the main listings table
+      // (there is no separate grassroots_listings table — grassroots items share the
+      //  listings table filtered by product_type)
       (() => {
-        let qb = supabase.from('grassroots_listings')
-          .select('id, title, category, city')
-          .eq('is_active', true)
+        let qb = supabase.from('listings')
+          .select('id, title, category, location')
+          .eq('product_type', 'grassroots')
           .eq('status', 'active')
           .limit(browseMode ? 10 : perType)
         if (tsq) {
@@ -200,7 +198,7 @@ export async function GET(req: NextRequest) {
           id: g.id,
           type: 'grassroots',
           title: g.title,
-          subtitle: [g.category, g.city].filter(Boolean).join(' · ') || undefined,
+          subtitle: [g.category, g.location].filter(Boolean).join(' · ') || undefined,
           url: `/grassroots/${g.id}`,
         })
       }

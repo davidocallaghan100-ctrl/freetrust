@@ -62,17 +62,8 @@ ALTER TABLE organisations
 CREATE INDEX IF NOT EXISTS organisations_search_vector_idx
   ON organisations USING GIN (search_vector);
 
--- ── grassroots_listings (title + description) ────────────────
-ALTER TABLE grassroots_listings
-  ADD COLUMN IF NOT EXISTS search_vector tsvector
-    GENERATED ALWAYS AS (
-      to_tsvector('english',
-        coalesce(title, '') || ' ' || coalesce(description, '')
-      )
-    ) STORED;
-
-CREATE INDEX IF NOT EXISTS grassroots_listings_search_vector_idx
-  ON grassroots_listings USING GIN (search_vector);
+-- NOTE: grassroots listings live in the main `listings` table filtered by
+-- product_type='grassroots' — no separate table exists. The listings index above covers them.
 
 -- ── events (title + description) ────────────────────────────
 ALTER TABLE events
