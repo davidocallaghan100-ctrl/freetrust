@@ -113,6 +113,13 @@ export const ONLINE_CATEGORIES: ServiceCategory[] = [
     subcategories: ['Photo Editing', 'Product Photography', 'Photo Retouching', 'Real Estate Photos', 'Background Removal'],
   },
   {
+    id: 'sales-online',
+    label: 'Sales',
+    icon: '💼',
+    mode: 'online',
+    subcategories: ['B2B Sales', 'B2C Sales', 'Cold Outreach & Prospecting', 'Sales Funnel Strategy', 'CRM Setup & Management', 'Lead Generation', 'Sales Copywriting', 'Sales Training & Coaching'],
+  },
+  {
     id: 'seo-digital',
     label: 'SEO & Digital Marketing',
     icon: '🔍',
@@ -317,6 +324,13 @@ export const OFFLINE_CATEGORIES: ServiceCategory[] = [
       'Martial Arts Instruction',
       'Yoga & Pilates (In-Person)',
     ],
+  },
+  {
+    id: 'sales-local',
+    label: 'Sales',
+    icon: '💼',
+    mode: 'offline',
+    subcategories: ['Door-to-Door Sales', 'Field Sales', 'In-Store Sales', 'Event & Exhibition Sales', 'Retail Sales', 'Promotional Sales', 'Territory Sales Rep', 'Product Demonstrations'],
   },
   {
     id: 'taxi-drivers',
