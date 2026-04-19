@@ -46,6 +46,7 @@ interface RemoteJob {
   url: string
   description_snippet: string
   is_local?: boolean
+  job_source?: string | null
   // Poster social links — only populated for local FreeTrust jobs.
   // Remotive remote jobs leave this undefined.
   posterSocial?: SocialUrls
@@ -55,6 +56,8 @@ interface SupabaseJob {
   id: string
   title: string
   company_name?: string | null
+  company_logo?: string | null
+  job_source?: string | null
   description: string
   job_type: string
   location_type: string
@@ -135,7 +138,7 @@ function supabaseToRemoteJob(j: SupabaseJob): RemoteJob {
     id: `local-${j.id}`,
     title: j.title,
     company_name: j.company_name ?? j.poster?.full_name ?? 'FreeTrust Member',
-    company_logo: null,
+    company_logo: j.company_logo ?? null,
     job_type: j.job_type,
     location_type: j.location_type,
     location: j.location,
@@ -155,8 +158,9 @@ function supabaseToRemoteJob(j: SupabaseJob): RemoteJob {
     category: j.category,
     created_at: j.created_at,
     url: `/jobs/${j.id}`,
-    description_snippet: j.description.slice(0, 200),
+    description_snippet: j.description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200),
     is_local: true,
+    job_source: j.job_source ?? null,
     posterSocial,
   }
 }
@@ -593,7 +597,9 @@ export default function JobsPage() {
                       <div>
                         <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#94a3b8' }}>{job.company_name}</span>
                         {job.is_local && (
-                          <div style={{ fontSize: '0.65rem', color: '#fb923c', fontWeight: 600, letterSpacing: '0.04em' }}>FreeTrust</div>
+                          <div style={{ fontSize: '0.65rem', color: '#fb923c', fontWeight: 600, letterSpacing: '0.04em' }}>
+                            {job.job_source === 'remotive' ? 'via Remotive' : job.job_source === 'arbeitnow' ? 'via Arbeitnow' : 'FreeTrust'}
+                          </div>
                         )}
                         {/* Poster social links — max 3, prioritised order
                             from SocialLinks (LinkedIn → website → Instagram).
