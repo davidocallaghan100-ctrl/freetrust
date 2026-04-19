@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { awardDeliveryTrust } from '@/lib/trust/deliveryRewards'
 
 // PATCH /api/disputes/[id] — admin resolve or user update
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -56,25 +57,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         : 'closed'
       await supabase.from('orders').update({ status: orderStatus }).eq('id', dispute.order_id)
 
-      // If refund — record in trust ledger as a negative for the seller
+      // If refund — deduct -50₮ from seller via delivery trust system
+      // (upgrades the old -5 direct insert to the proper -50₮ via issue_trust RPC)
       if (resolution === 'full_refund' || resolution === 'partial_refund') {
         const order = dispute.order as { seller_id: string; buyer_id: string; amount: number } | null
-        if (order) {
-          const refundAmt = refund_amount ?? (resolution === 'full_refund' ? order.amount : order.amount / 2)
-          await supabase.from('trust_ledger').insert([
-            {
-              user_id: order.seller_id,
-              amount: -5,
-              type: 'dispute_resolved_against',
-              description: `Trust deducted — dispute resolved against you`,
-            },
-            {
-              user_id: order.buyer_id,
-              amount: 0,
-              type: 'refund_issued',
-              description: `Refund of £${refundAmt.toFixed(2)} processed`,
-            },
-          ])
+        if (order?.seller_id) {
+          void awardDeliveryTrust(order.seller_id, 'dispute_lost', dispute.order_id)
         }
       }
 

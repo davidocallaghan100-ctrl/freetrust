@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendPushNotification } from '@/lib/push/sendPushNotification'
 import { logActivity } from '@/lib/activity/logActivity'
+import { awardDeliveryTrust } from '@/lib/trust/deliveryRewards'
 
 // POST: Start a delivery session (seller action)
 export async function POST(req: NextRequest) {
@@ -49,6 +50,9 @@ export async function POST(req: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  // +10₮ to seller for using live tracking (adoption incentive, non-blocking)
+  void awardDeliveryTrust(session.user.id, 'tracking_used', order_id)
 
   // Notify buyer that delivery has started (fire-and-forget)
   sendPushNotification({

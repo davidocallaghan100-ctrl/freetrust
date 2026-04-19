@@ -5,6 +5,7 @@ import { sendReviewReceivedEmail } from '@/lib/resend'
 import { awardTrust } from '@/lib/trust/award'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 import { insertNotification } from '@/lib/notifications/insert'
+import { awardDeliveryTrust } from '@/lib/trust/deliveryRewards'
 
 // GET /api/reviews?profileId=&listingId=&page=
 export async function GET(request: NextRequest) {
@@ -118,6 +119,11 @@ export async function POST(request: NextRequest) {
         desc:   'Received a review',
       })
       await supabase.from('reviews').update({ trust_issued: true }).eq('id', review.id)
+
+      // Bonus +25₮ for leaving a 5-star review (on top of LEAVE_REVIEW award)
+      if (rating_overall === 5) {
+        void awardDeliveryTrust(user.id, 'five_star_review', order_id ?? undefined)
+      }
     }
 
     // Update reviewee avg_rating + review_count

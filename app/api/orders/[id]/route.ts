@@ -7,6 +7,7 @@ import { sendEmail } from '@/lib/email/send'
 import { insertNotification } from '@/lib/notifications/insert'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 import { logActivity } from '@/lib/activity/logActivity'
+import { awardDeliveryTrust } from '@/lib/trust/deliveryRewards'
 
 // Stripe client — optional at module load so the route can still
 // return clean errors (not crash) on environments without a key.
@@ -144,14 +145,29 @@ export async function PATCH(
         p_actor_id: user.id,
       })
 
+      // ── Delivery-weighted TrustCoin reward ───────────────────────────
+      // On-time = delivered before or on the expected delivery date.
+      // If no deadline was set (order pre-dates delivery_days feature),
+      // we give the base reward rather than the on-time bonus.
+      const deliveredAt    = new Date()
+      const expectedAt     = order.expected_delivery_at ? new Date(order.expected_delivery_at as string) : null
+      const isOnTime       = expectedAt !== null && deliveredAt <= expectedAt
+      const deliveryEvent  = isOnTime ? 'delivered_on_time' : 'delivered_late'
+
+      void awardDeliveryTrust(user.id, deliveryEvent, id)
+
       // Log to activity feed (non-blocking)
       void logActivity({
         orderId:    id,
         actorId:    user.id,
         actorRole:  'seller',
         eventType:  'delivery_completed',
-        title:      'Seller marked as delivered',
-        body:       delivery_notes || undefined,
+        title:      isOnTime
+          ? `⚡ +${150}₮ On-time delivery bonus earned!`
+          : `📦 +${50}₮ Delivery reward earned`,
+        body:       isOnTime
+          ? (delivery_notes || 'Delivered within promised timeframe.')
+          : (delivery_notes || 'Delivered outside promised timeframe.'),
       })
 
       await insertNotification({
@@ -310,16 +326,6 @@ export async function PATCH(
         p_actor_id: user.id,
       })
 
-      // Log to activity feed (non-blocking)
-      void logActivity({
-        orderId:   id,
-        actorId:   user.id,
-        actorRole: 'buyer',
-        eventType: 'buyer_confirmed',
-        title:     'Buyer confirmed receipt',
-        body:      'Payment released from escrow to seller.',
-      })
-
       // ── 4. Trust reward to seller (₮COMPLETE_ORDER = 100) ────────────
       try {
         const { error: trustErr } = await admin.rpc('issue_trust', {
@@ -333,6 +339,21 @@ export async function PATCH(
       } catch (err) {
         console.error('[orders/release_payment] trust award threw:', err)
       }
+
+      // ── 4b. Buyer-confirmed delivery reward (+25₮ to buyer) ───────────
+      // Encourages buyers to confirm receipt promptly rather than leaving
+      // escrow hanging — faster confirmation = seller paid sooner.
+      void awardDeliveryTrust(user.id, 'buyer_confirmed', id)
+
+      // Log buyer confirmation to activity feed
+      void logActivity({
+        orderId:   id,
+        actorId:   user.id,
+        actorRole: 'buyer',
+        eventType: 'buyer_confirmed',
+        title:     '✅ +25₮ Confirmed receipt',
+        body:      'Payment released from escrow to seller.',
+      })
 
       // ── 5. Notifications + emails for both parties ──────────────────
       void (async () => {

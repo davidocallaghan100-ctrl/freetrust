@@ -79,6 +79,26 @@ export const TRUST_LEDGER_TYPES = {
 
   DONATE_IMPACT:    'donate_impact',
   POST_LIKED:       'post_liked',
+
+  // ── Delivery-weighted rewards (Week 2) ───────────────────────────
+  DELIVERED_ON_TIME: 'delivered_on_time',
+  DELIVERED_LATE:    'delivered_late',
+  BUYER_CONFIRMED:   'buyer_confirmed',
+  FIVE_STAR_BONUS:   'five_star_review',
+  DISPUTE_LOST:      'dispute_lost',
+  TRACKING_USED:     'tracking_used',
 } as const
 
 export type TrustLedgerType = typeof TRUST_LEDGER_TYPES[keyof typeof TRUST_LEDGER_TYPES]
+
+// ── Delivery reward amounts ──────────────────────────────────────────
+// Separate from TRUST_REWARDS so they are clearly labelled as
+// delivery-quality signals rather than activity rewards.
+export const DELIVERY_TRUST_REWARDS = {
+  DELIVERED_ON_TIME: 150,   // Seller — arrived on or before expected date
+  DELIVERED_LATE:     50,   // Seller — arrived but after expected date (still rewarded)
+  BUYER_CONFIRMED:    25,   // Buyer  — confirmed receipt (encourages fast confirmation)
+  FIVE_STAR_BONUS:    25,   // Reviewer — bonus on top of LEAVE_REVIEW for a 5-star
+  DISPUTE_LOST:      -50,   // Seller — deducted when dispute resolved against them
+  TRACKING_USED:      10,   // Seller — started live delivery tracking (adoption incentive)
+} as const
