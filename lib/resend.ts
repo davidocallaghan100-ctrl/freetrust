@@ -536,6 +536,115 @@ export async function sendWelcomeCommunityEmail(to: string, name: string, referr
   })
 }
 
+// ─── Monthly Seller Statement ─────────────────────────────────────────────────
+
+export interface MonthlyStatementOrder {
+  invoiceNumber: string | null
+  date: string
+  itemTitle: string
+  grossCents: number
+  netCents: number
+}
+
+export async function sendMonthlyStatementEmail(
+  to: string,
+  name: string,
+  monthName: string,
+  year: number,
+  stats: {
+    grossCents: number
+    feeCents: number
+    netCents: number
+    orderCount: number
+    trustCoinsEarned: number
+  },
+  orders: MonthlyStatementOrder[],
+  totalOrders: number,
+) {
+  const fmt = (cents: number) =>
+    '€' + (cents / 100).toLocaleString('en-IE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+  const netFormatted = fmt(stats.netCents)
+  const subject = `Your FreeTrust earnings for ${monthName} ${year} — ${netFormatted} net`
+
+  const statBox = (value: string, label: string, color: string) => `
+    <td width="50%" style="padding:6px;vertical-align:top;">
+      <div style="background:rgba(148,163,184,0.07);border-radius:12px;padding:16px 12px;text-align:center;">
+        <div style="font-size:22px;font-weight:900;color:${color};">${value}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:4px;text-transform:uppercase;letter-spacing:0.05em;">${label}</div>
+      </div>
+    </td>
+  `
+
+  const orderRows = orders.slice(0, 10).map(o => {
+    const date = new Date(o.date).toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })
+    const title = o.itemTitle.length > 40 ? o.itemTitle.slice(0, 38) + '…' : o.itemTitle
+    const inv = o.invoiceNumber ?? '—'
+    return `
+      <tr>
+        <td style="padding:8px 6px;font-size:12px;color:#64748b;border-bottom:1px solid rgba(255,255,255,0.05);">${inv}</td>
+        <td style="padding:8px 6px;font-size:12px;color:#cbd5e1;border-bottom:1px solid rgba(255,255,255,0.05);">${date}</td>
+        <td style="padding:8px 6px;font-size:12px;color:#cbd5e1;border-bottom:1px solid rgba(255,255,255,0.05);max-width:160px;overflow:hidden;">${title}</td>
+        <td style="padding:8px 6px;font-size:12px;color:#94a3b8;border-bottom:1px solid rgba(255,255,255,0.05);text-align:right;">${fmt(o.grossCents)}</td>
+        <td style="padding:8px 6px;font-size:13px;font-weight:700;color:#10b981;border-bottom:1px solid rgba(255,255,255,0.05);text-align:right;">${fmt(o.netCents)}</td>
+      </tr>
+    `
+  }).join('')
+
+  const moreLink = totalOrders > 10
+    ? `<p style="margin:8px 0 0;font-size:12px;color:#64748b;text-align:center;">…and ${totalOrders - 10} more. <a href="${BASE_URL}/accounting" style="color:#38bdf8;text-decoration:underline;">View full statement →</a></p>`
+    : ''
+
+  const html = wrap(`Your ${monthName} ${year} Earnings Summary`, `
+    ${h1(`Your ${monthName} ${year} earnings summary`)}
+    ${p(`Hi ${name}, here's a full breakdown of your FreeTrust seller activity last month.`)}
+
+    <!-- 4 stat boxes -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+      <tr>
+        ${statBox(fmt(stats.grossCents), 'Gross Sales', '#f1f5f9')}
+        ${statBox(fmt(stats.feeCents), 'Platform Fees', '#94a3b8')}
+      </tr>
+      <tr>
+        ${statBox(fmt(stats.netCents), 'Net Earnings', '#10b981')}
+        ${statBox(String(stats.orderCount), 'Orders Completed', '#38bdf8')}
+      </tr>
+    </table>
+
+    <!-- TrustCoins -->
+    ${stats.trustCoinsEarned > 0 ? `
+    <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:12px;padding:14px 18px;margin:0 0 20px;text-align:center;">
+      <span style="font-size:13px;color:#10b981;font-weight:700;">₮${stats.trustCoinsEarned} TrustCoins earned this month</span>
+    </div>` : ''}
+
+    ${divider()}
+
+    <!-- Orders table -->
+    <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">Orders</div>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 4px;">
+      <thead>
+        <tr>
+          <th style="padding:6px;font-size:11px;color:#475569;text-align:left;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Invoice</th>
+          <th style="padding:6px;font-size:11px;color:#475569;text-align:left;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Date</th>
+          <th style="padding:6px;font-size:11px;color:#475569;text-align:left;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Item</th>
+          <th style="padding:6px;font-size:11px;color:#475569;text-align:right;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Gross</th>
+          <th style="padding:6px;font-size:11px;color:#475569;text-align:right;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Net</th>
+        </tr>
+      </thead>
+      <tbody>${orderRows}</tbody>
+    </table>
+    ${moreLink}
+
+    ${divider()}
+    <div style="text-align:center;padding-top:4px;">${btn('📊 View Full Accounting →', `${BASE_URL}/accounting`)}</div>
+    <p style="text-align:center;margin-top:14px;font-size:12px;color:#475569;">
+      FreeTrust · hello@freetrust.co · <a href="${BASE_URL}/profile" style="color:#64748b;">Manage notifications</a>
+    </p>
+  `)
+
+  return getResend().emails.send({ from: FROM, to, subject, html })
+}
+
 // ─── Outbound Campaigns ────────────────────────────────────────────────────────
 
 // sendCampaignEmail — used for broadcast/drip campaigns from the admin panel.

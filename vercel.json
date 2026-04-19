@@ -27,6 +27,10 @@
     {
       "path": "/api/cron/delivery-nudge",
       "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/monthly-statement",
+      "schedule": "0 7 1 * *"
     }
   ]
 }

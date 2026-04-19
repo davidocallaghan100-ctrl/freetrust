@@ -5,6 +5,7 @@ import { useCurrency } from '@/context/CurrencyContext'
 import FAQAccordion from '@/components/marketing/FAQAccordion'
 import { FAQS } from '@/lib/faq'
 import ROICalculator from './ROICalculator'
+import ListingQualityBadge from '@/components/marketplace/ListingQualityBadge'
 
 export interface HomeClientProps {
   initialCounts: {
@@ -44,6 +45,22 @@ type PreviewJob = {
   salary_currency: string
   created_at: string
   poster: { full_name: string | null } | null
+}
+
+type PreviewListing = {
+  id: string
+  title: string
+  type: 'product' | 'service'
+  price: number
+  currency: string
+  image_url: string | null
+  quality_score: number
+  seller_name: string
+  seller_avatar: string | null
+  avg_rating: number
+  review_count: number
+  category: string | null
+  delivery_days: number | null
 }
 type StatsData = {
   members: { total: number; thisWeek: number; thisMonth: number }
@@ -287,6 +304,8 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
   const [featuredProducts, setFeaturedProducts] = useState<FeaturedProduct[]>([])
   const [previewEvents, setPreviewEvents] = useState<PreviewEvent[] | null>(null)
   const [previewJobs, setPreviewJobs] = useState<PreviewJob[] | null>(null)
+  const [featuredListings, setFeaturedListings] = useState<PreviewListing[] | null>(null)
+  const [listingTab, setListingTab] = useState<'all' | 'service' | 'product'>('all')
 
   const fetchStats = useCallback(async () => {
     try {
@@ -354,6 +373,21 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           setPreviewJobs([])
         }
       } catch { setPreviewJobs([]) }
+    }
+    void load()
+  }, [])
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch('/api/landing/featured-preview')
+        if (res.ok) {
+          const data = await res.json() as PreviewListing[]
+          setFeaturedListings(data)
+        } else {
+          setFeaturedListings([])
+        }
+      } catch { setFeaturedListings([]) }
     }
     void load()
   }, [])
@@ -872,6 +906,129 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
             </p>
           </div>
           <ROICalculator />
+        </div>
+      </section>
+
+      {/* ── FEATURED LISTINGS ── */}
+      <section style={{ borderBottom: '1px solid rgba(16,185,129,0.06)', background: 'rgba(16,185,129,0.01)' }}>
+        <div className="lp-sec">
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div>
+              <h2 className="section-h2" style={{ fontSize: 'clamp(1.3rem,3vw,1.8rem)', fontWeight: 900, margin: '0 0 0.2rem' }}>⭐ Featured Listings</h2>
+              <p style={{ fontSize: '0.78rem', color: '#64748b', margin: 0 }}>Top-rated by the FreeTrust community</p>
+            </div>
+            <Link href="/browse" style={{ fontSize: '0.82rem', color: '#10b981', textDecoration: 'none', fontWeight: 600, flexShrink: 0 }}>Browse all →</Link>
+          </div>
+          {/* Tab switcher */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.1rem' }}>
+            {(['all', 'service', 'product'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setListingTab(tab)}
+                style={{
+                  padding: '0.3rem 0.85rem', borderRadius: 999, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', border: 'none', transition: 'all 0.15s',
+                  background: listingTab === tab ? '#10b981' : 'rgba(16,185,129,0.08)',
+                  color: listingTab === tab ? '#0f172a' : '#64748b',
+                }}
+              >
+                {tab === 'all' ? 'All' : tab === 'service' ? 'Services' : 'Products'}
+              </button>
+            ))}
+          </div>
+
+          {/* Cards */}
+          {featuredListings === null ? (
+            /* Loading skeleton */
+            <div className="hscroll">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} style={{ flexShrink: 0, width: 220, height: 240, background: '#1e293b', borderRadius: 14, border: '1px solid rgba(16,185,129,0.08)', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
+              ))}
+            </div>
+          ) : (() => {
+            const filtered = listingTab === 'all' ? featuredListings : featuredListings.filter(l => l.type === listingTab)
+            if (filtered.length === 0) {
+              return (
+                <div style={{ textAlign: 'center', padding: '2.5rem 1rem', background: '#1e293b', borderRadius: 14, border: '1px solid rgba(16,185,129,0.08)' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⭐</div>
+                  <div style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '0.75rem' }}>No featured listings yet — quality listings will appear here as reviews come in</div>
+                  <Link href="/create" style={{ fontSize: '0.82rem', color: '#10b981', fontWeight: 700, textDecoration: 'none' }}>Create a listing →</Link>
+                </div>
+              )
+            }
+            const catGrads: Record<string, string> = {
+              Technology: 'linear-gradient(135deg,#059669,#047857)',
+              Design: 'linear-gradient(135deg,#db2777,#9d174d)',
+              Marketing: 'linear-gradient(135deg,#d97706,#92400e)',
+              Writing: 'linear-gradient(135deg,#7c3aed,#4c1d95)',
+              Finance: 'linear-gradient(135deg,#0284c7,#1e40af)',
+              Health: 'linear-gradient(135deg,#0891b2,#0e7490)',
+              Education: 'linear-gradient(135deg,#4338ca,#3730a3)',
+              Legal: 'linear-gradient(135deg,#475569,#334155)',
+            }
+            return (
+              <div className="hscroll">
+                {filtered.map(listing => {
+                  const grad = catGrads[listing.category ?? ''] ?? 'linear-gradient(135deg,#10b981,#059669)'
+                  const href = listing.type === 'product' ? `/products/${listing.id}` : `/services/${listing.id}`
+                  const priceLabel = listing.type === 'service'
+                    ? `€${listing.price.toLocaleString('en-IE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/hr`
+                    : `€${listing.price.toLocaleString('en-IE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                  return (
+                    <Link key={listing.id} href={href} style={{ textDecoration: 'none', flexShrink: 0, width: 220 }}>
+                      <div
+                        style={{ background: '#1e293b', border: '1px solid rgba(16,185,129,0.12)', borderRadius: 14, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s', display: 'flex', flexDirection: 'column', height: 260 }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 24px rgba(16,185,129,0.18)' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '' }}
+                      >
+                        {/* Image / gradient header */}
+                        <div style={{ height: 120, flexShrink: 0, background: grad, position: 'relative', overflow: 'hidden' }}>
+                          {listing.image_url && (
+                            <img src={listing.image_url} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                          )}
+                          {/* Quality badge top-right */}
+                          <div style={{ position: 'absolute', top: 8, right: 8 }}>
+                            <ListingQualityBadge qualityScore={listing.quality_score} compact />
+                          </div>
+                          {/* Type pill top-left */}
+                          <div style={{ position: 'absolute', top: 8, left: 8, background: listing.type === 'service' ? 'rgba(16,185,129,0.9)' : 'rgba(56,189,248,0.9)', color: '#0f172a', fontSize: '0.58rem', fontWeight: 800, padding: '2px 6px', borderRadius: 999 }}>
+                            {listing.type === 'service' ? 'SERVICE' : 'PRODUCT'}
+                          </div>
+                        </div>
+                        {/* Body */}
+                        <div style={{ padding: '0.8rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                          {/* Title */}
+                          <div style={{ fontSize: '0.83rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', marginBottom: '0.4rem' } as React.CSSProperties}>
+                            {listing.title}
+                          </div>
+                          {/* Seller row */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
+                            {listing.seller_avatar
+                              ? <img src={listing.seller_avatar} alt="" style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                              : <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(16,185,129,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 800, color: '#10b981', flexShrink: 0 }}>
+                                  {listing.seller_name.charAt(0).toUpperCase()}
+                                </div>
+                            }
+                            <span style={{ fontSize: '0.7rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.seller_name}</span>
+                          </div>
+                          {/* Rating row */}
+                          {listing.review_count > 0 && (
+                            <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginBottom: '0.35rem' }}>
+                              <span style={{ color: '#fbbf24' }}>★</span> {listing.avg_rating.toFixed(1)} · {listing.review_count} review{listing.review_count !== 1 ? 's' : ''}
+                            </div>
+                          )}
+                          {/* Price */}
+                          <div style={{ marginTop: 'auto', fontSize: '0.92rem', fontWeight: 900, color: '#f1f5f9' }}>
+                            {priceLabel}
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            )
+          })()}
         </div>
       </section>
 
