@@ -359,8 +359,53 @@ async function handleTransferCreated(transfer: Stripe.Transfer) {
     destination: transfer.destination,
   });
 
-  // TODO: Update escrow status in your DB to "released".
-  // Notify buyer and seller that funds have been released.
+  // Find the order associated with this transfer and notify both parties
+  const orderId = transfer.metadata?.order_id;
+  if (!orderId) return;
+
+  try {
+    const supabase = createAdminClient();
+
+    // Mark order as completed
+    await supabase
+      .from('orders')
+      .update({ status: 'completed', updated_at: new Date().toISOString() })
+      .eq('id', orderId);
+
+    const { data: order } = await supabase
+      .from('orders')
+      .select('buyer_id, seller_id, item_title, amount_cents')
+      .eq('id', orderId)
+      .single();
+
+    if (!order) return;
+
+    const amountEur = ((transfer.amount ?? 0) / 100).toFixed(2);
+
+    // Notify seller — funds released
+    if (order.seller_id) {
+      await supabase.from('notifications').insert({
+        user_id: order.seller_id,
+        type: 'order',
+        title: '💸 Payment released!',
+        body: `€${amountEur} has been transferred to your Stripe account for "${order.item_title}".`,
+        link: `/orders/${orderId}`,
+      });
+    }
+
+    // Notify buyer — order complete
+    if (order.buyer_id) {
+      await supabase.from('notifications').insert({
+        user_id: order.buyer_id,
+        type: 'order',
+        title: '✅ Order complete',
+        body: `Your order for "${order.item_title}" is complete. Don't forget to leave a review!`,
+        link: `/orders/${orderId}`,
+      });
+    }
+  } catch (err) {
+    console.error('[Webhook] handleTransferCreated error:', err);
+  }
 }
 
 async function handleFounderInvestment(session: Stripe.Checkout.Session) {
@@ -377,7 +422,8 @@ async function handleFounderInvestment(session: Stripe.Checkout.Session) {
   const productFeeBps = meta.product_fee_bps;
   const aiCreditsBonus = meta.ai_credits_bonus;
   const trustBonus = meta.trust_bonus;
-  const monthlyRefill = meta.monthly_refill;
+  // monthly_refill removed from product — kept as fallback 0 for DB compat
+  const monthlyRefill = meta.monthly_refill ?? '0';
 
   if (
     !userId ||
@@ -386,8 +432,7 @@ async function handleFounderInvestment(session: Stripe.Checkout.Session) {
     !serviceFeeBps ||
     !productFeeBps ||
     !aiCreditsBonus ||
-    !trustBonus ||
-    !monthlyRefill
+    !trustBonus
   ) {
     console.error('[Founder] Missing required metadata:', session.id, meta);
     return;

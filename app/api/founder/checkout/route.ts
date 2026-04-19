@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
             currency: 'eur',
             product_data: {
               name: `FreeTrust ${tier.displayName} Founder`,
-              description: `Lifetime ${tier.serviceFeePercent}% / ${tier.productFeePercent}% fees · +${tier.aiCreditsBonus.toLocaleString()} AI Credits · +${tier.trustBonus.toLocaleString()} TrustCoins · +${tier.monthlyAiCreditRefill}/mo refill for life`,
+              description: `Lifetime ${tier.serviceFeePercent}% / ${tier.productFeePercent}% fees · +${tier.aiCreditsBonus.toLocaleString()} AI Credits · +${tier.trustBonus.toLocaleString()} TrustCoins · 30% permanent discount on all future AI Credit top-ups`,
             },
             unit_amount: tier.priceCents,
           },
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
         product_fee_bps: tier.productFeeBps.toString(),
         ai_credits_bonus: tier.aiCreditsBonus.toString(),
         trust_bonus: tier.trustBonus.toString(),
-        monthly_refill: tier.monthlyAiCreditRefill.toString(),
+        topup_discount_percent: '30',
       },
       success_url: `${origin}/invest/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/invest?canceled=1`,
