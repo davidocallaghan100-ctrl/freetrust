@@ -454,6 +454,9 @@ export async function POST(req: NextRequest) {
       const imagesLiteral = toPgUrlArray(parsedImages)
       const tagsLiteral   = toPgTagArray([])
 
+      const deliveryDaysRaw = data.delivery_days ? Number(data.delivery_days) : null
+      const deliveryDays = deliveryDaysRaw && deliveryDaysRaw > 0 ? deliveryDaysRaw : null
+
       const { error } = await admin.from('listings').insert({
         seller_id: user.id,
         title,
@@ -464,6 +467,7 @@ export async function POST(req: NextRequest) {
         status: 'active',
         images: imagesLiteral,
         tags:   tagsLiteral,
+        delivery_days: deliveryDays,
         // ── Globalisation fields ────────────────────────────────────────
         country:        struct.country ?? null,
         region:         struct.region ?? null,

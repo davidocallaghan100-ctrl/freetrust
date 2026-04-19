@@ -1,8 +1,19 @@
 'use client'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useParams } from 'next/navigation'
+import { useSellerTracking, useBuyerTracking } from '@/hooks/useDeliveryTracking'
+
+// Leaflet map — SSR disabled (window not available server-side)
+const DeliveryMap = dynamic(() => import('@/components/delivery/DeliveryMap'), { ssr: false })
+
+interface StatusHistoryEntry {
+  status: string
+  timestamp: string
+  actor_id: string
+}
 
 interface Order {
   id: string
@@ -21,6 +32,11 @@ interface Order {
   escrow_released_at?: string
   delivery_notes?: string
   dispute_reason?: string
+  status_history?: StatusHistoryEntry[]
+  expected_delivery_at?: string
+  delivery_lat?: number
+  delivery_lng?: number
+  delivery_address?: string
 }
 
 const STATUS_STEPS = [
@@ -47,6 +63,165 @@ function formatDate(str: string) {
   return new Date(str).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
+// Compact timestamp for timeline steps: "19 Apr · 09:31"
+function formatStepTime(str: string) {
+  const d = new Date(str)
+  const day = d.getDate()
+  const month = d.toLocaleDateString('en-GB', { month: 'short' })
+  const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+  return `${day} ${month} · ${time}`
+}
+
+// ─── Seller Tracking Panel ───────────────────────────────────────────────────
+function SellerTrackingPanel({ order, onDeliveryStarted }: { order: Order; onDeliveryStarted: (sessionId: string) => void }) {
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [starting, setStarting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const { isTracking, error: trackingError, startTracking, stopTracking } = useSellerTracking(order.id, sessionId)
+
+  const handleStart = useCallback(async () => {
+    setStarting(true)
+    setError(null)
+    try {
+      // Get seller's current location to use as starting point
+      const geo = await new Promise<GeolocationPosition>((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 })
+      )
+
+      const res = await fetch('/api/delivery-sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: order.id,
+          buyer_lat: order.delivery_lat ?? null,
+          buyer_lng: order.delivery_lng ?? null,
+          buyer_address: order.delivery_address ?? null,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to start session')
+
+      setSessionId(data.session.id)
+      onDeliveryStarted(data.session.id)
+      startTracking()
+      void geo // used above
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not start tracking')
+    } finally {
+      setStarting(false)
+    }
+  }, [order, startTracking, onDeliveryStarted])
+
+  const handleStop = useCallback(async () => {
+    if (!sessionId) return
+    stopTracking()
+    await fetch('/api/delivery-sessions', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId, status: 'completed' }),
+    })
+    setSessionId(null)
+  }, [sessionId, stopTracking])
+
+  if (isTracking) {
+    return (
+      <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 12, padding: '1rem 1.25rem' }}>
+        {/* iOS wake lock warning */}
+        <div style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#fbbf24', marginBottom: 12 }}>
+          📱 Keep this screen open while delivering — closing the app will pause location sharing
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+          <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: '#10b981', animation: 'pulse-dot 1.5s ease-in-out infinite' }} />
+          <span style={{ fontWeight: 700, color: '#10b981', fontSize: '0.9rem' }}>📡 Location sharing active</span>
+        </div>
+        <button
+          onClick={handleStop}
+          style={{ padding: '0.6rem 1.25rem', background: 'rgba(248,113,113,0.15)', color: '#f87171', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.875rem' }}
+        >
+          ⏹ Stop Sharing Location
+        </button>
+        <style>{`@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ background: '#1e293b', borderRadius: 12, padding: '1rem 1.25rem', border: '1px solid rgba(16,185,129,0.15)' }}>
+      <div style={{ fontSize: '0.875rem', color: '#94a3b8', marginBottom: '0.75rem' }}>
+        Making a physical delivery? Share your live location so the buyer can track you on a map.
+      </div>
+      {error && <div style={{ color: '#f87171', fontSize: '0.8rem', marginBottom: '0.5rem' }}>⚠ {error}</div>}
+      {trackingError && <div style={{ color: '#f87171', fontSize: '0.8rem', marginBottom: '0.5rem' }}>⚠ {trackingError}</div>}
+      <button
+        onClick={handleStart}
+        disabled={starting}
+        style={{
+          padding: '0.75rem 1.5rem', background: starting ? 'rgba(16,185,129,0.3)' : '#10b981',
+          color: '#0f172a', border: 'none', borderRadius: 8, fontWeight: 700,
+          cursor: starting ? 'not-allowed' : 'pointer', fontSize: '0.9rem',
+          display: 'flex', alignItems: 'center', gap: '0.5rem',
+        }}
+      >
+        🚚 {starting ? 'Starting…' : 'Start Delivery Tracking'}
+      </button>
+    </div>
+  )
+}
+
+// ─── Buyer Tracking Panel ────────────────────────────────────────────────────
+function BuyerTrackingPanel({ orderId }: { orderId: string }) {
+  const { sellerPosition, session, loading } = useBuyerTracking(orderId)
+
+  if (loading) return null
+  if (!session) return null
+
+  // If we don't have a seller position yet, show waiting state
+  if (!sellerPosition) {
+    return (
+      <div style={{ background: '#1e293b', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(16,185,129,0.2)' }}>
+        <h3 style={{ margin: '0 0 0.75rem', fontSize: '0.95rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Live Delivery Tracking</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#64748b', fontSize: '0.875rem' }}>
+          <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#10b981', animation: 'pulse-dot 1.5s ease-in-out infinite' }} />
+          Waiting for seller&apos;s location…
+        </div>
+        <style>{`@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
+      </div>
+    )
+  }
+
+  const hasDestination = session.buyer_lat != null && session.buyer_lng != null
+
+  return (
+    <div style={{ background: '#1e293b', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(16,185,129,0.2)' }}>
+      <h3 style={{ margin: '0 0 1rem', fontSize: '0.95rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        🗺️ Live Delivery Tracking
+      </h3>
+      {hasDestination ? (
+        <DeliveryMap
+          sellerLat={sellerPosition.lat}
+          sellerLng={sellerPosition.lng}
+          buyerLat={session.buyer_lat!}
+          buyerLng={session.buyer_lng!}
+        />
+      ) : (
+        // No buyer address stored — show seller position only with a simple indicator
+        <div style={{ padding: '1rem', background: 'rgba(16,185,129,0.06)', borderRadius: 10, fontSize: '0.875rem', color: '#34d399' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+            <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#10b981', animation: 'pulse-dot 1.5s ease-in-out infinite' }} />
+            <strong>Seller is on the way</strong>
+          </div>
+          <div style={{ color: '#64748b', fontSize: '0.8rem' }}>
+            Last updated: {new Date(sellerPosition.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        </div>
+      )}
+      <style>{`@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
+    </div>
+  )
+}
+
+// ─── Main Page ───────────────────────────────────────────────────────────────
 export default function OrderDetailPage() {
   const router = useRouter()
   const params = useParams()
@@ -60,6 +235,7 @@ export default function OrderDetailPage() {
   const [deliveryNotes, setDeliveryNotes] = useState('')
   const [disputeReason, setDisputeReason] = useState('')
   const [showDispute, setShowDispute] = useState(false)
+  const [activeDeliverySessionId, setActiveDeliverySessionId] = useState<string | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -68,6 +244,7 @@ export default function OrderDetailPage() {
       setUserId(user.id)
       fetchOrder()
     })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId])
 
   async function fetchOrder() {
@@ -109,7 +286,7 @@ export default function OrderDetailPage() {
       } else {
         showToast(data.error || 'Action failed', 'error')
       }
-    } catch (e) {
+    } catch {
       showToast('Something went wrong', 'error')
     } finally {
       setActionLoading(false)
@@ -140,6 +317,10 @@ export default function OrderDetailPage() {
   const currentStepIdx = STATUS_STEPS.findIndex(s => s.key === order.status)
   const isDisputed = order.status === 'disputed'
   const isRefunded = order.status === 'refunded'
+
+  // Physical delivery tracking is shown for in_progress orders
+  const isPhysical = order.item_type === 'physical' || order.item_type === 'product'
+  const showDeliveryTracking = isPhysical && order.status === 'in_progress'
 
   return (
     <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', padding: '2rem 1rem', paddingTop: '5rem' }}>
@@ -198,6 +379,13 @@ export default function OrderDetailPage() {
                   {STATUS_STEPS.map((step, idx) => {
                     const done = idx < currentStepIdx
                     const current = idx === currentStepIdx
+                    // Find timestamp: pending_escrow uses created_at, rest from status_history
+                    const historyEntry = step.key === 'pending_escrow'
+                      ? null
+                      : (order.status_history || []).find(h => h.status === step.key || h.status === 'paid')
+                    const stepTimestamp = step.key === 'pending_escrow'
+                      ? (done || current ? order.created_at : null)
+                      : (done || current ? historyEntry?.timestamp || null : null)
                     return (
                       <div key={step.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
                         {idx < STATUS_STEPS.length - 1 && (
@@ -214,11 +402,30 @@ export default function OrderDetailPage() {
                         <div style={{ fontSize: '0.7rem', color: current ? '#38bdf8' : done ? '#34d399' : '#64748b', marginTop: '0.4rem', textAlign: 'center', fontWeight: current ? 700 : 400 }}>
                           {step.label}
                         </div>
+                        {stepTimestamp && (
+                          <div style={{ fontSize: '0.6rem', color: '#475569', marginTop: '0.2rem', textAlign: 'center', lineHeight: 1.3 }}>
+                            {formatStepTime(stepTimestamp)}
+                          </div>
+                        )}
                       </div>
                     )
                   })}
                 </div>
+                {/* Expected delivery date if set */}
+                {order.expected_delivery_at && order.status !== 'completed' && order.status !== 'delivered' && (
+                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(148,163,184,0.08)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>📅 Expected by:</span>
+                    <span style={{ fontSize: '0.8rem', color: '#fbbf24', fontWeight: 600 }}>
+                      {new Date(order.expected_delivery_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                  </div>
+                )}
               </div>
+            )}
+
+            {/* ── BUYER: Live delivery map (shown when active session exists) ── */}
+            {isBuyer && showDeliveryTracking && (
+              <BuyerTrackingPanel orderId={orderId} />
             )}
 
             {/* Dispute / Refund banner */}
@@ -261,34 +468,44 @@ export default function OrderDetailPage() {
               <div style={{ background: '#1e293b', borderRadius: 14, padding: '1.5rem', border: '1px solid rgba(148,163,184,0.1)' }}>
                 <h3 style={{ margin: '0 0 1rem', fontSize: '0.95rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actions</h3>
 
-                {/* SELLER: Mark as delivered */}
+                {/* SELLER: Mark as delivered + optional delivery tracking */}
                 {isSeller && order.status === 'in_progress' && (
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', color: '#94a3b8', marginBottom: '0.5rem' }}>
-                      Delivery notes (optional)
-                    </label>
-                    <textarea
-                      value={deliveryNotes}
-                      onChange={e => setDeliveryNotes(e.target.value)}
-                      placeholder="Describe what you've delivered, include any links or files..."
-                      style={{
-                        width: '100%', minHeight: 100, background: '#0f172a', border: '1px solid rgba(148,163,184,0.15)',
-                        borderRadius: 8, color: '#f1f5f9', padding: '0.75rem', fontSize: '0.875rem', resize: 'vertical',
-                        outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
-                      }}
-                    />
-                    <button
-                      onClick={() => doAction('mark_delivered', { delivery_notes: deliveryNotes })}
-                      disabled={actionLoading}
-                      style={{
-                        marginTop: '0.75rem', padding: '0.75rem 1.5rem', background: '#a78bfa',
-                        color: '#0f172a', border: 'none', borderRadius: 8, fontWeight: 700,
-                        cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1,
-                        fontSize: '0.9rem',
-                      }}
-                    >
-                      {actionLoading ? 'Updating...' : '📦 Mark as Delivered'}
-                    </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {/* ── Physical delivery tracking button ── */}
+                    {showDeliveryTracking && !activeDeliverySessionId && (
+                      <SellerTrackingPanel
+                        order={order}
+                        onDeliveryStarted={(sid) => setActiveDeliverySessionId(sid)}
+                      />
+                    )}
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.875rem', color: '#94a3b8', marginBottom: '0.5rem' }}>
+                        Delivery notes (optional)
+                      </label>
+                      <textarea
+                        value={deliveryNotes}
+                        onChange={e => setDeliveryNotes(e.target.value)}
+                        placeholder="Describe what you've delivered, include any links or files..."
+                        style={{
+                          width: '100%', minHeight: 100, background: '#0f172a', border: '1px solid rgba(148,163,184,0.15)',
+                          borderRadius: 8, color: '#f1f5f9', padding: '0.75rem', fontSize: '0.875rem', resize: 'vertical',
+                          outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+                        }}
+                      />
+                      <button
+                        onClick={() => doAction('mark_delivered', { delivery_notes: deliveryNotes })}
+                        disabled={actionLoading}
+                        style={{
+                          marginTop: '0.75rem', padding: '0.75rem 1.5rem', background: '#a78bfa',
+                          color: '#0f172a', border: 'none', borderRadius: 8, fontWeight: 700,
+                          cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1,
+                          fontSize: '0.9rem',
+                        }}
+                      >
+                        {actionLoading ? 'Updating...' : '📦 Mark as Delivered'}
+                      </button>
+                    </div>
                   </div>
                 )}
 

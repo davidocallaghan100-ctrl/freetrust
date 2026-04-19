@@ -136,6 +136,13 @@ export async function PATCH(
         return NextResponse.json({ error: 'Failed to update order' }, { status: 500 })
       }
 
+      // Append to status_history timeline (non-blocking)
+      void admin.rpc('append_order_status_history', {
+        p_order_id: id,
+        p_status:   'delivered',
+        p_actor_id: user.id,
+      })
+
       await insertNotification({
         userId: order.buyer_id,
         type:   'order',
@@ -284,6 +291,13 @@ export async function PATCH(
         // Money has moved — don't fail the response, just log so we
         // can reconcile manually.
       }
+
+      // Append to status_history timeline (non-blocking)
+      void admin.rpc('append_order_status_history', {
+        p_order_id: id,
+        p_status:   'completed',
+        p_actor_id: user.id,
+      })
 
       // ── 4. Trust reward to seller (₮COMPLETE_ORDER = 100) ────────────
       try {
@@ -447,6 +461,13 @@ export async function PATCH(
         return NextResponse.json({ error: 'Failed to update order' }, { status: 500 })
       }
 
+      // Append to status_history timeline (non-blocking)
+      void admin.rpc('append_order_status_history', {
+        p_order_id: id,
+        p_status:   'cancelled',
+        p_actor_id: user.id,
+      })
+
       // Notify both parties. If the buyer earned ₮5 purchase_reward
       // on checkout.session.completed, we'd normally reverse it here —
       // but the Webhook only awards that AFTER the hold, and most
@@ -494,6 +515,13 @@ export async function PATCH(
       if (updateError) {
         return NextResponse.json({ error: 'Failed to raise dispute' }, { status: 500 })
       }
+
+      // Append to status_history timeline (non-blocking)
+      void admin.rpc('append_order_status_history', {
+        p_order_id: id,
+        p_status:   'disputed',
+        p_actor_id: user.id,
+      })
 
       // The PaymentIntent is left in its current state (requires_capture)
       // so the platform admin can decide whether to capture + refund

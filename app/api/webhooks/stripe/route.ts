@@ -248,12 +248,32 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       return;
     }
 
-    // Fetch order to issue trust reward to buyer
+    // Fetch order to issue trust reward to buyer + get listing_id for delivery deadline
     const { data: order } = await supabase
       .from('orders')
-      .select('buyer_id, item_title')
+      .select('buyer_id, item_title, listing_id')
       .eq('id', orderId)
       .single();
+
+    // Set expected_delivery_at from listing.delivery_days (non-blocking)
+    if (order?.listing_id) {
+      supabase
+        .from('listings')
+        .select('delivery_days')
+        .eq('id', order.listing_id)
+        .single()
+        .then(({ data: listing }) => {
+          if (listing?.delivery_days) {
+            const expectedDate = new Date()
+            expectedDate.setDate(expectedDate.getDate() + listing.delivery_days)
+            supabase
+              .from('orders')
+              .update({ expected_delivery_at: expectedDate.toISOString() })
+              .eq('id', orderId)
+              .then(() => {})
+          }
+        })
+    }
 
     if (order?.buyer_id) {
       // Issue ₮5 trust to buyer for making a purchase

@@ -33,6 +33,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     fetch('/api/me/geo-init', { method: 'POST', cache: 'no-store' }).catch(() => {})
   }, [isAuth])
 
+  // Register the push notification service worker (sw-push.js) once per session.
+  // This is separate from the Workbox sw.js so it won't be overwritten by builds.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return
+    navigator.serviceWorker.register('/sw-push.js', { scope: '/' }).catch(() => {
+      // Silently ignore — push is progressive enhancement
+    })
+  }, [])
+
   if (isAuth) {
     return (
       <div style={{ minHeight: '100vh', background: '#0f172a' }}>

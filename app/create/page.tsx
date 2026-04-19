@@ -1084,13 +1084,27 @@ export default function CreatePage() {
                 </select>
               </div>
             </div>
+            <div style={s.row}>
+              <div>
+                <label style={s.label}>Estimated Delivery</label>
+                <select style={s.select} value={f('delivery_days') || ''} onChange={e => setField('delivery_days', e.target.value)}>
+                  <option value="">Select delivery time…</option>
+                  <option value="1">Next day (1 day)</option>
+                  <option value="2">2 days</option>
+                  <option value="3">3 days</option>
+                  <option value="5">5 days</option>
+                  <option value="7">1 week</option>
+                  <option value="14">2 weeks</option>
+                </select>
+              </div>
+              <div>
+                <label style={s.label}>Shipping Info</label>
+                <input style={s.input} placeholder="e.g. Nationwide, tracked" value={f('shipping')} onChange={e => setField('shipping', e.target.value)} />
+              </div>
+            </div>
             <div style={s.fieldGroup}>
               <label style={s.label}>Image URLs (one per line)</label>
               <textarea style={{ ...s.textarea, minHeight: '80px' }} placeholder="https://image1.com&#10;https://image2.com" value={f('images')} onChange={e => setField('images', e.target.value)} />
-            </div>
-            <div style={s.fieldGroup}>
-              <label style={s.label}>Shipping Info</label>
-              <input style={s.input} placeholder="e.g. Ships worldwide, 3-5 days" value={f('shipping')} onChange={e => setField('shipping', e.target.value)} />
             </div>
           </>
         )

@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import Avatar from '@/components/Avatar'
 import SocialLinks from '@/components/social/SocialLinks'
 import MessageDrawer from '@/components/profile/MessageDrawer'
+import SellerOTIFBadge from '@/components/marketplace/SellerOTIFBadge'
 import {
   GRASSROOTS_CATEGORIES_BY_SLUG,
   AVAILABILITY_BY_VALUE,
@@ -1087,6 +1088,13 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* Delivery Performance (OTIF) — shown for any seller profile */}
+        {(viewingId || user?.id) && (
+          <div className="profile-card">
+            <SellerOTIFBadge sellerId={viewingId || user?.id || ''} />
+          </div>
+        )}
 
         {/* Edit form or About */}
         {editing ? (
