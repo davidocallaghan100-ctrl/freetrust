@@ -130,6 +130,7 @@ export default function ProductDetailPage() {
   const [cartAdded, setCartAdded] = useState(false)
   const [buyLoading, setBuyLoading] = useState(false)
   const [cartCount, setCartCount] = useState(0)
+  const [payError, setPayError] = useState<string | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -543,6 +544,27 @@ export default function ProductDetailPage() {
                   <span>{fmt(total, listing.currency, formatCurrency)}</span>
                 </div>
               </div>
+            )}
+
+            {/* Apple Pay / Google Pay express checkout */}
+            {!outOfStock && listing.price > 0 && (
+              <>
+                <AppleGooglePayButton
+                  amountCents={Math.round(listing.price * 100 * qty)}
+                  currency={(listing.currency ?? 'EUR').toUpperCase()}
+                  label={listing.title ?? 'Product'}
+                  description={listing.title ?? undefined}
+                  metadata={{ type: 'product_purchase', listing_id: listing.id }}
+                  onSuccess={(piId) => {
+                    setPayError(null)
+                    router.push(`/checkout/success?payment_intent=${piId}`)
+                  }}
+                  onError={(msg) => setPayError(msg)}
+                />
+                {payError && (
+                  <div style={{ color: '#f87171', fontSize: '0.78rem', marginTop: -4 }}>{payError}</div>
+                )}
+              </>
             )}
 
             {/* CTA buttons */}

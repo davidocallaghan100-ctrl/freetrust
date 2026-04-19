@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
+
+const AppleGooglePayButton = dynamic(() => import('@/components/payments/AppleGooglePayButton'), { ssr: false })
 
 type CartItem = { id: string; title: string; price: number; currency: string; qty: number; image: string }
 
@@ -29,6 +32,7 @@ export default function CartPage() {
   const [promoApplied, setPromoApplied] = useState(false)
   const [promoError, setPromoError] = useState('')
   const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [payError, setPayError] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -358,6 +362,30 @@ export default function CartPage() {
                 </div>
               )}
 
+              {/* Apple Pay / Google Pay express checkout */}
+              {cart.length > 0 && total > 0 && (
+                <>
+                  <AppleGooglePayButton
+                    amountCents={total}
+                    currency={currency.toUpperCase()}
+                    label={`FreeTrust Order (${cart.length} item${cart.length > 1 ? 's' : ''})`}
+                    description={cart.map(i => `${i.title} ×${i.qty}`).join(', ').slice(0, 200)}
+                    metadata={{ type: 'cart_checkout', item_count: String(cart.length) }}
+                    onSuccess={(piId) => {
+                      setPayError(null)
+                      localStorage.removeItem('ft_cart')
+                      window.dispatchEvent(new Event('ft-cart-updated'))
+                      router.push(`/checkout/success?payment_intent=${piId}`)
+                    }}
+                    onError={(msg) => setPayError(msg)}
+                    style={{ marginBottom: 8 }}
+                  />
+                  {payError && (
+                    <div style={{ color: '#f87171', fontSize: '0.72rem', marginBottom: 8 }}>{payError}</div>
+                  )}
+                </>
+              )}
+
               {/* Checkout button — 52 px tall, full width */}
               <button
                 type="button"
@@ -368,16 +396,6 @@ export default function CartPage() {
               >
                 {checkoutLoading ? 'Processing…' : `Checkout · ${fmt(total, currency)}`}
               </button>
-
-              {/* Apple Pay / Google Pay note */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.68rem', color: muted }}>or pay with</span>
-                <span style={{ background: '#000', color: '#fff', borderRadius: 5, padding: '2px 8px', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.02em' }}>🍎 Apple Pay</span>
-                <span style={{ background: '#fff', color: '#000', borderRadius: 5, padding: '2px 8px', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.02em', border: '1px solid #e2e8f0' }}>G Pay</span>
-              </div>
-              <div style={{ textAlign: 'center', fontSize: '0.65rem', color: '#475569', marginTop: '0.3rem' }}>
-                Available automatically on supported devices at checkout
-              </div>
 
               {/* Trust badges */}
               <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
