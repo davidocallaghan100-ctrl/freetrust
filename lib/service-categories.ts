@@ -13,6 +13,34 @@ export interface ServiceCategory {
 
 export const ONLINE_CATEGORIES: ServiceCategory[] = [
   {
+    id: 'ai-automation',
+    label: 'AI & Automation',
+    icon: '🤖',
+    mode: 'online',
+    subcategories: ['ChatGPT / LLM Integration', 'Workflow Automation', 'AI Chatbots', 'Prompt Engineering', 'Make / Zapier', 'AI Content Creation'],
+  },
+  {
+    id: 'business-consulting',
+    label: 'Business & Consulting',
+    icon: '🧠',
+    mode: 'online',
+    subcategories: ['Business Strategy', 'Market Research', 'Business Plans', 'Project Management', 'Operations', 'HR Consulting'],
+  },
+  {
+    id: 'coaching-mentoring',
+    label: 'Coaching & Mentoring',
+    icon: '🎯',
+    mode: 'online',
+    subcategories: ['Life Coaching', 'Career Coaching', 'Executive Coaching', 'Startup Mentoring', 'Leadership', 'Mindset Coaching'],
+  },
+  {
+    id: 'data-analytics',
+    label: 'Data & Analytics',
+    icon: '📊',
+    mode: 'online',
+    subcategories: ['Data Analysis', 'Excel / Google Sheets', 'Data Visualisation', 'Business Intelligence', 'Machine Learning', 'Scraping'],
+  },
+  {
     id: 'design-creative',
     label: 'Design & Creative',
     icon: '🎨',
@@ -27,39 +55,11 @@ export const ONLINE_CATEGORIES: ServiceCategory[] = [
     subcategories: ['Web Development', 'Mobile Apps', 'E-commerce', 'WordPress', 'API Integration', 'DevOps & Cloud', 'Cybersecurity', 'Game Dev'],
   },
   {
-    id: 'marketing-growth',
-    label: 'Marketing & Growth',
-    icon: '📣',
+    id: 'education-tutoring',
+    label: 'Education & Tutoring',
+    icon: '📚',
     mode: 'online',
-    subcategories: ['Digital Marketing', 'Email Marketing', 'PPC Advertising', 'Influencer Marketing', 'Affiliate Marketing', 'Brand Strategy'],
-  },
-  {
-    id: 'writing-content',
-    label: 'Writing & Content',
-    icon: '✍️',
-    mode: 'online',
-    subcategories: ['Copywriting', 'Blog Writing', 'Technical Writing', 'Ghostwriting', 'Translation', 'Proofreading', 'Scriptwriting'],
-  },
-  {
-    id: 'video-animation',
-    label: 'Video & Animation',
-    icon: '🎬',
-    mode: 'online',
-    subcategories: ['Video Editing', 'Animation', 'Whiteboard Animation', 'Explainer Videos', 'Short-form Video', 'YouTube Content'],
-  },
-  {
-    id: 'music-audio',
-    label: 'Music & Audio',
-    icon: '🎵',
-    mode: 'online',
-    subcategories: ['Music Production', 'Mixing & Mastering', 'Voiceover', 'Podcast Editing', 'Sound Design', 'Jingle & Drops'],
-  },
-  {
-    id: 'business-consulting',
-    label: 'Business & Consulting',
-    icon: '🧠',
-    mode: 'online',
-    subcategories: ['Business Strategy', 'Market Research', 'Business Plans', 'Project Management', 'Operations', 'HR Consulting'],
+    subcategories: ['Language Learning', 'Maths Tutoring', 'Science', 'Test Prep', 'Online Courses', 'Academic Writing'],
   },
   {
     id: 'finance-accounting',
@@ -68,85 +68,6 @@ export const ONLINE_CATEGORIES: ServiceCategory[] = [
     mode: 'online',
     subcategories: ['Bookkeeping', 'Tax Preparation', 'Financial Planning', 'Payroll', 'Budgeting', 'Investment Advice'],
   },
-  {
-    id: 'legal-compliance',
-    label: 'Legal & Compliance',
-    icon: '⚖️',
-    mode: 'online',
-    subcategories: ['Contract Review', 'GDPR Compliance', 'Trademark & IP', 'Terms & Privacy Policies', 'Legal Advice', 'Company Formation'],
-  },
-  {
-    id: 'coaching-mentoring',
-    label: 'Coaching & Mentoring',
-    icon: '🎯',
-    mode: 'online',
-    subcategories: ['Life Coaching', 'Career Coaching', 'Executive Coaching', 'Startup Mentoring', 'Leadership', 'Mindset Coaching'],
-  },
-  {
-    id: 'education-tutoring',
-    label: 'Education & Tutoring',
-    icon: '📚',
-    mode: 'online',
-    subcategories: ['Language Learning', 'Maths Tutoring', 'Science', 'Test Prep', 'Online Courses', 'Academic Writing'],
-  },
-  {
-    id: 'ai-automation',
-    label: 'AI & Automation',
-    icon: '🤖',
-    mode: 'online',
-    subcategories: ['ChatGPT / LLM Integration', 'Workflow Automation', 'AI Chatbots', 'Prompt Engineering', 'Make / Zapier', 'AI Content Creation'],
-  },
-  {
-    id: 'data-analytics',
-    label: 'Data & Analytics',
-    icon: '📊',
-    mode: 'online',
-    subcategories: ['Data Analysis', 'Excel / Google Sheets', 'Data Visualisation', 'Business Intelligence', 'Machine Learning', 'Scraping'],
-  },
-  {
-    id: 'photography-editing',
-    label: 'Photography & Editing',
-    icon: '📷',
-    mode: 'online',
-    subcategories: ['Photo Editing', 'Product Photography', 'Photo Retouching', 'Real Estate Photos', 'Background Removal'],
-  },
-  {
-    id: 'social-media',
-    label: 'Social Media Management',
-    icon: '📱',
-    mode: 'online',
-    subcategories: ['Instagram Management', 'TikTok Strategy', 'LinkedIn Growth', 'Content Calendars', 'Community Management'],
-  },
-  {
-    id: 'seo-digital',
-    label: 'SEO & Digital Marketing',
-    icon: '🔍',
-    mode: 'online',
-    subcategories: ['Technical SEO', 'On-Page SEO', 'Link Building', 'Local SEO', 'Keyword Research', 'SEO Audits'],
-  },
-  // Translation & Interpretation — document translation, court/medical
-  // interpreting. Irish immigrant communities (Polish, Ukrainian,
-  // Brazilian) face documented language barriers. Cross-linked to
-  // grassroots language_support.
-  {
-    id: 'translation-interpretation',
-    label: 'Translation & Interpretation',
-    icon: '🌍',
-    mode: 'online',
-    subcategories: [
-      'Document Translation',
-      'Court & Legal Interpreting',
-      'Medical Interpreting',
-      'Certified Translation',
-      'Community Interpreting',
-      'Subtitling & Captioning',
-      'Localisation',
-      'Irish Language (Gaeilge)',
-    ],
-  },
-  // Grant & Funding Consulting — SEAI, LEADER, business funding.
-  // Irish-specific niche with growing demand as SEAI grants expand.
-  // No current Services category covers this.
   {
     id: 'grant-consulting',
     label: 'Grant & Funding Consulting',
@@ -163,57 +84,87 @@ export const ONLINE_CATEGORIES: ServiceCategory[] = [
       'Community Fund Applications',
     ],
   },
+  {
+    id: 'legal-compliance',
+    label: 'Legal & Compliance',
+    icon: '⚖️',
+    mode: 'online',
+    subcategories: ['Contract Review', 'GDPR Compliance', 'Trademark & IP', 'Terms & Privacy Policies', 'Legal Advice', 'Company Formation'],
+  },
+  {
+    id: 'marketing-growth',
+    label: 'Marketing & Growth',
+    icon: '📣',
+    mode: 'online',
+    subcategories: ['Digital Marketing', 'Email Marketing', 'PPC Advertising', 'Influencer Marketing', 'Affiliate Marketing', 'Brand Strategy'],
+  },
+  {
+    id: 'music-audio',
+    label: 'Music & Audio',
+    icon: '🎵',
+    mode: 'online',
+    subcategories: ['Music Production', 'Mixing & Mastering', 'Voiceover', 'Podcast Editing', 'Sound Design', 'Jingle & Drops'],
+  },
+  {
+    id: 'photography-editing',
+    label: 'Photography & Editing',
+    icon: '📷',
+    mode: 'online',
+    subcategories: ['Photo Editing', 'Product Photography', 'Photo Retouching', 'Real Estate Photos', 'Background Removal'],
+  },
+  {
+    id: 'seo-digital',
+    label: 'SEO & Digital Marketing',
+    icon: '🔍',
+    mode: 'online',
+    subcategories: ['Technical SEO', 'On-Page SEO', 'Link Building', 'Local SEO', 'Keyword Research', 'SEO Audits'],
+  },
+  {
+    id: 'social-media',
+    label: 'Social Media Management',
+    icon: '📱',
+    mode: 'online',
+    subcategories: ['Instagram Management', 'TikTok Strategy', 'LinkedIn Growth', 'Content Calendars', 'Community Management'],
+  },
+  {
+    id: 'translation-interpretation',
+    label: 'Translation & Interpretation',
+    icon: '🌍',
+    mode: 'online',
+    subcategories: [
+      'Document Translation',
+      'Court & Legal Interpreting',
+      'Medical Interpreting',
+      'Certified Translation',
+      'Community Interpreting',
+      'Subtitling & Captioning',
+      'Localisation',
+      'Irish Language (Gaeilge)',
+    ],
+  },
+  {
+    id: 'video-animation',
+    label: 'Video & Animation',
+    icon: '🎬',
+    mode: 'online',
+    subcategories: ['Video Editing', 'Animation', 'Whiteboard Animation', 'Explainer Videos', 'Short-form Video', 'YouTube Content'],
+  },
+  {
+    id: 'writing-content',
+    label: 'Writing & Content',
+    icon: '✍️',
+    mode: 'online',
+    subcategories: ['Copywriting', 'Blog Writing', 'Technical Writing', 'Ghostwriting', 'Translation', 'Proofreading', 'Scriptwriting'],
+  },
 ]
 
 export const OFFLINE_CATEGORIES: ServiceCategory[] = [
-  {
-    id: 'trades-construction',
-    label: 'Trades & Construction',
-    icon: '🔧',
-    mode: 'offline',
-    subcategories: ['Plumbing', 'Electrician', 'Carpentry', 'Painting & Decorating', 'Plastering', 'Tiling', 'Roofing', 'Bricklaying'],
-  },
-  {
-    id: 'home-garden',
-    label: 'Home & Garden',
-    icon: '🏡',
-    mode: 'offline',
-    subcategories: ['Cleaning', 'Deep Cleaning', 'Landscaping', 'Gardening', 'Home Repairs', 'Furniture Assembly', 'Moving Help'],
-  },
-  {
-    id: 'health-wellness',
-    label: 'Health & Wellness',
-    icon: '💪',
-    mode: 'offline',
-    subcategories: ['Personal Training', 'Physiotherapy', 'Massage Therapy', 'Mobile Massage Therapy', 'Nutrition & Dietetics', 'Mental Health Therapy', 'Yoga', 'Yoga & Pilates (In-Person)'],
-  },
   {
     id: 'beauty-personal-care',
     label: 'Beauty & Personal Care',
     icon: '💅',
     mode: 'offline',
     subcategories: ['Hairdressing', 'Mobile Hairdressing', 'Makeup Artist', 'Bridal Makeup', 'Nail Tech', 'Mobile Nail Technician', 'Barbering', 'Eyebrow & Lash', 'Skincare Treatments', 'Mobile Spray Tan'],
-  },
-  {
-    id: 'food-catering',
-    label: 'Food & Catering',
-    icon: '🍽️',
-    mode: 'offline',
-    subcategories: ['Private Chef', 'Meal Prep & Delivery', 'Events Catering', 'Baking & Cakes', 'BBQ Catering', 'Dietary Specialist'],
-  },
-  {
-    id: 'events-entertainment',
-    label: 'Events & Entertainment',
-    icon: '🎉',
-    mode: 'offline',
-    subcategories: ['DJ', 'Event Photography', 'Venue Decoration', 'MC / Host', 'Live Music', 'Magician', 'Event Planning'],
-  },
-  {
-    id: 'transport-delivery',
-    label: 'Transport & Delivery',
-    icon: '🚚',
-    mode: 'offline',
-    subcategories: ['Courier Service', 'Removal & Moving', 'Errands & Shopping', 'Pet Transport', 'Airport Transfers', 'Van Hire'],
   },
   {
     id: 'childcare-education',
@@ -223,56 +174,28 @@ export const OFFLINE_CATEGORIES: ServiceCategory[] = [
     subcategories: ['Babysitting', 'Nannying', 'Tutoring (In-Person)', 'After School Care', 'Holiday Clubs', 'Swimming Lessons'],
   },
   {
-    id: 'pet-services',
-    label: 'Pet Services',
-    icon: '🐾',
-    mode: 'offline',
-    subcategories: ['Dog Walking', 'Pet Grooming', 'Pet Sitting', 'Dog Training', 'Vet Visits Companion', 'Pet Photography'],
-  },
-  {
-    id: 'elder-care',
-    label: 'Elder Care',
-    icon: '🤝',
-    mode: 'offline',
-    subcategories: ['Companionship', 'Home Help', 'Medical Support', 'Hospital Visits', 'Shopping Assistance', 'Carer Relief'],
-  },
-  {
     id: 'community-services',
     label: 'Community Services',
     icon: '🌍',
     mode: 'offline',
     subcategories: ['Volunteering', 'Local Projects', 'Charity Work', 'Community Events', 'Skill Sharing', 'Neighbourhood Help'],
   },
-  // Taxi Drivers — own top-level category rather than a subcategory of
-  // "Transport & Delivery" because the user set is large and well-
-  // defined (airport runs, school runs, wheelchair accessible, etc.)
-  // and users shopping for a ride don't want to wade through courier /
-  // removal / van-hire results first. Crosslinked to grassroots
-  // 'delivery' for the casual / informal end of the same work via
-  // lib/marketplace/category-overlap.ts.
   {
-    id: 'taxi-drivers',
-    label: 'Taxi Drivers',
-    icon: '🚕',
+    id: 'disability-care',
+    label: 'Disability Care & Support',
+    icon: '♿',
     mode: 'offline',
     subcategories: [
-      'Airport Transfers',
-      'Local Rides',
-      'Long Distance',
-      'School Runs',
-      'Wheelchair Accessible',
-      'Wedding & Events',
-      'Executive / Chauffeur',
-      'Night Out & Pub Runs',
+      'Personal Assistant (PA)',
+      'Home Help & Daily Living',
+      'Carer Relief & Respite',
+      'Hospital Companion',
+      'Mobility & Accessibility Support',
+      'Community Participation Support',
+      'Sensory & Communication Support',
+      'Acquired Brain Injury Support',
     ],
   },
-  // Driving Instructors — own top-level category, parallel logic to
-  // Taxi Drivers. The audience looking for a driving lesson is very
-  // different from someone booking a taxi or a courier. Subcategories
-  // map to the typical Irish ADI / RSA instructor offering: learner
-  // permits, pre-test, motorway, refresher, and specialist lessons
-  // (automatic, electric cars, trucks). Cross-linked to grassroots
-  // 'driving_instruction' via lib/marketplace/category-overlap.ts.
   {
     id: 'driving-instructors',
     label: 'Driving Instructors',
@@ -289,13 +212,13 @@ export const OFFLINE_CATEGORIES: ServiceCategory[] = [
       'EDT (Essential Driver Training)',
     ],
   },
-  // Energy Services — home + business energy-efficiency work.
-  // Subcategories reflect the Irish/UK green-grants landscape (SEAI,
-  // BUS): solar, EV chargers, heat pumps, insulation, audits. The
-  // category is marked 'offline' because every listed job is on-site
-  // at the customer's property — even an energy audit is a physical
-  // visit. If we later add remote consultancy (e.g. grant-application
-  // help) it fits under business-consulting, not here.
+  {
+    id: 'elder-care',
+    label: 'Elder Care',
+    icon: '🤝',
+    mode: 'offline',
+    subcategories: ['Companionship', 'Home Help', 'Medical Support', 'Hospital Visits', 'Shopping Assistance', 'Carer Relief'],
+  },
   {
     id: 'energy-services',
     label: 'Energy Services',
@@ -312,29 +235,34 @@ export const OFFLINE_CATEGORIES: ServiceCategory[] = [
       'Battery Storage',
     ],
   },
-  // Vehicle Services — mobile mechanics, valeting, NCT prep. Separate
-  // from trades-construction because the audience and skill set are
-  // automotive-specific. Cross-linked to grassroots car_valeting and
-  // mechanic_services.
   {
-    id: 'vehicle-services',
-    label: 'Vehicle Services',
-    icon: '🔧',
+    id: 'events-entertainment',
+    label: 'Events & Entertainment',
+    icon: '🎉',
     mode: 'offline',
-    subcategories: [
-      'Mobile Mechanic',
-      'NCT Preparation',
-      'Car Valeting & Detailing',
-      'Tyre Fitting & Repair',
-      'Windscreen Repair',
-      'Car Battery & Electrics',
-      'Pre-Purchase Inspection',
-      'Fuel System & Exhausts',
-    ],
+    subcategories: ['DJ', 'Event Photography', 'Venue Decoration', 'MC / Host', 'Live Music', 'Magician', 'Event Planning'],
   },
-  // Home Security — CCTV, alarms, smart locks. High trust category
-  // (documented scams in Ireland). Cross-linked to grassroots
-  // security_installation.
+  {
+    id: 'food-catering',
+    label: 'Food & Catering',
+    icon: '🍽️',
+    mode: 'offline',
+    subcategories: ['Private Chef', 'Meal Prep & Delivery', 'Events Catering', 'Baking & Cakes', 'BBQ Catering', 'Dietary Specialist'],
+  },
+  {
+    id: 'health-wellness',
+    label: 'Health & Wellness',
+    icon: '💪',
+    mode: 'offline',
+    subcategories: ['Personal Training', 'Physiotherapy', 'Massage Therapy', 'Mobile Massage Therapy', 'Nutrition & Dietetics', 'Mental Health Therapy', 'Yoga', 'Yoga & Pilates (In-Person)'],
+  },
+  {
+    id: 'home-garden',
+    label: 'Home & Garden',
+    icon: '🏡',
+    mode: 'offline',
+    subcategories: ['Cleaning', 'Deep Cleaning', 'Landscaping', 'Gardening', 'Home Repairs', 'Furniture Assembly', 'Moving Help'],
+  },
   {
     id: 'home-security',
     label: 'Home Security',
@@ -351,28 +279,6 @@ export const OFFLINE_CATEGORIES: ServiceCategory[] = [
       'Security Audit',
     ],
   },
-  // Sports & Fitness Coaching — personal trainers, GAA coaches,
-  // swimming instructors. Garda vetting badge angle for youth work.
-  // Cross-linked to grassroots sports_coaching.
-  {
-    id: 'sports-fitness-coaching',
-    label: 'Sports & Fitness Coaching',
-    icon: '⚽',
-    mode: 'offline',
-    subcategories: [
-      'Sports Coaching',
-      'Personal Training (Outdoor)',
-      'Swimming Coaching',
-      'Youth Sport & Development',
-      'Football Coaching',
-      'Athletics Coaching',
-      'Martial Arts Instruction',
-      'Yoga & Pilates (In-Person)',
-    ],
-  },
-  // Music & Arts Tuition — instruments, voice, trad Irish, art.
-  // Irish trad (fiddle, uilleann pipes, bodhrán) is a unique niche.
-  // Cross-linked to grassroots music_lessons.
   {
     id: 'music-arts-tuition',
     label: 'Music & Arts Tuition',
@@ -389,24 +295,73 @@ export const OFFLINE_CATEGORIES: ServiceCategory[] = [
       'Art & Drawing Classes',
     ],
   },
-  // Disability Care & Support — PA services, home help, carer relief.
-  // 23.76M home support hours in Ireland (2024), growing 12.5% YoY.
-  // New statutory registration legislation backs trust verification.
-  // Cross-linked to grassroots disability_support.
   {
-    id: 'disability-care',
-    label: 'Disability Care & Support',
-    icon: '♿',
+    id: 'pet-services',
+    label: 'Pet Services',
+    icon: '🐾',
+    mode: 'offline',
+    subcategories: ['Dog Walking', 'Pet Grooming', 'Pet Sitting', 'Dog Training', 'Vet Visits Companion', 'Pet Photography'],
+  },
+  {
+    id: 'sports-fitness-coaching',
+    label: 'Sports & Fitness Coaching',
+    icon: '⚽',
     mode: 'offline',
     subcategories: [
-      'Personal Assistant (PA)',
-      'Home Help & Daily Living',
-      'Carer Relief & Respite',
-      'Hospital Companion',
-      'Mobility & Accessibility Support',
-      'Community Participation Support',
-      'Sensory & Communication Support',
-      'Acquired Brain Injury Support',
+      'Sports Coaching',
+      'Personal Training (Outdoor)',
+      'Swimming Coaching',
+      'Youth Sport & Development',
+      'Football Coaching',
+      'Athletics Coaching',
+      'Martial Arts Instruction',
+      'Yoga & Pilates (In-Person)',
+    ],
+  },
+  {
+    id: 'taxi-drivers',
+    label: 'Taxi Drivers',
+    icon: '🚕',
+    mode: 'offline',
+    subcategories: [
+      'Airport Transfers',
+      'Local Rides',
+      'Long Distance',
+      'School Runs',
+      'Wheelchair Accessible',
+      'Wedding & Events',
+      'Executive / Chauffeur',
+      'Night Out & Pub Runs',
+    ],
+  },
+  {
+    id: 'trades-construction',
+    label: 'Trades & Construction',
+    icon: '🔧',
+    mode: 'offline',
+    subcategories: ['Plumbing', 'Electrician', 'Carpentry', 'Painting & Decorating', 'Plastering', 'Tiling', 'Roofing', 'Bricklaying'],
+  },
+  {
+    id: 'transport-delivery',
+    label: 'Transport & Delivery',
+    icon: '🚚',
+    mode: 'offline',
+    subcategories: ['Courier Service', 'Removal & Moving', 'Errands & Shopping', 'Pet Transport', 'Airport Transfers', 'Van Hire'],
+  },
+  {
+    id: 'vehicle-services',
+    label: 'Vehicle Services',
+    icon: '🔧',
+    mode: 'offline',
+    subcategories: [
+      'Mobile Mechanic',
+      'NCT Preparation',
+      'Car Valeting & Detailing',
+      'Tyre Fitting & Repair',
+      'Windscreen Repair',
+      'Car Battery & Electrics',
+      'Pre-Purchase Inspection',
+      'Fuel System & Exhausts',
     ],
   },
 ]
