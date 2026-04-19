@@ -160,11 +160,7 @@ export default function ProfilePage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const viewingId = searchParams.get('id') // null = own profile
-  // Guard: track the last viewingId we ran init for so searchParams
-  // reference churn (a Next.js 14 useSearchParams quirk) doesn't
-  // re-fire the init effect on every render.
   const lastInitIdRef = useRef<string | null | undefined>(undefined)
-  // Guard: only attempt the signup-bonus API call once per mount
   const bonusAttemptedRef = useRef(false)
 
   const [user, setUser] = useState<User | null>(null)
@@ -480,8 +476,6 @@ export default function ProfilePage() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    // Skip if viewingId hasn't actually changed — guards against
-    // Next.js useSearchParams reference churn causing repeated fires
     if (lastInitIdRef.current === viewingId) return
     lastInitIdRef.current = viewingId
 
