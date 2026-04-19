@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
 import { insertNotification } from "@/lib/notifications/insert";
+import { logActivity } from "@/lib/activity/logActivity";
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-04-10" })
@@ -274,6 +275,15 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           }
         })
     }
+
+    // Log payment confirmed to activity feed (non-blocking)
+    void logActivity({
+      orderId:   orderId,
+      actorRole: 'system',
+      eventType: 'payment_confirmed',
+      title:     'Payment confirmed',
+      body:      'Funds held in escrow until delivery is confirmed.',
+    })
 
     if (order?.buyer_id) {
       // Issue ₮5 trust to buyer for making a purchase

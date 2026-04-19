@@ -8,6 +8,8 @@ import { useSellerTracking, useBuyerTracking } from '@/hooks/useDeliveryTracking
 
 // Leaflet map — SSR disabled (window not available server-side)
 const DeliveryMap = dynamic(() => import('@/components/delivery/DeliveryMap'), { ssr: false })
+// Activity feed — client-only (uses Supabase Realtime)
+const OrderActivityFeed = dynamic(() => import('@/components/orders/OrderActivityFeed'), { ssr: false })
 
 interface StatusHistoryEntry {
   status: string
@@ -462,6 +464,11 @@ export default function OrderDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* Order Activity Feed — shared real-time log for buyer and seller */}
+            <div style={{ background: '#1e293b', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(148,163,184,0.1)' }}>
+              <OrderActivityFeed orderId={orderId} />
+            </div>
 
             {/* Actions */}
             {!isRefunded && !isDisputed && (

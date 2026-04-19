@@ -554,6 +554,16 @@ export async function PATCH(
         p_actor_id: user.id,
       })
 
+      // Log to activity feed (non-blocking)
+      void logActivity({
+        orderId:   id,
+        actorId:   user.id,
+        actorRole: 'buyer',
+        eventType: 'dispute_raised',
+        title:     'Dispute raised',
+        body:      dispute_reason,
+      })
+
       // The PaymentIntent is left in its current state (requires_capture)
       // so the platform admin can decide whether to capture + refund
       // via Stripe Dashboard or cancel. Order sits in 'disputed' until

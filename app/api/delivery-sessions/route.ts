@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendPushNotification } from '@/lib/push/sendPushNotification'
+import { logActivity } from '@/lib/activity/logActivity'
 
 // POST: Start a delivery session (seller action)
 export async function POST(req: NextRequest) {
@@ -57,6 +58,16 @@ export async function POST(req: NextRequest) {
     url: `/orders/${order_id}?track=1`,
   }).catch(() => {})
 
+  // Log to activity feed (non-blocking)
+  void logActivity({
+    orderId:   order_id,
+    actorId:   session.user.id,
+    actorRole: 'seller',
+    eventType: 'delivery_started',
+    title:     'Seller started delivery',
+    body:      'Live location tracking is now active.',
+  })
+
   return NextResponse.json({ session: data })
 }
 
@@ -90,6 +101,18 @@ export async function PATCH(req: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Log delivery end to activity feed (non-blocking)
+  if (data?.order_id) {
+    void logActivity({
+      orderId:   data.order_id,
+      actorId:   session.user.id,
+      actorRole: 'seller',
+      eventType: 'delivery_completed',
+      title:     'Delivery tracking ended',
+      body:      status === 'completed' ? 'Seller arrived at destination.' : 'Tracking cancelled.',
+    })
   }
 
   return NextResponse.json({ session: data })
