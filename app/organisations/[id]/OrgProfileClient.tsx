@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-const OrgTrustSummary = dynamic(() => import("@/components/organisation/OrgTrustSummary"), { ssr: false });
 import VerifiedBadge from "@/components/organisation/VerifiedBadge";
 import Avatar from "@/components/Avatar";
 import { createClient } from "@/lib/supabase/client";
@@ -103,17 +101,6 @@ interface OrgReview {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-
-function trustColor(score: number) {
-  if (score >= 90) return "#10b981";
-  if (score >= 70) return "#f59e0b";
-  return "#ef4444";
-}
-function trustLabel(score: number) {
-  if (score >= 90) return "Excellent";
-  if (score >= 70) return "Good";
-  return "Fair";
-}
 
 function RoleBadge({ role }: { role: OrgMember["role"] }) {
   const styles: Record<OrgMember["role"], React.CSSProperties> = {
@@ -428,10 +415,6 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
     );
   }
 
-  const score = org.trust_score;
-  const color = trustColor(score);
-  const label = trustLabel(score);
-
   const tabs: { key: OrgTab; label: string; count?: number }[] = [
     { key: "overview", label: "Overview" },
     { key: "members", label: "Members", count: org.members_count },
@@ -573,15 +556,13 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
         )}
 
         {/* Stats row */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
           {[
-            { value: score, sub: label, label: "Trust Score", valueColor: color },
-            { value: followerCount.toLocaleString(), sub: null, label: "Followers", valueColor: "#f1f5f9" },
-            { value: org.members_count.toLocaleString(), sub: null, label: "Members", valueColor: "#f1f5f9" },
+            { value: followerCount.toLocaleString(), label: "Followers" },
+            { value: org.members_count.toLocaleString(), label: "Members" },
           ].map((stat, i) => (
             <div key={i} style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 16, padding: "14px 8px", textAlign: "center" }}>
-              <div style={{ fontSize: 22, fontWeight: 700, color: stat.valueColor, lineHeight: 1 }}>{stat.value}</div>
-              {stat.sub && <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{stat.sub}</div>}
+              <div style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9", lineHeight: 1 }}>{stat.value}</div>
               <div style={{ fontSize: 11, color: "#475569", marginTop: 4, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{stat.label}</div>
             </div>
           ))}
@@ -615,31 +596,12 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
         {/* ── OVERVIEW ── */}
         {activeTab === "overview" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {/* Trust score bar */}
-            <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 16, padding: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <div style={{ position: "relative", width: 64, height: 64, flexShrink: 0 }}>
-                  <svg viewBox="0 0 36 36" style={{ width: 64, height: 64, transform: "rotate(-90deg)" }}>
-                    <circle cx="18" cy="18" r="15.915" fill="none" stroke="#1e293b" strokeWidth="3.5" />
-                    <circle cx="18" cy="18" r="15.915" fill="none" stroke={color} strokeWidth="3.5"
-                      strokeDasharray={`${score} ${100 - score}`} strokeLinecap="round" />
-                  </svg>
-                  <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color }}>{score}</span>
-                </div>
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9" }}>{label} Trust</div>
-                  <div style={{ fontSize: 12, color: "#475569", marginTop: 2 }}>Based on reviews & compliance</div>
-                  {org.is_verified && (
-                    <div style={{ marginTop: 6 }}>
-                      <VerifiedBadge verifiedAt={org.verified_at} />
-                    </div>
-                  )}
-                </div>
+            {/* Verified badge (if applicable) */}
+            {org.is_verified && (
+              <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 16, padding: 16 }}>
+                <VerifiedBadge verifiedAt={org.verified_at} />
               </div>
-            </div>
-
-            {/* Org Performance (OTIF + avg rating + orders) */}
-            <OrgTrustSummary orgId={org.id} />
+            )}
 
             {/* About */}
             <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 16, padding: 16 }}>
