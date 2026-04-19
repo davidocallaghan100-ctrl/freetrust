@@ -91,8 +91,8 @@ export const ONLINE_CATEGORIES: ServiceCategory[] = [
   },
   {
     id: 'ai-automation',
-    label: 'AI & Automation',
-    icon: '🤖',
+    label: 'Agents',
+    icon: '😎',
     mode: 'online',
     subcategories: ['ChatGPT / LLM Integration', 'Workflow Automation', 'AI Chatbots', 'Prompt Engineering', 'Make / Zapier', 'AI Content Creation'],
   },
