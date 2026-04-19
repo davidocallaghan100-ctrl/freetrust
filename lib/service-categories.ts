@@ -185,14 +185,14 @@ export const OFFLINE_CATEGORIES: ServiceCategory[] = [
     label: 'Health & Wellness',
     icon: '💪',
     mode: 'offline',
-    subcategories: ['Personal Training', 'Physiotherapy', 'Massage Therapy', 'Nutrition & Dietetics', 'Mental Health Therapy', 'Yoga'],
+    subcategories: ['Personal Training', 'Physiotherapy', 'Massage Therapy', 'Mobile Massage Therapy', 'Nutrition & Dietetics', 'Mental Health Therapy', 'Yoga', 'Yoga & Pilates (In-Person)'],
   },
   {
     id: 'beauty-personal-care',
     label: 'Beauty & Personal Care',
     icon: '💅',
     mode: 'offline',
-    subcategories: ['Hairdressing', 'Makeup Artist', 'Nail Tech', 'Barbering', 'Eyebrow & Lash', 'Skincare Treatments'],
+    subcategories: ['Hairdressing', 'Mobile Hairdressing', 'Makeup Artist', 'Bridal Makeup', 'Nail Tech', 'Mobile Nail Technician', 'Barbering', 'Eyebrow & Lash', 'Skincare Treatments', 'Mobile Spray Tan'],
   },
   {
     id: 'food-catering',
@@ -407,25 +407,6 @@ export const OFFLINE_CATEGORIES: ServiceCategory[] = [
       'Community Participation Support',
       'Sensory & Communication Support',
       'Acquired Brain Injury Support',
-    ],
-  },
-  // Mobile Beauty & Wellness — hairdressing, nails, massage at home.
-  // Rural Ireland staple — informal, no reviews, no trust. Cross-linked
-  // to grassroots beauty_mobile.
-  {
-    id: 'beauty-wellness-mobile',
-    label: 'Mobile Beauty & Wellness',
-    icon: '💅',
-    mode: 'offline',
-    subcategories: [
-      'Mobile Hairdressing',
-      'Home Nail Technician',
-      'Makeup Artist (Occasions)',
-      'Mobile Massage Therapy',
-      'Eyebrow & Lash Technician',
-      'Mobile Spray Tan',
-      'Skincare at Home',
-      'Bridal Beauty',
     ],
   },
 ]

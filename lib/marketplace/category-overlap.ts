@@ -65,7 +65,7 @@ const SERVICES_TO_GRASSROOTS: Record<string, string[]> = {
   'sports-fitness-coaching':    ['sports_coaching'],
   'music-arts-tuition':         ['music_lessons'],
   'disability-care':            ['disability_support'],
-  'beauty-wellness-mobile':     ['beauty_mobile'],
+  'beauty-personal-care':       ['beauty_mobile'],
   'translation-interpretation': ['language_support'],
   // Energy Services has no grassroots equivalent yet — solar / EV /
   // heat pump work is professional-only in the current taxonomy.
@@ -103,7 +103,7 @@ const GRASSROOTS_TO_SERVICES: Record<string, string[]> = {
   disability_support:     ['disability-care'],
   photography_local:      ['photography-editing'],
   language_support:       ['translation-interpretation'],
-  beauty_mobile:          ['beauty-wellness-mobile', 'beauty-personal-care'],
+  beauty_mobile:          ['beauty-personal-care'],
   it_support_local:       ['development-tech'],
   // boat_water has no direct Services counterpart — coastal/marine work
   // is grassroots-only for now. UI will skip the badge.
