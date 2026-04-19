@@ -7,7 +7,13 @@ export type AgentName =
   | 'eventPromoter'
   | 'applicationWriter'
   | 'salesDevelopment'
-  | 'translator';
+  | 'translator'
+  | 'trustScoreOptimiser'
+  | 'bulkListingGenerator'
+  | 'revenueIntelligence'
+  | 'pricingAdviser'
+  | 'collabMatchmaker'
+  | 'contentRepurposer';
 
 export interface AgentConfig {
   name: AgentName;

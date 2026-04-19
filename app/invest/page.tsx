@@ -202,80 +202,12 @@ export default function FounderPage() {
         <div className="checks">
           <span className="check-item"><span className="check-mark">✓</span> One-time payment</span>
           <span className="check-item"><span className="check-mark">✓</span> Lower fees for life</span>
-          <span className="check-item"><span className="check-mark">✓</span> Monthly AI refills</span>
+          <span className="check-item"><span className="check-mark">✓</span> 30% discount on AI Credits</span>
           <span className="check-item"><span className="check-mark">✓</span> 14-day refund</span>
         </div>
       </section>
 
-      {/* INTERACTIVE SCALE */}
-      <section style={{ padding: '0 20px 48px' }}>
-        <div className="founder-container" style={{ maxWidth: 820 }}>
-          <div className="invest-card">
-            <div className="invest-display">
-              <div className="invest-label">Your investment</div>
-              <div className="invest-value">€{amount.toLocaleString()}</div>
-            </div>
-
-            <input
-              className="slider"
-              type="range"
-              min={MIN_INVESTMENT_EUR}
-              max={MAX_INVESTMENT_EUR}
-              step={1}
-              value={amount}
-              onChange={(e) => setAmount(parseInt(e.target.value, 10))}
-              aria-label="Investment amount"
-            />
-            <div className="slider-marks">
-              <span>€{MIN_INVESTMENT_EUR}</span>
-              <span>€{MAX_INVESTMENT_EUR.toLocaleString()}</span>
-            </div>
-
-            <div style={{ textAlign: 'center', marginBottom: 8 }}>
-              <span className="tier-pill">
-                <span className="tier-pill-icon">{tier.icon}</span>
-                <span>{tier.displayName} tier</span>
-              </span>
-            </div>
-
-            <div className="stats-grid">
-              <div className="stat stat-accent">
-                <div className="stat-label">Service fee</div>
-                <div className="stat-value">{tier.serviceFeePercent}%</div>
-                <div className="stat-hint">was {STANDARD_SERVICE_FEE_PERCENT}%</div>
-              </div>
-              <div className="stat stat-accent">
-                <div className="stat-label">Product fee</div>
-                <div className="stat-value">{tier.productFeePercent}%</div>
-                <div className="stat-hint">was {STANDARD_PRODUCT_FEE_PERCENT}%</div>
-              </div>
-              <div className="stat">
-                <div className="stat-label">AI Credits</div>
-                <div className="stat-value">+{tier.aiCreditsBonus.toLocaleString()}</div>
-                <div className="stat-hint">one-time</div>
-              </div>
-              <div className="stat">
-                <div className="stat-label">₮ bonus</div>
-                <div className="stat-value">+{tier.trustBonus.toLocaleString()}</div>
-                <div className="stat-hint">one-time</div>
-              </div>
-              <div className="stat">
-                <div className="stat-label">Monthly refill</div>
-                <div className="stat-value">+{tier.monthlyAiCreditRefill}</div>
-                <div className="stat-hint">for life</div>
-              </div>
-            </div>
-          </div>
-
-          <button type="button" className="cta-btn" onClick={handlePurchase} disabled={loading}>
-            {loading ? 'Redirecting to Stripe…' : `Become a ${tier.displayName} founder — €${tier.priceEur.toLocaleString()}`}
-          </button>
-          {error && <div className="error-box">{error}</div>}
-          <div className="cta-note">Secure payment by Stripe · 14-day refund if fewer than 50 AI Credits spent</div>
-        </div>
-      </section>
-
-      {/* EARLY INVESTOR ROI */}
+      {/* EARLY INVESTOR ROI — moved to top as primary hook */}
       <section className="section" style={{ borderTop: `1px solid ${'rgba(148,163,184,0.15)'}` }}>
         <div className="founder-container">
           <div className="section-head">
@@ -344,6 +276,74 @@ export default function FounderPage() {
         </div>
       </section>
 
+      {/* INTERACTIVE SCALE */}
+      <section style={{ padding: '0 20px 48px' }}>
+        <div className="founder-container" style={{ maxWidth: 820 }}>
+          <div className="invest-card">
+            <div className="invest-display">
+              <div className="invest-label">Your investment</div>
+              <div className="invest-value">€{amount.toLocaleString()}</div>
+            </div>
+
+            <input
+              className="slider"
+              type="range"
+              min={MIN_INVESTMENT_EUR}
+              max={MAX_INVESTMENT_EUR}
+              step={1}
+              value={amount}
+              onChange={(e) => setAmount(parseInt(e.target.value, 10))}
+              aria-label="Investment amount"
+            />
+            <div className="slider-marks">
+              <span>€{MIN_INVESTMENT_EUR}</span>
+              <span>€{MAX_INVESTMENT_EUR.toLocaleString()}</span>
+            </div>
+
+            <div style={{ textAlign: 'center', marginBottom: 8 }}>
+              <span className="tier-pill">
+                <span className="tier-pill-icon">{tier.icon}</span>
+                <span>{tier.displayName} tier</span>
+              </span>
+            </div>
+
+            <div className="stats-grid">
+              <div className="stat stat-accent">
+                <div className="stat-label">Service fee</div>
+                <div className="stat-value">{tier.serviceFeePercent}%</div>
+                <div className="stat-hint">was {STANDARD_SERVICE_FEE_PERCENT}%</div>
+              </div>
+              <div className="stat stat-accent">
+                <div className="stat-label">Product fee</div>
+                <div className="stat-value">{tier.productFeePercent}%</div>
+                <div className="stat-hint">was {STANDARD_PRODUCT_FEE_PERCENT}%</div>
+              </div>
+              <div className="stat">
+                <div className="stat-label">AI Credits</div>
+                <div className="stat-value">+{tier.aiCreditsBonus.toLocaleString()}</div>
+                <div className="stat-hint">one-time</div>
+              </div>
+              <div className="stat">
+                <div className="stat-label">₮ bonus</div>
+                <div className="stat-value">+{tier.trustBonus.toLocaleString()}</div>
+                <div className="stat-hint">one-time</div>
+              </div>
+              <div className="stat stat-accent">
+                <div className="stat-label">Top-up discount</div>
+                <div className="stat-value">–30%</div>
+                <div className="stat-hint">permanent</div>
+              </div>
+            </div>
+          </div>
+
+          <button type="button" className="cta-btn" onClick={handlePurchase} disabled={loading}>
+            {loading ? 'Redirecting to Stripe…' : `Become a ${tier.displayName} founder — €${tier.priceEur.toLocaleString()}`}
+          </button>
+          {error && <div className="error-box">{error}</div>}
+          <div className="cta-note">Secure payment by Stripe · 14-day refund if fewer than 50 AI Credits spent</div>
+        </div>
+      </section>
+
       {/* TIER LADDER */}
       <section className="section">
         <div className="founder-container">
@@ -376,7 +376,7 @@ export default function FounderPage() {
                     <div className="tier-row"><span className="tier-row-label">Product</span><span className="tier-row-value">{t.productFeePercent}%</span></div>
                     <div className="tier-row"><span className="tier-row-label">Credits</span><span className="tier-row-value">+{t.aiCreditsBonus.toLocaleString()}</span></div>
                     <div className="tier-row"><span className="tier-row-label">₮</span><span className="tier-row-value">+{t.trustBonus.toLocaleString()}</span></div>
-                    <div className="tier-row"><span className="tier-row-label">Refill</span><span className="tier-row-value">+{t.monthlyAiCreditRefill}/mo</span></div>
+                    <div className="tier-row"><span className="tier-row-label">Top-up</span><span className="tier-row-value">–30%</span></div>
                   </div>
                 </button>
               );
@@ -463,12 +463,12 @@ export default function FounderPage() {
             <h2>Common questions</h2>
           </div>
           <div className="faq-list">
-            <FaqItem q="Is this a subscription?" a="No. One-time payment, lifetime benefits. Pay once and keep lower fees, monthly refills, and your TrustCoin bonus forever." />
+            <FaqItem q="Is this a subscription?" a="No. One-time payment, lifetime benefits. Pay once and keep lower fees, a permanent 30% discount on AI Credit top-ups, and your TrustCoin bonus forever." />
             <FaqItem q="Can I upgrade later?" a="Yes. Pay the difference between your current tier and the new one, and your benefits upgrade immediately. No double-paying." />
             <FaqItem q="Which tier should I pick?" a="Seed (€99) if you're just starting. Tree (€499) if you sell €10k-€50k/year. Forest (€1,999) for €50k-€200k/year. Summit or Legacy if FreeTrust is your primary income channel." />
-            <FaqItem q="What does the Legacy tier get me that Summit doesn't?" a="Nearly zero fees forever (0.25% / 0%), 20,000 starting AI Credits, 5,000 ₮ bonus, and 1,200 AI Credits refilled every month for life. It's priced for people who've decided FreeTrust is their business." />
+            <FaqItem q="What does the Legacy tier get me that Summit doesn't?" a="Nearly zero fees forever (0.25% / 0%), 20,000 starting AI Credits, 5,000 ₮ bonus, and a permanent 30% discount on all future AI Credit top-ups. It's priced for people who've decided FreeTrust is their business." />
             <FaqItem q="Does this stack with free Founding Member perks?" a="Yes. Free Founding Member perks are additive to any paid tier — you keep the badge and the 3-month zero fees." />
-            <FaqItem q="What happens if I go inactive?" a="Monthly refills accrue while your account is active. Return from a break and your balance is waiting. Fee tier never expires." />
+            <FaqItem q="What happens if I go inactive?" a="Your fee tier and 30% top-up discount never expire, even if you go inactive. Return any time and your rates are still locked. Fee tier never expires." />
             <FaqItem q="Are refunds available?" a="Full refund within 14 days of purchase if fewer than 50 AI Credits have been spent. After that, non-refundable." />
             <FaqItem q="Will my founder fees stay low forever?" a="Yes. Your tier rate is locked for life. Future fee reductions apply to you too — but your rate is never raised." />
           </div>
