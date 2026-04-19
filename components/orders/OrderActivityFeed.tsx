@@ -42,9 +42,12 @@ function formatTime(iso: string) {
 
 interface Props {
   orderId: string
+  currentUserId?: string
+  buyerId?: string
+  sellerId?: string
 }
 
-export default function OrderActivityFeed({ orderId }: Props) {
+export default function OrderActivityFeed({ orderId, currentUserId, buyerId, sellerId }: Props) {
   const [items, setItems] = useState<ActivityItem[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
@@ -103,6 +106,17 @@ export default function OrderActivityFeed({ orderId }: Props) {
 
         {items.map((item, i) => {
           const roleColor = ROLE_COLORS[item.actor_role] ?? '#64748b'
+          // Show "You" when the event was performed by the current viewer
+          const isCurrentUser = currentUserId && (
+            (item.actor_role === 'buyer'  && currentUserId === buyerId) ||
+            (item.actor_role === 'seller' && currentUserId === sellerId)
+          )
+          const roleLabel = item.actor_role === 'system'
+            ? 'system'
+            : isCurrentUser
+              ? 'You'
+              : item.actor_role === 'buyer' ? 'Buyer' : 'Seller'
+          const badgeColor = isCurrentUser ? '#f59e0b' : roleColor
           return (
             <div
               key={item.id}
@@ -116,7 +130,7 @@ export default function OrderActivityFeed({ orderId }: Props) {
               <div style={{
                 width: 29, height: 29, borderRadius: '50%', flexShrink: 0,
                 background: 'rgba(15,23,42,0.95)',
-                border: `1px solid ${roleColor}35`,
+                border: `1px solid ${badgeColor}35`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 13,
               }}>
@@ -131,11 +145,11 @@ export default function OrderActivityFeed({ orderId }: Props) {
                   </span>
                   <span style={{
                     fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-                    color: roleColor, letterSpacing: '0.05em',
-                    background: `${roleColor}15`, padding: '1px 6px', borderRadius: 4,
+                    color: badgeColor, letterSpacing: '0.05em',
+                    background: `${badgeColor}15`, padding: '1px 6px', borderRadius: 4,
                     flexShrink: 0,
                   }}>
-                    {item.actor_role}
+                    {roleLabel}
                   </span>
                 </div>
 

@@ -347,11 +347,56 @@ export default function OrderDetailPage() {
         </div>
       )}
 
-      <div style={{ maxWidth: 860, margin: '0 auto' }}>
+        <div style={{ maxWidth: 860, margin: '0 auto' }}>
         {/* Back nav */}
         <Link href="/orders" style={{ color: '#64748b', textDecoration: 'none', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1.5rem' }}>
           ← Back to Orders
         </Link>
+
+        {/* ── Role Context Banner ── */}
+        {isBuyer && !isSeller && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)',
+            borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13,
+          }}>
+            <span style={{ fontSize: 18 }}>🛒</span>
+            <div>
+              <span style={{ fontWeight: 700, color: '#60a5fa' }}>You&apos;re the buyer</span>
+              {order.seller_name && (
+                <span style={{ color: '#64748b', marginLeft: 8 }}>Purchased from {order.seller_name}</span>
+              )}
+            </div>
+          </div>
+        )}
+        {isSeller && !isBuyer && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)',
+            borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13,
+          }}>
+            <span style={{ fontSize: 18 }}>🏪</span>
+            <div>
+              <span style={{ fontWeight: 700, color: '#34d399' }}>You&apos;re the seller</span>
+              {order.buyer_name && (
+                <span style={{ color: '#64748b', marginLeft: 8 }}>Sold to {order.buyer_name}</span>
+              )}
+            </div>
+          </div>
+        )}
+        {isBuyer && isSeller && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.2)',
+            borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13,
+          }}>
+            <span style={{ fontSize: 18 }}>🔄</span>
+            <div>
+              <span style={{ fontWeight: 700, color: '#c084fc' }}>You&apos;re both buyer &amp; seller</span>
+              <span style={{ color: '#64748b', marginLeft: 8 }}>This is a self-transaction (e.g. a test order)</span>
+            </div>
+          </div>
+        )}
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
@@ -467,7 +512,12 @@ export default function OrderDetailPage() {
 
             {/* Order Activity Feed — shared real-time log for buyer and seller */}
             <div style={{ background: '#1e293b', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(148,163,184,0.1)' }}>
-              <OrderActivityFeed orderId={orderId} />
+              <OrderActivityFeed
+                orderId={orderId}
+                currentUserId={userId ?? undefined}
+                buyerId={order.buyer_id}
+                sellerId={order.seller_id}
+              />
             </div>
 
             {/* Actions */}

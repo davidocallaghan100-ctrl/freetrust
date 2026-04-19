@@ -108,7 +108,18 @@ function OrderCard({ order, role }: { order: Order; role: 'buyer' | 'seller' }) 
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
             <Avatar url={counterparty?.avatar_url} name={counterparty?.full_name} size={40} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f1f5f9', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
+                <span style={{
+                  fontSize: '0.65rem', fontWeight: 700, flexShrink: 0,
+                  color: isBuying ? '#60a5fa' : '#34d399',
+                  background: isBuying ? 'rgba(59,130,246,0.12)' : 'rgba(16,185,129,0.12)',
+                  border: `1px solid ${isBuying ? 'rgba(59,130,246,0.25)' : 'rgba(16,185,129,0.25)'}`,
+                  borderRadius: 6, padding: '1px 6px',
+                }}>
+                  {isBuying ? '🛒 Buying' : '🏪 Selling'}
+                </span>
+              </div>
               <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
                 {counterLabel}: <span style={{ color: '#94a3b8', fontWeight: 600 }}>{counterparty?.full_name ?? 'Unknown'}</span>
               </div>

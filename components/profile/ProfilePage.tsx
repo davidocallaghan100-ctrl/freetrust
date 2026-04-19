@@ -164,6 +164,8 @@ export default function ProfilePage() {
   // Surfaced as a red banner above the Save button when set.
   const [saveError, setSaveError] = useState<string | null>(null)
   const [trustBalance, setTrustBalance] = useState(0)
+  const [buyingCount, setBuyingCount] = useState<number | null>(null)
+  const [sellingCount, setSellingCount] = useState<number | null>(null)
   const [form, setForm] = useState({ full_name: '', bio: '', location: '', website: '' })
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [coverUploading, setCoverUploading] = useState(false)
@@ -489,6 +491,14 @@ export default function ProfilePage() {
             .select('*', { count: 'exact', head: true })
             .eq('following_id', u.id)
           setFollowerCount(count ?? 0)
+
+          // Dual-role order counts
+          const [buyRes, sellRes] = await Promise.all([
+            supabase.from('orders').select('*', { count: 'exact', head: true }).eq('buyer_id', u.id),
+            supabase.from('orders').select('*', { count: 'exact', head: true }).eq('seller_id', u.id),
+          ])
+          setBuyingCount(buyRes.count ?? 0)
+          setSellingCount(sellRes.count ?? 0)
         }
       } catch (err) {
         console.error('init error:', err)
@@ -1093,6 +1103,37 @@ export default function ProfilePage() {
         {(viewingId || user?.id) && (
           <div className="profile-card">
             <SellerOTIFBadge sellerId={viewingId || user?.id || ''} />
+          </div>
+        )}
+
+        {/* Dual Role Summary — own profile only, shows buying + selling counts side by side */}
+        {isOwnProfile && (buyingCount !== null || sellingCount !== null) && (
+          <div className="profile-card">
+            <h3 style={{ margin: '0 0 1rem', fontWeight: 700, fontSize: '0.95rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Your Activity
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div style={{
+                background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.18)',
+                borderRadius: 12, padding: '1rem', textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 28, marginBottom: 4 }}>🛒</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#60a5fa', lineHeight: 1 }}>
+                  {buyingCount ?? 0}
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 4 }}>Orders Placed</div>
+              </div>
+              <div style={{
+                background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.18)',
+                borderRadius: 12, padding: '1rem', textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 28, marginBottom: 4 }}>🏪</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#34d399', lineHeight: 1 }}>
+                  {sellingCount ?? 0}
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 4 }}>Orders Sold</div>
+              </div>
+            </div>
           </div>
         )}
 
