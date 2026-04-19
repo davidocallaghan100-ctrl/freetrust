@@ -11,6 +11,8 @@ import { type MapEvent } from '@/components/events/EventsMap'
 
 // Dynamically import the map to avoid SSR Leaflet errors
 const EventsMap = dynamic(() => import('@/components/events/EventsMap'), { ssr: false })
+// Dynamically import Apple/Google Pay button — client-only, only renders when wallet pay is available
+const AppleGooglePayButton = dynamic(() => import('@/components/payments/AppleGooglePayButton'), { ssr: false })
 
 interface DBEvent {
   id: string
@@ -113,6 +115,7 @@ export default function EventDetailPage() {
   const [notFound, setNotFound] = useState(false)
   const [rsvped, setRsvped] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [payError, setPayError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -403,6 +406,27 @@ export default function EventDetailPage() {
               {/* CTA button */}
               {!isPast && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {/* Apple Pay / Google Pay express checkout for paid events */}
+                  {event.is_paid && event.ticket_price && event.ticket_price > 0 && !event.external_url && (
+                    <>
+                      <AppleGooglePayButton
+                        amountCents={Math.round((event.ticket_price_eur ?? event.ticket_price) * 100)}
+                        currency={(event.currency_code ?? 'EUR').toUpperCase()}
+                        label={event.title ?? 'Event Ticket'}
+                        description={`Ticket: ${event.title}`}
+                        metadata={{ type: 'event_ticket', event_id: event.id }}
+                        onSuccess={() => {
+                          setRsvped(true)
+                          setPayError(null)
+                        }}
+                        onError={(msg) => setPayError(msg)}
+                      />
+                      {payError && (
+                        <div style={{ color: '#f87171', fontSize: 12, marginTop: 2 }}>{payError}</div>
+                      )}
+                    </>
+                  )}
+
                   {event.external_url ? (
                     <a
                       href={event.external_url}

@@ -3,11 +3,14 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { formatDistanceToNow } from 'date-fns'
 import { useCurrency } from '@/context/CurrencyContext'
 import { createClient as createAnonClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import ListingQualityBadge from '@/components/marketplace/ListingQualityBadge'
+
+const AppleGooglePayButton = dynamic(() => import('@/components/payments/AppleGooglePayButton'), { ssr: false })
 
 // ─── Supabase client ──────────────────────────────────────────────────────────
 
