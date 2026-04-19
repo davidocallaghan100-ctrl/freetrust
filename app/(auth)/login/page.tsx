@@ -26,6 +26,8 @@ function LoginForm() {
   const [resetSent, setResetSent] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [inAppInfo, setInAppInfo] = useState<InAppBrowserInfo | null>(null)
+  // Show a success banner when the user lands back here after a password reset
+  const passwordResetSuccess = searchParams.get('reset') === 'success'
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -404,6 +406,26 @@ function LoginForm() {
               <p className="auth-sub">
                 No account? <Link href="/register">Sign up free →</Link>
               </p>
+
+              {/* Password reset success banner */}
+              {passwordResetSuccess && (
+                <div style={{
+                  background: 'rgba(16,185,129,0.08)',
+                  border: '1px solid rgba(16,185,129,0.25)',
+                  borderRadius: 10,
+                  padding: '12px 14px',
+                  fontSize: 13,
+                  color: '#6ee7b7',
+                  marginBottom: 18,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  lineHeight: 1.5,
+                }}>
+                  <span>✅</span>
+                  <span>Password updated successfully. Sign in with your new password below.</span>
+                </div>
+              )}
 
               {/* Google — primary CTA */}
               <button className="btn-google" type="button" onClick={handleGoogleLogin} disabled={googleLoading}>
