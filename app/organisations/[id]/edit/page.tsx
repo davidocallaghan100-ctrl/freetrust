@@ -44,45 +44,51 @@ export default function EditOrgPage() {
   useEffect(() => {
     if (!id) return
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setNotAllowed(true); setLoading(false); return }
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) { setNotAllowed(true); return }
 
-      const { data: org } = await supabase
-        .from('organisations')
-        .select('*')
-        .eq('id', id)
-        .single()
-
-      if (!org) { setNotAllowed(true); setLoading(false); return }
-
-      // Check if user is creator or admin member
-      const isCreator = org.creator_id === user.id
-      if (!isCreator) {
-        const { data: membership } = await supabase
-          .from('organisation_members')
-          .select('role')
-          .eq('organisation_id', id)
-          .eq('user_id', user.id)
+        const { data: org } = await supabase
+          .from('organisations')
+          .select('*')
+          .eq('id', id)
           .single()
-        if (!membership || !['admin', 'owner'].includes(membership.role)) {
-          setNotAllowed(true); setLoading(false); return
-        }
-      }
 
-      setLogoUrl(org.logo_url || '')
-      setCoverUrl(org.cover_url || '')
-      setForm({
-        name: org.name || '',
-        tagline: org.tagline || '',
-        description: org.description || '',
-        website: org.website || '',
-        location: org.location || '',
-        sector: org.sector || '',
-        founded_year: org.founded_year?.toString() || '',
-        impact_statement: org.impact_statement || '',
-        tags: (org.tags || []).join(', '),
-      })
-      setLoading(false)
+        if (!org) { setNotAllowed(true); return }
+
+        // Check if user is creator or admin member
+        const isCreator = org.creator_id === user.id
+        if (!isCreator) {
+          const { data: membership } = await supabase
+            .from('organisation_members')
+            .select('role')
+            .eq('organisation_id', id)
+            .eq('user_id', user.id)
+            .single()
+          if (!membership || !['admin', 'owner'].includes(membership.role)) {
+            setNotAllowed(true); return
+          }
+        }
+
+        setLogoUrl(org.logo_url || '')
+        setCoverUrl(org.cover_url || '')
+        setForm({
+          name: org.name || '',
+          tagline: org.tagline || '',
+          description: org.description || '',
+          website: org.website || '',
+          location: org.location || '',
+          sector: org.sector || '',
+          founded_year: org.founded_year?.toString() || '',
+          impact_statement: org.impact_statement || '',
+          tags: (org.tags || []).join(', '),
+        })
+      } catch (err) {
+        console.error('[org-edit] load error:', err)
+        setError('Could not load organisation. Please try again.')
+      } finally {
+        setLoading(false)
+      }
     }
     load()
   }, [id])

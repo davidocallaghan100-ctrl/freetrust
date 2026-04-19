@@ -133,19 +133,26 @@ function SettingsPageInner() {
   useEffect(() => {
     const supabase = createClient()
     const load = async () => {
-      const { data: { user: u } } = await supabase.auth.getUser()
-      if (!u) {
-        router.push('/auth/signin')
-        return
+      const timer = setTimeout(() => setLoading(false), 10000) // 10s hard timeout
+      try {
+        const { data: { user: u } } = await supabase.auth.getUser()
+        if (!u) {
+          router.push('/login')
+          return
+        }
+        setUser(u)
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', u.id)
+          .single()
+        setProfile(prof)
+      } catch (err) {
+        console.error('[settings] load error:', err)
+      } finally {
+        clearTimeout(timer)
+        setLoading(false)
       }
-      setUser(u)
-      const { data: prof } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', u.id)
-        .single()
-      setProfile(prof)
-      setLoading(false)
     }
     load()
   }, [router])
@@ -158,7 +165,19 @@ function SettingsPageInner() {
     )
   }
 
-  if (!user || !profile) return null
+  if (!user || !profile) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+        <div style={{ color: '#94a3b8', fontSize: 15 }}>Could not load settings.</div>
+        <button
+          onClick={() => window.location.reload()}
+          style={{ background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 8, padding: '10px 22px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+        >
+          Try again
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', paddingTop: 80 }}>

@@ -70,7 +70,7 @@ export async function PATCH(request: NextRequest) {
 
     const { data: profile, error } = await supabase
       .from('profiles')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update(updates)
       .eq('id', user.id)
       .select()
       .single()
