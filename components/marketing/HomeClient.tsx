@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useCurrency } from '@/context/CurrencyContext'
 import FAQAccordion from '@/components/marketing/FAQAccordion'
 import { FAQS } from '@/lib/faq'
+import ROICalculator from './ROICalculator'
 
 export interface HomeClientProps {
   initialCounts: {
@@ -795,6 +796,22 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           </div>
         </div>
       </div>
+
+      {/* ── ROI CALCULATOR ── */}
+      <section style={{ borderBottom: '1px solid rgba(16,185,129,0.08)', background: 'linear-gradient(180deg, rgba(16,185,129,0.03) 0%, transparent 100%)' }}>
+        <div className="lp-sec" style={{ maxWidth: 820 }}>
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <div style={{ display: 'inline-block', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 999, padding: '0.3rem 0.9rem', fontSize: '0.72rem', color: '#34d399', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '0.85rem' }}>✦ YOUR EARNINGS</div>
+            <h2 className="section-h2" style={{ fontSize: 'clamp(1.6rem,4vw,2.4rem)', fontWeight: 900, margin: '0 0 0.5rem', letterSpacing: '-0.5px' }}>
+              See What You&apos;d Earn on FreeTrust
+            </h2>
+            <p style={{ color: '#64748b', fontSize: '0.95rem', maxWidth: 480, margin: '0 auto' }}>
+              TrustCoins compound — the more you participate, the less you pay in fees.
+            </p>
+          </div>
+          <ROICalculator />
+        </div>
+      </section>
 
       {/* ── FAQ ── */}
       <section style={{ borderBottom: '1px solid rgba(56,189,248,0.06)' }}>
