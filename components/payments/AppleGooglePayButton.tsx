@@ -130,77 +130,105 @@ export default function AppleGooglePayButton({
   }, [stripe, amountCents, currency, label])
 
   // ── Handle button click ───────────────────────────────────────────────────
-  const handleClick = useCallback(async () => {
+  const handleClick = useCallback(() => {
     if (!paymentRequest || !stripe || processing) return
     setProcessing(true)
 
-    try {
-      // 1. Create a PaymentIntent server-side
-      const res = await fetch('/api/stripe/payment-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount_cents: amountCents,
-          currency: currency.toLowerCase(),
-          description,
-          metadata,
-        }),
-      })
-      const data = await res.json() as { client_secret?: string; error?: string }
+    // ─────────────────────────────────────────────────────────────────────────
+    // IMPORTANT: Apple Pay requires paymentRequest.show() to be called
+    // SYNCHRONOUSLY within the user-gesture handler. Any await before .show()
+    // breaks the gesture chain and triggers the "must be invoked directly by a
+    // user activation event" error.
+    //
+    // Strategy:
+    //   1. Register the paymentmethod handler first (captures clientSecretRef).
+    //   2. Call .show() synchronously — this opens the sheet immediately.
+    //   3. Kick off the PaymentIntent creation in parallel (async, after show).
+    //   4. The paymentmethod event fires only after the user authorises, by
+    //      which time the fetch will have completed and clientSecretRef is set.
+    // ─────────────────────────────────────────────────────────────────────────
 
-      if (!res.ok || !data.client_secret) {
-        onError(data.error ?? 'Failed to create payment. Please try again.')
+    // Step 1 — register handler before the sheet opens
+    paymentRequest.once('paymentmethod', async (ev) => {
+      // Wait until the PaymentIntent fetch resolves (it was started in step 3)
+      // In practice the user takes a second or two to authenticate, which is
+      // more than enough time for the fetch to complete.
+      let attempts = 0
+      while (!clientSecretRef.current && attempts < 50) {
+        await new Promise(r => setTimeout(r, 100))
+        attempts++
+      }
+
+      const secret = clientSecretRef.current
+      if (!secret) {
+        ev.complete('fail')
+        onError('Payment setup timed out. Please try again.')
         setProcessing(false)
         return
       }
 
-      clientSecretRef.current = data.client_secret
+      // Confirm without 3DS first — if the card needs 3DS we handle it below
+      const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
+        secret,
+        { payment_method: ev.paymentMethod.id },
+        { handleActions: false }
+      )
 
-      // 2. Register the paymentmethod handler BEFORE calling .show()
-      //    (Stripe emits the event immediately after the user authorises)
-      paymentRequest.once('paymentmethod', async (ev) => {
-        const secret = clientSecretRef.current!
+      if (confirmError) {
+        ev.complete('fail')
+        onError(confirmError.message ?? 'Payment failed. Please try again.')
+        setProcessing(false)
+        return
+      }
 
-        // Confirm without 3DS first — if the card needs 3DS we handle it below
-        const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
-          secret,
-          { payment_method: ev.paymentMethod.id },
-          { handleActions: false }
-        )
-
-        if (confirmError) {
-          ev.complete('fail')
-          onError(confirmError.message ?? 'Payment failed. Please try again.')
-          setProcessing(false)
-          return
-        }
-
-        if (paymentIntent?.status === 'requires_action') {
-          // Card requires 3DS — close the sheet first, then redirect for auth
-          ev.complete('success')
-          const { error: actionError, paymentIntent: pi2 } = await stripe.confirmCardPayment(secret)
-          if (actionError) {
-            onError(actionError.message ?? 'Payment authentication failed.')
-            setProcessing(false)
-            return
-          }
-          onSuccess(pi2?.id ?? '')
-          setProcessing(false)
-          return
-        }
-
+      if (paymentIntent?.status === 'requires_action') {
+        // Card requires 3DS — close the sheet first, then redirect for auth
         ev.complete('success')
-        onSuccess(paymentIntent?.id ?? '')
+        const { error: actionError, paymentIntent: pi2 } = await stripe.confirmCardPayment(secret)
+        if (actionError) {
+          onError(actionError.message ?? 'Payment authentication failed.')
+          setProcessing(false)
+          return
+        }
+        onSuccess(pi2?.id ?? '')
+        setProcessing(false)
+        return
+      }
+
+      ev.complete('success')
+      onSuccess(paymentIntent?.id ?? '')
+      setProcessing(false)
+    })
+
+    // Step 2 — open the sheet NOW (synchronous, within the gesture handler)
+    paymentRequest.show()
+
+    // Step 3 — create the PaymentIntent in the background (async)
+    clientSecretRef.current = null
+    fetch('/api/stripe/payment-intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount_cents: amountCents,
+        currency: currency.toLowerCase(),
+        description,
+        metadata,
+      }),
+    })
+      .then(res => res.json() as Promise<{ client_secret?: string; error?: string }>)
+      .then(data => {
+        if (data.client_secret) {
+          clientSecretRef.current = data.client_secret
+        } else {
+          // PaymentIntent creation failed — we can't proceed
+          onError(data.error ?? 'Failed to create payment. Please try again.')
+          setProcessing(false)
+        }
+      })
+      .catch(() => {
+        onError('Network error creating payment. Please try again.')
         setProcessing(false)
       })
-
-      // 3. Open the native Apple Pay / Google Pay sheet
-      paymentRequest.show()
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Payment error. Please try again.'
-      onError(msg)
-      setProcessing(false)
-    }
   }, [paymentRequest, stripe, processing, amountCents, currency, description, metadata, onSuccess, onError])
 
   // ── Don't render if wallet pay is not available or component crashed ────────
