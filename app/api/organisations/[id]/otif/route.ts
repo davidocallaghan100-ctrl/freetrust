@@ -8,9 +8,12 @@ interface StatusHistoryEntry {
   actor_id: string
 }
 
+type ProfileEntry = { full_name: string | null; username: string | null }
+
 interface MemberRow {
   user_id: string
-  profile: { full_name: string | null; username: string | null } | null
+  // Supabase returns foreign-key joins as arrays
+  profile: ProfileEntry[]
 }
 
 export async function GET(
@@ -94,7 +97,7 @@ export async function GET(
     const { data: listings } = await admin
       .from('listings')
       .select('avg_rating, review_count')
-      .in('user_id', memberIds)
+      .in('seller_id', memberIds)
       .gt('review_count', 0)
 
     let avgRating: number | null = null
@@ -115,7 +118,8 @@ export async function GET(
       const sellerOtif = Math.round((ot / tot) * 100)
       if (sellerOtif > bestOtif) {
         bestOtif = sellerOtif
-        const name = m.profile?.full_name || m.profile?.username || 'Unknown'
+        const p = Array.isArray(m.profile) ? m.profile[0] : m.profile
+        const name = p?.full_name || p?.username || 'Unknown'
         topSeller = { name, otif: sellerOtif }
       }
     }
