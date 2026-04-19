@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
@@ -50,31 +50,56 @@ const CURRENT_MONTH = new Date().getMonth() + 1 // 1-indexed
 
 export default function AccountingPage() {
   const router = useRouter()
-  const supabase = createClient()
+  // Stable client — created once on mount, never recreated on re-render
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
+
   const [authed, setAuthed] = useState<boolean | null>(null)
   const [year, setYear] = useState(CURRENT_YEAR)
   const [summary, setSummary] = useState<Summary | null>(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
+  // Auth check — runs once on mount
   useEffect(() => {
+    const timer = setTimeout(() => {
+      // If auth check hasn't resolved in 10s, show page anyway (degraded)
+      setAuthed(prev => prev === null ? false : prev)
+    }, 10000)
     supabase.auth.getUser().then(({ data: { user } }) => {
+      clearTimeout(timer)
       if (!user) {
         router.push('/login')
       } else {
         setAuthed(true)
       }
+    }).catch(() => {
+      clearTimeout(timer)
+      setAuthed(false)
     })
+    return () => clearTimeout(timer)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchSummary = useCallback(async (y: number) => {
     setLoading(true)
+    setError(null)
     try {
       const res = await fetch(`/api/accounting/summary?year=${y}`)
-      if (res.ok) setSummary(await res.json())
+      if (res.ok) {
+        setSummary(await res.json())
+      } else {
+        const body = await res.json().catch(() => ({})) as { error?: string }
+        setError(body.error ?? 'Failed to load accounting data.')
+        setSummary(null)
+      }
+    } catch (err) {
+      console.error('[accounting] fetchSummary error:', err)
+      setError('Could not load accounting data. Please check your connection and try again.')
+      setSummary(null)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, []) // stable — no deps
 
   useEffect(() => {
     if (authed) fetchSummary(year)
@@ -91,7 +116,22 @@ export default function AccountingPage() {
     window.open(`/api/orders/${orderId}/invoice`, '_blank')
   }
 
-  if (authed === null) return null
+  // Still checking auth
+  if (authed === null) {
+    return (
+      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', color: '#64748b' }}>
+          <div style={{
+            display: 'inline-block', width: 32, height: 32,
+            border: '3px solid rgba(56,189,248,0.2)', borderTopColor: '#38bdf8',
+            borderRadius: '50%', animation: 'spin 0.7s linear infinite', marginBottom: 12,
+          }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          <div style={{ fontSize: 14 }}>Loading accounting…</div>
+        </div>
+      </div>
+    )
+  }
 
   const years = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2]
 
@@ -128,10 +168,48 @@ export default function AccountingPage() {
       </div>
 
       {loading && (
-        <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>Loading...</div>
+        <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+          <div style={{
+            display: 'inline-block', width: 28, height: 28,
+            border: '3px solid rgba(56,189,248,0.2)', borderTopColor: '#38bdf8',
+            borderRadius: '50%', animation: 'spin 0.7s linear infinite', marginBottom: 10,
+          }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          <div>Loading…</div>
+        </div>
       )}
 
-      {!loading && summary && (
+      {!loading && error && (
+        <div style={{
+          background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+          borderRadius: 10, padding: '1rem 1.25rem', color: '#fca5a5', fontSize: 14,
+          marginBottom: '1.5rem',
+        }}>
+          ⚠️ {error}
+        </div>
+      )}
+
+      {!loading && !error && summary && summary.totals.orders === 0 && (
+        <div style={{
+          background: '#1e293b', border: '1px solid rgba(148,163,184,0.1)',
+          borderRadius: 14, padding: '3rem 2rem', textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9', marginBottom: 8 }}>No sales in {year}</div>
+          <p style={{ fontSize: 14, color: '#64748b', marginBottom: 20 }}>
+            Completed orders will appear here once you make your first sale.
+          </p>
+          <Link href="/browse" style={{
+            display: 'inline-block', padding: '0.6rem 1.25rem',
+            background: '#10b981', color: '#0f172a', borderRadius: 8,
+            fontWeight: 700, fontSize: 14, textDecoration: 'none',
+          }}>
+            Browse listings →
+          </Link>
+        </div>
+      )}
+
+      {!loading && summary && summary.totals.orders > 0 && (
         <>
           {/* Summary cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
