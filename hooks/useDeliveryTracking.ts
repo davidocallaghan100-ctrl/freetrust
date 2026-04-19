@@ -57,6 +57,16 @@ export function useSellerTracking(orderId: string, sessionId: string | null) {
           })
           .eq('id', sessionId)
           .then(() => {})
+        // Geofence check — fires push notifications at 1 km and 100 m from buyer
+        fetch('/api/delivery-sessions/geofence', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: sessionId,
+            seller_lat: payload.lat,
+            seller_lng: payload.lng,
+          }),
+        }).catch(() => {})
       },
       (err) => setError(err.message),
       { enableHighAccuracy: true, maximumAge: 5000 }
