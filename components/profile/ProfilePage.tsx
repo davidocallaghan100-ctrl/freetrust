@@ -151,7 +151,12 @@ function calcCompleteness(profile: Profile | null, email: string | null): { pct:
 }
 
 export default function ProfilePage() {
-  const supabase = createClient()
+  // IMPORTANT: createClient() must be called once per mount, not on every render.
+  // Calling createBrowserClient on each render creates new auth listener instances
+  // which can fire repeated onAuthStateChange events → state updates → re-renders
+  // → more listeners → infinite loop. A ref ensures a single stable client.
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
   const searchParams = useSearchParams()
   const router = useRouter()
   const viewingId = searchParams.get('id') // null = own profile
