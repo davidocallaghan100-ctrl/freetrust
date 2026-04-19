@@ -4,6 +4,7 @@ import {
   searchNominatim,
   reverseGeocode,
   getBrowserGeoPoint,
+  fetchIpLocation,
   RADIUS_OPTIONS,
   type StructuredLocation,
   type NominatimSuggestion,
@@ -70,6 +71,7 @@ export default function LocationFilter({
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<NominatimSuggestion[]>([])
   const [locating, setLocating] = useState(false)
+  const [geoError, setGeoError] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -115,14 +117,27 @@ export default function LocationFilter({
 
   const nearMe = useCallback(async () => {
     setLocating(true)
+    setGeoError(null)
     try {
+      // Try browser GPS first
       const pt = await getBrowserGeoPoint()
-      if (!pt) return
-      const struct = await reverseGeocode(pt.latitude, pt.longitude)
-      onLocationChange({ ...struct, latitude: pt.latitude, longitude: pt.longitude })
-      setQuery(struct.location_label ?? `${pt.latitude.toFixed(2)}, ${pt.longitude.toFixed(2)}`)
-      // If no radius set yet, default to 50 km so results are immediately useful
-      if (radiusKm === 0) onRadiusChange(50)
+      if (pt) {
+        const struct = await reverseGeocode(pt.latitude, pt.longitude)
+        onLocationChange({ ...struct, latitude: pt.latitude, longitude: pt.longitude })
+        setQuery(struct.location_label ?? `${pt.latitude.toFixed(2)}, ${pt.longitude.toFixed(2)}`)
+        if (radiusKm === 0) onRadiusChange(50)
+        return
+      }
+      // Fallback to IP geolocation (works when GPS is denied or unavailable)
+      const ipLoc = await fetchIpLocation()
+      if (ipLoc && ipLoc.latitude != null && ipLoc.longitude != null) {
+        onLocationChange(ipLoc)
+        setQuery(ipLoc.location_label ?? (ipLoc as { city?: string }).city ?? 'Your location')
+        if (radiusKm === 0) onRadiusChange(50)
+        return
+      }
+      // Both failed — show inline error
+      setGeoError('Location unavailable. Try typing your city.')
     } finally {
       setLocating(false)
     }
@@ -165,7 +180,7 @@ export default function LocationFilter({
         <input
           type="text"
           value={query}
-          onChange={e => { setQuery(e.target.value); setOpen(true) }}
+          onChange={e => { setQuery(e.target.value); setOpen(true); setGeoError(null) }}
           onFocus={() => query && setOpen(true)}
           placeholder="Filter by city or country…"
           style={{
@@ -232,6 +247,10 @@ export default function LocationFilter({
       >
         {locating ? '⏳ Locating…' : '📍 Near Me'}
       </button>
+
+      {geoError && (
+        <span style={{ fontSize: 11, color: '#f87171', whiteSpace: 'nowrap' }}>{geoError}</span>
+      )}
 
       <select
         value={radiusKm}

@@ -16,6 +16,35 @@ export interface HomeClientProps {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type TickerItem = { id: string; type: string; text: string; time: string }
+
+type PreviewEvent = {
+  id: string
+  title: string
+  starts_at: string | null
+  is_online: boolean
+  location_label: string | null
+  venue_name: string | null
+  city: string | null
+  is_paid: boolean
+  ticket_price: number | null
+  currency_code: string | null
+  category: string | null
+  attendee_count: number
+}
+
+type PreviewJob = {
+  id: string
+  title: string
+  job_type: string
+  location_type: string
+  location: string | null
+  city: string | null
+  salary_min: number | null
+  salary_max: number | null
+  salary_currency: string
+  created_at: string
+  poster: { full_name: string | null } | null
+}
 type StatsData = {
   members: { total: number; thisWeek: number; thisMonth: number }
   listings: { services: number; products: number }
@@ -256,6 +285,8 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
   const [stats, setStats] = useState<StatsData | null>(null)
   const [featuredServices, setFeaturedServices] = useState<FeaturedService[]>([])
   const [featuredProducts, setFeaturedProducts] = useState<FeaturedProduct[]>([])
+  const [previewEvents, setPreviewEvents] = useState<PreviewEvent[] | null>(null)
+  const [previewJobs, setPreviewJobs] = useState<PreviewJob[] | null>(null)
 
   const fetchStats = useCallback(async () => {
     try {
@@ -292,6 +323,37 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           setFeaturedProducts(data)
         }
       } catch { /* silent */ }
+    }
+    void load()
+  }, [])
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const now = new Date().toISOString()
+        const res = await fetch(`/api/landing/events-preview?after=${encodeURIComponent(now)}&limit=4`)
+        if (res.ok) {
+          const data = await res.json() as PreviewEvent[]
+          setPreviewEvents(data)
+        } else {
+          setPreviewEvents([])
+        }
+      } catch { setPreviewEvents([]) }
+    }
+    void load()
+  }, [])
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch('/api/landing/jobs-preview?limit=4')
+        if (res.ok) {
+          const data = await res.json() as PreviewJob[]
+          setPreviewJobs(data)
+        } else {
+          setPreviewJobs([])
+        }
+      } catch { setPreviewJobs([]) }
     }
     void load()
   }, [])
@@ -810,6 +872,172 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
             </p>
           </div>
           <ROICalculator />
+        </div>
+      </section>
+
+      {/* ── UPCOMING EVENTS ── */}
+      <section style={{ borderBottom: '1px solid rgba(56,189,248,0.06)', background: 'rgba(56,189,248,0.02)' }}>
+        <div className="lp-sec">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <h2 className="section-h2" style={{ fontSize: 'clamp(1.3rem,3vw,1.8rem)', fontWeight: 900, margin: 0 }}>🎟️ Upcoming Events</h2>
+            <Link href="/events" style={{ fontSize: '0.82rem', color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>See all →</Link>
+          </div>
+          {previewEvents === null ? (
+            /* Loading skeleton */
+            <div className="hscroll">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} style={{ flexShrink: 0, width: 240, height: 200, background: '#1e293b', borderRadius: 14, border: '1px solid rgba(56,189,248,0.08)', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
+              ))}
+            </div>
+          ) : previewEvents.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2.5rem 1rem', background: '#1e293b', borderRadius: 14, border: '1px solid rgba(56,189,248,0.08)' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🎟️</div>
+              <div style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '0.75rem' }}>No upcoming events yet</div>
+              <Link href="/events/new" style={{ fontSize: '0.82rem', color: '#38bdf8', fontWeight: 700, textDecoration: 'none' }}>Post one →</Link>
+            </div>
+          ) : (
+            <div className="hscroll">
+              {previewEvents.map(ev => {
+                const date = ev.starts_at ? new Date(ev.starts_at) : null
+                const dayStr = date ? date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : null
+                const catGrads: Record<string, string> = {
+                  Community: 'linear-gradient(135deg,#0ea5e9,#0369a1)',
+                  Business: 'linear-gradient(135deg,#7c3aed,#4c1d95)',
+                  Technology: 'linear-gradient(135deg,#059669,#047857)',
+                  Design: 'linear-gradient(135deg,#db2777,#9d174d)',
+                  Finance: 'linear-gradient(135deg,#d97706,#92400e)',
+                  AI: 'linear-gradient(135deg,#a855f7,#6d28d9)',
+                  Startup: 'linear-gradient(135deg,#0284c7,#1e40af)',
+                  Education: 'linear-gradient(135deg,#7c3aed,#4338ca)',
+                }
+                const grad = catGrads[ev.category ?? ''] ?? 'linear-gradient(135deg,#0284c7,#1e40af)'
+                const locationStr = ev.location_label ?? ev.venue_name ?? ev.city ?? (ev.is_online ? 'Online' : null)
+                return (
+                  <Link key={ev.id} href={`/events/${ev.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 240 }}>
+                    <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s', height: '100%', display: 'flex', flexDirection: 'column' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.15)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
+                      {/* Gradient header */}
+                      <div style={{ height: 90, background: grad, position: 'relative', flexShrink: 0 }}>
+                        {date && (
+                          <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(8px)', borderRadius: 8, padding: '4px 8px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#38bdf8' }}>{dayStr}</div>
+                          </div>
+                        )}
+                        <div style={{ position: 'absolute', top: 10, right: 10, display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-end' }}>
+                          {ev.is_online
+                            ? <span style={{ background: 'rgba(56,189,248,0.9)', color: '#0f172a', fontSize: '0.6rem', fontWeight: 800, padding: '2px 6px', borderRadius: 999 }}>ONLINE</span>
+                            : <span style={{ background: 'rgba(148,163,184,0.85)', color: '#0f172a', fontSize: '0.6rem', fontWeight: 800, padding: '2px 6px', borderRadius: 999 }}>IN-PERSON</span>
+                          }
+                          {!ev.is_paid || !ev.ticket_price
+                            ? <span style={{ background: 'rgba(52,211,153,0.9)', color: '#0f172a', fontSize: '0.6rem', fontWeight: 800, padding: '2px 6px', borderRadius: 999 }}>FREE</span>
+                            : <span style={{ background: 'rgba(245,158,11,0.9)', color: '#0f172a', fontSize: '0.6rem', fontWeight: 800, padding: '2px 6px', borderRadius: 999 }}>
+                                {format(ev.ticket_price, (ev.currency_code ?? 'EUR') as 'EUR' | 'GBP' | 'USD')}
+                              </span>
+                          }
+                        </div>
+                      </div>
+                      {/* Body */}
+                      <div style={{ padding: '0.8rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{ev.title}</div>
+                        {locationStr && (
+                          <div style={{ fontSize: '0.72rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            📍 {locationStr}
+                          </div>
+                        )}
+                        {ev.attendee_count > 0 && (
+                          <div style={{ fontSize: '0.7rem', color: '#475569', marginTop: 'auto' }}>
+                            👥 {ev.attendee_count.toLocaleString()} attending
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── LATEST JOBS ── */}
+      <section style={{ borderBottom: '1px solid rgba(56,189,248,0.06)' }}>
+        <div className="lp-sec">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <h2 className="section-h2" style={{ fontSize: 'clamp(1.3rem,3vw,1.8rem)', fontWeight: 900, margin: 0 }}>💼 Latest Jobs</h2>
+            <Link href="/jobs" style={{ fontSize: '0.82rem', color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>See all →</Link>
+          </div>
+          {previewJobs === null ? (
+            /* Loading skeleton */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} style={{ height: 72, background: '#1e293b', borderRadius: 12, border: '1px solid rgba(56,189,248,0.08)', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
+              ))}
+            </div>
+          ) : previewJobs.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2.5rem 1rem', background: '#1e293b', borderRadius: 14, border: '1px solid rgba(56,189,248,0.08)' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>💼</div>
+              <div style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '0.75rem' }}>No jobs posted yet</div>
+              <Link href="/jobs/new" style={{ fontSize: '0.82rem', color: '#38bdf8', fontWeight: 700, textDecoration: 'none' }}>Post one →</Link>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              {previewJobs.map(job => {
+                const typeColors: Record<string, string> = { full_time: '#38bdf8', part_time: '#a78bfa', contract: '#fbbf24', freelance: '#34d399' }
+                const typeLabels: Record<string, string> = { full_time: 'Full Time', part_time: 'Part Time', contract: 'Contract', freelance: 'Freelance' }
+                const locBadge: Record<string, { emoji: string; label: string; color: string }> = {
+                  remote:  { emoji: '🌍', label: 'Remote',  color: '#34d399' },
+                  hybrid:  { emoji: '🔀', label: 'Hybrid',  color: '#a78bfa' },
+                  on_site: { emoji: '🏢', label: 'On-site', color: '#fb923c' },
+                }
+                const loc = locBadge[job.location_type]
+                const daysAgo = Math.floor((Date.now() - new Date(job.created_at).getTime()) / 86400000)
+                const postedStr = daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo}d ago`
+                const salaryStr = (job.salary_min || job.salary_max)
+                  ? (() => {
+                      const sym = job.salary_currency === 'GBP' ? '£' : job.salary_currency === 'EUR' ? '€' : '$'
+                      const fmt = (n: number) => n >= 1000 ? `${sym}${Math.round(n / 1000)}k` : `${sym}${n}`
+                      if (job.salary_min && job.salary_max) return `${fmt(job.salary_min)} – ${fmt(job.salary_max)}`
+                      return job.salary_min ? `From ${fmt(job.salary_min)}` : `Up to ${fmt(job.salary_max!)}`
+                    })()
+                  : null
+                const locationDisplay = job.city ?? job.location ?? (loc?.label ?? null)
+                return (
+                  <Link key={job.id} href={`/jobs/${job.id}`} style={{ textDecoration: 'none' }}>
+                    <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '0.9rem 1rem', display: 'flex', alignItems: 'center', gap: '0.85rem', transition: 'border-color 0.15s, box-shadow 0.15s' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor='rgba(56,189,248,0.3)'; (e.currentTarget as HTMLElement).style.boxShadow='0 2px 12px rgba(56,189,248,0.1)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor='rgba(56,189,248,0.08)'; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
+                      {/* Icon */}
+                      <div style={{ width: 42, height: 42, borderRadius: 10, background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', flexShrink: 0 }}>💼</div>
+                      {/* Main content */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {job.poster?.full_name ?? 'FreeTrust Member'}
+                          {locationDisplay ? ` · ${locationDisplay}` : ''}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: 4, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 700, color: typeColors[job.job_type] ?? '#64748b', background: `${typeColors[job.job_type] ?? '#64748b'}18`, borderRadius: 6, padding: '1px 6px' }}>
+                            {typeLabels[job.job_type] ?? job.job_type}
+                          </span>
+                          {loc && (
+                            <span style={{ fontSize: '0.68rem', color: loc.color, background: `${loc.color}18`, borderRadius: 6, padding: '1px 6px' }}>
+                              {loc.emoji} {loc.label}
+                            </span>
+                          )}
+                          {salaryStr && (
+                            <span style={{ fontSize: '0.68rem', color: '#34d399', fontWeight: 600 }}>{salaryStr}</span>
+                          )}
+                        </div>
+                      </div>
+                      {/* Posted date */}
+                      <div style={{ fontSize: '0.7rem', color: '#475569', flexShrink: 0 }}>{postedStr}</div>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
         </div>
       </section>
 
