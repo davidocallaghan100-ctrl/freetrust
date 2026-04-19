@@ -49,12 +49,19 @@ let stripePromise: ReturnType<typeof loadStripe> | null = null
 
 function getStripe(): ReturnType<typeof loadStripe> | null {
   if (typeof window === 'undefined') return null
-  if (!stripePromise) {
-    const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-    if (!key) return null
-    stripePromise = loadStripe(key)
+  try {
+    if (!stripePromise) {
+      const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+      // Only attempt to load with a valid publishable key — must start with pk_
+      // An mk_ restricted key or missing key will return null silently so the
+      // button simply doesn't render rather than crashing the page.
+      if (!key || !key.startsWith('pk_')) return null
+      stripePromise = loadStripe(key)
+    }
+    return stripePromise
+  } catch {
+    return null
   }
-  return stripePromise
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -74,40 +81,51 @@ export default function AppleGooglePayButton({
   const [available, setAvailable] = useState(false)
   const [walletType, setWalletType] = useState<'applePay' | 'googlePay' | 'link' | null>(null)
   const [processing, setProcessing] = useState(false)
+  const [crashed, setCrashed] = useState(false)
   // Keep a stable ref to the current client_secret so the paymentmethod
   // handler (which captures it via closure) always sees the latest value.
   const clientSecretRef = useRef<string | null>(null)
 
   // ── Load Stripe.js once ───────────────────────────────────────────────────
   useEffect(() => {
-    const p = getStripe()
-    if (!p) return
-    p.then(s => { if (s) setStripe(s) }).catch(() => { /* ignore */ })
+    try {
+      const p = getStripe()
+      if (!p) return
+      p.then(s => { if (s) setStripe(s) }).catch(() => {
+        // Stripe failed to initialise — button stays hidden, page is unaffected
+      })
+    } catch {
+      // Silently swallow — button stays hidden
+    }
   }, [])
 
   // ── Build / rebuild PaymentRequest when stripe or amount changes ──────────
   useEffect(() => {
     if (!stripe) return
 
-    const pr = stripe.paymentRequest({
-      country: 'IE',
-      currency: currency.toLowerCase(),
-      total: { label, amount: amountCents },
-      requestPayerName: false,
-      requestPayerEmail: false,
-    })
+    try {
+      const pr = stripe.paymentRequest({
+        country: 'IE',
+        currency: currency.toLowerCase(),
+        total: { label, amount: amountCents },
+        requestPayerName: false,
+        requestPayerEmail: false,
+      })
 
-    pr.canMakePayment().then(result => {
-      if (!result) { setAvailable(false); return }
+      pr.canMakePayment().then(result => {
+        if (!result) { setAvailable(false); return }
 
-      setPaymentRequest(pr)
-      setAvailable(true)
+        setPaymentRequest(pr)
+        setAvailable(true)
 
-      // Detect which wallet is available for the button label
-      if (result.applePay)  setWalletType('applePay')
-      else if (result.googlePay) setWalletType('googlePay')
-      else setWalletType('link')
-    }).catch(() => setAvailable(false))
+        // Detect which wallet is available for the button label
+        if (result.applePay)  setWalletType('applePay')
+        else if (result.googlePay) setWalletType('googlePay')
+        else setWalletType('link')
+      }).catch(() => setAvailable(false))
+    } catch {
+      setCrashed(true)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stripe, amountCents, currency, label])
 
@@ -185,8 +203,8 @@ export default function AppleGooglePayButton({
     }
   }, [paymentRequest, stripe, processing, amountCents, currency, description, metadata, onSuccess, onError])
 
-  // ── Don't render if wallet pay is not available ───────────────────────────
-  if (!available) return null
+  // ── Don't render if wallet pay is not available or component crashed ────────
+  if (crashed || !available) return null
 
   const formattedAmount = new Intl.NumberFormat('en-IE', {
     style: 'currency',
