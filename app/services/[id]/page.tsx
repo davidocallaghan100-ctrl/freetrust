@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ALL_CATEGORIES } from '@/lib/service-categories'
+import ListingQualityBadge from '@/components/marketplace/ListingQualityBadge'
 import { useCurrency, type CurrencyCode } from '@/context/CurrencyContext'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -53,6 +54,9 @@ type ServiceListing = {
   images: string[] | null
   category_id: string | null
   delivery_types: string[] | null
+  quality_score: number | null
+  avg_rating: number | null
+  review_count: number | null
   seller: {
     id: string
     full_name: string | null
@@ -249,6 +253,7 @@ export default function ServiceDetailPage() {
             id, title, description, price, currency,
             service_mode, tags, location,
             images, category_id, delivery_types,
+            quality_score, avg_rating, review_count,
             seller:profiles!seller_id (
               id, full_name, avatar_url, bio, location
             )
@@ -275,6 +280,9 @@ export default function ServiceDetailPage() {
             images: raw.images as string[] | null,
             category_id: raw.category_id as string | null,
             delivery_types: raw.delivery_types as string[] | null,
+            quality_score: (raw.quality_score as number | null) ?? null,
+            avg_rating: (raw.avg_rating as number | null) ?? null,
+            review_count: (raw.review_count as number | null) ?? null,
             seller: {
               id: (sellerRaw?.id as string) || '',
               full_name: (sellerRaw?.full_name as string | null) || 'FreeTrust Member',
@@ -418,6 +426,12 @@ export default function ServiceDetailPage() {
                   <strong style={{ color: '#fbbf24' }}>{rating.toFixed(1)}</strong>
                   <span>({reviewCount} verified review{reviewCount !== 1 ? 's' : ''})</span>
                   <span style={{ fontSize: '10px', color: '#38bdf8', fontWeight: 700, background: 'rgba(56,189,248,0.08)', padding: '2px 6px', borderRadius: 999 }}>✓ Buyer Reviews Only</span>
+                  <ListingQualityBadge
+                    qualityScore={svc.quality_score}
+                    avgRating={svc.avg_rating}
+                    reviewCount={svc.review_count}
+                    compact
+                  />
                 </div>
               ) : !reviewsLoading ? (
                 <div style={{ fontSize: '13px', color: '#475569' }}>No verified reviews yet — be the first!</div>

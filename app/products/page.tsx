@@ -9,6 +9,7 @@ import LocationBadge from '@/components/location/LocationBadge'
 import PriceDisplay from '@/components/currency/PriceDisplay'
 import { EMPTY_LOCATION, haversineKm, type StructuredLocation, type RadiusValue } from '@/lib/geo'
 import { buildCountryOptions } from '@/lib/countries'
+import ListingQualityBadge from '@/components/marketplace/ListingQualityBadge'
 
 function DeleteModal({ title, onConfirm, onCancel, deleting }: {
   title: string; onConfirm: () => void; onCancel: () => void; deleting: boolean
@@ -55,6 +56,7 @@ interface Product {
   free_shipping?: boolean
   delivery?: string
   wishlist?: boolean
+  quality_score?: number | null
   // ── Globalisation fields ───────────────────────────────────────────────
   country?: string | null
   city?: string | null
@@ -81,7 +83,7 @@ const ALL_CATEGORIES = [
   { id: 'merch', label: 'Merch', icon: '👕' },
 ]
 
-const SORT_OPTIONS = ['Newest', 'Popular', 'Price: Low', 'Price: High']
+const SORT_OPTIONS = ['Newest', 'Top Rated', 'Popular', 'Price: Low', 'Price: High']
 
 // ─── Category gradients ───────────────────────────────────────────────────────
 const CAT_GRAD: Record<string, string> = {
@@ -166,15 +168,18 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete }: {
 
       {/* Body (non-link) */}
       <div style={{ padding: '0.4rem 0.85rem 0.85rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-        {/* Rating — only show if real reviews exist */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+        {/* Rating + quality badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap' }}>
           {p.review_count > 0 ? (
             <>
               <Stars rating={p.rating} />
-              <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{p.rating.toFixed(1)} ({p.review_count} reviews)</span>
+              <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{p.rating.toFixed(1)} ({p.review_count})</span>
             </>
           ) : (
             <span style={{ fontSize: '0.72rem', color: '#475569' }}>No reviews yet</span>
+          )}
+          {p.quality_score != null && p.quality_score >= 40 && (
+            <ListingQualityBadge qualityScore={p.quality_score} compact />
           )}
         </div>
 
@@ -296,7 +301,7 @@ function ProductsInner() {
       try {
         const { data } = await supabase
           .from('listings')
-          .select('id, title, description, price, currency, product_type, tags, images, cover_image, avg_rating, review_count, seller_id, country, city, region, latitude, longitude, location_label, currency_code, price_eur, profiles!seller_id(id, full_name, avatar_url)')
+          .select('id, title, description, price, currency, product_type, tags, images, cover_image, avg_rating, review_count, quality_score, seller_id, country, city, region, latitude, longitude, location_label, currency_code, price_eur, profiles!seller_id(id, full_name, avatar_url)')
           .eq('status', 'active')
           .neq('product_type', 'service')
           .order('created_at', { ascending: false })
@@ -338,6 +343,7 @@ function ProductsInner() {
               seller_verified: true,
               rating: Number(d.avg_rating ?? 0),
               review_count: Number(d.review_count ?? 0),
+              quality_score: typeof d.quality_score === 'number' ? (d.quality_score as number) : null,
               free_shipping: true,
               delivery: d.product_type === 'digital' ? 'Instant Download' : '3–7 business days',
               // Globalisation fields
@@ -402,6 +408,7 @@ function ProductsInner() {
     if (sortBy === 'Price: Low')  return a.price - b.price
     if (sortBy === 'Price: High') return b.price - a.price
     if (sortBy === 'Popular')     return b.review_count - a.review_count
+    if (sortBy === 'Top Rated')   return (b.quality_score ?? 0) - (a.quality_score ?? 0)
     // Default: if the user set a location, sort by distance (local-first)
     if (filterLoc.latitude != null && a.distance_km != null && b.distance_km != null) {
       return a.distance_km - b.distance_km

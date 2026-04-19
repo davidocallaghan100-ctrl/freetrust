@@ -637,6 +637,9 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
               </div>
             </div>
 
+            {/* Org Performance (OTIF + avg rating + orders) */}
+            <OrgTrustSummary orgId={org.id} />
+
             {/* About */}
             <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 16, padding: 16 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>About</div>

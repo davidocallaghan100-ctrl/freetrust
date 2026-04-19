@@ -7,6 +7,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { useCurrency } from '@/context/CurrencyContext'
 import { createClient as createAnonClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
+import ListingQualityBadge from '@/components/marketplace/ListingQualityBadge'
 
 // ─── Supabase client ──────────────────────────────────────────────────────────
 
@@ -56,6 +57,7 @@ type Listing = {
   stock_qty: number
   avg_rating: number
   review_count: number
+  quality_score: number | null
   created_at: string
   shipping_options: string | null
   service_mode: string | null
@@ -478,6 +480,12 @@ export default function ProductDetailPage() {
               ) : (
                 <span style={{ fontSize: '0.78rem', color: muted }}>No reviews yet</span>
               )}
+              <ListingQualityBadge
+                qualityScore={listing.quality_score}
+                avgRating={avgRating}
+                reviewCount={reviewCount}
+                compact
+              />
             </div>
 
             {/* Price */}

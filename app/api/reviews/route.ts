@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
         .eq('id', reviewee_id)
     }
 
-    // Update listing avg_rating if applicable
+    // Update listing avg_rating if applicable, then recalculate quality score
     if (listing_id) {
       const { data: listingReviews } = await supabase
         .from('reviews')
@@ -149,6 +149,8 @@ export async function POST(request: NextRequest) {
         await supabase.from('listings')
           .update({ avg_rating: Math.round(avg * 100) / 100, review_count: listingReviews.length })
           .eq('id', listing_id)
+        // Recalculate quality_score + potentially set featured_at
+        void supabase.rpc('recalculate_listing_quality', { p_listing_id: listing_id })
       }
     }
 
