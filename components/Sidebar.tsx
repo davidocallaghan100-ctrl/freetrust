@@ -181,7 +181,7 @@ export default function Sidebar() {
                   label: walletBalance !== null ? `Wallet (₮${walletBalance.toFixed(0)})` : 'Wallet',
                   icon: '💎',
                 },
-                { href: '/agents', label: 'AI Agents', icon: '🤖' },
+                { href: '/agents', label: 'Agents', icon: '😎' },
                 { href: '/profile', label: 'Profile', icon: '👤' },
                 { href: '/settings', label: 'Settings', icon: '⚙️' },
               ].map(({ href, label, icon }) => {
