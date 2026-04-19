@@ -1,22 +1,26 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { awardTrust } from '@/lib/trust/award'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 
+// ── API key auth for external job ingestion ──────────────────────────────────
+//
+// Set JOBS_API_KEY in Vercel → Project Settings → Environment Variables.
+// External callers POST with:  x-api-key: <JOBS_API_KEY>
+// When authenticated this way, jobs are posted under the admin (system) account.
+// ─────────────────────────────────────────────────────────────────────────────
+
 // GET /api/jobs — list active jobs (public)
 //
-// Location-aware query params (new):
+// Location-aware query params:
 //   ?country=IE            Filter by ISO country code
 //   ?city=Cork             Filter by city (ilike)
 //   ?lat=51.9&lng=-8.5     User latitude/longitude for proximity sort
 //   ?radius_km=50          Return only jobs within N km of lat/lng
 //   ?remote=true           Include remote jobs
 //   ?remote_only=true      Return ONLY remote jobs
-//
-// When lat/lng is provided, the haversine_km() SQL helper is used to
-// sort + optionally filter by distance. Remote jobs bypass the distance
-// filter so worldwide contractors still show up for local searches.
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -106,13 +110,44 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/jobs — create job (auth required)
+// POST /api/jobs — create job
+//
+// Auth: Supabase JWT (Authorization: Bearer <token>)  — poster_id = authenticated user
+//   OR: API key (x-api-key: <JOBS_API_KEY>)           — poster_id = admin system account
+//
+// For the API key path, jobs are attributed to the admin user
+// (davidocallaghan100@gmail.com) so the poster relationship is always valid.
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const admin = createAdminClient()
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
+    // ── Auth: check JWT first, then API key ───────────────────────────────
+    let posterId: string | null = null
+    let isApiKeyAuth = false
+
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      posterId = user.id
+    } else {
+      // Try API key auth
+      const apiKey = request.headers.get('x-api-key')
+      const expectedKey = process.env.JOBS_API_KEY
+      if (expectedKey && apiKey && apiKey === expectedKey) {
+        // Look up the admin user to use as the system poster
+        const { data: adminProfile } = await admin
+          .from('profiles')
+          .select('id')
+          .eq('email', 'davidocallaghan100@gmail.com')
+          .maybeSingle()
+        if (adminProfile?.id) {
+          posterId = adminProfile.id
+          isApiKeyAuth = true
+        }
+      }
+    }
+
+    if (!posterId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -130,6 +165,17 @@ export async function POST(request: NextRequest) {
       salary_max,
       salary_currency,
       application_deadline,
+      // Extended fields for API key ingestion
+      country,
+      city,
+      region,
+      is_remote,
+      latitude,
+      longitude,
+      location_label,
+      currency_code,
+      salary_min_eur,
+      salary_max_eur,
     } = body
 
     // Validate required fields
@@ -149,10 +195,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Category is required' }, { status: 400 })
     }
 
-    const { data: job, error: insertError } = await supabase
+    // Use admin client for writes so RLS can't block API-key-authenticated posts
+    const { data: job, error: insertError } = await admin
       .from('jobs')
       .insert({
-        poster_id:            user.id,
+        poster_id:            posterId,
         title:                title.trim(),
         description:          description.trim(),
         requirements:         requirements?.trim() ?? null,
@@ -166,6 +213,17 @@ export async function POST(request: NextRequest) {
         salary_currency:      salary_currency ?? 'EUR',
         application_deadline: application_deadline ?? null,
         status:               'active',
+        // Extended geo/currency fields
+        country:              country ?? null,
+        city:                 city ?? null,
+        region:               region ?? null,
+        is_remote:            is_remote ?? (location_type === 'remote'),
+        latitude:             latitude ?? null,
+        longitude:            longitude ?? null,
+        location_label:       location_label ?? null,
+        currency_code:        currency_code ?? salary_currency ?? 'EUR',
+        salary_min_eur:       salary_min_eur ?? null,
+        salary_max_eur:       salary_max_eur ?? null,
       })
       .select()
       .single()
@@ -175,22 +233,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: insertError.message }, { status: 500 })
     }
 
-    // Award ₮ for posting a job — non-blocking. This was missing
-    // before the trust earning infrastructure audit (same bug class
-    // as Cliff's missing service listing coins).
-    const jobRow = job as { id?: string; title?: string } | null
-    const trustResult = await awardTrust({
-      userId: user.id,
-      amount: TRUST_REWARDS.CREATE_JOB,
-      type:   TRUST_LEDGER_TYPES.CREATE_JOB,
-      ref:    jobRow?.id ?? null,
-      desc:   `Posted job: ${jobRow?.title ?? 'Untitled'}`,
-    })
+    // Award ₮ for posting a job — skip for API key (system) posts
+    let trustAwarded = 0
+    if (!isApiKeyAuth) {
+      const jobRow = job as { id?: string; title?: string } | null
+      const trustResult = await awardTrust({
+        userId: posterId,
+        amount: TRUST_REWARDS.CREATE_JOB,
+        type:   TRUST_LEDGER_TYPES.CREATE_JOB,
+        ref:    jobRow?.id ?? null,
+        desc:   `Posted job: ${jobRow?.title ?? 'Untitled'}`,
+      })
+      trustAwarded = trustResult.ok ? trustResult.amount : 0
+    }
 
-    return NextResponse.json({
-      job,
-      trustAwarded: trustResult.ok ? trustResult.amount : 0,
-    }, { status: 201 })
+    return NextResponse.json({ job, trustAwarded }, { status: 201 })
   } catch (err) {
     console.error('[POST /api/jobs] Unexpected:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
