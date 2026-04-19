@@ -21,97 +21,79 @@ export async function GET(req: NextRequest) {
     const admin = createAdminClient()
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
-    let sent = 0
-    let skipped = 0
-    let totalProcessed = 0
-    let lastId: string | null = null
-    const PAGE_SIZE = 100
-    const BATCH = 25
+    // Fetch all profiles with an email (up to 1000 for now — pagination TODO)
+    const { data: profiles, error: profErr } = await admin
+      .from('profiles')
+      .select('id')
+      .not('email', 'is', null)
+      .limit(1000)
 
-    // Cursor-paginated fetch — processes ALL users regardless of count
-    while (true) {
-      let query = admin
-        .from('profiles')
-        .select('id')
-        .not('email', 'is', null)
-        .order('id', { ascending: true })
-        .limit(PAGE_SIZE)
-
-      if (lastId) query = query.gt('id', lastId)
-
-      const { data: profiles, error: profErr } = await query
-
-      if (profErr) {
-        console.error('[cron/weekly-digest] profiles query:', profErr)
-        return NextResponse.json({ error: profErr.message }, { status: 500 })
-      }
-
-      if (!profiles || profiles.length === 0) break
-
-      lastId = profiles[profiles.length - 1].id
-      totalProcessed += profiles.length
-
-      const userIds = profiles.map((p: { id: string }) => p.id)
-
-      // Process page in small batches to keep memory bounded
-      for (let i = 0; i < userIds.length; i += BATCH) {
-        const batch = userIds.slice(i, i + BATCH)
-
-        await Promise.all(batch.map(async (userId) => {
-          try {
-            // Gather weekly stats in parallel
-            const [followersRes, messagesRes, balanceRes] = await Promise.all([
-              admin.from('user_follows')
-                .select('id', { count: 'exact', head: true })
-                .eq('following_id', userId)
-                .gte('created_at', since),
-              admin.from('messages')
-                .select('id', { count: 'exact', head: true })
-                .eq('recipient_id', userId)
-                .gte('created_at', since),
-              admin.from('trust_balances')
-                .select('balance')
-                .eq('user_id', userId)
-                .maybeSingle(),
-            ])
-
-            const newFollowers = followersRes.count ?? 0
-            const newMessages  = messagesRes.count ?? 0
-            const trustBalance = balanceRes.data?.balance ?? 0
-
-            // Skip users who had zero activity AND zero trust
-            if (newFollowers === 0 && newMessages === 0 && trustBalance === 0) {
-              skipped++
-              return
-            }
-
-            const result = await sendEmail({
-              type: 'weekly_digest',
-              userId,
-              payload: {
-                stats: {
-                  newMessages,
-                  newFollowers,
-                  profileViews: 0, // view tracking not implemented
-                  trustBalance,
-                },
-              },
-            })
-            if (result.sent) sent++
-            else skipped++
-          } catch (err) {
-            console.error('[cron/weekly-digest] user error:', userId, err)
-            skipped++
-          }
-        }))
-      }
-
-      // If we got fewer than a full page, we've reached the end
-      if (profiles.length < PAGE_SIZE) break
+    if (profErr) {
+      console.error('[cron/weekly-digest] profiles query:', profErr)
+      return NextResponse.json({ error: profErr.message }, { status: 500 })
     }
 
-    console.log(`[cron/weekly-digest] total=${totalProcessed} sent=${sent} skipped=${skipped}`)
-    return NextResponse.json({ total: totalProcessed, sent, skipped })
+    const userIds = (profiles ?? []).map((p: { id: string }) => p.id)
+
+    let sent = 0
+    let skipped = 0
+
+    // Process users in small batches to keep memory bounded
+    const BATCH = 25
+    for (let i = 0; i < userIds.length; i += BATCH) {
+      const batch = userIds.slice(i, i + BATCH)
+
+      await Promise.all(batch.map(async (userId) => {
+        try {
+          // Gather weekly stats in parallel
+          const [followersRes, messagesRes, balanceRes] = await Promise.all([
+            admin.from('user_follows')
+              .select('id', { count: 'exact', head: true })
+              .eq('following_id', userId)
+              .gte('created_at', since),
+            admin.from('messages')
+              .select('id', { count: 'exact', head: true })
+              .eq('recipient_id', userId)
+              .gte('created_at', since),
+            admin.from('trust_balances')
+              .select('balance')
+              .eq('user_id', userId)
+              .maybeSingle(),
+          ])
+
+          const newFollowers = followersRes.count ?? 0
+          const newMessages  = messagesRes.count ?? 0
+          const trustBalance = balanceRes.data?.balance ?? 0
+
+          // Skip users who had zero activity AND zero trust
+          if (newFollowers === 0 && newMessages === 0 && trustBalance === 0) {
+            skipped++
+            return
+          }
+
+          const result = await sendEmail({
+            type: 'weekly_digest',
+            userId,
+            payload: {
+              stats: {
+                newMessages,
+                newFollowers,
+                profileViews: 0, // view tracking not implemented
+                trustBalance,
+              },
+            },
+          })
+          if (result.sent) sent++
+          else skipped++
+        } catch (err) {
+          console.error('[cron/weekly-digest] user error:', userId, err)
+          skipped++
+        }
+      }))
+    }
+
+    console.log(`[cron/weekly-digest] total=${userIds.length} sent=${sent} skipped=${skipped}`)
+    return NextResponse.json({ total: userIds.length, sent, skipped })
   } catch (err) {
     console.error('[cron/weekly-digest] unhandled:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -57,30 +57,6 @@ const AGENT_INPUT_GUIDANCE: Record<string, { placeholder: string; example: strin
     placeholder: 'Source text + source language + target language + type...',
     example: 'Translate "Original handmade ceramic mug, fired in our Kilkenny studio" from English to Spanish (listing)',
   },
-  trustScoreOptimiser: {
-    placeholder: 'Describe your current activity on FreeTrust...',
-    example: "I have 3 service listings, 2 reviews, haven't posted an article yet. I sell web design services.",
-  },
-  bulkListingGenerator: {
-    placeholder: 'Paste your list of products or services (one per line, include prices if you have them)...',
-    example: 'Logo design - €150\nBusiness card design - €80\nSocial media kit - €200\nEmail signature design - €50',
-  },
-  revenueIntelligence: {
-    placeholder: 'Describe your sales so far on FreeTrust...',
-    example: "I've made €2,400 this year. My logo design service accounts for 80% of it. I also have a social media package but it's only sold twice.",
-  },
-  pricingAdviser: {
-    placeholder: 'Describe your listing, current price, and who you sell to...',
-    example: "I offer a full brand identity package: logo, colour palette, fonts, and brand guidelines. I currently charge €350 but I'm not getting many enquiries.",
-  },
-  collabMatchmaker: {
-    placeholder: "Describe what you do and who you're looking to connect with...",
-    example: "I'm a web designer. I want to find copywriters or SEO specialists I could team up with to offer clients a fuller package.",
-  },
-  contentRepurposer: {
-    placeholder: 'Paste the content you want to repurpose (article, listing, project summary, review)...',
-    example: 'I just listed a new service: 3-month business coaching package specifically for first-time founders in Ireland.',
-  },
 };
 
 const SALES_DEV_TASKS: { key: string; label: string; template: string }[] = [
@@ -112,9 +88,9 @@ const SALES_DEV_TASKS: { key: string; label: string; template: string }[] = [
 ];
 
 const AGENT_GROUPS = {
-  'Create & earn': ['listingCreator', 'articleDrafter', 'eventPromoter', 'bulkListingGenerator', 'contentRepurposer', 'pricingAdviser'],
+  'Create & earn': ['listingCreator', 'articleDrafter', 'eventPromoter'],
   'Win work': ['salesDevelopment', 'applicationWriter', 'messageDrafter'],
-  'Grow & connect': ['matchFinder', 'reputationCoach', 'translator', 'trustScoreOptimiser', 'revenueIntelligence', 'collabMatchmaker'],
+  'Grow & connect': ['matchFinder', 'reputationCoach', 'translator'],
 } as const;
 
 export default function AgentsPage() {
@@ -268,7 +244,7 @@ export default function AgentsPage() {
         <div className="agents-container">
           <div className="pretitle">✦ Your AI team</div>
           <h1>
-            Fifteen agents. <span className="accent">On-demand.</span>
+            Nine agents. <span className="accent">On-demand.</span>
           </h1>
           <p>
             Every agent works on your behalf — writing listings, drafting outreach, translating, matching, coaching. Each run costs a small number of AI Credits.

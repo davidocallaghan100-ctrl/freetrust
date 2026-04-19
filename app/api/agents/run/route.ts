@@ -39,8 +39,11 @@ function getAnthropicClient(): Anthropic {
 //   6. Return — { success, data, creditsCharged, agentName }
 //
 // Credits are debited BEFORE the model call so a user can't
-// burn API budget without paying. If the model call fails after
-// debit, credits are automatically refunded via issue_trust RPC.
+// burn API budget without paying. If the model call fails, the
+// credits are NOT refunded automatically — the caller can retry
+// or contact support. This is the same pattern as Stripe's
+// "charge then fulfil" model and avoids the race where two
+// concurrent calls both pass the balance check.
 export async function POST(req: NextRequest) {
   try {
     // ── 1. Auth ─────────────────────────────────────────────────────
@@ -111,49 +114,25 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Helper: refund credits if the model call fails — not the user's fault
-    const refundCredits = async (reason: string) => {
-      const { error: refundErr } = await admin.rpc('issue_trust', {
-        p_user_id: user.id,
-        p_amount:  config.creditCost,
-        p_type:    `agent_refund_${config.name}`,
-        p_desc:    `Refund: ${config.displayName} agent failed (${reason})`,
-      })
-      if (refundErr) console.error('[agents/run] refund failed:', refundErr)
-    }
-
     // ── 4. Run the model ────────────────────────────────────────────
     let anthropic: Anthropic
     try {
       anthropic = getAnthropicClient()
     } catch {
-      // Refund credits — model not configured, not the user's fault
-      await refundCredits('AI not configured')
       return NextResponse.json(
         { error: 'AI agents are not configured on this server (missing ANTHROPIC_API_KEY)' },
         { status: 503 },
       )
     }
 
-    let response: Awaited<ReturnType<typeof anthropic.messages.create>>
-    try {
-      response = await anthropic.messages.create({
-        model:      config.model,
-        max_tokens: config.maxTokens,
-        system:     config.systemPrompt,
-        messages: [
-          { role: 'user', content: userInput },
-        ],
-      })
-    } catch (modelErr) {
-      // Refund credits — model call failed, not the user's fault
-      console.error('[agents/run] Claude API error:', modelErr)
-      await refundCredits('model error')
-      return NextResponse.json(
-        { error: 'Agent run failed — your credits have been refunded.' },
-        { status: 500 },
-      )
-    }
+    const response = await anthropic.messages.create({
+      model:      config.model,
+      max_tokens: config.maxTokens,
+      system:     config.systemPrompt,
+      messages: [
+        { role: 'user', content: userInput },
+      ],
+    })
 
     // ── 5. Parse response ───────────────────────────────────────────
     // The system prompt instructs the model to respond with JSON

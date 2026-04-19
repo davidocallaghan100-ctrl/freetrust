@@ -8,12 +8,6 @@ import { eventPromoterConfig } from './eventPromoter';
 import { applicationWriterConfig } from './applicationWriter';
 import { salesDevelopmentConfig } from './salesDevelopment';
 import { translatorConfig } from './translator';
-import { trustScoreOptimiserConfig } from './trustScoreOptimiser';
-import { bulkListingGeneratorConfig } from './bulkListingGenerator';
-import { revenueIntelligenceConfig } from './revenueIntelligence';
-import { pricingAdviserConfig } from './pricingAdviser';
-import { collabMatchmakerConfig } from './collabMatchmaker';
-import { contentRepurposerConfig } from './contentRepurposer';
 
 export const AGENT_REGISTRY: Record<AgentName, AgentConfig> = {
   listingCreator: listingCreatorConfig,
@@ -25,12 +19,6 @@ export const AGENT_REGISTRY: Record<AgentName, AgentConfig> = {
   applicationWriter: applicationWriterConfig,
   salesDevelopment: salesDevelopmentConfig,
   translator: translatorConfig,
-  trustScoreOptimiser: trustScoreOptimiserConfig,
-  bulkListingGenerator: bulkListingGeneratorConfig,
-  revenueIntelligence: revenueIntelligenceConfig,
-  pricingAdviser: pricingAdviserConfig,
-  collabMatchmaker: collabMatchmakerConfig,
-  contentRepurposer: contentRepurposerConfig,
 };
 
 export const AGENT_LIST: AgentConfig[] = Object.values(AGENT_REGISTRY);

@@ -22,7 +22,6 @@ export interface FounderTier {
   aiCreditsBonus: number;
   trustBonus: number;
   monthlyAiCreditRefill: number;
-  topupDiscountPercent: number;
 }
 
 export const FOUNDER_TIERS: readonly FounderTier[] = [
@@ -41,7 +40,6 @@ export const FOUNDER_TIERS: readonly FounderTier[] = [
     aiCreditsBonus: 150,
     trustBonus: 100,
     monthlyAiCreditRefill: 20,
-    topupDiscountPercent: 30,
   },
   {
     key: 'sapling',
@@ -58,7 +56,6 @@ export const FOUNDER_TIERS: readonly FounderTier[] = [
     aiCreditsBonus: 500,
     trustBonus: 250,
     monthlyAiCreditRefill: 50,
-    topupDiscountPercent: 30,
   },
   {
     key: 'tree',
@@ -75,7 +72,6 @@ export const FOUNDER_TIERS: readonly FounderTier[] = [
     aiCreditsBonus: 1200,
     trustBonus: 500,
     monthlyAiCreditRefill: 100,
-    topupDiscountPercent: 30,
   },
   {
     key: 'grove',
@@ -92,7 +88,6 @@ export const FOUNDER_TIERS: readonly FounderTier[] = [
     aiCreditsBonus: 2500,
     trustBonus: 1000,
     monthlyAiCreditRefill: 200,
-    topupDiscountPercent: 30,
   },
   {
     key: 'forest',
@@ -109,7 +104,6 @@ export const FOUNDER_TIERS: readonly FounderTier[] = [
     aiCreditsBonus: 6000,
     trustBonus: 2000,
     monthlyAiCreditRefill: 400,
-    topupDiscountPercent: 30,
   },
   {
     key: 'summit',
@@ -126,7 +120,6 @@ export const FOUNDER_TIERS: readonly FounderTier[] = [
     aiCreditsBonus: 12000,
     trustBonus: 3500,
     monthlyAiCreditRefill: 750,
-    topupDiscountPercent: 30,
   },
   {
     key: 'legacy',
@@ -143,7 +136,6 @@ export const FOUNDER_TIERS: readonly FounderTier[] = [
     aiCreditsBonus: 20000,
     trustBonus: 5000,
     monthlyAiCreditRefill: 1200,
-    topupDiscountPercent: 30,
   },
 ];
 
