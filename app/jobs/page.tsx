@@ -233,10 +233,18 @@ function ApplyModal({ job, onClose }: { job: RemoteJob; onClose: () => void }) {
         {/* Header */}
         <div style={{ padding: '12px 20px 16px', borderBottom: '1px solid #1e293b' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {job.company_logo
-              ? <img src={job.company_logo} alt={job.company_name} style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'contain', background: '#fff', padding: 3, flexShrink: 0 }} />
-              : <div style={{ width: 44, height: 44, borderRadius: 10, background: 'linear-gradient(135deg,#38bdf8,#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#0f172a', flexShrink: 0 }}>{initials}</div>
-            }
+            {job.company_logo && (
+              <img
+                src={job.company_logo}
+                alt={job.company_name}
+                style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'contain', background: '#fff', padding: 3, flexShrink: 0 }}
+                onError={(e) => {
+                  const t = e.currentTarget; t.style.display = 'none';
+                  const s = t.nextElementSibling as HTMLElement | null; if (s) s.style.display = 'flex';
+                }}
+              />
+            )}
+            <div style={{ width: 44, height: 44, borderRadius: 10, background: 'linear-gradient(135deg,#38bdf8,#0284c7)', display: job.company_logo ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#0f172a', flexShrink: 0 }}>{initials}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9', lineHeight: 1.2 }}>{job.title}</div>
               <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>{job.company_name}</div>
@@ -588,12 +596,21 @@ export default function JobsPage() {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                       {job.company_logo ? (
-                        <img src={job.company_logo} alt={job.company_name} style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'contain', background: '#fff', padding: 3, flexShrink: 0 }} />
-                      ) : (
-                        <div style={{ width: 36, height: 36, borderRadius: 8, background: job.is_local ? 'linear-gradient(135deg,#fb923c,#ea580c)' : 'linear-gradient(135deg,#38bdf8,#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.75rem', color: '#0f172a', flexShrink: 0 }}>
-                          {initials}
-                        </div>
-                      )}
+                        <img
+                          src={job.company_logo}
+                          alt={job.company_name}
+                          style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'contain', background: '#fff', padding: 3, flexShrink: 0 }}
+                          onError={(e) => {
+                            const target = e.currentTarget
+                            target.style.display = 'none'
+                            const sibling = target.nextElementSibling as HTMLElement | null
+                            if (sibling) sibling.style.display = 'flex'
+                          }}
+                        />
+                      ) : null}
+                      <div style={{ width: 36, height: 36, borderRadius: 8, background: job.is_local ? 'linear-gradient(135deg,#fb923c,#ea580c)' : 'linear-gradient(135deg,#38bdf8,#0284c7)', display: job.company_logo ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.75rem', color: '#0f172a', flexShrink: 0 }}>
+                        {initials}
+                      </div>
                       <div>
                         <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#94a3b8' }}>{job.company_name}</span>
                         {job.is_local && (
