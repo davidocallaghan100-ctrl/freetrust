@@ -4,36 +4,32 @@ import { createClient } from '@/lib/supabase/server'
 export const dynamic = 'force-dynamic'
 
 // GET /api/landing/featured-preview
-// Returns up to 8 top-rated listings (quality_score >= 60) for the landing page.
+// Returns up to 8 recent active rent_share_listings for the landing page Rent & Share section.
 export async function GET() {
   try {
     const supabase = await createClient()
 
     const { data, error } = await supabase
-      .from('listings')
+      .from('rent_share_listings')
       .select(`
         id,
         title,
-        product_type,
-        price,
-        currency,
-        cover_image,
-        images,
-        quality_score,
-        avg_rating,
-        review_count,
         category,
-        delivery_days,
-        profiles!seller_id (
+        price_per_day,
+        price_per_week,
+        deposit,
+        location,
+        images,
+        available_from,
+        available_to,
+        created_at,
+        profiles:user_id (
           full_name,
-          avatar_url,
-          avg_rating,
-          trust_balance
+          avatar_url
         )
       `)
       .eq('status', 'active')
-      .gte('quality_score', 60)
-      .order('quality_score', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(8)
 
     if (error) {
@@ -41,20 +37,19 @@ export async function GET() {
       return NextResponse.json([], { status: 200 })
     }
 
-    type ProfileRow = { full_name: string | null; avatar_url: string | null; avg_rating: number | null; trust_balance: number | null }
+    type ProfileRow = { full_name: string | null; avatar_url: string | null }
     type RawRow = {
       id: string
       title: string
-      product_type: string | null
-      price: number | null
-      currency: string | null
-      cover_image: string | null
-      images: string[] | null
-      quality_score: number | null
-      avg_rating: number | null
-      review_count: number | null
       category: string | null
-      delivery_days: number | null
+      price_per_day: number | null
+      price_per_week: number | null
+      deposit: number | null
+      location: string | null
+      images: string[] | null
+      available_from: string | null
+      available_to: string | null
+      created_at: string
       profiles: ProfileRow | ProfileRow[] | null
     }
 
@@ -62,21 +57,21 @@ export async function GET() {
 
     const result = rows.map(r => {
       const profile = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles
-      const imageUrl = r.cover_image ?? (r.images && r.images.length > 0 ? r.images[0] : null)
+      const imageUrl = r.images && r.images.length > 0 ? r.images[0] : null
       return {
         id: r.id,
         title: r.title,
-        type: r.product_type === 'service' ? 'service' : 'product',
-        price: r.price ?? 0,
-        currency: r.currency ?? 'EUR',
+        category: r.category ?? 'Other',
+        price_per_day: r.price_per_day ?? null,
+        price_per_week: r.price_per_week ?? null,
+        deposit: r.deposit ?? null,
+        location: r.location ?? null,
         image_url: imageUrl,
-        quality_score: r.quality_score ?? 0,
-        seller_name: profile?.full_name ?? 'FreeTrust Member',
-        seller_avatar: profile?.avatar_url ?? null,
-        avg_rating: r.avg_rating ?? 0,
-        review_count: r.review_count ?? 0,
-        category: r.category ?? null,
-        delivery_days: r.delivery_days ?? null,
+        available_from: r.available_from ?? null,
+        available_to: r.available_to ?? null,
+        created_at: r.created_at,
+        owner_name: profile?.full_name ?? 'FreeTrust Member',
+        owner_avatar: profile?.avatar_url ?? null,
       }
     })
 

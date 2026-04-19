@@ -5,7 +5,6 @@ import { useCurrency } from '@/context/CurrencyContext'
 import FAQAccordion from '@/components/marketing/FAQAccordion'
 import { FAQS } from '@/lib/faq'
 import ROICalculator from './ROICalculator'
-import ListingQualityBadge from '@/components/marketplace/ListingQualityBadge'
 
 export interface HomeClientProps {
   initialCounts: {
@@ -47,20 +46,20 @@ type PreviewJob = {
   poster: { full_name: string | null } | null
 }
 
-type PreviewListing = {
+type PreviewRentShare = {
   id: string
   title: string
-  type: 'product' | 'service'
-  price: number
-  currency: string
+  category: string
+  price_per_day: number | null
+  price_per_week: number | null
+  deposit: number | null
+  location: string | null
   image_url: string | null
-  quality_score: number
-  seller_name: string
-  seller_avatar: string | null
-  avg_rating: number
-  review_count: number
-  category: string | null
-  delivery_days: number | null
+  available_from: string | null
+  available_to: string | null
+  created_at: string
+  owner_name: string
+  owner_avatar: string | null
 }
 type StatsData = {
   members: { total: number; thisWeek: number; thisMonth: number }
@@ -304,8 +303,8 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
   const [featuredProducts, setFeaturedProducts] = useState<FeaturedProduct[]>([])
   const [previewEvents, setPreviewEvents] = useState<PreviewEvent[] | null>(null)
   const [previewJobs, setPreviewJobs] = useState<PreviewJob[] | null>(null)
-  const [featuredListings, setFeaturedListings] = useState<PreviewListing[] | null>(null)
-  const [listingTab, setListingTab] = useState<'all' | 'service' | 'product'>('all')
+  const [rentShareListings, setRentShareListings] = useState<PreviewRentShare[] | null>(null)
+  const [rentShareTab, setRentShareTab] = useState<'all' | 'rent' | 'share'>('all')
 
   const fetchStats = useCallback(async () => {
     try {
@@ -382,12 +381,12 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
       try {
         const res = await fetch('/api/landing/featured-preview')
         if (res.ok) {
-          const data = await res.json() as PreviewListing[]
-          setFeaturedListings(data)
+          const data = await res.json() as PreviewRentShare[]
+          setRentShareListings(data)
         } else {
-          setFeaturedListings([])
+          setRentShareListings([])
         }
-      } catch { setFeaturedListings([]) }
+      } catch { setRentShareListings([]) }
     }
     void load()
   }, [])
@@ -909,73 +908,86 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
         </div>
       </section>
 
-      {/* ── FEATURED LISTINGS ── */}
+      {/* ── RENT & SHARE ── */}
       <section style={{ borderBottom: '1px solid rgba(16,185,129,0.06)', background: 'rgba(16,185,129,0.01)' }}>
         <div className="lp-sec">
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <div>
-              <h2 className="section-h2" style={{ fontSize: 'clamp(1.3rem,3vw,1.8rem)', fontWeight: 900, margin: '0 0 0.2rem' }}>⭐ Featured Listings</h2>
-              <p style={{ fontSize: '0.78rem', color: '#64748b', margin: 0 }}>Top-rated by the FreeTrust community</p>
+              <h2 className="section-h2" style={{ fontSize: 'clamp(1.3rem,3vw,1.8rem)', fontWeight: 900, margin: '0 0 0.2rem' }}>🔄 Rent &amp; Share</h2>
+              <p style={{ fontSize: '0.78rem', color: '#64748b', margin: 0 }}>Borrow, rent, or share from your community</p>
             </div>
-            <Link href="/browse" style={{ fontSize: '0.82rem', color: '#10b981', textDecoration: 'none', fontWeight: 600, flexShrink: 0 }}>Browse all →</Link>
+            <Link href="/rent-share" style={{ fontSize: '0.82rem', color: '#10b981', textDecoration: 'none', fontWeight: 600, flexShrink: 0 }}>Browse all →</Link>
           </div>
           {/* Tab switcher */}
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.1rem' }}>
-            {(['all', 'service', 'product'] as const).map(tab => (
+            {(['all', 'rent', 'share'] as const).map(tab => (
               <button
                 key={tab}
-                onClick={() => setListingTab(tab)}
+                onClick={() => setRentShareTab(tab)}
                 style={{
                   padding: '0.3rem 0.85rem', borderRadius: 999, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', border: 'none', transition: 'all 0.15s',
-                  background: listingTab === tab ? '#10b981' : 'rgba(16,185,129,0.08)',
-                  color: listingTab === tab ? '#0f172a' : '#64748b',
+                  background: rentShareTab === tab ? '#10b981' : 'rgba(16,185,129,0.08)',
+                  color: rentShareTab === tab ? '#0f172a' : '#64748b',
                 }}
               >
-                {tab === 'all' ? 'All' : tab === 'service' ? 'Services' : 'Products'}
+                {tab === 'all' ? 'All' : tab === 'rent' ? '🏠 Rent' : '🤝 Share'}
               </button>
             ))}
           </div>
 
           {/* Cards */}
-          {featuredListings === null ? (
+          {rentShareListings === null ? (
             /* Loading skeleton */
             <div className="hscroll">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} style={{ flexShrink: 0, width: 220, height: 240, background: '#1e293b', borderRadius: 14, border: '1px solid rgba(16,185,129,0.08)', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
               ))}
             </div>
+          ) : rentShareListings.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2.5rem 1rem', background: '#1e293b', borderRadius: 14, border: '1px solid rgba(16,185,129,0.08)' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔄</div>
+              <div style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '0.75rem' }}>No rent or share listings yet</div>
+              <Link href="/rent-share/new" style={{ fontSize: '0.82rem', color: '#10b981', fontWeight: 700, textDecoration: 'none' }}>List something →</Link>
+            </div>
           ) : (() => {
-            const filtered = listingTab === 'all' ? featuredListings : featuredListings.filter(l => l.type === listingTab)
+            const catGrads: Record<string, string> = {
+              Tools: 'linear-gradient(135deg,#d97706,#92400e)',
+              Electronics: 'linear-gradient(135deg,#0284c7,#1e40af)',
+              Vehicles: 'linear-gradient(135deg,#475569,#334155)',
+              'Sports & Outdoors': 'linear-gradient(135deg,#059669,#047857)',
+              'Home & Garden': 'linear-gradient(135deg,#7c3aed,#4c1d95)',
+              Clothing: 'linear-gradient(135deg,#db2777,#9d174d)',
+              Music: 'linear-gradient(135deg,#a855f7,#6d28d9)',
+              Other: 'linear-gradient(135deg,#10b981,#059669)',
+            }
+            // For tab filtering: no type field in rent_share, so 'rent' shows listings with price_per_day, 'share' shows those without (free share)
+            const filtered = rentShareTab === 'all'
+              ? rentShareListings
+              : rentShareTab === 'rent'
+                ? rentShareListings.filter(l => l.price_per_day != null || l.price_per_week != null)
+                : rentShareListings.filter(l => l.price_per_day == null && l.price_per_week == null)
             if (filtered.length === 0) {
               return (
                 <div style={{ textAlign: 'center', padding: '2.5rem 1rem', background: '#1e293b', borderRadius: 14, border: '1px solid rgba(16,185,129,0.08)' }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⭐</div>
-                  <div style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '0.75rem' }}>No featured listings yet — quality listings will appear here as reviews come in</div>
-                  <Link href="/create" style={{ fontSize: '0.82rem', color: '#10b981', fontWeight: 700, textDecoration: 'none' }}>Create a listing →</Link>
+                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔄</div>
+                  <div style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '0.75rem' }}>No {rentShareTab === 'rent' ? 'rental' : 'share'} listings yet</div>
+                  <Link href="/rent-share/new" style={{ fontSize: '0.82rem', color: '#10b981', fontWeight: 700, textDecoration: 'none' }}>List something →</Link>
                 </div>
               )
             }
-            const catGrads: Record<string, string> = {
-              Technology: 'linear-gradient(135deg,#059669,#047857)',
-              Design: 'linear-gradient(135deg,#db2777,#9d174d)',
-              Marketing: 'linear-gradient(135deg,#d97706,#92400e)',
-              Writing: 'linear-gradient(135deg,#7c3aed,#4c1d95)',
-              Finance: 'linear-gradient(135deg,#0284c7,#1e40af)',
-              Health: 'linear-gradient(135deg,#0891b2,#0e7490)',
-              Education: 'linear-gradient(135deg,#4338ca,#3730a3)',
-              Legal: 'linear-gradient(135deg,#475569,#334155)',
-            }
             return (
               <div className="hscroll">
-                {filtered.map(listing => {
-                  const grad = catGrads[listing.category ?? ''] ?? 'linear-gradient(135deg,#10b981,#059669)'
-                  const href = listing.type === 'product' ? `/products/${listing.id}` : `/services/${listing.id}`
-                  const priceLabel = listing.type === 'service'
-                    ? `€${listing.price.toLocaleString('en-IE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/hr`
-                    : `€${listing.price.toLocaleString('en-IE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                {filtered.map(item => {
+                  const grad = catGrads[item.category] ?? catGrads.Other
+                  const isRental = item.price_per_day != null || item.price_per_week != null
+                  const priceLabel = item.price_per_day
+                    ? `€${item.price_per_day.toLocaleString('en-IE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/day`
+                    : item.price_per_week
+                      ? `€${item.price_per_week.toLocaleString('en-IE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/wk`
+                      : 'Free to share'
                   return (
-                    <Link key={listing.id} href={href} style={{ textDecoration: 'none', flexShrink: 0, width: 220 }}>
+                    <Link key={item.id} href={`/rent-share/${item.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 220 }}>
                       <div
                         style={{ background: '#1e293b', border: '1px solid rgba(16,185,129,0.12)', borderRadius: 14, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s', display: 'flex', flexDirection: 'column', height: 260 }}
                         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 24px rgba(16,185,129,0.18)' }}
@@ -983,42 +995,42 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
                       >
                         {/* Image / gradient header */}
                         <div style={{ height: 120, flexShrink: 0, background: grad, position: 'relative', overflow: 'hidden' }}>
-                          {listing.image_url && (
-                            <img src={listing.image_url} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                          {item.image_url && (
+                            <img src={item.image_url} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
                           )}
-                          {/* Quality badge top-right */}
-                          <div style={{ position: 'absolute', top: 8, right: 8 }}>
-                            <ListingQualityBadge qualityScore={listing.quality_score} compact />
-                          </div>
                           {/* Type pill top-left */}
-                          <div style={{ position: 'absolute', top: 8, left: 8, background: listing.type === 'service' ? 'rgba(16,185,129,0.9)' : 'rgba(56,189,248,0.9)', color: '#0f172a', fontSize: '0.58rem', fontWeight: 800, padding: '2px 6px', borderRadius: 999 }}>
-                            {listing.type === 'service' ? 'SERVICE' : 'PRODUCT'}
+                          <div style={{ position: 'absolute', top: 8, left: 8, background: isRental ? 'rgba(245,158,11,0.9)' : 'rgba(16,185,129,0.9)', color: '#0f172a', fontSize: '0.58rem', fontWeight: 800, padding: '2px 6px', borderRadius: 999 }}>
+                            {isRental ? '📅 RENT' : '🤝 SHARE'}
+                          </div>
+                          {/* Category pill top-right */}
+                          <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(15,23,42,0.75)', color: '#94a3b8', fontSize: '0.58rem', fontWeight: 700, padding: '2px 6px', borderRadius: 999 }}>
+                            {item.category}
                           </div>
                         </div>
                         {/* Body */}
                         <div style={{ padding: '0.8rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
                           {/* Title */}
                           <div style={{ fontSize: '0.83rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', marginBottom: '0.4rem' } as React.CSSProperties}>
-                            {listing.title}
+                            {item.title}
                           </div>
-                          {/* Seller row */}
+                          {/* Owner row */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
-                            {listing.seller_avatar
-                              ? <img src={listing.seller_avatar} alt="" style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                            {item.owner_avatar
+                              ? <img src={item.owner_avatar} alt="" style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
                               : <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(16,185,129,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 800, color: '#10b981', flexShrink: 0 }}>
-                                  {listing.seller_name.charAt(0).toUpperCase()}
+                                  {item.owner_name.charAt(0).toUpperCase()}
                                 </div>
                             }
-                            <span style={{ fontSize: '0.7rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.seller_name}</span>
+                            <span style={{ fontSize: '0.7rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.owner_name}</span>
                           </div>
-                          {/* Rating row */}
-                          {listing.review_count > 0 && (
-                            <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginBottom: '0.35rem' }}>
-                              <span style={{ color: '#fbbf24' }}>★</span> {listing.avg_rating.toFixed(1)} · {listing.review_count} review{listing.review_count !== 1 ? 's' : ''}
+                          {/* Location */}
+                          {item.location && (
+                            <div style={{ fontSize: '0.68rem', color: '#475569', marginBottom: '0.3rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              📍 {item.location}
                             </div>
                           )}
                           {/* Price */}
-                          <div style={{ marginTop: 'auto', fontSize: '0.92rem', fontWeight: 900, color: '#f1f5f9' }}>
+                          <div style={{ marginTop: 'auto', fontSize: '0.92rem', fontWeight: 900, color: isRental ? '#f1f5f9' : '#10b981' }}>
                             {priceLabel}
                           </div>
                         </div>
@@ -1126,9 +1138,9 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           </div>
           {previewJobs === null ? (
             /* Loading skeleton */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+            <div className="hscroll">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} style={{ height: 72, background: '#1e293b', borderRadius: 12, border: '1px solid rgba(56,189,248,0.08)', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
+                <div key={i} style={{ flexShrink: 0, width: 220, height: 200, background: '#1e293b', borderRadius: 14, border: '1px solid rgba(56,189,248,0.08)', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
               ))}
             </div>
           ) : previewJobs.length === 0 ? (
@@ -1138,7 +1150,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
               <Link href="/jobs/new" style={{ fontSize: '0.82rem', color: '#38bdf8', fontWeight: 700, textDecoration: 'none' }}>Post one →</Link>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+            <div className="hscroll">
               {previewJobs.map(job => {
                 const typeColors: Record<string, string> = { full_time: '#38bdf8', part_time: '#a78bfa', contract: '#fbbf24', freelance: '#34d399' }
                 const typeLabels: Record<string, string> = { full_time: 'Full Time', part_time: 'Part Time', contract: 'Contract', freelance: 'Freelance' }
@@ -1160,35 +1172,43 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
                   : null
                 const locationDisplay = job.city ?? job.location ?? (loc?.label ?? null)
                 return (
-                  <Link key={job.id} href={`/jobs/${job.id}`} style={{ textDecoration: 'none' }}>
-                    <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '0.9rem 1rem', display: 'flex', alignItems: 'center', gap: '0.85rem', transition: 'border-color 0.15s, box-shadow 0.15s' }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor='rgba(56,189,248,0.3)'; (e.currentTarget as HTMLElement).style.boxShadow='0 2px 12px rgba(56,189,248,0.1)' }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor='rgba(56,189,248,0.08)'; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
-                      {/* Icon */}
-                      <div style={{ width: 42, height: 42, borderRadius: 10, background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', flexShrink: 0 }}>💼</div>
-                      {/* Main content */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <Link key={job.id} href={`/jobs/${job.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 220 }}>
+                    <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 14, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s', display: 'flex', flexDirection: 'column', height: 200 }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.12)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
+                      {/* Coloured top bar by job type */}
+                      <div style={{ height: 6, flexShrink: 0, background: typeColors[job.job_type] ?? '#38bdf8', opacity: 0.7 }} />
+                      {/* Body */}
+                      <div style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                        {/* Title */}
+                        <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', marginBottom: '0.35rem' } as React.CSSProperties}>
+                          {job.title}
+                        </div>
+                        {/* Company + location */}
+                        <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginBottom: '0.5rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {job.poster?.full_name ?? 'FreeTrust Member'}
                           {locationDisplay ? ` · ${locationDisplay}` : ''}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: 4, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '0.68rem', fontWeight: 700, color: typeColors[job.job_type] ?? '#64748b', background: `${typeColors[job.job_type] ?? '#64748b'}18`, borderRadius: 6, padding: '1px 6px' }}>
+                        {/* Pills */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginBottom: '0.4rem' }}>
+                          <span style={{ fontSize: '0.65rem', fontWeight: 700, color: typeColors[job.job_type] ?? '#64748b', background: `${typeColors[job.job_type] ?? '#64748b'}18`, borderRadius: 6, padding: '2px 6px' }}>
                             {typeLabels[job.job_type] ?? job.job_type}
                           </span>
                           {loc && (
-                            <span style={{ fontSize: '0.68rem', color: loc.color, background: `${loc.color}18`, borderRadius: 6, padding: '1px 6px' }}>
+                            <span style={{ fontSize: '0.65rem', color: loc.color, background: `${loc.color}18`, borderRadius: 6, padding: '2px 6px' }}>
                               {loc.emoji} {loc.label}
                             </span>
                           )}
-                          {salaryStr && (
-                            <span style={{ fontSize: '0.68rem', color: '#34d399', fontWeight: 600 }}>{salaryStr}</span>
-                          )}
+                        </div>
+                        {/* Salary + posted row */}
+                        <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.3rem' }}>
+                          {salaryStr
+                            ? <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#34d399' }}>{salaryStr}</span>
+                            : <span />
+                          }
+                          <span style={{ fontSize: '0.65rem', color: '#475569', flexShrink: 0 }}>{postedStr}</span>
                         </div>
                       </div>
-                      {/* Posted date */}
-                      <div style={{ fontSize: '0.7rem', color: '#475569', flexShrink: 0 }}>{postedStr}</div>
                     </div>
                   </Link>
                 )
