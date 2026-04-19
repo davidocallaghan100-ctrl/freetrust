@@ -260,9 +260,9 @@ export default function JobDetailPage() {
                 </span>
               )}
             </div>
-            {job.tags.length > 0 && (
+            {job.tags.filter((t: string) => !t.startsWith('remotive-') && !t.startsWith('arbeitnow-')).length > 0 && (
               <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                {job.tags.map(t => <span key={t} style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.75rem', color: '#38bdf8' }}>{t}</span>)}
+                {job.tags.filter((t: string) => !t.startsWith('remotive-') && !t.startsWith('arbeitnow-')).map(t => <span key={t} style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.75rem', color: '#38bdf8' }}>{t}</span>)}
               </div>
             )}
           </div>

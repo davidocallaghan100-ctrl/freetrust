@@ -149,7 +149,7 @@ function supabaseToRemoteJob(j: SupabaseJob): RemoteJob {
     longitude:       typeof j.longitude === 'number' ? j.longitude : null,
     location_label:  j.location_label ?? null,
     is_remote:       Boolean(j.is_remote ?? j.location_type === 'remote'),
-    tags: j.tags ?? [],
+     tags: (j.tags ?? []).filter((t: string) => !t.startsWith('remotive-') && !t.startsWith('arbeitnow-')),
     category: j.category,
     created_at: j.created_at,
     url: `/jobs/${j.id}`,
