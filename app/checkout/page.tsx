@@ -1,9 +1,16 @@
 'use client'
 
 import { Suspense, useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+
+// Apple Pay / Google Pay button — client-only (uses browser Payment Request API)
+const AppleGooglePayButton = dynamic(
+  () => import('@/components/payments/AppleGooglePayButton'),
+  { ssr: false }
+)
 
 interface ServiceListing {
   id: string
@@ -205,6 +212,20 @@ function CheckoutContent() {
           </div>
         )}
 
+        {/* Apple Pay / Google Pay express checkout — only shown on supported devices */}
+        <AppleGooglePayButton
+          amountCents={Math.round(price * 100)}
+          currency={currency.toUpperCase()}
+          label={service.title ?? 'FreeTrust Service'}
+          description={service.title ?? undefined}
+          metadata={{ type: 'service_purchase', service_id: service.id }}
+          onSuccess={(piId) => {
+            router.push(`/checkout/success?payment_intent=${piId}`)
+          }}
+          onError={(msg) => setError(msg)}
+          style={{ marginBottom: 12 }}
+        />
+
         {/* CTA */}
         <button
           onClick={handlePay}
@@ -213,7 +234,7 @@ function CheckoutContent() {
         >
           {status === 'paying'
             ? <><div style={{ width: 18, height: 18, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} /> Redirecting to payment…</>
-            : <>🔒 Pay {fmt(price, currency)} securely</>
+            : <>💳 Pay {fmt(price, currency)} by card</>
           }
         </button>
 

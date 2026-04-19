@@ -1,8 +1,15 @@
 'use client'
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useCurrency } from '@/context/CurrencyContext'
+
+// Apple Pay / Google Pay button — client-only (uses browser Payment Request API)
+const AppleGooglePayButton = dynamic(
+  () => import('@/components/payments/AppleGooglePayButton'),
+  { ssr: false }
+)
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -214,6 +221,23 @@ function AddFundsModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
           </div>
         )}
 
+        {/* Apple Pay / Google Pay express button — only shown on supported devices */}
+        {amountCents && amountCents >= 100 && (
+          <AppleGooglePayButton
+            amountCents={amountCents}
+            currency="EUR"
+            label="FreeTrust Wallet Top-up"
+            description={`Add €${(amountCents / 100).toFixed(2)} to FreeTrust wallet`}
+            metadata={{ type: 'wallet_topup' }}
+            onSuccess={() => {
+              onClose()
+              window.location.href = '/wallet?topup=success'
+            }}
+            onError={(msg) => setError(msg)}
+            style={{ marginBottom: 12 }}
+          />
+        )}
+
         <button
           onClick={handlePay}
           disabled={loading || !amountCents || amountCents < 100}
@@ -225,7 +249,7 @@ function AddFundsModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
             fontFamily: 'inherit', transition: 'all 0.15s', opacity: loading ? 0.7 : 1,
           }}
         >
-          {loading ? '⏳ Redirecting to payment…' : `Pay €${amountCents && amountCents >= 100 ? (amountCents / 100).toFixed(2) : '0.00'} securely`}
+          {loading ? '⏳ Redirecting to payment…' : `💳 Pay €${amountCents && amountCents >= 100 ? (amountCents / 100).toFixed(2) : '0.00'} by card`}
         </button>
 
         <div style={{ textAlign: 'center', fontSize: '11px', color: '#334155', marginTop: '12px' }}>
