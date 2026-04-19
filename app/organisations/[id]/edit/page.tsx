@@ -119,32 +119,46 @@ export default function EditOrgPage() {
     const rawFile = e.target.files?.[0]
     if (!rawFile) return
     setUploadingLogo(true)
+    setError(null)
     try {
-      // Org logo compression — 1 MB cap since logos display small.
+      // Compress before upload — 1 MB cap since logos display small.
       const file = await compressImage(rawFile, 1)
-      const ext = file.name.split('.').pop()
-      const path = `${id}-logo.${ext}`
-      await supabase.storage.from('org-logos').upload(path, file, { upsert: true })
-      const { data } = supabase.storage.from('org-logos').getPublicUrl(path)
-      setLogoUrl(data.publicUrl)
-    } catch { setError('Logo upload failed') }
-    finally { setUploadingLogo(false); if (logoInputRef.current) logoInputRef.current.value = '' }
+      const formData = new FormData()
+      formData.append('file', file)
+      // Route through API (admin client) to bypass storage RLS
+      const res = await fetch('/api/organisations/upload-logo', { method: 'POST', body: formData })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Logo upload failed')
+      setLogoUrl(json.url)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Logo upload failed')
+    } finally {
+      setUploadingLogo(false)
+      if (logoInputRef.current) logoInputRef.current.value = ''
+    }
   }
 
   async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const rawFile = e.target.files?.[0]
     if (!rawFile) return
     setUploadingCover(true)
+    setError(null)
     try {
-      // Cover photo compression — 2 MB cap (larger render area than logo).
+      // Compress before upload — 2 MB cap (larger render area than logo).
       const file = await compressImage(rawFile, 2)
-      const ext = file.name.split('.').pop()
-      const path = `orgs/${id}-cover.${ext}`
-      await supabase.storage.from('covers').upload(path, file, { upsert: true })
-      const { data } = supabase.storage.from('covers').getPublicUrl(path)
-      setCoverUrl(data.publicUrl)
-    } catch { setError('Cover upload failed') }
-    finally { setUploadingCover(false); if (coverInputRef.current) coverInputRef.current.value = '' }
+      const formData = new FormData()
+      formData.append('file', file)
+      // Route through API (admin client) to bypass storage RLS
+      const res = await fetch('/api/upload/org-cover', { method: 'POST', body: formData })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Cover upload failed')
+      setCoverUrl(json.url)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Cover upload failed')
+    } finally {
+      setUploadingCover(false)
+      if (coverInputRef.current) coverInputRef.current.value = ''
+    }
   }
 
   async function handleSave() {
