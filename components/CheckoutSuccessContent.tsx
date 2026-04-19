@@ -16,21 +16,32 @@ interface SessionSummary {
 export default function CheckoutSuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
+  // Apple Pay / Google Pay redirect with ?payment_intent=pi_xxx
+  const paymentIntentId = searchParams.get("payment_intent");
 
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!sessionId) { setLoading(false); return; }
-    async function fetchSession() {
+    // No identifiers at all — nothing to fetch, show fallback immediately
+    if (!sessionId && !paymentIntentId) { setLoading(false); return; }
+
+    async function fetchSummary() {
       try {
-        const res = await fetch(`/api/checkout/session?session_id=${sessionId}`);
+        let res: Response;
+        if (sessionId) {
+          // Stripe Checkout session flow
+          res = await fetch(`/api/checkout/session?session_id=${sessionId}`);
+        } else {
+          // Apple Pay / Google Pay PaymentIntent flow
+          res = await fetch(`/api/stripe/payment-intent?payment_intent_id=${paymentIntentId}`);
+        }
         if (res.ok) setSummary(await res.json());
-      } catch { /* silent — show fallback */ }
+      } catch { /* silent — show generic fallback */ }
       finally { setLoading(false); }
     }
-    fetchSession();
-  }, [sessionId]);
+    fetchSummary();
+  }, [sessionId, paymentIntentId]);
 
   if (loading) {
     return (
@@ -99,7 +110,17 @@ export default function CheckoutSuccessContent() {
             <div style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Order Summary</div>
           </div>
 
-          {summary ? (
+          {loading ? (
+            // Shimmer skeleton — only shown while the fetch is in flight
+            <div style={{ padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[80, 60, 70, 50].map((w, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div style={{ height: 12, width: `${w}%`, background: 'linear-gradient(90deg,#1e293b 25%,#243047 50%,#1e293b 75%)', backgroundSize: '200%', animation: 'shimmer 1.5s infinite', borderRadius: 6 }} />
+                </div>
+              ))}
+              <style>{`@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>
+            </div>
+          ) : summary ? (
             <div style={{ padding: '4px 0' }}>
               {/* Item */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 18px', borderBottom: '1px solid rgba(51,65,85,0.6)' }}>
@@ -123,13 +144,11 @@ export default function CheckoutSuccessContent() {
               </div>
             </div>
           ) : (
-            <div style={{ padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {[80, 60, 70, 50].map((w, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <div style={{ height: 12, width: `${w}%`, background: 'linear-gradient(90deg,#1e293b 25%,#243047 50%,#1e293b 75%)', backgroundSize: '200%', animation: 'shimmer 1.5s infinite', borderRadius: 6 }} />
-                </div>
-              ))}
-              <style>{`@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>
+            // No session/PI id in URL, or fetch failed — show a clean confirmation
+            <div style={{ padding: '20px 18px', textAlign: 'center' }}>
+              <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>
+                ✅ Payment confirmed. Check your orders for full details.
+              </div>
             </div>
           )}
         </div>
