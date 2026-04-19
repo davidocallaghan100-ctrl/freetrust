@@ -8,6 +8,120 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getAgent } from '@/lib/agents'
 import type { AgentRunResult } from '@/lib/agents'
 
+// ── Trust Score Live Signals ─────────────────────────────────────────────────
+// Fetches real DB data for the authenticated user and builds a structured
+// context block that is prepended to their input when running the
+// trustScoreOptimiser agent. All failures are caught and default to
+// safe zero/null values so the agent always runs, even if DB calls fail.
+interface TrustSignals {
+  profileCompleteness: { filled: number; total: number; missing: string[] }
+  listingCount: number
+  avgRating: number | null
+  reviewCount: number
+  accountAgeDays: number
+  emailVerified: boolean
+  socialLinks: string[]
+  followerCount: number
+  lastSeenDaysAgo: number | null
+  trustBalance: number
+}
+
+async function fetchTrustSignals(userId: string): Promise<TrustSignals> {
+  const admin = createAdminClient()
+
+  // Fetch profile
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('full_name, avatar_url, bio, location, website, website_url, linkedin_url, instagram_url, twitter_url, github_url, tiktok_url, youtube_url, created_at, last_seen_at, avg_rating, review_count, follower_count, trust_balance')
+    .eq('id', userId)
+    .maybeSingle()
+
+  // Profile completeness — 9 key fields
+  const completenessFields: Array<{ key: string; label: string; value: unknown }> = [
+    { key: 'full_name',     label: 'Full name',    value: profile?.full_name },
+    { key: 'avatar_url',    label: 'Avatar',       value: profile?.avatar_url },
+    { key: 'bio',           label: 'Bio',          value: profile?.bio },
+    { key: 'location',      label: 'Location',     value: profile?.location },
+    { key: 'website',       label: 'Website',      value: profile?.website_url ?? profile?.website },
+    { key: 'linkedin_url',  label: 'LinkedIn',     value: profile?.linkedin_url },
+    { key: 'instagram_url', label: 'Instagram',    value: profile?.instagram_url },
+    { key: 'twitter_url',   label: 'Twitter/X',    value: profile?.twitter_url },
+    { key: 'github_url',    label: 'GitHub',       value: profile?.github_url },
+  ]
+  const filled   = completenessFields.filter(f => f.value && String(f.value).trim() !== '').length
+  const missing  = completenessFields.filter(f => !f.value || String(f.value).trim() === '').map(f => f.label)
+
+  // Social links present
+  const socialLinks: string[] = []
+  if (profile?.linkedin_url)  socialLinks.push('LinkedIn')
+  if (profile?.twitter_url)   socialLinks.push('Twitter/X')
+  if (profile?.instagram_url) socialLinks.push('Instagram')
+  if (profile?.github_url)    socialLinks.push('GitHub')
+  if (profile?.tiktok_url)    socialLinks.push('TikTok')
+  if (profile?.youtube_url)   socialLinks.push('YouTube')
+
+  // Published listings count
+  const { count: listingCount } = await admin
+    .from('listings')
+    .select('id', { count: 'exact', head: true })
+    .eq('seller_id', userId)
+    .eq('status', 'published')
+
+  // Account age
+  const createdAt = profile?.created_at ? new Date(profile.created_at) : new Date()
+  const accountAgeDays = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24))
+
+  // Last seen
+  let lastSeenDaysAgo: number | null = null
+  if (profile?.last_seen_at) {
+    lastSeenDaysAgo = Math.floor((Date.now() - new Date(profile.last_seen_at).getTime()) / (1000 * 60 * 60 * 24))
+  }
+
+  // Email verification — check auth.users via admin (service role has access)
+  let emailVerified = false
+  try {
+    const { data: authUser } = await admin.auth.admin.getUserById(userId)
+    emailVerified = authUser?.user?.email_confirmed_at != null
+  } catch {
+    // non-blocking
+  }
+
+  return {
+    profileCompleteness: { filled, total: completenessFields.length, missing },
+    listingCount: listingCount ?? 0,
+    avgRating: typeof profile?.avg_rating === 'number' ? profile.avg_rating : null,
+    reviewCount: profile?.review_count ?? 0,
+    accountAgeDays,
+    emailVerified,
+    socialLinks,
+    followerCount: profile?.follower_count ?? 0,
+    lastSeenDaysAgo,
+    trustBalance: profile?.trust_balance ?? 0,
+  }
+}
+
+function buildTrustSignalsBlock(signals: TrustSignals): string {
+  const { profileCompleteness, listingCount, avgRating, reviewCount, accountAgeDays, emailVerified, socialLinks, followerCount, lastSeenDaysAgo, trustBalance } = signals
+  const completenessStr = `${profileCompleteness.filled}/${profileCompleteness.total} fields filled (${Math.round(profileCompleteness.filled / profileCompleteness.total * 100)}%)`
+  const missingStr = profileCompleteness.missing.length > 0 ? `Missing: ${profileCompleteness.missing.join(', ')}` : 'All fields filled'
+  const ratingStr = avgRating != null ? `${avgRating.toFixed(1)}/5` : 'No reviews yet'
+  const socialStr = socialLinks.length > 0 ? socialLinks.join(', ') : 'None connected'
+  const lastSeenStr = lastSeenDaysAgo === 0 ? 'Today' : lastSeenDaysAgo === 1 ? 'Yesterday' : lastSeenDaysAgo != null ? `${lastSeenDaysAgo} days ago` : 'Unknown'
+
+  return `## Live Trust Signals (real data from FreeTrust DB)
+- Profile completeness: ${completenessStr} — ${missingStr}
+- Published listings: ${listingCount}
+- Average review score: ${ratingStr} (from ${reviewCount} review${reviewCount !== 1 ? 's' : ''})
+- Account age: ${accountAgeDays} day${accountAgeDays !== 1 ? 's' : ''}
+- Email verified: ${emailVerified ? 'Yes' : 'No'}
+- Social links connected: ${socialStr}
+- Followers: ${followerCount}
+- Current ₮ balance: ₮${trustBalance.toLocaleString()}
+- Last active: ${lastSeenStr}
+
+`
+}
+
 // Lazy singleton — only created when the env var is present at
 // runtime. The route returns 503 if it's missing so the caller
 // sees a clear "not configured" error rather than a crash.
@@ -135,6 +249,19 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // For the Trust Score Optimiser, prepend live DB signals to the
+    // user's input so the model has ground-truth data to work from.
+    let effectiveInput = userInput
+    if (config.name === 'trustScoreOptimiser') {
+      try {
+        const signals = await fetchTrustSignals(user.id)
+        effectiveInput = buildTrustSignalsBlock(signals) + userInput
+      } catch (sigErr) {
+        // Non-fatal — still run the agent with user input only
+        console.warn('[agents/run] trust signals fetch failed:', sigErr)
+      }
+    }
+
     let response: Awaited<ReturnType<typeof anthropic.messages.create>>
     try {
       response = await anthropic.messages.create({
@@ -142,7 +269,7 @@ export async function POST(req: NextRequest) {
         max_tokens: config.maxTokens,
         system:     config.systemPrompt,
         messages: [
-          { role: 'user', content: userInput },
+          { role: 'user', content: effectiveInput },
         ],
       })
     } catch (modelErr) {
