@@ -210,7 +210,7 @@ function ServiceCard({ svc, isOwner, onDelete }: { svc: Service; isOwner?: boole
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #334155', paddingTop: '10px', marginTop: 'auto', gap: '8px' }}>
           <div style={{ minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 4 }}>
             <PriceDisplay
-              amountEur={svc.price_eur ?? svc.price}
+              amountEur={(svc.price_eur && svc.price_eur > 0) ? svc.price_eur : svc.price}
               sourceCode={(svc.currency || 'EUR') as CurrencyCode}
               sourceAmount={svc.price}
               size="md"

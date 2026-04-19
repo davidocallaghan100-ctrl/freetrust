@@ -44,7 +44,13 @@ export default function PriceDisplay({
 }: PriceDisplayProps) {
   const { currency, format, formatIn } = useCurrency()
 
-  if (amountEur == null || amountEur === 0) {
+  // Treat amountEur=0 as "free" only when sourceAmount is also 0 or absent.
+  // If sourceAmount has a real value, fall through to display it.
+  const effectiveAmount = (amountEur == null || amountEur === 0)
+    ? (sourceAmount && sourceAmount > 0 ? sourceAmount : 0)
+    : amountEur
+
+  if (effectiveAmount === 0) {
     return (
       <span style={{
         fontSize: SIZE_MAP[size].primary,
@@ -56,7 +62,7 @@ export default function PriceDisplay({
     )
   }
 
-  const primary = format(amountEur, 'EUR')
+  const primary = format(effectiveAmount, 'EUR')
 
   // Only show the EUR secondary line if the user is viewing a non-EUR
   // currency. If the source currency exists and isn't EUR, prefer
@@ -65,7 +71,7 @@ export default function PriceDisplay({
   const secondaryText =
     sourceCode && sourceCode !== 'EUR' && typeof sourceAmount === 'number'
       ? formatIn(sourceAmount, sourceCode)
-      : formatIn(amountEur, 'EUR')
+      : formatIn(effectiveAmount, 'EUR')
 
   if (layout === 'inline') {
     return (

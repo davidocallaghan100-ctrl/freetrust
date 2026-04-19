@@ -213,7 +213,7 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete }: {
         {/* Price + CTA */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
           <PriceDisplay
-            amountEur={p.price_eur ?? p.price}
+            amountEur={(p.price_eur && p.price_eur > 0) ? p.price_eur : p.price}
             sourceCode={(p.currency || 'EUR') as CurrencyCode}
             sourceAmount={p.price}
             size="md"
