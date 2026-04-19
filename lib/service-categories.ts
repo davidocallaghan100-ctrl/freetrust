@@ -124,6 +124,45 @@ export const ONLINE_CATEGORIES: ServiceCategory[] = [
     mode: 'online',
     subcategories: ['Technical SEO', 'On-Page SEO', 'Link Building', 'Local SEO', 'Keyword Research', 'SEO Audits'],
   },
+  // Translation & Interpretation — document translation, court/medical
+  // interpreting. Irish immigrant communities (Polish, Ukrainian,
+  // Brazilian) face documented language barriers. Cross-linked to
+  // grassroots language_support.
+  {
+    id: 'translation-interpretation',
+    label: 'Translation & Interpretation',
+    icon: '🌍',
+    mode: 'online',
+    subcategories: [
+      'Document Translation',
+      'Court & Legal Interpreting',
+      'Medical Interpreting',
+      'Certified Translation',
+      'Community Interpreting',
+      'Subtitling & Captioning',
+      'Localisation',
+      'Irish Language (Gaeilge)',
+    ],
+  },
+  // Grant & Funding Consulting — SEAI, LEADER, business funding.
+  // Irish-specific niche with growing demand as SEAI grants expand.
+  // No current Services category covers this.
+  {
+    id: 'grant-consulting',
+    label: 'Grant & Funding Consulting',
+    icon: '💶',
+    mode: 'online',
+    subcategories: [
+      'SEAI Home Energy Grants',
+      'LEADER & Rural Funding',
+      'Enterprise Ireland Grants',
+      'Business Start-Up Funding',
+      'Charity & NGO Grants',
+      'EU Funding Applications',
+      'R&D Tax Credits',
+      'Community Fund Applications',
+    ],
+  },
 ]
 
 export const OFFLINE_CATEGORIES: ServiceCategory[] = [
@@ -227,6 +266,29 @@ export const OFFLINE_CATEGORIES: ServiceCategory[] = [
       'Night Out & Pub Runs',
     ],
   },
+  // Driving Instructors — own top-level category, parallel logic to
+  // Taxi Drivers. The audience looking for a driving lesson is very
+  // different from someone booking a taxi or a courier. Subcategories
+  // map to the typical Irish ADI / RSA instructor offering: learner
+  // permits, pre-test, motorway, refresher, and specialist lessons
+  // (automatic, electric cars, trucks). Cross-linked to grassroots
+  // 'driving_instruction' via lib/marketplace/category-overlap.ts.
+  {
+    id: 'driving-instructors',
+    label: 'Driving Instructors',
+    icon: '🚗',
+    mode: 'offline',
+    subcategories: [
+      'Learner Driver Lessons',
+      'Pre-Test Training',
+      'Motorway Driving',
+      'Refresher Lessons',
+      'Automatic Transmission',
+      'Electric Vehicle Lessons',
+      'Truck & HGV Lessons',
+      'EDT (Essential Driver Training)',
+    ],
+  },
   // Energy Services — home + business energy-efficiency work.
   // Subcategories reflect the Irish/UK green-grants landscape (SEAI,
   // BUS): solar, EV chargers, heat pumps, insulation, audits. The
@@ -248,6 +310,122 @@ export const OFFLINE_CATEGORIES: ServiceCategory[] = [
       'Boiler Servicing',
       'Smart Meter & Thermostat',
       'Battery Storage',
+    ],
+  },
+  // Vehicle Services — mobile mechanics, valeting, NCT prep. Separate
+  // from trades-construction because the audience and skill set are
+  // automotive-specific. Cross-linked to grassroots car_valeting and
+  // mechanic_services.
+  {
+    id: 'vehicle-services',
+    label: 'Vehicle Services',
+    icon: '🔧',
+    mode: 'offline',
+    subcategories: [
+      'Mobile Mechanic',
+      'NCT Preparation',
+      'Car Valeting & Detailing',
+      'Tyre Fitting & Repair',
+      'Windscreen Repair',
+      'Car Battery & Electrics',
+      'Pre-Purchase Inspection',
+      'Fuel System & Exhausts',
+    ],
+  },
+  // Home Security — CCTV, alarms, smart locks. High trust category
+  // (documented scams in Ireland). Cross-linked to grassroots
+  // security_installation.
+  {
+    id: 'home-security',
+    label: 'Home Security',
+    icon: '🔒',
+    mode: 'offline',
+    subcategories: [
+      'CCTV Installation',
+      'Alarm Systems',
+      'Smart Locks & Access',
+      'Door & Window Sensors',
+      'Smart Doorbell & Intercom',
+      'Security Lighting',
+      'Safe Installation',
+      'Security Audit',
+    ],
+  },
+  // Sports & Fitness Coaching — personal trainers, GAA coaches,
+  // swimming instructors. Garda vetting badge angle for youth work.
+  // Cross-linked to grassroots sports_coaching.
+  {
+    id: 'sports-fitness-coaching',
+    label: 'Sports & Fitness Coaching',
+    icon: '⚽',
+    mode: 'offline',
+    subcategories: [
+      'Sports Coaching',
+      'Personal Training (Outdoor)',
+      'Swimming Coaching',
+      'Youth Sport & Development',
+      'Football Coaching',
+      'Athletics Coaching',
+      'Martial Arts Instruction',
+      'Yoga & Pilates (In-Person)',
+    ],
+  },
+  // Music & Arts Tuition — instruments, voice, trad Irish, art.
+  // Irish trad (fiddle, uilleann pipes, bodhrán) is a unique niche.
+  // Cross-linked to grassroots music_lessons.
+  {
+    id: 'music-arts-tuition',
+    label: 'Music & Arts Tuition',
+    icon: '🎵',
+    mode: 'offline',
+    subcategories: [
+      'Guitar Lessons',
+      'Piano & Keyboard',
+      'Singing & Vocal Coaching',
+      'Traditional Irish Music',
+      'Tin Whistle & Bodhrán',
+      'Uilleann Pipes & Fiddle',
+      'Drama & Theatre',
+      'Art & Drawing Classes',
+    ],
+  },
+  // Disability Care & Support — PA services, home help, carer relief.
+  // 23.76M home support hours in Ireland (2024), growing 12.5% YoY.
+  // New statutory registration legislation backs trust verification.
+  // Cross-linked to grassroots disability_support.
+  {
+    id: 'disability-care',
+    label: 'Disability Care & Support',
+    icon: '♿',
+    mode: 'offline',
+    subcategories: [
+      'Personal Assistant (PA)',
+      'Home Help & Daily Living',
+      'Carer Relief & Respite',
+      'Hospital Companion',
+      'Mobility & Accessibility Support',
+      'Community Participation Support',
+      'Sensory & Communication Support',
+      'Acquired Brain Injury Support',
+    ],
+  },
+  // Mobile Beauty & Wellness — hairdressing, nails, massage at home.
+  // Rural Ireland staple — informal, no reviews, no trust. Cross-linked
+  // to grassroots beauty_mobile.
+  {
+    id: 'beauty-wellness-mobile',
+    label: 'Mobile Beauty & Wellness',
+    icon: '💅',
+    mode: 'offline',
+    subcategories: [
+      'Mobile Hairdressing',
+      'Home Nail Technician',
+      'Makeup Artist (Occasions)',
+      'Mobile Massage Therapy',
+      'Eyebrow & Lash Technician',
+      'Mobile Spray Tan',
+      'Skincare at Home',
+      'Bridal Beauty',
     ],
   },
 ]

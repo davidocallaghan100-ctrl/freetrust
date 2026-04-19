@@ -35,7 +35,19 @@ export const GRASSROOTS_CATEGORIES: readonly GrassrootsCategory[] = [
   { slug: 'tutoring',     label: 'Local Tutoring & Teaching', emoji: '📚', blurb: 'In-person lessons, homework' },
   { slug: 'home_repairs', label: 'Home Repairs & Maintenance', emoji: '🔨', blurb: 'Fixes, odd jobs, touch-ups' },
   { slug: 'moving',       label: 'Moving & Heavy Lifting', emoji: '📦', blurb: 'House moves, furniture shifts' },
-  { slug: 'events_help',  label: 'Events & Festival Help', emoji: '🎪', blurb: 'Setup, stewards, teardown' },
+  { slug: 'events_help',       label: 'Events & Festival Help',   emoji: '🎪', blurb: 'Setup, stewards, teardown' },
+  { slug: 'driving_instruction',  label: 'Driving Instruction',        emoji: '🚗', blurb: 'Lessons, test prep, refreshers' },
+  { slug: 'sports_coaching',      label: 'Sports Coaching',             emoji: '⚽', blurb: 'GAA, football, swimming, youth coaching' },
+  { slug: 'music_lessons',        label: 'Music Lessons',               emoji: '🎸', blurb: 'Guitar, piano, trad, voice, tin whistle' },
+  { slug: 'car_valeting',         label: 'Car Valeting & Detailing',    emoji: '🚘', blurb: 'Mobile wash, polish, full valet' },
+  { slug: 'mechanic_services',    label: 'Vehicle Repairs',             emoji: '🔩', blurb: 'NCT prep, mobile mechanic, tyres' },
+  { slug: 'security_installation',label: 'Home Security & CCTV',        emoji: '🔒', blurb: 'Alarms, cameras, smart doorbells' },
+  { slug: 'disability_support',   label: 'Disability & Home Support',   emoji: '♿', blurb: 'PA services, home help, carer relief' },
+  { slug: 'photography_local',    label: 'Photography (Local)',          emoji: '📸', blurb: 'Communions, portraits, events, family' },
+  { slug: 'language_support',     label: 'Translation & Language',      emoji: '🌍', blurb: 'Interpreting, documents, community' },
+  { slug: 'beauty_mobile',        label: 'Mobile Beauty & Hair',        emoji: '💇', blurb: 'At-home cuts, nails, lashes' },
+  { slug: 'it_support_local',     label: 'IT Help & Tech Support',      emoji: '🖥️', blurb: 'PC fixes, Wi-Fi, phone setup' },
+  { slug: 'boat_water',           label: 'Boating & Water Services',    emoji: '⛵', blurb: 'Fishing trips, boat maintenance' },
 ] as const
 
 /** O(1) lookup by slug. Built once at module load. */

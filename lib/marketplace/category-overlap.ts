@@ -54,7 +54,19 @@ const SERVICES_TO_GRASSROOTS: Record<string, string[]> = {
   // tiers. A user browsing the professional Taxi Drivers category
   // can click through to casual / informal driving work on
   // grassroots via the cross-link badge rendered by this map.
-  'taxi-drivers':         ['delivery'],
+  'taxi-drivers':          ['delivery'],
+  // Driving Instructors maps to the new grassroots driving_instruction
+  // category — same audience (instructors / learners) at different
+  // registration levels (ADI qualified vs informal / pre-ADI).
+  'driving-instructors':        ['driving_instruction'],
+  // New batch — added April 2026
+  'vehicle-services':           ['car_valeting', 'mechanic_services'],
+  'home-security':              ['security_installation'],
+  'sports-fitness-coaching':    ['sports_coaching'],
+  'music-arts-tuition':         ['music_lessons'],
+  'disability-care':            ['disability_support'],
+  'beauty-wellness-mobile':     ['beauty_mobile'],
+  'translation-interpretation': ['language_support'],
   // Energy Services has no grassroots equivalent yet — solar / EV /
   // heat pump work is professional-only in the current taxonomy.
   // Intentionally NOT listed here so the badge renders nothing.
@@ -81,6 +93,20 @@ const GRASSROOTS_TO_SERVICES: Record<string, string[]> = {
   elder_care:    ['elder-care'],
   animal_care:   ['pet-services'],
   labour:        ['community-services'],
+  driving_instruction: ['driving-instructors'],
+  // New batch — added April 2026
+  sports_coaching:        ['sports-fitness-coaching'],
+  music_lessons:          ['music-arts-tuition'],
+  car_valeting:           ['vehicle-services'],
+  mechanic_services:      ['vehicle-services'],
+  security_installation:  ['home-security'],
+  disability_support:     ['disability-care'],
+  photography_local:      ['photography-editing'],
+  language_support:       ['translation-interpretation'],
+  beauty_mobile:          ['beauty-wellness-mobile', 'beauty-personal-care'],
+  it_support_local:       ['development-tech'],
+  // boat_water has no direct Services counterpart — coastal/marine work
+  // is grassroots-only for now. UI will skip the badge.
   // No services equivalent — farming, fishing, cleaning, general labour
   // have no direct Services counterpart and return null from the lookup
   // so the UI skips the badge.
