@@ -66,15 +66,20 @@ export default function FounderPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amountEur: tier.priceEur }),
       });
+      if (res.status === 401) {
+        // Not logged in — redirect to login with return path
+        window.location.href = `/login?next=${encodeURIComponent('/invest')}`;
+        return;
+      }
       if (!res.ok) {
-        const body = await res.json().catch(() => ({ error: 'Checkout is coming soon.' }));
+        const body = await res.json().catch(() => ({ error: 'Checkout failed. Please try again.' }));
         throw new Error(body.error ?? 'Checkout failed.');
       }
       const { url } = await res.json();
       if (!url) throw new Error('No checkout URL returned.');
       window.location.href = url;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Checkout is coming soon.';
+      const message = err instanceof Error ? err.message : 'Checkout failed. Please try again.';
       setError(message);
       setLoading(false);
     }
@@ -202,7 +207,7 @@ export default function FounderPage() {
         <div className="checks">
           <span className="check-item"><span className="check-mark">✓</span> One-time payment</span>
           <span className="check-item"><span className="check-mark">✓</span> Lower fees for life</span>
-          <span className="check-item"><span className="check-mark">✓</span> Monthly AI refills</span>
+          <span className="check-item"><span className="check-mark">✓</span> 30% discount on AI Credits</span>
           <span className="check-item"><span className="check-mark">✓</span> 14-day refund</span>
         </div>
       </section>
@@ -259,10 +264,10 @@ export default function FounderPage() {
                 <div className="stat-value">+{tier.trustBonus.toLocaleString()}</div>
                 <div className="stat-hint">one-time</div>
               </div>
-              <div className="stat">
-                <div className="stat-label">Monthly refill</div>
-                <div className="stat-value">+{tier.monthlyAiCreditRefill}</div>
-                <div className="stat-hint">for life</div>
+              <div className="stat stat-accent" style={{ gridColumn: '1 / -1' }}>
+                <div className="stat-label">Top-up discount</div>
+                <div className="stat-value">–30% on all AI Credit top-ups</div>
+                <div className="stat-hint">permanent · for life</div>
               </div>
             </div>
           </div>
@@ -376,7 +381,7 @@ export default function FounderPage() {
                     <div className="tier-row"><span className="tier-row-label">Product</span><span className="tier-row-value">{t.productFeePercent}%</span></div>
                     <div className="tier-row"><span className="tier-row-label">Credits</span><span className="tier-row-value">+{t.aiCreditsBonus.toLocaleString()}</span></div>
                     <div className="tier-row"><span className="tier-row-label">₮</span><span className="tier-row-value">+{t.trustBonus.toLocaleString()}</span></div>
-                    <div className="tier-row"><span className="tier-row-label">Refill</span><span className="tier-row-value">+{t.monthlyAiCreditRefill}/mo</span></div>
+                    <div className="tier-row"><span className="tier-row-label">Top-up</span><span className="tier-row-value">–30%</span></div>
                   </div>
                 </button>
               );
@@ -463,12 +468,12 @@ export default function FounderPage() {
             <h2>Common questions</h2>
           </div>
           <div className="faq-list">
-            <FaqItem q="Is this a subscription?" a="No. One-time payment, lifetime benefits. Pay once and keep lower fees, monthly refills, and your TrustCoin bonus forever." />
+            <FaqItem q="Is this a subscription?" a="No. One-time payment, lifetime benefits. Pay once and keep lower fees, a permanent 30% discount on AI Credit top-ups, and your TrustCoin bonus forever." />
             <FaqItem q="Can I upgrade later?" a="Yes. Pay the difference between your current tier and the new one, and your benefits upgrade immediately. No double-paying." />
             <FaqItem q="Which tier should I pick?" a="Seed (€99) if you're just starting. Tree (€499) if you sell €10k-€50k/year. Forest (€1,999) for €50k-€200k/year. Summit or Legacy if FreeTrust is your primary income channel." />
-            <FaqItem q="What does the Legacy tier get me that Summit doesn't?" a="Nearly zero fees forever (0.25% / 0%), 20,000 starting AI Credits, 5,000 ₮ bonus, and 1,200 AI Credits refilled every month for life. It's priced for people who've decided FreeTrust is their business." />
+            <FaqItem q="What does the Legacy tier get me that Summit doesn't?" a="Nearly zero fees forever (0.25% / 0%), 20,000 starting AI Credits, 5,000 ₮ bonus, and a permanent 30% discount on all future AI Credit top-ups. It's priced for people who've decided FreeTrust is their business." />
             <FaqItem q="Does this stack with free Founding Member perks?" a="Yes. Free Founding Member perks are additive to any paid tier — you keep the badge and the 3-month zero fees." />
-            <FaqItem q="What happens if I go inactive?" a="Monthly refills accrue while your account is active. Return from a break and your balance is waiting. Fee tier never expires." />
+            <FaqItem q="What happens if I go inactive?" a="Your fee tier and 30% top-up discount never expire, even if you go inactive. Return any time and your rates are still locked." />
             <FaqItem q="Are refunds available?" a="Full refund within 14 days of purchase if fewer than 50 AI Credits have been spent. After that, non-refundable." />
             <FaqItem q="Will my founder fees stay low forever?" a="Yes. Your tier rate is locked for life. Future fee reductions apply to you too — but your rate is never raised." />
           </div>
