@@ -54,6 +54,7 @@ interface RemoteJob {
 interface SupabaseJob {
   id: string
   title: string
+  company_name?: string | null
   description: string
   job_type: string
   location_type: string
@@ -87,6 +88,7 @@ interface SupabaseJob {
   salary_min_eur?: number | null
   salary_max_eur?: number | null
   distance_km?: number | null
+  company_name_override?: string | null
 }
 
 const TYPE_LABELS: Record<string, string> = { full_time: 'Full Time', part_time: 'Part Time', contract: 'Contract', freelance: 'Freelance' }
@@ -132,7 +134,7 @@ function supabaseToRemoteJob(j: SupabaseJob): RemoteJob {
   return {
     id: `local-${j.id}`,
     title: j.title,
-    company_name: j.poster?.full_name ?? 'FreeTrust Member',
+    company_name: j.company_name ?? j.poster?.full_name ?? 'FreeTrust Member',
     company_logo: null,
     job_type: j.job_type,
     location_type: j.location_type,
