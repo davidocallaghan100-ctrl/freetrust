@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 const NAV_SECTIONS = [
@@ -60,7 +60,8 @@ const NAV_SECTIONS = [
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
   const [userId, setUserId] = useState<string | null>(null)
   const [walletBalance, setWalletBalance] = useState<number | null>(null)
 

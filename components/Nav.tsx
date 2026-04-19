@@ -54,7 +54,8 @@ const DRAWER_SECTIONS = [
 export default function Nav() {
   const router   = useRouter()
   const pathname = usePathname()
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
 
   const [user, setUser] = useState<{
     id: string; email: string | null; name: string | null; avatar: string | null

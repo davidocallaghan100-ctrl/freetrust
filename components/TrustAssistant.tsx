@@ -61,7 +61,8 @@ function TypingDots() {
 // ─── Main component ──────────────────────────────────────────────────────────
 export default function TrustAssistant() {
   const pathname = usePathname()
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
 
   const [open, setOpen] = useState(false)
   const [dismissed, setDismissed] = useState(false)

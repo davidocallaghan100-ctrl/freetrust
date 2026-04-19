@@ -13,7 +13,8 @@ interface CreateMenuProps {
 
 export default function CreateMenu({ asCenterButton = false, onClose }: CreateMenuProps) {
   const router = useRouter()
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
 
   const [open, setOpen] = useState(false)
   const [showPostForm, setShowPostForm] = useState(false)

@@ -76,8 +76,8 @@ export async function GET(
     }
 
     // Fee calc
-    const totalCents = Number(order.amount_pence ?? 0)
-    const itemType   = String(order.item_type ?? '').toLowerCase()
+    const totalCents = Number(order.amount ?? 0)
+    const itemType   = String(order.type ?? '').toLowerCase()
     const feeRate    = itemType === 'product' ? FEE_RATE_PRODUCT : FEE_RATE_SERVICE
     const feePct     = itemType === 'product' ? 5 : 8
     const feeCents   = Math.round(totalCents * feeRate)
@@ -170,7 +170,7 @@ export async function GET(
     y -= 22
 
     // Line item row
-    const itemTitle = String(order.item_title ?? 'Item')
+    const itemTitle = String(order.title ?? 'Item')
     // Truncate long titles
     const displayTitle = itemTitle.length > 55 ? itemTitle.slice(0, 52) + '...' : itemTitle
     page.drawText(displayTitle, { x: 56, y, size: 10, font: regularFont, color: WHITE })

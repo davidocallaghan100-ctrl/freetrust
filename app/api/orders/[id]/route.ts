@@ -174,7 +174,7 @@ export async function PATCH(
         userId: order.buyer_id,
         type:   'order',
         title:  'Order delivered!',
-        body:   `"${order.item_title}" has been marked as delivered. Please review and release payment.`,
+        body:   `"${order.title}" has been marked as delivered. Please review and release payment.`,
         link:   `/orders/${id}`,
       })
 
@@ -258,10 +258,10 @@ export async function PATCH(
       // The fee was already retained by application_fee_amount on
       // capture. We still need to send the net-of-fee payout from the
       // platform balance to the seller's connected account.
-      const totalCents = Number(captured.amount ?? order.amount_pence ?? 0)
+      const totalCents = Number(captured.amount ?? order.amount ?? 0)
       // Prefer the per-order item_type to decide the fee rate; default
       // to service-rate (higher) so we never under-charge the platform.
-      const itemType   = String(order.item_type ?? '').toLowerCase()
+      const itemType   = String(order.type ?? '').toLowerCase()
       const feeRate    = itemType === 'product' ? FEE_RATE_PRODUCT : FEE_RATE_SERVICE
       const feeCents   = Math.round(totalCents * feeRate)
       const payoutCents = Math.max(totalCents - feeCents, 0)
@@ -333,7 +333,7 @@ export async function PATCH(
           p_amount:  TRUST_REWARDS.COMPLETE_ORDER,
           p_type:    TRUST_LEDGER_TYPES.COMPLETE_ORDER,
           p_ref:     id,
-          p_desc:    `₮${TRUST_REWARDS.COMPLETE_ORDER} reward for completing sale: ${order.item_title}`,
+          p_desc:    `₮${TRUST_REWARDS.COMPLETE_ORDER} reward for completing sale: ${order.title}`,
         })
         if (trustErr) console.error('[orders/release_payment] trust award failed:', trustErr)
       } catch (err) {
@@ -363,14 +363,14 @@ export async function PATCH(
               userId: order.seller_id,
               type:   'order',
               title:  `Payment released: ₮${payoutCents / 100}`,
-              body:   `"${order.item_title}" — ${(payoutCents / 100).toFixed(2)} ${captured.currency?.toUpperCase() ?? 'EUR'} sent to your Stripe account. You earned ₮${TRUST_REWARDS.COMPLETE_ORDER} trust.`,
+              body:   `"${order.title}" — ${(payoutCents / 100).toFixed(2)} ${captured.currency?.toUpperCase() ?? 'EUR'} sent to your Stripe account. You earned ₮${TRUST_REWARDS.COMPLETE_ORDER} trust.`,
               link:   `/orders/${id}`,
             }),
             insertNotification({
               userId: order.buyer_id,
               type:   'order',
               title:  'Order completed',
-              body:   `You released payment for "${order.item_title}". Thanks for using FreeTrust.`,
+              body:   `You released payment for "${order.title}". Thanks for using FreeTrust.`,
               link:   `/orders/${id}`,
             }),
           ])
@@ -380,12 +380,12 @@ export async function PATCH(
             sendEmail({
               type:    'order_completed',
               userId:  order.seller_id,
-              payload: { orderTitle: order.item_title as string, orderId: id },
+              payload: { orderTitle: order.title as string, orderId: id },
             }).catch(e => console.error('[orders] seller email failed:', e)),
             sendEmail({
               type:    'order_completed',
               userId:  order.buyer_id,
-              payload: { orderTitle: order.item_title as string, orderId: id },
+              payload: { orderTitle: order.title as string, orderId: id },
             }).catch(e => console.error('[orders] buyer email failed:', e)),
           ])
         } catch (err) {
@@ -531,14 +531,14 @@ export async function PATCH(
           userId: order.seller_id,
           type:   'order',
           title:  'Order cancelled',
-          body:   `The order for "${order.item_title}" was cancelled by the buyer before work began. No payment was taken.`,
+          body:   `The order for "${order.title}" was cancelled by the buyer before work began. No payment was taken.`,
           link:   `/orders/${id}`,
         }),
         insertNotification({
           userId: order.buyer_id,
           type:   'order',
           title:  'Order cancelled',
-          body:   `You cancelled your order for "${order.item_title}". No charge was applied to your card.`,
+          body:   `You cancelled your order for "${order.title}". No charge was applied to your card.`,
           link:   `/orders/${id}`,
         }),
       ])
@@ -593,7 +593,7 @@ export async function PATCH(
         userId: order.seller_id,
         type:   'order',
         title:  'Dispute raised',
-        body:   `A dispute has been raised for order "${order.item_title}". Our team will review.`,
+        body:   `A dispute has been raised for order "${order.title}". Our team will review.`,
         link:   `/orders/${id}`,
       })
 

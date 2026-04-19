@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface ActivityItem {
@@ -50,7 +50,8 @@ interface Props {
 export default function OrderActivityFeed({ orderId, currentUserId, buyerId, sellerId }: Props) {
   const [items, setItems] = useState<ActivityItem[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
 
   useEffect(() => {
     // Initial fetch — ordered oldest first so timeline reads top-to-bottom

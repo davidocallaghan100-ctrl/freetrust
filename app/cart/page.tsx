@@ -18,11 +18,11 @@ function saveCart(c: CartItem[]) {
 }
 
 function fmt(p: number, cur: string) {
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: cur, minimumFractionDigits: 2 }).format(p / 100)
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: cur, minimumFractionDigits: 2 }).format(p)
 }
 
 const TRUST_FEE_PCT = 5
-const FREE_SHIPPING_THRESHOLD = 5000 // €50
+const FREE_SHIPPING_THRESHOLD = 50 // €50
 
 export default function CartPage() {
   const router = useRouter()
@@ -73,7 +73,7 @@ export default function CartPage() {
             ? firstItem.title
             : `FreeTrust Order (${cart.length} items)`,
           itemDescription: cart.map(i => `${i.title} ×${i.qty}`).join(', '),
-          amountInCents: total,
+          amountInCents: Math.round(total * 100),
           type: 'product',
           sellerId: 'platform', // cart orders go through platform
         }),
@@ -97,7 +97,7 @@ export default function CartPage() {
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0)
   const discount = promoApplied ? Math.round(subtotal * 0.25) : 0
   const afterDiscount = subtotal - discount
-  const shipping = afterDiscount >= FREE_SHIPPING_THRESHOLD ? 0 : 499
+  const shipping = afterDiscount >= FREE_SHIPPING_THRESHOLD ? 0 : 4.99
   const fee = Math.round(afterDiscount * (TRUST_FEE_PCT / 100))
   const total = afterDiscount + shipping + fee
 
@@ -366,7 +366,7 @@ export default function CartPage() {
               {cart.length > 0 && total > 0 && (
                 <>
                   <AppleGooglePayButton
-                    amountCents={total}
+                    amountCents={Math.round(total * 100)}
                     currency={currency.toUpperCase()}
                     label={`FreeTrust Order (${cart.length} item${cart.length > 1 ? 's' : ''})`}
                     description={cart.map(i => `${i.title} ×${i.qty}`).join(', ').slice(0, 200)}
