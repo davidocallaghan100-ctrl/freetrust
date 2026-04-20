@@ -24,11 +24,12 @@ const withPWA = nextPwa({
       method: 'GET',
     },
     {
-      // Mapbox tile requests must NEVER be intercepted by the service worker.
-      // Mapbox GL JS fetches tiles from *.mapbox.com as .png (and other formats)
-      // via web workers. If the SW caches or blocks these, the map canvas stays black.
-      // This NetworkOnly rule must come BEFORE the generic image rule below.
-      urlPattern: /^https:\/\/[^/]*\.mapbox\.com\/.*/i,
+      // Map tile requests must NEVER be intercepted by the service worker.
+      // MapLibre GL JS fetches tiles from CartoDB (*.cartocdn.com) and the style
+      // JSON from basemaps.cartocdn.com. If the SW caches or blocks these, the
+      // map canvas stays black. This NetworkOnly rule must come BEFORE the
+      // generic image caching rule below.
+      urlPattern: /^https:\/\/[^/]*\.cartocdn\.com\/.*/i,
       handler: 'NetworkOnly',
     },
     {
@@ -149,22 +150,23 @@ const nextConfig = {
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self), payment=(self)' },
           // HSTS — force HTTPS for 2 years
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
-          // Content Security Policy — allows Mapbox GL JS, CartoDB tiles, Supabase, etc.
+          // Content Security Policy — allows MapLibre GL JS, CartoDB dark-matter tiles, Supabase, etc.
           {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              // blob: in script-src is required for Mapbox GL JS web worker inline scripts
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://api.mapbox.com https://unpkg.com",
-              "style-src 'self' 'unsafe-inline' https://api.mapbox.com https://unpkg.com https://fonts.googleapis.com",
-              // Allow all https images + blob — Mapbox tiles come from various CDN subdomains
+              // blob: in script-src is required for MapLibre GL JS web worker inline scripts
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://unpkg.com",
+              "style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com",
+              // Allow all https images + blob — tile PNGs/WebP come from various CDN subdomains
               "img-src 'self' data: blob: https:",
-              // blob: in connect-src needed for Mapbox tile worker blob URLs
-              "connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://*.mapbox.com https://*.tiles.mapbox.com https://*.cartocdn.com https://basemaps.cartocdn.com https://unpkg.com",
-              // Both worker-src and child-src needed for Mapbox GL web workers across browsers
+              // blob: in connect-src needed for MapLibre tile worker blob URLs;
+              // CartoDB hosts the dark-matter style JSON + vector/raster tiles
+              "connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co https://*.cartocdn.com https://basemaps.cartocdn.com https://unpkg.com",
+              // Both worker-src and child-src needed for MapLibre GL web workers across browsers
               "worker-src 'self' blob:",
               "child-src 'self' blob:",
-              "font-src 'self' https://fonts.gstatic.com https://api.mapbox.com data:",
+              "font-src 'self' https://fonts.gstatic.com data:",
               "frame-src 'self'",
             ].join('; '),
           },
