@@ -23,7 +23,7 @@ export const FAQS: readonly FAQItem[] = [
   {
     question: 'What is FreeTrust?',
     answer:
-      "FreeTrust is Ireland's community economy marketplace — a platform where members earn TrustCoins (₮) for every contribution they make and spend them to grow. You can list services, sell products, post jobs, run events, join communities, publish articles and support sustainability projects, all in one place.",
+      "FreeTrust is the community economy marketplace — a platform where members earn TrustCoins (₮) for every contribution they make and spend them to grow. You can list services, sell products, post jobs, run events, join communities, publish articles and support sustainability projects, all in one place.",
   },
   {
     question: 'Is FreeTrust free to join?',
@@ -51,9 +51,9 @@ export const FAQS: readonly FAQItem[] = [
       'List a product, service or gig from /services/new or /products/new, set your price in EUR, GBP or USD, and buyers pay securely via Stripe. Orders are tracked end-to-end with messaging, reviews and disputes built in. You earn TrustCoins at each step and get paid out to your bank.',
   },
   {
-    question: 'Is FreeTrust only for Irish users?',
+    question: 'Is FreeTrust only for certain users?',
     answer:
-      "FreeTrust is built in Ireland for Ireland's community economy first, but it is open to members worldwide. We support multiple currencies, international Stripe payouts and have members in the UK, EU and beyond.",
+      "FreeTrust is built for the community economy and is open to members worldwide. We support multiple currencies, international Stripe payouts and have members in the UK, EU and beyond.",
   },
   {
     question: 'How is FreeTrust different from other marketplaces?',

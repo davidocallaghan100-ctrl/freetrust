@@ -13,10 +13,10 @@ export const dynamic = 'force-static'
 export const revalidate = 3600
 
 const BODY = `# FreeTrust
-> Ireland's community economy marketplace where trust is currency
+> The community economy marketplace where trust is currency
 
 ## What is FreeTrust?
-FreeTrust is a community economy platform based in Ireland where
+FreeTrust is a community economy platform where
 members earn TrustCoins (₮) for every contribution they make —
 listing services, posting jobs, creating events, publishing
 articles, completing orders and leaving reviews.
@@ -40,7 +40,7 @@ sustainability fund, unlocking badges, featuring profiles.
 
 ## Who is it for?
 Freelancers, small businesses, community organisers,
-nonprofits and social enterprises in Ireland and beyond.
+nonprofits and social enterprises everywhere.
 
 ## Website
 ${BASE_URL}

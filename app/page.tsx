@@ -18,28 +18,28 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://freetrust.co'
 // / Bing / ChatGPT / Perplexity / Claude search results when someone
 // queries "FreeTrust" or related terms.
 export const metadata: Metadata = {
-  title:       "FreeTrust — Ireland's Community Economy Marketplace | Earn & Spend TrustCoins",
-  description: "Join FreeTrust — Ireland's community economy marketplace. Earn TrustCoins for listings, jobs, events and reviews. Connect, collaborate and grow with your community.",
+  title:       "FreeTrust — The Community Economy Marketplace | Earn & Spend TrustCoins",
+  description: "Join FreeTrust — the community economy marketplace. Earn TrustCoins for listings, jobs, events and reviews. Connect, collaborate and grow with your community.",
   alternates:  { canonical: BASE_URL },
   openGraph: {
     type:        'website',
     url:         BASE_URL,
     siteName:    'FreeTrust',
-    title:       "FreeTrust — Ireland's Community Economy Marketplace | Earn & Spend TrustCoins",
-    description: "Join FreeTrust — Ireland's community economy marketplace. Earn TrustCoins for listings, jobs, events and reviews. Connect, collaborate and grow with your community.",
+    title:       "FreeTrust — The Community Economy Marketplace | Earn & Spend TrustCoins",
+    description: "Join FreeTrust — the community economy marketplace. Earn TrustCoins for listings, jobs, events and reviews. Connect, collaborate and grow with your community.",
     images: [
       {
         url:    `${BASE_URL}/og-image.png`,
         width:  1200,
         height: 630,
-        alt:    "FreeTrust — Ireland's community economy marketplace",
+        alt:    "FreeTrust — the community economy marketplace",
       },
     ],
   },
   twitter: {
     card:        'summary_large_image',
-    title:       "FreeTrust — Ireland's Community Economy Marketplace | Earn & Spend TrustCoins",
-    description: "Join FreeTrust — Ireland's community economy marketplace. Earn TrustCoins for listings, jobs, events and reviews.",
+    title:       "FreeTrust — The Community Economy Marketplace | Earn & Spend TrustCoins",
+    description: "Join FreeTrust — the community economy marketplace. Earn TrustCoins for listings, jobs, events and reviews.",
     images:      [`${BASE_URL}/og-image.png`],
     creator:     '@freetrust',
   },

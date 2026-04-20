@@ -453,7 +453,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
               </h1>
 
               <p style={{ fontSize: '1.05rem', color: '#94a3b8', margin: 0, lineHeight: 1.65, maxWidth: 480 }}>
-                FreeTrust is Ireland&apos;s community economy platform — earn TrustCoins (₮) for every contribution, spend them to grow.
+                FreeTrust is the community economy platform — earn TrustCoins (₮) for every contribution, spend them to grow.
               </p>
 
               <div className="hero-cta" style={{ display: 'flex', flexDirection: 'row', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -1020,9 +1020,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
               Join FreeTrust Free →
             </Link>
           </div>
-          <div style={{ marginTop: '1.5rem', fontSize: '0.85rem', color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-            Built in Ireland 🇮🇪
-          </div>
+
         </div>
       </section>
 
