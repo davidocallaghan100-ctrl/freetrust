@@ -48,16 +48,11 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
       const container = map.getContainer()
       if (!canvas || !container) return false
 
-      // Force touch-action on canvas, container, and all ancestor elements
+      // Force touch-action on canvas and container only — do NOT walk up to page ancestors
+      // as that would freeze mobile page scroll
       const forceTouch = () => {
         canvas.style.touchAction = 'pinch-zoom'
         container.style.touchAction = 'pinch-zoom'
-        // Walk up DOM from canvas — Mapbox nests the canvas inside several divs
-        let el: HTMLElement | null = canvas.parentElement
-        while (el && el !== document.body) {
-          el.style.touchAction = 'pinch-zoom'
-          el = el.parentElement
-        }
       }
 
       forceTouch()
