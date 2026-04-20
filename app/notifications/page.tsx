@@ -7,8 +7,28 @@ import { createClient } from '@/lib/supabase/client'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type DBType = 'message' | 'order' | 'trust' | 'review' | 'gig_liked' | 'system'
-type TabKey = 'all' | 'orders' | 'payments' | 'messages' | 'reviews' | 'community' | 'system'
+// All notification types used across FreeTrust API routes
+type DBType =
+  // Messages
+  | 'message' | 'new_message'
+  // Orders
+  | 'order' | 'order_placed' | 'order_update'
+  // Payments / wallet
+  | 'trust' | 'wallet' | 'wallet_transfer' | 'payment' | 'transfer_received' | 'transfer_sent'
+  // Reviews
+  | 'review' | 'review_received'
+  // Social / community
+  | 'gig_liked' | 'post_like' | 'comment_like' | 'listing_liked'
+  // Connections / followers
+  | 'new_follower' | 'connection_request' | 'connection_accepted'
+  // Events
+  | 'event' | 'event_rsvp' | 'event_reminder'
+  // Jobs
+  | 'job_application' | 'new_job_application' | 'job_match'
+  // System / onboarding
+  | 'system' | 'onboarding' | 'badge'
+
+type TabKey = 'all' | 'messages' | 'orders' | 'payments' | 'reviews' | 'community' | 'system'
 
 interface DBNotification {
   id: string
@@ -33,39 +53,123 @@ interface Prefs {
 // ── Mappings ───────────────────────────────────────────────────────────────────
 
 const TYPE_TO_TAB: Record<DBType, TabKey> = {
-  order:     'orders',
-  trust:     'payments',
-  message:   'messages',
-  review:    'reviews',
-  gig_liked: 'community',
-  system:    'system',
+  // Messages
+  message:              'messages',
+  new_message:          'messages',
+  // Orders
+  order:                'orders',
+  order_placed:         'orders',
+  order_update:         'orders',
+  // Payments
+  trust:                'payments',
+  wallet:               'payments',
+  wallet_transfer:      'payments',
+  payment:              'payments',
+  transfer_received:    'payments',
+  transfer_sent:        'payments',
+  // Reviews
+  review:               'reviews',
+  review_received:      'reviews',
+  // Social / community
+  gig_liked:            'community',
+  post_like:            'community',
+  comment_like:         'community',
+  listing_liked:        'community',
+  new_follower:         'community',
+  connection_request:   'community',
+  connection_accepted:  'community',
+  event:                'community',
+  event_rsvp:           'community',
+  event_reminder:       'community',
+  job_application:      'community',
+  new_job_application:  'community',
+  job_match:            'community',
+  // System
+  system:               'system',
+  onboarding:           'system',
+  badge:                'system',
 }
 
 const TYPE_ICON: Record<DBType, string> = {
-  message:   '💬',
-  order:     '📦',
-  trust:     '₮',
-  review:    '⭐',
-  gig_liked: '❤️',
-  system:    '🔔',
+  message:              '💬',
+  new_message:          '💬',
+  order:                '📦',
+  order_placed:         '🛒',
+  order_update:         '📦',
+  trust:                '₮',
+  wallet:               '₮',
+  wallet_transfer:      '₮',
+  payment:              '💳',
+  transfer_received:    '₮',
+  transfer_sent:        '₮',
+  review:               '⭐',
+  review_received:      '⭐',
+  gig_liked:            '❤️',
+  post_like:            '👍',
+  comment_like:         '❤️',
+  listing_liked:        '❤️',
+  new_follower:         '🤝',
+  connection_request:   '🤝',
+  connection_accepted:  '✅',
+  event:                '📅',
+  event_rsvp:           '📅',
+  event_reminder:       '⏰',
+  job_application:      '💼',
+  new_job_application:  '💼',
+  job_match:            '🎯',
+  system:               '🔔',
+  onboarding:           '🎉',
+  badge:                '🏅',
 }
 
 const TYPE_COLOR: Record<DBType, { bg: string; color: string }> = {
-  message:   { bg: 'rgba(99,102,241,0.15)',  color: '#818cf8' },
-  order:     { bg: 'rgba(16,185,129,0.15)',  color: '#34d399' },
-  trust:     { bg: 'rgba(245,158,11,0.15)',  color: '#fbbf24' },
-  review:    { bg: 'rgba(139,92,246,0.15)',  color: '#a78bfa' },
-  gig_liked: { bg: 'rgba(239,68,68,0.15)',   color: '#f87171' },
-  system:    { bg: 'rgba(56,189,248,0.15)',  color: '#38bdf8' },
+  // Messages — teal
+  message:              { bg: 'rgba(0,212,170,0.15)',   color: '#00d4aa' },
+  new_message:          { bg: 'rgba(0,212,170,0.15)',   color: '#00d4aa' },
+  // Orders — green
+  order:                { bg: 'rgba(16,185,129,0.15)',  color: '#34d399' },
+  order_placed:         { bg: 'rgba(16,185,129,0.15)',  color: '#34d399' },
+  order_update:         { bg: 'rgba(16,185,129,0.15)',  color: '#34d399' },
+  // Payments — amber
+  trust:                { bg: 'rgba(245,158,11,0.15)',  color: '#fbbf24' },
+  wallet:               { bg: 'rgba(245,158,11,0.15)',  color: '#fbbf24' },
+  wallet_transfer:      { bg: 'rgba(245,158,11,0.15)',  color: '#fbbf24' },
+  payment:              { bg: 'rgba(245,158,11,0.15)',  color: '#fbbf24' },
+  transfer_received:    { bg: 'rgba(245,158,11,0.15)',  color: '#fbbf24' },
+  transfer_sent:        { bg: 'rgba(245,158,11,0.15)',  color: '#fbbf24' },
+  // Reviews — sky blue
+  review:               { bg: 'rgba(56,189,248,0.15)',  color: '#38bdf8' },
+  review_received:      { bg: 'rgba(56,189,248,0.15)',  color: '#38bdf8' },
+  // Social / likes — red/pink
+  gig_liked:            { bg: 'rgba(239,68,68,0.15)',   color: '#f87171' },
+  post_like:            { bg: 'rgba(239,68,68,0.15)',   color: '#f87171' },
+  comment_like:         { bg: 'rgba(239,68,68,0.15)',   color: '#f87171' },
+  listing_liked:        { bg: 'rgba(239,68,68,0.15)',   color: '#f87171' },
+  // Connections — teal
+  new_follower:         { bg: 'rgba(0,212,170,0.15)',   color: '#00d4aa' },
+  connection_request:   { bg: 'rgba(0,212,170,0.15)',   color: '#00d4aa' },
+  connection_accepted:  { bg: 'rgba(0,212,170,0.15)',   color: '#00d4aa' },
+  // Events — teal
+  event:                { bg: 'rgba(0,212,170,0.15)',   color: '#00d4aa' },
+  event_rsvp:           { bg: 'rgba(0,212,170,0.15)',   color: '#00d4aa' },
+  event_reminder:       { bg: 'rgba(245,158,11,0.15)',  color: '#fbbf24' },
+  // Jobs — amber
+  job_application:      { bg: 'rgba(245,158,11,0.15)',  color: '#fbbf24' },
+  new_job_application:  { bg: 'rgba(245,158,11,0.15)',  color: '#fbbf24' },
+  job_match:            { bg: 'rgba(245,158,11,0.15)',  color: '#fbbf24' },
+  // System — sky blue
+  system:               { bg: 'rgba(56,189,248,0.15)',  color: '#38bdf8' },
+  onboarding:           { bg: 'rgba(0,212,170,0.15)',   color: '#00d4aa' },
+  badge:                { bg: 'rgba(56,189,248,0.15)',  color: '#38bdf8' },
 }
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'all',       label: 'All' },
+  { key: 'messages',  label: 'Messages' },
   { key: 'orders',    label: 'Orders' },
   { key: 'payments',  label: 'Payments' },
-  { key: 'messages',  label: 'Messages' },
   { key: 'reviews',   label: 'Reviews' },
-  { key: 'community', label: 'Groups' },
+  { key: 'community', label: 'Community' },
   { key: 'system',    label: 'System' },
 ]
 
@@ -80,12 +184,12 @@ const DEFAULT_PREFS: Prefs = {
 }
 
 const PREF_ROWS: { key: keyof Prefs; label: string; desc: string; icon: string }[] = [
-  { key: 'messages',    label: 'Messages',      desc: 'New messages from buyers/sellers',  icon: '💬' },
-  { key: 'orders',      label: 'Orders',         desc: 'Dispatch, delivery, disputes',      icon: '📦' },
-  { key: 'trust',       label: 'Trust Tokens',   desc: 'Earned trust token notifications',  icon: '₮'  },
+  { key: 'messages',    label: 'Messages',      desc: 'New DMs and conversation replies',  icon: '💬' },
+  { key: 'orders',      label: 'Orders',         desc: 'Order placed, dispatched, delivered', icon: '📦' },
+  { key: 'trust',       label: 'Trust & Wallet', desc: 'Token earnings and transfers',      icon: '₮'  },
   { key: 'reviews',     label: 'Reviews',        desc: 'New ratings on your services',      icon: '⭐' },
-  { key: 'gig_liked',   label: 'Gig Likes',      desc: 'When someone likes your listing',   icon: '❤️' },
-  { key: 'system',      label: 'System Alerts',  desc: 'Badges and platform notices',       icon: '🔔' },
+  { key: 'gig_liked',   label: 'Likes & Follows', desc: 'Likes, follows, connections',      icon: '❤️' },
+  { key: 'system',      label: 'System Alerts',  desc: 'Events, jobs, badges, platform',    icon: '🔔' },
   { key: 'email_digest',label: 'Email Digest',   desc: 'Daily summary to your inbox',       icon: '📧' },
 ]
 
@@ -239,14 +343,17 @@ export default function NotificationsPage() {
 
   const unreadCount = notifications.filter(n => !n.read).length
 
+  const getTab = (type: string): TabKey =>
+    (TYPE_TO_TAB as Record<string, TabKey>)[type] ?? 'system'
+
   const filtered = notifications.filter(n =>
-    activeTab === 'all' ? true : TYPE_TO_TAB[n.type] === activeTab
+    activeTab === 'all' ? true : getTab(n.type) === activeTab
   )
 
   const tabUnread = (key: TabKey) =>
     key === 'all'
       ? unreadCount
-      : notifications.filter(n => TYPE_TO_TAB[n.type] === key && !n.read).length
+      : notifications.filter(n => getTab(n.type) === key && !n.read).length
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
@@ -508,8 +615,8 @@ function NotificationRow({
   onMarkRead: (id: string) => void
   onDelete:   (id: string) => void
 }) {
-  const { bg, color } = TYPE_COLOR[n.type] ?? TYPE_COLOR.system
-  const icon           = TYPE_ICON[n.type]  ?? '🔔'
+  const { bg, color } = (TYPE_COLOR as Record<string, { bg: string; color: string }>)[n.type] ?? TYPE_COLOR.system
+  const icon           = (TYPE_ICON as Record<string, string>)[n.type]  ?? '🔔'
 
   const handleWrapperClick = () => { if (!n.read) onMarkRead(n.id) }
   const handleMarkRead = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); onMarkRead(n.id) }

@@ -66,6 +66,18 @@ export default function Sidebar() {
   const supabase = supabaseRef.current
   const [userId, setUserId] = useState<string | null>(null)
   const [walletBalance, setWalletBalance] = useState<number | null>(null)
+  const [unreadNotifs, setUnreadNotifs] = useState(0)
+
+  // Fetch unread notification count
+  const fetchUnread = async () => {
+    try {
+      const res = await fetch('/api/notifications?unread=true&limit=1')
+      if (res.ok) {
+        const data = await res.json()
+        setUnreadNotifs(data.unreadCount ?? 0)
+      }
+    } catch { /* silent */ }
+  }
 
   useEffect(() => {
     const init = async () => {
@@ -79,6 +91,16 @@ export default function Sidebar() {
             .eq('user_id', session.user.id)
             .maybeSingle()
           setWalletBalance(data?.balance ?? null)
+          // Fetch unread count on mount
+          void fetchUnread()
+          // Subscribe to realtime notifications
+          supabase
+            .channel(`sidebar-notif:${session.user.id}`)
+            .on('postgres_changes', {
+              event: 'INSERT', schema: 'public', table: 'notifications',
+              filter: `user_id=eq.${session.user.id}`,
+            }, () => { setUnreadNotifs(prev => prev + 1) })
+            .subscribe()
         }
       } catch {
         // silently fail
@@ -95,9 +117,11 @@ export default function Sidebar() {
           .eq('user_id', session.user.id)
           .maybeSingle()
         setWalletBalance(data?.balance ?? null)
+        void fetchUnread()
       } else {
         setUserId(null)
         setWalletBalance(null)
+        setUnreadNotifs(0)
       }
     })
 
@@ -106,6 +130,13 @@ export default function Sidebar() {
 
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/')
+
+  // Clear unread badge when on notifications page
+  useEffect(() => {
+    if (pathname === '/notifications') {
+      setUnreadNotifs(0)
+    }
+  }, [pathname])
 
   return (
     <>
@@ -149,6 +180,7 @@ export default function Sidebar() {
               </div>
               {section.links.map(({ href, label, icon }) => {
                 const active = isActive(href)
+                const isNotifications = href === '/notifications'
                 return (
                   <Link
                     key={href}
@@ -168,7 +200,23 @@ export default function Sidebar() {
                     }}
                   >
                     <span style={{ fontSize: '15px', lineHeight: 1, flexShrink: 0 }}>{icon}</span>
-                    <span>{label}</span>
+                    <span style={{ flex: 1 }}>{label}</span>
+                    {isNotifications && unreadNotifs > 0 && (
+                      <span style={{
+                        background: '#ef4444',
+                        color: '#fff',
+                        borderRadius: 999,
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        padding: '1px 5px',
+                        lineHeight: '16px',
+                        minWidth: 16,
+                        textAlign: 'center',
+                        flexShrink: 0,
+                      }}>
+                        {unreadNotifs > 99 ? '99+' : unreadNotifs}
+                      </span>
+                    )}
                   </Link>
                 )
               })}
