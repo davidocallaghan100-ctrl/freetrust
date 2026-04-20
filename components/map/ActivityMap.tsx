@@ -17,8 +17,8 @@ interface BasePin {
 }
 interface MemberPin  extends BasePin { type: 'member';  username: string; avatar_url?: string | null; bio?: string | null }
 interface EventPin   extends BasePin { type: 'event';   title: string; starts_at?: string | null; venue_name?: string | null; ticket_price?: number | null; is_paid?: boolean }
-interface ProductPin extends BasePin { type: 'product'; title: string; price_eur?: number | null; cover_image?: string | null }
-interface ServicePin extends BasePin { type: 'service'; title: string; price_eur?: number | null; cover_image?: string | null; category?: string | null }
+interface ProductPin extends BasePin { type: 'product'; title: string; price_eur?: number | null; cover_image?: string | null; seller_id?: string | null; seller_username?: string | null }
+interface ServicePin extends BasePin { type: 'service'; title: string; price_eur?: number | null; cover_image?: string | null; category?: string | null; seller_id?: string | null; seller_username?: string | null }
 interface JobPin     extends BasePin { type: 'job';     title: string; salary_min_eur?: number | null; salary_max_eur?: number | null }
 
 type Pin = MemberPin | EventPin | ProductPin | ServicePin | JobPin
@@ -101,12 +101,24 @@ function PinPopup({ pin }: { pin: Pin }) {
 
   const btnStyle = (color: string): React.CSSProperties => ({
     display: 'inline-flex', alignItems: 'center', gap: 4,
-    marginTop: 12, padding: '7px 16px', borderRadius: 24,
+    padding: '7px 16px', borderRadius: 24,
     background: color, color: '#0a0a0f',
     fontWeight: 700, fontSize: 12, textDecoration: 'none',
     border: 'none', cursor: 'pointer',
     boxShadow: `0 2px 8px ${color}55`,
   })
+
+  const outlineBtnStyle = (color: string): React.CSSProperties => ({
+    display: 'inline-flex', alignItems: 'center', gap: 4,
+    padding: '7px 14px', borderRadius: 24,
+    background: 'transparent', color: color,
+    fontWeight: 700, fontSize: 12, textDecoration: 'none',
+    border: `1.5px solid ${color}`, cursor: 'pointer',
+  })
+
+  const btnRowStyle: React.CSSProperties = {
+    display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12,
+  }
 
   const topBar = (
     <div style={{
@@ -136,7 +148,10 @@ function PinPopup({ pin }: { pin: Pin }) {
           <span style={{ fontSize: 11, color: '#00d4aa', fontWeight: 600 }}>FreeTrust Member</span>
         </div>
         {p.bio && <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 6 }}>{p.bio.slice(0, 80)}{p.bio.length > 80 ? '…' : ''}</div>}
-        <a href={`/members/${encodeURIComponent(p.username || '')}`} style={btnStyle(cfg.color)}>View Profile →</a>
+        <div style={btnRowStyle}>
+          <a href={`/members/${encodeURIComponent(p.username || '')}`} style={btnStyle(cfg.color)}>View Profile →</a>
+          <a href={`/messages?to=${encodeURIComponent(p.id)}`} style={outlineBtnStyle(cfg.color)}>💬 Message</a>
+        </div>
       </div>
     )
   }
@@ -160,6 +175,12 @@ function PinPopup({ pin }: { pin: Pin }) {
   if (pin.type === 'product') {
     const p = pin as ProductPin
     const price = p.price_eur ? `€${Number(p.price_eur).toFixed(2)}` : ''
+    // Message target: use seller_id for /messages?to= (profile UUID)
+    const msgHref = p.seller_id
+      ? `/messages?to=${encodeURIComponent(p.seller_id)}`
+      : p.seller_username
+        ? `/members/${encodeURIComponent(p.seller_username)}?contact=true` // TODO: replace once messaging by username is supported
+        : null
     return (
       <div style={wrapStyle}>
         {topBar}
@@ -169,7 +190,10 @@ function PinPopup({ pin }: { pin: Pin }) {
         <div style={{ fontWeight: 700, fontSize: 14 }}>{p.title}</div>
         {price && <div style={{ color: cfg.color, fontWeight: 700, marginTop: 4 }}>{price}</div>}
         {loc   && <div style={{ color: '#64748b', fontSize: 11, marginTop: 2 }}>📍 {loc}</div>}
-        <a href={`/listing/${encodeURIComponent(p.id)}`} style={btnStyle(cfg.color)}>View Listing →</a>
+        <div style={btnRowStyle}>
+          <a href={`/listing/${encodeURIComponent(p.id)}`} style={btnStyle(cfg.color)}>View Listing →</a>
+          {msgHref && <a href={msgHref} style={outlineBtnStyle('#a855f7')}>💬 Message Seller</a>}
+        </div>
       </div>
     )
   }
@@ -177,6 +201,12 @@ function PinPopup({ pin }: { pin: Pin }) {
   if (pin.type === 'service') {
     const s = pin as ServicePin
     const price = s.price_eur ? `€${Number(s.price_eur).toFixed(2)}` : 'Contact for price'
+    // Message target: use seller_id for /messages?to= (profile UUID)
+    const msgHref = s.seller_id
+      ? `/messages?to=${encodeURIComponent(s.seller_id)}`
+      : s.seller_username
+        ? `/members/${encodeURIComponent(s.seller_username)}?contact=true` // TODO: replace once messaging by username is supported
+        : null
     return (
       <div style={wrapStyle}>
         {topBar}
@@ -187,7 +217,10 @@ function PinPopup({ pin }: { pin: Pin }) {
         {s.category && <div style={{ fontSize: 11, color: cfg.color, marginTop: 2, textTransform: 'capitalize' }}>{s.category}</div>}
         <div style={{ color: cfg.color, fontWeight: 700, marginTop: 4 }}>{price}</div>
         {loc && <div style={{ color: '#64748b', fontSize: 11, marginTop: 2 }}>📍 {loc}</div>}
-        <a href={`/listing/${encodeURIComponent(s.id)}`} style={btnStyle(cfg.color)}>View Service →</a>
+        <div style={btnRowStyle}>
+          <a href={`/listing/${encodeURIComponent(s.id)}`} style={btnStyle(cfg.color)}>View Service →</a>
+          {msgHref && <a href={msgHref} style={outlineBtnStyle('#f97316')}>💬 Message Seller</a>}
+        </div>
       </div>
     )
   }
