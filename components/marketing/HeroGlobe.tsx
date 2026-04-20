@@ -7,37 +7,28 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 const MAP_STYLE   = 'mapbox://styles/davos212/cmo7emfe2000x01r3b3cn2zgq'
 
-// ── Shooting star helper ───────────────────────────────────────────────────────
-type ShootingStarProps = {
-  style: React.CSSProperties
-  animName: string
-  duration: string
-  delay: string
-  width?: number
-}
-function ShootingStar({ style, animName, duration, delay, width = 60 }: ShootingStarProps) {
-  return (
-    <div style={{
-      position: 'absolute',
-      width,
-      height: 2,
-      background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.9), rgba(200,230,255,0.6), transparent)',
-      borderRadius: 2,
-      filter: 'blur(0.5px)',
-      boxShadow: '0 0 4px rgba(255,255,255,0.8), 0 0 8px rgba(147,210,255,0.5)',
-      animation: `${animName} ${duration} ease-in-out ${delay} infinite`,
-      pointerEvents: 'none',
-      ...style,
-    }} />
-  )
-}
+// Static star field — scattered dots for a space backdrop (no animation, no straight lines)
+const STARS = [
+  { top:  '8%', left: '12%', size: 2,   opacity: 0.55 },
+  { top: '18%', left: '78%', size: 2.5, opacity: 0.45 },
+  { top: '72%', left:  '7%', size: 2,   opacity: 0.5  },
+  { top: '82%', left: '88%', size: 3,   opacity: 0.35 },
+  { top:  '5%', left: '55%', size: 2,   opacity: 0.6  },
+  { top: '60%', left: '92%', size: 2.5, opacity: 0.4  },
+  { top: '88%', left: '30%', size: 2,   opacity: 0.5  },
+  { top: '32%', left:  '4%', size: 3,   opacity: 0.3  },
+  { top: '48%', left: '96%', size: 2,   opacity: 0.45 },
+  { top: '92%', left: '65%', size: 2.5, opacity: 0.4  },
+  { top: '15%', left: '38%', size: 1.5, opacity: 0.5  },
+  { top: '68%', left: '48%', size: 2,   opacity: 0.35 },
+]
 
 // ── HeroGlobe — Mapbox GL globe with auto-rotation ────────────────────────────
 export default function HeroGlobe({ size = 220 }: { size?: number }) {
   const mapRef  = useRef<MapRef | null>(null)
   const bearRef = useRef(0)
   const rafRef  = useRef<number>(0)
-  const pad     = 80
+  const pad     = 60
 
   useEffect(() => {
     // Wait for map to load then start slow rotation
@@ -55,20 +46,12 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
 
   return (
     <>
-      {/* Keyframes for shooting stars + rings + pin pulse */}
+      {/* Keyframes for rings + pin pulse only — no shooting stars */}
       <style>{`
         @keyframes hg-spin-cw  { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes hg-spin-ccw { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
         @keyframes hg-glow     { 0%,100% { box-shadow: 0 0 0 2px rgba(200,235,255,0.7), 0 0 35px rgba(56,189,248,0.8), 0 0 70px rgba(56,189,248,0.4); } 50% { box-shadow: 0 0 0 2.5px rgba(220,245,255,0.9), 0 0 50px rgba(56,189,248,1), 0 0 100px rgba(56,189,248,0.55); } }
         @keyframes hg-pin      { 0%,100% { transform: scale(1); opacity:1; } 50% { transform: scale(2); opacity:0.4; } }
-        @keyframes hg-shoot-1  { 0%,82%,100%{ opacity:0; transform:translate(-70px,-25px) rotate(-25deg) scaleX(0.3); } 85%{ opacity:1; transform:translate(0,0) rotate(-25deg) scaleX(1); } 90%{ opacity:0; transform:translate(50px,18px) rotate(-25deg) scaleX(0.5); } }
-        @keyframes hg-shoot-2  { 0%,68%,100%{ opacity:0; transform:translate(-90px,10px) rotate(-15deg) scaleX(0.3); } 71%{ opacity:0.9; transform:translate(0,0) rotate(-15deg) scaleX(1); } 76%{ opacity:0; transform:translate(60px,-22px) rotate(-15deg) scaleX(0.5); } }
-        @keyframes hg-shoot-3  { 0%,55%,100%{ opacity:0; transform:translate(-50px,-40px) rotate(-35deg) scaleX(0.3); } 58%{ opacity:1; transform:translate(0,0) rotate(-35deg) scaleX(1); } 63%{ opacity:0; transform:translate(35px,28px) rotate(-35deg) scaleX(0.5); } }
-        @keyframes hg-shoot-4  { 0%,40%,100%{ opacity:0; transform:translate(-75px,5px) rotate(-20deg) scaleX(0.3); } 43%{ opacity:0.85; transform:translate(0,0) rotate(-20deg) scaleX(1); } 48%{ opacity:0; transform:translate(55px,-15px) rotate(-20deg) scaleX(0.5); } }
-        @keyframes hg-shoot-5  { 0%,25%,100%{ opacity:0; transform:translate(-60px,-15px) rotate(-30deg) scaleX(0.3); } 28%{ opacity:1; transform:translate(0,0) rotate(-30deg) scaleX(1); } 33%{ opacity:0; transform:translate(45px,10px) rotate(-30deg) scaleX(0.5); } }
-        @keyframes hg-shoot-6  { 0%,90%,100%{ opacity:0; transform:translate(-85px,20px) rotate(-10deg) scaleX(0.3); } 93%{ opacity:0.9; transform:translate(0,0) rotate(-10deg) scaleX(1); } 97%{ opacity:0; transform:translate(65px,-30px) rotate(-10deg) scaleX(0.5); } }
-        @keyframes hg-shoot-7  { 0%,10%,100%{ opacity:0; transform:translate(-65px,-30px) rotate(-40deg) scaleX(0.3); } 13%{ opacity:1; transform:translate(0,0) rotate(-40deg) scaleX(1); } 18%{ opacity:0; transform:translate(40px,20px) rotate(-40deg) scaleX(0.5); } }
-        @keyframes hg-shoot-8  { 0%,48%,100%{ opacity:0; transform:translate(-55px,15px) rotate(-18deg) scaleX(0.3); } 51%{ opacity:0.85; transform:translate(0,0) rotate(-18deg) scaleX(1); } 56%{ opacity:0; transform:translate(40px,-12px) rotate(-18deg) scaleX(0.5); } }
       `}</style>
 
       <div style={{
@@ -81,15 +64,20 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
         overflow: 'visible',
         flexShrink: 0,
       }}>
-        {/* ── Shooting stars ── */}
-        <ShootingStar style={{ top: 10, left: 20 }}         animName="hg-shoot-1" duration="7s"   delay="0s"    width={65} />
-        <ShootingStar style={{ top: 30, right: 15 }}        animName="hg-shoot-2" duration="9s"   delay="1.2s"  width={55} />
-        <ShootingStar style={{ top: '60%', left: -10 }}     animName="hg-shoot-3" duration="8s"   delay="2.5s"  width={50} />
-        <ShootingStar style={{ bottom: 40, right: 10 }}     animName="hg-shoot-4" duration="7.5s" delay="3.8s"  width={70} />
-        <ShootingStar style={{ top: '15%', right: 25 }}     animName="hg-shoot-5" duration="10s"  delay="0.7s"  width={60} />
-        <ShootingStar style={{ bottom: 20, left: 30 }}      animName="hg-shoot-6" duration="8.5s" delay="4.5s"  width={45} />
-        <ShootingStar style={{ top: 5, left: '45%' }}       animName="hg-shoot-7" duration="9.5s" delay="5.5s"  width={58} />
-        <ShootingStar style={{ bottom: '10%', right: 40 }}  animName="hg-shoot-8" duration="7s"   delay="2s"    width={52} />
+        {/* ── Static star field ── */}
+        {STARS.map((s, i) => (
+          <span key={i} style={{
+            position: 'absolute',
+            top: s.top,
+            left: s.left,
+            width: s.size,
+            height: s.size,
+            borderRadius: '50%',
+            background: '#fff',
+            opacity: s.opacity,
+            pointerEvents: 'none',
+          }} />
+        ))}
 
         {/* ── Globe wrapper ── */}
         <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
