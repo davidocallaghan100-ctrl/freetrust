@@ -45,7 +45,7 @@ const sections = [
             ['Usage Data', 'Information about how you use FreeTrust, including pages visited, features used, and interactions with other users.'],
             ['Device & Technical Data', 'IP address, browser type, operating system, and device identifiers collected automatically when you access our platform.'],
           ].map(([label, desc]) => (
-            <li key={label} className="pl-4 border-l-2 border-[#6c63ff]">
+            <li key={label} className="pl-4 border-l-2 border-[#38bdf8]">
               <span className="text-white font-medium">{label}:</span>{' '}
               <span className="text-[#94a3b8]">{desc}</span>
             </li>
@@ -118,7 +118,7 @@ const sections = [
             delete your stored Google Calendar tokens immediately.
           </li>
         </ul>
-        <p className="mt-3 p-3 rounded-xl bg-[#6c63ff]/10 border border-[#6c63ff]/30 text-[#94a3b8]">
+        <p className="mt-3 p-3 rounded-xl bg-[#38bdf8]/10 border border-[#38bdf8]/30 text-[#94a3b8]">
           <strong className="text-white">In summary:</strong> We access your Google Calendar solely to
           sync your FreeTrust gigs, events, and reminders. We do not share your calendar data with third
           parties. You can disconnect at any time from Settings → Calendar.
@@ -259,7 +259,7 @@ export default function PrivacyPage() {
             ← Back to FreeTrust
           </Link>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-[#6c63ff]/20 flex items-center justify-center text-xl">
+            <div className="w-10 h-10 rounded-xl bg-[#38bdf8]/20 flex items-center justify-center text-xl">
               🔒
             </div>
             <h1 className="text-2xl font-bold text-white">Privacy Policy</h1>

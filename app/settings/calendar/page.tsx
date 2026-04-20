@@ -187,8 +187,8 @@ export default function CalendarSettingsPage() {
         {/* ── Info box when not connected ── */}
         {!settings?.connected && (
           <div style={{
-            background:   'rgba(108,99,255,0.07)',
-            border:       '1px solid rgba(108,99,255,0.2)',
+            background:   'rgba(56,189,248,0.07)',
+            border:       '1px solid rgba(56,189,248,0.2)',
             borderRadius: 'var(--radius-md)',
             padding:      '1.25rem',
           }}>

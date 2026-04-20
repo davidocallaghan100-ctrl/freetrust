@@ -26,7 +26,7 @@ export default function CheckoutButton({ label = "Buy Now", className = "" }: Ch
       className={className}
       style={{
         padding: "0.75rem 1.5rem",
-        background: "var(--color-primary, #6c63ff)",
+        background: "var(--color-primary, #38bdf8)",
         color: "#fff",
         border: "none",
         borderRadius: 8,
