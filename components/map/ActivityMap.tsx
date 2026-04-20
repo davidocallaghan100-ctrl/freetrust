@@ -45,11 +45,18 @@ interface JobPin extends BasePin {
 type Pin = MemberPin | EventPin | ProductPin | JobPin
 
 // ─── Config ──────────────────────────────────────────────────────────────────
-const LAYER_CONFIG: Record<PinType, { label: string; emoji: string; color: string }> = {
-  member:  { label: 'Members',  emoji: '👤', color: '#6c63ff' },
-  event:   { label: 'Events',   emoji: '🎟️', color: '#f59e0b' },
-  product: { label: 'Products', emoji: '📦', color: '#00d4aa' },
-  job:     { label: 'Jobs',     emoji: '💼', color: '#38bdf8' },
+const LAYER_CONFIG: Record<PinType, { label: string; emoji: string; color: string; glow: string }> = {
+  member:  { label: 'Members',  emoji: '👤', color: '#6c63ff', glow: 'rgba(108,99,255,0.6)' },
+  event:   { label: 'Events',   emoji: '🎟️', color: '#f59e0b', glow: 'rgba(245,158,11,0.6)' },
+  product: { label: 'Products', emoji: '📦', color: '#00d4aa', glow: 'rgba(0,212,170,0.6)' },
+  job:     { label: 'Jobs',     emoji: '💼', color: '#38bdf8', glow: 'rgba(56,189,248,0.6)' },
+}
+
+function buildMarkerHtml(color: string, glow: string): string {
+  return `<div style="position:relative;width:36px;height:36px;display:flex;align-items:center;justify-content:center">
+    <div style="position:absolute;inset:-6px;background:radial-gradient(circle,${glow} 0%,transparent 70%);border-radius:50%;pointer-events:none"></div>
+    <div style="width:16px;height:16px;background:radial-gradient(circle,#ffffff 0%,${color} 45%,${color}cc 100%);border-radius:50%;box-shadow:0 0 10px 3px ${glow},0 0 20px 6px ${color}44;cursor:pointer;flex-shrink:0"></div>
+  </div>`
 }
 
 function esc(s: string): string {
@@ -133,7 +140,7 @@ export default function ActivityMap() {
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+      style: 'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json',
       center: [0, 20],
       zoom: 2,
       attributionControl: false,
@@ -169,7 +176,8 @@ export default function ActivityMap() {
       const cfg = LAYER_CONFIG[pin.type]
 
       const el = document.createElement('div')
-      el.innerHTML = `<div style="background:${cfg.color};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid rgba(255,255,255,0.9);box-shadow:0 2px 10px rgba(0,0,0,0.5);cursor:pointer">${cfg.emoji}</div>`
+      el.style.overflow = 'visible'
+      el.innerHTML = buildMarkerHtml(cfg.color, cfg.glow)
 
       const popup = new maplibregl.Popup({
         closeButton: true,
@@ -290,10 +298,10 @@ export default function ActivityMap() {
                 <span style={{
                   width: 8, height: 8, borderRadius: '50%',
                   background: active ? cfg.color : '#55556a',
-                  boxShadow: active ? `0 0 6px ${cfg.color}` : 'none',
+                  boxShadow: active ? `0 0 8px 2px ${cfg.glow}` : 'none',
                   flexShrink: 0,
                 }} />
-                {cfg.emoji} {cfg.label}
+                {cfg.label}
               </button>
             )
           })}

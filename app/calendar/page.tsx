@@ -551,10 +551,23 @@ function CalendarPageInner() {
 
   // ── Google connect ────────────────────────────────────────────────────────
   async function handleGoogleConnect() {
-    const res = await fetch('/api/calendar/google/connect', { method: 'POST' })
-    if (!res.ok) { showToast('Failed to start Google auth', 'error'); return }
-    const { url } = await res.json()
-    window.location.href = url
+    try {
+      const res = await fetch('/api/calendar/google/connect', { method: 'POST' })
+      if (res.status === 401) {
+        // Not logged in — redirect to login
+        router.push('/login?next=/calendar')
+        return
+      }
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        showToast(d.error ?? 'Failed to connect Google Calendar', 'error')
+        return
+      }
+      const { url } = await res.json()
+      window.location.href = url
+    } catch {
+      showToast('Failed to connect Google Calendar', 'error')
+    }
   }
 
   // ── Google sync ───────────────────────────────────────────────────────────

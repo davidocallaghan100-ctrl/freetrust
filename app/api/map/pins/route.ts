@@ -14,13 +14,13 @@ export async function GET() {
 
     const [membersResult, eventsResult, productsResult, jobsResult] =
       await Promise.allSettled([
-        // Members with location
+        // Members with location (no onboarding_complete filter — include all located users)
         supabase
           .from('profiles')
           .select('id, username, avatar_url, bio, city, country, latitude, longitude, account_type')
           .not('latitude', 'is', null)
           .not('longitude', 'is', null)
-          .eq('onboarding_complete', true)
+          .not('username', 'is', null)
           .limit(500),
 
         // Upcoming published in-person events
@@ -47,7 +47,6 @@ export async function GET() {
           .select('id, title, salary_min_eur, salary_max_eur, latitude, longitude, city, country')
           .not('latitude', 'is', null)
           .eq('status', 'active')
-          .eq('is_remote', false)
           .limit(500),
       ])
 
