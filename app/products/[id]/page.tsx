@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { formatDistanceToNow } from 'date-fns'
 import { useCurrency } from '@/context/CurrencyContext'
 import { createClient as createAnonClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import ListingQualityBadge from '@/components/marketplace/ListingQualityBadge'
+import ReviewsSection from '@/components/ReviewsSection'
 
 const AppleGooglePayButton = dynamic(() => import('@/components/payments/AppleGooglePayButton'), { ssr: false })
 
@@ -710,52 +710,19 @@ export default function ProductDetailPage() {
               </div>
             )}
 
-            {/* Reviews */}
+            {/* Reviews — powered by ReviewsSection component */}
             {tab === 'reviews' && (
-              reviews.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '3rem 1rem', color: muted }}>
-                  <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>⭐</div>
-                  <p style={{ fontWeight: 600, marginBottom: 4, color: '#94a3b8' }}>No reviews yet</p>
-                  <p style={{ fontSize: '0.82rem' }}>Be the first to review this product.</p>
-                </div>
-              ) : (
-                <div className="pd-reviews-grid" style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '1.5rem', maxWidth: 900 }}>
-                  {/* Summary */}
-                  <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 14, padding: '1.5rem', textAlign: 'center', height: 'fit-content' }}>
-                    <div style={{ fontSize: '3.5rem', fontWeight: 900, lineHeight: 1, color: text }}>{avgRating.toFixed(1)}</div>
-                    <Stars rating={avgRating} size="1rem" />
-                    <div style={{ fontSize: '0.75rem', color: muted, marginTop: 6 }}>Based on {reviewCount} review{reviewCount !== 1 ? 's' : ''}</div>
-                  </div>
-
-                  {/* Review list */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {reviews.map(rev => {
-                      const reviewer = Array.isArray(rev.reviewer) ? rev.reviewer[0] : rev.reviewer
-                      const reviewerName = reviewer?.full_name?.trim() || 'Anonymous'
-                      const reviewerAvatar = reviewer?.avatar_url
-                        || `https://ui-avatars.com/api/?name=${encodeURIComponent(reviewerName)}&background=8b5cf6&color=fff&size=40`
-                      return (
-                        <div key={rev.id} style={{ background: card, border: `1px solid ${border}`, borderRadius: 14, padding: '1.1rem' }}>
-                          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                            <img src={reviewerAvatar} alt={reviewerName} style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                            <div style={{ flex: 1 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4 }}>
-                                <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>{reviewerName}</span>
-                                <span style={{ fontSize: '0.72rem', color: muted }}>
-                                  {formatDistanceToNow(new Date(rev.created_at), { addSuffix: true })}
-                                </span>
-                              </div>
-                              <Stars rating={rev.rating} />
-                              {rev.title && <p style={{ fontSize: '0.85rem', fontWeight: 600, color: text, margin: '0.4rem 0 0.25rem' }}>{rev.title}</p>}
-                              {rev.content && <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.6, margin: '0.25rem 0 0' }}>{rev.content}</p>}
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )
+              <div style={{ maxWidth: 820 }}>
+                <ReviewsSection
+                  listingId={id}
+                  revieweeId={listing.seller_id}
+                  canReview={!!currentUserId && currentUserId !== listing.seller_id}
+                  onReviewSubmitted={() => {
+                    // Refresh listing to update avg_rating display in the rating row
+                    setListing(prev => prev ? { ...prev, review_count: (prev.review_count || 0) + 1 } : prev)
+                  }}
+                />
+              </div>
             )}
           </div>
         </div>
