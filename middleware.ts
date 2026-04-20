@@ -46,7 +46,7 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
       // blob: required for Mapbox GL JS worker scripts injected as blob: URLs
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://js.stripe.com https://www.googletagmanager.com https://api.mapbox.com https://unpkg.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.mapbox.com https://unpkg.com",
-      "font-src 'self' https://fonts.gstatic.com https://api.mapbox.com data:",
+      "font-src 'self' https://fonts.gstatic.com https://api.mapbox.com https://tiles.openfreemap.org data:",
       "img-src 'self' data: blob: https: http:",
       "media-src 'self' https:",
       // blob: required for Mapbox GL tile worker blob URLs in connect-src

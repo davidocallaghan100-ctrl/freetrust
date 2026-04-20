@@ -11,7 +11,8 @@ const AUTH_PATHS = ['/login', '/register', '/onboarding']
 
 // Per-session flag — we only trigger IP-based location init once per
 // browser tab to avoid hammering the ipapi.co endpoint.
-const GEO_INIT_SESSION_KEY = 'freetrust_geo_init_v1'
+// v2: bumped version so existing members without location re-trigger on next load.
+const GEO_INIT_SESSION_KEY = 'freetrust_geo_init_v2'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -22,6 +23,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // their IP. The server checks the profile first and no-ops if already
   // set, so this is safe to call on every mount. We gate it on sessionStorage
   // so we don't re-check within the same tab.
+  // v2: session key bumped so existing members without location re-trigger.
   useEffect(() => {
     if (isAuth) return
     if (typeof window === 'undefined') return

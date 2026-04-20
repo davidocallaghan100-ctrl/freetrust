@@ -174,7 +174,7 @@ const nextConfig = {
               // Both worker-src and child-src needed for MapLibre GL web workers across browsers
               "worker-src 'self' blob:",
               "child-src 'self' blob:",
-              "font-src 'self' https://fonts.gstatic.com data:",
+              "font-src 'self' https://fonts.gstatic.com https://tiles.openfreemap.org data:",
               "frame-src 'self'",
             ].join('; '),
           },
