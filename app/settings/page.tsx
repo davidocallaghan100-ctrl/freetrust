@@ -54,6 +54,8 @@ interface Profile {
   tiktok_url?:    string | null
   youtube_url?:   string | null
   website_url?:   string | null
+  // Map privacy
+  show_on_map?: boolean | null
 }
 
 interface TrustBalance {
@@ -653,7 +655,8 @@ function PrivacyTab({ profile, onSaved }: { profile: Profile; onSaved: (p: Profi
   const [visibility, setVisibility] = useState<string>((priv.profile_visibility as string) ?? 'public')
   const [showTrust, setShowTrust] = useState<boolean>((priv.show_trust_score as boolean) ?? true)
   const [showOnline, setShowOnline] = useState<boolean>((priv.show_online_status as boolean) ?? true)
-  const [showOnMap, setShowOnMap] = useState<boolean>(priv.show_on_map === false ? false : true)
+  const [showOnMap, setShowOnMap] = useState<boolean>(profile.show_on_map !== false)
+  const [mapSaving, setMapSaving] = useState(false)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
 
@@ -669,15 +672,126 @@ function PrivacyTab({ profile, onSaved }: { profile: Profile; onSaved: (p: Profi
           profile_visibility: visibility,
           show_trust_score: showTrust,
           show_online_status: showOnline,
-          show_on_map: showOnMap,
         }),
       })
       if (res.ok) {
-        onSaved({ ...profile, privacy_settings: { profile_visibility: visibility, show_trust_score: showTrust, show_online_status: showOnline, show_on_map: showOnMap } })
+        onSaved({ ...profile, privacy_settings: { profile_visibility: visibility, show_trust_score: showTrust, show_online_status: showOnline } })
         showToast('Privacy settings saved!')
       } else {
         showToast('Failed to save.')
       }
+    } catch {
+      showToast('Network error.')
+    }
+    setSaving(false)
+  }
+
+  const handleMapToggle = async (next: boolean) => {
+    setShowOnMap(next)
+    setMapSaving(true)
+    try {
+      const res = await fetch('/api/profile/map-privacy', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ show_on_map: next }),
+      })
+      if (res.ok) {
+        onSaved({ ...profile, show_on_map: next })
+        showToast(next ? 'You now appear on the Activity Map' : 'You are hidden from the Activity Map')
+      } else {
+        setShowOnMap(!next) // rollback
+        showToast('Failed to update. Try again.')
+      }
+    } catch {
+      setShowOnMap(!next) // rollback
+      showToast('Network error.')
+    }
+    setMapSaving(false)
+  }
+
+  return (
+    <div>
+      <div className="card">
+        <h2 className="section-title">Privacy</h2>
+        <p className="section-desc">Control who can see your profile and data.</p>
+
+        <div className="toggle-row">
+          <div>
+            <div className="toggle-label">Profile visibility</div>
+            <div className="toggle-desc">Who can view your profile page</div>
+          </div>
+          <select className="select-input" value={visibility} onChange={e => setVisibility(e.target.value)}>
+            <option value="public">Public</option>
+            <option value="connections">Connections Only</option>
+            <option value="private">Private</option>
+          </select>
+        </div>
+
+        <div className="toggle-row">
+          <div>
+            <div className="toggle-label">Show Trust score publicly</div>
+            <div className="toggle-desc">Display your ₮ balance on your profile</div>
+          </div>
+          <label className="toggle">
+            <input type="checkbox" checked={showTrust} onChange={e => setShowTrust(e.target.checked)} />
+            <span className="toggle-slider" />
+          </label>
+        </div>
+
+        <div className="toggle-row">
+          <div>
+            <div className="toggle-label">Show online status</div>
+            <div className="toggle-desc">Let others see when you're active</div>
+          </div>
+          <label className="toggle">
+            <input type="checkbox" checked={showOnline} onChange={e => setShowOnline(e.target.checked)} />
+            <span className="toggle-slider" />
+          </label>
+        </div>
+
+        <div style={{ marginTop: 20 }}>
+          <button className="save-btn" onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving…' : 'Save privacy settings'}
+          </button>
+        </div>
+      </div>
+
+      {/* Map Privacy */}
+      <div className="card" style={{ marginTop: 16 }}>
+        <h2 className="section-title">📍 Activity Map</h2>
+        <p className="section-desc">Control whether your profile appears as a pin on the FreeTrust Activity Map.</p>
+
+        <div className="toggle-row" style={{ opacity: mapSaving ? 0.6 : 1 }}>
+          <div>
+            <div className="toggle-label">Show me on the Activity Map</div>
+            <div className="toggle-desc">
+              {showOnMap
+                ? 'Your profile is visible to other members on the map'
+                : 'Your profile is hidden from the Activity Map'}
+            </div>
+          </div>
+          <label className="toggle">
+            <input
+              type="checkbox"
+              checked={showOnMap}
+              disabled={mapSaving}
+              onChange={e => handleMapToggle(e.target.checked)}
+            />
+            <span className="toggle-slider" />
+          </label>
+        </div>
+
+        <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>
+          ℹ️ Your location is only shown if you have set a city in your{' '}
+          <a href="/settings?tab=account" style={{ color: '#38bdf8', textDecoration: 'none' }}>Account settings</a>.
+          Disabling this hides you immediately from the map.
+        </div>
+      </div>
+
+      {toast && <div className="success-toast">{toast}</div>}
+    </div>
+  )
+}
     } catch {
       showToast('Network error.')
     }

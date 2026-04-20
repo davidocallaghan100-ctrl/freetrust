@@ -36,7 +36,7 @@ export default async function MapPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    redirect('/login')
+    redirect('/auth/login?redirect=/map')
   }
 
   return (
