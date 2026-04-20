@@ -52,38 +52,30 @@ export default async function MapPage() {
       background: '#0a0a0f',
       color: '#f1f5f9',
     }}>
-      {/* ── Header ── */}
-      <div style={{ padding: '16px 20px 0', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
-          {/* Icon circle */}
-          <div style={{
-            width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-            background: 'linear-gradient(135deg, #38bdf8, #00d4aa)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 22,
-            boxShadow: '0 4px 16px rgba(56,189,248,0.35)',
-          }}>
-            🗺️
-          </div>
-          <div>
-            <h1 style={{
-              margin: 0, fontSize: 22, fontWeight: 700,
-              background: 'linear-gradient(135deg, #f1f5f9, #94a3b8)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}>
-              Activity Map
-            </h1>
-            <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>
-              Discover members, events, products &amp; jobs near you
-            </p>
-          </div>
-        </div>
-        {/* Divider */}
+      {/* ── Compact header ── */}
+      <div style={{
+        padding: '10px 16px 8px',
+        flexShrink: 0,
+        display: 'flex', alignItems: 'center', gap: 10,
+        borderBottom: '1px solid rgba(42,42,58,0.6)',
+        background: 'rgba(10,10,15,0.6)',
+      }}>
         <div style={{
-          height: 1,
-          background: 'linear-gradient(90deg, rgba(56,189,248,0.5), rgba(0,212,170,0.25), transparent)',
-        }} />
+          width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+          background: 'linear-gradient(135deg, #38bdf8, #00d4aa)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 16, boxShadow: '0 2px 10px rgba(56,189,248,0.3)',
+        }}>🗺️</div>
+        <div>
+          <h1 style={{
+            margin: 0, fontSize: 16, fontWeight: 700, lineHeight: 1.2,
+            background: 'linear-gradient(135deg, #f1f5f9, #94a3b8)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          }}>Activity Map</h1>
+          <p style={{ margin: 0, fontSize: 11, color: '#64748b', lineHeight: 1.2 }}>
+            Members · Events · Products · Services · Jobs
+          </p>
+        </div>
       </div>
 
       {/* ── Map (fills remaining height) ── */}
