@@ -24,6 +24,14 @@ const withPWA = nextPwa({
       method: 'GET',
     },
     {
+      // Mapbox tile requests must NEVER be intercepted by the service worker.
+      // Mapbox GL JS fetches tiles from *.mapbox.com as .png (and other formats)
+      // via web workers. If the SW caches or blocks these, the map canvas stays black.
+      // This NetworkOnly rule must come BEFORE the generic image rule below.
+      urlPattern: /^https:\/\/[^/]*\.mapbox\.com\/.*/i,
+      handler: 'NetworkOnly',
+    },
+    {
       urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
       handler: 'CacheFirst',
       options: {
@@ -146,11 +154,13 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://api.mapbox.com https://unpkg.com",
+              // blob: in script-src is required for Mapbox GL JS web worker inline scripts
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://api.mapbox.com https://unpkg.com",
               "style-src 'self' 'unsafe-inline' https://api.mapbox.com https://unpkg.com https://fonts.googleapis.com",
-              // Allow all https images — Mapbox tiles come from various CDN subdomains
+              // Allow all https images + blob — Mapbox tiles come from various CDN subdomains
               "img-src 'self' data: blob: https:",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://*.mapbox.com https://*.cartocdn.com https://basemaps.cartocdn.com https://unpkg.com",
+              // blob: in connect-src needed for Mapbox tile worker blob URLs
+              "connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://*.mapbox.com https://*.tiles.mapbox.com https://*.cartocdn.com https://basemaps.cartocdn.com https://unpkg.com",
               // Both worker-src and child-src needed for Mapbox GL web workers across browsers
               "worker-src 'self' blob:",
               "child-src 'self' blob:",

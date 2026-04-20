@@ -40,23 +40,22 @@ const LAYER_CONFIG: Record<PinType, { label: string; color: string; glow: string
 // ─── GlowDot marker ───────────────────────────────────────────────────────────
 function GlowDot({ color, glow }: { color: string; glow: string }) {
   return (
-    <div style={{ position: 'relative', width: 14, height: 14, overflow: 'visible', cursor: 'pointer' }}>
-      {/* outer glow halo */}
+    <div style={{ position: 'relative', width: 12, height: 12, overflow: 'visible', cursor: 'pointer' }}>
+      {/* tight outer ring */}
       <div style={{
-        position: 'absolute', top: '50%', left: '50%',
-        transform: 'translate(-50%,-50%)',
-        width: 28, height: 28,
-        background: `radial-gradient(circle, ${color}55 0%, transparent 70%)`,
+        position: 'absolute',
+        inset: -3,
         borderRadius: '50%',
+        border: `1.5px solid ${color}66`,
         pointerEvents: 'none',
       }} />
-      {/* dot */}
+      {/* sharp center dot */}
       <div style={{
-        width: 14, height: 14,
-        background: `radial-gradient(circle, #ffffff 0%, ${color} 55%, ${color}bb 100%)`,
+        width: 12, height: 12,
+        background: color,
         borderRadius: '50%',
-        boxShadow: `0 0 6px 2px ${glow}`,
-        border: '1px solid rgba(255,255,255,0.45)',
+        border: '2px solid white',
+        boxShadow: `0 0 4px 1px ${glow}, 0 1px 3px rgba(0,0,0,0.6)`,
       }} />
     </div>
   )
