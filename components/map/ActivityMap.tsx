@@ -23,9 +23,9 @@ interface JobPin     extends BasePin { type: 'job';     title: string; salary_mi
 type Pin = MemberPin | EventPin | ProductPin | JobPin
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-// Free dark tile style from CartoDB — no token required, no service-worker issues.
+// CartoDB Voyager — bright, colourful tile style. Free, no token required.
 // Uses the MapLibre open-source renderer (already installed as maplibre-gl).
-const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json'
 
 const LAYER_CONFIG: Record<PinType, { label: string; color: string; glow: string }> = {
   member:  { label: 'Members',  color: '#00d4aa', glow: 'rgba(0,212,170,0.6)'  },
