@@ -31,36 +31,42 @@ const ActivityMap = dynamic(
 
 export default function MapPage() {
   return (
+    // Use negative margins to break out of ft-page-content padding,
+    // then size to fill the viewport minus the nav+searchbar (104px).
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      minHeight: '100vh',
+      // Pull back the ft-page-content padding so we go edge-to-edge
+      margin: '-20px -20px 0',
+      // Height = full viewport minus nav (58px) + searchbar (46px)
+      height: 'calc(100vh - 104px)',
+      overflow: 'hidden',
       background: '#0a0a0f',
       color: '#f1f5f9',
     }}>
       {/* ── Header ── */}
-      <div style={{ padding: '20px 20px 0', flexShrink: 0 }}>
+      <div style={{ padding: '16px 20px 0', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
           {/* Icon circle */}
           <div style={{
-            width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
+            width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
             background: 'linear-gradient(135deg, #6c63ff, #00d4aa)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 24,
+            fontSize: 22,
             boxShadow: '0 4px 16px rgba(108,99,255,0.35)',
           }}>
             🗺️
           </div>
           <div>
             <h1 style={{
-              margin: 0, fontSize: 24, fontWeight: 700,
+              margin: 0, fontSize: 22, fontWeight: 700,
               background: 'linear-gradient(135deg, #f1f5f9, #94a3b8)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
               Activity Map
             </h1>
-            <p style={{ margin: 0, fontSize: 13, color: '#64748b' }}>
+            <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>
               Discover members, events, products &amp; jobs near you
             </p>
           </div>
@@ -69,12 +75,11 @@ export default function MapPage() {
         <div style={{
           height: 1,
           background: 'linear-gradient(90deg, #6c63ff44, #00d4aa22, transparent)',
-          marginBottom: 0,
         }} />
       </div>
 
       {/* ── Map (fills remaining height) ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         <ActivityMap />
       </div>
     </div>
