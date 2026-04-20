@@ -34,6 +34,7 @@ const DRAWER_SECTIONS = [
     links: [
       { href: '/events',        label: 'Directory',    icon: '📅' },
       { href: '/calendar',      label: 'My Calendar',  icon: '🗓️' },
+      { href: '/map',           label: 'Activity Map', icon: '🗺️' },
       { href: '/events/create', label: 'Add Event',    icon: '➕' },
     ],
   },
