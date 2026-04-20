@@ -52,10 +52,10 @@ const LAYER_CONFIG: Record<PinType, { label: string; emoji: string; color: strin
   job:     { label: 'Jobs',     emoji: '💼', color: '#38bdf8', glow: 'rgba(56,189,248,0.6)' },
 }
 
-function buildMarkerHtml(color: string, glow: string): string {
-  return `<div style="position:relative;width:36px;height:36px;display:flex;align-items:center;justify-content:center">
-    <div style="position:absolute;inset:-6px;background:radial-gradient(circle,${glow} 0%,transparent 70%);border-radius:50%;pointer-events:none"></div>
-    <div style="width:16px;height:16px;background:radial-gradient(circle,#ffffff 0%,${color} 45%,${color}cc 100%);border-radius:50%;box-shadow:0 0 10px 3px ${glow},0 0 20px 6px ${color}44;cursor:pointer;flex-shrink:0"></div>
+function buildMarkerHtml(color: string): string {
+  return `<div style="position:relative;width:14px;height:14px;overflow:visible;cursor:pointer">
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:26px;height:26px;background:radial-gradient(circle,${color}44 0%,transparent 70%);border-radius:50%;pointer-events:none"></div>
+    <div style="width:14px;height:14px;background:radial-gradient(circle,#ffffff 0%,${color} 55%,${color}bb 100%);border-radius:50%;box-shadow:0 0 5px 2px ${color}88;border:1px solid rgba(255,255,255,0.5)"></div>
   </div>`
 }
 
@@ -140,7 +140,7 @@ export default function ActivityMap() {
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: 'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json',
+      style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
       center: [0, 20],
       zoom: 2,
       attributionControl: false,
@@ -177,7 +177,9 @@ export default function ActivityMap() {
 
       const el = document.createElement('div')
       el.style.overflow = 'visible'
-      el.innerHTML = buildMarkerHtml(cfg.color, cfg.glow)
+      el.style.width = '14px'
+      el.style.height = '14px'
+      el.innerHTML = buildMarkerHtml(cfg.color)
 
       const popup = new maplibregl.Popup({
         closeButton: true,
