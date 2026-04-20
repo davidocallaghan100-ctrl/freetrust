@@ -7,6 +7,110 @@ import { FAQS } from '@/lib/faq'
 import ROICalculator from './ROICalculator'
 import { createClient } from '@/lib/supabase/client'
 
+// ── Continent paths (reusable across SVG copies) ──────────────────────────────
+function ContinentPaths() {
+  return (
+    <>
+      <path d="M18,12 C20,8 28,7 34,10 C38,12 40,18 38,24 C36,28 30,32 26,30 C20,28 14,22 18,12 Z" fill="#22c55e"/>
+      <path d="M20,28 C22,26 26,30 28,34 C26,38 20,38 18,34 C16,30 18,28 20,28 Z" fill="#16a34a"/>
+      <path d="M30,2 C34,1 38,3 38,7 C38,11 34,12 30,10 C26,8 26,3 30,2 Z" fill="#4ade80" opacity={0.7}/>
+      <path d="M54,8 C58,6 64,8 66,12 C68,16 64,20 60,20 C56,20 52,16 52,12 C52,10 53,9 54,8 Z" fill="#22c55e"/>
+      <path d="M58,2 C62,1 66,4 66,7 C64,9 60,8 58,6 C56,5 56,3 58,2 Z" fill="#4ade80"/>
+      <path d="M56,22 C62,20 70,22 72,30 C74,38 72,50 68,56 C64,60 58,60 56,54 C52,48 50,36 52,28 C53,24 54,22 56,22 Z" fill="#16a34a"/>
+      <path d="M72,28 C76,26 80,28 82,34 C80,38 76,38 74,36 C72,34 70,30 72,28 Z" fill="#22c55e"/>
+      <path d="M70,4 C80,2 100,4 106,8 C110,12 108,18 100,18 C88,18 74,16 70,12 C68,10 68,6 70,4 Z" fill="#22c55e"/>
+      <path d="M84,22 C88,20 92,22 92,28 C92,34 88,40 84,40 C80,38 78,32 80,26 C81,24 82,22 84,22 Z" fill="#4ade80"/>
+      <path d="M98,10 C108,8 118,10 122,16 C124,22 120,28 112,28 C104,28 96,24 96,18 C96,14 97,11 98,10 Z" fill="#16a34a"/>
+      <path d="M108,26 C114,24 120,28 122,34 C120,40 114,42 110,40 C106,38 104,32 106,28 C107,27 107,26 108,26 Z" fill="#22c55e"/>
+      <path d="M128,12 C130,10 134,12 134,16 C134,20 130,22 128,20 C126,18 126,14 128,12 Z" fill="#4ade80"/>
+      <path d="M114,52 C120,48 132,50 136,56 C138,62 134,70 128,72 C122,72 114,68 112,62 C110,58 112,54 114,52 Z" fill="#22c55e"/>
+      <path d="M30,36 C36,32 44,34 46,42 C48,50 46,62 42,68 C38,72 32,72 28,66 C24,58 24,46 28,40 C29,38 30,36 30,36 Z" fill="#16a34a"/>
+      <path d="M0,90 Q50,82 100,84 Q150,82 200,90 L200,100 L0,100 Z" fill="white" opacity={0.5}/>
+      <path d="M0,0 Q50,6 100,4 Q150,6 200,0 L200,8 Q150,14 100,12 Q50,14 0,8 Z" fill="white" opacity={0.4}/>
+    </>
+  )
+}
+
+// ── Rotating Globe (hero version) ─────────────────────────────────────────────
+function HeroGlobe({ size = 220 }: { size?: number }) {
+  return (
+    <div style={{ position: 'relative', width: size, height: size, borderRadius: '50%', flexShrink: 0 }}>
+      {/* Outer atmosphere rings */}
+      <div style={{
+        position: 'absolute',
+        inset: -18,
+        borderRadius: '50%',
+        border: '2px dashed rgba(56,189,248,0.3)',
+        animation: 'hg-spin-cw 14s linear infinite',
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute',
+        inset: -8,
+        borderRadius: '50%',
+        border: '1px dotted rgba(52,211,153,0.25)',
+        animation: 'hg-spin-ccw 10s linear infinite',
+        pointerEvents: 'none',
+      }} />
+      {/* Globe body */}
+      <div style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        overflow: 'hidden',
+        background: 'radial-gradient(circle at 38% 33%, #2a96d4 0%, #1565a8 40%, #0d3d6b 100%)',
+        position: 'relative',
+        boxShadow: '0 0 0 2px rgba(255,255,255,0.6), 0 0 30px rgba(56,189,248,0.7), 0 0 60px rgba(56,189,248,0.35)',
+        animation: 'hg-glow 3s ease-in-out infinite',
+      }}>
+        {/* Scrolling continents */}
+        <div style={{
+          display: 'flex',
+          width: size * 4,
+          height: size,
+          animation: 'hg-spin 18s linear infinite',
+        }}>
+          {[0, 1, 2, 3].map(i => (
+            <svg
+              key={i}
+              viewBox="0 0 200 100"
+              preserveAspectRatio="xMidYMid slice"
+              style={{ width: size, height: size, flexShrink: 0 }}
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <rect width="200" height="100" fill="transparent" />
+              <ContinentPaths />
+            </svg>
+          ))}
+        </div>
+        {/* 3D crescent highlight */}
+        <div style={{
+          position: 'absolute', inset: 0, borderRadius: '50%',
+          background: 'radial-gradient(circle at 32% 27%, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0.12) 28%, transparent 58%)',
+          pointerEvents: 'none',
+        }} />
+        {/* Atmosphere rim */}
+        <div style={{
+          position: 'absolute', inset: 0, borderRadius: '50%',
+          background: 'radial-gradient(circle at 50% 50%, transparent 52%, rgba(56,189,248,0.1) 78%, rgba(56,189,248,0.28) 100%)',
+          pointerEvents: 'none',
+        }} />
+        {/* Ireland pin */}
+        <div style={{
+          position: 'absolute',
+          top: `${size * 0.33}px`,
+          left: `${size * 0.47}px`,
+          width: 10, height: 10, borderRadius: '50%',
+          background: '#34d399',
+          boxShadow: '0 0 8px rgba(52,211,153,1), 0 0 18px rgba(52,211,153,0.6)',
+          animation: 'hg-pin 2s ease-in-out infinite',
+          zIndex: 2,
+        }} />
+      </div>
+    </div>
+  )
+}
+
 export interface HomeClientProps {
   initialCounts: {
     members:     number
@@ -379,19 +483,12 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
 
       {/* ── GLOBAL STYLES ── */}
       <style>{`
-        /* AI bubble animations */
-        @keyframes ai-spin-cw  { from { transform: rotate(0deg); }   to { transform: rotate(360deg); } }
-        @keyframes ai-spin-ccw { from { transform: rotate(0deg); }   to { transform: rotate(-360deg); } }
-        @keyframes ai-pulse    { 0%,100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.04); } }
-        @keyframes ai-breathe  { 0%,100% { transform: scale(1); }    50% { transform: scale(1.025); } }
-        @keyframes ai-core-pulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
-        /* Orbiting dot — arm rotates, dot counter-rotates to stay round */
-        @keyframes ai-orbit-arm { from { transform: rotate(0deg);   } to { transform: rotate(360deg);  } }
-        @keyframes ai-orbit-dot { from { transform: rotate(0deg);   } to { transform: rotate(-360deg); } }
-        .ai-bubble-wrap .ai-ripple-1 { inset: -8px; }
-        .ai-bubble-wrap .ai-ripple-2 { inset: -18px; }
-        .ai-bubble-wrap .ai-ripple-3 { inset: -30px; }
-        @keyframes ai-ripple { 0% { opacity: 0.6; transform: scale(1); } 100% { opacity: 0; transform: scale(1.4); } }
+        /* Hero globe animations */
+        @keyframes hg-spin     { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        @keyframes hg-glow     { 0%,100% { box-shadow: 0 0 0 2px rgba(255,255,255,0.6), 0 0 30px rgba(56,189,248,0.7), 0 0 60px rgba(56,189,248,0.35); } 50% { box-shadow: 0 0 0 2.5px rgba(255,255,255,0.8), 0 0 40px rgba(56,189,248,0.9), 0 0 80px rgba(56,189,248,0.5); } }
+        @keyframes hg-pin      { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.8); } }
+        @keyframes hg-spin-cw  { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes hg-spin-ccw { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
         @keyframes ai-wave   { 0%,100% { height: 4px; } 50% { height: 18px; } }
         .ai-wave-bar { display: inline-block; height: 4px; }
 
@@ -442,12 +539,12 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
         <div className="lp" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '3rem', flexWrap: 'wrap', justifyContent: 'center' }} >
           <div className="hero-inner" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '3rem', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
 
-            {/* Left: bubble */}
+            {/* Left: rotating globe */}
             <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'center' }} className="bubble-col">
               <style>{`
                 @media (max-width: 640px) { .bubble-col > div { transform: scale(0.78); transform-origin: center top; } }
               `}</style>
-              <AIVoiceBubble size={220} />
+              <HeroGlobe size={220} />
             </div>
 
             {/* Right: headline + CTAs */}

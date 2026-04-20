@@ -61,40 +61,44 @@ function TypingDots() {
 // ─── Rotating Globe ────────────────────────────────────────────────────────────
 // Pure CSS globe using a scrolling SVG inside a circular clip to simulate rotation.
 // Two SVG copies sit side-by-side and scroll left — creating a seamless continent loop.
-function RotatingGlobe({ size = 56 }: { size?: number }) {
-  const continentPaths = `
-    <!-- North America -->
-    <path d="M18,12 C20,8 28,7 34,10 C38,12 40,18 38,24 C36,28 30,32 26,30 C20,28 14,22 18,12 Z" fill="#22c55e"/>
-    <path d="M20,28 C22,26 26,30 28,34 C26,38 20,38 18,34 C16,30 18,28 20,28 Z" fill="#16a34a"/>
-    <!-- Greenland -->
-    <path d="M30,2 C34,1 38,3 38,7 C38,11 34,12 30,10 C26,8 26,3 30,2 Z" fill="#4ade80" opacity="0.7"/>
-    <!-- Europe -->
-    <path d="M54,8 C58,6 64,8 66,12 C68,16 64,20 60,20 C56,20 52,16 52,12 C52,10 53,9 54,8 Z" fill="#22c55e"/>
-    <!-- Scandinavia -->
-    <path d="M58,2 C62,1 66,4 66,7 C64,9 60,8 58,6 C56,5 56,3 58,2 Z" fill="#4ade80"/>
-    <!-- Africa -->
-    <path d="M56,22 C62,20 70,22 72,30 C74,38 72,50 68,56 C64,60 58,60 56,54 C52,48 50,36 52,28 C53,24 54,22 56,22 Z" fill="#16a34a"/>
-    <!-- Middle East / Arabian Peninsula -->
-    <path d="M72,28 C76,26 80,28 82,34 C80,38 76,38 74,36 C72,34 70,30 72,28 Z" fill="#22c55e"/>
-    <!-- Russia / Central Asia -->
-    <path d="M70,4 C80,2 100,4 106,8 C110,12 108,18 100,18 C88,18 74,16 70,12 C68,10 68,6 70,4 Z" fill="#22c55e"/>
-    <!-- India -->
-    <path d="M84,22 C88,20 92,22 92,28 C92,34 88,40 84,40 C80,38 78,32 80,26 C81,24 82,22 84,22 Z" fill="#4ade80"/>
-    <!-- China / SE Asia -->
-    <path d="M98,10 C108,8 118,10 122,16 C124,22 120,28 112,28 C104,28 96,24 96,18 C96,14 97,11 98,10 Z" fill="#16a34a"/>
-    <path d="M108,26 C114,24 120,28 122,34 C120,40 114,42 110,40 C106,38 104,32 106,28 C107,27 107,26 108,26 Z" fill="#22c55e"/>
-    <!-- Japan -->
-    <path d="M128,12 C130,10 134,12 134,16 C134,20 130,22 128,20 C126,18 126,14 128,12 Z" fill="#4ade80"/>
-    <!-- Australia -->
-    <path d="M114,52 C120,48 132,50 136,56 C138,62 134,70 128,72 C122,72 114,68 112,62 C110,58 112,54 114,52 Z" fill="#22c55e"/>
-    <!-- South America -->
-    <path d="M30,36 C36,32 44,34 46,42 C48,50 46,62 42,68 C38,72 32,72 28,66 C24,58 24,46 28,40 C29,38 30,36 30,36 Z" fill="#16a34a"/>
-    <!-- Antarctica hint -->
-    <path d="M0,90 Q50,82 100,84 Q150,82 200,90 L200,100 L0,100 Z" fill="white" opacity="0.5"/>
-    <!-- Arctic -->
-    <path d="M0,0 Q50,6 100,4 Q150,6 200,0 L200,8 Q150,14 100,12 Q50,14 0,8 Z" fill="white" opacity="0.4"/>
-  `
+function ContinentPaths() {
+  return (
+    <>
+      {/* North America */}
+      <path d="M18,12 C20,8 28,7 34,10 C38,12 40,18 38,24 C36,28 30,32 26,30 C20,28 14,22 18,12 Z" fill="#22c55e"/>
+      <path d="M20,28 C22,26 26,30 28,34 C26,38 20,38 18,34 C16,30 18,28 20,28 Z" fill="#16a34a"/>
+      {/* Greenland */}
+      <path d="M30,2 C34,1 38,3 38,7 C38,11 34,12 30,10 C26,8 26,3 30,2 Z" fill="#4ade80" opacity={0.7}/>
+      {/* Europe */}
+      <path d="M54,8 C58,6 64,8 66,12 C68,16 64,20 60,20 C56,20 52,16 52,12 C52,10 53,9 54,8 Z" fill="#22c55e"/>
+      {/* Scandinavia */}
+      <path d="M58,2 C62,1 66,4 66,7 C64,9 60,8 58,6 C56,5 56,3 58,2 Z" fill="#4ade80"/>
+      {/* Africa */}
+      <path d="M56,22 C62,20 70,22 72,30 C74,38 72,50 68,56 C64,60 58,60 56,54 C52,48 50,36 52,28 C53,24 54,22 56,22 Z" fill="#16a34a"/>
+      {/* Middle East */}
+      <path d="M72,28 C76,26 80,28 82,34 C80,38 76,38 74,36 C72,34 70,30 72,28 Z" fill="#22c55e"/>
+      {/* Russia / Central Asia */}
+      <path d="M70,4 C80,2 100,4 106,8 C110,12 108,18 100,18 C88,18 74,16 70,12 C68,10 68,6 70,4 Z" fill="#22c55e"/>
+      {/* India */}
+      <path d="M84,22 C88,20 92,22 92,28 C92,34 88,40 84,40 C80,38 78,32 80,26 C81,24 82,22 84,22 Z" fill="#4ade80"/>
+      {/* China / SE Asia */}
+      <path d="M98,10 C108,8 118,10 122,16 C124,22 120,28 112,28 C104,28 96,24 96,18 C96,14 97,11 98,10 Z" fill="#16a34a"/>
+      <path d="M108,26 C114,24 120,28 122,34 C120,40 114,42 110,40 C106,38 104,32 106,28 C107,27 107,26 108,26 Z" fill="#22c55e"/>
+      {/* Japan */}
+      <path d="M128,12 C130,10 134,12 134,16 C134,20 130,22 128,20 C126,18 126,14 128,12 Z" fill="#4ade80"/>
+      {/* Australia */}
+      <path d="M114,52 C120,48 132,50 136,56 C138,62 134,70 128,72 C122,72 114,68 112,62 C110,58 112,54 114,52 Z" fill="#22c55e"/>
+      {/* South America */}
+      <path d="M30,36 C36,32 44,34 46,42 C48,50 46,62 42,68 C38,72 32,72 28,66 C24,58 24,46 28,40 C29,38 30,36 30,36 Z" fill="#16a34a"/>
+      {/* Antarctica */}
+      <path d="M0,90 Q50,82 100,84 Q150,82 200,90 L200,100 L0,100 Z" fill="white" opacity={0.5}/>
+      {/* Arctic */}
+      <path d="M0,0 Q50,6 100,4 Q150,6 200,0 L200,8 Q150,14 100,12 Q50,14 0,8 Z" fill="white" opacity={0.4}/>
+    </>
+  )
+}
 
+function RotatingGlobe({ size = 56 }: { size?: number }) {
   return (
     <div style={{
       position: 'relative',
@@ -114,7 +118,7 @@ function RotatingGlobe({ size = 56 }: { size?: number }) {
         boxShadow: '0 0 0 1.5px rgba(255,255,255,0.55), 0 0 16px rgba(56,189,248,0.55), 0 0 32px rgba(56,189,248,0.25)',
         animation: 'globe-glow 3s ease-in-out infinite',
       }}>
-        {/* Scrolling continents — two SVGs side by side for seamless loop */}
+        {/* Scrolling continents — four SVG copies for seamless loop */}
         <div style={{
           display: 'flex',
           width: size * 4,
@@ -130,7 +134,7 @@ function RotatingGlobe({ size = 56 }: { size?: number }) {
               xmlns="http://www.w3.org/2000/svg"
             >
               <rect width="200" height="100" fill="transparent" />
-              <g dangerouslySetInnerHTML={{ __html: continentPaths }} />
+              <ContinentPaths />
             </svg>
           ))}
         </div>
@@ -161,8 +165,8 @@ function RotatingGlobe({ size = 56 }: { size?: number }) {
           width: size > 100 ? 8 : 5,
           height: size > 100 ? 8 : 5,
           borderRadius: '50%',
-          background: '#fff',
-          boxShadow: '0 0 6px rgba(255,255,255,0.9), 0 0 12px rgba(56,189,248,0.8)',
+          background: '#34d399',
+          boxShadow: '0 0 6px rgba(52,211,153,0.9), 0 0 12px rgba(52,211,153,0.6)',
           animation: 'pin-pulse 2s ease-in-out infinite',
           zIndex: 2,
         }} />
@@ -341,29 +345,12 @@ export default function TrustAssistant() {
 
   const accent = '#38bdf8'
 
-  // ── Globe click handler ──
-  const handleGlobeClick = () => {
-    if (open) {
-      setOpen(false)
-    } else {
-      handleOpen()
-    }
-  }
-
   return (
     <>
       <style>{`
-        @keyframes globe-spin {
-          from { transform: translateX(0); }
-          to   { transform: translateX(-50%); }
-        }
-        @keyframes globe-glow {
-          0%,100% { box-shadow: 0 0 0 1.5px rgba(255,255,255,0.55), 0 0 16px rgba(56,189,248,0.55), 0 0 32px rgba(56,189,248,0.25); }
-          50%     { box-shadow: 0 0 0 2px rgba(255,255,255,0.75), 0 0 22px rgba(56,189,248,0.75), 0 0 44px rgba(56,189,248,0.4); }
-        }
-        @keyframes pin-pulse {
-          0%,100% { opacity: 1; transform: scale(1); }
-          50%     { opacity: 0.6; transform: scale(1.5); }
+        @keyframes ta-pulse {
+          0%,100% { box-shadow: 0 0 0 0 rgba(56,189,248,0.5), 0 4px 20px rgba(56,189,248,0.4); }
+          50% { box-shadow: 0 0 0 10px rgba(56,189,248,0), 0 4px 20px rgba(56,189,248,0.4); }
         }
         @keyframes ta-dot {
           0%,80%,100% { transform: scale(0.6); opacity: 0.4; }
@@ -377,17 +364,7 @@ export default function TrustAssistant() {
           from { opacity: 0; transform: translateX(12px); }
           to { opacity: 1; transform: translateX(0); }
         }
-        .ta-globe-btn {
-          background: none;
-          border: none;
-          padding: 0;
-          cursor: pointer;
-          display: block;
-          transition: transform 0.2s ease;
-          -webkit-tap-highlight-color: transparent;
-        }
-        .ta-globe-btn:hover { transform: scale(1.07); }
-        .ta-globe-btn:active { transform: scale(0.96); }
+        .ta-bubble:hover { transform: scale(1.06) !important; }
         .ta-send:hover { background: #0ea5e9 !important; }
         .ta-quick:hover { background: rgba(56,189,248,0.15) !important; border-color: rgba(56,189,248,0.4) !important; }
         .ta-escalate:hover { background: rgba(251,191,36,0.15) !important; }
@@ -433,30 +410,23 @@ export default function TrustAssistant() {
             >✕</button>
           )}
 
-          {/* Globe button wrapper */}
-          <div className="ta-globe-wrapper" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <button
-              className="ta-globe-btn"
-              onClick={handleGlobeClick}
-              aria-label={open ? 'Close Trust Assistant' : 'Join FreeTrust'}
-            >
-              {open ? (
-                /* Close X when chat is open */
-                <div style={{
-                  width: 56, height: 56, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #1e293b, #0f172a)',
-                  border: '2px solid rgba(56,189,248,0.4)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-                  color: '#94a3b8', fontSize: 16, fontWeight: 700,
-                }}>✕</div>
-              ) : (
-                <RotatingGlobe size={56} />
-              )}
-            </button>
-
-
-          </div>
+          {/* Main bubble — original ₮ */}
+          <button
+            className="ta-bubble"
+            onClick={open ? () => setOpen(false) : handleOpen}
+            aria-label="Trust Assistant"
+            style={{
+              width: 44, height: 44, borderRadius: '50%',
+              background: 'linear-gradient(135deg,#38bdf8,#0284c7)',
+              border: 'none', cursor: 'pointer', color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              animation: !open ? 'ta-pulse 2.5s ease-in-out infinite' : 'none',
+              transition: 'transform 0.2s ease',
+              boxShadow: '0 4px 16px rgba(56,189,248,0.35)',
+            }}
+          >
+            {open ? <span style={{ fontSize: 14, fontWeight: 700 }}>✕</span> : <span style={{ fontWeight: 900, fontSize: 20, letterSpacing: '-1px', fontFamily: 'system-ui, sans-serif' }}>₮</span>}
+          </button>
         </div>
       )}
 
