@@ -38,7 +38,7 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
   const resumeTimer    = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pad            = 60
 
-  // Auto-rotate via RAF
+  // Auto-rotate via RAF + fix touch-action on canvas once map loads
   useEffect(() => {
     const step = () => {
       if (!isPausedRef.current) {
@@ -51,7 +51,36 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
       rafRef.current = requestAnimationFrame(step)
     }
     rafRef.current = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(rafRef.current)
+
+    // Once map loads, set touch-action directly on the canvas so mobile pinch-zoom works
+    const fixTouchAction = () => {
+      const map = mapRef.current?.getMap()
+      if (map) {
+        const canvas = map.getCanvas()
+        if (canvas) {
+          canvas.style.touchAction = 'pinch-zoom'
+        }
+        // Also fix the container
+        const container = map.getContainer()
+        if (container) {
+          container.style.touchAction = 'pinch-zoom'
+        }
+      }
+    }
+
+    // Poll until map is ready
+    const pollTimer = setInterval(() => {
+      const map = mapRef.current?.getMap()
+      if (map && map.isStyleLoaded()) {
+        fixTouchAction()
+        clearInterval(pollTimer)
+      }
+    }, 200)
+
+    return () => {
+      cancelAnimationFrame(rafRef.current)
+      clearInterval(pollTimer)
+    }
   }, [])
 
   const pauseRotation = () => {
@@ -78,7 +107,6 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
         @keyframes hg-pin { 0%,100% { transform: scale(1); opacity:1; } 50% { transform: scale(2); opacity:0.4; } }
         /* Clip map to circle without overflow:hidden blocking touch events */
         .hg-map-clip { clip-path: circle(50% at 50% 50%); }
-        .hg-map-clip .mapboxgl-canvas { touch-action: pinch-zoom pan-x pan-y; }
       `}</style>
 
       <div style={{
@@ -139,6 +167,7 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
               scrollZoom={true}
               doubleClickZoom={true}
               touchZoomRotate={true}
+              touchPitch={false}
               onZoomStart={pauseRotation}
               onZoomEnd={scheduleResume}
               onDragStart={pauseRotation}
