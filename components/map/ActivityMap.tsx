@@ -38,20 +38,11 @@ const LAYER_CONFIG: Record<PinType, { label: string; color: string; glow: string
 }
 
 // ─── PinMarker — image avatar or fallback glow dot ───────────────────────────
-function PinMarker({ color, glow, imageUrl }: { color: string; glow: string; imageUrl?: string | null }) {
+function PinMarker({ color, glow: _glow, imageUrl }: { color: string; glow: string; imageUrl?: string | null }) {
   if (imageUrl) {
     return (
       <div style={{ position: 'relative', width: 32, height: 32, overflow: 'visible', cursor: 'pointer' }}>
-        {/* Outer glow ring */}
-        <div style={{
-          position: 'absolute',
-          inset: -4,
-          borderRadius: '50%',
-          border: `2px solid ${color}88`,
-          boxShadow: `0 0 10px 3px ${glow}`,
-          pointerEvents: 'none',
-        }} />
-        {/* Circular image */}
+        {/* Circular image — crisp border, no glow halo */}
         <img
           src={imageUrl}
           alt=""
@@ -59,8 +50,8 @@ function PinMarker({ color, glow, imageUrl }: { color: string; glow: string; ima
             width: 32, height: 32,
             borderRadius: '50%',
             objectFit: 'cover',
-            border: `2.5px solid ${color}`,
-            boxShadow: `0 2px 8px rgba(0,0,0,0.5)`,
+            border: `2px solid ${color}`,
+            boxShadow: `0 1px 3px rgba(0,0,0,0.4)`,
             display: 'block',
           }}
           onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
@@ -68,17 +59,13 @@ function PinMarker({ color, glow, imageUrl }: { color: string; glow: string; ima
       </div>
     )
   }
-  // Fallback: solid glow dot
+  // Fallback: solid dot — sharp white outline, no colour spread
   return (
-    <div style={{ position: 'relative', width: 14, height: 14, overflow: 'visible', cursor: 'pointer' }}>
-      <div style={{
-        position: 'absolute', inset: -4, borderRadius: '50%',
-        border: `1.5px solid ${color}55`, pointerEvents: 'none',
-      }} />
+    <div style={{ position: 'relative', width: 14, height: 14, cursor: 'pointer' }}>
       <div style={{
         width: 14, height: 14, background: color, borderRadius: '50%',
         border: '2.5px solid white',
-        boxShadow: `0 0 6px 2px ${glow}, 0 1px 4px rgba(0,0,0,0.5)`,
+        boxShadow: `0 1px 3px rgba(0,0,0,0.4)`,
       }} />
     </div>
   )
