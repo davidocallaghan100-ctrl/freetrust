@@ -7,105 +7,179 @@ import { FAQS } from '@/lib/faq'
 import ROICalculator from './ROICalculator'
 import { createClient } from '@/lib/supabase/client'
 
-// ── Continent paths (reusable across SVG copies) ──────────────────────────────
+// ── Continent paths — improved realistic shapes ───────────────────────────────
 function ContinentPaths() {
   return (
     <>
-      <path d="M18,12 C20,8 28,7 34,10 C38,12 40,18 38,24 C36,28 30,32 26,30 C20,28 14,22 18,12 Z" fill="#22c55e"/>
-      <path d="M20,28 C22,26 26,30 28,34 C26,38 20,38 18,34 C16,30 18,28 20,28 Z" fill="#16a34a"/>
-      <path d="M30,2 C34,1 38,3 38,7 C38,11 34,12 30,10 C26,8 26,3 30,2 Z" fill="#4ade80" opacity={0.7}/>
-      <path d="M54,8 C58,6 64,8 66,12 C68,16 64,20 60,20 C56,20 52,16 52,12 C52,10 53,9 54,8 Z" fill="#22c55e"/>
-      <path d="M58,2 C62,1 66,4 66,7 C64,9 60,8 58,6 C56,5 56,3 58,2 Z" fill="#4ade80"/>
-      <path d="M56,22 C62,20 70,22 72,30 C74,38 72,50 68,56 C64,60 58,60 56,54 C52,48 50,36 52,28 C53,24 54,22 56,22 Z" fill="#16a34a"/>
-      <path d="M72,28 C76,26 80,28 82,34 C80,38 76,38 74,36 C72,34 70,30 72,28 Z" fill="#22c55e"/>
-      <path d="M70,4 C80,2 100,4 106,8 C110,12 108,18 100,18 C88,18 74,16 70,12 C68,10 68,6 70,4 Z" fill="#22c55e"/>
-      <path d="M84,22 C88,20 92,22 92,28 C92,34 88,40 84,40 C80,38 78,32 80,26 C81,24 82,22 84,22 Z" fill="#4ade80"/>
-      <path d="M98,10 C108,8 118,10 122,16 C124,22 120,28 112,28 C104,28 96,24 96,18 C96,14 97,11 98,10 Z" fill="#16a34a"/>
-      <path d="M108,26 C114,24 120,28 122,34 C120,40 114,42 110,40 C106,38 104,32 106,28 C107,27 107,26 108,26 Z" fill="#22c55e"/>
-      <path d="M128,12 C130,10 134,12 134,16 C134,20 130,22 128,20 C126,18 126,14 128,12 Z" fill="#4ade80"/>
-      <path d="M114,52 C120,48 132,50 136,56 C138,62 134,70 128,72 C122,72 114,68 112,62 C110,58 112,54 114,52 Z" fill="#22c55e"/>
-      <path d="M30,36 C36,32 44,34 46,42 C48,50 46,62 42,68 C38,72 32,72 28,66 C24,58 24,46 28,40 C29,38 30,36 30,36 Z" fill="#16a34a"/>
-      <path d="M0,90 Q50,82 100,84 Q150,82 200,90 L200,100 L0,100 Z" fill="white" opacity={0.5}/>
-      <path d="M0,0 Q50,6 100,4 Q150,6 200,0 L200,8 Q150,14 100,12 Q50,14 0,8 Z" fill="white" opacity={0.4}/>
+      {/* North America */}
+      <path d="M15,14 C17,9 22,7 28,8 C34,9 38,13 40,18 C42,23 40,29 36,32 C31,35 25,34 21,30 C16,26 13,20 15,14 Z" fill="#22c55e"/>
+      <path d="M22,30 C24,28 28,31 30,35 C28,40 22,41 19,37 C17,33 19,31 22,30 Z" fill="#15803d"/>
+      {/* Greenland */}
+      <path d="M28,2 C32,1 38,2 40,6 C41,10 38,13 33,12 C28,11 25,8 26,4 Z" fill="#4ade80" opacity={0.8}/>
+      {/* Iceland */}
+      <path d="M47,8 C49,7 52,8 52,10 C52,12 50,13 48,12 C46,11 46,9 47,8 Z" fill="#4ade80" opacity={0.7}/>
+      {/* Europe */}
+      <path d="M52,7 C56,5 62,6 65,10 C67,14 65,18 62,19 C58,20 54,18 52,14 C50,11 50,9 52,7 Z" fill="#22c55e"/>
+      <path d="M58,2 C61,1 65,3 65,6 C63,8 59,8 57,6 C55,5 56,3 58,2 Z" fill="#4ade80" opacity={0.8}/>
+      {/* Africa */}
+      <path d="M54,21 C60,19 68,21 71,28 C74,35 73,47 70,55 C67,61 61,63 57,59 C52,54 50,43 51,32 C52,26 52,22 54,21 Z" fill="#16a34a"/>
+      {/* Arabia */}
+      <path d="M70,26 C75,24 80,26 82,31 C81,36 77,37 73,35 C70,33 68,28 70,26 Z" fill="#22c55e"/>
+      {/* Russia / Central Asia */}
+      <path d="M68,3 C80,1 105,3 115,7 C122,11 122,17 115,19 C104,21 80,20 68,15 C63,12 63,6 68,3 Z" fill="#22c55e"/>
+      {/* India */}
+      <path d="M83,21 C87,19 92,21 93,26 C94,32 91,39 87,41 C83,40 80,34 81,27 Z" fill="#4ade80"/>
+      {/* SE Asia */}
+      <path d="M100,19 C108,17 118,19 121,25 C123,31 119,36 112,36 C105,35 99,30 99,24 Z" fill="#16a34a"/>
+      <path d="M110,34 C116,32 122,35 123,41 C121,47 115,49 110,47 C106,45 105,38 108,35 Z" fill="#22c55e"/>
+      {/* Japan */}
+      <path d="M126,11 C129,9 133,11 133,15 C133,19 130,21 127,19 C124,17 124,13 126,11 Z" fill="#4ade80"/>
+      {/* Australia */}
+      <path d="M112,50 C119,46 131,48 136,54 C140,60 137,69 130,72 C122,74 113,69 110,62 C108,56 109,52 112,50 Z" fill="#22c55e"/>
+      {/* New Zealand */}
+      <path d="M136,66 C138,64 141,65 141,68 C141,71 139,73 137,72 C135,70 135,68 136,66 Z" fill="#4ade80" opacity={0.8}/>
+      {/* South America */}
+      <path d="M28,34 C34,30 43,32 46,39 C49,47 48,59 44,67 C40,73 33,74 29,68 C24,61 23,50 26,42 Z" fill="#15803d"/>
+      {/* Antarctica */}
+      <path d="M0,88 Q30,83 60,84 Q100,82 140,84 Q170,83 200,88 L200,100 L0,100 Z" fill="rgba(240,248,255,0.85)"/>
+      {/* Arctic */}
+      <path d="M0,0 Q50,5 100,3 Q150,5 200,0 L200,7 Q150,13 100,11 Q50,13 0,7 Z" fill="rgba(240,248,255,0.85)"/>
     </>
+  )
+}
+
+// ── Shooting star helper ───────────────────────────────────────────────────────
+type ShootingStarProps = {
+  style: React.CSSProperties
+  animName: string
+  duration: string
+  delay: string
+  width?: number
+}
+function ShootingStar({ style, animName, duration, delay, width = 60 }: ShootingStarProps) {
+  return (
+    <div style={{
+      position: 'absolute',
+      width,
+      height: 2,
+      background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.9), rgba(200,230,255,0.6), transparent)',
+      borderRadius: 2,
+      filter: 'blur(0.5px)',
+      boxShadow: '0 0 4px rgba(255,255,255,0.8), 0 0 8px rgba(147,210,255,0.5)',
+      animation: `${animName} ${duration} ease-in-out ${delay} infinite`,
+      pointerEvents: 'none',
+      ...style,
+    }} />
   )
 }
 
 // ── Rotating Globe (hero version) ─────────────────────────────────────────────
 function HeroGlobe({ size = 220 }: { size?: number }) {
+  const pad = 80 // extra space around globe for shooting stars
   return (
-    <div style={{ position: 'relative', width: size, height: size, borderRadius: '50%', flexShrink: 0 }}>
-      {/* Outer atmosphere rings */}
-      <div style={{
-        position: 'absolute',
-        inset: -18,
-        borderRadius: '50%',
-        border: '2px dashed rgba(56,189,248,0.3)',
-        animation: 'hg-spin-cw 14s linear infinite',
-        pointerEvents: 'none',
-      }} />
-      <div style={{
-        position: 'absolute',
-        inset: -8,
-        borderRadius: '50%',
-        border: '1px dotted rgba(52,211,153,0.25)',
-        animation: 'hg-spin-ccw 10s linear infinite',
-        pointerEvents: 'none',
-      }} />
-      {/* Globe body */}
-      <div style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        overflow: 'hidden',
-        background: 'radial-gradient(circle at 38% 33%, #2a96d4 0%, #1565a8 40%, #0d3d6b 100%)',
-        position: 'relative',
-        boxShadow: '0 0 0 2px rgba(255,255,255,0.6), 0 0 30px rgba(56,189,248,0.7), 0 0 60px rgba(56,189,248,0.35)',
-        animation: 'hg-glow 3s ease-in-out infinite',
-      }}>
-        {/* Scrolling continents */}
+    <div style={{
+      position: 'relative',
+      width: size + pad,
+      height: size + pad,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'visible',
+      flexShrink: 0,
+    }}>
+      {/* ── Shooting stars ── */}
+      <ShootingStar style={{ top: 10, left: 20 }}          animName="hg-shoot-1" duration="7s"   delay="0s"    width={65} />
+      <ShootingStar style={{ top: 30, right: 15 }}         animName="hg-shoot-2" duration="9s"   delay="1.2s"  width={55} />
+      <ShootingStar style={{ top: '60%', left: -10 }}      animName="hg-shoot-3" duration="8s"   delay="2.5s"  width={50} />
+      <ShootingStar style={{ bottom: 40, right: 10 }}      animName="hg-shoot-4" duration="7.5s" delay="3.8s"  width={70} />
+      <ShootingStar style={{ top: '15%', right: 25 }}      animName="hg-shoot-5" duration="10s"  delay="0.7s"  width={60} />
+      <ShootingStar style={{ bottom: 20, left: 30 }}       animName="hg-shoot-6" duration="8.5s" delay="4.5s"  width={45} />
+      <ShootingStar style={{ top: 5, left: '45%' }}        animName="hg-shoot-7" duration="9.5s" delay="5.5s"  width={58} />
+      <ShootingStar style={{ bottom: '10%', right: 40 }}   animName="hg-shoot-8" duration="7s"   delay="2s"    width={52} />
+
+      {/* ── Globe wrapper ── */}
+      <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+        {/* Outer spinning rings */}
         <div style={{
-          display: 'flex',
-          width: size * 4,
-          height: size,
-          animation: 'hg-spin 18s linear infinite',
+          position: 'absolute', inset: -22, borderRadius: '50%',
+          border: '1.5px dashed rgba(147,210,255,0.35)',
+          animation: 'hg-spin-cw 14s linear infinite',
+          pointerEvents: 'none',
+        }} />
+        <div style={{
+          position: 'absolute', inset: -10, borderRadius: '50%',
+          border: '1px dotted rgba(52,211,153,0.3)',
+          animation: 'hg-spin-ccw 10s linear infinite',
+          pointerEvents: 'none',
+        }} />
+
+        {/* Globe body */}
+        <div style={{
+          width: size, height: size, borderRadius: '50%',
+          overflow: 'hidden',
+          background: 'radial-gradient(circle at 38% 33%, #1e7fc4 0%, #0e4d8c 45%, #061d3a 100%)',
+          position: 'relative',
+          boxShadow: '0 0 0 2px rgba(200,235,255,0.7), 0 0 35px rgba(56,189,248,0.8), 0 0 70px rgba(56,189,248,0.4), 0 0 120px rgba(56,189,248,0.2)',
+          animation: 'hg-glow 3s ease-in-out infinite',
         }}>
-          {[0, 1, 2, 3].map(i => (
-            <svg
-              key={i}
-              viewBox="0 0 200 100"
-              preserveAspectRatio="xMidYMid slice"
-              style={{ width: size, height: size, flexShrink: 0 }}
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <rect width="200" height="100" fill="transparent" />
-              <ContinentPaths />
-            </svg>
-          ))}
+          {/* Scrolling continents — 4 copies for seamless loop */}
+          <div style={{
+            display: 'flex',
+            width: size * 4,
+            height: size,
+            animation: 'hg-spin 18s linear infinite',
+          }}>
+            {[0, 1, 2, 3].map(i => (
+              <svg
+                key={i}
+                viewBox="0 0 200 100"
+                preserveAspectRatio="xMidYMid slice"
+                style={{ width: size, height: size, flexShrink: 0 }}
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect width="200" height="100" fill="transparent" />
+                <ContinentPaths />
+              </svg>
+            ))}
+          </div>
+
+          {/* Bright crescent highlight top-left */}
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: '50%',
+            background: 'radial-gradient(circle at 30% 25%, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.15) 20%, transparent 50%)',
+            pointerEvents: 'none',
+          }} />
+          {/* Secondary soft highlight */}
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: '50%',
+            background: 'radial-gradient(circle at 65% 70%, rgba(255,255,255,0.06) 0%, transparent 40%)',
+            pointerEvents: 'none',
+          }} />
+          {/* Dark shadow bottom-right */}
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: '50%',
+            background: 'radial-gradient(circle at 72% 75%, rgba(0,0,10,0.4) 0%, transparent 50%)',
+            pointerEvents: 'none',
+          }} />
+          {/* Atmosphere rim */}
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: '50%',
+            background: 'radial-gradient(circle at 50% 50%, transparent 48%, rgba(96,165,250,0.08) 70%, rgba(56,189,248,0.3) 88%, rgba(147,210,255,0.5) 100%)',
+            pointerEvents: 'none',
+          }} />
+
+          {/* Ireland pin */}
+          <div style={{
+            position: 'absolute',
+            top: `${size * 0.33}px`,
+            left: `${size * 0.47}px`,
+            width: 10, height: 10, borderRadius: '50%',
+            background: '#34d399',
+            boxShadow: '0 0 8px rgba(52,211,153,1), 0 0 18px rgba(52,211,153,0.6)',
+            animation: 'hg-pin 2s ease-in-out infinite',
+            zIndex: 2,
+          }} />
         </div>
-        {/* 3D crescent highlight */}
-        <div style={{
-          position: 'absolute', inset: 0, borderRadius: '50%',
-          background: 'radial-gradient(circle at 32% 27%, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0.12) 28%, transparent 58%)',
-          pointerEvents: 'none',
-        }} />
-        {/* Atmosphere rim */}
-        <div style={{
-          position: 'absolute', inset: 0, borderRadius: '50%',
-          background: 'radial-gradient(circle at 50% 50%, transparent 52%, rgba(56,189,248,0.1) 78%, rgba(56,189,248,0.28) 100%)',
-          pointerEvents: 'none',
-        }} />
-        {/* Ireland pin */}
-        <div style={{
-          position: 'absolute',
-          top: `${size * 0.33}px`,
-          left: `${size * 0.47}px`,
-          width: 10, height: 10, borderRadius: '50%',
-          background: '#34d399',
-          boxShadow: '0 0 8px rgba(52,211,153,1), 0 0 18px rgba(52,211,153,0.6)',
-          animation: 'hg-pin 2s ease-in-out infinite',
-          zIndex: 2,
-        }} />
       </div>
     </div>
   )
@@ -485,10 +559,18 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
       <style>{`
         /* Hero globe animations */
         @keyframes hg-spin     { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-        @keyframes hg-glow     { 0%,100% { box-shadow: 0 0 0 2px rgba(255,255,255,0.6), 0 0 30px rgba(56,189,248,0.7), 0 0 60px rgba(56,189,248,0.35); } 50% { box-shadow: 0 0 0 2.5px rgba(255,255,255,0.8), 0 0 40px rgba(56,189,248,0.9), 0 0 80px rgba(56,189,248,0.5); } }
-        @keyframes hg-pin      { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.8); } }
+        @keyframes hg-glow     { 0%,100% { box-shadow: 0 0 0 2px rgba(200,235,255,0.7), 0 0 35px rgba(56,189,248,0.8), 0 0 70px rgba(56,189,248,0.4); } 50% { box-shadow: 0 0 0 2.5px rgba(220,245,255,0.9), 0 0 50px rgba(56,189,248,1), 0 0 100px rgba(56,189,248,0.55); } }
+        @keyframes hg-pin      { 0%,100% { transform: scale(1); opacity:1; } 50% { transform: scale(2); opacity:0.4; } }
         @keyframes hg-spin-cw  { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes hg-spin-ccw { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+        @keyframes hg-shoot-1  { 0%,82%,100%{ opacity:0; transform:translate(-70px,-25px) rotate(-25deg) scaleX(0.3); } 85%{ opacity:1; transform:translate(0,0) rotate(-25deg) scaleX(1); } 90%{ opacity:0; transform:translate(50px,18px) rotate(-25deg) scaleX(0.5); } }
+        @keyframes hg-shoot-2  { 0%,68%,100%{ opacity:0; transform:translate(-90px,10px) rotate(-15deg) scaleX(0.3); } 71%{ opacity:0.9; transform:translate(0,0) rotate(-15deg) scaleX(1); } 76%{ opacity:0; transform:translate(60px,-22px) rotate(-15deg) scaleX(0.5); } }
+        @keyframes hg-shoot-3  { 0%,55%,100%{ opacity:0; transform:translate(-50px,-40px) rotate(-35deg) scaleX(0.3); } 58%{ opacity:1; transform:translate(0,0) rotate(-35deg) scaleX(1); } 63%{ opacity:0; transform:translate(35px,28px) rotate(-35deg) scaleX(0.5); } }
+        @keyframes hg-shoot-4  { 0%,40%,100%{ opacity:0; transform:translate(-75px,5px) rotate(-20deg) scaleX(0.3); } 43%{ opacity:0.85; transform:translate(0,0) rotate(-20deg) scaleX(1); } 48%{ opacity:0; transform:translate(55px,-15px) rotate(-20deg) scaleX(0.5); } }
+        @keyframes hg-shoot-5  { 0%,25%,100%{ opacity:0; transform:translate(-60px,-15px) rotate(-30deg) scaleX(0.3); } 28%{ opacity:1; transform:translate(0,0) rotate(-30deg) scaleX(1); } 33%{ opacity:0; transform:translate(45px,10px) rotate(-30deg) scaleX(0.5); } }
+        @keyframes hg-shoot-6  { 0%,90%,100%{ opacity:0; transform:translate(-85px,20px) rotate(-10deg) scaleX(0.3); } 93%{ opacity:0.9; transform:translate(0,0) rotate(-10deg) scaleX(1); } 97%{ opacity:0; transform:translate(65px,-30px) rotate(-10deg) scaleX(0.5); } }
+        @keyframes hg-shoot-7  { 0%,10%,100%{ opacity:0; transform:translate(-65px,-30px) rotate(-40deg) scaleX(0.3); } 13%{ opacity:1; transform:translate(0,0) rotate(-40deg) scaleX(1); } 18%{ opacity:0; transform:translate(40px,20px) rotate(-40deg) scaleX(0.5); } }
+        @keyframes hg-shoot-8  { 0%,48%,100%{ opacity:0; transform:translate(-55px,15px) rotate(-18deg) scaleX(0.3); } 51%{ opacity:0.85; transform:translate(0,0) rotate(-18deg) scaleX(1); } 56%{ opacity:0; transform:translate(40px,-12px) rotate(-18deg) scaleX(0.5); } }
         @keyframes ai-wave   { 0%,100% { height: 4px; } 50% { height: 18px; } }
         .ai-wave-bar { display: inline-block; height: 4px; }
 
