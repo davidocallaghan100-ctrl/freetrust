@@ -17,8 +17,8 @@ interface BasePin {
 }
 interface MemberPin  extends BasePin { type: 'member';  username: string; avatar_url?: string | null; bio?: string | null }
 interface EventPin   extends BasePin { type: 'event';   title: string; starts_at?: string | null; venue_name?: string | null; ticket_price?: number | null; is_paid?: boolean }
-interface ProductPin extends BasePin { type: 'product'; title: string; price_eur?: number | null; cover_image_url?: string | null }
-interface ServicePin extends BasePin { type: 'service'; title: string; price_eur?: number | null; cover_image_url?: string | null; category?: string | null }
+interface ProductPin extends BasePin { type: 'product'; title: string; price_eur?: number | null; cover_image?: string | null }
+interface ServicePin extends BasePin { type: 'service'; title: string; price_eur?: number | null; cover_image?: string | null; category?: string | null }
 interface JobPin     extends BasePin { type: 'job';     title: string; salary_min_eur?: number | null; salary_max_eur?: number | null }
 
 type Pin = MemberPin | EventPin | ProductPin | ServicePin | JobPin
@@ -163,8 +163,8 @@ function PinPopup({ pin }: { pin: Pin }) {
     return (
       <div style={wrapStyle}>
         {topBar}
-        {p.cover_image_url && (
-          <img src={p.cover_image_url} style={{ width: '100%', height: 80, objectFit: 'cover', borderRadius: 8, marginBottom: 10 }} alt="" />
+        {p.cover_image && (
+          <img src={p.cover_image} style={{ width: '100%', height: 80, objectFit: 'cover', borderRadius: 8, marginBottom: 10 }} alt="" />
         )}
         <div style={{ fontWeight: 700, fontSize: 14 }}>{p.title}</div>
         {price && <div style={{ color: cfg.color, fontWeight: 700, marginTop: 4 }}>{price}</div>}
@@ -180,8 +180,8 @@ function PinPopup({ pin }: { pin: Pin }) {
     return (
       <div style={wrapStyle}>
         {topBar}
-        {s.cover_image_url && (
-          <img src={s.cover_image_url} style={{ width: '100%', height: 80, objectFit: 'cover', borderRadius: 8, marginBottom: 10 }} alt="" />
+        {s.cover_image && (
+          <img src={s.cover_image} style={{ width: '100%', height: 80, objectFit: 'cover', borderRadius: 8, marginBottom: 10 }} alt="" />
         )}
         <div style={{ fontWeight: 700, fontSize: 14 }}>{s.title}</div>
         {s.category && <div style={{ fontSize: 11, color: cfg.color, marginTop: 2, textTransform: 'capitalize' }}>{s.category}</div>}
@@ -392,8 +392,8 @@ export default function ActivityMap() {
             // Determine image URL: avatars for members, cover images for products/services
             let imageUrl: string | null = null
             if (pin.type === 'member')  imageUrl = (pin as MemberPin).avatar_url ?? null
-            if (pin.type === 'product') imageUrl = (pin as ProductPin).cover_image_url ?? null
-            if (pin.type === 'service') imageUrl = (pin as ServicePin).cover_image_url ?? null
+            if (pin.type === 'product') imageUrl = (pin as ProductPin).cover_image ?? null
+            if (pin.type === 'service') imageUrl = (pin as ServicePin).cover_image ?? null
             return (
               <Marker
                 key={`${pin.type}-${pin.id}`}

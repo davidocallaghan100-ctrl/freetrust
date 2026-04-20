@@ -65,7 +65,7 @@ export async function GET() {
         // Will be split into 'product' vs 'service' based on category below
         supabase
           .from('listings')
-          .select('id, title, price_eur, currency_code, cover_image_url, category, seller_id, latitude, longitude, city, country, profiles!listings_seller_id_fkey(latitude, longitude, city, country)')
+          .select('id, title, price_eur, currency_code, cover_image, category, seller_id, latitude, longitude, city, country, profiles!listings_seller_id_fkey(latitude, longitude, city, country)')
           .eq('status', 'active')
           .limit(500),
 
@@ -126,7 +126,7 @@ export async function GET() {
           title: p.title,
           price_eur: p.price_eur,
           currency_code: p.currency_code,
-          cover_image_url: p.cover_image_url,
+          cover_image: (p as any).cover_image,
           category: p.category,
           latitude: lat,
           longitude: lng,
