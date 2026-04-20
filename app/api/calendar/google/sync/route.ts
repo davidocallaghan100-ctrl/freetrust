@@ -31,6 +31,10 @@ function buildOAuth2Client(token: GoogleCalendarTokenRow) {
   return oauth2
 }
 
+class TokenExpiredError extends Error {
+  constructor() { super('Google token expired and could not be refreshed. Please reconnect Google Calendar.') }
+}
+
 async function refreshTokenIfNeeded(
   oauth2: ReturnType<typeof buildOAuth2Client>,
   token:  GoogleCalendarTokenRow,
@@ -41,20 +45,30 @@ async function refreshTokenIfNeeded(
 
   if (expiry - now < 5 * 60 * 1000) {
     // Token expired or expires in < 5 min — refresh
-    const { credentials } = await oauth2.refreshAccessToken()
-    const newExpiry = credentials.expiry_date
-      ? new Date(credentials.expiry_date).toISOString()
-      : null
+    try {
+      const { credentials } = await oauth2.refreshAccessToken()
+      const newExpiry = credentials.expiry_date
+        ? new Date(credentials.expiry_date).toISOString()
+        : null
 
-    await admin
-      .from('google_calendar_tokens')
-      .update({
-        access_token: credentials.access_token!,
-        expires_at:   newExpiry,
-      })
-      .eq('user_id', token.user_id)
+      await admin
+        .from('google_calendar_tokens')
+        .update({
+          access_token: credentials.access_token!,
+          expires_at:   newExpiry,
+        })
+        .eq('user_id', token.user_id)
 
-    oauth2.setCredentials(credentials)
+      oauth2.setCredentials(credentials)
+    } catch (refreshErr) {
+      console.error('[Google sync] Token refresh failed:', refreshErr)
+      // Delete the stale token so user is prompted to reconnect
+      await admin
+        .from('google_calendar_tokens')
+        .delete()
+        .eq('user_id', token.user_id)
+      throw new TokenExpiredError()
+    }
   }
 }
 
@@ -81,7 +95,17 @@ export async function POST(req: NextRequest) {
 
     const token   = tokenRow as GoogleCalendarTokenRow
     const oauth2  = buildOAuth2Client(token)
-    await refreshTokenIfNeeded(oauth2, token, admin)
+    try {
+      await refreshTokenIfNeeded(oauth2, token, admin)
+    } catch (refreshErr) {
+      if (refreshErr instanceof TokenExpiredError) {
+        return NextResponse.json(
+          { error: 'Google Calendar disconnected — please reconnect to sync.', reconnect: true },
+          { status: 401 }
+        )
+      }
+      throw refreshErr
+    }
 
     const calendar   = google.calendar({ version: 'v3', auth: oauth2 })
     const syncedAt   = token.synced_at ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()

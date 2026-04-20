@@ -562,7 +562,17 @@ function CalendarPageInner() {
     try {
       const res = await fetch('/api/calendar/google/sync', { method: 'POST' })
       const d   = await res.json()
-      if (!res.ok) { showToast(d.error ?? 'Sync failed', 'error'); return }
+      if (!res.ok) {
+        if (d.reconnect) {
+          // Token expired — update UI to show disconnected state
+          setGoogleConnected(false)
+          setGoogleSyncedAt(null)
+          showToast('Google Calendar disconnected — please reconnect', 'error')
+        } else {
+          showToast(d.error ?? 'Sync failed', 'error')
+        }
+        return
+      }
       setGoogleSyncedAt(d.synced_at)
       await fetchEvents(date)
       showToast(`Synced! ↓${d.pulled} from Google, ↑${d.pushed} pushed`, 'success')
