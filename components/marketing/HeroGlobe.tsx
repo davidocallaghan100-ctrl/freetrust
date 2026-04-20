@@ -38,7 +38,7 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
   const resumeTimer    = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pad            = 60
 
-  // Auto-rotate via RAF + fix touch-action on canvas once map loads
+  // Auto-rotate via RAF + persistently fix touch-action so mobile pinch-zoom works
   useEffect(() => {
     const step = () => {
       if (!isPausedRef.current) {
@@ -52,27 +52,45 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
     }
     rafRef.current = requestAnimationFrame(step)
 
-    // Once map loads, set touch-action directly on the canvas so mobile pinch-zoom works
-    const fixTouchAction = () => {
+    let observer: MutationObserver | null = null
+
+    const setupTouchFix = () => {
       const map = mapRef.current?.getMap()
-      if (map) {
-        const canvas = map.getCanvas()
-        if (canvas) {
-          canvas.style.touchAction = 'pinch-zoom'
-        }
-        // Also fix the container
-        const container = map.getContainer()
-        if (container) {
-          container.style.touchAction = 'pinch-zoom'
+      if (!map) return false
+
+      const canvas = map.getCanvas()
+      const container = map.getContainer()
+      if (!canvas || !container) return false
+
+      // Force touch-action on canvas, container, and all ancestor elements
+      const forceTouch = () => {
+        canvas.style.touchAction = 'pinch-zoom'
+        container.style.touchAction = 'pinch-zoom'
+        // Walk up DOM from canvas — Mapbox nests the canvas inside several divs
+        let el: HTMLElement | null = canvas.parentElement
+        while (el && el !== document.body) {
+          el.style.touchAction = 'pinch-zoom'
+          el = el.parentElement
         }
       }
+
+      forceTouch()
+
+      // Mapbox GL resets touch-action: none on the canvas on every render/interaction.
+      // Watch the canvas style attribute and immediately override it back.
+      observer = new MutationObserver(() => {
+        if (canvas.style.touchAction !== 'pinch-zoom') {
+          forceTouch()
+        }
+      })
+      observer.observe(canvas, { attributes: true, attributeFilter: ['style'] })
+
+      return true
     }
 
-    // Poll until map is ready
+    // Poll until map style is loaded, then set up the persistent observer
     const pollTimer = setInterval(() => {
-      const map = mapRef.current?.getMap()
-      if (map && map.isStyleLoaded()) {
-        fixTouchAction()
+      if (setupTouchFix()) {
         clearInterval(pollTimer)
       }
     }, 200)
@@ -80,6 +98,7 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
     return () => {
       cancelAnimationFrame(rafRef.current)
       clearInterval(pollTimer)
+      observer?.disconnect()
     }
   }, [])
 
@@ -168,6 +187,7 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
               doubleClickZoom={true}
               touchZoomRotate={true}
               touchPitch={false}
+              cooperativeGestures={false}
               onZoomStart={pauseRotation}
               onZoomEnd={scheduleResume}
               onDragStart={pauseRotation}
