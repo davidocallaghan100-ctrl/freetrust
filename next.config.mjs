@@ -25,11 +25,19 @@ const withPWA = nextPwa({
     },
     {
       // Map tile requests must NEVER be intercepted by the service worker.
-      // MapLibre GL JS fetches tiles from CartoDB (*.cartocdn.com) and the style
-      // JSON from basemaps.cartocdn.com. If the SW caches or blocks these, the
-      // map canvas stays black. This NetworkOnly rule must come BEFORE the
-      // generic image caching rule below.
+      // MapLibre GL JS fetches tiles from CartoDB (*.cartocdn.com) and
+      // OpenFreeMap (tiles.openfreemap.org). If the SW caches or blocks these,
+      // the map canvas stays black. These NetworkOnly rules must come BEFORE
+      // the generic image caching rule below.
       urlPattern: /^https:\/\/[^/]*\.cartocdn\.com\/.*/i,
+      handler: 'NetworkOnly',
+    },
+    {
+      urlPattern: /^https:\/\/tiles\.openfreemap\.org\/.*/i,
+      handler: 'NetworkOnly',
+    },
+    {
+      urlPattern: /^https:\/\/[^/]*\.openfreemap\.org\/.*/i,
       handler: 'NetworkOnly',
     },
     {
