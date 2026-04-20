@@ -141,6 +141,20 @@ const nextConfig = {
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self), payment=(self)' },
           // HSTS — force HTTPS for 2 years
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          // Content Security Policy — allows Mapbox GL JS, CartoDB tiles, Supabase, etc.
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://api.mapbox.com https://unpkg.com",
+              "style-src 'self' 'unsafe-inline' https://api.mapbox.com https://unpkg.com https://fonts.googleapis.com",
+              "img-src 'self' data: blob: https://*.supabase.co https://lh3.googleusercontent.com https://m.media-amazon.com https://api.mapbox.com https://*.mapbox.com https://*.cartocdn.com",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://*.mapbox.com https://*.cartocdn.com https://basemaps.cartocdn.com https://unpkg.com",
+              "worker-src 'self' blob:",
+              "font-src 'self' https://fonts.gstatic.com https://api.mapbox.com",
+              "frame-src 'self'",
+            ].join('; '),
+          },
         ],
       },
     ]

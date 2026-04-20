@@ -241,21 +241,40 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, pulled, pushed, synced_at: nowIso })
   } catch (err) {
     console.error('[POST /api/calendar/google/sync]', err)
-    // Return a friendlier error message
-    const message = err instanceof Error ? err.message : 'Sync failed'
-    // Check for common Google API errors
-    if (message.includes('invalid_grant') || message.includes('Token has been expired')) {
+    const message = (err instanceof Error ? err.message : String(err)).toLowerCase()
+
+    // Auth-related errors — delete stale token and prompt reconnect
+    const isAuthError = (
+      message.includes('invalid_grant') ||
+      message.includes('token has been expired') ||
+      message.includes('token_expired') ||
+      message.includes('unauthorized') ||
+      message.includes('401') ||
+      message.includes('403') ||
+      message.includes('forbidden') ||
+      message.includes('insufficient') ||
+      message.includes('access_denied') ||
+      err instanceof TokenExpiredError
+    )
+
+    if (isAuthError) {
+      // Try to delete the stale token so UI resets to Connect state
+      try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const admin = createAdminClient()
+          await admin.from('google_calendar_tokens').delete().eq('user_id', user.id)
+        }
+      } catch (cleanupErr) {
+        console.error('[Google sync] cleanup failed:', cleanupErr)
+      }
       return NextResponse.json(
-        { error: 'Google Calendar access expired. Please reconnect.', reconnect: true },
+        { error: 'Google Calendar disconnected — please reconnect.', reconnect: true },
         { status: 401 }
       )
     }
-    if (message.includes('insufficient') || message.includes('forbidden') || message.includes('403')) {
-      return NextResponse.json(
-        { error: 'Google Calendar permission denied. Please reconnect.', reconnect: true },
-        { status: 403 }
-      )
-    }
+
     return NextResponse.json({ error: 'Calendar sync failed. Please try again.', reconnect: false }, { status: 500 })
   }
 }

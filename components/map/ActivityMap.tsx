@@ -14,42 +14,21 @@ interface BasePin {
   city?: string | null
   country?: string | null
 }
-interface MemberPin extends BasePin {
-  type: 'member'
-  username: string
-  avatar_url?: string | null
-  bio?: string | null
-}
-interface EventPin extends BasePin {
-  type: 'event'
-  title: string
-  starts_at?: string | null
-  venue_name?: string | null
-  ticket_price?: number | null
-  is_paid?: boolean
-}
-interface ProductPin extends BasePin {
-  type: 'product'
-  title: string
-  price_eur?: number | null
-  cover_image_url?: string | null
-  category?: string | null
-}
-interface JobPin extends BasePin {
-  type: 'job'
-  title: string
-  salary_min_eur?: number | null
-  salary_max_eur?: number | null
-}
+interface MemberPin extends BasePin { type: 'member'; username: string; avatar_url?: string | null; bio?: string | null }
+interface EventPin extends BasePin { type: 'event'; title: string; starts_at?: string | null; venue_name?: string | null; ticket_price?: number | null; is_paid?: boolean }
+interface ProductPin extends BasePin { type: 'product'; title: string; price_eur?: number | null; cover_image_url?: string | null }
+interface JobPin extends BasePin { type: 'job'; title: string; salary_min_eur?: number | null; salary_max_eur?: number | null }
 
 type Pin = MemberPin | EventPin | ProductPin | JobPin
 
 // ─── Config ──────────────────────────────────────────────────────────────────
-const LAYER_CONFIG: Record<PinType, { label: string; emoji: string; color: string; glow: string }> = {
-  member:  { label: 'Members',  emoji: '👤', color: '#6c63ff', glow: 'rgba(108,99,255,0.6)' },
-  event:   { label: 'Events',   emoji: '🎟️', color: '#f59e0b', glow: 'rgba(245,158,11,0.6)' },
-  product: { label: 'Products', emoji: '📦', color: '#00d4aa', glow: 'rgba(0,212,170,0.6)' },
-  job:     { label: 'Jobs',     emoji: '💼', color: '#38bdf8', glow: 'rgba(56,189,248,0.6)' },
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''
+
+const LAYER_CONFIG: Record<PinType, { label: string; color: string; glow: string }> = {
+  member:  { label: 'Members',  color: '#6c63ff', glow: 'rgba(108,99,255,0.6)' },
+  event:   { label: 'Events',   color: '#f59e0b', glow: 'rgba(245,158,11,0.6)' },
+  product: { label: 'Products', color: '#00d4aa', glow: 'rgba(0,212,170,0.6)' },
+  job:     { label: 'Jobs',     color: '#38bdf8', glow: 'rgba(56,189,248,0.6)' },
 }
 
 function buildMarkerHtml(color: string): string {
@@ -75,7 +54,7 @@ function buildPopupHtml(pin: Pin): string {
       : `<div style="width:40px;height:40px;border-radius:50%;background:#6c63ff;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">👤</div>`
     const loc = [p.city, p.country].filter(Boolean).join(', ')
     const bio = p.bio ? `<div style="color:#94a3b8;font-size:12px;margin-top:4px">${esc(p.bio.slice(0, 70))}${p.bio.length > 70 ? '…' : ''}</div>` : ''
-    return `<div style="${base}"><div style="display:flex;align-items:center;gap:10px">${avatar}<div><div style="font-weight:700">@${esc(p.username)}</div>${loc ? `<div style="color:#64748b;font-size:11px">📍 ${esc(loc)}</div>` : ''}</div></div>${bio}${btn('#6c63ff', `/members/${encodeURIComponent(p.username)}`, 'View Profile →')}</div>`
+    return `<div style="${base}"><div style="display:flex;align-items:center;gap:10px">${avatar}<div><div style="font-weight:700">@${esc(p.username || 'member')}</div>${loc ? `<div style="color:#64748b;font-size:11px">📍 ${esc(loc)}</div>` : ''}</div></div>${bio}${btn('#6c63ff', `/members/${encodeURIComponent(p.username || '')}`, 'View Profile →')}</div>`
   }
   if (pin.type === 'event') {
     const e = pin as EventPin
@@ -100,11 +79,11 @@ function buildPopupHtml(pin: Pin): string {
   return ''
 }
 
-// ─── Declare maplibregl on window ─────────────────────────────────────────────
+// ─── Declare mapboxgl on window ───────────────────────────────────────────────
 declare global {
   interface Window {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    maplibregl: any
+    mapboxgl: any
   }
 }
 
@@ -132,30 +111,29 @@ export default function ActivityMap() {
       .catch(() => setLoading(false))
   }, [])
 
-  // Init map once CDN script loaded
+  // Init Mapbox once CDN script loaded
   useEffect(() => {
     if (!scriptsLoaded || !containerRef.current || mapRef.current) return
-    const maplibregl = window.maplibregl
-    if (!maplibregl) return
+    try {
+      const mbgl = window.mapboxgl
+      if (!mbgl) return
+      mbgl.accessToken = MAPBOX_TOKEN
 
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-      center: [0, 20],
-      zoom: 2,
-      attributionControl: false,
-    })
+      const map = new mbgl.Map({
+        container: containerRef.current,
+        style: 'mapbox://styles/mapbox/dark-v11',
+        center: [0, 20],
+        zoom: 2,
+        attributionControl: false,
+      })
 
-    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left')
-
-    map.on('load', () => {
-      mapRef.current = map
-      setMapReady(true)
-    })
-
-    return () => {
-      map.remove()
-      mapRef.current = null
+      map.addControl(new mbgl.AttributionControl({ compact: true }), 'bottom-left')
+      map.on('load', () => {
+        mapRef.current = map
+        setMapReady(true)
+      })
+    } catch (e) {
+      console.error('Mapbox init error:', e)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scriptsLoaded])
@@ -163,41 +141,44 @@ export default function ActivityMap() {
   // Add markers once map + pins ready
   useEffect(() => {
     if (!mapReady || !mapRef.current || loading) return
-    const maplibregl = window.maplibregl
-    if (!maplibregl) return
-    const map = mapRef.current
+    try {
+      const mbgl = window.mapboxgl
+      if (!mbgl) return
+      const map = mapRef.current
 
-    // Remove old markers
-    markersRef.current.forEach(({ marker }) => marker.remove())
-    markersRef.current.clear()
+      markersRef.current.forEach(({ marker }) => marker.remove())
+      markersRef.current.clear()
 
-    for (const pin of pins) {
-      if (typeof pin.latitude !== 'number' || typeof pin.longitude !== 'number') continue
-      const cfg = LAYER_CONFIG[pin.type]
+      for (const pin of pins) {
+        if (typeof pin.latitude !== 'number' || typeof pin.longitude !== 'number') continue
+        const cfg = LAYER_CONFIG[pin.type]
 
-      const el = document.createElement('div')
-      el.style.overflow = 'visible'
-      el.style.width = '14px'
-      el.style.height = '14px'
-      el.innerHTML = buildMarkerHtml(cfg.color)
+        const el = document.createElement('div')
+        el.style.overflow = 'visible'
+        el.style.width = '14px'
+        el.style.height = '14px'
+        el.innerHTML = buildMarkerHtml(cfg.color)
 
-      const popup = new maplibregl.Popup({
-        closeButton: true,
-        maxWidth: '280px',
-        className: 'ft-popup',
-        offset: 20,
-      }).setHTML(buildPopupHtml(pin))
+        const popup = new mbgl.Popup({
+          closeButton: true,
+          maxWidth: '280px',
+          className: 'ft-popup',
+          offset: 20,
+        }).setHTML(buildPopupHtml(pin))
 
-      const marker = new maplibregl.Marker({ element: el })
-        .setLngLat([pin.longitude, pin.latitude])
-        .setPopup(popup)
-        .addTo(map)
+        const marker = new mbgl.Marker({ element: el })
+          .setLngLat([pin.longitude, pin.latitude])
+          .setPopup(popup)
+          .addTo(map)
 
-      if (!activeLayers.has(pin.type)) {
-        el.style.display = 'none'
+        if (!activeLayers.has(pin.type)) {
+          el.style.display = 'none'
+        }
+
+        markersRef.current.set(pin.id, { marker, type: pin.type })
       }
-
-      markersRef.current.set(pin.id, { marker, type: pin.type })
+    } catch (e) {
+      console.error('Marker render error:', e)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady, pins, loading])
@@ -206,7 +187,7 @@ export default function ActivityMap() {
   useEffect(() => {
     markersRef.current.forEach(({ marker, type }) => {
       const el = marker.getElement() as HTMLDivElement
-      el.style.display = activeLayers.has(type) ? '' : 'none'
+      if (el) el.style.display = activeLayers.has(type) ? '' : 'none'
     })
   }, [activeLayers])
 
@@ -235,40 +216,40 @@ export default function ActivityMap() {
 
   return (
     <>
-      {/* Load MapLibre GL from CDN — avoids webpack/SSR bundling issues */}
+      {/* Load Mapbox GL JS from CDN */}
       <Script
-        src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"
+        src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"
         strategy="afterInteractive"
         onLoad={() => setScriptsLoaded(true)}
       />
       {/* eslint-disable-next-line @next/next/no-css-tags */}
-      <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+      <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css" />
 
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         {/* Popup CSS overrides */}
         <style>{`
-          .ft-popup .maplibregl-popup-content {
+          .ft-popup .mapboxgl-popup-content {
             background: #13131a !important;
             border: 1px solid #2a2a3a !important;
             border-radius: 12px !important;
             padding: 0 !important;
             box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
           }
-          .ft-popup .maplibregl-popup-close-button {
+          .ft-popup .mapboxgl-popup-close-button {
             color: #94a3b8 !important;
             font-size: 18px !important;
             padding: 4px 8px !important;
             background: transparent !important;
           }
-          .ft-popup .maplibregl-popup-tip {
+          .ft-popup .mapboxgl-popup-tip {
             border-top-color: #2a2a3a !important;
             border-bottom-color: #2a2a3a !important;
           }
-          .maplibregl-ctrl-attrib {
+          .mapboxgl-ctrl-attrib {
             background: rgba(13,13,26,0.8) !important;
             color: #64748b !important;
           }
-          .maplibregl-ctrl-attrib a { color: #6c63ff !important; }
+          .mapboxgl-ctrl-attrib a { color: #00d4aa !important; }
           @keyframes ft-spin { to { transform: rotate(360deg); } }
         `}</style>
 
@@ -280,9 +261,9 @@ export default function ActivityMap() {
         }}>
           <button onClick={toggleAll} style={{
             flexShrink: 0, padding: '6px 16px', borderRadius: 20,
-            border: `1.5px solid ${allOn ? '#6c63ff' : '#2a2a3a'}`,
-            background: allOn ? 'rgba(108,99,255,0.15)' : 'transparent',
-            color: allOn ? '#6c63ff' : '#94a3b8',
+            border: `1.5px solid ${allOn ? '#00d4aa' : '#2a2a3a'}`,
+            background: allOn ? 'rgba(0,212,170,0.15)' : 'transparent',
+            color: allOn ? '#00d4aa' : '#94a3b8',
             fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
           }}>✦ All</button>
 
@@ -311,7 +292,6 @@ export default function ActivityMap() {
 
         {/* Map container */}
         <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-          {/* Loading overlay */}
           {loading && (
             <div style={{
               position: 'absolute', inset: 0, zIndex: 10,
@@ -320,26 +300,23 @@ export default function ActivityMap() {
             }}>
               <div style={{
                 width: 44, height: 44, borderRadius: '50%',
-                border: '3px solid #1e1e2e', borderTop: '3px solid #6c63ff',
+                border: '3px solid #1e1e2e', borderTop: '3px solid #00d4aa',
                 animation: 'ft-spin 0.8s linear infinite',
               }} />
               <p style={{ color: '#64748b', marginTop: 12, fontSize: 13 }}>Loading activity…</p>
             </div>
           )}
 
-          {/* Map div */}
           <div ref={containerRef} style={{ width: '100%', height: '100%', background: '#0a0a0f' }} />
 
-          {/* Near Me button */}
           <button onClick={flyToMe} title="Fly to my location" style={{
             position: 'absolute', bottom: 24, right: 16, zIndex: 5,
             width: 48, height: 48, borderRadius: '50%',
-            background: '#6c63ff', border: 'none', color: 'white', fontSize: 20,
-            cursor: 'pointer', boxShadow: '0 4px 16px rgba(108,99,255,0.5)',
+            background: '#00d4aa', border: 'none', color: 'white', fontSize: 20,
+            cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,212,170,0.5)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>📍</button>
 
-          {/* Pin count badge */}
           {!loading && pins.length > 0 && (
             <div style={{
               position: 'absolute', top: 12, right: 16, zIndex: 5,

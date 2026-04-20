@@ -131,7 +131,7 @@ function EventDrawer({ event, onClose, onSave, onDelete, creating, newStart }: D
 
   const sourceColor = event
     ? (event.color ?? SOURCE_TYPE_COLORS[event.source_type] ?? '#64748b')
-    : '#6c63ff'
+    : '#00d4aa'
 
   return (
     <div style={{
@@ -373,12 +373,12 @@ function EmptyState({ onNew }: { onNew: () => void }) {
       <div style={{
         width: 64, height: 64,
         borderRadius: '50%',
-        background: 'rgba(108,99,255,0.1)',
-        border: '1px solid rgba(108,99,255,0.2)',
+        background: 'rgba(0,212,170,0.1)',
+        border: '1px solid rgba(0,212,170,0.2)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         marginBottom: '0.25rem',
       }}>
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#6c63ff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#00d4aa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
           <line x1="16" y1="2" x2="16" y2="6"/>
           <line x1="8" y1="2" x2="8" y2="6"/>
@@ -393,9 +393,9 @@ function EmptyState({ onNew }: { onNew: () => void }) {
         onClick={onNew}
         style={{
           marginTop: '0.5rem',
-          color: '#6c63ff',
-          background: 'rgba(108,99,255,0.1)',
-          border: '1px solid rgba(108,99,255,0.3)',
+          color: '#00d4aa',
+          background: 'rgba(0,212,170,0.1)',
+          border: '1px solid rgba(0,212,170,0.3)',
           borderRadius: '9999px',
           padding: '0.5rem 1.25rem',
           fontSize: '0.85rem',
@@ -658,13 +658,13 @@ function CalendarPageInner() {
         .rbc-toolbar button:hover {
           background: #2a2a3d;
           color: #e8e8f0;
-          border-color: #6c63ff;
+          border-color: #38bdf8;
         }
         .rbc-toolbar button.rbc-active {
-          background: #6c63ff;
-          color: #fff;
-          border-color: #6c63ff;
-          box-shadow: 0 0 12px rgba(108,99,255,0.35);
+          background: #38bdf8;
+          color: #0a0a0f;
+          border-color: #38bdf8;
+          box-shadow: 0 0 12px rgba(56,189,248,0.35);
         }
         .rbc-toolbar-label {
           font-weight: 700;
@@ -692,19 +692,19 @@ function CalendarPageInner() {
           background: #13131a;
         }
         .rbc-off-range-bg { background: rgba(255,255,255,0.015); }
-        .rbc-today { background: rgba(108,99,255,0.08) !important; }
+        .rbc-today { background: rgba(56,189,248,0.08) !important; }
         .rbc-date-cell {
           color: #8888aa;
           font-size: 0.8rem;
           padding: 0.3rem 0.5rem;
         }
         .rbc-date-cell.rbc-now {
-          color: #6c63ff;
+          color: #38bdf8;
           font-weight: 800;
         }
         .rbc-row-segment .rbc-event { border-radius: 5px; }
         .rbc-show-more {
-          color: #6c63ff;
+          color: #00d4aa;
           font-size: 0.75rem;
           font-weight: 600;
           background: transparent;
@@ -746,17 +746,17 @@ function CalendarPageInner() {
           border-bottom: 1px solid rgba(42,42,61,0.7);
         }
         .rbc-agenda-table tbody > tr:hover {
-          background: rgba(108,99,255,0.06);
+          background: rgba(56,189,248,0.06);
         }
         .rbc-agenda-table .rbc-agenda-date-cell {
           font-weight: 600;
-          color: #6c63ff;
+          color: #38bdf8;
           font-size: 0.8rem;
         }
 
         /* Selection */
-        .rbc-slot-selection { background: rgba(108,99,255,0.15); }
-        .rbc-selected { box-shadow: 0 0 0 2px #6c63ff; }
+        .rbc-slot-selection { background: rgba(56,189,248,0.15); }
+        .rbc-selected { box-shadow: 0 0 0 2px #38bdf8; }
 
         /* Borders */
         .rbc-month-row { border-color: #2a2a3d; }
@@ -788,11 +788,11 @@ function CalendarPageInner() {
             <div style={{
               width: 48, height: 48,
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #6c63ff, #00d4aa)',
+              background: 'linear-gradient(135deg, #38bdf8, #00d4aa)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '1.45rem',
               flexShrink: 0,
-              boxShadow: '0 2px 16px rgba(108,99,255,0.35)',
+              boxShadow: '0 2px 16px rgba(56,189,248,0.35)',
             }}>
               🗓️
             </div>
@@ -810,7 +810,7 @@ function CalendarPageInner() {
           <div style={{
             height: 1,
             marginTop: '0.875rem',
-            background: 'linear-gradient(90deg, rgba(108,99,255,0.5), rgba(0,212,170,0.25), transparent)',
+            background: 'linear-gradient(90deg, rgba(56,189,248,0.5), rgba(0,212,170,0.25), transparent)',
             borderRadius: 1,
           }}/>
         </div>
@@ -923,13 +923,13 @@ function CalendarPageInner() {
               padding: '0.65rem 1.1rem',
               borderRadius: '12px',
               border: 'none',
-              background: 'linear-gradient(135deg, #6c63ff, #7c6fff)',
-              color: '#fff',
+              background: 'linear-gradient(135deg, #00d4aa, #38bdf8)',
+              color: '#0a0a0f',
               fontSize: '0.9rem',
               fontWeight: 700,
               cursor: 'pointer',
               minHeight: 48,
-              boxShadow: '0 2px 16px rgba(108,99,255,0.4)',
+              boxShadow: '0 2px 16px rgba(0,212,170,0.35)',
               transition: 'all 0.15s',
             }}
           >
@@ -1010,7 +1010,7 @@ function CalendarPageInner() {
               <div style={{
                 width: 36, height: 36,
                 border: '3px solid #2a2a3d',
-                borderTopColor: '#6c63ff',
+                borderTopColor: '#38bdf8',
                 borderRadius: '50%',
                 animation: 'spin 0.8s linear infinite',
               }}/>
@@ -1111,7 +1111,7 @@ export default function CalendarPage() {
         <div style={{
           width: 36, height: 36,
           border: '3px solid #2a2a3d',
-          borderTopColor: '#6c63ff',
+          borderTopColor: '#38bdf8',
           borderRadius: '50%',
           animation: 'spin 0.8s linear infinite',
         }}/>
