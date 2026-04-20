@@ -31,27 +31,13 @@ const STARS = [
 ]
 
 export default function HeroGlobe({ size = 220 }: { size?: number }) {
-  const mapRef         = useRef<MapRef | null>(null)
-  const bearRef        = useRef(0)
-  const rafRef         = useRef<number>(0)
-  const isPausedRef    = useRef(false)
-  const resumeTimer    = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pad            = 60
+  const mapRef = useRef<MapRef | null>(null)
+  const pad    = 60
 
-  // Auto-rotate via RAF + persistently fix touch-action so mobile pinch-zoom works
+  // Persistently fix touch-action so mobile pinch-zoom works.
+  // Mapbox GL resets touch-action: none on the canvas on every render/interaction,
+  // so we use a MutationObserver to override it back whenever it changes.
   useEffect(() => {
-    const step = () => {
-      if (!isPausedRef.current) {
-        const map = mapRef.current?.getMap()
-        if (map && map.isStyleLoaded()) {
-          bearRef.current = (bearRef.current + 0.04) % 360
-          map.setBearing(bearRef.current)
-        }
-      }
-      rafRef.current = requestAnimationFrame(step)
-    }
-    rafRef.current = requestAnimationFrame(step)
-
     let observer: MutationObserver | null = null
 
     const setupTouchFix = () => {
@@ -76,8 +62,7 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
 
       forceTouch()
 
-      // Mapbox GL resets touch-action: none on the canvas on every render/interaction.
-      // Watch the canvas style attribute and immediately override it back.
+      // Watch the canvas style attribute and immediately override any reset
       observer = new MutationObserver(() => {
         if (canvas.style.touchAction !== 'pinch-zoom') {
           forceTouch()
@@ -96,21 +81,10 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
     }, 200)
 
     return () => {
-      cancelAnimationFrame(rafRef.current)
       clearInterval(pollTimer)
       observer?.disconnect()
     }
   }, [])
-
-  const pauseRotation = () => {
-    isPausedRef.current = true
-    if (resumeTimer.current) clearTimeout(resumeTimer.current)
-  }
-
-  const scheduleResume = () => {
-    if (resumeTimer.current) clearTimeout(resumeTimer.current)
-    resumeTimer.current = setTimeout(() => { isPausedRef.current = false }, 2000)
-  }
 
   return (
     <>
@@ -180,7 +154,7 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
               attributionControl={false}
               logoPosition="bottom-right"
               style={{ width: size, height: size }}
-              dragPan={false}
+              dragPan={true}
               dragRotate={false}
               keyboard={false}
               scrollZoom={true}
@@ -188,10 +162,6 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
               touchZoomRotate={true}
               touchPitch={false}
               cooperativeGestures={false}
-              onZoomStart={pauseRotation}
-              onZoomEnd={scheduleResume}
-              onDragStart={pauseRotation}
-              onDragEnd={scheduleResume}
               onError={e => console.warn('[HeroGlobe]', e)}
             />
           </div>
