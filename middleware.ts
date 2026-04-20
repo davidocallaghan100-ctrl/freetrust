@@ -187,12 +187,14 @@ export async function middleware(request: NextRequest) {
     '/seller',              // all seller pages (gigs, listings, etc.)
     '/jobs/new',
     '/create-business',
+    '/calendar',
+    '/map',
   ]
   const isProtected = protectedPaths.some(p => pathname.startsWith(p))
 
   if (isProtected && !user) {
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = '/auth/login'
     url.searchParams.set('redirect', pathname)
     const redirectRes = NextResponse.redirect(url)
     return applySecurityHeaders(redirectRes)
