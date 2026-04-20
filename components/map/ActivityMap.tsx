@@ -23,14 +23,14 @@ interface JobPin     extends BasePin { type: 'job';     title: string; salary_mi
 type Pin = MemberPin | EventPin | ProductPin | JobPin
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-// CartoDB Voyager — bright, colourful tile style. Free, no token required.
+// OpenFreeMap Liberty — green land, blue water, classic atlas look. Free, no token required.
 // Uses the MapLibre open-source renderer (already installed as maplibre-gl).
-const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json'
+const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty'
 
 const LAYER_CONFIG: Record<PinType, { label: string; color: string; glow: string }> = {
   member:  { label: 'Members',  color: '#00d4aa', glow: 'rgba(0,212,170,0.6)'  },
   event:   { label: 'Events',   color: '#f59e0b', glow: 'rgba(245,158,11,0.6)' },
-  product: { label: 'Products', color: '#00d4aa', glow: 'rgba(0,212,170,0.6)'  },
+  product: { label: 'Products', color: '#a855f7', glow: 'rgba(168,85,247,0.6)' },
   job:     { label: 'Jobs',     color: '#38bdf8', glow: 'rgba(56,189,248,0.6)' },
 }
 

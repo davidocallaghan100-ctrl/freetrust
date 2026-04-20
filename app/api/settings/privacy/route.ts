@@ -15,17 +15,26 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
 
     // Only allow known privacy keys
-    const allowed = ['profile_visibility', 'show_trust_score', 'show_online_status'] as const
+    const allowed = ['profile_visibility', 'show_trust_score', 'show_online_status', 'show_on_map'] as const
     type AllowedKey = typeof allowed[number]
     const privacy: Partial<Record<AllowedKey, unknown>> = {}
     for (const key of allowed) {
       if (key in body) privacy[key] = body[key]
     }
 
+    // Fetch existing privacy_settings so we can merge (not replace) them
+    const { data: existing } = await supabase
+      .from('profiles')
+      .select('privacy_settings')
+      .eq('id', user.id)
+      .single()
+
+    const merged = { ...(existing?.privacy_settings ?? {}), ...privacy }
+
     const { data: profile, error } = await supabase
       .from('profiles')
       .update({
-        privacy_settings: privacy,
+        privacy_settings: merged,
         updated_at: new Date().toISOString(),
       })
       .eq('id', user.id)

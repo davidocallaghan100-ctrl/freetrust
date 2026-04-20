@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic'
 //   - Listings have no lat/lng yet → we join via seller profile location
 //   - Profiles may have null username → shown as "Member"
 //   - Only events reliably have lat/lng from the geo-init API
+//   - show_on_map column on profiles controls map visibility (default true)
 // ============================================================================
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -18,12 +19,13 @@ export async function GET() {
 
     const [membersResult, eventsResult, productsResult, jobsResult] =
       await Promise.allSettled([
-        // Members with location — no username filter (many profiles have null username)
+        // Members with location — only those who opted in to map visibility
         supabase
           .from('profiles')
           .select('id, username, avatar_url, bio, city, country, latitude, longitude, account_type')
           .not('latitude', 'is', null)
           .not('longitude', 'is', null)
+          .eq('show_on_map', true)
           .limit(500),
 
         // Upcoming published in-person events
@@ -60,7 +62,7 @@ export async function GET() {
       for (const m of membersResult.value.data ?? []) {
         pins.push({ ...m, type: 'member' })
       }
-      console.log(`[map/pins] members: ${membersResult.value.data?.length ?? 0}`)
+      console.log('[map/pins] members: ' + (membersResult.value.data?.length ?? 0))
     } else {
       const err = membersResult.status === 'fulfilled' ? membersResult.value.error?.message : membersResult.reason
       console.error('[map/pins] members error:', err)
@@ -71,7 +73,7 @@ export async function GET() {
       for (const e of eventsResult.value.data ?? []) {
         pins.push({ ...e, type: 'event' })
       }
-      console.log(`[map/pins] events: ${eventsResult.value.data?.length ?? 0}`)
+      console.log('[map/pins] events: ' + (eventsResult.value.data?.length ?? 0))
     } else {
       const err = eventsResult.status === 'fulfilled' ? eventsResult.value.error?.message : eventsResult.reason
       console.error('[map/pins] events error:', err)
@@ -106,7 +108,7 @@ export async function GET() {
         })
         productCount++
       }
-      console.log(`[map/pins] products: ${productCount} (of ${productsResult.value.data?.length ?? 0} listings)`)
+      console.log('[map/pins] products: ' + productCount + ' (of ' + (productsResult.value.data?.length ?? 0) + ' listings)')
     } else {
       const err = productsResult.status === 'fulfilled' ? productsResult.value.error?.message : productsResult.reason
       console.error('[map/pins] products error:', err)
@@ -117,13 +119,13 @@ export async function GET() {
       for (const j of jobsResult.value.data ?? []) {
         pins.push({ ...j, type: 'job' })
       }
-      console.log(`[map/pins] jobs: ${jobsResult.value.data?.length ?? 0}`)
+      console.log('[map/pins] jobs: ' + (jobsResult.value.data?.length ?? 0))
     } else {
       const err = jobsResult.status === 'fulfilled' ? jobsResult.value.error?.message : jobsResult.reason
       console.warn('[map/pins] jobs warning:', err)
     }
 
-    console.log(`[map/pins] total pins: ${pins.length}`)
+    console.log('[map/pins] total pins: ' + pins.length)
     return NextResponse.json({ pins })
   } catch (err) {
     console.error('[GET /api/map/pins]', err)

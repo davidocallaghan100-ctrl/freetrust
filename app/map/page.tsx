@@ -1,3 +1,5 @@
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
 import dynamic from 'next/dynamic'
 
 // Load the map client-side only (maplibre-gl requires browser APIs)
@@ -29,7 +31,14 @@ const ActivityMap = dynamic(
   }
 )
 
-export default function MapPage() {
+export default async function MapPage() {
+  // Require authentication — unauthenticated users are redirected to login
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    redirect('/login')
+  }
+
   return (
     // ft-page-content already adds padding-top: 104px (nav+searchbar).
     // We size to fill the remaining viewport height below that offset.

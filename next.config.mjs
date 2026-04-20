@@ -161,8 +161,8 @@ const nextConfig = {
               // Allow all https images + blob — tile PNGs/WebP come from various CDN subdomains
               "img-src 'self' data: blob: https:",
               // blob: in connect-src needed for MapLibre tile worker blob URLs;
-              // CartoDB hosts the dark-matter style JSON + vector/raster tiles
-              "connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co https://*.cartocdn.com https://basemaps.cartocdn.com https://unpkg.com",
+              // CartoDB + OpenFreeMap host tiles and style JSON
+              "connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co https://*.cartocdn.com https://basemaps.cartocdn.com https://unpkg.com https://tiles.openfreemap.org https://*.openfreemap.org",
               // Both worker-src and child-src needed for MapLibre GL web workers across browsers
               "worker-src 'self' blob:",
               "child-src 'self' blob:",

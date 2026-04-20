@@ -653,6 +653,7 @@ function PrivacyTab({ profile, onSaved }: { profile: Profile; onSaved: (p: Profi
   const [visibility, setVisibility] = useState<string>((priv.profile_visibility as string) ?? 'public')
   const [showTrust, setShowTrust] = useState<boolean>((priv.show_trust_score as boolean) ?? true)
   const [showOnline, setShowOnline] = useState<boolean>((priv.show_online_status as boolean) ?? true)
+  const [showOnMap, setShowOnMap] = useState<boolean>(priv.show_on_map === false ? false : true)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
 
@@ -668,10 +669,11 @@ function PrivacyTab({ profile, onSaved }: { profile: Profile; onSaved: (p: Profi
           profile_visibility: visibility,
           show_trust_score: showTrust,
           show_online_status: showOnline,
+          show_on_map: showOnMap,
         }),
       })
       if (res.ok) {
-        onSaved({ ...profile, privacy_settings: { profile_visibility: visibility, show_trust_score: showTrust, show_online_status: showOnline } })
+        onSaved({ ...profile, privacy_settings: { profile_visibility: visibility, show_trust_score: showTrust, show_online_status: showOnline, show_on_map: showOnMap } })
         showToast('Privacy settings saved!')
       } else {
         showToast('Failed to save.')
@@ -718,6 +720,17 @@ function PrivacyTab({ profile, onSaved }: { profile: Profile; onSaved: (p: Profi
           </div>
           <label className="toggle">
             <input type="checkbox" checked={showOnline} onChange={e => setShowOnline(e.target.checked)} />
+            <span className="toggle-slider" />
+          </label>
+        </div>
+
+        <div className="toggle-row">
+          <div>
+            <div className="toggle-label">Show me on the Activity Map</div>
+            <div className="toggle-desc">Let other members discover you on the map based on your city</div>
+          </div>
+          <label className="toggle">
+            <input type="checkbox" checked={showOnMap} onChange={e => setShowOnMap(e.target.checked)} />
             <span className="toggle-slider" />
           </label>
         </div>

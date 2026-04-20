@@ -50,7 +50,7 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
       "img-src 'self' data: blob: https: http:",
       "media-src 'self' https:",
       // blob: required for Mapbox GL tile worker blob URLs in connect-src
-      "connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://www.google-analytics.com https://api.mapbox.com https://events.mapbox.com https://*.mapbox.com https://*.tiles.mapbox.com https://nominatim.openstreetmap.org https://api.frankfurter.app https://ipapi.co https://tile.openstreetmap.org https://*.cartocdn.com https://basemaps.cartocdn.com https://*.maplibre.org",
+      "connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://www.google-analytics.com https://api.mapbox.com https://events.mapbox.com https://*.mapbox.com https://*.tiles.mapbox.com https://nominatim.openstreetmap.org https://api.frankfurter.app https://ipapi.co https://tile.openstreetmap.org https://*.cartocdn.com https://basemaps.cartocdn.com https://*.maplibre.org https://tiles.openfreemap.org https://*.openfreemap.org",
       "frame-src https://js.stripe.com https://hooks.stripe.com",
       // Both worker-src and child-src needed for Mapbox GL web workers across browsers
       "worker-src 'self' blob:",
