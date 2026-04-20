@@ -1279,6 +1279,103 @@ input, textarea, select {
 }
 
 /* ============================================================
+   AGENDA VIEW OVERRIDES
+   The agenda view uses completely different markup to month/week/day.
+   All cells, headers, dates and event rows need explicit overrides.
+   ============================================================ */
+
+/* Agenda table wrapper */
+.ft-calendar-wrap .rbc-agenda-view {
+  background: #13131a !important;
+  color: #f1f5f9 !important;
+  border: 1px solid #2a2a3a !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+/* Agenda table */
+.ft-calendar-wrap .rbc-agenda-view table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+}
+
+/* Column headers (DATE / TIME / EVENT) */
+.ft-calendar-wrap .rbc-agenda-view table thead th,
+.ft-calendar-wrap .rbc-header {
+  background: #0d0d1a !important;
+  color: #64748b !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  padding: 10px 14px !important;
+  border-bottom: 1px solid #2a2a3a !important;
+  border-right: 1px solid #2a2a3a !important;
+}
+
+/* Date cell (left column) */
+.ft-calendar-wrap .rbc-agenda-date-cell {
+  background: #0d0d1a !important;
+  color: #00d4aa !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  padding: 12px 14px !important;
+  border-right: 1px solid #2a2a3a !important;
+  border-bottom: 1px solid #1e1e2e !important;
+  white-space: nowrap !important;
+  vertical-align: top !important;
+}
+
+/* Time cell (middle column) */
+.ft-calendar-wrap .rbc-agenda-time-cell {
+  background: #13131a !important;
+  color: #64748b !important;
+  font-size: 12px !important;
+  padding: 12px 14px !important;
+  border-right: 1px solid #2a2a3a !important;
+  border-bottom: 1px solid #1e1e2e !important;
+  white-space: nowrap !important;
+  vertical-align: top !important;
+}
+
+/* Event cell (right column) — kill the baby blue background */
+.ft-calendar-wrap .rbc-agenda-event-cell {
+  background: #13131a !important;
+  color: #f1f5f9 !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  padding: 12px 14px !important;
+  border-bottom: 1px solid #1e1e2e !important;
+  border-left: 3px solid #00d4aa !important;
+}
+
+/* Hover row highlight */
+.ft-calendar-wrap .rbc-agenda-view table tbody tr:hover .rbc-agenda-date-cell,
+.ft-calendar-wrap .rbc-agenda-view table tbody tr:hover .rbc-agenda-time-cell,
+.ft-calendar-wrap .rbc-agenda-view table tbody tr:hover .rbc-agenda-event-cell {
+  background: rgba(0,212,170,0.05) !important;
+}
+
+/* The anchor/link inside the event cell */
+.ft-calendar-wrap .rbc-agenda-event-cell a,
+.ft-calendar-wrap .rbc-agenda-event-cell .rbc-event {
+  background: transparent !important;
+  color: #f1f5f9 !important;
+  border: none !important;
+  padding: 0 !important;
+  text-decoration: none !important;
+}
+
+/* Empty state */
+.ft-calendar-wrap .rbc-agenda-empty {
+  background: #13131a !important;
+  color: #64748b !important;
+  padding: 40px !important;
+  text-align: center !important;
+  font-size: 14px !important;
+}
+
+/* ============================================================
    TABLET ADJUSTMENTS  (769px – 1024px)
    ============================================================ */
 @media (min-width: 769px) and (max-width: 1024px) {
