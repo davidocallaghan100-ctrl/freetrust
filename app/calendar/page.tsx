@@ -758,6 +758,31 @@ function CalendarPageInner() {
         .rbc-slot-selection { background: rgba(56,189,248,0.15); }
         .rbc-selected { box-shadow: 0 0 0 2px #38bdf8; }
 
+        /* ── Fix default purple event background ──
+           react-big-calendar ships with a hardcoded blue/purple .rbc-event rule.
+           We override it here; individual event colors still come through via
+           eventPropGetter's inline style (which has higher specificity). */
+        .rbc-event {
+          background-color: #38bdf8 !important;
+          border-color: #0ea5e9 !important;
+          border-left-color: #0ea5e9 !important;
+          color: #0a0a0f !important;
+        }
+        .rbc-event.rbc-selected {
+          background-color: #0ea5e9 !important;
+        }
+        .rbc-event:focus {
+          outline: 2px solid #38bdf8 !important;
+          outline-offset: 2px;
+        }
+        /* Give inline eventPropGetter styles priority over the !important above
+           by using attribute selector (higher specificity than class-only) */
+        .rbc-event[style] {
+          background-color: revert !important;
+          border-color: revert !important;
+          color: revert !important;
+        }
+
         /* Borders */
         .rbc-month-row { border-color: #2a2a3d; }
         .rbc-day-bg + .rbc-day-bg { border-color: #2a2a3d; }
