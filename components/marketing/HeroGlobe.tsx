@@ -8,20 +8,28 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 const MAP_STYLE   = 'mapbox://styles/davos212/cmo7emfe2000x01r3b3cn2zgq'
 
-// Static star field — scattered dots for a space backdrop (no animation, no straight lines)
+// Subtle twinkling star field scattered around the globe
 const STARS = [
-  { top:  '8%', left: '12%', size: 2,   opacity: 0.55 },
-  { top: '18%', left: '78%', size: 2.5, opacity: 0.45 },
-  { top: '72%', left:  '7%', size: 2,   opacity: 0.5  },
-  { top: '82%', left: '88%', size: 3,   opacity: 0.35 },
-  { top:  '5%', left: '55%', size: 2,   opacity: 0.6  },
-  { top: '60%', left: '92%', size: 2.5, opacity: 0.4  },
-  { top: '88%', left: '30%', size: 2,   opacity: 0.5  },
-  { top: '32%', left:  '4%', size: 3,   opacity: 0.3  },
-  { top: '48%', left: '96%', size: 2,   opacity: 0.45 },
-  { top: '92%', left: '65%', size: 2.5, opacity: 0.4  },
-  { top: '15%', left: '38%', size: 1.5, opacity: 0.5  },
-  { top: '68%', left: '48%', size: 2,   opacity: 0.35 },
+  { top:  '6%', left: '10%', size: 1.5, opacity: 0.5,  delay: '0s'   },
+  { top: '14%', left: '82%', size: 2,   opacity: 0.4,  delay: '0.8s' },
+  { top: '22%', left: '24%', size: 1,   opacity: 0.35, delay: '1.5s' },
+  { top: '70%', left:  '6%', size: 1.5, opacity: 0.45, delay: '0.3s' },
+  { top: '80%', left: '90%', size: 2,   opacity: 0.3,  delay: '2.1s' },
+  { top:  '4%', left: '52%', size: 1.5, opacity: 0.55, delay: '1.1s' },
+  { top: '58%', left: '95%', size: 1,   opacity: 0.35, delay: '0.6s' },
+  { top: '90%', left: '28%', size: 1.5, opacity: 0.45, delay: '1.8s' },
+  { top: '30%', left:  '2%', size: 1,   opacity: 0.3,  delay: '2.4s' },
+  { top: '46%', left: '98%', size: 1.5, opacity: 0.4,  delay: '0.9s' },
+  { top: '94%', left: '68%', size: 1,   opacity: 0.35, delay: '1.3s' },
+  { top: '12%', left: '40%', size: 1,   opacity: 0.45, delay: '2.7s' },
+  { top: '65%', left: '50%', size: 1.5, opacity: 0.3,  delay: '0.4s' },
+  { top: '38%', left: '88%', size: 1,   opacity: 0.4,  delay: '1.9s' },
+  { top: '84%', left: '44%', size: 1.5, opacity: 0.35, delay: '3.1s' },
+  { top: '50%', left: '15%', size: 1,   opacity: 0.3,  delay: '0.7s' },
+  { top: '76%', left: '72%', size: 2,   opacity: 0.25, delay: '2.2s' },
+  { top: '26%', left: '60%', size: 1,   opacity: 0.4,  delay: '1.6s' },
+  { top:  '3%', left: '30%', size: 1.5, opacity: 0.45, delay: '3.4s' },
+  { top: '55%', left: '35%', size: 1,   opacity: 0.3,  delay: '0.2s' },
 ]
 
 // ── HeroGlobe — Mapbox GL globe, auto-rotate, zoom, click-to-register ─────────
@@ -69,9 +77,11 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
   return (
     <>
       <style>{`
-        @keyframes hg-spin-cw  { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes hg-spin-ccw { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
-        @keyframes hg-glow     {
+        @keyframes hg-twinkle {
+          0%,100% { opacity: var(--star-op); transform: scale(1); }
+          50%      { opacity: calc(var(--star-op) * 0.25); transform: scale(0.7); }
+        }
+        @keyframes hg-glow {
           0%,100% { box-shadow: 0 0 0 2px rgba(200,235,255,0.7), 0 0 35px rgba(56,189,248,0.8), 0 0 70px rgba(56,189,248,0.4); }
           50%     { box-shadow: 0 0 0 2.5px rgba(220,245,255,0.9), 0 0 50px rgba(56,189,248,1), 0 0 100px rgba(56,189,248,0.55); }
         }
@@ -104,7 +114,7 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
           overflow: 'visible',
           flexShrink: 0,
         }}>
-          {/* ── Static star field ── */}
+          {/* ── Twinkling star field ── */}
           {STARS.map((s, i) => (
             <span key={i} style={{
               position: 'absolute',
@@ -114,27 +124,15 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
               background: '#fff',
               opacity: s.opacity,
               pointerEvents: 'none',
+              // @ts-expect-error CSS custom property
+              '--star-op': s.opacity,
+              animation: `hg-twinkle ${2.5 + i * 0.3}s ease-in-out ${s.delay} infinite`,
+              boxShadow: s.size >= 1.5 ? '0 0 3px rgba(200,230,255,0.8)' : 'none',
             }} />
           ))}
 
-          {/* ── Globe wrapper ── */}
+          {/* ── Globe wrapper — no rings ── */}
           <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
-            {/* Outer spinning ring */}
-            <div style={{
-              position: 'absolute', inset: -22, borderRadius: '50%',
-              border: '1.5px dashed rgba(147,210,255,0.35)',
-              animation: 'hg-spin-cw 14s linear infinite',
-              pointerEvents: 'none',
-              zIndex: 2,
-            }} />
-            {/* Inner counter-rotating ring */}
-            <div style={{
-              position: 'absolute', inset: -10, borderRadius: '50%',
-              border: '1px dotted rgba(52,211,153,0.3)',
-              animation: 'hg-spin-ccw 10s linear infinite',
-              pointerEvents: 'none',
-              zIndex: 2,
-            }} />
 
             {/* Globe body — circular clipped Mapbox GL map */}
             <div
