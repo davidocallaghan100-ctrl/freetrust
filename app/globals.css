@@ -309,7 +309,7 @@ p { line-height: 1.7; color: var(--color-text-muted); }
 .form-textarea:focus,
 .form-select:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(108,99,255,.15);
+  box-shadow: 0 0 0 3px rgba(56,189,248,.15);
 }
 
 .form-input::placeholder,
