@@ -256,6 +256,6 @@ export async function POST(req: NextRequest) {
         { status: 403 }
       )
     }
-    return NextResponse.json({ error: 'Calendar sync failed. Please try again.' }, { status: 500 })
+    return NextResponse.json({ error: 'Calendar sync failed. Please try again.', reconnect: false }, { status: 500 })
   }
 }

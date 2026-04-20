@@ -570,6 +570,16 @@ function CalendarPageInner() {
     }
   }
 
+  // ── Google disconnect ─────────────────────────────────────────────────────
+  async function handleGoogleDisconnect() {
+    try {
+      await fetch('/api/calendar/google/disconnect', { method: 'POST' })
+    } catch {}
+    setGoogleConnected(false)
+    setGoogleSyncedAt(null)
+    showToast('Google Calendar disconnected', 'success')
+  }
+
   // ── Google sync ───────────────────────────────────────────────────────────
   async function handleSync() {
     setSyncing(true)
@@ -577,20 +587,20 @@ function CalendarPageInner() {
       const res = await fetch('/api/calendar/google/sync', { method: 'POST' })
       const d   = await res.json()
       if (!res.ok) {
-        if (d.reconnect) {
-          // Token expired — update UI to show disconnected state
+        if (d.reconnect || res.status === 401 || res.status === 403) {
+          // Token expired or revoked — switch to disconnected state
           setGoogleConnected(false)
           setGoogleSyncedAt(null)
-          showToast('Google Calendar disconnected — please reconnect', 'error')
+          showToast(d.error ?? 'Google Calendar disconnected — please reconnect', 'error')
         } else {
-          showToast(d.error ?? 'Sync failed', 'error')
+          showToast(d.error ?? 'Sync failed. Please try again.', 'error')
         }
         return
       }
       setGoogleSyncedAt(d.synced_at)
       await fetchEvents(date)
       showToast(`Synced! ↓${d.pulled} from Google, ↑${d.pushed} pushed`, 'success')
-    } catch { showToast('Sync failed', 'error') }
+    } catch { showToast('Sync failed. Please try again.', 'error') }
     finally   { setSyncing(false) }
   }
 
@@ -810,7 +820,7 @@ function CalendarPageInner() {
           {/* Top row: Google Calendar status + settings gear */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem' }}>
             {googleConnected ? (
-              /* Connected: compact sync status + sync button */
+              /* Connected: compact sync status + sync button + disconnect */
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, flexWrap: 'wrap' }}>
                 <span style={{
                   fontSize: '0.75rem', color: '#8888aa',
@@ -839,6 +849,22 @@ function CalendarPageInner() {
                 >
                   <span style={{ fontSize: '0.85rem' }}>{syncing ? '⏳' : '🔄'}</span>
                   {syncing ? 'Syncing…' : 'Sync now'}
+                </button>
+                <button
+                  onClick={handleGoogleDisconnect}
+                  style={{
+                    padding: '0.3rem 0.6rem',
+                    borderRadius: '9999px',
+                    border: '1px solid #3a2a2a',
+                    background: 'transparent',
+                    color: '#8888aa',
+                    fontSize: '0.72rem',
+                    cursor: 'pointer',
+                    minHeight: 32,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  Disconnect
                 </button>
               </div>
             ) : (
