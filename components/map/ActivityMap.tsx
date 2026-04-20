@@ -37,8 +37,38 @@ const LAYER_CONFIG: Record<PinType, { label: string; color: string; glow: string
   job:     { label: 'Jobs',     color: '#38bdf8', glow: 'rgba(56,189,248,0.6)' },
 }
 
-// ─── GlowDot marker ───────────────────────────────────────────────────────────
-function GlowDot({ color, glow }: { color: string; glow: string }) {
+// ─── PinMarker — image avatar or fallback glow dot ───────────────────────────
+function PinMarker({ color, glow, imageUrl }: { color: string; glow: string; imageUrl?: string | null }) {
+  if (imageUrl) {
+    return (
+      <div style={{ position: 'relative', width: 32, height: 32, overflow: 'visible', cursor: 'pointer' }}>
+        {/* Outer glow ring */}
+        <div style={{
+          position: 'absolute',
+          inset: -4,
+          borderRadius: '50%',
+          border: `2px solid ${color}88`,
+          boxShadow: `0 0 10px 3px ${glow}`,
+          pointerEvents: 'none',
+        }} />
+        {/* Circular image */}
+        <img
+          src={imageUrl}
+          alt=""
+          style={{
+            width: 32, height: 32,
+            borderRadius: '50%',
+            objectFit: 'cover',
+            border: `2.5px solid ${color}`,
+            boxShadow: `0 2px 8px rgba(0,0,0,0.5)`,
+            display: 'block',
+          }}
+          onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+        />
+      </div>
+    )
+  }
+  // Fallback: solid glow dot
   return (
     <div style={{ position: 'relative', width: 14, height: 14, overflow: 'visible', cursor: 'pointer' }}>
       <div style={{
@@ -359,6 +389,11 @@ export default function ActivityMap() {
         >
           {visiblePins.map(pin => {
             const cfg = LAYER_CONFIG[pin.type]
+            // Determine image URL: avatars for members, cover images for products/services
+            let imageUrl: string | null = null
+            if (pin.type === 'member')  imageUrl = (pin as MemberPin).avatar_url ?? null
+            if (pin.type === 'product') imageUrl = (pin as ProductPin).cover_image_url ?? null
+            if (pin.type === 'service') imageUrl = (pin as ServicePin).cover_image_url ?? null
             return (
               <Marker
                 key={`${pin.type}-${pin.id}`}
@@ -367,7 +402,7 @@ export default function ActivityMap() {
                 anchor="center"
                 onClick={e => { e.originalEvent.stopPropagation(); setSelectedPin(pin) }}
               >
-                <GlowDot color={cfg.color} glow={cfg.glow} />
+                <PinMarker color={cfg.color} glow={cfg.glow} imageUrl={imageUrl} />
               </Marker>
             )
           })}
