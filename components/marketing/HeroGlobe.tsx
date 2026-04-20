@@ -128,6 +128,9 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
         /* Override Mapbox popup default styles */
         .mapboxgl-popup-content { background: transparent !important; padding: 0 !important; box-shadow: none !important; }
         .mapboxgl-popup-tip { display: none !important; }
+        /* Hide Mapbox branding */
+        .mapboxgl-ctrl-logo { display: none !important; }
+        .mapboxgl-ctrl-attrib { display: none !important; }
       `}</style>
 
       <div style={{

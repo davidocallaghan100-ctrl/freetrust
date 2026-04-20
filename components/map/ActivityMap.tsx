@@ -313,10 +313,9 @@ export default function ActivityMap() {
           border-bottom-color: #2a2a3a !important;
         }
         .mapboxgl-ctrl-attrib {
-          background: rgba(13,13,26,0.85) !important; color: #64748b !important;
-          font-size: 10px !important; border-radius: 6px !important;
+          display: none !important;
         }
-        .mapboxgl-ctrl-attrib a { color: #00d4aa !important; }
+        .mapboxgl-ctrl-logo { display: none !important; }
         @keyframes ft-spin { to { transform: rotate(360deg); } }
         @keyframes ft-pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
