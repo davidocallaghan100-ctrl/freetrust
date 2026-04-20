@@ -1,11 +1,22 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-import Map, { type MapRef } from 'react-map-gl/mapbox'
+import { useEffect, useRef, useState } from 'react'
+import Map, { type MapRef, Marker, Popup } from 'react-map-gl/mapbox'
+import { createClient } from '@supabase/supabase-js'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
-const MAP_STYLE   = 'mapbox://styles/davos212/cmo7emfe2000x01r3b3cn2zgq'
+const MAPBOX_TOKEN  = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
+const MAP_STYLE     = 'mapbox://styles/davos212/cmo7emfe2000x01r3b3cn2zgq'
+const SUPABASE_URL  = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+
+type Job = {
+  id: string
+  title: string
+  location_label: string
+  latitude: number
+  longitude: number
+}
 
 const STARS = [
   { top:  '6%', left: '10%', size: 1.5, opacity: 0.5,  delay: '0s'   },
@@ -31,8 +42,27 @@ const STARS = [
 ]
 
 export default function HeroGlobe({ size = 220 }: { size?: number }) {
-  const mapRef = useRef<MapRef | null>(null)
-  const pad    = 60
+  const mapRef       = useRef<MapRef | null>(null)
+  const pad          = 60
+  const [jobs, setJobs]               = useState<Job[]>([])
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null)
+
+  // Fetch active jobs with coordinates
+  useEffect(() => {
+    if (!SUPABASE_URL || !SUPABASE_ANON) return
+    const sb = createClient(SUPABASE_URL, SUPABASE_ANON)
+    sb
+      .from('jobs')
+      .select('id, title, location_label, latitude, longitude')
+      .eq('status', 'active')
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(50)
+      .then(({ data }) => {
+        if (data) setJobs(data as Job[])
+      })
+  }, [])
 
   // Persistently fix touch-action so mobile pinch-zoom works.
   // Mapbox GL resets touch-action: none on the canvas on every render/interaction,
@@ -95,6 +125,9 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
         @keyframes hg-pin { 0%,100% { transform: scale(1); opacity:1; } 50% { transform: scale(2); opacity:0.4; } }
         /* Clip map to circle without overflow:hidden blocking touch events */
         .hg-map-clip { clip-path: circle(50% at 50% 50%); }
+        /* Override Mapbox popup default styles */
+        .mapboxgl-popup-content { background: transparent !important; padding: 0 !important; box-shadow: none !important; }
+        .mapboxgl-popup-tip { display: none !important; }
       `}</style>
 
       <div style={{
@@ -158,7 +191,72 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
               touchPitch={false}
               cooperativeGestures={false}
               onError={e => console.warn('[HeroGlobe]', e)}
-            />
+            >
+              {/* Job location pins */}
+              {jobs.map(job => (
+                <Marker
+                  key={job.id}
+                  longitude={job.longitude}
+                  latitude={job.latitude}
+                  anchor="center"
+                  onClick={e => {
+                    e.originalEvent.stopPropagation()
+                    setSelectedJob(prev => prev?.id === job.id ? null : job)
+                  }}
+                >
+                  <div style={{
+                    width: 10, height: 10, borderRadius: '50%',
+                    background: '#34d399',
+                    boxShadow: '0 0 6px rgba(52,211,153,0.9), 0 0 14px rgba(52,211,153,0.5)',
+                    cursor: 'pointer',
+                    border: '1.5px solid rgba(255,255,255,0.6)',
+                  }} />
+                </Marker>
+              ))}
+
+              {/* Popup for selected job */}
+              {selectedJob && (
+                <Popup
+                  longitude={selectedJob.longitude}
+                  latitude={selectedJob.latitude}
+                  anchor="bottom"
+                  closeButton={false}
+                  closeOnClick={true}
+                  onClose={() => setSelectedJob(null)}
+                  offset={16}
+                >
+                  <div style={{
+                    background: '#1a1a2e',
+                    border: '1px solid rgba(52,211,153,0.4)',
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    minWidth: 160,
+                    maxWidth: 220,
+                  }}>
+                    <div style={{ fontWeight: 700, color: '#fff', fontSize: 14, marginBottom: 4, lineHeight: 1.3 }}>
+                      {selectedJob.title}
+                    </div>
+                    <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, marginBottom: 8 }}>
+                      {selectedJob.location_label}
+                    </div>
+                    <div
+                      onClick={() => { window.location.href = '/jobs/' + selectedJob.id }}
+                      style={{
+                        color: '#34d399',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
+                      View Job →
+                    </div>
+                  </div>
+                </Popup>
+              )}
+            </Map>
           </div>
 
           {/* Overlays — atmosphere, crescent, shadow (all pointer-events:none) */}
