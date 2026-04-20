@@ -6,6 +6,8 @@ import FAQAccordion from '@/components/marketing/FAQAccordion'
 import { FAQS } from '@/lib/faq'
 import ROICalculator from './ROICalculator'
 import { createClient } from '@/lib/supabase/client'
+import Map, { type MapRef } from 'react-map-gl/mapbox'
+import 'mapbox-gl/dist/mapbox-gl.css'
 
 // ── Continent paths — improved realistic shapes ───────────────────────────────
 function ContinentPaths() {
@@ -73,7 +75,193 @@ function ShootingStar({ style, animName, duration, delay, width = 60 }: Shooting
   )
 }
 
-// ── Rotating Globe (hero version) ─────────────────────────────────────────────
+// ── Landing Globe — real Mapbox globe, no pins ────────────────────────────────
+function LandingGlobe() {
+  const mapRef = useRef<MapRef>(null)
+  const lngRef = useRef(0)
+  const isZoomingRef = useRef(false)
+  const zoomTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const recentlyZoomedRef = useRef(false)
+  const recentZoomTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const size = 280
+  const pad = 80
+
+  // Auto-rotate — pauses while zooming
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isZoomingRef.current) return
+      lngRef.current = (lngRef.current + 0.06) % 360
+      const map = mapRef.current?.getMap()
+      if (map) {
+        map.jumpTo({ center: [lngRef.current, 20] })
+      }
+    }, 50)
+    return () => clearInterval(interval)
+  }, [])
+
+  const handleZoomStart = () => {
+    isZoomingRef.current = true
+    recentlyZoomedRef.current = true
+    if (zoomTimerRef.current) clearTimeout(zoomTimerRef.current)
+    if (recentZoomTimerRef.current) clearTimeout(recentZoomTimerRef.current)
+  }
+
+  const handleZoomEnd = () => {
+    // Resume auto-rotate after 2s
+    zoomTimerRef.current = setTimeout(() => { isZoomingRef.current = false }, 2000)
+    // Track "recently zoomed" for 300ms to block click navigation
+    recentZoomTimerRef.current = setTimeout(() => { recentlyZoomedRef.current = false }, 300)
+  }
+
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (recentlyZoomedRef.current) {
+      e.preventDefault()
+    }
+  }
+
+  return (
+    <Link
+      href="/register"
+      onClick={handleClick}
+      style={{
+        display: 'block',
+        position: 'relative',
+        width: size + pad,
+        height: size + pad,
+        textDecoration: 'none',
+        cursor: 'pointer',
+        flexShrink: 0,
+      }}
+      className="landing-globe-link"
+    >
+      <style>{`
+        .landing-globe-link .globe-glow-box {
+          transition: box-shadow 0.3s ease;
+        }
+        .landing-globe-link:hover .globe-glow-box {
+          box-shadow: 0 0 0 2.5px rgba(220,245,255,0.85), 0 0 40px rgba(56,189,248,0.95), 0 0 80px rgba(56,189,248,0.55) !important;
+        }
+        .landing-globe-link .globe-join-label {
+          opacity: 0;
+          transition: opacity 0.25s ease, transform 0.25s ease;
+          transform: translateY(4px);
+        }
+        .landing-globe-link:hover .globe-join-label {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      `}</style>
+
+      {/* Shooting stars */}
+      <ShootingStar style={{ top: 10, left: 20 }}          animName="hg-shoot-1" duration="7s"   delay="0s"    width={65} />
+      <ShootingStar style={{ top: 30, right: 15 }}         animName="hg-shoot-2" duration="9s"   delay="1.2s"  width={55} />
+      <ShootingStar style={{ top: '60%', left: -10 }}      animName="hg-shoot-3" duration="8s"   delay="2.5s"  width={50} />
+      <ShootingStar style={{ bottom: 40, right: 10 }}      animName="hg-shoot-4" duration="7.5s" delay="3.8s"  width={70} />
+      <ShootingStar style={{ top: '15%', right: 25 }}      animName="hg-shoot-5" duration="10s"  delay="0.7s"  width={60} />
+      <ShootingStar style={{ bottom: 20, left: 30 }}       animName="hg-shoot-6" duration="8.5s" delay="4.5s"  width={45} />
+      <ShootingStar style={{ top: 5, left: '45%' }}        animName="hg-shoot-7" duration="9.5s" delay="5.5s"  width={58} />
+      <ShootingStar style={{ bottom: '10%', right: 40 }}   animName="hg-shoot-8" duration="7s"   delay="2s"    width={52} />
+
+      {/* Globe wrapper — centred in the padded container */}
+      <div style={{
+        position: 'absolute',
+        top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: size,
+        height: size,
+        flexShrink: 0,
+      }}>
+        {/* Outer spinning rings */}
+        <div style={{
+          position: 'absolute', inset: -22, borderRadius: '50%',
+          border: '1.5px dashed rgba(147,210,255,0.35)',
+          animation: 'hg-spin-cw 14s linear infinite',
+          pointerEvents: 'none',
+          zIndex: 2,
+        }} />
+        <div style={{
+          position: 'absolute', inset: -10, borderRadius: '50%',
+          border: '1px dotted rgba(52,211,153,0.3)',
+          animation: 'hg-spin-ccw 10s linear infinite',
+          pointerEvents: 'none',
+          zIndex: 2,
+        }} />
+
+        {/* Mapbox globe clipped to circle */}
+        <div
+          className="globe-glow-box"
+          style={{
+            width: size,
+            height: size,
+            borderRadius: '50%',
+            overflow: 'hidden',
+            position: 'relative',
+            boxShadow: '0 0 0 2px rgba(200,235,255,0.6), 0 0 30px rgba(56,189,248,0.7), 0 0 60px rgba(56,189,248,0.35)',
+            animation: 'hg-glow 3s ease-in-out infinite',
+          }}
+        >
+          <Map
+            ref={mapRef}
+            mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''}
+            mapStyle="mapbox://styles/davos212/cmo7emfe2000x01r3b3cn2zgq"
+            projection="globe"
+            initialViewState={{ longitude: 0, latitude: 20, zoom: 1.2 }}
+            style={{ width: size, height: size }}
+            attributionControl={false}
+            dragPan={false}
+            scrollZoom={true}
+            doubleClickZoom={true}
+            dragRotate={false}
+            keyboard={false}
+            touchZoomRotate={true}
+            onZoomStart={handleZoomStart}
+            onZoomEnd={handleZoomEnd}
+          />
+          {/* Atmosphere rim overlay */}
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: '50%',
+            background: 'radial-gradient(circle at 50% 50%, transparent 48%, rgba(96,165,250,0.06) 70%, rgba(56,189,248,0.22) 88%, rgba(147,210,255,0.4) 100%)',
+            pointerEvents: 'none',
+            zIndex: 1,
+          }} />
+          {/* Crescent highlight */}
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: '50%',
+            background: 'radial-gradient(circle at 30% 25%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 20%, transparent 50%)',
+            pointerEvents: 'none',
+            zIndex: 1,
+          }} />
+        </div>
+
+        {/* "Join FreeTrust →" hover label */}
+        <div
+          className="globe-join-label"
+          style={{
+            position: 'absolute',
+            bottom: -36,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(10,20,40,0.85)',
+            border: '1px solid rgba(56,189,248,0.4)',
+            borderRadius: 999,
+            padding: '5px 14px',
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            color: '#38bdf8',
+            whiteSpace: 'nowrap',
+            backdropFilter: 'blur(8px)',
+            pointerEvents: 'none',
+            zIndex: 3,
+          }}
+        >
+          Join FreeTrust →
+        </div>
+      </div>
+    </Link>
+  )
+}
+
+// ── Rotating Globe (hero version — CSS fallback) ───────────────────────────────
 function HeroGlobe({ size = 220 }: { size?: number }) {
   const pad = 80 // extra space around globe for shooting stars
   return (
@@ -621,12 +809,12 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
         <div className="lp" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '3rem', flexWrap: 'wrap', justifyContent: 'center' }} >
           <div className="hero-inner" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '3rem', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
 
-            {/* Left: rotating globe */}
+            {/* Left: real Mapbox globe */}
             <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'center' }} className="bubble-col">
               <style>{`
-                @media (max-width: 640px) { .bubble-col > div { transform: scale(0.78); transform-origin: center top; } }
+                @media (max-width: 640px) { .bubble-col > div { transform: scale(0.72); transform-origin: center top; } }
               `}</style>
-              <HeroGlobe size={220} />
+              <LandingGlobe />
             </div>
 
             {/* Right: headline + CTAs */}
