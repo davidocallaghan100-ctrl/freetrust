@@ -1303,7 +1303,7 @@ input, textarea, select {
 .ft-calendar-wrap .rbc-agenda-view table thead th,
 .ft-calendar-wrap .rbc-header {
   background: #0d0d1a !important;
-  color: #64748b !important;
+  color: #94a3b8 !important;
   font-size: 11px !important;
   font-weight: 700 !important;
   letter-spacing: 0.08em !important;
@@ -1329,8 +1329,9 @@ input, textarea, select {
 /* Time cell (middle column) */
 .ft-calendar-wrap .rbc-agenda-time-cell {
   background: #13131a !important;
-  color: #64748b !important;
+  color: #94a3b8 !important;
   font-size: 12px !important;
+  font-weight: 500 !important;
   padding: 12px 14px !important;
   border-right: 1px solid #2a2a3a !important;
   border-bottom: 1px solid #1e1e2e !important;
