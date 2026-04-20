@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import Map, { Marker, Popup, type MapRef } from 'react-map-gl/maplibre'
-import 'maplibre-gl/dist/maplibre-gl.css'
+import Map, { Marker, Popup, type MapRef } from 'react-map-gl/mapbox'
+import 'mapbox-gl/dist/mapbox-gl.css'
 
 // ─── Pin types ────────────────────────────────────────────────────────────────
 type PinType = 'member' | 'event' | 'product' | 'service' | 'job'
@@ -24,9 +24,10 @@ interface JobPin     extends BasePin { type: 'job';     title: string; salary_mi
 type Pin = MemberPin | EventPin | ProductPin | ServicePin | JobPin
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-// Custom FreeTrust map style — deep navy oceans, bright green land.
-// Hosted in /public/map-style.json. Uses OpenFreeMap vector tiles, no token required.
-const MAP_STYLE = '/map-style.json'
+// Custom Mapbox Studio style — globe with bright green land and vivid blue ocean.
+// Published by davos212 on Mapbox Studio.
+const MAP_STYLE = 'mapbox://styles/davos212/cmo7emfe2000x01r3b3cn2zgq'
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 
 const LAYER_CONFIG: Record<PinType, { label: string; color: string; glow: string }> = {
   member:  { label: 'Members',  color: '#00d4aa', glow: 'rgba(0,212,170,0.6)'  },
@@ -228,7 +229,7 @@ export default function ActivityMap() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* ── Global styles ── */}
       <style>{`
-        .maplibregl-popup-content {
+        .mapboxgl-popup-content {
           background: #13131a !important;
           border: 1px solid #2a2a3a !important;
           border-radius: 12px !important;
@@ -237,22 +238,22 @@ export default function ActivityMap() {
           box-shadow: 0 12px 40px rgba(0,0,0,0.7) !important;
           color: #f1f5f9;
         }
-        .maplibregl-popup-content > div { padding: 0 16px 16px !important; }
-        .maplibregl-popup-close-button {
+        .mapboxgl-popup-content > div { padding: 0 16px 16px !important; }
+        .mapboxgl-popup-close-button {
           color: #64748b !important; font-size: 20px !important;
           padding: 6px 10px !important; background: transparent !important;
           right: 0; top: 0; z-index: 10; line-height: 1;
         }
-        .maplibregl-popup-close-button:hover { color: #f1f5f9 !important; }
-        .maplibregl-popup-tip {
+        .mapboxgl-popup-close-button:hover { color: #f1f5f9 !important; }
+        .mapboxgl-popup-tip {
           border-top-color: #2a2a3a !important;
           border-bottom-color: #2a2a3a !important;
         }
-        .maplibregl-ctrl-attrib {
+        .mapboxgl-ctrl-attrib {
           background: rgba(13,13,26,0.85) !important; color: #64748b !important;
           font-size: 10px !important; border-radius: 6px !important;
         }
-        .maplibregl-ctrl-attrib a { color: #00d4aa !important; }
+        .mapboxgl-ctrl-attrib a { color: #00d4aa !important; }
         @keyframes ft-spin { to { transform: rotate(360deg); } }
         @keyframes ft-pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
@@ -349,10 +350,12 @@ export default function ActivityMap() {
 
         <Map
           ref={mapRef}
+          mapboxAccessToken={MAPBOX_TOKEN}
           mapStyle={MAP_STYLE}
           initialViewState={{ longitude: -2, latitude: 54, zoom: 5 }}
           style={{ width: '100%', height: '100%' }}
           attributionControl={false}
+          onError={e => console.error('[ActivityMap] Mapbox error:', e)}
         >
           {visiblePins.map(pin => {
             const cfg = LAYER_CONFIG[pin.type]

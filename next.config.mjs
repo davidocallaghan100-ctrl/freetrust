@@ -25,10 +25,25 @@ const withPWA = nextPwa({
     },
     {
       // Map tile requests must NEVER be intercepted by the service worker.
-      // MapLibre GL JS fetches tiles from CartoDB (*.cartocdn.com) and
-      // OpenFreeMap (tiles.openfreemap.org). If the SW caches or blocks these,
-      // the map canvas stays black. These NetworkOnly rules must come BEFORE
-      // the generic image caching rule below.
+      // Mapbox GL JS fetches tiles from *.mapbox.com and *.tiles.mapbox.com.
+      // MapLibre / CartoDB / OpenFreeMap also bypass here as fallback.
+      // These NetworkOnly rules must come BEFORE the generic image caching rule.
+      urlPattern: /^https:\/\/[^/]*\.mapbox\.com\/.*/i,
+      handler: 'NetworkOnly',
+    },
+    {
+      urlPattern: /^https:\/\/[^/]*\.tiles\.mapbox\.com\/.*/i,
+      handler: 'NetworkOnly',
+    },
+    {
+      urlPattern: /^https:\/\/api\.mapbox\.com\/.*/i,
+      handler: 'NetworkOnly',
+    },
+    {
+      urlPattern: /^https:\/\/events\.mapbox\.com\/.*/i,
+      handler: 'NetworkOnly',
+    },
+    {
       urlPattern: /^https:\/\/[^/]*\.cartocdn\.com\/.*/i,
       handler: 'NetworkOnly',
     },
@@ -158,23 +173,22 @@ const nextConfig = {
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self), payment=(self)' },
           // HSTS — force HTTPS for 2 years
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
-          // Content Security Policy — allows MapLibre GL JS, CartoDB dark-matter tiles, Supabase, etc.
+          // Content Security Policy — allows Mapbox GL JS, Supabase, etc.
           {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              // blob: in script-src is required for MapLibre GL JS web worker inline scripts
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://unpkg.com",
-              "style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com",
-              // Allow all https images + blob — tile PNGs/WebP come from various CDN subdomains
+              // blob: in script-src is required for Mapbox GL JS web worker inline scripts
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://api.mapbox.com https://unpkg.com",
+              "style-src 'self' 'unsafe-inline' https://api.mapbox.com https://unpkg.com https://fonts.googleapis.com",
+              // Allow all https images + blob — Mapbox tiles come from various CDN subdomains
               "img-src 'self' data: blob: https:",
-              // blob: in connect-src needed for MapLibre tile worker blob URLs;
-              // CartoDB + OpenFreeMap host tiles and style JSON
-              "connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co https://*.cartocdn.com https://basemaps.cartocdn.com https://unpkg.com https://tiles.openfreemap.org https://*.openfreemap.org",
-              // Both worker-src and child-src needed for MapLibre GL web workers across browsers
+              // blob: in connect-src needed for Mapbox tile worker blob URLs
+              "connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://*.mapbox.com https://*.tiles.mapbox.com https://*.cartocdn.com https://basemaps.cartocdn.com https://unpkg.com https://tiles.openfreemap.org https://*.openfreemap.org",
+              // Both worker-src and child-src needed for Mapbox GL web workers across browsers
               "worker-src 'self' blob:",
               "child-src 'self' blob:",
-              "font-src 'self' https://fonts.gstatic.com https://tiles.openfreemap.org data:",
+              "font-src 'self' https://fonts.gstatic.com https://api.mapbox.com https://tiles.openfreemap.org data:",
               "frame-src 'self'",
             ].join('; '),
           },
