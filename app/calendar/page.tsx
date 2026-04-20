@@ -5,7 +5,7 @@
 // Displays gigs, products, services, events, reminders and manual entries
 // for the authenticated user with optional Google Calendar sync.
 // ============================================================================
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams }               from 'next/navigation'
 import { Calendar, dateFnsLocalizer, Views }        from 'react-big-calendar'
 import { format, parse, startOfWeek, getDay,
@@ -331,8 +331,8 @@ function EventDrawer({ event, onClose, onSave, onDelete, creating, newStart }: D
   )
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
-export default function CalendarPage() {
+// ── Main page (inner – needs Suspense because it uses useSearchParams) ────────
+function CalendarPageInner() {
   const router       = useRouter()
   const searchParams = useSearchParams()
 
@@ -687,5 +687,18 @@ export default function CalendarPage() {
         </div>
       )}
     </div>
+  )
+}
+
+// ── Default export wrapped in Suspense (required for useSearchParams) ─────────
+export default function CalendarPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen" style={{ background: '#0a0a0f' }}>
+        <div className="text-[#38bdf8] text-lg">Loading calendar…</div>
+      </div>
+    }>
+      <CalendarPageInner />
+    </Suspense>
   )
 }
