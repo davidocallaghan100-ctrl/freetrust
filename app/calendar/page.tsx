@@ -696,6 +696,27 @@ function CalendarPageInner() {
         .rbc-day-bg, .rbc-month-view, .rbc-time-view, .rbc-agenda-view {
           background: #13131a;
         }
+
+        /* Agenda — horizontal scroll so EVENT column is fully readable on mobile */
+        .rbc-agenda-view {
+          overflow-x: auto !important;
+          -webkit-overflow-scrolling: touch;
+        }
+        .rbc-agenda-table {
+          min-width: 480px;
+        }
+        /* DATE col fixed width, TIME col fixed, EVENT col takes remaining space */
+        .rbc-agenda-table .rbc-agenda-date-cell {
+          min-width: 90px;
+          width: 90px;
+        }
+        .rbc-agenda-table .rbc-agenda-time-cell {
+          min-width: 130px;
+          width: 130px;
+        }
+        .rbc-agenda-table .rbc-agenda-event-cell {
+          min-width: 200px;
+        }
         .rbc-off-range-bg { background: rgba(255,255,255,0.015); }
         .rbc-today { background: rgba(56,189,248,0.08) !important; }
         .rbc-date-cell {
@@ -767,8 +788,27 @@ function CalendarPageInner() {
         }
 
         /* Selection */
-        .rbc-slot-selection { background: rgba(56,189,248,0.15); }
-        .rbc-selected { box-shadow: 0 0 0 2px #38bdf8; }
+        .rbc-slot-selection { background: rgba(0,212,170,0.1); }
+        .rbc-selected { box-shadow: 0 0 0 2px #00d4aa; }
+
+        /* Kill the baby blue row highlight when clicking agenda rows */
+        .rbc-agenda-table tbody > tr.rbc-selected,
+        .rbc-agenda-table tbody > tr:focus,
+        .rbc-agenda-table tbody > tr:active,
+        .rbc-agenda-table tbody > tr td.rbc-selected,
+        .rbc-agenda-table .rbc-selected {
+          background: rgba(0,212,170,0.06) !important;
+        }
+        /* Remove default browser blue text-selection highlight */
+        .rbc-agenda-table ::selection {
+          background: rgba(0,212,170,0.2);
+        }
+        /* Kill any lingering blue backgrounds on agenda cells */
+        .rbc-agenda-table td:focus,
+        .rbc-agenda-table tr:focus {
+          outline: none;
+          background: rgba(0,212,170,0.06) !important;
+        }
 
         /* ── Event colours handled in globals.css ──
            Base .rbc-event override (teal) lives in globals.css so it
