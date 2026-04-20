@@ -90,7 +90,10 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (tokenErr || !tokenRow) {
-      return NextResponse.json({ error: 'Google Calendar not connected' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Please connect Google Calendar first', reconnect: true },
+        { status: 400 }
+      )
     }
 
     const token   = tokenRow as GoogleCalendarTokenRow
@@ -238,6 +241,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, pulled, pushed, synced_at: nowIso })
   } catch (err) {
     console.error('[POST /api/calendar/google/sync]', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    // Return a friendlier error message
+    const message = err instanceof Error ? err.message : 'Sync failed'
+    // Check for common Google API errors
+    if (message.includes('invalid_grant') || message.includes('Token has been expired')) {
+      return NextResponse.json(
+        { error: 'Google Calendar access expired. Please reconnect.', reconnect: true },
+        { status: 401 }
+      )
+    }
+    if (message.includes('insufficient') || message.includes('forbidden') || message.includes('403')) {
+      return NextResponse.json(
+        { error: 'Google Calendar permission denied. Please reconnect.', reconnect: true },
+        { status: 403 }
+      )
+    }
+    return NextResponse.json({ error: 'Calendar sync failed. Please try again.' }, { status: 500 })
   }
 }

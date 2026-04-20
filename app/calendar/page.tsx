@@ -56,8 +56,9 @@ function eventStyleGetter(event: RBCEvent) {
     ?? '#64748b'
   return {
     style: {
-      backgroundColor: color,
-      border:          'none',
+      backgroundColor: `${color}cc`,   // slightly transparent for softer look
+      border:          `1px solid ${color}`,
+      borderLeft:      `3px solid ${color}`,
       borderRadius:    '6px',
       color:           '#fff',
       fontSize:        '0.78rem',
@@ -697,21 +698,37 @@ function CalendarPageInner() {
         .rbc-day-slot .rbc-time-slot { border-color: rgba(42,42,61,0.5); }
 
         /* Agenda view */
-        .rbc-agenda-table { color: #e8e8f0; }
+        .rbc-agenda-table { color: #e8e8f0; width: 100%; }
+        .rbc-agenda-table thead > tr > th {
+          background: #1a1a2e;
+          color: #8888aa;
+          font-size: 0.72rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          padding: 0.55rem 1rem;
+          border-bottom: 1px solid #2a2a3d;
+        }
         .rbc-agenda-date-cell, .rbc-agenda-time-cell {
           color: #8888aa;
           font-size: 0.82rem;
-          padding: 0.75rem 1rem;
+          padding: 0.75rem 0.875rem;
+          white-space: nowrap;
         }
         .rbc-agenda-event-cell {
           font-size: 0.88rem;
-          padding: 0.75rem 1rem;
+          padding: 0.75rem 0.875rem;
         }
         .rbc-agenda-table tbody > tr {
-          border-bottom: 1px solid #2a2a3d;
+          border-bottom: 1px solid rgba(42,42,61,0.7);
         }
         .rbc-agenda-table tbody > tr:hover {
-          background: rgba(108,99,255,0.05);
+          background: rgba(108,99,255,0.06);
+        }
+        .rbc-agenda-table .rbc-agenda-date-cell {
+          font-weight: 600;
+          color: #6c63ff;
+          font-size: 0.8rem;
         }
 
         /* Selection */
@@ -742,26 +759,26 @@ function CalendarPageInner() {
       <div style={{ maxWidth: 1300, margin: '0 auto', padding: '1.25rem 1rem 2rem' }}>
 
         {/* ── Header ── */}
-        <div style={{ marginBottom: '1.5rem' }}>
+        <div style={{ marginBottom: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', marginBottom: '0.35rem' }}>
-            {/* Icon circle */}
+            {/* Gradient icon circle */}
             <div style={{
               width: 48, height: 48,
-              borderRadius: '14px',
-              background: 'linear-gradient(135deg, rgba(108,99,255,0.25), rgba(0,212,170,0.15))',
-              border: '1px solid rgba(108,99,255,0.3)',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #6c63ff, #00d4aa)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1.5rem',
+              fontSize: '1.45rem',
               flexShrink: 0,
+              boxShadow: '0 2px 16px rgba(108,99,255,0.35)',
             }}>
               🗓️
             </div>
             <div>
-              <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#e8e8f0', margin: 0, lineHeight: 1.2 }}>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#e8e8f0', margin: 0, lineHeight: 1.2 }}>
                 My Calendar
               </h1>
               <p style={{ color: '#8888aa', fontSize: '0.82rem', margin: 0, marginTop: '0.1rem' }}>
-                Gigs, deliveries, events & reminders — all in one place
+                Gigs, deliveries, events &amp; reminders — all in one place
               </p>
             </div>
           </div>
@@ -769,117 +786,116 @@ function CalendarPageInner() {
           {/* Gradient divider */}
           <div style={{
             height: 1,
-            marginTop: '1rem',
-            background: 'linear-gradient(90deg, rgba(108,99,255,0.4), rgba(0,212,170,0.2), transparent)',
+            marginTop: '0.875rem',
+            background: 'linear-gradient(90deg, rgba(108,99,255,0.5), rgba(0,212,170,0.25), transparent)',
             borderRadius: 1,
           }}/>
         </div>
 
         {/* ── Action bar ── */}
-        <div style={{
-          display: 'flex',
-          gap: '0.6rem',
-          alignItems: 'center',
-          marginBottom: '1.25rem',
-          flexWrap: 'wrap',
-        }}>
-          {googleConnected ? (
-            <>
-              <span style={{
-                fontSize: '0.75rem',
-                color: '#8888aa',
-                display: 'flex', alignItems: 'center', gap: '0.3rem',
-              }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00d4aa', display: 'inline-block' }}/>
-                {syncedLabel}
-              </span>
+        <div style={{ marginBottom: '1.25rem' }}>
+          {/* Top row: Google Calendar status + settings gear */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem' }}>
+            {googleConnected ? (
+              /* Connected: compact sync status + sync button */
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, flexWrap: 'wrap' }}>
+                <span style={{
+                  fontSize: '0.75rem', color: '#8888aa',
+                  display: 'flex', alignItems: 'center', gap: '0.3rem',
+                }}>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#00d4aa', display: 'inline-block', boxShadow: '0 0 4px #00d4aa' }}/>
+                  {syncedLabel}
+                </span>
+                <button
+                  onClick={handleSync}
+                  disabled={syncing}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.35rem',
+                    padding: '0.4rem 0.875rem',
+                    borderRadius: '9999px',
+                    border: '1px solid #2a2a3d',
+                    background: '#1c1c27',
+                    color: '#e8e8f0',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    cursor: syncing ? 'wait' : 'pointer',
+                    minHeight: 36,
+                    opacity: syncing ? 0.6 : 1,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <span style={{ fontSize: '0.85rem' }}>{syncing ? '⏳' : '🔄'}</span>
+                  {syncing ? 'Syncing…' : 'Sync now'}
+                </button>
+              </div>
+            ) : (
+              /* Not connected: prominent connect button */
               <button
-                onClick={handleSync}
-                disabled={syncing}
+                onClick={handleGoogleConnect}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '0.4rem',
-                  padding: '0.55rem 1rem',
-                  borderRadius: '10px',
-                  border: '1px solid #2a2a3d',
-                  background: '#1c1c27',
-                  color: '#e8e8f0',
-                  fontSize: '0.82rem',
+                  flex: 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                  padding: '0.6rem 1.1rem',
+                  borderRadius: '12px',
+                  border: '1.5px solid #38bdf8',
+                  background: 'rgba(56,189,248,0.07)',
+                  color: '#38bdf8',
+                  fontSize: '0.85rem',
                   fontWeight: 600,
                   cursor: 'pointer',
                   minHeight: 44,
-                  opacity: syncing ? 0.6 : 1,
+                  transition: 'all 0.15s',
                 }}
               >
-                <span style={{ fontSize: '1rem' }}>{syncing ? '⏳' : '🔄'}</span>
-                {syncing ? 'Syncing…' : 'Sync now'}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                </svg>
+                Connect Google Calendar
               </button>
-            </>
-          ) : (
+            )}
+
+            {/* Settings gear */}
             <button
-              onClick={handleGoogleConnect}
+              onClick={() => router.push('/settings/calendar')}
+              title="Calendar settings"
               style={{
-                display: 'flex', alignItems: 'center', gap: '0.5rem',
-                padding: '0.55rem 1.1rem',
+                width: 44, height: 44,
                 borderRadius: '10px',
-                border: '1.5px solid #38bdf8',
-                background: 'rgba(56,189,248,0.06)',
-                color: '#38bdf8',
-                fontSize: '0.85rem',
-                fontWeight: 600,
+                border: '1px solid #2a2a3d',
+                background: '#13131a',
+                color: '#8888aa',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '1rem',
                 cursor: 'pointer',
-                minHeight: 44,
-                transition: 'all 0.15s',
+                flexShrink: 0,
               }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" style={{ display: 'none' }}/>
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-              </svg>
-              Connect Google Calendar
+              ⚙️
             </button>
-          )}
+          </div>
 
-          {/* + New button */}
+          {/* Bottom row: + New event button (full width on mobile) */}
           <button
             onClick={openNewEvent}
             style={{
-              display: 'flex', alignItems: 'center', gap: '0.4rem',
-              padding: '0.55rem 1.1rem',
-              borderRadius: '10px',
+              width: '100%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+              padding: '0.65rem 1.1rem',
+              borderRadius: '12px',
               border: 'none',
-              background: '#6c63ff',
+              background: 'linear-gradient(135deg, #6c63ff, #7c6fff)',
               color: '#fff',
-              fontSize: '0.85rem',
+              fontSize: '0.9rem',
               fontWeight: 700,
               cursor: 'pointer',
-              minHeight: 44,
-              boxShadow: '0 2px 12px rgba(108,99,255,0.35)',
+              minHeight: 48,
+              boxShadow: '0 2px 16px rgba(108,99,255,0.4)',
               transition: 'all 0.15s',
             }}
           >
-            <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>+</span>
-            New
-          </button>
-
-          {/* Settings gear — pushed to right */}
-          <button
-            onClick={() => router.push('/settings/calendar')}
-            title="Calendar settings"
-            style={{
-              marginLeft: 'auto',
-              width: 44, height: 44,
-              borderRadius: '10px',
-              border: '1px solid #2a2a3d',
-              background: '#13131a',
-              color: '#8888aa',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1.1rem',
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
-          >
-            ⚙️
+            <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>+</span>
+            New Event
           </button>
         </div>
 
@@ -889,6 +905,7 @@ function CalendarPageInner() {
           gap: '0.45rem',
           overflowX: 'auto',
           paddingBottom: '0.5rem',
+          paddingRight: '1rem',
           marginBottom: '1.25rem',
           WebkitOverflowScrolling: 'touch',
           scrollbarWidth: 'none',
