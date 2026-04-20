@@ -7,7 +7,6 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 const MAP_STYLE   = 'mapbox://styles/davos212/cmo7emfe2000x01r3b3cn2zgq'
 
-// Subtle twinkling star field scattered around the globe
 const STARS = [
   { top:  '6%', left: '10%', size: 1.5, opacity: 0.5,  delay: '0s'   },
   { top: '14%', left: '82%', size: 2,   opacity: 0.4,  delay: '0.8s' },
@@ -31,17 +30,15 @@ const STARS = [
   { top: '55%', left: '35%', size: 1,   opacity: 0.3,  delay: '0.2s' },
 ]
 
-// ── HeroGlobe — Mapbox GL globe, auto-rotate, zoom, click-to-register ─────────
 export default function HeroGlobe({ size = 220 }: { size?: number }) {
-  const mapRef          = useRef<MapRef | null>(null)
-  const bearRef         = useRef(0)
-  const rafRef          = useRef<number>(0)
-  const isPausedRef     = useRef(false)
-  const resumeTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const recentZoomRef   = useRef(false)
-  const recentZoomTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pad             = 60
+  const mapRef         = useRef<MapRef | null>(null)
+  const bearRef        = useRef(0)
+  const rafRef         = useRef<number>(0)
+  const isPausedRef    = useRef(false)
+  const resumeTimer    = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pad            = 60
 
+  // Auto-rotate via RAF
   useEffect(() => {
     const step = () => {
       if (!isPausedRef.current) {
@@ -57,23 +54,14 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
     return () => cancelAnimationFrame(rafRef.current)
   }, [])
 
-  const handleZoomStart = () => {
+  const pauseRotation = () => {
     isPausedRef.current = true
-    recentZoomRef.current = true
-    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current)
-    if (recentZoomTimer.current) clearTimeout(recentZoomTimer.current)
+    if (resumeTimer.current) clearTimeout(resumeTimer.current)
   }
 
-  const handleZoomEnd = () => {
-    resumeTimerRef.current = setTimeout(() => { isPausedRef.current = false }, 2000)
-    recentZoomTimer.current = setTimeout(() => { recentZoomRef.current = false }, 300)
-  }
-
-  // Navigate to register on clean tap (not after zoom)
-  const handleMapClick = () => {
-    if (!recentZoomRef.current) {
-      window.location.href = '/register'
-    }
+  const scheduleResume = () => {
+    if (resumeTimer.current) clearTimeout(resumeTimer.current)
+    resumeTimer.current = setTimeout(() => { isPausedRef.current = false }, 2000)
   }
 
   return (
@@ -81,45 +69,29 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
       <style>{`
         @keyframes hg-twinkle {
           0%,100% { opacity: var(--star-op); transform: scale(1); }
-          50%      { opacity: calc(var(--star-op) * 0.25); transform: scale(0.7); }
+          50%      { opacity: calc(var(--star-op) * 0.25); transform: scale(0.6); }
         }
         @keyframes hg-glow {
           0%,100% { box-shadow: 0 0 0 2px rgba(200,235,255,0.7), 0 0 35px rgba(56,189,248,0.8), 0 0 70px rgba(56,189,248,0.4); }
           50%     { box-shadow: 0 0 0 2.5px rgba(220,245,255,0.9), 0 0 50px rgba(56,189,248,1), 0 0 100px rgba(56,189,248,0.55); }
         }
         @keyframes hg-pin { 0%,100% { transform: scale(1); opacity:1; } 50% { transform: scale(2); opacity:0.4; } }
-        .hg-outer:hover .hg-glow-box {
-          box-shadow: 0 0 0 2.5px rgba(220,245,255,0.9), 0 0 55px rgba(56,189,248,1), 0 0 110px rgba(56,189,248,0.6) !important;
-          animation: none !important;
-        }
-        .hg-outer .hg-join-label {
-          opacity: 0;
-          transform: translateX(-50%) translateY(4px);
-          transition: opacity 0.25s ease, transform 0.25s ease;
-          pointer-events: none;
-        }
-        .hg-outer:hover .hg-join-label {
-          opacity: 1;
-          transform: translateX(-50%) translateY(0);
-        }
+        /* Clip map to circle without overflow:hidden blocking touch events */
+        .hg-map-clip { clip-path: circle(50% at 50% 50%); }
+        .hg-map-clip .mapboxgl-canvas { touch-action: pinch-zoom pan-x pan-y; }
       `}</style>
 
-      {/* Outer container — no Link wrapper so touch events reach Mapbox freely */}
-      <div
-        className="hg-outer"
-        style={{
-          position: 'relative',
-          width: size + pad,
-          height: size + pad,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'visible',
-          flexShrink: 0,
-          cursor: 'pointer',
-        }}
-      >
-        {/* ── Twinkling star field ── */}
+      <div style={{
+        position: 'relative',
+        width: size + pad,
+        height: size + pad,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'visible',
+        flexShrink: 0,
+      }}>
+        {/* Twinkling stars */}
         {STARS.map((s, i) => (
           <span key={i} style={{
             position: 'absolute',
@@ -127,7 +99,6 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
             width: s.size, height: s.size,
             borderRadius: '50%',
             background: '#fff',
-            opacity: s.opacity,
             pointerEvents: 'none',
             // @ts-expect-error CSS custom property
             '--star-op': s.opacity,
@@ -136,26 +107,29 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
           }} />
         ))}
 
-        {/* ── Globe wrapper ── */}
+        {/* Globe */}
         <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
 
-          {/* Globe body — Mapbox receives all pointer events directly */}
+          {/* Glow ring — separate from map so overflow:hidden doesn't block touch */}
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: '50%',
+            boxShadow: '0 0 0 2px rgba(200,235,255,0.7), 0 0 35px rgba(56,189,248,0.8), 0 0 70px rgba(56,189,248,0.4), 0 0 120px rgba(56,189,248,0.2)',
+            animation: 'hg-glow 3s ease-in-out infinite',
+            pointerEvents: 'none',
+            zIndex: 4,
+          }} />
+
+          {/* Map — clipped to circle via clip-path (no overflow:hidden) */}
           <div
-            className="hg-glow-box"
-            style={{
-              width: size, height: size, borderRadius: '50%',
-              overflow: 'hidden',
-              position: 'relative',
-              boxShadow: '0 0 0 2px rgba(200,235,255,0.7), 0 0 35px rgba(56,189,248,0.8), 0 0 70px rgba(56,189,248,0.4), 0 0 120px rgba(56,189,248,0.2)',
-              animation: 'hg-glow 3s ease-in-out infinite',
-            }}
+            className="hg-map-clip"
+            style={{ width: size, height: size, borderRadius: '50%', position: 'relative' }}
           >
             <Map
               ref={mapRef}
               mapboxAccessToken={MAPBOX_TOKEN}
               mapStyle={MAP_STYLE}
               projection={{ name: 'globe' }}
-              initialViewState={{ longitude: -8, latitude: 30, zoom: 0.5 }}
+              initialViewState={{ longitude: -8, latitude: 20, zoom: 0.5 }}
               attributionControl={false}
               logoPosition="bottom-right"
               style={{ width: size, height: size }}
@@ -165,34 +139,18 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
               scrollZoom={true}
               doubleClickZoom={true}
               touchZoomRotate={true}
-              onZoomStart={handleZoomStart}
-              onZoomEnd={handleZoomEnd}
-              onClick={handleMapClick}
-              onError={e => console.warn('[HeroGlobe] map error', e)}
+              onZoomStart={pauseRotation}
+              onZoomEnd={scheduleResume}
+              onDragStart={pauseRotation}
+              onDragEnd={scheduleResume}
+              onError={e => console.warn('[HeroGlobe]', e)}
             />
-
-            {/* Atmosphere rim overlay */}
-            <div style={{
-              position: 'absolute', inset: 0, borderRadius: '50%',
-              background: 'radial-gradient(circle at 50% 50%, transparent 55%, rgba(96,165,250,0.06) 72%, rgba(56,189,248,0.22) 88%, rgba(147,210,255,0.4) 100%)',
-              pointerEvents: 'none',
-              zIndex: 1,
-            }} />
-            {/* Crescent highlight top-left */}
-            <div style={{
-              position: 'absolute', inset: 0, borderRadius: '50%',
-              background: 'radial-gradient(circle at 28% 22%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.07) 18%, transparent 45%)',
-              pointerEvents: 'none',
-              zIndex: 1,
-            }} />
-            {/* Shadow bottom-right */}
-            <div style={{
-              position: 'absolute', inset: 0, borderRadius: '50%',
-              background: 'radial-gradient(circle at 74% 76%, rgba(0,0,10,0.32) 0%, transparent 48%)',
-              pointerEvents: 'none',
-              zIndex: 1,
-            }} />
           </div>
+
+          {/* Overlays — atmosphere, crescent, shadow (all pointer-events:none) */}
+          <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'radial-gradient(circle at 50% 50%, transparent 55%, rgba(96,165,250,0.06) 72%, rgba(56,189,248,0.22) 88%, rgba(147,210,255,0.4) 100%)', pointerEvents: 'none', zIndex: 2 }} />
+          <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'radial-gradient(circle at 28% 22%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.07) 18%, transparent 45%)', pointerEvents: 'none', zIndex: 2 }} />
+          <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'radial-gradient(circle at 74% 76%, rgba(0,0,10,0.32) 0%, transparent 48%)', pointerEvents: 'none', zIndex: 2 }} />
 
           {/* Ireland pin */}
           <div style={{
@@ -203,31 +161,9 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
             background: '#34d399',
             boxShadow: '0 0 8px rgba(52,211,153,1), 0 0 18px rgba(52,211,153,0.6)',
             animation: 'hg-pin 2s ease-in-out infinite',
-            zIndex: 3,
+            zIndex: 5,
             pointerEvents: 'none',
           }} />
-
-          {/* "Join FreeTrust →" hover label */}
-          <div
-            className="hg-join-label"
-            style={{
-              position: 'absolute',
-              bottom: -38,
-              left: '50%',
-              background: 'rgba(10,20,40,0.85)',
-              border: '1px solid rgba(56,189,248,0.4)',
-              borderRadius: 999,
-              padding: '5px 16px',
-              fontSize: '0.78rem',
-              fontWeight: 700,
-              color: '#38bdf8',
-              whiteSpace: 'nowrap',
-              backdropFilter: 'blur(8px)',
-              zIndex: 4,
-            }}
-          >
-            Join FreeTrust →
-          </div>
         </div>
       </div>
     </>
