@@ -1290,13 +1290,14 @@ input, textarea, select {
   color: #f1f5f9 !important;
   border: 1px solid #2a2a3a !important;
   border-radius: 12px !important;
-  overflow: hidden !important;
+  overflow: visible !important;
 }
 
 /* Agenda table */
 .ft-calendar-wrap .rbc-agenda-view table {
   width: 100% !important;
   border-collapse: collapse !important;
+  table-layout: fixed !important;
 }
 
 /* Column headers (DATE / TIME / EVENT) */
@@ -1324,6 +1325,7 @@ input, textarea, select {
   border-bottom: 1px solid #1e1e2e !important;
   white-space: nowrap !important;
   vertical-align: top !important;
+  width: 90px !important;
 }
 
 /* Time cell (middle column) */
@@ -1337,6 +1339,7 @@ input, textarea, select {
   border-bottom: 1px solid #1e1e2e !important;
   white-space: nowrap !important;
   vertical-align: top !important;
+  width: 110px !important;
 }
 
 /* Event cell (right column) — kill the baby blue background */
@@ -1348,6 +1351,10 @@ input, textarea, select {
   padding: 12px 14px !important;
   border-bottom: 1px solid #1e1e2e !important;
   border-left: 3px solid #00d4aa !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  max-width: 0 !important;
+  width: 100% !important;
 }
 
 /* Hover row highlight */
@@ -1365,6 +1372,8 @@ input, textarea, select {
   border: none !important;
   padding: 0 !important;
   text-decoration: none !important;
+  white-space: normal !important;
+  word-break: break-word !important;
 }
 
 /* Empty state */
