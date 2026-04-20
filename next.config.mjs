@@ -148,10 +148,13 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://api.mapbox.com https://unpkg.com",
               "style-src 'self' 'unsafe-inline' https://api.mapbox.com https://unpkg.com https://fonts.googleapis.com",
-              "img-src 'self' data: blob: https://*.supabase.co https://lh3.googleusercontent.com https://m.media-amazon.com https://api.mapbox.com https://*.mapbox.com https://*.cartocdn.com",
+              // Allow all https images — Mapbox tiles come from various CDN subdomains
+              "img-src 'self' data: blob: https:",
               "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://*.mapbox.com https://*.cartocdn.com https://basemaps.cartocdn.com https://unpkg.com",
+              // Both worker-src and child-src needed for Mapbox GL web workers across browsers
               "worker-src 'self' blob:",
-              "font-src 'self' https://fonts.gstatic.com https://api.mapbox.com",
+              "child-src 'self' blob:",
+              "font-src 'self' https://fonts.gstatic.com https://api.mapbox.com data:",
               "frame-src 'self'",
             ].join('; '),
           },

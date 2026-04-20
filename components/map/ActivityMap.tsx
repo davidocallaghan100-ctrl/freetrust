@@ -22,7 +22,8 @@ interface JobPin extends BasePin { type: 'job'; title: string; salary_min_eur?: 
 type Pin = MemberPin | EventPin | ProductPin | JobPin
 
 // ─── Config ──────────────────────────────────────────────────────────────────
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''
+// Public token — safe to embed client-side (Mapbox pk.* tokens are designed for this)
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 
 const LAYER_CONFIG: Record<PinType, { label: string; color: string; glow: string }> = {
   member:  { label: 'Members',  color: '#6c63ff', glow: 'rgba(108,99,255,0.6)' },
@@ -130,8 +131,19 @@ export default function ActivityMap() {
       map.addControl(new mbgl.AttributionControl({ compact: true }), 'bottom-left')
       map.on('load', () => {
         mapRef.current = map
+        map.resize()
         setMapReady(true)
       })
+      // Resize after short delays to handle dynamic layout changes
+      setTimeout(() => { try { map.resize() } catch {} }, 200)
+      setTimeout(() => { try { map.resize() } catch {} }, 600)
+      setTimeout(() => { try { map.resize() } catch {} }, 1200)
+
+      // Auto-resize when container size changes
+      if (containerRef.current && typeof ResizeObserver !== 'undefined') {
+        const ro = new ResizeObserver(() => { try { map.resize() } catch {} })
+        ro.observe(containerRef.current)
+      }
     } catch (e) {
       console.error('Mapbox init error:', e)
     }

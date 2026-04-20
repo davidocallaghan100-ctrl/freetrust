@@ -15,7 +15,7 @@ export const SOURCE_TYPE_COLORS: Record<CalendarSourceType, string> = {
   gig:      '#10b981', // emerald
   product:  '#f59e0b', // amber
   service:  '#38bdf8', // sky-blue (FreeTrust brand)
-  event:    '#8b5cf6', // violet
+  event:    '#38bdf8', // sky-blue (FreeTrust brand)
   reminder: '#94a3b8', // silver / slate
   manual:   '#64748b', // slate
 }
