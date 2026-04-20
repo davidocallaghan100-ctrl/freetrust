@@ -5,7 +5,7 @@ import Map, { Marker, Popup, type MapRef } from 'react-map-gl/maplibre'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 // ─── Pin types ────────────────────────────────────────────────────────────────
-type PinType = 'member' | 'event' | 'product' | 'job'
+type PinType = 'member' | 'event' | 'product' | 'service' | 'job'
 
 interface BasePin {
   id: string
@@ -18,19 +18,21 @@ interface BasePin {
 interface MemberPin  extends BasePin { type: 'member';  username: string; avatar_url?: string | null; bio?: string | null }
 interface EventPin   extends BasePin { type: 'event';   title: string; starts_at?: string | null; venue_name?: string | null; ticket_price?: number | null; is_paid?: boolean }
 interface ProductPin extends BasePin { type: 'product'; title: string; price_eur?: number | null; cover_image_url?: string | null }
+interface ServicePin extends BasePin { type: 'service'; title: string; price_eur?: number | null; cover_image_url?: string | null; category?: string | null }
 interface JobPin     extends BasePin { type: 'job';     title: string; salary_min_eur?: number | null; salary_max_eur?: number | null }
 
-type Pin = MemberPin | EventPin | ProductPin | JobPin
+type Pin = MemberPin | EventPin | ProductPin | ServicePin | JobPin
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-// OpenFreeMap Liberty — green land, blue water, classic atlas look. Free, no token required.
-// Uses the MapLibre open-source renderer (already installed as maplibre-gl).
-const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty'
+// Custom FreeTrust map style — deep navy oceans (#0a1628), bright green land (#1d7a35→#22c55e).
+// Hosted in /public/map-style.json. Uses OpenFreeMap vector tiles, no token required.
+const MAP_STYLE = '/map-style.json'
 
 const LAYER_CONFIG: Record<PinType, { label: string; color: string; glow: string }> = {
   member:  { label: 'Members',  color: '#00d4aa', glow: 'rgba(0,212,170,0.6)'  },
   event:   { label: 'Events',   color: '#f59e0b', glow: 'rgba(245,158,11,0.6)' },
   product: { label: 'Products', color: '#a855f7', glow: 'rgba(168,85,247,0.6)' },
+  service: { label: 'Services', color: '#f97316', glow: 'rgba(249,115,22,0.6)' },
   job:     { label: 'Jobs',     color: '#38bdf8', glow: 'rgba(56,189,248,0.6)' },
 }
 
@@ -139,6 +141,23 @@ function PinPopup({ pin }: { pin: Pin }) {
     )
   }
 
+  if (pin.type === 'service') {
+    const s = pin as ServicePin
+    const price = s.price_eur ? `€${Number(s.price_eur).toFixed(2)}` : 'Contact for price'
+    return (
+      <div style={baseStyle}>
+        {s.cover_image_url && (
+          <img src={s.cover_image_url} style={{ width: '100%', height: 80, objectFit: 'cover', borderRadius: 8, marginBottom: 8 }} alt="" />
+        )}
+        <div style={{ fontWeight: 700 }}>{s.title}</div>
+        {s.category && <div style={{ color: '#f97316', fontSize: 11, marginTop: 2 }}>{s.category}</div>}
+        {price && <div style={{ color: '#f97316', fontWeight: 600, marginTop: 2 }}>{price}</div>}
+        {loc   && <div style={{ color: '#64748b', fontSize: 11 }}>📍 {loc}</div>}
+        <a href={`/listing/${encodeURIComponent(s.id)}`} style={btnStyle('#f97316')}>View Service →</a>
+      </div>
+    )
+  }
+
   if (pin.type === 'job') {
     const j = pin as JobPin
     const salary = j.salary_min_eur
@@ -162,7 +181,7 @@ export default function ActivityMap() {
   const [pins,         setPins]         = useState<Pin[]>([])
   const [loading,      setLoading]      = useState(true)
   const [activeLayers, setActiveLayers] = useState<Set<PinType>>(
-    new Set<PinType>(['member', 'event', 'product', 'job'])
+    new Set<PinType>(['member', 'event', 'product', 'service', 'job'])
   )
   const [selectedPin, setSelectedPin]  = useState<Pin | null>(null)
   const mapRef = useRef<MapRef | null>(null)
@@ -185,7 +204,7 @@ export default function ActivityMap() {
 
   const toggleAll = useCallback(() => {
     setActiveLayers(prev =>
-      prev.size === 4 ? new Set<PinType>() : new Set<PinType>(['member', 'event', 'product', 'job'])
+      prev.size === 5 ? new Set<PinType>() : new Set<PinType>(['member', 'event', 'product', 'service', 'job'])
     )
   }, [])
 
@@ -200,7 +219,7 @@ export default function ActivityMap() {
   }, [])
 
   const visiblePins = pins.filter(p => activeLayers.has(p.type))
-  const allOn = activeLayers.size === 4
+  const allOn = activeLayers.size === 5
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>

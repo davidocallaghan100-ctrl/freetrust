@@ -1,15 +1,38 @@
 export const dynamic = 'force-dynamic'
 // ============================================================================
 // GET /api/map/pins
-// Returns all map-pinnable entities: members, events, products, jobs.
-// Each item has a `type` field: 'member' | 'event' | 'product' | 'job'
+// Returns all map-pinnable entities: members, events, products, services, jobs.
+// Each item has a `type` field: 'member' | 'event' | 'product' | 'service' | 'job'
 //
 // Notes on data availability:
 //   - Listings have no lat/lng yet → we join via seller profile location
 //   - Profiles may have null username → shown as "Member"
 //   - Only events reliably have lat/lng from the geo-init API
 //   - show_on_map column on profiles controls map visibility (default true)
+//   - Listings split: SERVICE_CATEGORIES → type:'service', everything else → type:'product'
 // ============================================================================
+
+// Categories treated as services (freelance/coaching/consulting type offerings)
+const SERVICE_CATEGORIES = new Set([
+  'Coaching & Mentoring',
+  'coaching',
+  'mentoring',
+  'service',
+  'services',
+  'freelance',
+  'consulting',
+  'consulting & advisory',
+  'design',
+  'writing',
+  'marketing',
+  'development',
+  'photography',
+  'videography',
+  'tutoring',
+  'legal',
+  'accounting',
+  'health & wellness',
+])
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -17,7 +40,7 @@ export async function GET() {
   try {
     const supabase = await createClient()
 
-    const [membersResult, eventsResult, productsResult, jobsResult] =
+    const [membersResult, eventsResult, listingsResult, jobsResult] =
       await Promise.allSettled([
         // Members with location — only those who opted in to map visibility
         supabase
@@ -38,8 +61,8 @@ export async function GET() {
           .gte('starts_at', new Date().toISOString())
           .limit(500),
 
-        // Active listings — join seller profile for location since listings lack lat/lng
-        // Use the embedded select to get seller profile location
+        // All active listings — join seller profile for location fallback
+        // Will be split into 'product' vs 'service' based on category below
         supabase
           .from('listings')
           .select('id, title, price_eur, currency_code, cover_image_url, category, seller_id, latitude, longitude, city, country, profiles!listings_seller_id_fkey(latitude, longitude, city, country)')
@@ -79,11 +102,12 @@ export async function GET() {
       console.error('[map/pins] events error:', err)
     }
 
-    // Products — use listing lat/lng if set, otherwise fall back to seller profile location
-    if (productsResult.status === 'fulfilled' && !productsResult.value.error) {
+    // Listings — split into Products and Services based on category
+    // Use listing lat/lng if set, otherwise fall back to seller profile location
+    if (listingsResult.status === 'fulfilled' && !listingsResult.value.error) {
       let productCount = 0
-      for (const p of productsResult.value.data ?? []) {
-        // Try listing's own lat/lng first, fall back to seller profile location
+      let serviceCount = 0
+      for (const p of listingsResult.value.data ?? []) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const profile = (p as any).profiles
         const lat = p.latitude ?? profile?.latitude
@@ -92,6 +116,10 @@ export async function GET() {
         const country = p.country ?? profile?.country
 
         if (lat == null || lng == null) continue // skip if no location at all
+
+        // Determine if this listing is a service or a product
+        const isService = p.category != null && SERVICE_CATEGORIES.has(p.category)
+        const pinType = isService ? 'service' : 'product'
 
         pins.push({
           id: p.id,
@@ -104,14 +132,14 @@ export async function GET() {
           longitude: lng,
           city,
           country,
-          type: 'product',
+          type: pinType,
         })
-        productCount++
+        if (isService) serviceCount++; else productCount++
       }
-      console.log('[map/pins] products: ' + productCount + ' (of ' + (productsResult.value.data?.length ?? 0) + ' listings)')
+      console.log(`[map/pins] products: ${productCount}, services: ${serviceCount} (of ${listingsResult.value.data?.length ?? 0} listings)`)
     } else {
-      const err = productsResult.status === 'fulfilled' ? productsResult.value.error?.message : productsResult.reason
-      console.error('[map/pins] products error:', err)
+      const err = listingsResult.status === 'fulfilled' ? listingsResult.value.error?.message : listingsResult.reason
+      console.error('[map/pins] listings error:', err)
     }
 
     // Jobs
