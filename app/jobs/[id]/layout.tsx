@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
 
 const BASE = process.env.NEXT_PUBLIC_BASE_URL || 'https://freetrust.co'
-const SUPABASE = 'https://tioqakxnqjxyuzgnwhrb.supabase.co'
+const SUPABASE = 'https://auth.freetrust.co'
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export async function generateMetadata(
