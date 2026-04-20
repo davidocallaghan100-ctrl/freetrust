@@ -23,7 +23,12 @@ interface JobPin     extends BasePin { type: 'job';     title: string; salary_mi
 type Pin = MemberPin | EventPin | ProductPin | JobPin
 
 // ─── Config ───────────────────────────────────────────────────────────────────
+// NEXT_PUBLIC_ vars are inlined at build time by Next.js.
+// If missing, log a warning — the map will show a blank canvas.
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
+if (!MAPBOX_TOKEN && typeof window !== 'undefined') {
+  console.warn('[ActivityMap] NEXT_PUBLIC_MAPBOX_TOKEN is not set — map tiles will not load.')
+}
 
 const LAYER_CONFIG: Record<PinType, { label: string; color: string; glow: string }> = {
   member:  { label: 'Members',  color: '#00d4aa', glow: 'rgba(0,212,170,0.6)'  },
@@ -294,6 +299,7 @@ export default function ActivityMap() {
           initialViewState={{ longitude: -2, latitude: 54, zoom: 5 }}
           style={{ width: '100%', height: '100%' }}
           attributionControl={false}
+          onError={e => console.error('[ActivityMap] Mapbox error:', e)}
         >
           {/* Markers */}
           {visiblePins.map(pin => {

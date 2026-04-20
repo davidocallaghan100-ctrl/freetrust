@@ -31,14 +31,13 @@ const ActivityMap = dynamic(
 
 export default function MapPage() {
   return (
-    // Use negative margins to break out of ft-page-content padding,
-    // then size to fill the viewport minus the nav+searchbar (104px).
+    // ft-page-content already adds padding-top: 104px (nav+searchbar).
+    // We size to fill the remaining viewport height below that offset.
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      // Pull back the ft-page-content padding so we go edge-to-edge
-      margin: '-20px -20px 0',
-      // Height = full viewport minus nav (58px) + searchbar (46px)
+      // Height = full viewport minus the nav+searchbar (104px) that
+      // ft-page-content's padding-top already accounts for.
       height: 'calc(100vh - 104px)',
       overflow: 'hidden',
       background: '#0a0a0f',

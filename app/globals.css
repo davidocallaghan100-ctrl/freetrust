@@ -1249,6 +1249,35 @@ input, textarea, select {
 }
 
 /* ============================================================
+   REACT-BIG-CALENDAR OVERRIDES
+   Wrapped in .ft-calendar-wrap so our selectors have higher
+   specificity (0,2,0) than the library's (0,1,0) rules,
+   beating them without !important. This means the eventPropGetter
+   inline styles (which have no !important) also win cleanly.
+   ============================================================ */
+
+/* Default teal — overrides library's #3174ad blue/purple */
+.ft-calendar-wrap .rbc-event,
+.ft-calendar-wrap .rbc-day-slot .rbc-background-event {
+  background-color: #00c49a;
+  border: 1px solid #00d4aa;
+  border-left: 3px solid #00d4aa;
+  color: #0a0a0f;
+}
+.ft-calendar-wrap .rbc-event.rbc-selected,
+.ft-calendar-wrap .rbc-day-slot .rbc-selected.rbc-background-event {
+  background-color: #00b88a;
+}
+.ft-calendar-wrap .rbc-event:focus,
+.ft-calendar-wrap .rbc-day-slot .rbc-background-event:focus {
+  outline: 2px solid #00d4aa;
+  outline-offset: 2px;
+}
+/* Individual event colours come from eventPropGetter as inline styles,
+   which beat ALL CSS class rules (including !important) since there is
+   no CSS !important competing — inline style wins the specificity war. */
+
+/* ============================================================
    TABLET ADJUSTMENTS  (769px – 1024px)
    ============================================================ */
 @media (min-width: 769px) and (max-width: 1024px) {
