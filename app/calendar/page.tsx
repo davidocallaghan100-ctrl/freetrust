@@ -448,6 +448,11 @@ function CalendarPageInner() {
       const from = startOfMonth(subMonths(rangeDate, 1)).toISOString()
       const to   = endOfMonth(addMonths(rangeDate, 1)).toISOString()
       const res  = await fetch(`/api/calendar/events?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`)
+      if (res.status === 401) {
+        // Not logged in — redirect to login with return URL
+        window.location.href = '/auth/login?redirect=/calendar'
+        return
+      }
       if (!res.ok) throw new Error('Failed to load events')
       const { events: rows } = await res.json() as { events: CalendarEventRow[] }
       allRowsRef.current = rows
