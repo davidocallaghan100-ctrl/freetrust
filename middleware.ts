@@ -24,26 +24,37 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
   response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
   // Content Security Policy
   //
-  // Added for the globalisation feature:
-  //   * script-src  + https://unpkg.com — Leaflet library (events map)
-  //   * style-src   + https://unpkg.com — Leaflet base stylesheet
-  //   * img-src     already covers https: (OpenStreetMap tile PNGs)
-  //   * connect-src + https://nominatim.openstreetmap.org — location search
-  //                + https://api.frankfurter.app               — live FX rates
-  //                + https://ipapi.co                          — free IP geoloc
-  //                + https://tile.openstreetmap.org            — map tiles
+  // Domains required:
+  //   * script-src  blob:                           — Mapbox GL JS web worker inline scripts
+  //   * script-src  https://unpkg.com               — Leaflet legacy (events map)
+  //   * style-src   https://api.mapbox.com          — Mapbox GL CSS
+  //   * connect-src blob:                           — Mapbox tile worker blob: URLs
+  //   * connect-src https://api.mapbox.com          — Mapbox tile + style API
+  //   * connect-src https://events.mapbox.com       — Mapbox telemetry
+  //   * connect-src https://*.mapbox.com            — Mapbox CDN (tiles, sprites, glyphs)
+  //   * connect-src https://*.tiles.mapbox.com      — Mapbox tile CDN edge nodes
+  //   * connect-src https://nominatim.openstreetmap.org — location search
+  //   * connect-src https://api.frankfurter.app     — live FX rates
+  //   * connect-src https://ipapi.co                — free IP geoloc
+  //   * worker-src  blob:                           — Mapbox GL and other web workers
+  //   * child-src   blob:                           — fallback for older browsers
+  //   * font-src    https://api.mapbox.com          — Mapbox glyph fonts
   response.headers.set(
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://unpkg.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
-      "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https: http: https://*.cartocdn.com https://basemaps.cartocdn.com",
+      // blob: required for Mapbox GL JS worker scripts injected as blob: URLs
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://js.stripe.com https://www.googletagmanager.com https://api.mapbox.com https://unpkg.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.mapbox.com https://unpkg.com",
+      "font-src 'self' https://fonts.gstatic.com https://api.mapbox.com data:",
+      "img-src 'self' data: blob: https: http:",
       "media-src 'self' https:",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://www.google-analytics.com https://nominatim.openstreetmap.org https://api.frankfurter.app https://ipapi.co https://tile.openstreetmap.org https://*.cartocdn.com https://basemaps.cartocdn.com https://*.maplibre.org",
+      // blob: required for Mapbox GL tile worker blob URLs in connect-src
+      "connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://www.google-analytics.com https://api.mapbox.com https://events.mapbox.com https://*.mapbox.com https://*.tiles.mapbox.com https://nominatim.openstreetmap.org https://api.frankfurter.app https://ipapi.co https://tile.openstreetmap.org https://*.cartocdn.com https://basemaps.cartocdn.com https://*.maplibre.org",
       "frame-src https://js.stripe.com https://hooks.stripe.com",
+      // Both worker-src and child-src needed for Mapbox GL web workers across browsers
       "worker-src 'self' blob:",
+      "child-src 'self' blob:",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
