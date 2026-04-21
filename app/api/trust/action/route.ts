@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { TRUST_REWARDS } from '@/lib/trust/rewards'
+import { TRUST_REWARDS, DELIVERY_TRUST_REWARDS } from '@/lib/trust/rewards'
 
 // Qualifying actions and their Trust rewards.
 // Every `amount` here references the canonical catalogue in
@@ -34,6 +34,11 @@ const TRUST_ACTIONS: Record<string, { amount: number; label: string; repeatable?
   get_100_followers: { amount: 50,                              label: 'Reached 100 followers'         },
   make_purchase:     { amount: 5,                               label: 'Made a purchase',         repeatable: true },
   daily_login:       { amount: 1,                               label: 'Daily check-in',          repeatable: true },
+  // Delivery rewards — earned automatically on order completion
+  delivered_on_time: { amount: DELIVERY_TRUST_REWARDS.DELIVERED_ON_TIME, label: '⚡ On-time delivery (seller)', repeatable: true },
+  delivered_late:    { amount: DELIVERY_TRUST_REWARDS.DELIVERED_LATE,    label: '📦 Delivery completed (late)', repeatable: true },
+  buyer_confirmed:   { amount: DELIVERY_TRUST_REWARDS.BUYER_CONFIRMED,   label: '✅ Buyer confirmed receipt',   repeatable: true },
+  tracking_used:     { amount: DELIVERY_TRUST_REWARDS.TRACKING_USED,     label: '📍 Used live delivery tracking', repeatable: true },
 }
 
 // POST /api/trust/action — award trust for a qualifying action

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 // ── Types ────────────────────────────────────────────────────────────────────
 interface OverviewStats {
   trustEarnedMonth: number
+  trustBalance: number
   profileViewsWeek: number
   totalRevenue: number
   activeListings: number
@@ -131,7 +132,7 @@ export default function AnalyticsDashboard() {
 
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
-  const [overview, setOverview] = useState<OverviewStats>({ trustEarnedMonth: 0, profileViewsWeek: 0, totalRevenue: 0, activeListings: 0 })
+  const [overview, setOverview] = useState<OverviewStats>({ trustEarnedMonth: 0, trustBalance: 0, profileViewsWeek: 0, totalRevenue: 0, activeListings: 0 })
   const [topPosts, setTopPosts] = useState<PostStat[]>([])
   const [contentStats, setContentStats] = useState({ totalViews: 0, totalLikes: 0, totalComments: 0, totalShares: 0, articles: 0, videos: 0 })
   const [marketStats, setMarketStats] = useState({ listingViews: 0, orders: 0, revenue: 0, avgOrder: 0, repeatBuyers: 0, listings: 0 })
@@ -288,6 +289,7 @@ export default function AnalyticsDashboard() {
 
         setOverview({
           trustEarnedMonth,
+          trustBalance: trustBal,
           profileViewsWeek: pvCount ?? 0,
           totalRevenue,
           activeListings,

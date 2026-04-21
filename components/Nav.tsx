@@ -186,8 +186,9 @@ export default function Nav() {
         {/* Right side — hamburger always last and always visible */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, minWidth: 0 }}>
           {user && walletBalance !== null && (
-            <Link href="/wallet" style={{ display: 'flex', alignItems: 'center', padding: '5px 8px', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '8px', fontSize: '12px', fontWeight: 600, color: '#38bdf8', textDecoration: 'none', flexShrink: 0 }}>
+            <Link href="/wallet" title="Your total ₮ balance" style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '5px 8px', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '8px', fontSize: '12px', fontWeight: 600, color: '#38bdf8', textDecoration: 'none', flexShrink: 0 }}>
               ₮{walletBalance.toFixed(0)}
+              <span style={{ fontSize: '9px', fontWeight: 500, color: '#64748b', lineHeight: 1 }}>bal</span>
             </Link>
           )}
           <CurrencySwitcher compact />

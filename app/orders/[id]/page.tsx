@@ -698,10 +698,20 @@ export default function OrderDetailPage() {
 
             {/* Trust reward */}
             <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 12, padding: '1rem' }}>
-              <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.4rem' }}>Trust Rewards</div>
-              <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
-                <div style={{ fontSize: '0.875rem', color: '#38bdf8' }}>🛒 +₮5 for buyer on purchase</div>
-                <div style={{ fontSize: '0.875rem', color: '#34d399' }}>🏷 +₮10 for seller on completion</div>
+              <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.6rem', fontWeight: 600 }}>Trust Rewards</div>
+              <div style={{ display: 'flex', gap: '0.4rem', flexDirection: 'column' }}>
+                <div style={{ fontSize: '0.8rem', color: '#38bdf8' }}>🛒 +₮5 buyer on purchase</div>
+                <div style={{ fontSize: '0.8rem', color: '#34d399' }}>🏷 +₮10 seller on completion</div>
+                {isPhysical && (
+                  <>
+                    <div style={{ height: 1, background: 'rgba(56,189,248,0.1)', margin: '4px 0' }} />
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Delivery bonuses:</div>
+                    <div style={{ fontSize: '0.8rem', color: '#10b981' }}>⚡ +₮150 on-time delivery</div>
+                    <div style={{ fontSize: '0.8rem', color: '#f59e0b' }}>📦 +₮50 late delivery</div>
+                    <div style={{ fontSize: '0.8rem', color: '#a78bfa' }}>✅ +₮25 buyer confirms receipt</div>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>📍 +₮10 tracking used</div>
+                  </>
+                )}
               </div>
             </div>
 
