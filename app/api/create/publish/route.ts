@@ -195,13 +195,13 @@ export async function POST(req: NextRequest) {
       // article is still live and the user still sees success; the
       // failure is logged but we don't 500 the whole publish because
       // of a trust bookkeeping hiccup.
-      await awardTrust({
-        userId: user.id,
-        amount: TRUST_REWARDS.PUBLISH_ARTICLE,
-        type:   TRUST_LEDGER_TYPES.PUBLISH_ARTICLE,
-        desc:   `Published article: ${title}`,
-      })
-      redirectUrl = '/articles'
+       void Promise.resolve().then(() => awardTrust({
+         userId: user.id,
+         amount: TRUST_REWARDS.PUBLISH_ARTICLE,
+         type:   TRUST_LEDGER_TYPES.PUBLISH_ARTICLE,
+         desc:   `Published article: ${title}`,
+       }))
+       redirectUrl = '/articles'
     }
 
     // ── Job → jobs table ────────────────────────────────────────────────────
@@ -259,14 +259,14 @@ export async function POST(req: NextRequest) {
         console.error('[publish job]', error)
         return fail(`Could not save job: ${error.message}`)
       }
-      await awardTrust({
-        userId: user.id,
-        amount: TRUST_REWARDS.CREATE_JOB,
-        type:   TRUST_LEDGER_TYPES.CREATE_JOB,
-        ref:    inserted?.id ?? null,
-        desc:   `Posted job: ${title}`,
-      })
-      redirectUrl = inserted?.id ? `/jobs/${inserted.id}` : '/jobs'
+       void Promise.resolve().then(() => awardTrust({
+         userId: user.id,
+         amount: TRUST_REWARDS.CREATE_JOB,
+         type:   TRUST_LEDGER_TYPES.CREATE_JOB,
+         ref:    inserted?.id ?? null,
+         desc:   `Posted job: ${title}`,
+       }))
+       redirectUrl = inserted?.id ? `/jobs/${inserted.id}` : '/jobs'
     }
 
     // ── Event → events table (not community_events) ────────────────────────
@@ -312,14 +312,14 @@ export async function POST(req: NextRequest) {
         console.error('[publish event]', error)
         return fail(`Could not save event: ${error.message}`)
       }
-      await awardTrust({
-        userId: user.id,
-        amount: TRUST_REWARDS.CREATE_EVENT,
-        type:   TRUST_LEDGER_TYPES.CREATE_EVENT,
-        ref:    inserted?.id ?? null,
-        desc:   `Created event: ${title}`,
-      })
-      redirectUrl = inserted?.id ? `/events/${inserted.id}` : '/events'
+       void Promise.resolve().then(() => awardTrust({
+         userId: user.id,
+         amount: TRUST_REWARDS.CREATE_EVENT,
+         type:   TRUST_LEDGER_TYPES.CREATE_EVENT,
+         ref:    inserted?.id ?? null,
+         desc:   `Created event: ${title}`,
+       }))
+       redirectUrl = inserted?.id ? `/events/${inserted.id}` : '/events'
     }
 
     // ── Service → listings table with product_type='service' ───────────────
@@ -414,14 +414,14 @@ export async function POST(req: NextRequest) {
       // marketplace listing got zero coins, contradicting the
       // product spec. Now awards TRUST_REWARDS.CREATE_SERVICE (50)
       // non-blocking.
-      await awardTrust({
-        userId: user.id,
-        amount: TRUST_REWARDS.CREATE_SERVICE,
-        type:   TRUST_LEDGER_TYPES.CREATE_SERVICE,
-        ref:    inserted?.id ?? null,
-        desc:   `Published service: ${title}`,
-      })
-      redirectUrl = inserted?.id ? `/services/${inserted.id}` : '/services'
+       void Promise.resolve().then(() => awardTrust({
+         userId: user.id,
+         amount: TRUST_REWARDS.CREATE_SERVICE,
+         type:   TRUST_LEDGER_TYPES.CREATE_SERVICE,
+         ref:    inserted?.id ?? null,
+         desc:   `Published service: ${title}`,
+       }))
+       redirectUrl = inserted?.id ? `/services/${inserted.id}` : '/services'
     }
 
     // ── Product → listings table (marketplace) ─────────────────────────────
@@ -487,13 +487,13 @@ export async function POST(req: NextRequest) {
       // branch also had no trust award before this commit. Fixing
       // both in one pass so the /create → Publish flow is
       // internally consistent across every listing type.
-      await awardTrust({
-        userId: user.id,
-        amount: TRUST_REWARDS.CREATE_PRODUCT,
-        type:   TRUST_LEDGER_TYPES.CREATE_PRODUCT,
-        desc:   `Listed product: ${title}`,
-      })
-      redirectUrl = '/products'
+       void Promise.resolve().then(() => awardTrust({
+         userId: user.id,
+         amount: TRUST_REWARDS.CREATE_PRODUCT,
+         type:   TRUST_LEDGER_TYPES.CREATE_PRODUCT,
+         desc:   `Listed product: ${title}`,
+       }))
+       redirectUrl = '/products'
     }
 
     // ── text/photo/video/short/link/poll → feed_posts ──────────────────────

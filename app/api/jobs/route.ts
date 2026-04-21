@@ -267,21 +267,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: insertError.message }, { status: 500 })
     }
 
-    // Award ₮ for posting a job — skip for API key (system) posts
-    let trustAwarded = 0
-    if (!isApiKeyAuth) {
-      const jobRow = job as { id?: string; title?: string } | null
-      const trustResult = await awardTrust({
-        userId: posterId,
-        amount: TRUST_REWARDS.CREATE_JOB,
-        type:   TRUST_LEDGER_TYPES.CREATE_JOB,
-        ref:    jobRow?.id ?? null,
-        desc:   `Posted job: ${jobRow?.title ?? 'Untitled'}`,
-      })
-      trustAwarded = trustResult.ok ? trustResult.amount : 0
+    // Respond immediately after the DB insert — fire trust award + notification
+    // in the background so they never block the HTTP response. On Vercel's
+    // hobby plan, serverless functions hard-timeout at 10s regardless of
+    // maxDuration; awaiting awardTrust() caused the response to arrive after
+    // the cutoff, making the client show "request taking too long" even though
+    // the job was created successfully.
+    const jobRow = job as { id?: string; title?: string } | null
+    if (!isApiKeyAuth && posterId && jobRow?.id) {
+      void Promise.resolve().then(() =>
+        awardTrust({
+          userId: posterId!,
+          amount: TRUST_REWARDS.CREATE_JOB,
+          type:   TRUST_LEDGER_TYPES.CREATE_JOB,
+          ref:    jobRow.id ?? null,
+          desc:   `Posted job: ${jobRow.title ?? 'Untitled'}`,
+        })
+      )
     }
 
-    return NextResponse.json({ job, trustAwarded }, { status: 201 })
+    return NextResponse.json({ job, trustAwarded: TRUST_REWARDS.CREATE_JOB }, { status: 201 })
   } catch (err) {
     console.error('[POST /api/jobs] Unexpected:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

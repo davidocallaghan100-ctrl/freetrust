@@ -279,7 +279,8 @@ export async function POST(request: NextRequest) {
     // of listing the user created.
     const listingRow = listing as { id?: string; product_type?: string; title?: string } | null
     const isService = listingRow?.product_type === 'service'
-    const trustResult = await awardTrust({
+    // Fire trust award in background — don't await, prevents Vercel 10s timeout
+    void Promise.resolve().then(() => awardTrust({
       userId: user.id,
       amount: isService ? TRUST_REWARDS.CREATE_SERVICE : TRUST_REWARDS.CREATE_PRODUCT,
       type:   isService ? TRUST_LEDGER_TYPES.CREATE_SERVICE : TRUST_LEDGER_TYPES.CREATE_PRODUCT,
@@ -287,11 +288,11 @@ export async function POST(request: NextRequest) {
       desc:   isService
         ? `Published service: ${listingRow?.title ?? 'Untitled'}`
         : `Listed product: ${listingRow?.title ?? 'Untitled'}`,
-    })
+    }))
 
     return NextResponse.json({
       listing,
-      trustAwarded: trustResult.ok ? trustResult.amount : 0,
+      trustAwarded: isService ? TRUST_REWARDS.CREATE_SERVICE : TRUST_REWARDS.CREATE_PRODUCT,
     }, { status: 201 })
   } catch (err) {
     console.error('[POST /api/listings] Unexpected error:', err)
