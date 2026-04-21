@@ -101,7 +101,7 @@ export default async function MapPage() {
 
         {/* CTA buttons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 320 }}>
-          <a href="/auth/login?redirect=/map" style={{
+          <a href="/login?redirect=/map" style={{
             display: 'block', padding: '14px 24px', borderRadius: 12,
             background: 'linear-gradient(135deg, #00d4aa, #38bdf8)',
             color: '#0a0a0f', fontWeight: 700, fontSize: 15,
@@ -109,7 +109,7 @@ export default async function MapPage() {
             boxShadow: '0 4px 20px rgba(0,212,170,0.4)',
           }}>Sign in to explore the map</a>
 
-          <a href="/auth/register" style={{
+          <a href="/register" style={{
             display: 'block', padding: '14px 24px', borderRadius: 12,
             background: 'transparent',
             border: '1.5px solid #2a2a3a',

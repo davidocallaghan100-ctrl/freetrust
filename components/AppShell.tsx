@@ -7,7 +7,7 @@ import BottomNav from './BottomNav'
 import SearchBar from './SearchBar'
 import TrustAssistant from './TrustAssistant'
 
-const AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/reset-password', '/auth/callback', '/login', '/register', '/onboarding']
+const AUTH_PATHS = ['/login', '/register', '/auth/reset-password', '/auth/callback', '/login', '/register', '/onboarding']
 
 // Per-session flag — we only trigger IP-based location init once per
 // browser tab to avoid hammering the ipapi.co endpoint.

@@ -139,7 +139,7 @@ function SettingsPageInner() {
       try {
         const { data: { user: u } } = await supabase.auth.getUser()
         if (!u) {
-          router.push('/auth/login')
+          router.push('/login')
           return
         }
         setUser(u)
@@ -1556,7 +1556,7 @@ function SecurityTab({ user }: { user: { email?: string } }) {
           style={{ fontSize: 13 }}
           onClick={async () => {
             await fetch('/api/auth/logout', { method: 'POST' })
-            window.location.href = '/auth/login'
+            window.location.href = '/login'
           }}
         >
           Sign out all sessions

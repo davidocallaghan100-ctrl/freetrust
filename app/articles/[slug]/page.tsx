@@ -143,7 +143,7 @@ export default function ArticlePage() {
   useEffect(() => { loadAll() }, [loadAll])
 
   const handleClap = async () => {
-    if (!userId) { router.push('/auth/login'); return }
+    if (!userId) { router.push('/login'); return }
     if (!article || userClapCount >= 50) return
     setClapAnimating(true)
     setTimeout(() => setClapAnimating(false), 400)
@@ -155,7 +155,7 @@ export default function ArticlePage() {
   }
 
   const handleComment = async () => {
-    if (!userId) { router.push('/auth/login'); return }
+    if (!userId) { router.push('/login'); return }
     if (!commentText.trim() || !article) return
     setSubmittingComment(true)
     const { data: newComment, error } = await supabase

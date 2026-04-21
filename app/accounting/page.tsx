@@ -69,7 +69,7 @@ export default function AccountingPage() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       clearTimeout(timer)
       if (!user) {
-        router.push('/auth/login')
+        router.push('/login')
       } else {
         setAuthed(true)
       }

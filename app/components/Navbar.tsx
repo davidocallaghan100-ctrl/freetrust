@@ -185,7 +185,7 @@ export default function Navbar() {
           {/* Desktop auth CTAs */}
           <div className="hidden lg:flex items-center gap-3">
             <Link
-              href="/auth/login"
+              href="/login"
               className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors rounded-lg hover:bg-white/8"
             >
               Sign in
@@ -280,7 +280,7 @@ export default function Navbar() {
           {/* Mobile auth */}
           <div className="pt-4 border-t border-white/10 flex flex-col gap-2 mt-2">
             <Link
-              href="/auth/login"
+              href="/login"
               className="block px-4 py-2.5 rounded-lg text-sm font-medium text-center text-slate-300 hover:text-white hover:bg-white/8 transition-colors border border-white/10"
             >
               Sign in

@@ -194,7 +194,7 @@ export default function Nav() {
           {user && <NotificationBell />}
           {!loading && !user && (
             <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-              <Link href="/auth/login" style={{ padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 500, color: '#94a3b8', textDecoration: 'none', border: '1px solid #334155' }}>Sign in</Link>
+              <Link href="/login" style={{ padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 500, color: '#94a3b8', textDecoration: 'none', border: '1px solid #334155' }}>Sign in</Link>
               <Link href="/register" style={{ padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #38bdf8, #818cf8)' }}>Sign up</Link>
             </div>
           )}
@@ -371,7 +371,7 @@ export default function Nav() {
               Sign Out
             </button>
           ) : (
-            <Link href="/auth/login" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', fontSize: '14px', color: '#38bdf8', textDecoration: 'none', borderLeft: '3px solid transparent' }}>
+            <Link href="/login" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', fontSize: '14px', color: '#38bdf8', textDecoration: 'none', borderLeft: '3px solid transparent' }}>
               <span style={{ fontSize: '16px', lineHeight: 1 }}>🔑</span>
               Sign In
             </Link>

@@ -222,7 +222,7 @@ function ResetPasswordForm() {
               This password reset link has expired or is no longer valid. Reset links are single-use and expire after an hour.
             </p>
             <Link
-              href="/auth/login"
+              href="/login"
               style={{
                 display: 'block',
                 width: '100%',
@@ -353,7 +353,7 @@ function ResetPasswordForm() {
             </button>
 
             <p style={{ fontSize: 12, color: '#475569', textAlign: 'center', marginTop: 16 }}>
-              Remembered it? <Link href="/auth/login" style={{ color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>Back to sign in</Link>
+              Remembered it? <Link href="/login" style={{ color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>Back to sign in</Link>
             </p>
           </form>
         )}

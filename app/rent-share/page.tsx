@@ -255,7 +255,7 @@ export default function RentSharePage() {
   }
 
   function handleListItem() {
-    if (!userId) { router.push('/auth/login'); return }
+    if (!userId) { router.push('/login'); return }
     router.push('/rent-share/new')
   }
 

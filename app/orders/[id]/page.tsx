@@ -242,7 +242,7 @@ export default function OrderDetailPage() {
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { router.push('/auth/login'); return }
+      if (!user) { router.push('/login'); return }
       setUserId(user.id)
       fetchOrder()
     })
@@ -459,14 +459,33 @@ export default function OrderDetailPage() {
                   })}
                 </div>
                 {/* Expected delivery date if set */}
-                {order.expected_delivery_at && order.status !== 'completed' && order.status !== 'delivered' && (
-                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(148,163,184,0.08)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>📅 Expected by:</span>
-                    <span style={{ fontSize: '0.8rem', color: '#fbbf24', fontWeight: 600 }}>
-                      {new Date(order.expected_delivery_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </span>
-                  </div>
-                )}
+                {order.expected_delivery_at && order.status !== 'completed' && order.status !== 'delivered' && (() => {
+                  const isOverdue = new Date(order.expected_delivery_at) < new Date()
+                  return (
+                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(148,163,184,0.08)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.8rem', color: '#64748b' }}>📅 Expected by:</span>
+                        <span style={{ fontSize: '0.8rem', color: isOverdue ? '#f87171' : '#fbbf24', fontWeight: 600 }}>
+                          {new Date(order.expected_delivery_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                        {isOverdue && (
+                          <span style={{
+                            fontSize: '0.7rem', fontWeight: 700, color: '#f87171',
+                            background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.3)',
+                            borderRadius: 6, padding: '2px 8px',
+                          }}>
+                            ⚠️ Overdue
+                          </span>
+                        )}
+                      </div>
+                      {isOverdue && (
+                        <div style={{ marginTop: '0.4rem', fontSize: '0.75rem', color: '#94a3b8' }}>
+                          This delivery is past its estimated date. Please contact the seller if you have concerns.
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
             )}
 

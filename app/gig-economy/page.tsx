@@ -709,7 +709,7 @@ export default function GigEconomyPage() {
   useEffect(() => {
     const sb = createClient()
     sb.auth.getUser().then(({ data }) => {
-      if (!data.user) { router.push('/auth/login'); return }
+      if (!data.user) { router.push('/login'); return }
       setUserId(data.user.id)
       setAuthLoading(false)
     })

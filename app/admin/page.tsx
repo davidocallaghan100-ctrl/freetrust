@@ -165,7 +165,7 @@ export default function AdminPage() {
     const init = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/auth/login'); return }
+      if (!user) { router.push('/login'); return }
 
       // Check admin role
       const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()

@@ -278,7 +278,7 @@ export default function ReviewsSection({
           background: '#13131a', border: '1px solid #2a2a3a',
           borderRadius: 10, fontSize: '0.85rem', color: '#94a3b8',
         }}>
-          <Link href="/auth/login" style={{ color: '#00d4aa', fontWeight: 700, textDecoration: 'none' }}>
+          <Link href="/login" style={{ color: '#00d4aa', fontWeight: 700, textDecoration: 'none' }}>
             Sign in
           </Link>{' '}to leave a review.
         </div>

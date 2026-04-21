@@ -70,7 +70,7 @@ export default function OutboundPage() {
     const init = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/auth/login'); return }
+      if (!user) { router.push('/login'); return }
       const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
       if (!profile || profile.role !== 'admin') { router.push('/'); return }
       setAuthorized(true)

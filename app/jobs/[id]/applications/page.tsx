@@ -66,7 +66,7 @@ export default function ManageApplicationsPage() {
     setError(null)
     try {
       const res = await fetch(`/api/jobs/${jobId}/applications`, { cache: 'no-store' })
-      if (res.status === 401) { router.push('/auth/login'); return }
+      if (res.status === 401) { router.push('/login'); return }
       if (res.status === 403) { setError('Only the job poster can view applications.'); setLoading(false); return }
       if (!res.ok) { const d = await res.json().catch(() => ({})); setError((d as { error?: string }).error ?? 'Failed to load'); setLoading(false); return }
       const data = await res.json() as { applications: Application[]; jobTitle: string }

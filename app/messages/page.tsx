@@ -103,7 +103,7 @@ function MessagesPageInner() {
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { router.push('/auth/login'); return }
+      if (!user) { router.push('/login'); return }
       setUserId(user.id)
       loadConversations(user.id)
     })

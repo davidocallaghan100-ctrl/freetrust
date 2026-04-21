@@ -258,7 +258,7 @@ export default function AgentsPage() {
             ) : (
               <span className="balance-chip">
                 <span className="icon">⚡</span>
-                <Link href="/auth/login" className="topup-link">Sign in to see your balance</Link>
+                <Link href="/login" className="topup-link">Sign in to see your balance</Link>
               </span>
             )}
             <Link href="/invest" className="topup-link">Top up →</Link>
