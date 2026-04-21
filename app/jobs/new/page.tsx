@@ -142,51 +142,17 @@ export default function PostJobPage() {
     setSubmitting(true)
     setError('')
     try {
-      // ── Get session with a hard 8-second timeout ─────────────────────
-      // getSession() can trigger a token refresh network call on mobile.
-      // If that hangs (poor connectivity), it blocks the whole submit flow
-      // indefinitely until the 20s safety timer fires. We race it against
-      // a timeout so the user gets a fast, actionable error instead.
-      const supabase = createClient()
-      let session: { access_token: string } | null = null
-      try {
-        const sessionResult = await Promise.race([
-          supabase.auth.getSession().then(r => r.data.session),
-          new Promise<null>((_, reject) =>
-            setTimeout(() => reject(new Error('SESSION_TIMEOUT')), 8000)
-          ),
-        ])
-        session = sessionResult
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : ''
-        if (msg === 'SESSION_TIMEOUT') {
-          throw new Error('Could not verify your session — please refresh the page and try again.')
-        }
-        throw e
-      }
-
-      if (!session) {
-        setSubmitting(false)
-        router.push('/login?redirect=/jobs/new')
-        return
-      }
-
-      // ── POST to API with a 25-second abort timeout ────────────────────
-      // 25s > Vercel's 10s function hard limit, so if the server times out
-      // the browser will get a proper TCP reset / 504 well before this fires.
-      // The main purpose is as a last-resort client safety net.
-      const controller = new AbortController()
-      const fetchTimeout = setTimeout(() => controller.abort(), 25000)
-
+      // ── POST directly to API — no client-side auth check ─────────────
+      // The server authenticates via the Supabase session cookie (same
+      // pattern as /api/create/publish which works reliably). Any
+      // client-side getSession() / getUser() call risks a token-refresh
+      // network round-trip that can hang on mobile and fire the safety
+      // timer before the fetch even starts.
       let res: Response
       try {
         res = await fetch('/api/jobs', {
           method: 'POST',
-          signal: controller.signal,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...form,
             salary_min: form.salary_min ? parseInt(form.salary_min) : null,
@@ -200,12 +166,7 @@ export default function PostJobPage() {
           }),
         })
       } catch (fetchErr) {
-        const isAbort = fetchErr instanceof Error && fetchErr.name === 'AbortError'
-        throw new Error(isAbort
-          ? 'The server is taking too long — please try again in a moment.'
-          : 'Network error. Please check your connection and try again.')
-      } finally {
-        clearTimeout(fetchTimeout)
+        throw new Error('Network error. Please check your connection and try again.')
       }
 
       let json: { job?: { id?: string }; error?: string } = {}
@@ -215,6 +176,11 @@ export default function PostJobPage() {
         throw new Error('Server returned an unexpected response. Please try again.')
       }
 
+      if (res.status === 401) {
+        setSubmitting(false)
+        router.push('/login?redirect=/jobs/new')
+        return
+      }
       if (!res.ok) throw new Error(json.error || `Failed to post job (${res.status})`)
 
       const jobId = json.job?.id
