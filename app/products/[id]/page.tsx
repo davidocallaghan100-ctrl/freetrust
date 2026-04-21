@@ -25,6 +25,7 @@ type Seller = {
   avg_rating: number
   review_count: number
   trust_balance: number
+  stripe_onboarded: boolean | null
 }
 
 type Review = {
@@ -130,6 +131,10 @@ export default function ProductDetailPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [msgLoading, setMsgLoading] = useState(false)
+  const [showPendingModal, setShowPendingModal] = useState(false)
+  const [pendingMsg, setPendingMsg] = useState('')
+  const [pendingSending, setPendingSending] = useState(false)
+  const [pendingResult, setPendingResult] = useState<string | null>(null)
 
   const messageSeller = async (sellerId: string, listingTitle: string) => {
     setMsgLoading(true)
@@ -207,7 +212,7 @@ export default function ProductDetailPage() {
       // Fetch seller profile
       const { data: seller } = await supabase
         .from('profiles')
-        .select('id, full_name, avatar_url, username, avg_rating, review_count, trust_balance')
+        .select('id, full_name, avatar_url, username, avg_rating, review_count, trust_balance, stripe_onboarded')
         .eq('id', lst.seller_id)
         .single()
 
@@ -542,9 +547,15 @@ export default function ProductDetailPage() {
                 </button>
               ) : (
                 <>
-                  <button className="pd-btn-pri" onClick={handleBuyNow} disabled={buyLoading} style={{ flex: 1, background: 'linear-gradient(135deg,#8b5cf6,#6d28d9)', color: '#fff', border: 'none', borderRadius: 12, padding: '1rem', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 20px rgba(139,92,246,0.3)', transition: 'filter 0.2s' }}>
-                    ⚡ {buyLoading ? 'Loading…' : isService ? 'Book Now' : 'Buy Now'}
-                  </button>
+                  {listing.seller?.stripe_onboarded ? (
+                    <button className="pd-btn-pri" onClick={handleBuyNow} disabled={buyLoading} style={{ flex: 1, background: 'linear-gradient(135deg,#8b5cf6,#6d28d9)', color: '#fff', border: 'none', borderRadius: 12, padding: '1rem', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 20px rgba(139,92,246,0.3)', transition: 'filter 0.2s' }}>
+                      ⚡ {buyLoading ? 'Loading…' : isService ? 'Book Now' : 'Buy Now'}
+                    </button>
+                  ) : (
+                    <button type="button" onClick={() => setShowPendingModal(true)} style={{ flex: 1, background: 'linear-gradient(135deg,#fbbf24,#f59e0b)', color: '#0f172a', border: 'none', borderRadius: 12, padding: '1rem', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 20px rgba(251,191,36,0.25)' }}>
+                      📋 Request to buy
+                    </button>
+                  )}
                   <button className="pd-btn-sec" onClick={handleAddToCart} style={{ flex: 1, background: card, color: cartAdded ? '#34d399' : text, border: `1.5px solid ${cartAdded ? 'rgba(52,211,153,0.4)' : border}`, borderRadius: 12, padding: '1rem', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s' }}>
                     🛒 {cartAdded ? '✓ Added!' : 'Add to Cart'}
                   </button>
@@ -715,6 +726,40 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Pending order modal */}
+      {showPendingModal && listing && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 9999 }} onClick={() => !pendingSending && setShowPendingModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#1e293b', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 16, padding: 28, maxWidth: 420, width: '100%' }}>
+            {pendingResult ? (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 32, marginBottom: 12 }}>✅</div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: '#f1f5f9', marginBottom: 8 }}>Request sent</div>
+                <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 16 }}>{pendingResult}</div>
+                <button type="button" onClick={() => { setShowPendingModal(false); setPendingResult(null); setPendingMsg('') }} style={{ padding: '8px 20px', borderRadius: 8, background: '#38bdf8', color: '#0f172a', border: 'none', fontWeight: 600, cursor: 'pointer' }}>Close</button>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 17, fontWeight: 600, color: '#f1f5f9', marginBottom: 6 }}>Request to buy</div>
+                <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 16 }}>The seller will be notified. You&apos;ll get a notification when they start accepting orders.</div>
+                <textarea value={pendingMsg} onChange={e => setPendingMsg(e.target.value)} placeholder="Message to seller (optional)" style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 10, padding: '10px 12px', color: '#f1f5f9', fontSize: 14, fontFamily: 'inherit', resize: 'vertical', minHeight: 80, outline: 'none', marginBottom: 12 }} />
+                <button type="button" disabled={pendingSending} onClick={async () => {
+                  setPendingSending(true)
+                  try {
+                    const lt = isService ? 'service' : 'product'
+                    const res = await fetch('/api/pending-orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ listingId: listing.id, listingType: lt, message: pendingMsg.trim() || undefined }) })
+                    const d = await res.json()
+                    if (!res.ok) throw new Error(d.error ?? 'Request failed')
+                    setPendingResult(`You'll be notified when ${listing.seller?.full_name ?? 'the seller'} starts accepting orders.`)
+                  } catch (err) { alert(err instanceof Error ? err.message : 'Request failed') } finally { setPendingSending(false) }
+                }} style={{ width: '100%', padding: '12px', borderRadius: 10, background: '#fbbf24', color: '#0f172a', border: 'none', fontWeight: 700, fontSize: 15, cursor: pendingSending ? 'not-allowed' : 'pointer', opacity: pendingSending ? 0.6 : 1 }}>
+                  {pendingSending ? 'Sending…' : 'Submit request'}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   )
 }

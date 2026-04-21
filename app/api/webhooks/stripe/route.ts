@@ -346,6 +346,21 @@ async function handleAccountUpdated(account: Stripe.Account) {
       console.error('[Webhook] handleAccountUpdated: failed to mark onboarded', error);
     } else {
       console.log(`[Webhook] Seller onboarded: stripe_account=${account.id}`);
+
+      // Notify buyers who have pending orders for this seller
+      try {
+        const { data: profile } = await supabase.from('profiles').select('id').eq('stripe_account_id', account.id).maybeSingle();
+        if (profile?.id) {
+          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://freetrust.co';
+          await fetch(`${baseUrl}/api/pending-orders/convert`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sellerId: profile.id }),
+          }).catch(e => console.error('[Webhook] pending-orders convert call failed:', e));
+        }
+      } catch (e) {
+        console.error('[Webhook] pending-orders convert lookup failed:', e);
+      }
     }
   } catch (err) {
     console.error('[Webhook] handleAccountUpdated error:', err);

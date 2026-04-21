@@ -95,7 +95,7 @@ function Avatar({ url, name, size = 48 }: { url: string | null; name: string; si
 
 // ─── Book CTA Card (desktop sidebar + mobile) ─────────────────────────────────
 
-function BookCard({ svc, mobile = false }: { svc: ServiceListing; mobile?: boolean }) {
+function BookCard({ svc, mobile = false, onRequestToBuy }: { svc: ServiceListing; mobile?: boolean; onRequestToBuy?: () => void }) {
   const { format } = useCurrency()
   const currency = (svc.currency || 'GBP') as CurrencyCode
 
@@ -113,13 +113,26 @@ function BookCard({ svc, mobile = false }: { svc: ServiceListing; mobile?: boole
           One clear price. No surprises.
         </p>
 
-        {/* CTA */}
-        <Link
-          href={`/checkout?service=${svc.id}`}
-          style={{ display: 'block', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', borderRadius: '12px', padding: '15px', textAlign: 'center', fontWeight: 800, fontSize: '16px', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.25)', marginBottom: '10px' }}
-        >
-          Book Now — {format(svc.price, currency)}
-        </Link>
+        {/* CTA — Book Now if seller has Stripe, Request to buy if not */}
+        {(svc.seller as Record<string, unknown>).stripe_onboarded ? (
+          <Link
+            href={`/checkout?service=${svc.id}`}
+            style={{ display: 'block', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', borderRadius: '12px', padding: '15px', textAlign: 'center', fontWeight: 800, fontSize: '16px', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.25)', marginBottom: '10px' }}
+          >
+            Book Now — {format(svc.price, currency)}
+          </Link>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => onRequestToBuy?.()}
+              style={{ display: 'block', width: '100%', background: 'linear-gradient(135deg,#fbbf24,#f59e0b)', borderRadius: '12px', padding: '15px', textAlign: 'center', fontWeight: 800, fontSize: '16px', color: '#0f172a', border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(251,191,36,0.25)', marginBottom: '6px' }}
+            >
+              Request to buy — {format(svc.price, currency)}
+            </button>
+            <div style={{ fontSize: 11, color: '#64748b', textAlign: 'center', marginBottom: 10 }}>This seller is setting up payments. Submit a request and they&apos;ll be notified.</div>
+          </>
+        )}
 
         {/* AI Agent link */}
         <Link
@@ -214,6 +227,10 @@ export default function ServiceDetailPage() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showPendingModal, setShowPendingModal] = useState(false)
+  const [pendingMsg, setPendingMsg] = useState('')
+  const [pendingSending, setPendingSending] = useState(false)
+  const [pendingResult, setPendingResult] = useState<string | null>(null)
 
   useEffect(() => {
     const sb = createClient();
@@ -250,7 +267,7 @@ export default function ServiceDetailPage() {
             service_mode, tags, location,
             images, category_id, delivery_types,
             seller:profiles!seller_id (
-              id, full_name, avatar_url, bio, location
+              id, full_name, avatar_url, bio, location, stripe_onboarded
             )
           `)
           .eq('id', id)
@@ -384,7 +401,7 @@ export default function ServiceDetailPage() {
 
         {/* Mobile: book card at top */}
         <div className="sd-mobile-pkg" style={{ marginBottom: '20px' }}>
-          <BookCard svc={svc} mobile />
+          <BookCard svc={svc} mobile onRequestToBuy={() => setShowPendingModal(true)} />
         </div>
 
         <div className="sd-grid">
@@ -581,7 +598,7 @@ export default function ServiceDetailPage() {
 
           {/* ── Right column (desktop only) ── */}
           <div className="sd-right" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <BookCard svc={svc} />
+            <BookCard svc={svc} onRequestToBuy={() => setShowPendingModal(true)} />
 
             {/* Trust badge desktop */}
             <div style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: '12px', padding: '14px', fontSize: '12px', color: '#64748b', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
@@ -598,6 +615,39 @@ export default function ServiceDetailPage() {
       {/* Mobile sticky bottom bar */}
       <div className="sd-mobile-bar" style={{ display: 'none' }}>
         <MobileStickyBar svc={svc} />
+
+        {/* Pending order modal */}
+        {showPendingModal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 9999 }} onClick={() => !pendingSending && setShowPendingModal(false)}>
+            <div onClick={e => e.stopPropagation()} style={{ background: '#1e293b', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 16, padding: 28, maxWidth: 420, width: '100%' }}>
+              {pendingResult ? (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 32, marginBottom: 12 }}>✅</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: '#f1f5f9', marginBottom: 8 }}>Request sent</div>
+                  <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 16 }}>{pendingResult}</div>
+                  <button type="button" onClick={() => { setShowPendingModal(false); setPendingResult(null); setPendingMsg('') }} style={{ padding: '8px 20px', borderRadius: 8, background: '#38bdf8', color: '#0f172a', border: 'none', fontWeight: 600, cursor: 'pointer' }}>Close</button>
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontSize: 17, fontWeight: 600, color: '#f1f5f9', marginBottom: 6 }}>Request to buy</div>
+                  <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 16 }}>The seller will be notified. You&apos;ll get a notification when they start accepting orders.</div>
+                  <textarea value={pendingMsg} onChange={e => setPendingMsg(e.target.value)} placeholder="Message to seller (optional)" style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 10, padding: '10px 12px', color: '#f1f5f9', fontSize: 14, fontFamily: 'inherit', resize: 'vertical', minHeight: 80, outline: 'none', marginBottom: 12 }} />
+                  <button type="button" disabled={pendingSending} onClick={async () => {
+                    setPendingSending(true)
+                    try {
+                      const res = await fetch('/api/pending-orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ listingId: svc.id, listingType: 'service', message: pendingMsg.trim() || undefined }) })
+                      const d = await res.json()
+                      if (!res.ok) throw new Error(d.error ?? 'Request failed')
+                      setPendingResult(`You'll be notified when ${svc.seller.full_name ?? 'the seller'} starts accepting orders.`)
+                    } catch (err) { alert(err instanceof Error ? err.message : 'Request failed') } finally { setPendingSending(false) }
+                  }} style={{ width: '100%', padding: '12px', borderRadius: 10, background: '#fbbf24', color: '#0f172a', border: 'none', fontWeight: 700, fontSize: 15, cursor: pendingSending ? 'not-allowed' : 'pointer', opacity: pendingSending ? 0.6 : 1 }}>
+                    {pendingSending ? 'Sending…' : 'Submit request'}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
