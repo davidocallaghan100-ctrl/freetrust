@@ -191,6 +191,12 @@ export async function POST(request: NextRequest) {
       salary_max,
       salary_currency,
       application_deadline,
+      // Company / business details
+      company_name,
+      company_logo_url,
+      company_website,
+      company_size,
+      company_description,
       // Extended fields for API key ingestion
       country,
       city,
@@ -239,6 +245,12 @@ export async function POST(request: NextRequest) {
         salary_currency:      salary_currency ?? 'EUR',
         application_deadline: application_deadline ?? null,
         status:               'active',
+        // Company / business details
+        company_name:         company_name?.trim() ?? null,
+        company_logo_url:     company_logo_url ?? null,
+        company_website:      company_website?.trim() ?? null,
+        company_size:         company_size ?? null,
+        company_description:  company_description?.trim() ?? null,
         // Extended geo/currency fields
         country:              country ?? null,
         city:                 city ?? null,

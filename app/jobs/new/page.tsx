@@ -1,5 +1,5 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -15,6 +15,7 @@ const LOCATION_TYPES = [
   { value: 'on_site', label: 'On-Site' },
 ]
 const CATEGORIES = ['Tech', 'Design', 'Marketing', 'Sales', 'Finance', 'Operations', 'Trades', 'Other']
+const COMPANY_SIZES = ['1–10', '11–50', '51–200', '200–500', '500+']
 
 const TYPE_COLORS: Record<string, string> = {
   full_time: '#38bdf8', part_time: '#a78bfa', contract: '#fbbf24', freelance: '#34d399',
@@ -27,8 +28,17 @@ export default function PostJobPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [tagInput, setTagInput] = useState('')
+  const [logoUploading, setLogoUploading] = useState(false)
+  const submitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [form, setForm] = useState({
+    // Company details
+    company_name: '',
+    company_logo_url: '',
+    company_website: '',
+    company_size: '',
+    company_description: '',
+    // Job details
     title: '',
     description: '',
     requirements: '',
@@ -42,6 +52,21 @@ export default function PostJobPage() {
     salary_currency: 'EUR',
     application_deadline: '',
   })
+
+  // Safety net: if still "submitting" after 20 seconds, auto-reset
+  useEffect(() => {
+    if (submitting) {
+      submitTimeoutRef.current = setTimeout(() => {
+        setSubmitting(false)
+        setError('The request is taking too long. Please try again.')
+      }, 20000)
+    } else {
+      if (submitTimeoutRef.current) clearTimeout(submitTimeoutRef.current)
+    }
+    return () => {
+      if (submitTimeoutRef.current) clearTimeout(submitTimeoutRef.current)
+    }
+  }, [submitting])
 
   const set = (k: string, v: string | string[]) => setForm(f => ({ ...f, [k]: v }))
 
@@ -59,6 +84,36 @@ export default function PostJobPage() {
     if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag() }
   }
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Logo must be under 2MB.')
+      return
+    }
+    setLogoUploading(true)
+    setError('')
+    try {
+      const supabase = createClient()
+      const ext = file.name.split('.').pop() ?? 'jpg'
+      const path = `logos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('company-logos')
+        .upload(path, file, { upsert: true })
+      if (uploadError) {
+        setError(`Logo upload failed: ${uploadError.message}`)
+        return
+      }
+      const { data: { publicUrl } } = supabase.storage.from('company-logos').getPublicUrl(path)
+      setForm(f => ({ ...f, company_logo_url: publicUrl }))
+    } catch (err) {
+      setError('Logo upload failed. Please try again.')
+      console.error('[logo upload]', err)
+    } finally {
+      setLogoUploading(false)
+    }
+  }
+
   const handleSubmit = async () => {
     if (!form.title || !form.description || !form.job_type) {
       setError('Please fill in title, description and job type.')
@@ -69,14 +124,16 @@ export default function PostJobPage() {
     try {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/login?redirect=/jobs/new'); return }
+      if (!session) {
+        setSubmitting(false)
+        router.push('/auth/login?redirect=/jobs/new')
+        return
+      }
 
       const res = await fetch('/api/jobs', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Pass the JWT explicitly so the server-side route can authenticate
-          // regardless of cookie availability (belt-and-suspenders approach)
           'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
@@ -84,14 +141,31 @@ export default function PostJobPage() {
           salary_min: form.salary_min ? parseInt(form.salary_min) : null,
           salary_max: form.salary_max ? parseInt(form.salary_max) : null,
           application_deadline: form.application_deadline || null,
+          company_name: form.company_name || null,
+          company_logo_url: form.company_logo_url || null,
+          company_website: form.company_website || null,
+          company_size: form.company_size || null,
+          company_description: form.company_description || null,
         }),
       })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Failed to post job')
-      router.push(`/jobs/${json.job.id}`)
+
+      let json: { job?: { id?: string }; error?: string } = {}
+      try {
+        json = await res.json()
+      } catch {
+        throw new Error('Server returned an unexpected response. Please try again.')
+      }
+
+      if (!res.ok) throw new Error(json.error || `Failed to post job (${res.status})`)
+
+      const jobId = json.job?.id
+      if (!jobId) throw new Error('Job was created but no ID was returned.')
+
+      // Reset submitting before navigating so the spinner clears immediately
+      setSubmitting(false)
+      router.push(`/jobs/${jobId}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
-    } finally {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
       setSubmitting(false)
     }
   }
@@ -107,6 +181,14 @@ export default function PostJobPage() {
   const sectionStyle: React.CSSProperties = { marginBottom: '1.5rem' }
   const selectStyle: React.CSSProperties = { ...inputStyle, cursor: 'pointer' }
 
+  const sectionDivider = (icon: string, label: string) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', marginTop: '0.5rem' }}>
+      <span style={{ fontSize: '1rem' }}>{icon}</span>
+      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</span>
+      <div style={{ flex: 1, height: 1, background: 'rgba(56,189,248,0.1)' }} />
+    </div>
+  )
+
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
       <style>{`
@@ -116,6 +198,17 @@ export default function PostJobPage() {
           .new-job-grid { grid-template-columns: 1fr; }
           .new-job-grid-3 { grid-template-columns: 1fr; }
           .new-job-inner { padding: 1rem !important; }
+        }
+        input[type="file"]::file-selector-button {
+          background: rgba(56,189,248,0.1);
+          border: 1px solid rgba(56,189,248,0.3);
+          border-radius: 6px;
+          color: #38bdf8;
+          cursor: pointer;
+          font-size: 0.82rem;
+          font-weight: 600;
+          padding: 0.35rem 0.75rem;
+          margin-right: 0.75rem;
         }
       `}</style>
 
@@ -145,6 +238,22 @@ export default function PostJobPage() {
           /* Preview Card */
           <div style={{ background: '#1e293b', border: '2px solid rgba(56,189,248,0.2)', borderRadius: 14, padding: '1.5rem', maxWidth: 480 }}>
             <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.75rem', fontWeight: 600 }}>PREVIEW — how your job will appear</div>
+
+            {/* Company row in preview */}
+            {form.company_name && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
+                {form.company_logo_url ? (
+                  <img src={form.company_logo_url} alt={form.company_name} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(56,189,248,0.2)', background: '#0f172a' }} />
+                ) : (
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>🏢</div>
+                )}
+                <div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f1f5f9' }}>{form.company_name}</div>
+                  {form.company_size && <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{form.company_size} employees</div>}
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
               {form.job_type && <span style={{ background: `${TYPE_COLORS[form.job_type]}18`, color: TYPE_COLORS[form.job_type], border: `1px solid ${TYPE_COLORS[form.job_type]}30`, borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.72rem', fontWeight: 600 }}>
                 {JOB_TYPES.find(t => t.value === form.job_type)?.label}
@@ -168,6 +277,81 @@ export default function PostJobPage() {
         ) : (
           /* Edit Form */
           <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '2rem' }}>
+
+            {/* ── COMPANY DETAILS ── */}
+            {sectionDivider('🏢', 'Company Details')}
+
+            <div style={sectionStyle}>
+              <label style={labelStyle}>Company Name</label>
+              <input value={form.company_name} onChange={e => set('company_name', e.target.value)} placeholder="e.g. Acme Technologies" style={inputStyle} />
+            </div>
+
+            {/* Logo upload */}
+            <div style={sectionStyle}>
+              <label style={labelStyle}>Company Logo</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                {form.company_logo_url ? (
+                  <img
+                    src={form.company_logo_url}
+                    alt="Company logo"
+                    style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(56,189,248,0.3)', background: '#0f172a', flexShrink: 0 }}
+                  />
+                ) : (
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(56,189,248,0.06)', border: '1px dashed rgba(56,189,248,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1.25rem' }}>
+                    🏢
+                  </div>
+                )}
+                <div style={{ flex: 1 }}>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+                    onChange={handleLogoUpload}
+                    disabled={logoUploading}
+                    style={{ ...inputStyle, padding: '0.5rem', cursor: 'pointer', fontSize: '0.82rem', color: '#94a3b8' }}
+                  />
+                  <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '0.3rem' }}>
+                    {logoUploading ? '⏳ Uploading...' : 'PNG, JPG, WebP or SVG · Max 2MB'}
+                  </div>
+                  {form.company_logo_url && (
+                    <button
+                      onClick={() => set('company_logo_url', '')}
+                      style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.78rem', cursor: 'pointer', padding: 0, marginTop: '0.2rem' }}
+                    >
+                      ✕ Remove logo
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="new-job-grid" style={sectionStyle}>
+              <div>
+                <label style={labelStyle}>Company Website</label>
+                <input value={form.company_website} onChange={e => set('company_website', e.target.value)} placeholder="https://yourcompany.com" style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Company Size</label>
+                <select value={form.company_size} onChange={e => set('company_size', e.target.value)} style={selectStyle}>
+                  <option value="">Select size...</option>
+                  {COMPANY_SIZES.map(s => <option key={s} value={s}>{s} employees</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div style={sectionStyle}>
+              <label style={labelStyle}>About the Company</label>
+              <textarea
+                value={form.company_description}
+                onChange={e => set('company_description', e.target.value)}
+                placeholder="Brief description of your company, culture, and what makes it a great place to work..."
+                rows={3}
+                style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }}
+              />
+            </div>
+
+            {/* ── JOB DETAILS ── */}
+            {sectionDivider('📋', 'Job Details')}
+
             <div style={sectionStyle}>
               <label style={labelStyle}>Job Title *</label>
               <input value={form.title} onChange={e => set('title', e.target.value)} placeholder="e.g. Senior Full-Stack Engineer" style={inputStyle} />
@@ -261,10 +445,30 @@ export default function PostJobPage() {
               )}
             </div>
 
-            {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '0.75rem 1rem', color: '#ef4444', fontSize: '0.85rem', marginBottom: '1.25rem' }}>{error}</div>}
+            {error && (
+              <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '0.75rem 1rem', color: '#ef4444', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+                {error}
+              </div>
+            )}
 
-            <button onClick={handleSubmit} disabled={submitting} style={{ width: '100%', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 10, padding: '0.85rem', fontSize: '1rem', fontWeight: 800, cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1 }}>
-              {submitting ? 'Posting...' : '🚀 Post Job'}
+            <button
+              onClick={handleSubmit}
+              disabled={submitting || logoUploading}
+              style={{
+                width: '100%',
+                background: submitting ? 'rgba(56,189,248,0.5)' : '#38bdf8',
+                color: '#0f172a',
+                border: 'none',
+                borderRadius: 10,
+                padding: '0.85rem',
+                fontSize: '1rem',
+                fontWeight: 800,
+                cursor: (submitting || logoUploading) ? 'not-allowed' : 'pointer',
+                opacity: (submitting || logoUploading) ? 0.7 : 1,
+                transition: 'background 0.2s',
+              }}
+            >
+              {submitting ? '⏳ Posting...' : logoUploading ? '⏳ Uploading logo...' : '🚀 Post Job'}
             </button>
           </div>
         )}
