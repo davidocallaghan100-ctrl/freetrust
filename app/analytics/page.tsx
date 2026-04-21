@@ -364,8 +364,9 @@ export default function AnalyticsDashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <SectionHeader icon="📊" title="Overview" />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <StatCard icon="💎" label="Trust Earned" value={`₮${overview.trustEarnedMonth.toFixed(0)}`} sub="This month" color="#38bdf8" />
-              <StatCard icon="👁" label="Profile Views" value={overview.profileViewsWeek.toLocaleString()} sub="This week" color="#818cf8" />
+              <StatCard icon="₮" label="Trust Balance" value={`₮${overview.trustBalance.toFixed(0)}`} sub="Total (same as navbar)" color="#38bdf8" />
+              <StatCard icon="💎" label="Earned This Month" value={`₮${overview.trustEarnedMonth.toFixed(0)}`} sub="April activity" color="#818cf8" />
+              <StatCard icon="👁" label="Profile Views" value={overview.profileViewsWeek.toLocaleString()} sub="This week" color="#a78bfa" />
               <StatCard icon="💰" label="Total Revenue" value={`$${overview.totalRevenue.toFixed(2)}`} sub="All time" color="#34d399" />
               <StatCard icon="🛍" label="Active Listings" value={overview.activeListings.toString()} sub="Services & products" color="#f59e0b" />
             </div>
