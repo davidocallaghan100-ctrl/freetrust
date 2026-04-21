@@ -201,6 +201,9 @@ export default function CreatePage() {
   const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null)
   const [linkLoading, setLinkLoading] = useState(false)
 
+  // Stripe status — shown as soft info banner on service/product types
+  const [stripeConnected, setStripeConnected] = useState<boolean | null>(null)
+
   // Load the orgs the current user can post on behalf of, once on
   // mount. Queries organisation_members filtered to owner/admin and
   // joins the org row. Empty result is expected for most users —
@@ -216,6 +219,9 @@ export default function CreatePage() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user || cancelled) return
+      supabase.from('profiles').select('stripe_onboarded').eq('id', user.id).maybeSingle().then(({ data: p }) => {
+        if (!cancelled) setStripeConnected(!!p?.stripe_onboarded)
+      })
       const { data, error } = await supabase
         .from('organisation_members')
         .select('role, organisation:organisations!organisation_id(id, name, logo_url, slug)')
@@ -1258,6 +1264,15 @@ export default function CreatePage() {
           </button>
         ))}
       </div>
+
+      {/* Stripe info banner — only for paid listing types */}
+      {stripeConnected === false && selectedType && (selectedType === 'service' || selectedType === 'product') && (
+        <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 12, padding: '0.85rem 1.1rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 13, color: '#94a3b8', lineHeight: 1.5 }}>
+          <span style={{ fontSize: 16, flexShrink: 0 }}>💡</span>
+          <span style={{ flex: 1, minWidth: 200 }}>You can post this listing now — buyers can send interest requests. You&apos;ll need to connect Stripe to accept payments.</span>
+          <a href="/seller/connect" style={{ color: '#38bdf8', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>Connect Stripe (optional) →</a>
+        </div>
+      )}
 
       {/* Form */}
       {selectedType && renderForm()}

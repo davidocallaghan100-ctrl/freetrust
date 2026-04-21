@@ -48,6 +48,7 @@ export default function NewProductPage() {
   const [stock, setStock] = useState('')
   const [tags, setTags] = useState('')
   const [images, setImages] = useState<NewImage[]>([])
+  const [stripeConnected, setStripeConnected] = useState<boolean | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -56,6 +57,9 @@ export default function NewProductPage() {
         router.replace('/login?next=/products/new')
       } else {
         setAuthChecking(false)
+        supabase.from('profiles').select('stripe_onboarded').eq('id', session.user.id).maybeSingle().then(({ data: p }) => {
+          setStripeConnected(!!p?.stripe_onboarded)
+        })
       }
     })
   }, [router])
@@ -359,6 +363,14 @@ export default function NewProductPage() {
           <h1 style={{ fontSize: '1.6rem', fontWeight: 800, margin: '0 0 0.4rem' }}>List a Product</h1>
           <p style={{ color: '#64748b', margin: 0 }}>Sell your digital or physical products to the FreeTrust community</p>
         </div>
+
+        {stripeConnected === false && (
+          <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 12, padding: '0.85rem 1.1rem', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 13, color: '#94a3b8', lineHeight: 1.5 }}>
+            <span style={{ fontSize: 16, flexShrink: 0 }}>💡</span>
+            <span style={{ flex: 1, minWidth: 200 }}>You can post this listing now — buyers can send interest requests. You&apos;ll need to connect Stripe to accept payments.</span>
+            <a href="/seller/connect" style={{ color: '#38bdf8', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>Connect Stripe (optional) →</a>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 

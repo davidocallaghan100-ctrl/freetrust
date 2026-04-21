@@ -1,10 +1,11 @@
 
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { compressImage } from '@/lib/image-compression'
+import { createClient } from '@/lib/supabase/client'
 
 type Category = 'online' | 'offline'
 
@@ -153,6 +154,18 @@ export default function CreateGigPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dragCounter = useRef(0)
   const [isDragging, setIsDragging] = useState(false)
+  const [stripeConnected, setStripeConnected] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase.from('profiles').select('stripe_onboarded').eq('id', user.id).maybeSingle().then(({ data: p }) => {
+          setStripeConnected(!!p?.stripe_onboarded)
+        })
+      }
+    })
+  }, [])
 
   const updateForm = (field: keyof GigFormData, value: unknown) => {
     setForm(prev => ({ ...prev, [field]: value }))
@@ -515,6 +528,14 @@ export default function CreateGigPage() {
             </div>
           ))}
         </div>
+
+        {stripeConnected === false && (
+          <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 12, padding: '0.85rem 1.1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 13, color: '#94a3b8', lineHeight: 1.5 }}>
+            <span style={{ fontSize: 16, flexShrink: 0 }}>💡</span>
+            <span style={{ flex: 1, minWidth: 200 }}>You can post this listing now — buyers can send interest requests. You&apos;ll need to connect Stripe to accept payments.</span>
+            <a href="/seller/connect" style={{ color: '#38bdf8', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>Connect Stripe (optional) →</a>
+          </div>
+        )}
 
         {/* Form Card */}
         <div style={styles.card}>
