@@ -219,6 +219,10 @@ export default function MessageDrawer({
     const text = input.trim()
     if (!text || !conversationId || !currentUserId) return
     setInput('')
+    // Reset textarea height after clearing
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto'
+    }
     setSending(true)
     setError(null)
 
@@ -510,7 +514,13 @@ export default function MessageDrawer({
             ref={inputRef}
             className="drawer-textarea"
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={e => {
+                setInput(e.target.value)
+                // Auto-resize: expand up to 160px, then scroll
+                const el = e.target
+                el.style.height = 'auto'
+                el.style.height = Math.min(el.scrollHeight, 160) + 'px'
+              }}
             onKeyDown={onKeyDown}
             placeholder={conversationId ? 'Type a message…' : 'Opening…'}
             rows={1}
