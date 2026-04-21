@@ -156,6 +156,7 @@ export async function POST(req: NextRequest) {
     }
 
     let redirectUrl = '/feed'
+    let stripeNudge: string | null = null  // soft nudge shown when seller hasn't connected Stripe yet
 
     // ── Article → articles table ────────────────────────────────────────────
     if (type === 'article') {
@@ -341,12 +342,11 @@ export async function POST(req: NextRequest) {
       const price = data.price ? Number(data.price) : 0
       const priceEur = await toEur(price, currencyCode)
 
-      // Stripe Connect gate — paid services need a connected Stripe
-      // account before publish so buyers can actually pay out to the
-      // seller on completion. Free services (price === 0) skip.
+      // Stripe Connect — check status but never block publish.
+      // Sellers can list freely; Connect is only required when a buyer pays.
       const gate = await assertStripeConnectedForPaidListing(user.id, price)
-      if (!gate.ok) {
-        return NextResponse.json(gate.blockedResponse, { status: 412 })
+      if (price > 0 && !gate.isConnected) {
+        stripeNudge = "Your listing is live! Connect Stripe in your wallet before your first sale so you can receive payouts."
       }
 
       // ── Gig-rich-data columns (added to listings by
@@ -441,11 +441,11 @@ export async function POST(req: NextRequest) {
       const price = data.price ? Number(data.price) : 0
       const priceEur = await toEur(price, currencyCode)
 
-      // Stripe Connect gate — paid products require Stripe Connect
-      // onboarding. Free products skip.
+      // Stripe Connect — check status but never block publish.
+      // Sellers can list freely; Connect is only required when a buyer pays.
       const prodGate = await assertStripeConnectedForPaidListing(user.id, price)
-      if (!prodGate.ok) {
-        return NextResponse.json(prodGate.blockedResponse, { status: 412 })
+      if (price > 0 && !prodGate.isConnected) {
+        stripeNudge = "Your listing is live! Connect Stripe in your wallet before your first sale so you can receive payouts."
       }
 
       // Encode text[] columns as Postgres array literals — workaround
@@ -543,7 +543,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, redirectUrl })
+    return NextResponse.json({ success: true, redirectUrl, ...(stripeNudge ? { stripeNudge } : {}) })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[publish] unhandled:', message, err)

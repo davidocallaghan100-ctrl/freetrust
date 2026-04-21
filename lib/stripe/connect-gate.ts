@@ -1,25 +1,23 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 
-// Canonical Stripe Connect onboarding gate for paid-listing flows.
+// Canonical Stripe Connect status checker for paid-listing flows.
 //
-// Rules:
-//   * Free listings (price === 0 or null/undefined) — skip the gate
-//     entirely. Returns { ok: true, isConnected: boolean }.
-//   * Paid listings — require stripe_onboarded === true OR
-//     stripe_onboarding_complete === true. Either column is a valid
-//     signal (they're kept in sync by a trigger from
-//     20260416000003_escrow_columns.sql, but older projects may only
-//     have one).
+// POLICY (Apr 2026): Stripe Connect is OPTIONAL at publish time.
+// Sellers can publish any listing — paid or free — without connecting
+// Stripe. The gate will never block. Instead it reports isConnected so
+// callers can surface a soft nudge ("connect Stripe before your first
+// sale") in the response body without blocking the publish.
 //
-// Returns a discriminated union so callers can short-circuit with
-// NextResponse.json(res.blockedResponse, { status: 412 }) without
-// re-deriving the message.
+// Stripe Connect is only required at the point a buyer actually attempts
+// to pay — the checkout route enforces that separately.
 
 export interface ConnectGateOk {
   ok:          true
   isConnected: boolean
 }
 
+// Keep the blocked type for backwards-compat with existing callers even
+// though it is never returned by this function anymore.
 export interface ConnectGateBlocked {
   ok:          false
   blockedResponse: {
@@ -35,11 +33,12 @@ export async function assertStripeConnectedForPaidListing(
   userId: string,
   price: number | null | undefined,
 ): Promise<ConnectGateResult> {
-  // Free listings bypass the gate — users can always publish at ₮0.
+  // Free listings — skip the DB lookup entirely.
   if (price === null || price === undefined || Number(price) === 0) {
     return { ok: true, isConnected: false }
   }
 
+  // For paid listings: check Stripe status but NEVER block publish.
   try {
     const admin = createAdminClient()
     const { data, error } = await admin
@@ -50,8 +49,6 @@ export async function assertStripeConnectedForPaidListing(
 
     if (error) {
       // Old schemas may not have stripe_onboarding_complete yet.
-      // Retry without it — stripe_onboarded alone is still a valid
-      // signal on pre-20260416 projects.
       const legacy = await admin
         .from('profiles')
         .select('stripe_account_id, stripe_onboarded')
@@ -59,30 +56,20 @@ export async function assertStripeConnectedForPaidListing(
         .maybeSingle()
       if (legacy.error) {
         console.error('[connect-gate] profile lookup failed:', legacy.error)
-        return blocked()
+        // Fail open — don't block the seller.
+        return { ok: true, isConnected: false }
       }
-      const onboarded = Boolean(legacy.data?.stripe_onboarded)
-      return onboarded ? { ok: true, isConnected: true } : blocked()
+      return { ok: true, isConnected: Boolean(legacy.data?.stripe_onboarded) }
     }
 
     const onboarded = Boolean(
       data?.stripe_onboarded === true ||
       (data as Record<string, unknown> | null)?.['stripe_onboarding_complete'] === true,
     )
-    return onboarded ? { ok: true, isConnected: true } : blocked()
+    return { ok: true, isConnected: onboarded }
   } catch (err) {
     console.error('[connect-gate] unexpected:', err)
-    return blocked()
-  }
-}
-
-function blocked(): ConnectGateBlocked {
-  return {
-    ok: false,
-    blockedResponse: {
-      error:          'stripe_not_connected',
-      message:        'Connect your Stripe account before publishing a paid listing. It takes ~2 minutes and unlocks payouts to your bank.',
-      onboarding_url: '/wallet?connect=true',
-    },
+    // Fail open — don't block the seller.
+    return { ok: true, isConnected: false }
   }
 }

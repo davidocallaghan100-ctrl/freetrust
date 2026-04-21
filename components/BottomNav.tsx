@@ -5,9 +5,9 @@ import { useState } from 'react'
 
 const tabs = [
   { href: '/feed', icon: '🏠', label: 'Home' },
-  { href: '/connections', icon: '🔗', label: 'Connect' },
+  { href: '/map', icon: '🗺️', label: 'Map' },
   null, // center Create button
-  { href: '/gig-economy', icon: '💼', label: 'Earn' },
+  { href: '/calendar', icon: '📅', label: 'Calendar' },
   { href: '/profile', icon: '👤', label: 'Profile' },
 ]
 
