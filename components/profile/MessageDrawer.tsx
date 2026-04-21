@@ -290,7 +290,7 @@ export default function MessageDrawer({
         .drawer-backdrop {
           position: fixed; inset: 0;
           background: rgba(0, 0, 0, 0.55);
-          z-index: 9998;
+          z-index: 10000;
           animation: drawer-fade 0.18s ease-out;
         }
         .drawer-panel {
@@ -303,7 +303,7 @@ export default function MessageDrawer({
           box-shadow: -8px 0 32px rgba(0, 0, 0, 0.4);
           display: flex;
           flex-direction: column;
-          z-index: 9999;
+          z-index: 10001;
           animation: drawer-slide 0.22s ease-out;
           font-family: system-ui;
           overflow: hidden;
@@ -326,27 +326,37 @@ export default function MessageDrawer({
           padding: 1rem;
           -webkit-overflow-scrolling: touch;
         }
-        .drawer-input-row {
+         .drawer-input-row {
           flex-shrink: 0;
           display: flex;
           gap: 0.5rem;
           align-items: flex-end;
           padding: 0.75rem;
+          padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0.75rem));
           border-top: 1px solid rgba(56,189,248,0.1);
           background: #111827;
+          position: relative;
+          z-index: 10001;
         }
         .drawer-textarea {
           flex: 1;
           background: #1e293b;
-          border: 1px solid rgba(56,189,248,0.15);
+          border: 1px solid rgba(56,189,248,0.3);
           border-radius: 10px;
           color: #f1f5f9;
+          -webkit-text-fill-color: #f1f5f9;
+          caret-color: #34d399;
           font-family: inherit;
           font-size: 16px; /* prevents iOS auto-zoom */
           padding: 0.6rem 0.85rem;
           resize: none;
           outline: none;
+          min-height: 44px;
           max-height: 120px;
+        }
+        .drawer-textarea:focus {
+          border-color: rgba(52,211,153,0.5);
+          box-shadow: 0 0 0 3px rgba(52,211,153,0.1);
         }
         .drawer-send {
           width: 44px; height: 44px;
