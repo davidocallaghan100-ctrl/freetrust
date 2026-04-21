@@ -746,7 +746,7 @@ function CalendarPageInner() {
       const res = await fetch('/api/calendar/google/connect', { method: 'POST' })
       if (res.status === 401) {
         // Not logged in — redirect to login
-        router.push('/auth/login?redirect=/calendar')
+        router.push('/login?redirect=/calendar')
         return
       }
       if (!res.ok) {
