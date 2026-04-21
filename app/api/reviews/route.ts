@@ -130,21 +130,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // In-app notification to reviewee
-    try {
-      const { data: reviewerProfile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', user.id)
-        .single()
-      await insertNotification({
-        userId: reviewee_id,
-        type:   'review_received',
-        title:  `${reviewerProfile?.full_name ?? 'Someone'} left you a ${finalRating}-star review`,
-        body:   finalComment?.slice(0, 140) ?? null,
-        link:   `/profile?id=${reviewee_id}`,
-      })
-    } catch { /* notification failure is non-fatal */ }
+    // In-app notification to reviewee — fire-and-forget so it never blocks the response
+    void (async () => {
+      try {
+        const { data: reviewerProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single()
+        await insertNotification({
+          userId: reviewee_id,
+          type:   'review_received',
+          title:  `${reviewerProfile?.full_name ?? 'Someone'} left you a ${finalRating}-star review`,
+          body:   finalComment?.slice(0, 140) ?? null,
+          link:   `/profile?id=${reviewee_id}`,
+        })
+      } catch { /* notification failure is non-fatal */ }
+    })()
 
     // Return with normalised fields so client gets rating_overall
     return NextResponse.json({

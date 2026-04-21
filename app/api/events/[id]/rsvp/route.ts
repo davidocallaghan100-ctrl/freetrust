@@ -73,32 +73,36 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .update({ attendee_count: (event.attendee_count || 0) + 1 })
       .eq('id', eventId)
 
-    // Notify the event creator (skip if the RSVPer IS the creator)
+    // Notify the event creator — fire-and-forget so it never blocks the response
     if (event.creator_id && event.creator_id !== user.id) {
-      try {
-        const { data: rsvper } = await supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle()
-        await insertNotification({
-          userId: event.creator_id as string,
-          type: 'event_rsvp',
-          title: `${(rsvper?.full_name as string | null) ?? 'Someone'} is attending ${event.title ?? 'your event'}`,
-          body: 'Tap to see the full attendee list.',
-          link: `/events/${eventId}`,
-        })
-      } catch (e) {
-        console.error('[events/rsvp] notification failed:', e)
-      }
+      void (async () => {
+        try {
+          const { data: rsvper } = await supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle()
+          await insertNotification({
+            userId: event.creator_id as string,
+            type: 'event_rsvp',
+            title: `${(rsvper?.full_name as string | null) ?? 'Someone'} is attending ${event.title ?? 'your event'}`,
+            body: 'Tap to see the full attendee list.',
+            link: `/events/${eventId}`,
+          })
+        } catch (e) {
+          console.error('[events/rsvp] notification failed:', e)
+        }
+      })()
     }
 
-    // Award ₮ for RSVPing — free path only. Paid event RSVPs go
-    // through the Stripe checkout flow which can award after
-    // payment confirmation.
-    const trustResult = await awardTrust({
+    // Award ₮ for RSVPing — fire-and-forget, don't block the response
+    // Paid event RSVPs go through Stripe checkout which awards after payment confirmation.
+    void awardTrust({
       userId: user.id,
       amount: TRUST_REWARDS.RSVP_EVENT,
       type:   TRUST_LEDGER_TYPES.RSVP_EVENT,
       ref:    eventId,
       desc:   `RSVPed to: ${event.title ?? 'an event'}`,
-    })
+    }).catch(e => console.error('[events/rsvp] awardTrust failed:', e))
+
+    // Use a fixed trust amount for the response since awardTrust is now non-blocking
+    const trustResult = { ok: true, amount: TRUST_REWARDS.RSVP_EVENT }
 
     // Fire RSVP confirmation notification (non-blocking)
     insertNotification({

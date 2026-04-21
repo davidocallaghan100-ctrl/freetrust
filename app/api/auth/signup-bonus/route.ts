@@ -182,17 +182,14 @@ export async function POST() {
         console.error('[signup-bonus] welcome email dispatch threw:', err)
       })
 
-      try {
-        await insertNotification({
-          userId: user.id,
-          type: 'welcome',
-          title: 'Welcome to FreeTrust! 🎉',
-          body: `₮${expectedAmount} TrustCoins added to your wallet. Explore the marketplace to start earning more.`,
-          link: '/wallet',
-        })
-      } catch (e) {
-        console.error('[signup-bonus] welcome notification failed:', e)
-      }
+      // Fire-and-forget — don't block the signup response on notification insert
+      void insertNotification({
+        userId: user.id,
+        type: 'welcome',
+        title: 'Welcome to FreeTrust! 🎉',
+        body: `₮${expectedAmount} TrustCoins added to your wallet. Explore the marketplace to start earning more.`,
+        link: '/wallet',
+      }).catch(e => console.error('[signup-bonus] welcome notification failed:', e))
 
       return NextResponse.json({
         issued:   true,

@@ -1064,6 +1064,39 @@ export default function CreatePage() {
       case 'product':
         return (
           <>
+            {/* Product Type selector — Physical / Digital / Service */}
+            <div style={s.fieldGroup}>
+              <label style={s.label}>Product Type</label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {(['physical', 'digital', 'service'] as const).map(pt => (
+                  <button
+                    key={pt}
+                    type="button"
+                    onClick={() => setField('product_type', pt)}
+                    style={{
+                      flex: 1,
+                      padding: '0.55rem 0.5rem',
+                      borderRadius: 8,
+                      border: (f('product_type') || 'physical') === pt ? '2px solid #38bdf8' : '1px solid rgba(148,163,184,0.2)',
+                      background: (f('product_type') || 'physical') === pt ? 'rgba(56,189,248,0.1)' : 'transparent',
+                      color: (f('product_type') || 'physical') === pt ? '#38bdf8' : '#94a3b8',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      textTransform: 'capitalize' as const,
+                    }}
+                  >
+                    {pt === 'physical' ? '📦 Physical' : pt === 'digital' ? '⚡ Digital' : '🛠 Service'}
+                  </button>
+                ))}
+              </div>
+              <p style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 5 }}>
+                {(f('product_type') || 'physical') === 'physical' ? 'Item ships to buyer — delivery tracking available' :
+                 (f('product_type') || 'physical') === 'digital' ? 'Instant delivery via download link or message' :
+                 'Custom service offering — no physical delivery'}
+              </p>
+            </div>
             <div style={s.fieldGroup}>
               <label style={s.label}>Product Title</label>
               <input style={s.input} placeholder="Product name…" value={f('title')} onChange={e => setField('title', e.target.value)} />
@@ -1084,24 +1117,27 @@ export default function CreatePage() {
                 </select>
               </div>
             </div>
-            <div style={s.row}>
-              <div>
-                <label style={s.label}>Estimated Delivery</label>
-                <select style={s.select} value={f('delivery_days') || ''} onChange={e => setField('delivery_days', e.target.value)}>
-                  <option value="">Select delivery time…</option>
-                  <option value="1">Next day (1 day)</option>
-                  <option value="2">2 days</option>
-                  <option value="3">3 days</option>
-                  <option value="5">5 days</option>
-                  <option value="7">1 week</option>
-                  <option value="14">2 weeks</option>
-                </select>
+            {/* Delivery fields — only for physical products */}
+            {(f('product_type') || 'physical') === 'physical' && (
+              <div style={s.row}>
+                <div>
+                  <label style={s.label}>Estimated Delivery</label>
+                  <select style={s.select} value={f('delivery_days') || ''} onChange={e => setField('delivery_days', e.target.value)}>
+                    <option value="">Select delivery time…</option>
+                    <option value="1">Next day (1 day)</option>
+                    <option value="2">2 days</option>
+                    <option value="3">3 days</option>
+                    <option value="5">5 days</option>
+                    <option value="7">1 week</option>
+                    <option value="14">2 weeks</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={s.label}>Shipping Info</label>
+                  <input style={s.input} placeholder="e.g. Nationwide, tracked" value={f('shipping')} onChange={e => setField('shipping', e.target.value)} />
+                </div>
               </div>
-              <div>
-                <label style={s.label}>Shipping Info</label>
-                <input style={s.input} placeholder="e.g. Nationwide, tracked" value={f('shipping')} onChange={e => setField('shipping', e.target.value)} />
-              </div>
-            </div>
+            )}
             <div style={s.fieldGroup}>
               <label style={s.label}>Image URLs (one per line)</label>
               <textarea style={{ ...s.textarea, minHeight: '80px' }} placeholder="https://image1.com&#10;https://image2.com" value={f('images')} onChange={e => setField('images', e.target.value)} />

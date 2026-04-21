@@ -149,17 +149,14 @@ export async function POST(
       payload: { applicantName, jobTitle: job.title, jobId },
     }).catch(() => {})
 
-    try {
-      await insertNotification({
-        userId: job.poster_id,
-        type: 'job_application',
-        title: `New application: ${job.title}`,
-        body: `${applicantName} has applied to your job.`,
-        link: `/jobs/${jobId}/applications`,
-      })
-    } catch (e) {
-      console.error('[jobs/apply] notification failed:', e)
-    }
+    // Fire-and-forget: don't block the response on notification insert
+    void insertNotification({
+      userId: job.poster_id,
+      type: 'job_application',
+      title: `New application: ${job.title}`,
+      body: `${applicantName} has applied to your job.`,
+      link: `/jobs/${jobId}/applications`,
+    }).catch(e => console.error('[jobs/apply] notification failed:', e))
 
     return NextResponse.json({ application, trust_earned: 5 }, { status: 201 })
   } catch (err) {

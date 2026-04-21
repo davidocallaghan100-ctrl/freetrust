@@ -843,16 +843,13 @@ async function handleFounderInvestment(session: Stripe.Checkout.Session) {
 
   console.log('[Founder] Granted:', session.id, data);
 
-  try {
-    await insertNotification({
-      userId,
-      type: 'founder_investment',
-      title: `🏅 ${tierKey.charAt(0).toUpperCase() + tierKey.slice(1)} Early Investor tier activated!`,
-      body: 'Your lifetime lower fees, AI Credits, and TrustCoin bonus are live.',
-      link: '/wallet',
-    });
-  } catch (e) {
-    console.error('[Founder] notification failed:', e);
-  }
+  // Fire-and-forget — webhook must respond quickly to Stripe
+  void insertNotification({
+    userId,
+    type: 'founder_investment',
+    title: `🏅 ${tierKey.charAt(0).toUpperCase() + tierKey.slice(1)} Early Investor tier activated!`,
+    body: 'Your lifetime lower fees, AI Credits, and TrustCoin bonus are live.',
+    link: '/wallet',
+  }).catch(e => console.error('[Founder] notification failed:', e));
 }
 

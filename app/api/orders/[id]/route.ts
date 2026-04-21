@@ -170,13 +170,14 @@ export async function PATCH(
           : (delivery_notes || 'Delivered outside promised timeframe.'),
       })
 
-      await insertNotification({
+      // Fire-and-forget — don't block the 'delivered' response on notification
+      void insertNotification({
         userId: order.buyer_id,
         type:   'order',
         title:  'Order delivered!',
         body:   `"${order.title}" has been marked as delivered. Please review and release payment.`,
         link:   `/orders/${id}`,
-      })
+      }).catch(e => console.error('[orders/mark_delivered] notification failed:', e))
 
       return NextResponse.json({ success: true, status: 'delivered' })
     }
@@ -526,7 +527,8 @@ export async function PATCH(
       // cancellations happen before any trust was awarded, so we
       // leave the ledger untouched to keep the accounting simple.
       // Admin can manually reverse via /admin if needed.
-      await Promise.all([
+      // Fire-and-forget — don't block the 'cancelled' response on notifications
+      void Promise.all([
         insertNotification({
           userId: order.seller_id,
           type:   'order',
@@ -541,7 +543,7 @@ export async function PATCH(
           body:   `You cancelled your order for "${order.title}". No charge was applied to your card.`,
           link:   `/orders/${id}`,
         }),
-      ])
+      ]).catch(e => console.error('[orders/cancel_order] notifications failed:', e))
 
       return NextResponse.json({ success: true, status: 'cancelled' })
     }
@@ -589,13 +591,14 @@ export async function PATCH(
       // so the platform admin can decide whether to capture + refund
       // via Stripe Dashboard or cancel. Order sits in 'disputed' until
       // reviewed.
-      await insertNotification({
+      // Fire-and-forget — don't block the 'disputed' response on notification
+      void insertNotification({
         userId: order.seller_id,
         type:   'order',
         title:  'Dispute raised',
         body:   `A dispute has been raised for order "${order.title}". Our team will review.`,
         link:   `/orders/${id}`,
-      })
+      }).catch(e => console.error('[orders/raise_dispute] notification failed:', e))
 
       return NextResponse.json({ success: true, status: 'disputed' })
     }
