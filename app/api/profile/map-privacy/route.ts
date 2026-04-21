@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 // PATCH /api/profile/map-privacy
 // Updates the show_on_map preference for the authenticated user
 import { NextRequest, NextResponse } from 'next/server'

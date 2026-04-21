@@ -8,6 +8,7 @@
 // This runs server-side so the VAPID private key never leaves the server
 // and dedup state is persisted in Postgres rather than per-device memory.
 
+export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
