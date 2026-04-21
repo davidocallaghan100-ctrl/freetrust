@@ -130,6 +130,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'm.media-amazon.com', // Amazon product images
       },
+      {
+        protocol: 'https',
+        hostname: 'img.logo.dev', // logo.dev company logo CDN fallback
+      },
+      {
+        protocol: 'https',
+        hostname: 'remotive.com', // Remotive job board logos
+      },
     ],
   },
 
