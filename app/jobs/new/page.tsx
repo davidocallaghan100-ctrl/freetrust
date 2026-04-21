@@ -93,6 +93,11 @@ export default function PostJobPage() {
     }
     setLogoUploading(true)
     setError('')
+    // Safety net: always clear uploading state after 15 seconds max
+    const safetyTimer = setTimeout(() => {
+      setLogoUploading(false)
+      setError('Logo upload timed out. You can post the job without a logo.')
+    }, 15000)
     try {
       const supabase = createClient()
       const ext = file.name.split('.').pop() ?? 'jpg'
@@ -101,15 +106,16 @@ export default function PostJobPage() {
         .from('company-logos')
         .upload(path, file, { upsert: true })
       if (uploadError) {
-        setError(`Logo upload failed: ${uploadError.message}`)
+        setError(`Logo upload failed: ${uploadError.message}. You can still post the job without a logo.`)
         return
       }
       const { data: { publicUrl } } = supabase.storage.from('company-logos').getPublicUrl(path)
       setForm(f => ({ ...f, company_logo_url: publicUrl }))
     } catch (err) {
-      setError('Logo upload failed. Please try again.')
+      setError('Logo upload failed. You can still post the job without a logo.')
       console.error('[logo upload]', err)
     } finally {
+      clearTimeout(safetyTimer)
       setLogoUploading(false)
     }
   }
@@ -453,7 +459,7 @@ export default function PostJobPage() {
 
             <button
               onClick={handleSubmit}
-              disabled={submitting || logoUploading}
+              disabled={submitting}
               style={{
                 width: '100%',
                 background: submitting ? 'rgba(56,189,248,0.5)' : '#38bdf8',
@@ -463,12 +469,12 @@ export default function PostJobPage() {
                 padding: '0.85rem',
                 fontSize: '1rem',
                 fontWeight: 800,
-                cursor: (submitting || logoUploading) ? 'not-allowed' : 'pointer',
-                opacity: (submitting || logoUploading) ? 0.7 : 1,
+                cursor: submitting ? 'not-allowed' : 'pointer',
+                opacity: submitting ? 0.7 : 1,
                 transition: 'background 0.2s',
               }}
             >
-              {submitting ? '⏳ Posting...' : logoUploading ? '⏳ Uploading logo...' : '🚀 Post Job'}
+              {submitting ? '⏳ Posting...' : logoUploading ? '⏳ Logo uploading… (you can still post)' : '🚀 Post Job'}
             </button>
           </div>
         )}
