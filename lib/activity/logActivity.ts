@@ -1,19 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 // Uses service role to bypass RLS — this is a server-only helper
 // Never import this in client components
-// Lazy-initialized to avoid module-level crashes during Next.js build
-// (env vars are not available at static analysis time)
-let _supabaseAdmin: ReturnType<typeof createClient> | null = null
-function getAdmin() {
-  if (!_supabaseAdmin) {
-    _supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-  }
-  return _supabaseAdmin
-}
 
 export type ActivityEventType =
   | 'order_placed'
@@ -40,7 +28,8 @@ export interface LogActivityParams {
 }
 
 export async function logActivity(params: LogActivityParams): Promise<void> {
-  const { error } = await getAdmin().from('order_activity').insert({
+  const supabaseAdmin = createAdminClient()
+  const { error } = await supabaseAdmin.from('order_activity').insert({
     order_id:   params.orderId,
     actor_id:   params.actorId ?? null,
     actor_role: params.actorRole,
