@@ -267,7 +267,7 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
           <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'radial-gradient(circle at 28% 22%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.07) 18%, transparent 45%)', pointerEvents: 'none', zIndex: 2 }} />
           <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'radial-gradient(circle at 74% 76%, rgba(0,0,10,0.32) 0%, transparent 48%)', pointerEvents: 'none', zIndex: 2 }} />
 
-          {/* Ireland pin */}
+          {/* Europe pin */}
           <div style={{
             position: 'absolute',
             top: `${size * 0.33}px`,

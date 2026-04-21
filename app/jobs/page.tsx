@@ -386,7 +386,7 @@ export default function JobsPage() {
 
       const localJobs = localRaw.map(supabaseToRemoteJob)
 
-      // Local (Irish/on-site/hybrid) jobs first, then Remotive remote jobs
+      // Local (on-site/hybrid) jobs first, then Remotive remote jobs
       setJobs([...localJobs, ...remoteJobs])
     } catch {
       setError('Unable to load jobs right now. Please try again.')
@@ -499,7 +499,7 @@ export default function JobsPage() {
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
               <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.4rem' }}>Jobs</h1>
-              <p style={{ color: '#64748b', margin: 0 }}>Remote, hybrid, and on-site opportunities — Ireland and beyond</p>
+              <p style={{ color: '#64748b', margin: 0 }}>Remote, hybrid, and on-site opportunities worldwide</p>
             </div>
             <Link href="/jobs/new" style={{ background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 8, padding: '0.6rem 1.3rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap', display: 'inline-block' }}>
               + Post a Job

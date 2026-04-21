@@ -77,7 +77,7 @@ export default async function Page() {
   // JSON-LD payloads — rendered into the initial HTML so Google, Bing,
   // ChatGPT, Perplexity and Claude can index them without running JS.
   //
-  //   1. Organization   — who we are (name, URL, description, Ireland)
+  //   1. Organization   — who we are (name, URL, description)
   //   2. WebSite        — sitelinks search box target for search results
   //   3. FAQPage        — most important for AI search (ChatGPT / SGE /
   //                       Perplexity lift FAQPage entries directly when
@@ -90,8 +90,7 @@ export default async function Page() {
     '@type':           'Organization',
     name:              'FreeTrust',
     url:               BASE_URL,
-    description:       "Ireland's community economy marketplace",
-    foundingLocation:  'Ireland',
+    description:       "The community economy marketplace",
     logo:              `${BASE_URL}/icons/icon-512x512.png`,
     sameAs: [
       'https://twitter.com/freetrust',
@@ -103,8 +102,8 @@ export default async function Page() {
     '@type':      'WebSite',
     name:         'FreeTrust',
     url:          BASE_URL,
-    description:  "Ireland's community economy marketplace",
-    inLanguage:   'en-IE',
+    description:  "The community economy marketplace",
+    inLanguage:   'en',
     potentialAction: {
       '@type':       'SearchAction',
       target:        `${BASE_URL}/browse?q={search_term_string}`,

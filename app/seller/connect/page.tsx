@@ -77,7 +77,7 @@ export default function SellerConnectPage() {
                 {[
                   { icon: '🔒', text: 'Bank-grade security via Stripe' },
                   { icon: '⚡', text: 'Fast payouts — 2 business days' },
-                  { icon: '🌍', text: 'Supports Ireland & EU accounts' },
+                  { icon: '🌍', text: 'Supports global accounts' },
                   { icon: '📱', text: 'Apple Pay & Google Pay for buyers' },
                 ].map(({ icon, text }) => (
                   <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', fontSize: '0.88rem', color: '#94a3b8' }}>

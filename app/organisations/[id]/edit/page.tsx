@@ -312,7 +312,7 @@ export default function EditOrgPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <div>
               <label style={labelStyle}>Location</label>
-              <input style={inputStyle} value={form.location} onChange={e => set('location', e.target.value)} placeholder="e.g. Cork, Ireland" maxLength={100} />
+              <input style={inputStyle} value={form.location} onChange={e => set('location', e.target.value)} placeholder="e.g. London, UK" maxLength={100} />
             </div>
             <div>
               <label style={labelStyle}>Sector</label>

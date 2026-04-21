@@ -780,7 +780,7 @@ function Step5({ form, setForm }: StepProps) {
       <LocationPicker
         value={form.location}
         onChange={loc => setForm(f => ({ ...f, location: loc }))}
-        placeholder="e.g. Cork, Ireland"
+        placeholder="e.g. London, UK"
       />
       <div style={{ marginBottom: 18 }} />
 

@@ -3,12 +3,12 @@ import type { SearchParams, SearchResponse, SearchResult } from './types'
 
 // Demo fallback results for when DB tables don't have data yet
 const DEMO_RESULTS: SearchResult[] = [
-  { id: 's1', title: 'Web Development', subtitle: 'Full-stack development service', description: 'Professional web development for startups and SMEs. React, Next.js, Node.js.', href: '/services/web-development', category: 'service', location: 'Dublin, Ireland', price: 500, trustScore: 92 },
+  { id: 's1', title: 'Web Development', subtitle: 'Full-stack development service', description: 'Professional web development for startups and SMEs. React, Next.js, Node.js.', href: '/services/web-development', category: 'service', location: 'London, UK', price: 500, trustScore: 92 },
   { id: 's2', title: 'Logo Design', subtitle: 'Brand identity design', description: 'Custom logo and brand identity packages tailored to your business.', href: '/services/logo-design', category: 'service', location: 'Remote', price: 150, trustScore: 88 },
   { id: 'p1', title: 'FreeTrust Pro Plan', subtitle: 'Premium subscription', description: 'Unlock advanced features including verified badges, analytics, and priority support.', href: '/products/pro-plan', category: 'product', price: 29, trustScore: 95 },
-  { id: 'e1', title: 'Freelancer Meetup Dublin', subtitle: 'Networking event', description: 'Monthly meetup for freelancers and independent professionals in Dublin.', href: '/events/freelancer-meetup-dublin', category: 'event', location: 'Dublin, Ireland', date: 'Apr 18, 2026', trustScore: 78 },
-  { id: 'o1', title: 'Tech Guild Ireland', subtitle: 'Professional organisation', description: "Ireland's largest community for tech professionals, freelancers, and founders.", href: '/organisations/tech-guild-ireland', category: 'organisation', location: 'Ireland', trustScore: 85 },
-  { id: 'm1', title: 'David O Callaghan', subtitle: 'Founder & Developer', description: 'Building FreeTrust — open-source trust infrastructure for modern applications.', href: '/members/davidocallaghan', category: 'member', location: 'Ireland', trustScore: 91 },
+  { id: 'e1', title: 'Freelancer Meetup', subtitle: 'Networking event', description: 'Monthly meetup for freelancers and independent professionals.', href: '/events/freelancer-meetup', category: 'event', location: 'London, UK', date: 'Apr 18, 2026', trustScore: 78 },
+  { id: 'o1', title: 'Tech Guild', subtitle: 'Professional organisation', description: "A community for tech professionals, freelancers, and founders.", href: '/organisations/tech-guild', category: 'organisation', location: 'Global', trustScore: 85 },
+  { id: 'm1', title: 'David O Callaghan', subtitle: 'Founder & Developer', description: 'Building FreeTrust — open-source trust infrastructure for modern applications.', href: '/members/davidocallaghan', category: 'member', location: 'Global', trustScore: 91 },
 ]
 
 export async function fetchSearchResults({

@@ -261,7 +261,7 @@ function SuggestACauseForm() {
           <textarea
             value={description}
             onChange={e => setDescription(e.target.value)}
-            placeholder="Describe the cause, who it helps, and why it matters in Ireland…"
+            placeholder="Describe the cause, who it helps, and why it matters…"
             required
             minLength={20}
             maxLength={1000}

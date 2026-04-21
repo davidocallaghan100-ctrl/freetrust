@@ -509,7 +509,7 @@ function AccountTab({
           <LocationPicker
             value={structLoc}
             onChange={setStructLoc}
-            placeholder="Dublin, Ireland"
+            placeholder="Your city"
           />
           <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
             Used to default your browse filters to listings near you.

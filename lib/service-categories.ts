@@ -76,7 +76,7 @@ export const ONLINE_CATEGORIES: ServiceCategory[] = [
     subcategories: [
       'SEAI Home Energy Grants',
       'LEADER & Rural Funding',
-      'Enterprise Ireland Grants',
+      'Government & Enterprise Grants',
       'Business Start-Up Funding',
       'Charity & NGO Grants',
       'EU Funding Applications',

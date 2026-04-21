@@ -169,7 +169,7 @@ export default function EditJobPage() {
               <div><label style={s.label}>Location type</label><select style={s.select} value={form.location_type} onChange={e => set('location_type', e.target.value)}>{LOC_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}</select></div>
             </div>
 
-            <div><label style={s.label}>Location</label><input style={s.input} value={form.location} onChange={e => set('location', e.target.value)} placeholder="e.g. Dublin, Ireland" /></div>
+            <div><label style={s.label}>Location</label><input style={s.input} value={form.location} onChange={e => set('location', e.target.value)} placeholder="e.g. London, UK" /></div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
               <div><label style={s.label}>Min salary</label><input style={s.input} type="number" value={form.salary_min} onChange={e => set('salary_min', e.target.value)} /></div>

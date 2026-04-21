@@ -2,12 +2,12 @@
 import React from 'react'
 
 // Small tag shown on every listing card to reinforce global discovery.
-// Shows location_label (e.g. "Cork, Ireland") or "Remote / Online" when
+// Shows location_label (e.g. "London, UK") or "Remote / Online" when
 // is_remote=true. When neither is set, renders nothing — we don't want
 // an empty "📍 unknown" clogging the UI.
 //
 // Usage:
-//   <LocationBadge label="Cork, Ireland" />
+//   <LocationBadge label="London, UK" />
 //   <LocationBadge label={null} remote />
 //   <LocationBadge label="Berlin, Germany" distanceKm={12.4} />
 

@@ -16,7 +16,7 @@ export async function searchTypeahead(query: string): Promise<TypeaheadResult[]>
     { id: "g2", title: "Need someone to help move a sofa", subtitle: "Grassroots · Moving", category: "grassroots", href: "/grassroots", trustScore: 80 },
     { id: "p1", title: "FreeTrust Pro Plan", subtitle: "Product", category: "product", href: "/products/pro-plan", trustScore: 95 },
     { id: "e1", title: "Freelancer Meetup Dublin", subtitle: "Event · Apr 2026", category: "event", href: "/events/freelancer-meetup-dublin", trustScore: 78 },
-    { id: "o1", title: "Tech Guild Ireland", subtitle: "Organisation", category: "organisation", href: "/organisations/tech-guild-ireland", trustScore: 85 },
+    { id: "o1", title: "Tech Guild", subtitle: "Organisation", category: "organisation", href: "/organisations/tech-guild", trustScore: 85 },
     { id: "m1", title: "David O Callaghan", subtitle: "Member", category: "member", href: "/members/davidocallaghan", trustScore: 91 },
   ]
 

@@ -157,7 +157,7 @@ function RotatingGlobe({ size = 56 }: { size?: number }) {
           pointerEvents: 'none',
         }} />
 
-        {/* Ireland/Europe pin */}
+        {/* Europe pin */}
         <div style={{
           position: 'absolute',
           top: `${size * 0.33}px`,
