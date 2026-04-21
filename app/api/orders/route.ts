@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
       currency?: string
       type?: string
       notes?: string
+      delivery_address?: string
     }
 
     const orderTitle = body.title ?? body.item_title
@@ -97,6 +98,7 @@ export async function POST(req: NextRequest) {
         currency: body.currency ?? 'EUR',
         type: body.type ?? 'product',
         notes: body.notes ?? null,
+        delivery_address: body.delivery_address ?? null,
         status: 'pending',
       })
       .select()

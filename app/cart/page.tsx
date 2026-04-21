@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic'
 
 const AppleGooglePayButton = dynamic(() => import('@/components/payments/AppleGooglePayButton'), { ssr: false })
 
-type CartItem = { id: string; title: string; price: number; currency: string; qty: number; image: string }
+type CartItem = { id: string; title: string; price: number; currency: string; qty: number; image: string; product_type?: string }
 
 function getCart(): CartItem[] {
   try { return JSON.parse(localStorage.getItem('ft_cart') || '[]') } catch { return [] }
@@ -33,6 +33,8 @@ export default function CartPage() {
   const [promoError, setPromoError] = useState('')
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [payError, setPayError] = useState<string | null>(null)
+  const [deliveryAddress, setDeliveryAddress] = useState('')
+  const [addressError, setAddressError] = useState('')
 
   useEffect(() => {
     setMounted(true)
@@ -61,6 +63,13 @@ export default function CartPage() {
   }
 
   async function handleCheckout() {
+    // Require delivery address if any physical item in cart
+    const hasPhysical = cart.some(i => !i.product_type || i.product_type === 'physical')
+    if (hasPhysical && !deliveryAddress.trim()) {
+      setAddressError('Please enter a delivery address for your physical items.')
+      return
+    }
+    setAddressError('')
     setCheckoutLoading(true)
     try {
       // Build a combined cart checkout session
@@ -76,6 +85,7 @@ export default function CartPage() {
           amountInCents: Math.round(total * 100),
           type: 'product',
           sellerId: 'platform', // cart orders go through platform
+          delivery_address: hasPhysical ? deliveryAddress.trim() : undefined,
         }),
       })
       const data = await res.json()
@@ -91,6 +101,9 @@ export default function CartPage() {
       setCheckoutLoading(false)
     }
   }
+
+  // Physical items check (items without product_type default to physical)
+  const hasPhysical = cart.some(i => !i.product_type || i.product_type === 'physical')
 
   // Calculations
   const currency = cart[0]?.currency ?? 'GBP'
@@ -334,6 +347,36 @@ export default function CartPage() {
               {shipping > 0 && (
                 <div style={{ background: 'rgba(56,189,248,0.06)', border: `1px solid rgba(56,189,248,0.15)`, borderRadius: 8, padding: '0.6rem 0.85rem', fontSize: '0.75rem', color: '#94a3b8', marginBottom: '1rem' }}>
                   Add <strong style={{ color: accent }}>{fmt(FREE_SHIPPING_THRESHOLD - afterDiscount, currency)}</strong> more for free shipping
+                </div>
+              )}
+
+              {/* Delivery address — shown only when cart contains physical items */}
+              {hasPhysical && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: text, marginBottom: 6 }}>
+                    📦 Delivery Address
+                  </label>
+                  <textarea
+                    value={deliveryAddress}
+                    onChange={e => { setDeliveryAddress(e.target.value); setAddressError('') }}
+                    placeholder="Street, City, Postcode, Country…"
+                    rows={3}
+                    style={{
+                      width: '100%',
+                      background: '#0f172a',
+                      border: `1px solid ${addressError ? '#f87171' : border}`,
+                      borderRadius: 8,
+                      padding: '0.65rem 0.75rem',
+                      color: text,
+                      fontSize: '0.85rem',
+                      outline: 'none',
+                      fontFamily: 'system-ui',
+                      resize: 'vertical',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                  {addressError && <div style={{ color: '#f87171', fontSize: '0.72rem', marginTop: 4 }}>{addressError}</div>}
+                  <div style={{ fontSize: '0.68rem', color: muted, marginTop: 4 }}>Required for physical items — shared with seller for delivery.</div>
                 </div>
               )}
 

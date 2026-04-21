@@ -463,7 +463,7 @@ export async function POST(req: NextRequest) {
         description,
         price,
         currency: currencyCode,
-        product_type: 'physical',
+        product_type: (data.product_type as string) || 'physical',
         status: 'active',
         images: imagesLiteral,
         tags:   tagsLiteral,

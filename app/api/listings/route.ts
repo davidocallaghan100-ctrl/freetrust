@@ -21,8 +21,26 @@ export async function GET(request: NextRequest) {
     const location = searchParams.get('location')
     const search = searchParams.get('q')
     const mine = searchParams.get('mine') === 'true'
+    const idsParam = searchParams.get('ids') // comma-separated list of listing IDs
 
     const { data: { user } } = await supabase.auth.getUser()
+
+    // Fast path: fetch specific listings by ID (e.g. for cart page)
+    if (idsParam) {
+      const ids = idsParam.split(',').map(id => id.trim()).filter(Boolean)
+      if (ids.length === 0) {
+        return NextResponse.json({ listings: [], total: 0, page: 1, limit: ids.length })
+      }
+      const { data: listings, error } = await supabase
+        .from('listings')
+        .select('*, profiles!seller_id(id, full_name, avatar_url)')
+        .in('id', ids)
+      if (error) {
+        console.error('[GET /api/listings?ids]', error)
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+      return NextResponse.json({ listings: listings ?? [], total: listings?.length ?? 0, page: 1, limit: ids.length })
+    }
 
     let query = supabase
       .from('listings')
