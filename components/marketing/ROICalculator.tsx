@@ -98,21 +98,27 @@ export default function ROICalculator() {
 
   const result = useMemo(() => {
     if (mode === 'seller') {
-      const fromListings = listings * 100
-      const fromOrders   = orders * (onTime ? 150 : 50)
-      const fromReviews  = Math.round(orders * 0.7 * 50)
-      const monthly      = fromListings + fromOrders + fromReviews
-      const annual       = monthly * 12
-      const feeReduction = annual >= 10000 ? 3 : annual >= 5000 ? 2 : annual >= 1000 ? 1 : 0
-      const moneySaved   = Math.round(orderValue * orders * 12 * (feeReduction / 100))
-      return { monthly, annual, feeReduction, moneySaved }
+      const fromListings   = listings * 100
+      const fromOrders     = orders * (onTime ? 150 : 50)
+      const fromReviews    = Math.round(orders * 0.7 * 50)
+      const monthly        = fromListings + fromOrders + fromReviews
+      const annual         = monthly * 12
+      const feeReduction   = annual >= 10000 ? 3 : annual >= 5000 ? 2 : annual >= 1000 ? 1 : 0
+      // Real EUR earnings: gross revenue minus platform fee (5% standard, reduced by tier)
+      const platformFeePct = Math.max(5 - feeReduction, 2)
+      const monthlyGross   = orders * orderValue
+      const monthlyNet     = Math.round(monthlyGross * (1 - platformFeePct / 100))
+      const annualGross    = monthlyGross * 12
+      const annualNet      = monthlyNet * 12
+      const moneySaved     = Math.round(annualGross * (feeReduction / 100))
+      return { monthly, annual, feeReduction, moneySaved, monthlyGross, monthlyNet, annualGross, annualNet, platformFeePct }
     } else {
       const fromConfirming = purchases * 25
       const fromReviewing  = reviews * 55
       const monthly        = fromConfirming + fromReviewing
       const annual         = monthly * 12
       const feeReduction   = annual >= 1000 ? 1 : 0
-      return { monthly, annual, feeReduction, moneySaved: 0 }
+      return { monthly, annual, feeReduction, moneySaved: 0, monthlyGross: 0, monthlyNet: 0, annualGross: 0, annualNet: 0, platformFeePct: 5 }
     }
   }, [mode, listings, orderValue, orders, onTime, purchases, reviews])
 
@@ -250,39 +256,70 @@ export default function ROICalculator() {
             Your Earnings
           </div>
 
-          {/* Monthly */}
-          <div style={{
-            background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)',
-            borderRadius: 12, padding: '14px 16px',
-          }}>
-            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Monthly TrustCoins</div>
-            <div style={{ fontSize: 32, fontWeight: 900, color: '#10b981', lineHeight: 1 }}>
-              <AnimatedNum value={result.monthly} suffix="₮" />
-            </div>
-          </div>
+          {/* ── Real EUR earnings (seller only) ── */}
+          {mode === 'seller' && (
+            <>
+              {/* Monthly real money */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(56,189,248,0.08))',
+                border: '1px solid rgba(16,185,129,0.3)',
+                borderRadius: 12, padding: '14px 16px',
+              }}>
+                <div style={{ fontSize: 11, color: '#6ee7b7', marginBottom: 4, fontWeight: 600 }}>💶 Monthly Revenue</div>
+                <div style={{ fontSize: 32, fontWeight: 900, color: '#f1f5f9', lineHeight: 1 }}>
+                  €<AnimatedNum value={result.monthlyNet} />
+                </div>
+                <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                  €<AnimatedNum value={result.monthlyGross} /> gross · {result.platformFeePct}% fee deducted
+                </div>
+              </div>
 
-          {/* Annual */}
+              {/* Annual real money */}
+              <div style={{
+                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(16,185,129,0.15)',
+                borderRadius: 12, padding: '12px 14px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                gap: 8, minWidth: 0,
+              }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 11, color: '#64748b', marginBottom: 3 }}>Annual revenue</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#34d399', whiteSpace: 'nowrap' }}>
+                    €<AnimatedNum value={result.annualNet} />
+                  </div>
+                  <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
+                    €<AnimatedNum value={result.annualGross} /> gross
+                  </div>
+                </div>
+                {/* Tier badge */}
+                <div style={{
+                  background: `${tier.color}18`, border: `1px solid ${tier.color}40`,
+                  borderRadius: 8, padding: '5px 8px', textAlign: 'center', flexShrink: 0,
+                }}>
+                  <div style={{ fontSize: 16, lineHeight: 1 }}>{tier.emoji}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: tier.color, letterSpacing: '0.04em', marginTop: 2, whiteSpace: 'nowrap' }}>
+                    {tier.label}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Monthly TrustCoins */}
           <div style={{
-            background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.12)',
-            borderRadius: 12, padding: '12px 14px',
+            background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)',
+            borderRadius: 12, padding: '12px 16px',
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            gap: 8, minWidth: 0,
           }}>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: 11, color: '#64748b', marginBottom: 3 }}>Annual projection</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: '#34d399', whiteSpace: 'nowrap' }}>
-                <AnimatedNum value={result.annual} suffix="₮" />
+            <div>
+              <div style={{ fontSize: 11, color: '#64748b', marginBottom: 3 }}>Monthly TrustCoins</div>
+              <div style={{ fontSize: 24, fontWeight: 900, color: '#10b981', lineHeight: 1 }}>
+                <AnimatedNum value={result.monthly} suffix="₮" />
               </div>
             </div>
-            {/* Tier badge — compact, never overflows */}
-            <div style={{
-              background: `${tier.color}18`, border: `1px solid ${tier.color}40`,
-              borderRadius: 8, padding: '5px 8px', textAlign: 'center',
-              flexShrink: 0,
-            }}>
-              <div style={{ fontSize: 16, lineHeight: 1 }}>{tier.emoji}</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: tier.color, letterSpacing: '0.04em', marginTop: 2, whiteSpace: 'nowrap' }}>
-                {tier.label}
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 11, color: '#64748b', marginBottom: 3 }}>Annual</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#34d399' }}>
+                <AnimatedNum value={result.annual} suffix="₮" />
               </div>
             </div>
           </div>
@@ -294,7 +331,7 @@ export default function ROICalculator() {
             borderRadius: 12, padding: '12px 16px',
           }}>
             <div style={{ fontSize: 11, color: '#64748b', marginBottom: 3 }}>Fee reduction</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: result.feeReduction > 0 ? '#f59e0b' : '#475569' }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: result.feeReduction > 0 ? '#f59e0b' : '#475569' }}>
               {result.feeReduction > 0
                 ? <><AnimatedNum value={result.feeReduction} suffix="%" /> off platform fees</>
                 : 'Earn 1,000₮ to unlock savings'
@@ -302,7 +339,7 @@ export default function ROICalculator() {
             </div>
             {result.moneySaved > 0 && (
               <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
-                ≈ <strong style={{ color: '#fbbf24' }}>€<AnimatedNum value={result.moneySaved} /></strong> saved per year
+                ≈ <strong style={{ color: '#fbbf24' }}>€<AnimatedNum value={result.moneySaved} /></strong> extra kept per year
               </div>
             )}
           </div>
