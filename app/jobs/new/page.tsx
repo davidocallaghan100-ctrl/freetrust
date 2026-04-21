@@ -126,7 +126,7 @@ export default function PostJobPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
         setSubmitting(false)
-        router.push('/auth/login?redirect=/jobs/new')
+        router.push('/login?redirect=/jobs/new')
         return
       }
 
