@@ -27,9 +27,12 @@ export default function PostJobPage() {
   const [preview, setPreview] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<{ title?: boolean; description?: boolean }>({})
   const [tagInput, setTagInput] = useState('')
   const [logoUploading, setLogoUploading] = useState(false)
   const submitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const titleRef = useRef<HTMLInputElement>(null)
+  const descRef = useRef<HTMLTextAreaElement>(null)
 
   const [form, setForm] = useState({
     // Company details
@@ -121,10 +124,21 @@ export default function PostJobPage() {
   }
 
   const handleSubmit = async () => {
-    if (!form.title || !form.description || !form.job_type) {
-      setError('Please fill in title, description and job type.')
+    const missing = { title: !form.title.trim(), description: !form.description.trim() }
+    if (missing.title || missing.description) {
+      setFieldErrors(missing)
+      setError('Please fill in the required fields marked in red above.')
+      // Scroll to first missing field
+      if (missing.title) {
+        titleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        titleRef.current?.focus()
+      } else if (missing.description) {
+        descRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        descRef.current?.focus()
+      }
       return
     }
+    setFieldErrors({})
     setSubmitting(true)
     setError('')
     try {
@@ -359,13 +373,28 @@ export default function PostJobPage() {
             {sectionDivider('📋', 'Job Details')}
 
             <div style={sectionStyle}>
-              <label style={labelStyle}>Job Title *</label>
-              <input value={form.title} onChange={e => set('title', e.target.value)} placeholder="e.g. Senior Full-Stack Engineer" style={inputStyle} />
+              <label style={{ ...labelStyle, color: fieldErrors.title ? '#ef4444' : undefined }}>Job Title *</label>
+              <input
+                ref={titleRef}
+                value={form.title}
+                onChange={e => { set('title', e.target.value); setFieldErrors(f => ({ ...f, title: false })) }}
+                placeholder="e.g. Senior Full-Stack Engineer"
+                style={{ ...inputStyle, borderColor: fieldErrors.title ? 'rgba(239,68,68,0.7)' : undefined, boxShadow: fieldErrors.title ? '0 0 0 3px rgba(239,68,68,0.15)' : undefined }}
+              />
+              {fieldErrors.title && <div style={{ fontSize: '0.78rem', color: '#ef4444', marginTop: '0.3rem' }}>⚠️ Job title is required</div>}
             </div>
 
             <div style={sectionStyle}>
-              <label style={labelStyle}>Description *</label>
-              <textarea value={form.description} onChange={e => set('description', e.target.value)} placeholder="Describe the role, responsibilities, and what you're looking for..." rows={6} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
+              <label style={{ ...labelStyle, color: fieldErrors.description ? '#ef4444' : undefined }}>Description *</label>
+              <textarea
+                ref={descRef}
+                value={form.description}
+                onChange={e => { set('description', e.target.value); setFieldErrors(f => ({ ...f, description: false })) }}
+                placeholder="Describe the role, responsibilities, and what you're looking for..."
+                rows={6}
+                style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6, borderColor: fieldErrors.description ? 'rgba(239,68,68,0.7)' : undefined, boxShadow: fieldErrors.description ? '0 0 0 3px rgba(239,68,68,0.15)' : undefined }}
+              />
+              {fieldErrors.description && <div style={{ fontSize: '0.78rem', color: '#ef4444', marginTop: '0.3rem' }}>⚠️ Description is required</div>}
             </div>
 
             <div style={sectionStyle}>
