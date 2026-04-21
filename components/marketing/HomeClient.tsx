@@ -808,6 +808,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
       </div>
 
       {/* ── UPCOMING EVENTS ── */}
+      {(homeEvents === null || homeEvents.length > 0) && (
       <div style={{ borderBottom: '1px solid rgba(56,189,248,0.06)', background: 'rgba(56,189,248,0.02)' }}>
         <div className="lp-sec">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -824,8 +825,6 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
                 <div key={i} style={{ flexShrink: 0, width: 280, height: 120, background: '#1e293b', borderRadius: 14, border: '1px solid rgba(56,189,248,0.08)', animation: 'shimmer 1.4s infinite', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%' }} />
               ))}
             </div>
-          ) : homeEvents.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '0.88rem' }}>No upcoming events yet — <Link href="/events/create" style={{ color: '#38bdf8' }}>create one</Link>.</div>
           ) : (
             <div className="hscroll">
               {homeEvents.map(ev => {
@@ -862,8 +861,10 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           )}
         </div>
       </div>
+      )}
 
       {/* ── LATEST JOBS ── */}
+      {(homeJobs === null || homeJobs.length > 0) && (
       <div style={{ borderBottom: '1px solid rgba(56,189,248,0.06)' }}>
         <div className="lp-sec">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -879,8 +880,6 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
                 <div key={i} style={{ flexShrink: 0, width: 280, height: 90, background: '#1e293b', borderRadius: 12, border: '1px solid rgba(56,189,248,0.08)', animation: 'shimmer 1.4s infinite', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%' }} />
               ))}
             </div>
-          ) : homeJobs.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '0.88rem' }}>No jobs posted yet — <Link href="/jobs/new" style={{ color: '#38bdf8' }}>post one</Link>.</div>
           ) : (
             <div className="hscroll">
               {homeJobs.map(job => {
@@ -928,6 +927,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           )}
         </div>
       </div>
+      )}
 
       {/* ── 8. FOUNDING MEMBER CTA ── */}
       <div style={{ background: 'linear-gradient(135deg, rgba(56,189,248,0.06) 0%, rgba(129,140,248,0.06) 100%)', borderBottom: '1px solid rgba(56,189,248,0.1)' }}>
