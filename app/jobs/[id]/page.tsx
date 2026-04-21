@@ -239,11 +239,6 @@ export default function JobDetailPage() {
               <span style={{ color: '#38bdf8', fontWeight: 600 }}>💰 {formatSalary(job.salary_min, job.salary_max, job.salary_currency, job.job_type)}</span>
               {job.location && <span>📍 {job.location}</span>}
               <span>👥 {job.applicant_count} applicant{job.applicant_count !== 1 ? 's' : ''}</span>
-              {currentUserId && job.poster?.id === currentUserId && job.applicant_count > 0 && (
-                <Link href={`/jobs/${id}/applications`} style={{ color: '#38bdf8', textDecoration: 'none', fontWeight: 600, fontSize: '0.82rem' }}>
-                  View applications →
-                </Link>
-              )}
               {currentUserId && job.poster?.id === currentUserId && (
                 <Link href={`/jobs/${id}/edit`} style={{ color: '#a78bfa', textDecoration: 'none', fontWeight: 600, fontSize: '0.82rem' }}>
                   ✏️ Edit
@@ -266,6 +261,42 @@ export default function JobDetailPage() {
               </div>
             )}
           </div>
+
+          {/* ── Poster Admin Panel ── */}
+          {currentUserId && job.poster?.id === currentUserId && (
+            <div style={{
+              background: 'rgba(56,189,248,0.06)',
+              border: '1px solid rgba(56,189,248,0.2)',
+              borderRadius: 14,
+              padding: '1rem 1.25rem',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '0.75rem',
+            }}>
+              <div>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.2rem' }}>📋 You posted this job</div>
+                <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                  {job.applicant_count === 0
+                    ? 'No applications yet — share your listing to attract candidates'
+                    : `${job.applicant_count} application${job.applicant_count !== 1 ? 's' : ''} received`}
+                </div>
+              </div>
+              <Link
+                href={`/jobs/${id}/applications`}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                  background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.35)',
+                  color: '#38bdf8', textDecoration: 'none', fontWeight: 700, fontSize: '0.85rem',
+                  borderRadius: 10, padding: '0.55rem 1.1rem', whiteSpace: 'nowrap',
+                }}
+              >
+                👥 Manage Applications →
+              </Link>
+            </div>
+          )}
 
           {/* Description */}
           <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 14, padding: '1.75rem', marginBottom: '1.5rem' }}>

@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -122,37 +123,32 @@ export async function POST(request: NextRequest) {
   try {
     const admin = createAdminClient()
 
-    // ── Auth: check JWT (cookie or Authorization header), then API key ──────
+    // ── Auth: check JWT (cookie + Bearer header in parallel), then API key ──
     let posterId: string | null = null
     let isApiKeyAuth = false
 
-    // 1. Try cookie-based session (standard SSR flow)
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      posterId = user.id
-    }
+    const authHeader = request.headers.get('Authorization')
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
 
-    // 2. Fallback: Authorization Bearer header (sent explicitly by the client
-    //    as a belt-and-suspenders measure when cookie propagation may be unreliable)
-    if (!posterId) {
-      const authHeader = request.headers.get('Authorization')
-      if (authHeader?.startsWith('Bearer ')) {
-        const token = authHeader.slice(7)
-        try {
-          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-          const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-          const bearerClient = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
-            global: { headers: { Authorization: `Bearer ${token}` } },
-          })
-          const { data: { user: bearerUser } } = await bearerClient.auth.getUser(token)
-          if (bearerUser) {
-            posterId = bearerUser.id
-          }
-        } catch {
-          // Bearer auth failed — fall through to API key check
-        }
-      }
+    // Run cookie-based session and bearer token auth in parallel to save latency
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+    const [cookieResult, bearerResult] = await Promise.allSettled([
+      // 1. Cookie-based session (standard SSR flow)
+      createClient().then(s => s.auth.getUser()),
+      // 2. Bearer header (belt-and-suspenders for mobile/SPA)
+      bearerToken
+        ? createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+            global: { headers: { Authorization: `Bearer ${bearerToken}` } },
+          }).auth.getUser(bearerToken)
+        : Promise.resolve({ data: { user: null } }),
+    ])
+
+    if (cookieResult.status === 'fulfilled' && cookieResult.value.data.user) {
+      posterId = cookieResult.value.data.user.id
+    } else if (bearerResult.status === 'fulfilled' && bearerResult.value.data.user) {
+      posterId = bearerResult.value.data.user.id
     }
 
     // 3. Try API key auth (for automated/external job ingestion)
