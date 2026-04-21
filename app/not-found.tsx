@@ -40,7 +40,7 @@ export default function NotFound() {
       </p>
 
       {/* CTAs */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 300 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 300, position: 'relative', zIndex: 200 }}>
         <Link href="/auth/login" style={{
           display: 'block', padding: '14px 24px', borderRadius: 12,
           background: 'linear-gradient(135deg, #00d4aa, #38bdf8)',

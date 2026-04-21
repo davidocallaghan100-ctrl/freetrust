@@ -279,6 +279,18 @@ type HomeJob = {
   job_type: string | null
 }
 
+interface HomeRentShare {
+  id: string
+  title: string
+  category: string | null
+  price_per_day: number | null
+  price_per_week: number | null
+  currency: string | null
+  location: string | null
+  images: string[] | null
+  owner: { full_name: string | null; avatar_url: string | null } | null
+}
+
 const CAT_COLORS_HOME: Record<string, string> = {
   Technology: '#34d399', Startup: '#38bdf8', AI: '#e879f9',
   Business: '#a78bfa', Design: '#f472b6', Marketing: '#fb923c',
@@ -293,6 +305,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
   const [featuredProducts, setFeaturedProducts] = useState<FeaturedProduct[]>([])
   const [homeEvents, setHomeEvents] = useState<HomeEvent[] | null>(null)
   const [homeJobs, setHomeJobs] = useState<HomeJob[] | null>(null)
+  const [homeRentShare, setHomeRentShare] = useState<HomeRentShare[] | null>(null)
 
   const fetchStats = useCallback(async () => {
     try {
@@ -365,6 +378,13 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
       } catch { setHomeJobs([]) }
     }
     void load()
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/rent-share?limit=6')
+      .then(r => r.ok ? r.json() : { listings: [] })
+      .then(d => setHomeRentShare((d.listings ?? []).slice(0, 6) as HomeRentShare[]))
+      .catch(() => setHomeRentShare([]))
   }, [])
 
   const tm = stats?.members.total ?? 0
@@ -918,6 +938,59 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
                         <span style={{ fontSize: '0.6rem', fontWeight: 800, background: 'rgba(167,139,250,0.1)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.25)', padding: '2px 6px', borderRadius: 999 }}>
                           {jobTypeLabel}
                         </span>
+                      </div>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+      )}
+
+      {/* ── RENT & SHARE ── */}
+      {(homeRentShare === null || homeRentShare.length > 0) && (
+      <div style={{ borderBottom: '1px solid rgba(56,189,248,0.06)', background: 'rgba(0,212,170,0.015)' }}>
+        <div className="lp-sec">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div>
+              <h2 className="section-h2" style={{ fontSize: 'clamp(1.3rem,3vw,1.8rem)', fontWeight: 900, margin: '0 0 0.2rem' }}>♻️ Rent &amp; Share</h2>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>Borrow what you need, share what you have</p>
+            </div>
+            <Link href="/rent-share" style={{ fontSize: '0.82rem', color: '#00d4aa', textDecoration: 'none', fontWeight: 600, flexShrink: 0 }}>Browse all →</Link>
+          </div>
+          {homeRentShare === null ? (
+            <div className="hscroll">
+              {[0,1,2].map(i => (
+                <div key={i} style={{ flexShrink: 0, width: 240, height: 140, background: '#1e293b', borderRadius: 14, border: '1px solid rgba(0,212,170,0.08)', animation: 'shimmer 1.4s infinite', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%' }} />
+              ))}
+            </div>
+          ) : (
+            <div className="hscroll">
+              {homeRentShare.map(item => {
+                const priceStr = item.price_per_day
+                  ? `${item.currency ?? '€'}${item.price_per_day}/day`
+                  : item.price_per_week
+                  ? `${item.currency ?? '€'}${item.price_per_week}/week`
+                  : 'Free to borrow'
+                const thumbUrl = item.images && item.images.length > 0 ? item.images[0] : null
+                return (
+                  <Link key={item.id} href={`/rent-share/${item.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 220 }}>
+                    <div
+                      style={{ background: '#1e293b', border: '1px solid rgba(0,212,170,0.1)', borderRadius: 14, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(0,212,170,0.12)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}
+                    >
+                      <div style={{ width: '100%', height: 100, background: thumbUrl ? `url(${thumbUrl}) center/cover` : 'linear-gradient(135deg,rgba(0,212,170,0.15),rgba(56,189,248,0.1))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {!thumbUrl && <span style={{ fontSize: '2rem' }}>♻️</span>}
+                      </div>
+                      <div style={{ padding: '0.75rem' }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.25rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#00d4aa' }}>{priceStr}</span>
+                          {item.location && <span style={{ fontSize: '0.7rem', color: '#64748b' }}>📍 {item.location}</span>}
+                        </div>
                       </div>
                     </div>
                   </Link>
