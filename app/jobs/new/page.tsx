@@ -142,18 +142,41 @@ export default function PostJobPage() {
     setSubmitting(true)
     setError('')
     try {
+      // ── Get session with a hard 8-second timeout ─────────────────────
+      // getSession() can trigger a token refresh network call on mobile.
+      // If that hangs (poor connectivity), it blocks the whole submit flow
+      // indefinitely until the 20s safety timer fires. We race it against
+      // a timeout so the user gets a fast, actionable error instead.
       const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
+      let session: { access_token: string } | null = null
+      try {
+        const sessionResult = await Promise.race([
+          supabase.auth.getSession().then(r => r.data.session),
+          new Promise<null>((_, reject) =>
+            setTimeout(() => reject(new Error('SESSION_TIMEOUT')), 8000)
+          ),
+        ])
+        session = sessionResult
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : ''
+        if (msg === 'SESSION_TIMEOUT') {
+          throw new Error('Could not verify your session — please refresh the page and try again.')
+        }
+        throw e
+      }
+
       if (!session) {
         setSubmitting(false)
         router.push('/login?redirect=/jobs/new')
         return
       }
 
-      // 12-second timeout — fast-fail if the server doesn't respond,
-      // rather than hanging silently until the 20s safety timer fires.
+      // ── POST to API with a 25-second abort timeout ────────────────────
+      // 25s > Vercel's 10s function hard limit, so if the server times out
+      // the browser will get a proper TCP reset / 504 well before this fires.
+      // The main purpose is as a last-resort client safety net.
       const controller = new AbortController()
-      const fetchTimeout = setTimeout(() => controller.abort(), 12000)
+      const fetchTimeout = setTimeout(() => controller.abort(), 25000)
 
       let res: Response
       try {
@@ -179,7 +202,7 @@ export default function PostJobPage() {
       } catch (fetchErr) {
         const isAbort = fetchErr instanceof Error && fetchErr.name === 'AbortError'
         throw new Error(isAbort
-          ? 'The server took too long to respond. Please try again — your job was not posted.'
+          ? 'The server is taking too long — please try again in a moment.'
           : 'Network error. Please check your connection and try again.')
       } finally {
         clearTimeout(fetchTimeout)
