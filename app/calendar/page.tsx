@@ -627,7 +627,7 @@ function CalendarPageInner() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0f' }}>
+    <div style={{ minHeight: '100vh', background: '#0a0a0f', overflowX: 'hidden' }}>
       {/* ── Inline calendar CSS overrides ── */}
       <style>{`
         /* Base calendar */
@@ -697,25 +697,32 @@ function CalendarPageInner() {
           background: #13131a;
         }
 
-        /* Agenda — horizontal scroll so EVENT column is fully readable on mobile */
+        /* Agenda — vertical scroll on mobile, no horizontal overflow */
         .rbc-agenda-view {
-          overflow-x: auto !important;
+          overflow-y: auto !important;
           -webkit-overflow-scrolling: touch;
         }
+        /* Let the agenda table flow naturally, no forced min-width */
         .rbc-agenda-table {
-          min-width: 480px;
+          width: 100%;
+          table-layout: fixed;
         }
-        /* DATE col fixed width, TIME col fixed, EVENT col takes remaining space */
+        /* Compact columns on mobile so EVENT has room */
         .rbc-agenda-table .rbc-agenda-date-cell {
-          min-width: 90px;
-          width: 90px;
+          width: 70px;
+          min-width: 70px;
+          max-width: 70px;
+          word-break: break-word;
         }
         .rbc-agenda-table .rbc-agenda-time-cell {
-          min-width: 130px;
-          width: 130px;
+          width: 90px;
+          min-width: 90px;
+          max-width: 90px;
+          word-break: break-word;
         }
         .rbc-agenda-table .rbc-agenda-event-cell {
-          min-width: 200px;
+          word-break: break-word;
+          white-space: normal !important;
         }
         .rbc-off-range-bg { background: rgba(255,255,255,0.015); }
         .rbc-today { background: rgba(56,189,248,0.08) !important; }
@@ -760,16 +767,19 @@ function CalendarPageInner() {
         }
         .rbc-agenda-date-cell, .rbc-agenda-time-cell {
           color: #cbd5e1;
-          font-size: 0.82rem;
+          font-size: 0.78rem;
           font-weight: 500;
-          padding: 0.75rem 0.875rem;
-          white-space: nowrap;
+          padding: 0.65rem 0.5rem;
+          white-space: normal;
+          word-break: break-word;
         }
         .rbc-agenda-event-cell {
           color: #f1f5f9;
-          font-size: 0.88rem;
+          font-size: 0.85rem;
           font-weight: 600;
-          padding: 0.75rem 0.875rem;
+          padding: 0.65rem 0.5rem;
+          white-space: normal;
+          word-break: break-word;
         }
         .rbc-agenda-table tbody > tr {
           border-bottom: 1px solid rgba(42,42,61,0.7);
@@ -835,9 +845,54 @@ function CalendarPageInner() {
           text-align: center;
           font-size: 0.9rem;
         }
+
+        /* Mobile agenda — stack date/time above event for readability */
+        @media (max-width: 480px) {
+          .rbc-agenda-table {
+            table-layout: auto;
+          }
+          .rbc-agenda-table .rbc-agenda-date-cell,
+          .rbc-agenda-table .rbc-agenda-time-cell {
+            font-size: 0.72rem;
+            padding: 0.5rem 0.4rem;
+          }
+          .rbc-agenda-table .rbc-agenda-event-cell {
+            font-size: 0.82rem;
+            padding: 0.5rem 0.4rem;
+          }
+          /* Reduce toolbar button padding on mobile */
+          .rbc-toolbar button {
+            padding: 0.35rem 0.6rem;
+            font-size: 0.75rem;
+          }
+          .rbc-toolbar-label {
+            font-size: 0.88rem;
+          }
+        }
+
+        /* Ensure the rbc-calendar itself doesn't clip agenda scroll */
+        .rbc-calendar.rbc-agenda-view-open {
+          overflow: visible !important;
+        }
+        /* Make the agenda content area scrollable if it overflows */
+        .rbc-agenda-view table.rbc-agenda-table tbody {
+          display: block;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+        .rbc-agenda-view table.rbc-agenda-table thead {
+          display: table;
+          width: 100%;
+          table-layout: fixed;
+        }
+        .rbc-agenda-view table.rbc-agenda-table tbody tr {
+          display: table;
+          width: 100%;
+          table-layout: fixed;
+        }
       `}</style>
 
-      <div style={{ maxWidth: 1300, margin: '0 auto', padding: '1.25rem 1rem 2rem' }}>
+      <div style={{ maxWidth: 1300, margin: '0 auto', padding: '1.25rem 1rem 6rem' }}>
 
         {/* ── Header ── */}
         <div style={{ marginBottom: '1.25rem' }}>
@@ -1056,7 +1111,7 @@ function CalendarPageInner() {
           background: '#13131a',
           borderRadius: '16px',
           border: '1px solid #2a2a3d',
-          overflow: 'hidden',
+          overflow: 'visible',
         }}>
           {loading ? (
             <div style={{
@@ -1083,7 +1138,7 @@ function CalendarPageInner() {
               events={filteredEvents}
               startAccessor="start"
               endAccessor="end"
-              style={{ height: 'calc(100vh - 320px)', minHeight: 460 }}
+              style={{ height: view === 'agenda' ? 'auto' : 'calc(100vh - 260px)', minHeight: view === 'agenda' ? 300 : 460 }}
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               view={view as any}
               onView={(v: string) => setView(v)}
