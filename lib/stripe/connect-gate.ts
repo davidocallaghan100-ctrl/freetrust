@@ -27,7 +27,9 @@ export interface ConnectGateBlocked {
   }
 }
 
-export type ConnectGateResult = ConnectGateOk | ConnectGateBlocked
+// NOTE: The function always returns ConnectGateOk now (never blocks).
+// ConnectGateBlocked is kept for backwards-compat only.
+export type ConnectGateResult = ConnectGateOk
 
 export async function assertStripeConnectedForPaidListing(
   userId: string,
