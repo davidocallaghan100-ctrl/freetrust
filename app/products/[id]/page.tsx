@@ -142,7 +142,7 @@ export default function ProductDetailPage() {
     try {
       const sb = createClient()
       const { data: { user } } = await sb.auth.getUser()
-      if (!user) { router.push('/login'); return }
+      if (!user) { router.push('/auth/login'); return }
       const res = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

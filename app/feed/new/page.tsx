@@ -55,7 +55,7 @@ export default function NewFeedPostPage() {
         body: JSON.stringify({ type, content: content.trim(), media_url: mediaUrl.trim() || null }),
       })
       if (res.status === 401) {
-        router.push('/login')
+        router.push('/auth/login')
         return
       }
       if (!res.ok) {

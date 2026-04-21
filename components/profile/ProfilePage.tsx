@@ -751,7 +751,7 @@ export default function ProfilePage() {
     console.log('[profile] handleMessage — opening drawer for', profile?.id ?? viewingId)
     if (!user) {
       console.warn('[profile] handleMessage: no authenticated user, redirecting to /login')
-      router.push('/login')
+      router.push('/auth/login')
       return
     }
     setDrawerOpen(true)
@@ -803,7 +803,7 @@ export default function ProfilePage() {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', background: '#0f172a', color: '#f1f5f9', gap: '1rem' }}>
         <div style={{ fontSize: '3rem' }}>🔒</div>
         <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Sign in to view your profile</h3>
-        <Link href="/login" style={{ background: '#38bdf8', color: '#0f172a', borderRadius: 8, padding: '0.6rem 1.4rem', fontWeight: 700, textDecoration: 'none', fontSize: '0.9rem' }}>Sign In</Link>
+        <Link href="/auth/login" style={{ background: '#38bdf8', color: '#0f172a', borderRadius: 8, padding: '0.6rem 1.4rem', fontWeight: 700, textDecoration: 'none', fontSize: '0.9rem' }}>Sign In</Link>
       </div>
     )
   }

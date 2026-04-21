@@ -554,7 +554,7 @@ export default function RegisterPage() {
               </div>
               <p style={{ fontSize: 12, color: '#64748b', textAlign: 'center', margin: 0 }}>
                 Can&rsquo;t find it? Check your spam folder or{' '}
-                <Link href="/login" style={{ color: '#38bdf8' }}>sign in</Link>
+                <Link href="/auth/login" style={{ color: '#38bdf8' }}>sign in</Link>
                 {' '}if you already have an account.
               </p>
             </div>
@@ -572,7 +572,7 @@ export default function RegisterPage() {
           ) : (
             <>
               <div className="auth-heading">Join FreeTrust</div>
-              <p className="auth-sub">Already have an account? <Link href="/login">Sign in →</Link></p>
+              <p className="auth-sub">Already have an account? <Link href="/auth/login">Sign in →</Link></p>
 
               <div className="perks-strip">
                 <div className="perk">✅ Free forever</div>

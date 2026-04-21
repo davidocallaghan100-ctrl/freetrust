@@ -242,7 +242,7 @@ export default function OrderDetailPage() {
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { router.push('/login'); return }
+      if (!user) { router.push('/auth/login'); return }
       setUserId(user.id)
       fetchOrder()
     })

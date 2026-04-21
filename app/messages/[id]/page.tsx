@@ -73,7 +73,7 @@ export default function ConversationPage() {
     try {
       const res = await fetch(`/api/messages/${conversationId}`, { cache: 'no-store' })
       if (!res.ok) {
-        if (res.status === 401) { router.push('/login'); return }
+        if (res.status === 401) { router.push('/auth/login'); return }
         const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string }
         console.error('[messages/:id] load failed:', res.status, err)
         setLoadError(err.error || `HTTP ${res.status}`)
@@ -177,7 +177,7 @@ export default function ConversationPage() {
     setLoading(true)
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (cancelled) return
-      if (!user) { router.push('/login'); return }
+      if (!user) { router.push('/auth/login'); return }
       setUserId(user.id)
       await Promise.all([loadMessages(), loadOtherUser(user.id)])
       subscribeRealtime()

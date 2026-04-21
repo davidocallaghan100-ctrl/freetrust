@@ -30,7 +30,7 @@ export default function DraftsPage() {
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/login'); return }
+      if (!user) { router.push('/auth/login'); return }
       setUserId(user.id)
 
       const { data, error } = await supabase
