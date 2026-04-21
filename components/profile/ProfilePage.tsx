@@ -475,8 +475,21 @@ export default function ProfilePage() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Safety net: if loading hasn't resolved within 8 seconds, force it false.
+  // Guards against supabase.auth.getUser() hanging on slow/offline connections
+  // and against the lastInitIdRef early-return on component remount.
   useEffect(() => {
-    if (lastInitIdRef.current === viewingId) return
+    const t = setTimeout(() => setLoading(false), 8000)
+    return () => clearTimeout(t)
+  }, [])
+
+  useEffect(() => {
+    if (lastInitIdRef.current === viewingId) {
+      // Guard: the ref matched so we skip init, but if loading is still true
+      // (e.g. component remounted and state reset) we must release it.
+      setLoading(false)
+      return
+    }
     lastInitIdRef.current = viewingId
 
     const init = async () => {
@@ -532,6 +545,7 @@ export default function ProfilePage() {
           setBuyingCount(buyRes.count ?? 0)
           setSellingCount(sellRes.count ?? 0)
         }
+        // If neither branch ran (no viewingId, no user) loading is released in finally
       } catch (err) {
         console.error('init error:', err)
       } finally {
