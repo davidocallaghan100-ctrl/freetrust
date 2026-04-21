@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { awardTrust } from '@/lib/trust/award'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 // ── API key auth for external job ingestion ──────────────────────────────────
 //
@@ -121,16 +122,41 @@ export async function POST(request: NextRequest) {
   try {
     const admin = createAdminClient()
 
-    // ── Auth: check JWT first, then API key ───────────────────────────────
+    // ── Auth: check JWT (cookie or Authorization header), then API key ──────
     let posterId: string | null = null
     let isApiKeyAuth = false
 
+    // 1. Try cookie-based session (standard SSR flow)
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       posterId = user.id
-    } else {
-      // Try API key auth
+    }
+
+    // 2. Fallback: Authorization Bearer header (sent explicitly by the client
+    //    as a belt-and-suspenders measure when cookie propagation may be unreliable)
+    if (!posterId) {
+      const authHeader = request.headers.get('Authorization')
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.slice(7)
+        try {
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+          const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+          const bearerClient = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+            global: { headers: { Authorization: `Bearer ${token}` } },
+          })
+          const { data: { user: bearerUser } } = await bearerClient.auth.getUser(token)
+          if (bearerUser) {
+            posterId = bearerUser.id
+          }
+        } catch {
+          // Bearer auth failed — fall through to API key check
+        }
+      }
+    }
+
+    // 3. Try API key auth (for automated/external job ingestion)
+    if (!posterId) {
       const apiKey = request.headers.get('x-api-key')
       const expectedKey = process.env.JOBS_API_KEY
       if (expectedKey && apiKey && apiKey === expectedKey) {

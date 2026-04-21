@@ -68,12 +68,17 @@ export default function PostJobPage() {
     setError('')
     try {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/login?redirect=/jobs/new'); return }
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { router.push('/login?redirect=/jobs/new'); return }
 
       const res = await fetch('/api/jobs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          // Pass the JWT explicitly so the server-side route can authenticate
+          // regardless of cookie availability (belt-and-suspenders approach)
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           ...form,
           salary_min: form.salary_min ? parseInt(form.salary_min) : null,
