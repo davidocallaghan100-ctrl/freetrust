@@ -5,8 +5,9 @@
 // Displays gigs, products, services, events, reminders and manual entries
 // for the authenticated user with optional Google Calendar sync.
 // ============================================================================
-import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
+import React, { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams }               from 'next/navigation'
+import Link                                         from 'next/link'
 import { Calendar, dateFnsLocalizer, Views }        from 'react-big-calendar'
 import { format, parse, startOfWeek, getDay,
          startOfMonth, endOfMonth, addMonths,
@@ -84,34 +85,52 @@ interface DrawerProps {
 }
 
 function EventDrawer({ event, onClose, onSave, onDelete, creating, newStart }: DrawerProps) {
-  const [title,       setTitle]       = useState(event?.title ?? '')
-  const [description, setDescription] = useState(event?.description ?? '')
-  const [startAt,     setStartAt]     = useState(
+  const [title,        setTitle]        = useState(event?.title ?? '')
+  const [description,  setDescription]  = useState(event?.description ?? '')
+  const [startAt,      setStartAt]      = useState(
     event?.start_at
       ? event.start_at.slice(0, 16)
       : (newStart ? format(newStart, "yyyy-MM-dd'T'HH:mm") : format(new Date(), "yyyy-MM-dd'T'HH:mm"))
   )
-  const [endAt, setEndAt] = useState(
-    event?.end_at ? event.end_at.slice(0, 16) : ''
-  )
-  const [location,    setLocation]    = useState(event?.location ?? '')
-  const [allDay,      setAllDay]      = useState(event?.all_day ?? false)
-  const [saving,      setSaving]      = useState(false)
-  const [deleting,    setDeleting]    = useState(false)
+  const [endAt,        setEndAt]        = useState(event?.end_at ? event.end_at.slice(0, 16) : '')
+  const [location,     setLocation]     = useState(event?.location ?? '')
+  const [allDay,       setAllDay]       = useState(event?.all_day ?? false)
+  const [saving,       setSaving]       = useState(false)
+  const [deleting,     setDeleting]     = useState(false)
+  const [descExpanded, setDescExpanded] = useState(false)
 
   const isEditable = creating || event?.source_type === 'manual' || event?.source_type === 'reminder'
+
+  // Determine the "View" link for non-editable source types
+  const viewLink: string | null = (() => {
+    if (!event || creating || !event.source_id) return null
+    if (event.source_type === 'event')   return `/events/${event.source_id}`
+    if (event.source_type === 'product') return `/products/${event.source_id}`
+    if (event.source_type === 'gig')     return `/gig-economy`
+    if (event.source_type === 'service') return `/services/${event.source_id}`
+    return null
+  })()
+
+  const viewLabel: string = (() => {
+    if (!event) return 'View'
+    if (event.source_type === 'event')   return '🎟 View Event'
+    if (event.source_type === 'product') return '🛍 View Product'
+    if (event.source_type === 'gig')     return '💼 View Gig'
+    if (event.source_type === 'service') return '🔧 View Service'
+    return 'View'
+  })()
 
   async function handleSave() {
     if (!title.trim()) return
     setSaving(true)
     try {
       await onSave({
-        title: title.trim(),
+        title:       title.trim(),
         description: description || undefined,
-        start_at: new Date(startAt).toISOString(),
-        end_at:   endAt ? new Date(endAt).toISOString() : undefined,
-        all_day:  allDay,
-        location: location || undefined,
+        start_at:    new Date(startAt).toISOString(),
+        end_at:      endAt ? new Date(endAt).toISOString() : undefined,
+        all_day:     allDay,
+        location:    location || undefined,
         source_type: creating ? 'manual' : event?.source_type,
       }, event?.id)
     } finally {
@@ -133,232 +152,399 @@ function EventDrawer({ event, onClose, onSave, onDelete, creating, newStart }: D
     ? (event.color ?? SOURCE_TYPE_COLORS[event.source_type] ?? '#64748b')
     : '#00d4aa'
 
+  // ── Formatted date/time helpers ──────────────────────────────────────────
+  function fmtDate(iso: string) {
+    const d = new Date(iso)
+    return d.toLocaleDateString('en-IE', { weekday: 'short', month: 'short', day: 'numeric' })
+  }
+  function fmtTime(iso: string) {
+    const d = new Date(iso)
+    return d.toLocaleTimeString('en-IE', { hour: '2-digit', minute: '2-digit' })
+  }
+
+  const descText = event?.description ?? ''
+  const descLong = descText.length > 200
+
   return (
-    <div style={{
-      position:   'fixed',
-      inset:      0,
-      zIndex:     300,
-      display:    'flex',
-      alignItems: 'flex-start',
-      justifyContent: 'flex-end',
-    }}>
-      {/* Backdrop */}
-      <div
-        onClick={onClose}
-        style={{
-          position:   'absolute',
-          inset:      0,
-          background: 'rgba(0,0,0,0.65)',
-          backdropFilter: 'blur(4px)',
-        }}
-      />
+    <>
+      {/* Inject slide-up animation */}
+      <style>{`
+        @keyframes drawerSlideUp {
+          from { transform: translateY(100%); opacity: 0.6; }
+          to   { transform: translateY(0);    opacity: 1; }
+        }
+        @keyframes drawerSlideIn {
+          from { transform: translateX(100%); opacity: 0.6; }
+          to   { transform: translateX(0);    opacity: 1; }
+        }
+        @media (max-width: 600px) {
+          .cal-drawer-panel {
+            border-radius: 20px 20px 0 0 !important;
+            border-left: none !important;
+            border-top: 1px solid rgba(255,255,255,0.08) !important;
+            animation: drawerSlideUp 0.28s cubic-bezier(0.34,1.26,0.64,1) !important;
+            max-height: 92vh !important;
+            height: auto !important;
+            width: 100vw !important;
+          }
+        }
+        @media (min-width: 601px) {
+          .cal-drawer-panel {
+            animation: drawerSlideIn 0.22s ease !important;
+          }
+        }
+      `}</style>
 
-      {/* Drawer */}
       <div style={{
-        position:       'relative',
-        zIndex:         1,
-        width:          'min(420px, 100vw)',
-        height:         '100vh',
-        background:     '#13131a',
-        borderLeft:     '1px solid #2a2a3d',
-        display:        'flex',
-        flexDirection:  'column',
-        overflowY:      'auto',
-        animation:      'slideInDrawer 0.22s ease',
+        position:        'fixed',
+        inset:           0,
+        zIndex:          300,
+        display:         'flex',
+        alignItems:      'flex-end',
+        justifyContent:  'flex-end',
       }}>
-        {/* Header */}
-        <div style={{
-          display:        'flex',
-          alignItems:     'center',
-          justifyContent: 'space-between',
-          padding:        '1.25rem 1.5rem',
-          borderBottom:   '1px solid #2a2a3d',
-          background:     '#1c1c27',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            {event && (
-              <span style={{
-                width:        10,
-                height:       10,
-                borderRadius: '50%',
-                background:   sourceColor,
-                flexShrink:   0,
-                display:      'inline-block',
-                boxShadow:    `0 0 6px ${sourceColor}88`,
-              }}/>
-            )}
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#e8e8f0', margin: 0 }}>
-              {creating ? 'New Event' : (isEditable ? 'Edit Event' : 'Event Details')}
-            </h3>
-          </div>
-          <button
-            onClick={onClose}
-            style={{
-              width: 32, height: 32,
-              borderRadius: '50%',
-              background: '#2a2a3d',
-              border: 'none',
-              color: '#8888aa',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-            }}
-            aria-label="Close"
-          >✕</button>
-        </div>
+        {/* Backdrop */}
+        <div
+          onClick={onClose}
+          style={{
+            position:       'absolute',
+            inset:          0,
+            background:     'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(6px)',
+          }}
+        />
 
-        {/* Body */}
-        <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* Source badge */}
-          {event && !creating && (
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-              padding: '0.3rem 0.75rem',
-              borderRadius: '9999px',
-              background: `${sourceColor}22`,
-              color: sourceColor,
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              alignSelf: 'flex-start',
-              border: `1px solid ${sourceColor}44`,
-            }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: sourceColor, display: 'inline-block' }}/>
-              {SOURCE_TYPE_LABELS[event.source_type] ?? event.source_type}
-            </span>
-          )}
-
-          {/* Title */}
-          <div className="form-group">
-            <label className="form-label">Title</label>
-            {isEditable ? (
-              <input
-                className="form-input"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                placeholder="Event title"
-                autoFocus
-                style={{ fontSize: '16px' }}
-              />
-            ) : (
-              <p style={{ color: '#e8e8f0', fontWeight: 600 }}>{event?.title}</p>
-            )}
-          </div>
-
-          {/* Start */}
-          <div className="form-group">
-            <label className="form-label">Start</label>
-            {isEditable ? (
-              <input
-                className="form-input"
-                type="datetime-local"
-                value={startAt}
-                onChange={e => setStartAt(e.target.value)}
-                style={{ fontSize: '16px' }}
-              />
-            ) : (
-              <p style={{ color: '#e8e8f0' }}>
-                {event?.start_at ? new Date(event.start_at).toLocaleString('en-IE') : '—'}
-              </p>
-            )}
-          </div>
-
-          {/* End */}
-          <div className="form-group">
-            <label className="form-label">End</label>
-            {isEditable ? (
-              <input
-                className="form-input"
-                type="datetime-local"
-                value={endAt}
-                onChange={e => setEndAt(e.target.value)}
-                style={{ fontSize: '16px' }}
-              />
-            ) : (
-              <p style={{ color: '#e8e8f0' }}>
-                {event?.end_at ? new Date(event.end_at).toLocaleString('en-IE') : '—'}
-              </p>
-            )}
-          </div>
-
-          {/* All day */}
-          {isEditable && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={allDay}
-                onChange={e => setAllDay(e.target.checked)}
-                style={{ width: 16, height: 16 }}
-              />
-              <span style={{ color: '#8888aa', fontSize: '0.9rem' }}>All-day event</span>
-            </label>
-          )}
-
-          {/* Location */}
-          <div className="form-group">
-            <label className="form-label">Location</label>
-            {isEditable ? (
-              <input
-                className="form-input"
-                value={location}
-                onChange={e => setLocation(e.target.value)}
-                placeholder="Optional location"
-                style={{ fontSize: '16px' }}
-              />
-            ) : (
-              <p style={{ color: '#e8e8f0' }}>{event?.location || '—'}</p>
-            )}
-          </div>
-
-          {/* Description */}
-          <div className="form-group">
-            <label className="form-label">Notes</label>
-            {isEditable ? (
-              <textarea
-                className="form-textarea"
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                placeholder="Optional notes…"
-                rows={3}
-                style={{ fontSize: '16px' }}
-              />
-            ) : (
-              <p style={{ color: '#e8e8f0' }}>{event?.description || '—'}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        {(isEditable || creating) && (
+        {/* Drawer panel */}
+        <div
+          className="cal-drawer-panel"
+          style={{
+            position:      'relative',
+            zIndex:        1,
+            width:         'min(440px, 100vw)',
+            height:        '100vh',
+            background:    'rgba(15,23,42,0.97)',
+            borderLeft:    '1px solid rgba(255,255,255,0.08)',
+            display:       'flex',
+            flexDirection: 'column',
+            overflowY:     'auto',
+          }}
+        >
+          {/* Colour accent bar at top */}
           <div style={{
-            padding:        '1rem 1.5rem',
-            borderTop:      '1px solid #2a2a3d',
+            height:     4,
+            background: `linear-gradient(90deg, ${sourceColor}, ${sourceColor}88)`,
+            flexShrink: 0,
+          }}/>
+
+          {/* Header — close button + title */}
+          <div style={{
             display:        'flex',
+            alignItems:     'flex-start',
+            justifyContent: 'space-between',
+            padding:        '1.25rem 1.25rem 0.75rem',
             gap:            '0.75rem',
           }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {/* Source type badge */}
+              {event && !creating && (
+                <span style={{
+                  display:       'inline-flex',
+                  alignItems:    'center',
+                  gap:           '0.35rem',
+                  padding:       '0.2rem 0.65rem',
+                  borderRadius:  '9999px',
+                  background:    `${sourceColor}1a`,
+                  color:         sourceColor,
+                  fontSize:      '0.7rem',
+                  fontWeight:    700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  border:        `1px solid ${sourceColor}33`,
+                  marginBottom:  '0.5rem',
+                }}>
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: sourceColor, display: 'inline-block' }}/>
+                  {SOURCE_TYPE_LABELS[event.source_type] ?? event.source_type}
+                </span>
+              )}
+              {/* Event title (view mode) or "New Event" label (create mode) */}
+              {!isEditable && event ? (
+                <h2 style={{
+                  fontSize:   '1.25rem',
+                  fontWeight: 800,
+                  color:      '#f1f5f9',
+                  margin:     0,
+                  lineHeight: 1.3,
+                  wordBreak:  'break-word',
+                }}>
+                  {event.title}
+                </h2>
+              ) : (
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#e8e8f0', margin: 0 }}>
+                  {creating ? 'New Event' : 'Edit Event'}
+                </h3>
+              )}
+            </div>
+
+            {/* Close button */}
             <button
-              className="btn btn-primary"
-              style={{ flex: 1, minHeight: 44 }}
-              onClick={handleSave}
-              disabled={saving || !title.trim()}
-            >
-              {saving ? 'Saving…' : (creating ? 'Create' : 'Save Changes')}
-            </button>
-            {!creating && event?.source_type === 'manual' && (
-              <button
-                className="btn btn-danger"
-                onClick={handleDelete}
-                disabled={deleting}
-                style={{ minHeight: 44 }}
-              >
-                {deleting ? '…' : 'Delete'}
-              </button>
+              onClick={onClose}
+              style={{
+                flexShrink:     0,
+                width:          34,
+                height:         34,
+                borderRadius:   '50%',
+                background:     'rgba(255,255,255,0.07)',
+                border:         '1px solid rgba(255,255,255,0.1)',
+                color:          '#94a3b8',
+                display:        'flex',
+                alignItems:     'center',
+                justifyContent: 'center',
+                fontSize:       '1rem',
+                cursor:         'pointer',
+                lineHeight:     1,
+              }}
+              aria-label="Close"
+            >✕</button>
+          </div>
+
+          {/* Body */}
+          <div style={{ padding: '0.5rem 1.25rem 1.5rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+
+            {isEditable ? (
+              /* ── EDIT / CREATE FORM ── */
+              <>
+                <div className="form-group">
+                  <label className="form-label">Title</label>
+                  <input
+                    className="form-input"
+                    value={title}
+                    onChange={e => setTitle(e.target.value)}
+                    placeholder="Event title"
+                    autoFocus
+                    style={{ fontSize: '16px' }}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Start</label>
+                  <input
+                    className="form-input"
+                    type="datetime-local"
+                    value={startAt}
+                    onChange={e => setStartAt(e.target.value)}
+                    style={{ fontSize: '16px' }}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">End</label>
+                  <input
+                    className="form-input"
+                    type="datetime-local"
+                    value={endAt}
+                    onChange={e => setEndAt(e.target.value)}
+                    style={{ fontSize: '16px' }}
+                  />
+                </div>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={allDay}
+                    onChange={e => setAllDay(e.target.checked)}
+                    style={{ width: 16, height: 16 }}
+                  />
+                  <span style={{ color: '#8888aa', fontSize: '0.9rem' }}>All-day event</span>
+                </label>
+
+                <div className="form-group">
+                  <label className="form-label">Location</label>
+                  <input
+                    className="form-input"
+                    value={location}
+                    onChange={e => setLocation(e.target.value)}
+                    placeholder="Optional location"
+                    style={{ fontSize: '16px' }}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Notes</label>
+                  <textarea
+                    className="form-textarea"
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                    placeholder="Optional notes…"
+                    rows={3}
+                    style={{ fontSize: '16px' }}
+                  />
+                </div>
+              </>
+            ) : (
+              /* ── VIEW MODE ── */
+              <>
+                {/* Date / time row */}
+                {event?.start_at && (
+                  <div style={{
+                    display:    'flex',
+                    alignItems: 'center',
+                    gap:        '0.6rem',
+                    padding:    '0.7rem 0.9rem',
+                    background: 'rgba(255,255,255,0.04)',
+                    borderRadius: 12,
+                    border:     '1px solid rgba(255,255,255,0.07)',
+                  }}>
+                    {/* Calendar icon */}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={sourceColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <rect x="3" y="4" width="18" height="18" rx="2"/>
+                      <line x1="16" y1="2" x2="16" y2="6"/>
+                      <line x1="8" y1="2" x2="8" y2="6"/>
+                      <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: '#f1f5f9', fontWeight: 600, fontSize: '0.9rem' }}>
+                        {fmtDate(event.start_at)}
+                        {' · '}
+                        <span style={{ color: sourceColor }}>{fmtTime(event.start_at)}</span>
+                        {event.end_at && (
+                          <>
+                            <span style={{ color: '#475569', margin: '0 0.3rem' }}>→</span>
+                            <span style={{ color: '#94a3b8' }}>{fmtTime(event.end_at)}</span>
+                          </>
+                        )}
+                      </div>
+                      {event.all_day && (
+                        <div style={{ color: '#64748b', fontSize: '0.75rem', marginTop: 2 }}>All day</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Location row — only if set */}
+                {event?.location && (
+                  <div style={{
+                    display:    'flex',
+                    alignItems: 'flex-start',
+                    gap:        '0.6rem',
+                    padding:    '0.7rem 0.9rem',
+                    background: 'rgba(255,255,255,0.04)',
+                    borderRadius: 12,
+                    border:     '1px solid rgba(255,255,255,0.07)',
+                  }}>
+                    {/* Pin icon */}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
+                      <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>
+                      <circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    <span style={{ color: '#cbd5e1', fontSize: '0.88rem', lineHeight: 1.4 }}>
+                      {event.location}
+                    </span>
+                  </div>
+                )}
+
+                {/* Description card */}
+                {descText && (
+                  <div style={{
+                    padding:      '0.8rem 0.9rem',
+                    background:   'rgba(255,255,255,0.04)',
+                    borderRadius: 12,
+                    border:       '1px solid rgba(255,255,255,0.07)',
+                  }}>
+                    <p style={{
+                      color:      '#94a3b8',
+                      fontSize:   '0.85rem',
+                      lineHeight: 1.6,
+                      margin:     0,
+                      overflow:   descExpanded ? 'visible' : 'hidden',
+                      display:    descExpanded ? 'block' : '-webkit-box',
+                      WebkitLineClamp: descExpanded ? undefined : 4,
+                      WebkitBoxOrient: 'vertical' as const,
+                    } as React.CSSProperties}>
+                      {descText}
+                    </p>
+                    {descLong && (
+                      <button
+                        onClick={() => setDescExpanded(v => !v)}
+                        style={{
+                          marginTop:  '0.4rem',
+                          background: 'none',
+                          border:     'none',
+                          color:      sourceColor,
+                          fontSize:   '0.78rem',
+                          fontWeight: 600,
+                          cursor:     'pointer',
+                          padding:    0,
+                        }}
+                      >
+                        {descExpanded ? 'Show less ↑' : 'Show more ↓'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </div>
-        )}
+
+          {/* Footer — CTA + edit/delete */}
+          <div style={{
+            padding:        '0.75rem 1.25rem',
+            paddingBottom:  'max(0.75rem, env(safe-area-inset-bottom))',
+            borderTop:      '1px solid rgba(255,255,255,0.07)',
+            display:        'flex',
+            flexDirection:  'column',
+            gap:            '0.6rem',
+          }}>
+            {/* View CTA — only shown in view mode when a link exists */}
+            {!isEditable && !creating && viewLink && (
+              <Link
+                href={viewLink}
+                style={{
+                  display:        'flex',
+                  alignItems:     'center',
+                  justifyContent: 'center',
+                  gap:            '0.4rem',
+                  padding:        '0.8rem 1rem',
+                  borderRadius:   14,
+                  background:     `linear-gradient(135deg, ${sourceColor}, ${sourceColor}cc)`,
+                  color:          '#0f172a',
+                  fontWeight:     700,
+                  fontSize:       '0.95rem',
+                  textDecoration: 'none',
+                  boxShadow:      `0 4px 16px ${sourceColor}44`,
+                  minHeight:      50,
+                }}
+              >
+                {viewLabel} →
+              </Link>
+            )}
+
+            {/* Save / Delete (editable events only) */}
+            {isEditable && (
+              <div style={{ display: 'flex', gap: '0.6rem' }}>
+                <button
+                  className="btn btn-primary"
+                  style={{ flex: 1, minHeight: 46 }}
+                  onClick={handleSave}
+                  disabled={saving || !title.trim()}
+                >
+                  {saving ? 'Saving…' : (creating ? 'Create Event' : 'Save Changes')}
+                </button>
+                {!creating && event?.source_type === 'manual' && (
+                  <button
+                    className="btn btn-danger"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    style={{ minHeight: 46 }}
+                  >
+                    {deleting ? '…' : 'Delete'}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -560,7 +746,7 @@ function CalendarPageInner() {
       const res = await fetch('/api/calendar/google/connect', { method: 'POST' })
       if (res.status === 401) {
         // Not logged in — redirect to login
-        router.push('/login?next=/calendar')
+        router.push('/auth/login?redirect=/calendar')
         return
       }
       if (!res.ok) {
