@@ -16,19 +16,8 @@ export interface ConnectGateOk {
   isConnected: boolean
 }
 
-// Keep the blocked type for backwards-compat with existing callers even
-// though it is never returned by this function anymore.
-export interface ConnectGateBlocked {
-  ok:          false
-  blockedResponse: {
-    error:              'stripe_not_connected'
-    message:            string
-    onboarding_url:     string
-  }
-}
-
-// NOTE: The function always returns ConnectGateOk now (never blocks).
-// ConnectGateBlocked is kept for backwards-compat only.
+// NOTE: The function always returns ConnectGateOk (never blocks).
+// Stripe Connect is only enforced at checkout time, not at listing publish.
 export type ConnectGateResult = ConnectGateOk
 
 export async function assertStripeConnectedForPaidListing(

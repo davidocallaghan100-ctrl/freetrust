@@ -116,16 +116,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Price must be a non-negative number' }, { status: 400 })
     }
 
-    // Stripe Connect gate — paid listings require the seller's
-    // Stripe Connect account to be fully onboarded so funds can
-    // actually be paid out on order completion. Free listings
-    // (price === 0) bypass the gate. Returns 412 Precondition Failed
-    // with a machine-readable `stripe_not_connected` code + onboarding
-    // URL so the UI can route the seller to /wallet?connect=true.
-    const gate = await assertStripeConnectedForPaidListing(user.id, price)
-    if (!gate.ok) {
-      return NextResponse.json(gate.blockedResponse, { status: 412 })
-    }
+    // Stripe Connect — check status but never block publish.
+    // Sellers can list freely; Connect is only required when a buyer pays.
+    await assertStripeConnectedForPaidListing(user.id, price)
 
     // Ensure product_type is always set so services and products are kept separate
     const resolvedProductType = (typeof product_type === 'string' && product_type.trim())
