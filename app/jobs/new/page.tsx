@@ -150,24 +150,40 @@ export default function PostJobPage() {
         return
       }
 
-      const res = await fetch('/api/jobs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          ...form,
-          salary_min: form.salary_min ? parseInt(form.salary_min) : null,
-          salary_max: form.salary_max ? parseInt(form.salary_max) : null,
-          application_deadline: form.application_deadline || null,
-          company_name: form.company_name || null,
-          company_logo_url: form.company_logo_url || null,
-          company_website: form.company_website || null,
-          company_size: form.company_size || null,
-          company_description: form.company_description || null,
-        }),
-      })
+      // 12-second timeout — fast-fail if the server doesn't respond,
+      // rather than hanging silently until the 20s safety timer fires.
+      const controller = new AbortController()
+      const fetchTimeout = setTimeout(() => controller.abort(), 12000)
+
+      let res: Response
+      try {
+        res = await fetch('/api/jobs', {
+          method: 'POST',
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            ...form,
+            salary_min: form.salary_min ? parseInt(form.salary_min) : null,
+            salary_max: form.salary_max ? parseInt(form.salary_max) : null,
+            application_deadline: form.application_deadline || null,
+            company_name: form.company_name || null,
+            company_logo_url: form.company_logo_url || null,
+            company_website: form.company_website || null,
+            company_size: form.company_size || null,
+            company_description: form.company_description || null,
+          }),
+        })
+      } catch (fetchErr) {
+        const isAbort = fetchErr instanceof Error && fetchErr.name === 'AbortError'
+        throw new Error(isAbort
+          ? 'The server took too long to respond. Please try again — your job was not posted.'
+          : 'Network error. Please check your connection and try again.')
+      } finally {
+        clearTimeout(fetchTimeout)
+      }
 
       let json: { job?: { id?: string }; error?: string } = {}
       try {

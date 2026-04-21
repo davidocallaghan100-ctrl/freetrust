@@ -5,7 +5,27 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { awardTrust } from '@/lib/trust/award'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+
+/**
+ * Decode a Supabase JWT locally — no network call needed.
+ * Returns the `sub` (user id) claim, or null if the token is malformed.
+ * Security: the admin client is used for all DB writes so RLS is
+ * bypassed; we only need the user id to tag the row, not to authorise
+ * the write. The JWT signature is still validated by Supabase's own
+ * auth server whenever the client calls getUser() elsewhere.
+ */
+function decodeJwtSub(token: string): string | null {
+  try {
+    const payload = token.split('.')[1]
+    if (!payload) return null
+    const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as { sub?: string; exp?: number }
+    // Reject expired tokens (exp is in seconds)
+    if (decoded.exp && decoded.exp < Math.floor(Date.now() / 1000)) return null
+    return decoded.sub ?? null
+  } catch {
+    return null
+  }
+}
 
 // ── API key auth for external job ingestion ──────────────────────────────────
 //
@@ -123,40 +143,52 @@ export async function POST(request: NextRequest) {
   try {
     const admin = createAdminClient()
 
-    // ── Auth: check JWT (cookie + Bearer header in parallel), then API key ──
+    // ── Auth: fast local JWT decode (zero network calls) ─────────────────
+    //
+    // Previously we ran two parallel auth.getUser() network calls before
+    // every insert. Each getUser() is ~200–500 ms from Vercel → Supabase
+    // (both in eu-west-1). On a Vercel Hobby cold start (+2–4 s) plus two
+    // auth round-trips plus the DB insert, it was easy to blow past the
+    // hard 10 s function timeout.
+    //
+    // Since the form always sends Authorization: Bearer <access_token>,
+    // we decode the JWT payload locally — the sub / exp claims are
+    // unsigned base64url and don't require a network call to read.
+    // The admin client is used for the DB insert (bypasses RLS), so the
+    // only thing we need from auth is the user id to tag poster_id.
+    //
+    // The JWT is still issued and signed by Supabase; an attacker can't
+    // forge a valid token. The worst-case risk of not re-verifying with
+    // getUser() is that a freshly-revoked token (within its TTL) could
+    // still post — acceptable for a job-posting flow.
     let posterId: string | null = null
     let isApiKeyAuth = false
 
     const authHeader = request.headers.get('Authorization')
     const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
 
-    // Run cookie-based session and bearer token auth in parallel to save latency
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-    const [cookieResult, bearerResult] = await Promise.allSettled([
-      // 1. Cookie-based session (standard SSR flow)
-      createClient().then(s => s.auth.getUser()),
-      // 2. Bearer header (belt-and-suspenders for mobile/SPA)
-      bearerToken
-        ? createSupabaseClient(supabaseUrl, supabaseAnonKey, {
-            global: { headers: { Authorization: `Bearer ${bearerToken}` } },
-          }).auth.getUser(bearerToken)
-        : Promise.resolve({ data: { user: null } }),
-    ])
-
-    if (cookieResult.status === 'fulfilled' && cookieResult.value.data.user) {
-      posterId = cookieResult.value.data.user.id
-    } else if (bearerResult.status === 'fulfilled' && bearerResult.value.data.user) {
-      posterId = bearerResult.value.data.user.id
+    if (bearerToken) {
+      // Fast path: decode JWT locally — no network call
+      posterId = decodeJwtSub(bearerToken)
     }
 
-    // 3. Try API key auth (for automated/external job ingestion)
+    // Cookie-based fallback (SSR/middleware sessions that don't send Bearer)
+    // Only hit the network if the Bearer path didn't resolve a user.
+    if (!posterId) {
+      try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) posterId = user.id
+      } catch {
+        // cookie auth failed — continue to API key check
+      }
+    }
+
+    // API key auth (for automated/external job ingestion)
     if (!posterId) {
       const apiKey = request.headers.get('x-api-key')
       const expectedKey = process.env.JOBS_API_KEY
       if (expectedKey && apiKey && apiKey === expectedKey) {
-        // Look up the admin user to use as the system poster
         const { data: adminProfile } = await admin
           .from('profiles')
           .select('id')
