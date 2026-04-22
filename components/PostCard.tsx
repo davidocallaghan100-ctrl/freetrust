@@ -274,9 +274,9 @@ function VideoPlayer({ src, isShort }: { src: string; isShort: boolean }) {
 
 // ── Share Sheet ───────────────────────────────────────────────────────────────
 
-function ShareSheet({ postId, text, onClose }: { postId: string; text: string; onClose: () => void }) {
+function ShareSheet({ postId, canonicalPath, text, onClose }: { postId: string; canonicalPath: string; text: string; onClose: () => void }) {
   const [copied, setCopied] = useState(false)
-  const url = typeof window !== 'undefined' ? `${window.location.origin}/feed/${postId}` : `/feed/${postId}`
+  const url = typeof window !== 'undefined' ? `${window.location.origin}${canonicalPath}` : canonicalPath
   const encoded = encodeURIComponent(url)
   const encodedText = encodeURIComponent(text.slice(0, 100) + ' — via FreeTrust')
 
@@ -417,6 +417,29 @@ export default function PostCard({
   }
 
   const typeInfo  = TYPE_META[post.type] ?? TYPE_META.text
+
+  // ── Canonical "read more" URL ─────────────────────────────────────────────
+  // Jobs, events, and listings are synthesized by the feed API with a
+  // prefixed id ("job-<uuid>", "event-<uuid>", "listing-<uuid>"). These
+  // IDs don't exist in feed_posts so navigating to /feed/<prefixed-id>
+  // returns a 404. Instead we derive the canonical destination URL:
+  //   job-<uuid>     → /jobs/<uuid>
+  //   event-<uuid>   → /events/<uuid>
+  //   listing-<uuid> → /listings/<uuid>
+  //   article-<uuid> → /articles/<uuid>
+  //   <plain-uuid>   → /feed/<uuid>  (regular feed post)
+  function getCanonicalUrl(postId: string, postType: string): string {
+    if (postId.startsWith('job-'))     return `/jobs/${postId.slice(4)}`
+    if (postId.startsWith('event-'))   return `/events/${postId.slice(6)}`
+    if (postId.startsWith('listing-')) return `/listings/${postId.slice(8)}`
+    if (postId.startsWith('article-')) return `/articles/${postId.slice(8)}`
+    // For cross-table types without a prefix, use the type to route correctly
+    if (postType === 'job')     return `/jobs/${postId}`
+    if (postType === 'event')   return `/events/${postId}`
+    if (postType === 'listing' || postType === 'service' || postType === 'product') return `/listings/${postId}`
+    return `/feed/${postId}`
+  }
+  const canonicalUrl = getCanonicalUrl(post.id, post.type)
 
   // ── Author display — "post as organisation" override ─────────────────────
   // When post.posted_as_organisation is set, the card renders with the
@@ -610,7 +633,7 @@ export default function PostCard({
         {post.content ? (
           <p style={{ fontSize: '14px', lineHeight: 1.65, color: '#cbd5e1', margin: '0 0 12px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
             {!expanded && post.content.length > 280
-              ? <>{post.content.slice(0, 280)}<Link href={`/feed/${post.id}`} style={{ color: '#38bdf8', textDecoration: 'none' }}> …more</Link></>
+              ? <>{post.content.slice(0, 280)}<Link href={canonicalUrl} style={{ color: '#38bdf8', textDecoration: 'none' }}> …more</Link></>
               : post.content
             }
           </p>
@@ -649,7 +672,7 @@ export default function PostCard({
       {/* ── Top comment preview (inline) ── */}
       {post.top_comment && !showComments && (
         <Link
-          href={`/feed/${post.id}`}
+          href={canonicalUrl}
           style={{ display: 'block', margin: '8px 16px 0', padding: '8px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(51,65,85,0.6)', borderRadius: 10, textDecoration: 'none' }}
         >
           <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, marginBottom: 2 }}>
@@ -733,7 +756,7 @@ export default function PostCard({
       {/* ── Share sheet ── */}
       {showShare && (
         <div style={{ padding: '0 16px 14px' }}>
-          <ShareSheet postId={post.id} text={shareText} onClose={() => setShowShare(false)} />
+          <ShareSheet postId={post.id} canonicalPath={canonicalUrl} text={shareText} onClose={() => setShowShare(false)} />
         </div>
       )}
 
