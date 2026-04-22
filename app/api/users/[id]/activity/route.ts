@@ -42,8 +42,9 @@ export async function GET(
         .limit(50),
       admin
         .from('events')
-        .select('id, title, start_date, location, is_online, cover_url, attendee_count, created_at')
+        .select('id, title, starts_at, venue_name, location_label, is_online, cover_image_url, attendee_count, created_at')
         .eq('creator_id', userId)
+        .eq('is_platform_curated', false)
         .order('created_at', { ascending: false })
         .limit(50),
       admin
@@ -109,14 +110,15 @@ export async function GET(
       })
     }
 
-    // Events
+    // Events (platform-curated events excluded — they appear on David's profile via is_platform_curated=false filter)
     for (const e of (eventsRes.data ?? [])) {
+      const locationLabel = (e.location_label ?? e.venue_name) as string | null | undefined
       items.push({
         id:         `event-${e.id}`,
         type:       'event',
         title:      (e.title as string) ?? 'Event',
-        subtitle:   e.is_online ? '🌐 Online' : `📍 ${e.location ?? 'In person'}`,
-        image_url:  e.cover_url as string | null ?? null,
+        subtitle:   e.is_online ? '🌐 Online' : `📍 ${locationLabel ?? 'In person'}`,
+        image_url:  (e.cover_image_url as string | null) ?? null,
         created_at: e.created_at as string,
         link:       `/events/${e.id}`,
         meta:       `👥 ${(e.attendee_count as number) ?? 0} attending`,

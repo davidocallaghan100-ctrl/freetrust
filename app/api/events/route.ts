@@ -25,8 +25,9 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
     const { searchParams } = new URL(request.url)
-    const upcoming = searchParams.get('upcoming') === 'true'
-    const category = searchParams.get('category')
+    const upcoming     = searchParams.get('upcoming') === 'true'
+    const category     = searchParams.get('category')
+    const organiserId  = searchParams.get('organiserId') // filter by creator_id (org profile activity tab)
 
     const country    = searchParams.get('country')
     const city       = searchParams.get('city')
@@ -46,11 +47,12 @@ export async function GET(request: NextRequest) {
       .eq('status', 'published')
       .order('starts_at', { ascending: true })
 
-    if (upcoming)   query = query.gte('starts_at', new Date().toISOString())
-    if (category)   query = query.eq('category', category)
-    if (country)    query = query.eq('country', country.toUpperCase())
-    if (city)       query = query.ilike('city', `%${city}%`)
-    if (onlineOnly) query = query.eq('is_online', true)
+    if (upcoming)      query = query.gte('starts_at', new Date().toISOString())
+    if (category)      query = query.eq('category', category)
+    if (country)       query = query.eq('country', country.toUpperCase())
+    if (city)          query = query.ilike('city', `%${city}%`)
+    if (onlineOnly)    query = query.eq('is_online', true)
+    if (organiserId)   query = query.eq('creator_id', organiserId)
 
     const { data, error } = await query.limit(200)
 

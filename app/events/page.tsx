@@ -30,6 +30,7 @@ interface EventItem {
   organiser?: string
   organiserTrust?: number
   organiserAvatar?: string
+  is_platform_curated?: boolean
   imageGradient?: string
   // Globalisation fields
   country?: string | null
@@ -159,8 +160,12 @@ function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void
         {/* Description */}
         <p style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.55, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{ev.description}</p>
 
-        {/* Organiser */}
-        {ev.organiser && (
+        {/* Organiser / Curated badge */}
+        {ev.is_platform_curated ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', paddingTop: '0.25rem', borderTop: '1px solid rgba(56,189,248,0.07)' }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#a78bfa', background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.25)', padding: '2px 8px', borderRadius: 999 }}>📌 Curated by FreeTrust</span>
+          </div>
+        ) : ev.organiser ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingTop: '0.25rem', borderTop: '1px solid rgba(56,189,248,0.07)' }}>
             {ev.organiserAvatar
               ? <img src={ev.organiserAvatar} alt={ev.organiser} style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
@@ -169,7 +174,7 @@ function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void
             <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{ev.organiser}</span>
             {ev.organiserTrust && <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#38bdf8', fontWeight: 700, background: 'rgba(56,189,248,0.08)', padding: '1px 6px', borderRadius: 6 }}>₮{ev.organiserTrust.toLocaleString()}</span>}
           </div>
-        )}
+        ) : null}
 
         {/* Footer: attendees + buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
@@ -250,7 +255,7 @@ export default function EventsPage() {
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
         const { data, error } = await supabase
           .from('events')
-          .select('id, title, description, starts_at, ends_at, is_online, meeting_url, attendee_count, is_paid, ticket_price, ticket_price_eur, currency_code, country, region, city, latitude, longitude, location_label, venue_name, category')
+          .select('id, title, description, starts_at, ends_at, is_online, meeting_url, attendee_count, is_paid, ticket_price, ticket_price_eur, currency_code, country, region, city, latitude, longitude, location_label, venue_name, category, organiser_name, is_platform_curated')
           .eq('status', 'published')
           .or(`starts_at.is.null,starts_at.gte.${oneDayAgo}`)
           .order('starts_at', { ascending: true, nullsFirst: false })
@@ -282,8 +287,10 @@ export default function EventsPage() {
             latitude:       typeof e.latitude  === 'number' ? (e.latitude as number)  : null,
             longitude:      typeof e.longitude === 'number' ? (e.longitude as number) : null,
             location_label: (e.location_label as string | null | undefined) ?? null,
-            price_eur:      typeof e.ticket_price_eur === 'number' ? (e.ticket_price_eur as number) : null,
-            currency_code:  (e.currency_code as string | null | undefined) ?? null,
+            price_eur:           typeof e.ticket_price_eur === 'number' ? (e.ticket_price_eur as number) : null,
+            currency_code:       (e.currency_code as string | null | undefined) ?? null,
+            organiser:           (e.is_platform_curated ? null : (e.organiser_name as string | null | undefined)) ?? undefined,
+            is_platform_curated: (e.is_platform_curated as boolean | undefined) ?? false,
           })))
         } else {
           setDbEvents([])

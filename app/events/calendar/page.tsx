@@ -83,18 +83,18 @@ export default function CalendarPage() {
         const { data } = await supabase
           .from("events")
           .select("*")
-          .order("date", { ascending: true });
+          .order("starts_at", { ascending: true });
         if (data && data.length > 0) {
           setEvents(data.map((e: Record<string, unknown>) => ({
             id: e.id as string,
             title: e.title as string,
-            date: format(new Date(e.start_date as string), "yyyy-MM-dd"),
-            startTime: format(new Date(e.start_date as string), "HH:mm"),
-            endTime: e.end_date ? format(new Date(e.end_date as string), "HH:mm") : "",
+            date: format(new Date(e.starts_at as string), "yyyy-MM-dd"),
+            startTime: format(new Date(e.starts_at as string), "HH:mm"),
+            endTime: e.ends_at ? format(new Date(e.ends_at as string), "HH:mm") : "",
             mode: (e.is_online ? "online" : "in-person") as EventMode,
             ticketType: ((e.ticket_price as number) > 0 ? "paid" : "free") as TicketType,
             price: (e.ticket_price as number) || undefined,
-            location: e.location as string | undefined,
+            location: (e.venue_name ?? e.venue_address ?? e.location_label) as string | undefined,
             meetingUrl: e.meeting_url as string | undefined,
             attendees: (e.attendee_count as number) ?? 0,
             maxAttendees: (e.max_attendees as number) ?? 100,

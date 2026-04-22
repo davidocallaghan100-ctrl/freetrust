@@ -42,6 +42,7 @@ interface DBEvent {
   location_label: string | null
   external_url: string | null
   status: string
+  is_platform_curated: boolean
 }
 
 const CAT_GRADIENTS: Record<string, string> = {
@@ -132,7 +133,7 @@ export default function EventDetailPage() {
             max_attendees, attendee_count,
             organiser_name, organiser_bio,
             country, city, latitude, longitude, location_label,
-            external_url, status
+            external_url, status, is_platform_curated
           `)
           .eq('id', id)
           .maybeSingle()
@@ -279,8 +280,18 @@ export default function EventDetailPage() {
               </div>
             )}
 
-            {/* Organiser bio */}
-            {event.organiser_name && (
+            {/* Organiser bio / Curated badge */}
+            {event.is_platform_curated ? (
+              <div style={{ background: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: 16, padding: '1.25rem', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg,#a78bfa,#7c3aed)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
+                  📌
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: '#a78bfa', marginBottom: 2 }}>Curated by FreeTrust</div>
+                  <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5 }}>This event was verified and added by the FreeTrust platform team. All details are sourced from official event websites.</div>
+                </div>
+              </div>
+            ) : event.organiser_name ? (
               <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, padding: '1.5rem' }}>
                 <h2 style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9', margin: '0 0 14px' }}>Organiser</h2>
                 <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
@@ -295,7 +306,7 @@ export default function EventDetailPage() {
                   </div>
                 </div>
               </div>
-            )}
+            ) : null}
 
             {/* Online join link */}
             {event.is_online && event.meeting_url && !isPast && (
