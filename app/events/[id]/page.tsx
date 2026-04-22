@@ -347,7 +347,22 @@ export default function EventDetailPage() {
 
               {/* Price */}
               <div>
-                {event.is_paid && event.ticket_price && event.ticket_price > 0 ? (
+                {event.is_platform_curated ? (
+                  /* Curated events — no ticket price shown, link to official site */
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#a78bfa', marginBottom: 6 }}>📌 Curated by FreeTrust</div>
+                    {event.external_url && (
+                      <a
+                        href={event.external_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ fontSize: 13, color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}
+                      >
+                        🎟 Official tickets &amp; info ↗
+                      </a>
+                    )}
+                  </div>
+                ) : event.is_paid && event.ticket_price && event.ticket_price > 0 ? (
                   <>
                     <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Ticket Price</div>
                     <PriceDisplay
@@ -421,8 +436,8 @@ export default function EventDetailPage() {
               {/* CTA button */}
               {!isPast && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {/* Apple Pay / Google Pay express checkout for paid events */}
-                  {event.is_paid && event.ticket_price && event.ticket_price > 0 && !event.external_url && (
+                  {/* Apple Pay / Google Pay express checkout — only for non-curated paid events */}
+                  {!event.is_platform_curated && event.is_paid && event.ticket_price && event.ticket_price > 0 && !event.external_url && (
                     <>
                       <AppleGooglePayButton
                         amountCents={Math.round((event.ticket_price_eur ?? event.ticket_price) * 100)}
@@ -442,7 +457,27 @@ export default function EventDetailPage() {
                     </>
                   )}
 
-                  {event.external_url ? (
+                  {event.is_platform_curated ? (
+                    /* Curated events: "Learn More" → official site, plus "Save Event" for interest tracking */
+                    <>
+                      {event.external_url && (
+                        <a
+                          href={event.external_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ display: 'block', textAlign: 'center', background: 'linear-gradient(135deg,#a78bfa,#7c3aed)', color: '#fff', fontWeight: 800, fontSize: 15, padding: '0.875rem', borderRadius: 12, textDecoration: 'none', letterSpacing: '0.01em' }}
+                        >
+                          🔗 Learn More &amp; Get Tickets →
+                        </a>
+                      )}
+                      <button
+                        onClick={() => setRsvped(v => !v)}
+                        style={{ background: rsvped ? 'rgba(52,211,153,0.15)' : 'rgba(167,139,250,0.1)', border: `1px solid ${rsvped ? '#34d399' : 'rgba(167,139,250,0.3)'}`, borderRadius: 12, padding: '0.75rem', fontSize: 14, fontWeight: 700, color: rsvped ? '#34d399' : '#a78bfa', cursor: 'pointer', transition: 'all 0.2s', letterSpacing: '0.01em' }}
+                      >
+                        {rsvped ? "✓ Saved to my events!" : "🔖 I'm interested"}
+                      </button>
+                    </>
+                  ) : event.external_url ? (
                     <a
                       href={event.external_url}
                       target="_blank"

@@ -31,6 +31,7 @@ interface EventItem {
   organiserTrust?: number
   organiserAvatar?: string
   is_platform_curated?: boolean
+  external_url?: string | null
   imageGradient?: string
   // Globalisation fields
   country?: string | null
@@ -189,10 +190,8 @@ function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void
               <span>Be the first to attend!</span>
             </div>
           )}
-          {/* Dual-currency price line — only shown for paid events. The
-              Buy button uses the user's selected currency rather than the
-              hardcoded GBP from the previous version. */}
-          {ev.price != null && ev.price > 0 && (
+          {/* Price line — only shown for non-curated paid events */}
+          {!ev.is_platform_curated && ev.price != null && ev.price > 0 && (
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
               <PriceDisplay
                 amountEur={ev.price_eur ?? ev.price}
@@ -203,12 +202,31 @@ function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void
               />
             </div>
           )}
-          <div style={{ marginLeft: ev.price && ev.price > 0 ? 0 : 'auto', display: 'flex', gap: '0.4rem' }}>
-            <button
-              onClick={e => { e.preventDefault(); e.stopPropagation(); onRsvp(ev.id) }}
-              style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.78rem', fontWeight: 700, color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 36 }}>
-              {ev.price ? `Buy · ${currencyFormat(ev.price_eur ?? ev.price, (ev.currency_code ?? 'EUR') as CurrencyCode)}` : 'RSVP Free'}
-            </button>
+          {/* Official tickets link for curated events */}
+          {ev.is_platform_curated && ev.external_url && (
+            <div style={{ marginLeft: 'auto', fontSize: '0.68rem', color: '#64748b' }}>
+              🎟 <a href={ev.external_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: '#38bdf8', textDecoration: 'none' }}>
+                Official site ↗
+              </a>
+            </div>
+          )}
+          <div style={{ marginLeft: (ev.is_platform_curated || !(ev.price && ev.price > 0)) ? 'auto' : 0, display: 'flex', gap: '0.4rem' }}>
+            {ev.is_platform_curated ? (
+              <a
+                href={ev.external_url ?? `/events/${ev.id}`}
+                target={ev.external_url ? '_blank' : undefined}
+                rel={ev.external_url ? 'noopener noreferrer' : undefined}
+                onClick={e => e.stopPropagation()}
+                style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.78rem', fontWeight: 700, color: '#38bdf8', cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 36, textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+                Learn More →
+              </a>
+            ) : (
+              <button
+                onClick={e => { e.preventDefault(); e.stopPropagation(); onRsvp(ev.id) }}
+                style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.78rem', fontWeight: 700, color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 36 }}>
+                {ev.price ? `Buy · ${currencyFormat(ev.price_eur ?? ev.price, (ev.currency_code ?? 'EUR') as CurrencyCode)}` : 'RSVP Free'}
+              </button>
+            )}
             <button
               onClick={e => { e.preventDefault(); e.stopPropagation(); if (navigator.share) { navigator.share({ title: ev.title, url: `${window.location.origin}/events/${ev.id}` }) } else { navigator.clipboard.writeText(`${window.location.origin}/events/${ev.id}`) } }}
               style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.45rem 0.6rem', fontSize: '0.78rem', color: '#38bdf8', cursor: 'pointer', minHeight: 36 }}
@@ -262,7 +280,7 @@ export default function EventsPage() {
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
         const { data, error } = await supabase
           .from('events')
-          .select('id, title, description, starts_at, ends_at, is_online, meeting_url, attendee_count, is_paid, ticket_price, ticket_price_eur, currency_code, country, region, city, latitude, longitude, location_label, venue_name, category, organiser_name, is_platform_curated')
+          .select('id, title, description, starts_at, ends_at, is_online, meeting_url, attendee_count, is_paid, ticket_price, ticket_price_eur, currency_code, country, region, city, latitude, longitude, location_label, venue_name, category, organiser_name, is_platform_curated, external_url')
           .eq('status', 'published')
           .or(`starts_at.is.null,starts_at.gte.${oneDayAgo}`)
           .order('starts_at', { ascending: true, nullsFirst: false })
@@ -298,6 +316,7 @@ export default function EventsPage() {
             currency_code:       (e.currency_code as string | null | undefined) ?? null,
             organiser:           (e.is_platform_curated ? null : (e.organiser_name as string | null | undefined)) ?? undefined,
             is_platform_curated: (e.is_platform_curated as boolean | undefined) ?? false,
+            external_url:        (e.external_url as string | null | undefined) ?? null,
           })))
         } else {
           setDbEvents([])
