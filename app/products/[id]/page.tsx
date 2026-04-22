@@ -297,8 +297,8 @@ export default function ProductDetailPage() {
   const stockWarning = isPhysical && listing.stock_qty > 0 && listing.stock_qty <= 5
   const outOfStock = isPhysical && listing.stock_qty === 0
   const reviews = listing.reviews || []
-  const avgRating = listing.avg_rating || 0
   const reviewCount = listing.review_count || 0
+  const avgRating = reviewCount > 0 ? (listing.avg_rating || 5) : 5
 
   function handleAddToCart() {
     if (outOfStock) return
@@ -650,12 +650,11 @@ export default function ProductDetailPage() {
                         {sellerDisplayName(listing.seller)}
                       </Link>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                        {listing.seller.avg_rating > 0 && (
-                          <>
-                            <span style={{ color: '#fbbf24', fontSize: '0.75rem' }}>★ {listing.seller.avg_rating.toFixed(1)}</span>
-                            <span style={{ color: subtle, fontSize: '0.7rem' }}>·</span>
-                          </>
-                        )}
+                        {/* Seller rating — default 5.0 for no reviews */}
+                        <>
+                          <span style={{ color: '#fbbf24', fontSize: '0.75rem' }}>★ {(listing.seller.avg_rating > 0 ? listing.seller.avg_rating : 5).toFixed(1)}</span>
+                          <span style={{ color: subtle, fontSize: '0.7rem' }}>·</span>
+                        </>
                         {listing.seller.trust_balance > 0 && (
                           <span style={{ color: accent, fontSize: '0.72rem', fontWeight: 600 }}>₮{listing.seller.trust_balance.toLocaleString()}</span>
                         )}

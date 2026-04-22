@@ -1022,7 +1022,12 @@ export default function ProfilePage() {
               </div>
             ) : (
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                {user && (
+                {/* Follow button — shown to all visitors (logged in or not).
+                    Unauthenticated visitors get a "Sign In to Follow" button
+                    that redirects to /login with the full profile URL (including
+                    ?id=) as the redirect param, so after login they land back on
+                    this exact profile rather than their own. */}
+                {user ? (
                   <button
                     onClick={isFollowing ? handleUnfollow : handleFollow}
                     disabled={followLoading}
@@ -1040,6 +1045,23 @@ export default function ProfilePage() {
                     }}
                   >
                     {followLoading ? '…' : isFollowing ? 'Unfollow' : '+ Follow'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => router.push(`/login?redirect=${encodeURIComponent(`/profile?id=${viewingId}`)}`)}
+                    style={{
+                      background: 'linear-gradient(135deg,#38bdf8,#818cf8)',
+                      border: 'none',
+                      borderRadius: 8,
+                      padding: '0.45rem 1.1rem',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      color: '#0f172a',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    + Follow
                   </button>
                 )}
                 {user && (
@@ -1368,9 +1390,7 @@ export default function ProfilePage() {
                           {svc.service_mode === 'online' ? '🌐 Online' : svc.service_mode === 'in-person' ? '📍 In-person' : '🔄 Hybrid'}
                         </span>
                       )}
-                      {svc.avg_rating && svc.review_count ? (
-                        <span style={{ fontSize: '0.68rem', color: '#f59e0b' }}>⭐ {Number(svc.avg_rating).toFixed(1)} ({svc.review_count})</span>
-                      ) : null}
+                      <span style={{ fontSize: '0.68rem', color: '#f59e0b' }}>⭐ {svc.avg_rating && (svc.review_count ?? 0) > 0 ? Number(svc.avg_rating).toFixed(1) : '5.0'} ({svc.review_count ?? 0})</span>
                     </div>
                   </div>
                   <div style={{ flexShrink: 0, textAlign: 'right' }}>

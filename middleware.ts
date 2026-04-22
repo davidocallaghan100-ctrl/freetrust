@@ -164,7 +164,10 @@ export async function middleware(request: NextRequest) {
     '/dashboard',
     '/wallet',
     '/admin',
-    '/profile',
+    // '/profile' intentionally excluded — public profiles (/profile?id=...) must
+    // be viewable without auth. The own-profile view (/profile with no id param)
+    // handles the unauthenticated state inline with a "Sign In" prompt.
+    '/profile/manage', // sub-page that requires auth (listing management)
     '/settings',
     '/analytics',
     '/messages',

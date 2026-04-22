@@ -291,8 +291,8 @@ export default function ServiceDetailPage() {
   if (notFound || !svc) return <NotFound />
 
   const catInfo = ALL_CATEGORIES.find(c => c.id === svc.category_id)
-  const rating = svc.avg_rating ?? 0
   const reviewCount = svc.review_count ?? 0
+  const rating = reviewCount > 0 ? (svc.avg_rating ?? 5) : 5
   const images = svc.images ?? []
   const tags = svc.tags ?? []
   const mode = svc.service_mode
@@ -391,11 +391,10 @@ export default function ServiceDetailPage() {
                 )}
               </div>
               <h1 style={{ fontSize: 'clamp(17px,4vw,22px)', fontWeight: 800, lineHeight: 1.3, margin: '0 0 10px' }}>{svc.title}</h1>
-              {rating > 0 ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '13px', color: '#94a3b8' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '13px', color: '#94a3b8' }}>
                   <Stars rating={rating} />
                   <strong style={{ color: '#fbbf24' }}>{rating.toFixed(1)}</strong>
-                  <span>({reviewCount} review{reviewCount !== 1 ? 's' : ''})</span>
+                  <span>({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})</span>
                   <ListingQualityBadge
                     qualityScore={svc.quality_score}
                     avgRating={svc.avg_rating}
@@ -403,9 +402,6 @@ export default function ServiceDetailPage() {
                     compact
                   />
                 </div>
-              ) : (
-                <div style={{ fontSize: '13px', color: '#475569' }}>No reviews yet — be the first!</div>
-              )}
             </div>
 
             {/* Seller mini row */}

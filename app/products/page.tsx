@@ -170,14 +170,10 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete }: {
       <div style={{ padding: '0.4rem 0.85rem 0.85rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
         {/* Rating + quality badge */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap' }}>
-          {p.review_count > 0 ? (
-            <>
-              <Stars rating={p.rating} />
-              <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{p.rating.toFixed(1)} ({p.review_count})</span>
-            </>
-          ) : (
-            <span style={{ fontSize: '0.72rem', color: '#475569' }}>No reviews yet</span>
-          )}
+          <>
+            <Stars rating={p.rating} />
+            <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{p.rating.toFixed(1)} ({p.review_count})</span>
+          </>
           {p.quality_score != null && p.quality_score >= 40 && (
             <ListingQualityBadge qualityScore={p.quality_score} compact />
           )}
@@ -341,8 +337,8 @@ function ProductsInner() {
               seller_avatar: profile?.avatar_url ? String(profile.avatar_url) : undefined,
               seller_id: profile?.id ? String(profile.id) : (d.seller_id ? String(d.seller_id) : null),
               seller_verified: true,
-              rating: Number(d.avg_rating ?? 0),
               review_count: Number(d.review_count ?? 0),
+              rating: Number(d.review_count ?? 0) > 0 ? Number(d.avg_rating ?? 5) : 5,
               quality_score: typeof d.quality_score === 'number' ? (d.quality_score as number) : null,
               free_shipping: true,
               delivery: d.product_type === 'digital' ? 'Instant Download' : '3–7 business days',
