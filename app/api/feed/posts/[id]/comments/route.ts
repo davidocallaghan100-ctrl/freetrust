@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendEmail } from '@/lib/email/send'
+import { sendPushNotification } from '@/lib/push/sendPushNotification'
 
 export async function GET(
   req: NextRequest,
@@ -92,6 +93,14 @@ export async function POST(
           type: 'new_comment',
           userId: postData.user_id,
           payload: { commenterName, preview, postId: id },
+        }).catch(() => {})
+
+        // Push notification (fire-and-forget)
+        sendPushNotification({
+          userId: postData.user_id,
+          title: 'New comment on your post',
+          message: `${commenterName}: "${preview}"`,
+          url: `/feed/${id}`,
         }).catch(() => {})
       }
     }

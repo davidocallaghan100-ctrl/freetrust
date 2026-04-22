@@ -16,6 +16,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendNewPostEmail } from '@/lib/resend'
+import { sendPushNotification } from '@/lib/push/sendPushNotification'
 
 export interface NewPostFanoutParams {
   postId:         string
@@ -76,24 +77,38 @@ export async function notifyAllMembersNewPost(params: NewPostFanoutParams): Prom
       console.log(`[new-post-fanout] inserted ${notificationRows.length} in-app notifications for post ${postId}`)
     }
 
-    // 3. Send emails with a 100ms delay between each to respect Resend rate limits
+    // 3. Send emails + push notifications with a 100ms delay between each
     let emailsSent = 0
+    let pushSent = 0
     for (const profile of profiles) {
       const email = profile.email as string | null
       const name  = (profile.full_name as string | null) ?? 'there'
-      if (!email) continue
+      const userId = profile.id as string
 
-      try {
-        await sendNewPostEmail(email, name, authorName, preview, postId)
-        emailsSent++
-      } catch (emailErr) {
-        console.error('[new-post-fanout] email failed for', email, emailErr instanceof Error ? emailErr.message : emailErr)
+      if (email) {
+        try {
+          await sendNewPostEmail(email, name, authorName, preview, postId)
+          emailsSent++
+        } catch (emailErr) {
+          console.error('[new-post-fanout] email failed for', email, emailErr instanceof Error ? emailErr.message : emailErr)
+        }
       }
+
+      // Send push notification (best-effort, fire-and-forget per user)
+      try {
+        const pushed = await sendPushNotification({
+          userId,
+          title: `New post on FreeTrust 👋`,
+          message: `${authorName}: "${preview}"`,
+          url: `https://freetrust.co/feed/${postId}`,
+        })
+        if (pushed) pushSent++
+      } catch { /* silent — push is progressive enhancement */ }
 
       await sleep(100)
     }
 
-    console.log(`[new-post-fanout] sent ${emailsSent} emails for post ${postId}`)
+    console.log(`[new-post-fanout] sent ${emailsSent} emails, ${pushSent} pushes for post ${postId}`)
   } catch (err) {
     console.error('[new-post-fanout] unexpected error:', err instanceof Error ? err.message : err)
   }

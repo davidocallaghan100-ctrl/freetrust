@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail } from '@/lib/email/send'
+import { sendPushNotification } from '@/lib/push/sendPushNotification'
 
 const VALID = new Set(['trust', 'love', 'insightful', 'collab'])
 
@@ -87,6 +88,12 @@ export async function POST(
           type: 'new_reaction',
           userId: postData.user_id,
           payload: { reactorName, reactionType: type, postId },
+        }).catch(() => {})
+        sendPushNotification({
+          userId: postData.user_id,
+          title: `${reactorName} reacted to your post`,
+          message: `They gave it a "${type}" reaction`,
+          url: `/feed/${postId}`,
         }).catch(() => {})
       }
     }
