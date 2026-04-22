@@ -507,6 +507,11 @@ export default function JobsPage() {
                   📋 My Jobs
                 </Link>
               )}
+              {currentUser && (
+                <Link href="/jobs/applications/mine" style={{ background: 'transparent', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.3)', borderRadius: 8, padding: '0.6rem 1.3rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap', display: 'inline-block' }}>
+                  📨 Applications
+                </Link>
+              )}
               <Link href="/jobs/new" style={{ background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 8, padding: '0.6rem 1.3rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap', display: 'inline-block' }}>
                 + Post a Job
               </Link>
