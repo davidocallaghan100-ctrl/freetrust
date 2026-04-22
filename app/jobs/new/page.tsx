@@ -3,6 +3,15 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
+interface OrgOption {
+  id: string
+  name: string
+  slug: string
+  logo_url: string | null
+  is_verified: boolean
+  userRole: string
+}
+
 const JOB_TYPES = [
   { value: 'full_time', label: 'Full Time' },
   { value: 'part_time', label: 'Part Time' },
@@ -34,6 +43,11 @@ export default function PostJobPage() {
   const titleRef = useRef<HTMLInputElement>(null)
   const descRef = useRef<HTMLTextAreaElement>(null)
 
+  // Org selector state
+  const [myOrgs, setMyOrgs] = useState<OrgOption[]>([])
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null)
+  const [loadingOrgs, setLoadingOrgs] = useState(true)
+
   const [form, setForm] = useState({
     // Company details
     company_name: '',
@@ -55,6 +69,17 @@ export default function PostJobPage() {
     salary_currency: 'EUR',
     application_deadline: '',
   })
+
+  // Load user's admin organisations for the "Post as" selector
+  useEffect(() => {
+    fetch('/api/organisations/mine')
+      .then(r => r.json())
+      .then(d => {
+        setMyOrgs(d.organisations ?? [])
+      })
+      .catch(() => setMyOrgs([]))
+      .finally(() => setLoadingOrgs(false))
+  }, [])
 
   // Safety net: if still "submitting" after 20 seconds, auto-reset
   useEffect(() => {
@@ -148,6 +173,9 @@ export default function PostJobPage() {
       // client-side getSession() / getUser() call risks a token-refresh
       // network round-trip that can hang on mobile and fire the safety
       // timer before the fetch even starts.
+      // If posting as an org and no company name set, auto-fill from the selected org
+      const selectedOrg = myOrgs.find(o => o.id === selectedOrgId) ?? null
+
       let res: Response
       try {
         res = await fetch('/api/jobs', {
@@ -158,11 +186,13 @@ export default function PostJobPage() {
             salary_min: form.salary_min ? parseInt(form.salary_min) : null,
             salary_max: form.salary_max ? parseInt(form.salary_max) : null,
             application_deadline: form.application_deadline || null,
-            company_name: form.company_name || null,
-            company_logo_url: form.company_logo_url || null,
+            company_name: form.company_name || (selectedOrg?.name ?? null),
+            company_logo_url: form.company_logo_url || (selectedOrg?.logo_url ?? null),
             company_website: form.company_website || null,
             company_size: form.company_size || null,
             company_description: form.company_description || null,
+            // Organisation posting
+            org_id: selectedOrgId ?? null,
           }),
         })
       } catch (fetchErr) {
@@ -302,6 +332,69 @@ export default function PostJobPage() {
         ) : (
           /* Edit Form */
           <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '2rem' }}>
+
+            {/* ── POST AS selector (LinkedIn-style org posting) ── */}
+            {!loadingOrgs && myOrgs.length > 0 && (
+              <div style={{ marginBottom: '1.75rem' }}>
+                {sectionDivider('🏢', 'Post As')}
+                <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.75rem' }}>
+                  Post this job on behalf of yourself or an organisation you manage
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
+                  {/* "Myself" option */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOrgId(null)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.5rem',
+                      padding: '0.5rem 1rem', borderRadius: 999, cursor: 'pointer',
+                      border: selectedOrgId === null ? '2px solid #38bdf8' : '1px solid rgba(148,163,184,0.2)',
+                      background: selectedOrgId === null ? 'rgba(56,189,248,0.1)' : 'transparent',
+                      color: selectedOrgId === null ? '#38bdf8' : '#94a3b8',
+                      fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.15s',
+                    }}
+                  >
+                    <span style={{ fontSize: '1.1rem' }}>👤</span>
+                    <span>Myself</span>
+                  </button>
+
+                  {/* Org options */}
+                  {myOrgs.map(org => (
+                    <button
+                      key={org.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedOrgId(org.id)
+                        // Auto-fill company name if empty
+                        if (!form.company_name) set('company_name', org.name)
+                        if (!form.company_logo_url && org.logo_url) set('company_logo_url', org.logo_url)
+                      }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '0.5rem',
+                        padding: '0.5rem 1rem', borderRadius: 999, cursor: 'pointer',
+                        border: selectedOrgId === org.id ? '2px solid #38bdf8' : '1px solid rgba(148,163,184,0.2)',
+                        background: selectedOrgId === org.id ? 'rgba(56,189,248,0.1)' : 'transparent',
+                        color: selectedOrgId === org.id ? '#38bdf8' : '#94a3b8',
+                        fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.15s',
+                      }}
+                    >
+                      {org.logo_url ? (
+                        <img src={org.logo_url} alt={org.name} style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }} />
+                      ) : (
+                        <span style={{ fontSize: '1.1rem' }}>🏢</span>
+                      )}
+                      <span>{org.name}</span>
+                      {org.is_verified && <span style={{ fontSize: '0.7rem' }}>✓</span>}
+                    </button>
+                  ))}
+                </div>
+                {selectedOrgId && (
+                  <div style={{ marginTop: '0.6rem', fontSize: '0.78rem', color: '#34d399', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    🏢 This job will be posted on behalf of <strong>{myOrgs.find(o => o.id === selectedOrgId)?.name}</strong>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* ── COMPANY DETAILS ── */}
             {sectionDivider('🏢', 'Company Details')}

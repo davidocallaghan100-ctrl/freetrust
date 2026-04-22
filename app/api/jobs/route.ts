@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('jobs')
-      .select('*, poster:profiles!poster_id(id, full_name, bio, created_at, linkedin_url, instagram_url, twitter_url, github_url, tiktok_url, youtube_url, website_url)')
+      .select('*, poster:profiles!poster_id(id, full_name, bio, created_at, linkedin_url, instagram_url, twitter_url, github_url, tiktok_url, youtube_url, website_url), org:organisations!org_id(id, name, slug, logo_url, is_verified)')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(100)
@@ -164,16 +164,57 @@ export async function POST(request: NextRequest) {
     let posterId: string | null = null
     let isApiKeyAuth = false
 
+    // ── Fast path 1: Bearer token (Authorization header) ─────────────────
     const authHeader = request.headers.get('Authorization')
     const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
-
     if (bearerToken) {
-      // Fast path: decode JWT locally — no network call
       posterId = decodeJwtSub(bearerToken)
     }
 
-    // Cookie-based fallback (SSR/middleware sessions that don't send Bearer)
-    // Only hit the network if the Bearer path didn't resolve a user.
+    // ── Fast path 2: Cookie JWT decode (no network call) ──────────────────
+    // Supabase SSR sets the cookie as `sb-{project-ref}-auth-token`.
+    // The value is a JSON array [accessToken, refreshToken] encoded as a
+    // chunked cookie. We read it and decode the JWT sub claim locally —
+    // same zero-latency approach as the Bearer path above, just from a
+    // different source. This handles the standard Next.js form-submit
+    // pattern where no Authorization header is sent.
+    if (!posterId) {
+      try {
+        const { cookies } = await import('next/headers')
+        const cookieStore = await cookies()
+        // Supabase SSR may split the token across chunks: sb-{ref}-auth-token.0, .1 etc.
+        // Try the base name first (single-chunk), then reassemble if chunked.
+        const projectRef = 'tioqakxnqjxyuzgnwhrb'
+        const baseName = `sb-${projectRef}-auth-token`
+        let rawToken = cookieStore.get(baseName)?.value ?? null
+        if (!rawToken) {
+          // Try chunked: concatenate .0 .1 .2
+          const chunks: string[] = []
+          for (let i = 0; i <= 5; i++) {
+            const chunk = cookieStore.get(`${baseName}.${i}`)?.value
+            if (!chunk) break
+            chunks.push(chunk)
+          }
+          if (chunks.length > 0) rawToken = chunks.join('')
+        }
+        if (rawToken) {
+          // The cookie value is a URL-encoded JSON string: ["accessToken","refreshToken"]
+          const decoded = decodeURIComponent(rawToken)
+          const parsed = JSON.parse(decoded) as string | string[] | { access_token?: string }
+          const accessToken = Array.isArray(parsed) ? parsed[0]
+            : typeof parsed === 'object' && parsed !== null && 'access_token' in parsed
+              ? (parsed as { access_token?: string }).access_token ?? null
+              : typeof parsed === 'string' ? parsed : null
+          if (accessToken) posterId = decodeJwtSub(accessToken)
+        }
+      } catch {
+        // Cookie decode failed — fall through to network call
+      }
+    }
+
+    // ── Fallback: network getUser() call (last resort) ────────────────────
+    // Only reached if both fast paths fail (e.g. cookie format changed).
+    // This is the slow path (~300–500ms) but only runs as an absolute fallback.
     if (!posterId) {
       try {
         const supabase = await createClient()
@@ -225,6 +266,8 @@ export async function POST(request: NextRequest) {
       company_website,
       company_size,
       company_description,
+      // Organisation posting (LinkedIn-style "post as org")
+      org_id,
       // Extended fields for API key ingestion
       country,
       city,
@@ -237,6 +280,29 @@ export async function POST(request: NextRequest) {
       salary_min_eur,
       salary_max_eur,
     } = body
+
+    // If posting on behalf of an org, verify the user is owner/admin
+    let resolvedOrgId: string | null = org_id ?? null
+    if (resolvedOrgId && !isApiKeyAuth) {
+      const { data: membership } = await admin
+        .from('organisation_members')
+        .select('role')
+        .eq('organisation_id', resolvedOrgId)
+        .eq('user_id', posterId)
+        .maybeSingle()
+      const { data: orgRow } = await admin
+        .from('organisations')
+        .select('creator_id')
+        .eq('id', resolvedOrgId)
+        .maybeSingle()
+      const isOrgAdmin =
+        orgRow?.creator_id === posterId ||
+        membership?.role === 'owner' ||
+        membership?.role === 'admin'
+      if (!isOrgAdmin) {
+        return NextResponse.json({ error: 'You do not have permission to post on behalf of this organisation' }, { status: 403 })
+      }
+    }
 
     // Validate required fields
     if (!title?.trim()) {
@@ -273,6 +339,8 @@ export async function POST(request: NextRequest) {
         salary_currency:      salary_currency ?? 'EUR',
         application_deadline: application_deadline ?? null,
         status:               'active',
+        // Organisation posting
+        org_id:               resolvedOrgId,
         // Company / business details
         company_name:         company_name?.trim() ?? null,
         company_logo_url:     company_logo_url ?? null,
