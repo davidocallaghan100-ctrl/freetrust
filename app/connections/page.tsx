@@ -133,16 +133,22 @@ export default function ConnectionsPage() {
         const connRes = await fetch('/api/connections', { cache: 'no-store' })
         if (connRes.ok) {
           const connData = await connRes.json() as { following?: MemberProfile[]; followers?: MemberProfile[]; followingIds?: string[] }
-          setFollowing(connData.following ?? [])
-          setFollowers(connData.followers ?? [])
-          setFollowingIds(new Set(connData.followingIds ?? []))
+          const followingList = connData.following ?? []
+          const followersList = connData.followers ?? []
+          const followingIdSet = new Set((connData.followingIds ?? []))
+          setFollowing(followingList)
+          setFollowers(followersList)
+          setFollowingIds(followingIdSet)
+          // Mutual follows = connections (you follow them AND they follow you back)
+          const followerIdSet = new Set(followersList.map((m: MemberProfile) => m.id))
+          const mutuals = followingList.filter((m: MemberProfile) => followerIdSet.has(m.id))
+          setConnections(mutuals)
         } else {
           console.error('[connections page] /api/connections returned', connRes.status)
         }
       } catch (fetchErr) {
         console.error('[connections page] fetch /api/connections:', fetchErr)
       }
-      setConnections([])
 
     } catch (err) {
       console.error('[connections page]', err)
@@ -281,7 +287,7 @@ export default function ConnectionsPage() {
             {loading ? (
               <SkeletonGrid />
             ) : filterMembers(connections).length === 0 ? (
-              <EmptyState icon="🤝" message="You haven't connected with anyone yet." subtext="Discover members and start building your network." cta="Discover Members" onCta={() => setTab('suggestions')} />
+              <EmptyState icon="🤝" message="No mutual connections yet." subtext="When someone you follow follows you back, they'll appear here." cta="Discover Members" onCta={() => setTab('suggestions')} />
             ) : (
               <div className="conn-grid">
                 {filterMembers(connections).map(m => (
