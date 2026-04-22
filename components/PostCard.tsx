@@ -358,6 +358,8 @@ export default function PostCard({
   const [userReaction, setUserReaction]   = useState<ReactionType | null>(post.user_reaction ?? null)
   const [reactionTotal, setReactionTotal] = useState(post.reactions?.total ?? 0)
   const reactionPickerRef = useRef<HTMLDivElement | null>(null)
+  const reactBtnWrapRef = useRef<HTMLDivElement | null>(null)
+  const [pickerPos, setPickerPos] = useState<{ top: number; left: number } | null>(null)
 
   // Close reaction picker on outside click
   useEffect(() => {
@@ -685,9 +687,9 @@ export default function PostCard({
       )}
 
       {/* ── Action bar ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '10px 8px 10px', borderTop: '1px solid rgba(51,65,85,0.6)', marginTop: '10px', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '10px 8px 10px', borderTop: '1px solid rgba(51,65,85,0.6)', marginTop: '10px', width: '100%', boxSizing: 'border-box' }}>
         {/* React button + picker */}
-        <div ref={reactionPickerRef} style={{ position: 'relative' }}>
+        <div ref={reactBtnWrapRef} style={{ position: 'relative' }}>
           <ActionBtn
             icon={userReaction
               ? (REACTIONS.find(r => r.type === userReaction)?.emoji ?? '👍')
@@ -696,10 +698,19 @@ export default function PostCard({
               ? reactionTotal.toString()
               : (userReaction ? (REACTIONS.find(r => r.type === userReaction)?.label ?? 'React') : 'React')}
             active={!!userReaction}
-            onClick={(e) => { e?.stopPropagation(); setShowReactionPicker(v => !v) }}
+            onClick={(e) => {
+              e?.stopPropagation()
+              if (!showReactionPicker && reactBtnWrapRef.current) {
+                const rect = reactBtnWrapRef.current.getBoundingClientRect()
+                setPickerPos({ top: rect.top - 52, left: rect.left })
+              }
+              setShowReactionPicker(v => !v)
+            }}
           />
-          {showReactionPicker && (
-            <div style={{ position: 'absolute', bottom: '100%', left: 0, marginBottom: 6, background: '#0f172a', border: '1px solid #334155', borderRadius: 999, padding: '6px 8px', display: 'flex', gap: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 50 }}>
+          {showReactionPicker && pickerPos && (
+            <div
+              ref={reactionPickerRef}
+              style={{ position: 'fixed', top: pickerPos.top, left: pickerPos.left, marginBottom: 6, background: '#0f172a', border: '1px solid #334155', borderRadius: 999, padding: '6px 8px', display: 'flex', gap: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 9999 }}>
               {REACTIONS.map(r => {
                 const isActive = userReaction === r.type
                 return (

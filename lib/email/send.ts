@@ -46,6 +46,7 @@ import {
   sendTrustBadgeEmail,
   sendFirstListingNudgeEmail,
   sendProfilePhotoNudgeEmail,
+  sendNewPostEmail,
 } from '@/lib/resend'
 
 export type EmailType =
@@ -72,6 +73,7 @@ export type EmailType =
   | 'weekly_digest'
   | 'first_listing_nudge'
   | 'profile_photo_nudge'
+  | 'new_post'
 
 // Human-readable labels used by the settings UI
 export const EMAIL_TYPE_LABELS: Record<EmailType, { label: string; description: string; category: string }> = {
@@ -98,6 +100,7 @@ export const EMAIL_TYPE_LABELS: Record<EmailType, { label: string; description: 
   weekly_digest:        { label: 'Weekly digest',              description: 'Monday-morning summary of activity and trends',   category: 'digest' },
   first_listing_nudge:  { label: 'First listing nudge',        description: '24-hour nudge to add your first listing',         category: 'onboarding' },
   profile_photo_nudge:  { label: 'Profile photo nudge',        description: '48-hour nudge to upload a profile photo',         category: 'onboarding' },
+  new_post:             { label: 'New post',                   description: 'Someone posted on the newsfeed',                  category: 'social' },
 }
 
 // Types that ignore preferences (critical — users always get these)
@@ -133,6 +136,7 @@ export type SendEmailParams =
   | { type: 'weekly_digest';       userId: string; payload: { stats: { newMessages: number; newFollowers: number; profileViews: number; trustBalance: number } } }
   | { type: 'first_listing_nudge'; userId: string }
   | { type: 'profile_photo_nudge'; userId: string }
+  | { type: 'new_post'; userId: string; payload: { authorName: string; contentPreview: string; postId: string } }
 
 export type SendEmailResult = { sent: boolean; reason?: string }
 
@@ -264,6 +268,9 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
         break
       case 'profile_photo_nudge':
         await sendProfilePhotoNudgeEmail(to, name)
+        break
+      case 'new_post':
+        await sendNewPostEmail(to, name, params.payload.authorName, params.payload.contentPreview, params.payload.postId)
         break
     }
 

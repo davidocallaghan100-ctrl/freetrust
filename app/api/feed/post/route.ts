@@ -1,6 +1,8 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { notifyAllMembersNewPost } from '@/lib/notifications/new-post-fanout'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(req: NextRequest) {
   try {
@@ -84,6 +86,27 @@ export async function POST(req: NextRequest) {
       console.error('feed_posts insert error:', insertError)
       return NextResponse.json({ error: 'Failed to create post' }, { status: 500 })
     }
+
+    // Fan-out: notify all members of new post (fire and forget — don't await)
+    ;(async () => {
+      try {
+        const admin = createAdminClient()
+        const { data: authorProfile } = await admin
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .maybeSingle()
+        const authorName = (authorProfile?.full_name as string | null) ?? 'A member'
+        await notifyAllMembersNewPost({
+          postId:         (post as { id: string }).id,
+          authorId:       user.id,
+          authorName,
+          contentPreview: ((post as { content?: string | null }).content ?? '').slice(0, 120),
+        })
+      } catch (err) {
+        console.error('[new-post fan-out]', err)
+      }
+    })()
 
     return NextResponse.json({ success: true, post })
   } catch (err) {

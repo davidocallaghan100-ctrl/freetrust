@@ -645,6 +645,46 @@ export async function sendMonthlyStatementEmail(
   return getResend().emails.send({ from: FROM, to, subject, html })
 }
 
+// ─── New Post Notification ─────────────────────────────────────────────────────
+
+// sendNewPostEmail — broadcast to all members when someone posts on the newsfeed.
+// `authorName` is the display name of the post author.
+// `contentPreview` is the first ~100 chars of the post content.
+// `postId` is used to build the CTA link.
+export async function sendNewPostEmail(
+  to: string,
+  name: string,
+  authorName: string,
+  contentPreview: string,
+  postId: string,
+) {
+  const firstName = name.split(' ')[0] || name
+  const postUrl = `${BASE_URL}/feed/${postId}`
+  const preview = contentPreview.length > 120 ? contentPreview.slice(0, 120) + '…' : contentPreview
+
+  const html = wrap(`New post on FreeTrust 👋`, `
+    ${h1(`New post from ${authorName} 👋`)}
+    ${p(`Hi ${firstName}, someone just shared something new on the FreeTrust newsfeed.`)}
+    <div style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.15);border-radius:12px;padding:18px 20px;margin:0 0 20px;">
+      <div style="font-size:12px;font-weight:700;color:#38bdf8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">${authorName}</div>
+      <div style="font-size:14px;color:#cbd5e1;line-height:1.65;">${preview}</div>
+    </div>
+    ${divider()}
+    <div style="text-align:center;padding-top:4px;">${btn('View Post →', postUrl)}</div>
+    <p style="text-align:center;margin-top:14px;font-size:12px;color:#475569;">
+      You're receiving this because you're a FreeTrust member.&nbsp;
+      <a href="${BASE_URL}/settings/notifications" style="color:#64748b;text-decoration:underline;">Manage notifications</a>
+    </p>
+  `)
+
+  return getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `New post on FreeTrust: ${authorName} just posted 👋`,
+    html,
+  })
+}
+
 // ─── Outbound Campaigns ────────────────────────────────────────────────────────
 
 // sendCampaignEmail — used for broadcast/drip campaigns from the admin panel.

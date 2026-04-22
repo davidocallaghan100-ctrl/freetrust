@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { notifyAllMembersNewPost } from '@/lib/notifications/new-post-fanout'
 
 // Shape returned to the client — matches FeedPost in components/PostCard
 type FeedItem = {
@@ -542,6 +543,15 @@ export async function POST(req: NextRequest) {
       console.error('[feed/posts POST]', insertError)
       return NextResponse.json({ error: 'Failed to create post' }, { status: 500 })
     }
+
+    // Fan-out: notify all members of new post (fire and forget — don't await)
+    const profilesData = post.profiles as { full_name?: string | null } | null
+    notifyAllMembersNewPost({
+      postId:         post.id,
+      authorId:       user.id,
+      authorName:     profilesData?.full_name ?? 'A member',
+      contentPreview: (post.content ?? post.title ?? '').slice(0, 120),
+    }).catch(err => console.error('[new-post fan-out]', err))
 
     return NextResponse.json({ success: true, post })
   } catch (err) {
