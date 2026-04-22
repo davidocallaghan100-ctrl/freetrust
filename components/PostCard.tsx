@@ -696,9 +696,28 @@ export default function PostCard({
         try { pollData = JSON.parse(post.content ?? '{}') } catch { pollData = {} }
         const options = pollData.options ?? []
         const totalVotes = Object.values(localVoteCounts).reduce((a: number, b: number) => a + b, 0)
-        const hasVoted = localUserVote !== null
+
+        // Expiry calculation
+        const durationMap: Record<string, number> = { '1d': 86400000, '3d': 259200000, '7d': 604800000, '14d': 1209600000 }
+        const durationMs = durationMap[pollData.duration ?? '7d'] ?? 604800000
+        const createdAt = new Date(post.created_at).getTime()
+        const expiresAt = createdAt + durationMs
+        const isPollExpired = Date.now() > expiresAt
+        const timeRemaining = (() => {
+          if (isPollExpired) return 'Ended'
+          const ms = expiresAt - Date.now()
+          const hours = Math.floor(ms / 3600000)
+          const days = Math.floor(hours / 24)
+          if (days > 0) return `${days}d left`
+          if (hours > 0) return `${hours}h left`
+          return 'Ending soon'
+        })()
+
+        // Show results if user has voted OR poll has expired
+        const hasVoted = localUserVote !== null || isPollExpired
 
         const handleVote = async (idx: number) => {
+          if (isPollExpired) return
           // Optimistic update
           const prevVote = localUserVote
           const prevCounts = { ...localVoteCounts }
@@ -731,9 +750,15 @@ export default function PostCard({
               setLocalUserVote(data.user_vote)
               setLocalVoteCounts(data.counts ?? {})
             } else {
-              // Revert on error
-              setLocalUserVote(prevVote)
-              setLocalVoteCounts(prevCounts)
+              const errData = await res.json().catch(() => ({})) as { expired?: boolean }
+              if (errData.expired) {
+                // Poll ended between load and vote — don't revert, just leave results visible
+                console.warn('[poll] vote rejected: poll has ended')
+              } else {
+                // Revert on other errors
+                setLocalUserVote(prevVote)
+                setLocalVoteCounts(prevCounts)
+              }
             }
           } catch {
             setLocalUserVote(prevVote)
@@ -750,6 +775,7 @@ export default function PostCard({
               return (
                 <button
                   key={i}
+                  disabled={isPollExpired}
                   onClick={() => handleVote(i)}
                   style={{
                     display: 'block', width: '100%', textAlign: 'left',
@@ -757,10 +783,12 @@ export default function PostCard({
                     background: isChosen ? 'rgba(56,189,248,0.1)' : 'rgba(15,23,42,0.6)',
                     border: isChosen ? '1px solid rgba(56,189,248,0.5)' : '1px solid #334155',
                     borderRadius: '10px', padding: '10px 14px', marginBottom: '8px',
-                    cursor: 'pointer', fontFamily: 'inherit', transition: 'border-color 0.15s',
+                    cursor: isPollExpired ? 'not-allowed' : 'pointer',
+                    fontFamily: 'inherit', transition: 'border-color 0.15s',
+                    opacity: isPollExpired && !isChosen ? 0.7 : 1,
                   }}
                 >
-                  {/* Progress bar fill — only shown after voting */}
+                  {/* Progress bar fill — shown after voting or when expired */}
                   {hasVoted && (
                     <div style={{
                       position: 'absolute', left: 0, top: 0, bottom: 0,
@@ -789,9 +817,11 @@ export default function PostCard({
                 </button>
               )
             })}
-            <div style={{ fontSize: '11px', color: '#475569', marginTop: '2px' }}>
-              {totalVotes} vote{totalVotes !== 1 ? 's' : ''}
-              {pollData.duration ? ` · ${pollData.duration === '1d' ? '1 day' : pollData.duration === '3d' ? '3 days' : pollData.duration === '7d' ? '7 days' : '14 days'} poll` : ''}
+            <div style={{ fontSize: '11px', marginTop: '2px', display: 'flex', gap: '8px' }}>
+              <span style={{ color: '#64748b' }}>{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</span>
+              <span style={{ color: isPollExpired ? '#fbbf24' : '#64748b' }}>
+                {isPollExpired ? '🔒 Poll ended' : `⏱ ${timeRemaining}`}
+              </span>
             </div>
           </div>
         )

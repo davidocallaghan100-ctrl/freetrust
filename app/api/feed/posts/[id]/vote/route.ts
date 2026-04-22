@@ -3,9 +3,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+function parseDurationMs(duration: string): number {
+  const map: Record<string, number> = { '1d': 86400000, '3d': 259200000, '7d': 604800000, '14d': 1209600000 }
+  return map[duration] ?? 604800000 // default 7 days
+}
+
 // POST /api/feed/posts/[id]/vote { optionIdx: number }
 // - Inserts or updates the user's vote (one vote per user per poll)
 // - Sending same optionIdx again removes the vote (toggle off)
+// - Returns 403 { expired: true } if poll duration has passed
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -23,6 +29,30 @@ export async function POST(
     }
 
     const admin = createAdminClient()
+
+    // Fetch the post to validate type and check expiry
+    const { data: post, error: postErr } = await admin
+      .from('feed_posts')
+      .select('type, content, created_at')
+      .eq('id', postId)
+      .maybeSingle()
+
+    if (postErr || !post) {
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 })
+    }
+    if ((post as { type: string }).type !== 'poll') {
+      return NextResponse.json({ error: 'Not a poll' }, { status: 400 })
+    }
+
+    // Check expiry
+    let pollData: { duration?: string } = {}
+    try { pollData = JSON.parse((post as { content: string }).content ?? '{}') } catch { pollData = {} }
+    const durationMs = parseDurationMs(pollData.duration ?? '7d')
+    const createdAt = new Date((post as { created_at: string }).created_at).getTime()
+    const expiresAt = createdAt + durationMs
+    if (Date.now() > expiresAt) {
+      return NextResponse.json({ error: 'Poll has ended', expired: true }, { status: 403 })
+    }
 
     // Check existing vote
     const { data: existing } = await admin
