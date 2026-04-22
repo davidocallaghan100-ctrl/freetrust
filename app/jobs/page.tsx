@@ -57,7 +57,8 @@ interface SupabaseJob {
   id: string
   title: string
   company_name?: string | null
-  company_logo?: string | null
+  company_logo_url?: string | null  // DB column name (was incorrectly mapped as company_logo)
+  company_logo?: string | null       // kept for backwards compat with any remote jobs that use this
   job_source?: string | null
   description: string
   job_type: string
@@ -139,7 +140,8 @@ function supabaseToRemoteJob(j: SupabaseJob): RemoteJob {
     id: `local-${j.id}`,
     title: j.title,
     company_name: j.company_name ?? j.poster?.full_name ?? 'FreeTrust Member',
-    company_logo: j.company_logo ?? null,
+    // Prefer company_logo_url (the actual DB column) over legacy company_logo field
+    company_logo: j.company_logo_url ?? j.company_logo ?? null,
     job_type: j.job_type,
     location_type: j.location_type,
     location: j.location,

@@ -389,8 +389,12 @@ export default function EventDetailPage() {
               {/* Attendee count + progress bar */}
               <div style={{ borderTop: '1px solid rgba(56,189,248,0.08)', paddingTop: '0.875rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <span style={{ fontSize: 13, color: '#94a3b8' }}>👥 {event.attendee_count.toLocaleString()} attending</span>
-                  {event.max_attendees && (
+                  {event.attendee_count > 0 ? (
+                    <span style={{ fontSize: 13, color: '#94a3b8' }}>👥 {event.attendee_count.toLocaleString()} attending</span>
+                  ) : (
+                    <span style={{ fontSize: 13, color: '#38bdf8' }}>✨ Be the first to attend!</span>
+                  )}
+                  {event.max_attendees && event.attendee_count > 0 && (
                     <span style={{ fontSize: 12, color: '#64748b' }}>of {event.max_attendees.toLocaleString()}</span>
                   )}
                 </div>

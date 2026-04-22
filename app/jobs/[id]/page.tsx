@@ -21,6 +21,9 @@ interface Job {
   updated_at: string
   applicant_count: number
   application_deadline: string | null
+  company_logo_url?: string | null
+  company_name?: string | null
+  company_website?: string | null
   poster?: { id: string; full_name: string | null; bio: string | null; created_at: string; trust_balance?: number }
 }
 

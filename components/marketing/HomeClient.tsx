@@ -870,7 +870,10 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
                         <span>📍 {location}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '0.72rem', color: '#475569' }}>👥 {(ev.attendee_count ?? 0).toLocaleString()} attending</span>
+                        {(ev.attendee_count ?? 0) > 0
+                          ? <span style={{ fontSize: '0.72rem', color: '#475569' }}>👥 {(ev.attendee_count ?? 0).toLocaleString()} attending</span>
+                          : <span style={{ fontSize: '0.72rem', color: '#38bdf8' }}>✨ Be the first to attend!</span>
+                        }
                         {ev.is_online && <span style={{ fontSize: '0.62rem', fontWeight: 800, background: 'rgba(56,189,248,0.12)', color: '#38bdf8', padding: '2px 7px', borderRadius: 999 }}>ONLINE</span>}
                       </div>
                     </div>

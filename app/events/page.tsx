@@ -178,10 +178,17 @@ function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void
 
         {/* Footer: attendees + buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: '#64748b' }}>
-            <span>👥</span>
-            <span>{ev.rsvpCount.toLocaleString()} attending</span>
-          </div>
+          {ev.rsvpCount > 0 ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: '#64748b' }}>
+              <span>👥</span>
+              <span>{ev.rsvpCount.toLocaleString()} attending</span>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.72rem', color: '#38bdf8' }}>
+              <span>✨</span>
+              <span>Be the first to attend!</span>
+            </div>
+          )}
           {/* Dual-currency price line — only shown for paid events. The
               Buy button uses the user's selected currency rather than the
               hardcoded GBP from the previous version. */}

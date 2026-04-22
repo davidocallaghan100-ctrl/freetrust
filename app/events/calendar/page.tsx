@@ -719,7 +719,7 @@ function ListViewRow({
             )}
             <span className="flex items-center gap-1">
               <UserGroupIcon className="w-3.5 h-3.5" />
-              {event.attendees}/{event.maxAttendees}
+              {event.attendees > 0 ? `${event.attendees}/${event.maxAttendees}` : 'Be first!'}
             </span>
             <span
               className={`px-1.5 py-0.5 rounded-full font-medium ${
@@ -986,7 +986,7 @@ function EventModal({
                 Attendees
               </h4>
               <span className="text-xs text-gray-500">
-                {event.attendees} / {event.maxAttendees}
+                {event.attendees > 0 ? `${event.attendees} / ${event.maxAttendees}` : '✨ Be the first!'}
               </span>
             </div>
             <div className="bg-gray-100 rounded-full h-2 mb-1.5">
