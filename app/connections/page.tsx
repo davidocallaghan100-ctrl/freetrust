@@ -55,7 +55,7 @@ function timeAgo(ts: string | null) {
 type Tab = 'connections' | 'followers' | 'following' | 'suggestions' | 'requests'
 
 export default function ConnectionsPage() {
-  const [tab, setTab] = useState<Tab>('suggestions')
+  const [tab, setTab] = useState<Tab>('connections')
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)

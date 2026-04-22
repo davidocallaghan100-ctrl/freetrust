@@ -230,7 +230,11 @@ export default function MemberDirectoryPage() {
 
   const categoryMatch = (member: Member, cat: string): boolean => {
     if (cat === 'All') return true
-    const bio = (member.bio ?? '').toLowerCase()
+    // Members with no bio are shown in every category — we don't have
+    // enough signal to exclude them. Only filter by keyword when the
+    // member actually has bio content.
+    const bio = (member.bio ?? '').trim().toLowerCase()
+    if (!bio) return true
     if (cat === 'Freelancers') return bio.includes('freelance')
     if (cat === 'Businesses') return bio.includes('business') || bio.includes('company')
     if (cat === 'Developers') return bio.includes('developer') || bio.includes('engineer')
