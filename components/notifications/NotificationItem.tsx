@@ -14,31 +14,108 @@ function formatRelativeTime(isoString: string): string {
   if (seconds < 60) return 'just now'
   if (minutes < 60) return `${minutes}m ago`
   if (hours < 24) return `${hours}h ago`
+  if (days === 1) return 'Yesterday'
   if (days < 7) return `${days}d ago`
   return new Date(isoString).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })
 }
 
 function getTypeIcon(type: string): string {
   switch (type) {
-    case 'message': return '💬'
-    case 'order': return '📦'
-    case 'trust': return '₮'
-    case 'review': return '⭐'
-    case 'gig_liked': return '❤️'
-    case 'system': return '🔔'
-    default: return '🔔'
+    // Messages
+    case 'message':
+    case 'new_message':             return '💬'
+    // Orders
+    case 'order':
+    case 'order_update':            return '📦'
+    case 'order_placed':            return '🛒'
+    // Trust / wallet
+    case 'trust':
+    case 'wallet':
+    case 'wallet_transfer':
+    case 'transfer_received':
+    case 'transfer_sent':           return '₮'
+    case 'payment':                 return '💳'
+    // Reviews
+    case 'review':
+    case 'review_received':         return '⭐'
+    // Social likes
+    case 'gig_liked':
+    case 'post_like':
+    case 'comment_like':
+    case 'listing_liked':           return '❤️'
+    // Followers / connections
+    case 'new_follower':            return '👤'
+    case 'connection_request':      return '🤝'
+    case 'connection_accepted':     return '✅'
+    // Events
+    case 'event':
+    case 'event_rsvp':              return '📅'
+    case 'event_reminder':          return '⏰'
+    // Jobs
+    case 'job_application':
+    case 'new_job_application':     return '📋'
+    case 'job_match':               return '🎯'
+    // Welcome / onboarding
+    case 'welcome':
+    case 'onboarding':              return '🎉'
+    // Referral
+    case 'referral':                return '🎁'
+    // Founder / investment
+    case 'founder_investment':
+    case 'badge':                   return '🏅'
+    // System
+    case 'system':                  return 'ℹ️'
+    default:                        return '🔔'
   }
 }
 
 function getTypeColor(type: string): { bg: string; color: string } {
   switch (type) {
-    case 'message': return { bg: 'rgba(99,102,241,0.15)', color: '#818cf8' }
-    case 'order': return { bg: 'rgba(16,185,129,0.15)', color: '#34d399' }
-    case 'trust': return { bg: 'rgba(245,158,11,0.15)', color: '#fbbf24' }
-    case 'review': return { bg: 'rgba(139,92,246,0.15)', color: '#a78bfa' }
-    case 'gig_liked': return { bg: 'rgba(239,68,68,0.15)', color: '#f87171' }
-    case 'system': return { bg: 'rgba(56,189,248,0.15)', color: '#38bdf8' }
-    default: return { bg: 'rgba(56,189,248,0.15)', color: '#38bdf8' }
+    // Messages — teal
+    case 'message':
+    case 'new_message':             return { bg: 'rgba(0,212,170,0.15)',   color: '#00d4aa' }
+    // Orders — green
+    case 'order':
+    case 'order_placed':
+    case 'order_update':            return { bg: 'rgba(16,185,129,0.15)',  color: '#34d399' }
+    // Trust / wallet — amber/gold
+    case 'trust':
+    case 'wallet':
+    case 'wallet_transfer':
+    case 'payment':
+    case 'transfer_received':
+    case 'transfer_sent':           return { bg: 'rgba(245,158,11,0.15)',  color: '#fbbf24' }
+    // Reviews — sky blue
+    case 'review':
+    case 'review_received':         return { bg: 'rgba(56,189,248,0.15)',  color: '#38bdf8' }
+    // Social likes — red/pink
+    case 'gig_liked':
+    case 'post_like':
+    case 'comment_like':
+    case 'listing_liked':           return { bg: 'rgba(239,68,68,0.15)',   color: '#f87171' }
+    // Followers / connections — blue
+    case 'new_follower':            return { bg: 'rgba(99,102,241,0.15)',  color: '#818cf8' }
+    case 'connection_request':
+    case 'connection_accepted':     return { bg: 'rgba(0,212,170,0.15)',   color: '#00d4aa' }
+    // Events — orange
+    case 'event':
+    case 'event_rsvp':
+    case 'event_reminder':          return { bg: 'rgba(251,146,60,0.15)',  color: '#fb923c' }
+    // Jobs — purple
+    case 'job_application':
+    case 'new_job_application':
+    case 'job_match':               return { bg: 'rgba(139,92,246,0.15)',  color: '#a78bfa' }
+    // Welcome / onboarding — gradient-ish green
+    case 'welcome':
+    case 'onboarding':              return { bg: 'rgba(16,185,129,0.15)',  color: '#34d399' }
+    // Referral — pink
+    case 'referral':                return { bg: 'rgba(236,72,153,0.15)',  color: '#f472b6' }
+    // Founder / badge — gold
+    case 'founder_investment':
+    case 'badge':                   return { bg: 'rgba(234,179,8,0.15)',   color: '#eab308' }
+    // System — grey/blue
+    case 'system':                  return { bg: 'rgba(100,116,139,0.15)', color: '#94a3b8' }
+    default:                        return { bg: 'rgba(56,189,248,0.15)',  color: '#38bdf8' }
   }
 }
 
@@ -119,18 +196,20 @@ export default function NotificationItem({ notification, onClose, onMarkRead, on
         }}>
           {notification.title}
         </p>
-        <p style={{
-          margin: '0.15rem 0 0',
-          fontSize: '0.75rem',
-          color: '#64748b',
-          lineHeight: 1.45,
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-        }}>
-          {notification.body}
-        </p>
+        {notification.body && (
+          <p style={{
+            margin: '0.15rem 0 0',
+            fontSize: '0.75rem',
+            color: '#64748b',
+            lineHeight: 1.45,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}>
+            {notification.body}
+          </p>
+        )}
         <p style={{ margin: '0.25rem 0 0', fontSize: '0.7rem', color: '#475569' }}>
           {formatRelativeTime(notification.created_at)}
         </p>
