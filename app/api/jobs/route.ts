@@ -53,6 +53,8 @@ export async function GET(request: NextRequest) {
     const category    = searchParams.get('category')
     const search      = searchParams.get('search')
     const salaryMin   = searchParams.get('salary_min')
+    const posterId    = searchParams.get('posterId')  // filter by poster — used on profile pages
+    const orgId       = searchParams.get('orgId')     // filter by org — used on org profile pages
 
     const country    = searchParams.get('country')
     const city       = searchParams.get('city')
@@ -70,9 +72,16 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('jobs')
       .select('*, poster:profiles!poster_id(id, full_name, bio, created_at, linkedin_url, instagram_url, twitter_url, github_url, tiktok_url, youtube_url, website_url), org:organisations!org_id(id, name, slug, logo_url, is_verified)')
-      .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(100)
+
+    // When filtering by poster, show all their jobs (any status).
+    // For public job board listings, only show active jobs.
+    if (posterId) {
+      query = query.eq('poster_id', posterId)
+    } else {
+      query = query.eq('status', 'active')
+    }
 
     if (jobType)   query = query.eq('job_type', jobType)
     if (locType)   query = query.eq('location_type', locType)
@@ -82,6 +91,7 @@ export async function GET(request: NextRequest) {
     if (country)   query = query.ilike('country', country)
     if (city)      query = query.ilike('city', `%${city}%`)
     if (remoteOnly) query = query.eq('is_remote', true)
+    if (orgId)     query = query.eq('org_id', orgId)
 
     const { data, error } = await query
     if (error) {

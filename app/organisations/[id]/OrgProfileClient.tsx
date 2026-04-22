@@ -28,7 +28,7 @@ import {
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type OrgTab = "overview" | "members" | "followers" | "reviews";
+type OrgTab = "overview" | "members" | "followers" | "reviews" | "jobs" | "activity";
 
 interface Organisation {
   id: string;
@@ -98,6 +98,31 @@ interface OrgReview {
     username: string | null;
     trust_balance: number | null;
   } | null;
+}
+
+interface OrgJob {
+  id: string;
+  title: string;
+  job_type: string | null;
+  location_type: string | null;
+  location: string | null;
+  category: string | null;
+  status: string;
+  created_at: string;
+  applicant_count: number | null;
+  company_logo_url: string | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  salary_currency: string | null;
+}
+
+interface OrgActivityItem {
+  id: string;
+  type: "job" | "event" | "listing";
+  title: string;
+  href: string;
+  created_at: string;
+  meta?: string;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -254,6 +279,14 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
   const [reviewsAvg, setReviewsAvg] = useState<number | null>(null);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewsLoaded, setReviewsLoaded] = useState(false);
+
+  const [orgJobs, setOrgJobs] = useState<OrgJob[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(false);
+  const [jobsLoaded, setJobsLoaded] = useState(false);
+
+  const [orgActivity, setOrgActivity] = useState<OrgActivityItem[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityLoaded, setActivityLoaded] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewTitle, setReviewTitle] = useState("");
@@ -370,6 +403,39 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
     }
   }, [activeTab, org, id, reviewsLoaded, reviewsLoading]);
 
+  useEffect(() => {
+    if (activeTab === "jobs" && org && !jobsLoaded && !jobsLoading) {
+      setJobsLoading(true);
+      fetch(`/api/organisations/${id}/jobs`)
+        .then(r => r.json())
+        .then(d => { setOrgJobs(d.jobs ?? []); setJobsLoaded(true); })
+        .catch(() => {})
+        .finally(() => setJobsLoading(false));
+    }
+  }, [activeTab, org, id, jobsLoaded, jobsLoading]);
+
+  useEffect(() => {
+    if (activeTab === "activity" && org && !activityLoaded && !activityLoading) {
+      setActivityLoading(true);
+      // Fetch jobs, events, listings for this org in parallel
+      Promise.all([
+        fetch(`/api/organisations/${id}/jobs`).then(r => r.json()).catch(() => ({ jobs: [] })),
+        fetch(`/api/events?organiserId=${id}`).then(r => r.json()).catch(() => ({ events: [] })),
+      ]).then(([jobsData, eventsData]) => {
+        const items: OrgActivityItem[] = [];
+        for (const j of (jobsData.jobs ?? [])) {
+          items.push({ id: `job-${j.id}`, type: "job", title: `📋 Posted job: ${j.title}`, href: `/jobs/${j.id}`, created_at: j.created_at, meta: j.job_type ?? undefined });
+        }
+        for (const e of (eventsData.events ?? [])) {
+          items.push({ id: `event-${e.id}`, type: "event", title: `📅 Created event: ${e.title}`, href: `/events/${e.id}`, created_at: e.created_at });
+        }
+        items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        setOrgActivity(items);
+        setActivityLoaded(true);
+      }).finally(() => setActivityLoading(false));
+    }
+  }, [activeTab, org, id, activityLoaded, activityLoading]);
+
   async function handleReviewSubmit() {
     if (!reviewContent.trim()) return;
     setReviewSubmitting(true);
@@ -417,6 +483,8 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
 
   const tabs: { key: OrgTab; label: string; count?: number }[] = [
     { key: "overview", label: "Overview" },
+    { key: "jobs", label: "Jobs", count: orgJobs.length || undefined },
+    { key: "activity", label: "Activity" },
     { key: "members", label: "Members", count: org.members_count },
     { key: "followers", label: "Followers", count: followerCount || undefined },
     { key: "reviews", label: "Reviews", count: reviews.length || undefined },
@@ -669,6 +737,124 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
                 )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ── JOBS ── */}
+        {activeTab === "jobs" && (
+          <div>
+            <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 14 }}>
+              Jobs posted by {org.name}
+            </div>
+            {canManageOrg && (
+              <Link
+                href={`/jobs/new?orgId=${org.id}`}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.25)", borderRadius: 14, padding: "12px 0", fontSize: 14, fontWeight: 600, color: "#a78bfa", cursor: "pointer", marginBottom: 16, textDecoration: "none" }}
+              >
+                <BriefcaseIcon style={{ width: 16, height: 16 }} />
+                Post a Job as {org.name}
+              </Link>
+            )}
+            {jobsLoading ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {[1, 2, 3].map(i => <div key={i} style={{ height: 100, borderRadius: 16, background: "#0f172a", border: "1px solid #1e293b" }} />)}
+              </div>
+            ) : orgJobs.length === 0 ? (
+              <EmptyState
+                icon={<BriefcaseIcon style={{ width: 28, height: 28, color: "#475569" }} />}
+                title="No jobs posted yet"
+                sub={canManageOrg ? "Post your first job on behalf of this organisation." : "This organisation hasn't posted any jobs yet."}
+              />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {orgJobs.map(job => (
+                  <div key={job.id} style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 16, padding: 16 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                      {job.company_logo_url ? (
+                        <img src={job.company_logo_url} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: "cover", flexShrink: 0, background: "#1e293b" }} />
+                      ) : (
+                        <div style={{ width: 44, height: 44, borderRadius: 10, background: "#1e293b", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <BriefcaseIcon style={{ width: 20, height: 20, color: "#475569" }} />
+                        </div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 4 }}>{job.title}</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                          {job.job_type && (
+                            <span style={{ fontSize: 11, fontWeight: 600, background: "rgba(124,58,237,0.15)", color: "#a78bfa", border: "1px solid rgba(124,58,237,0.25)", borderRadius: 20, padding: "2px 8px" }}>
+                              {job.job_type.replace(/_/g, " ")}
+                            </span>
+                          )}
+                          {job.location_type && (
+                            <span style={{ fontSize: 11, fontWeight: 600, background: "rgba(56,189,248,0.1)", color: "#7dd3fc", border: "1px solid rgba(56,189,248,0.2)", borderRadius: 20, padding: "2px 8px" }}>
+                              {job.location_type === "remote" ? "🌐 Remote" : job.location_type === "onsite" ? "📍 On-site" : "🔄 Hybrid"}
+                            </span>
+                          )}
+                          <span style={{ fontSize: 11, fontWeight: 600, background: job.status === "active" ? "rgba(52,211,153,0.12)" : "rgba(100,116,139,0.15)", color: job.status === "active" ? "#34d399" : "#64748b", border: `1px solid ${job.status === "active" ? "rgba(52,211,153,0.25)" : "rgba(100,116,139,0.2)"}`, borderRadius: 20, padding: "2px 8px" }}>
+                            {job.status}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                          <div style={{ fontSize: 12, color: "#475569" }}>
+                            {job.applicant_count != null && job.applicant_count > 0 && (
+                              <span style={{ marginRight: 10 }}>👥 {job.applicant_count} applicant{job.applicant_count !== 1 ? "s" : ""}</span>
+                            )}
+                            {new Date(job.created_at).toLocaleDateString("en", { day: "numeric", month: "short", year: "numeric" })}
+                          </div>
+                          <Link
+                            href={`/jobs/${job.id}`}
+                            style={{ fontSize: 12, fontWeight: 600, color: "#818cf8", border: "1px solid rgba(129,140,248,0.3)", borderRadius: 8, padding: "4px 12px", textDecoration: "none", flexShrink: 0 }}
+                          >
+                            View →
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── ACTIVITY ── */}
+        {activeTab === "activity" && (
+          <div>
+            <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 14 }}>
+              Recent Activity
+            </div>
+            {activityLoading ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {[1, 2, 3].map(i => <div key={i} style={{ height: 64, borderRadius: 16, background: "#0f172a", border: "1px solid #1e293b" }} />)}
+              </div>
+            ) : orgActivity.length === 0 ? (
+              <EmptyState
+                icon={<CalendarDaysIcon style={{ width: 28, height: 28, color: "#475569" }} />}
+                title="No activity yet"
+                sub="Jobs posted, events created, and other activity will appear here."
+              />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {orgActivity.map(item => (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    style={{ display: "flex", alignItems: "flex-start", gap: 12, background: "#0f172a", border: "1px solid #1e293b", borderRadius: 14, padding: "12px 16px", textDecoration: "none" }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "#f1f5f9", lineHeight: 1.4 }}>{item.title}</div>
+                      {item.meta && <div style={{ fontSize: 12, color: "#64748b", marginTop: 3 }}>{item.meta.replace(/_/g, " ")}</div>}
+                      <div style={{ fontSize: 11, color: "#475569", marginTop: 4 }}>
+                        {new Date(item.created_at).toLocaleDateString("en", { day: "numeric", month: "short", year: "numeric" })}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 18, flexShrink: 0, marginTop: 2 }}>
+                      {item.type === "job" ? "💼" : item.type === "event" ? "📅" : "🛍"}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

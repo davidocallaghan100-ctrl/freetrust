@@ -14,6 +14,7 @@ import {
   GRASSROOTS_GREEN,
 } from '@/lib/grassroots/categories'
 import type { User } from '@supabase/supabase-js'
+import ActivityFeed, { type ActivityItem as FeedItem } from '@/components/profile/ActivityFeed'
 
 interface Profile {
   id: string
@@ -191,6 +192,11 @@ export default function ProfilePage() {
   const [showAllServices, setShowAllServices] = useState(false)
   const [grassroots, setGrassroots] = useState<GrassrootsListing[]>([])
   const [showAllGrassroots, setShowAllGrassroots] = useState(false)
+  // Unified activity feed (jobs + listings + events + reviews)
+  const [activityFeedItems, setActivityFeedItems] = useState<FeedItem[]>([])
+  const [activityFeedLoading, setActivityFeedLoading] = useState(false)
+  const [activityFeedLoaded, setActivityFeedLoaded] = useState(false)
+  const [showPostsSection, setShowPostsSection] = useState(false)
   const [bonusAwarded, setBonusAwarded] = useState(false)
   const [toast, setToast] = useState('')
   const [isOwnProfile, setIsOwnProfile] = useState(true)
@@ -308,6 +314,21 @@ export default function ProfilePage() {
   // Load this user's active grassroots listings. Cast to unknown[] then
   // GrassrootsListing[] because supabase-js generated types don't know
   // about grassroots_listings yet — same untyped-row pattern services use.
+  const loadActivityFeed = useCallback(async (userId: string) => {
+    if (activityFeedLoaded) return
+    setActivityFeedLoading(true)
+    try {
+      const res = await fetch(`/api/users/${userId}/activity?limit=30`)
+      if (res.ok) {
+        const data = await res.json() as { items?: FeedItem[] }
+        setActivityFeedItems(data.items ?? [])
+        setActivityFeedLoaded(true)
+      }
+    } catch { /* non-critical */ } finally {
+      setActivityFeedLoading(false)
+    }
+  }, [activityFeedLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const loadGrassroots = useCallback(async (userId: string) => {
     try {
       const { data } = await supabase
@@ -506,6 +527,7 @@ export default function ProfilePage() {
             loadActivity(viewingId),
             loadServices(viewingId),
             loadGrassroots(viewingId),
+            loadActivityFeed(viewingId),
           ])
 
           // Get real follower count and check if current user follows them
@@ -528,7 +550,7 @@ export default function ProfilePage() {
         } else if (u) {
           // Own profile
           setIsOwnProfile(true)
-          await Promise.all([loadProfile(u.id), loadTrust(), loadActivity(u.id), loadServices(u.id), loadGrassroots(u.id)])
+          await Promise.all([loadProfile(u.id), loadTrust(), loadActivity(u.id), loadServices(u.id), loadGrassroots(u.id), loadActivityFeed(u.id)])
 
           // Real follower count from user_follows
           const { count } = await supabase
@@ -1531,34 +1553,85 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Activity Section */}
+        {/* Posts & Activity Section */}
         <div className="profile-card">
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '1rem', letterSpacing: '0.06em' }}>RECENT ACTIVITY</div>
-          {loadingActivity ? (
-            <div style={{ color: '#64748b', fontSize: '0.88rem' }}>Loading activity…</div>
-          ) : activity.length === 0 ? (
-            <div style={{ color: '#64748b', fontSize: '0.88rem', textAlign: 'center', padding: '1rem 0' }}>
-              No activity yet — start posting, listing services, or joining communities!
+          {/* Header with toggle between Posts and Activity */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={() => setShowPostsSection(false)}
+                style={{
+                  fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.06em',
+                  background: !showPostsSection ? 'rgba(56,189,248,0.12)' : 'transparent',
+                  border: !showPostsSection ? '1px solid rgba(56,189,248,0.3)' : '1px solid transparent',
+                  borderRadius: 6, padding: '0.2rem 0.65rem', color: !showPostsSection ? '#38bdf8' : '#64748b',
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                ACTIVITY
+              </button>
+              <button
+                onClick={() => setShowPostsSection(true)}
+                style={{
+                  fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.06em',
+                  background: showPostsSection ? 'rgba(56,189,248,0.12)' : 'transparent',
+                  border: showPostsSection ? '1px solid rgba(56,189,248,0.3)' : '1px solid transparent',
+                  borderRadius: 6, padding: '0.2rem 0.65rem', color: showPostsSection ? '#38bdf8' : '#64748b',
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                POSTS
+              </button>
             </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {activity.map(item => (
-                <div key={item.id} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: '2px' }}>{activityIcon[item.type] ?? '•'}</span>
-                  <div style={{ flex: 1 }}>
-                    {item.href ? (
-                      <Link href={item.href} style={{ color: '#f1f5f9', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500 }}>
-                        {item.title}
-                      </Link>
-                    ) : (
-                      <span style={{ color: '#f1f5f9', fontSize: '0.88rem', fontWeight: 500 }}>{item.title}</span>
-                    )}
-                    {item.subtitle && <div style={{ color: '#64748b', fontSize: '0.78rem', marginTop: '2px' }}>{item.subtitle}</div>}
-                  </div>
-                  <span style={{ color: '#475569', fontSize: '0.75rem', whiteSpace: 'nowrap', flexShrink: 0 }}>{timeAgo(item.created_at)}</span>
+            {showPostsSection && isOwnProfile && (
+              <Link href="/jobs/new" style={{ fontSize: '0.72rem', color: '#38bdf8', textDecoration: 'none', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 6, padding: '0.2rem 0.6rem' }}>
+                + Post Job
+              </Link>
+            )}
+          </div>
+
+          {/* Activity tab — original timeline */}
+          {!showPostsSection && (
+            <>
+              {loadingActivity ? (
+                <div style={{ color: '#64748b', fontSize: '0.88rem' }}>Loading activity…</div>
+              ) : activity.length === 0 ? (
+                <div style={{ color: '#64748b', fontSize: '0.88rem', textAlign: 'center', padding: '1rem 0' }}>
+                  No activity yet — start posting, listing services, or joining communities!
                 </div>
-              ))}
-            </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {activity.map(item => (
+                    <div key={item.id} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: '2px' }}>{activityIcon[item.type] ?? '•'}</span>
+                      <div style={{ flex: 1 }}>
+                        {item.href ? (
+                          <Link href={item.href} style={{ color: '#f1f5f9', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500 }}>
+                            {item.title}
+                          </Link>
+                        ) : (
+                          <span style={{ color: '#f1f5f9', fontSize: '0.88rem', fontWeight: 500 }}>{item.title}</span>
+                        )}
+                        {item.subtitle && <div style={{ color: '#64748b', fontSize: '0.78rem', marginTop: '2px' }}>{item.subtitle}</div>}
+                      </div>
+                      <span style={{ color: '#475569', fontSize: '0.75rem', whiteSpace: 'nowrap', flexShrink: 0 }}>{timeAgo(item.created_at)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Posts tab — unified jobs + listings + events feed */}
+          {showPostsSection && (
+            <ActivityFeed
+              items={activityFeedItems}
+              loading={activityFeedLoading}
+              emptyTitle="Nothing posted yet"
+              emptySubtitle="Jobs, services, events and listings created by this member will appear here."
+              emptyCtaHref={isOwnProfile ? '/jobs/new' : undefined}
+              emptyCtaLabel={isOwnProfile ? '💼 Post a Job' : undefined}
+            />
           )}
         </div>
 
