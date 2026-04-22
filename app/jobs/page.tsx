@@ -47,6 +47,7 @@ interface RemoteJob {
   created_at: string
   url: string
   description_snippet: string
+  description?: string
   is_local?: boolean
   job_source?: string | null
   // Poster social links — only populated for local FreeTrust jobs.
@@ -163,6 +164,7 @@ function supabaseToRemoteJob(j: SupabaseJob): RemoteJob {
     created_at: j.created_at,
     url: `/jobs/${j.id}`,
     description_snippet: j.description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200),
+    description: j.description,
     is_local: true,
     job_source: j.job_source ?? null,
     posterSocial,
