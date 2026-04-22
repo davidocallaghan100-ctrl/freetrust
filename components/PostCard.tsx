@@ -54,6 +54,9 @@ export type FeedPost = {
     slug: string | null
     logo_url: string | null
   } | null
+  // Poll vote data (only present when type === 'poll')
+  poll_vote_counts?: Record<number, number> | null
+  user_poll_vote?: number | null
 }
 
 export const REACTIONS: { type: ReactionType; emoji: string; label: string; color: string }[] = [
@@ -354,6 +357,10 @@ export default function PostCard({
   const [deleting,          setDeleting]          = useState(false)
   const [deleted,           setDeleted]           = useState(false)
 
+  // Poll state (optimistic updates)
+  const [localVoteCounts, setLocalVoteCounts] = useState<Record<number, number>>(post.poll_vote_counts ?? {})
+  const [localUserVote, setLocalUserVote] = useState<number | null>(post.user_poll_vote ?? null)
+
   // Reactions
   const [showReactionPicker, setShowReactionPicker] = useState(false)
   const [userReaction, setUserReaction]   = useState<ReactionType | null>(post.user_reaction ?? null)
@@ -642,7 +649,9 @@ export default function PostCard({
         {post.title ? (
           <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f1f5f9', margin: '0 0 8px', lineHeight: 1.4, wordBreak: 'break-word' }}>{String(post.title)}</h3>
         ) : null}
-        {post.content ? (
+        {/* For polls, content is stored as JSON — don't render it as body text;
+            the poll UI block below handles rendering. */}
+        {post.content && post.type !== 'poll' ? (
           <p style={{ fontSize: '14px', lineHeight: 1.65, color: '#cbd5e1', margin: '0 0 12px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
             {!expanded && post.content.length > 280
               ? <>{post.content.slice(0, 280)}<Link href={canonicalUrl} style={{ color: '#38bdf8', textDecoration: 'none' }}> …more</Link></>
@@ -680,6 +689,113 @@ export default function PostCard({
           </div>
         )
       })() : null}
+
+      {/* ── Poll ── */}
+      {post.type === 'poll' && (() => {
+        let pollData: { question?: string; options?: string[]; duration?: string } = {}
+        try { pollData = JSON.parse(post.content ?? '{}') } catch { pollData = {} }
+        const options = pollData.options ?? []
+        const totalVotes = Object.values(localVoteCounts).reduce((a: number, b: number) => a + b, 0)
+        const hasVoted = localUserVote !== null
+
+        const handleVote = async (idx: number) => {
+          // Optimistic update
+          const prevVote = localUserVote
+          const prevCounts = { ...localVoteCounts }
+          const newCounts = { ...localVoteCounts }
+
+          if (prevVote === idx) {
+            // Toggle off
+            setLocalUserVote(null)
+            newCounts[idx] = Math.max(0, (newCounts[idx] ?? 0) - 1)
+            if (newCounts[idx] === 0) delete newCounts[idx]
+          } else {
+            if (prevVote !== null) {
+              // Remove old vote
+              newCounts[prevVote] = Math.max(0, (newCounts[prevVote] ?? 0) - 1)
+              if (newCounts[prevVote] === 0) delete newCounts[prevVote]
+            }
+            setLocalUserVote(idx)
+            newCounts[idx] = (newCounts[idx] ?? 0) + 1
+          }
+          setLocalVoteCounts(newCounts)
+
+          try {
+            const res = await fetch(`/api/feed/posts/${post.id}/vote`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ optionIdx: idx }),
+            })
+            if (res.ok) {
+              const data = await res.json() as { user_vote: number | null; counts: Record<number, number>; total: number }
+              setLocalUserVote(data.user_vote)
+              setLocalVoteCounts(data.counts ?? {})
+            } else {
+              // Revert on error
+              setLocalUserVote(prevVote)
+              setLocalVoteCounts(prevCounts)
+            }
+          } catch {
+            setLocalUserVote(prevVote)
+            setLocalVoteCounts(prevCounts)
+          }
+        }
+
+        return (
+          <div style={{ margin: '0 16px 14px' }}>
+            {options.map((opt, i) => {
+              const votes = localVoteCounts[i] ?? 0
+              const pct = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0
+              const isChosen = localUserVote === i
+              return (
+                <button
+                  key={i}
+                  onClick={() => handleVote(i)}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left',
+                    position: 'relative', overflow: 'hidden',
+                    background: isChosen ? 'rgba(56,189,248,0.1)' : 'rgba(15,23,42,0.6)',
+                    border: isChosen ? '1px solid rgba(56,189,248,0.5)' : '1px solid #334155',
+                    borderRadius: '10px', padding: '10px 14px', marginBottom: '8px',
+                    cursor: 'pointer', fontFamily: 'inherit', transition: 'border-color 0.15s',
+                  }}
+                >
+                  {/* Progress bar fill — only shown after voting */}
+                  {hasVoted && (
+                    <div style={{
+                      position: 'absolute', left: 0, top: 0, bottom: 0,
+                      width: `${pct}%`,
+                      background: isChosen ? 'rgba(56,189,248,0.15)' : 'rgba(148,163,184,0.07)',
+                      transition: 'width 0.4s ease',
+                      borderRadius: '10px',
+                      pointerEvents: 'none',
+                    }} />
+                  )}
+                  <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                    <span style={{
+                      fontSize: '13px',
+                      color: isChosen ? '#38bdf8' : '#cbd5e1',
+                      fontWeight: isChosen ? 600 : 400,
+                      lineHeight: 1.4,
+                    }}>
+                      {isChosen && <span style={{ marginRight: '4px' }}>✓</span>}{opt}
+                    </span>
+                    {hasVoted && (
+                      <span style={{ fontSize: '12px', color: '#64748b', flexShrink: 0, fontWeight: 500 }}>
+                        {pct}%
+                      </span>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+            <div style={{ fontSize: '11px', color: '#475569', marginTop: '2px' }}>
+              {totalVotes} vote{totalVotes !== 1 ? 's' : ''}
+              {pollData.duration ? ` · ${pollData.duration === '1d' ? '1 day' : pollData.duration === '3d' ? '3 days' : pollData.duration === '7d' ? '7 days' : '14 days'} poll` : ''}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Top comment preview (inline) ── */}
       {post.top_comment && !showComments && (

@@ -32,6 +32,9 @@ type FeedItem = {
     slug: string | null
     logo_url: string | null
   } | null
+  // Poll vote data (only present for type === 'poll')
+  poll_vote_counts?: Record<number, number> | null
+  user_poll_vote?: number | null
 }
 
 export async function GET(req: NextRequest) {
@@ -229,6 +232,30 @@ export async function GET(req: NextRequest) {
       followingSet = new Set(((followingRes.data ?? []) as { following_id: string }[]).map(f => f.following_id))
     }
 
+    // ── Poll vote data ───────────────────────────────────────────────────────
+    // Fetch vote counts + user's vote for any poll-type posts in this batch
+    const pollVoteCountsMap: Record<string, Record<number, number>> = {}
+    const pollUserVoteMap: Record<string, number | null> = {}
+    const pollPostIds = (posts ?? [])
+      .filter((p: Record<string, unknown>) => p.type === 'poll')
+      .map((p: Record<string, unknown>) => p.id as string)
+
+    if (pollPostIds.length > 0) {
+      const [allVotesRes, userVotesRes] = await Promise.all([
+        supabase.from('poll_votes').select('post_id, option_idx').in('post_id', pollPostIds),
+        user
+          ? supabase.from('poll_votes').select('post_id, option_idx').eq('user_id', user.id).in('post_id', pollPostIds)
+          : Promise.resolve({ data: [] }),
+      ])
+      for (const v of (allVotesRes.data ?? []) as { post_id: string; option_idx: number }[]) {
+        if (!pollVoteCountsMap[v.post_id]) pollVoteCountsMap[v.post_id] = {}
+        pollVoteCountsMap[v.post_id][v.option_idx] = (pollVoteCountsMap[v.post_id][v.option_idx] ?? 0) + 1
+      }
+      for (const v of (userVotesRes.data ?? []) as { post_id: string; option_idx: number }[]) {
+        pollUserVoteMap[v.post_id] = v.option_idx
+      }
+    }
+
     let enriched: Record<string, unknown>[] = (posts ?? []).map((p: Record<string, unknown>) => {
       const realLikes = likeCountMap[p.id as string] ?? 0
       const realComments = commentCountMap[p.id as string] ?? 0
@@ -238,6 +265,7 @@ export async function GET(req: NextRequest) {
       // relationship direction. PostCard expects a plain object or null.
       const orgRaw = p.posted_as_organisation
       const postedAsOrg = Array.isArray(orgRaw) ? (orgRaw[0] ?? null) : (orgRaw ?? null)
+      const isPoll = p.type === 'poll'
       return {
         ...p,
         likes_count: realLikes,
@@ -250,6 +278,8 @@ export async function GET(req: NextRequest) {
         liked: likedIds.includes(p.id as string),
         saved: savedIds.includes(p.id as string),
         posted_as_organisation: postedAsOrg,
+        poll_vote_counts: isPoll ? (pollVoteCountsMap[p.id as string] ?? {}) : null,
+        user_poll_vote: isPoll ? (pollUserVoteMap[p.id as string] ?? null) : null,
       }
     })
 

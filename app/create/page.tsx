@@ -1155,9 +1155,9 @@ export default function CreatePage() {
             <div style={s.fieldGroup}>
               <label style={s.label}>Options (2–4)</label>
               {pollOptions.map((opt, i) => (
-                <div key={i} style={s.pollOption}>
+                <div key={i} style={{ ...s.pollOption, alignItems: 'center' }}>
                   <input
-                    style={{ ...s.input, flex: 1 }}
+                    style={{ ...s.input, flex: 1, marginBottom: 0 }}
                     placeholder={`Option ${i + 1}`}
                     value={opt}
                     onChange={e => {
@@ -1168,7 +1168,17 @@ export default function CreatePage() {
                   />
                   {pollOptions.length > 2 && (
                     <button
-                      style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1.1rem' }}
+                      type="button"
+                      style={{
+                        flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        width: '36px', height: '36px',
+                        background: 'rgba(248,113,113,0.1)',
+                        border: '1px solid rgba(248,113,113,0.25)',
+                        borderRadius: '8px',
+                        color: '#f87171', cursor: 'pointer', fontSize: '1.1rem',
+                        lineHeight: 1,
+                      }}
                       onClick={() => setPollOptions(pollOptions.filter((_, j) => j !== i))}
                     >×</button>
                   )}
