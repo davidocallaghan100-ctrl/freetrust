@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -21,6 +21,9 @@ interface JobData {
   status: string
   poster_id?: string
   poster?: { id: string }
+  company_logo_url?: string | null
+  company_name?: string | null
+  company_website?: string | null
 }
 
 const JOB_TYPES = [
@@ -60,12 +63,16 @@ export default function EditJobPage() {
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [logoUploading, setLogoUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [forbidden, setForbidden] = useState(false)
+  const logoInputRef = useRef<HTMLInputElement>(null)
+
   const [form, setForm] = useState({
     title: '', description: '', requirements: '', job_type: 'full_time',
     location_type: 'remote', location: '', salary_min: '', salary_max: '',
     salary_currency: 'EUR', category: '', tags: '' as string, status: 'active',
+    company_logo_url: '', company_name: '', company_website: '',
   })
 
   useEffect(() => {
@@ -95,11 +102,50 @@ export default function EditJobPage() {
         category: job.category ?? '',
         tags: (job.tags ?? []).join(', '),
         status: job.status ?? 'active',
+        company_logo_url: job.company_logo_url ?? '',
+        company_name: job.company_name ?? '',
+        company_website: job.company_website ?? '',
       })
       setLoading(false)
     }
     load()
   }, [jobId, router])
+
+  // ── Logo upload (same pattern as /jobs/new) ──────────────────────────
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Logo must be under 2MB.')
+      return
+    }
+    setLogoUploading(true)
+    setError(null)
+    const safetyTimer = setTimeout(() => {
+      setLogoUploading(false)
+      setError('Logo upload timed out. You can save without changing the logo.')
+    }, 15000)
+    try {
+      const supabase = createClient()
+      const ext = file.name.split('.').pop() ?? 'jpg'
+      const path = `logos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('company-logos')
+        .upload(path, file, { upsert: true })
+      if (uploadError) {
+        setError(`Logo upload failed: ${uploadError.message}.`)
+        return
+      }
+      const { data: { publicUrl } } = supabase.storage.from('company-logos').getPublicUrl(path)
+      setForm(f => ({ ...f, company_logo_url: publicUrl }))
+    } catch (err) {
+      setError('Logo upload failed. You can save without a logo.')
+      console.error('[logo upload]', err)
+    } finally {
+      clearTimeout(safetyTimer)
+      setLogoUploading(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -123,6 +169,9 @@ export default function EditJobPage() {
           category: form.category.trim(),
           tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
           status: form.status,
+          company_logo_url: form.company_logo_url || null,
+          company_name: form.company_name.trim() || null,
+          company_website: form.company_website.trim() || null,
         }),
       })
       if (!res.ok) {
@@ -159,7 +208,72 @@ export default function EditJobPage() {
         )}
 
         <form onSubmit={handleSubmit}>
+          {/* ── Logo / Company section ── */}
           <div style={{ ...s.card, display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 16 }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Company / Organisation</div>
+
+            {/* Logo preview + upload */}
+            <div>
+              <label style={s.label}>Logo</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                {/* Preview */}
+                <div style={{
+                  width: 72, height: 72, borderRadius: 12, overflow: 'hidden', flexShrink: 0,
+                  background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(148,163,184,0.2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {form.company_logo_url ? (
+                    <img src={form.company_logo_url} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <span style={{ fontSize: 28, opacity: 0.4 }}>🏢</span>
+                  )}
+                </div>
+
+                {/* Upload controls */}
+                <div style={{ flex: 1 }}>
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handleLogoUpload}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => logoInputRef.current?.click()}
+                    disabled={logoUploading}
+                    style={{
+                      padding: '0.55rem 1rem', borderRadius: 8, fontSize: '0.82rem', fontWeight: 600,
+                      background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)',
+                      color: '#38bdf8', cursor: logoUploading ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+                    }}
+                  >
+                    {logoUploading ? 'Uploading…' : form.company_logo_url ? '🔄 Change Logo' : '📷 Upload Logo'}
+                  </button>
+                  {form.company_logo_url && (
+                    <button
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, company_logo_url: '' }))}
+                      style={{ marginLeft: 8, padding: '0.55rem 0.75rem', borderRadius: 8, fontSize: '0.82rem', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', color: '#f87171', cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
+                      Remove
+                    </button>
+                  )}
+                  <p style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 6 }}>Max 2MB · JPG, PNG, WebP</p>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div><label style={s.label}>Company name</label><input style={s.input} value={form.company_name} onChange={e => set('company_name', e.target.value)} placeholder="e.g. FreeTrust" /></div>
+              <div><label style={s.label}>Company website</label><input style={s.input} value={form.company_website} onChange={e => set('company_website', e.target.value)} placeholder="https://..." /></div>
+            </div>
+          </div>
+
+          {/* ── Job details section ── */}
+          <div style={{ ...s.card, display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 16 }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Job Details</div>
+
             <div><label style={s.label}>Title *</label><input style={s.input} value={form.title} onChange={e => set('title', e.target.value)} required /></div>
             <div><label style={s.label}>Description *</label><textarea style={s.textarea} value={form.description} onChange={e => set('description', e.target.value)} required rows={5} /></div>
             <div><label style={s.label}>Requirements</label><textarea style={s.textarea} value={form.requirements} onChange={e => set('requirements', e.target.value)} rows={3} /></div>
@@ -185,7 +299,9 @@ export default function EditJobPage() {
 
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <Link href={`/jobs/${jobId}`} style={{ ...s.btn, background: 'transparent', border: '1px solid rgba(148,163,184,0.2)', color: '#94a3b8', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Cancel</Link>
-            <button type="submit" disabled={saving} style={{ ...s.btn, background: '#38bdf8', color: '#0f172a', opacity: saving ? 0.6 : 1 }}>{saving ? 'Saving…' : 'Save changes'}</button>
+            <button type="submit" disabled={saving || logoUploading} style={{ ...s.btn, background: '#38bdf8', color: '#0f172a', opacity: (saving || logoUploading) ? 0.6 : 1 }}>
+              {saving ? 'Saving…' : 'Save changes'}
+            </button>
           </div>
         </form>
       </div>

@@ -135,7 +135,7 @@ export default function Nav() {
         position: 'fixed', top: 0, left: 0, right: 0, height: '58px',
         background: '#0f172a', borderBottom: '1px solid #1e293b',
         zIndex: 100, display: 'flex', alignItems: 'center', padding: '0 12px', gap: '8px',
-        overflow: 'hidden',
+        overflow: 'visible',
       }}>
 
         {/* Profile avatar — top left */}
@@ -184,7 +184,7 @@ export default function Nav() {
         <div style={{ flex: 1 }} />
 
         {/* Right side — hamburger always last and always visible */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, paddingRight: '4px' }}>
           {user && walletBalance !== null && (
             <Link href="/wallet" title="Your total ₮ balance" style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '5px 8px', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '8px', fontSize: '12px', fontWeight: 600, color: '#38bdf8', textDecoration: 'none', flexShrink: 0 }}>
               ₮{walletBalance.toFixed(0)}

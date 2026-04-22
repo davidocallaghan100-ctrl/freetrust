@@ -52,6 +52,10 @@ export async function PATCH(
     if (typeof body.category === 'string' && body.category.trim()) updates.category = body.category.trim()
     if (Array.isArray(body.tags)) updates.tags = body.tags.filter((t: unknown): t is string => typeof t === 'string')
     if (typeof body.status === 'string' && VALID_STATUS.includes(body.status)) updates.status = body.status
+    // Logo / company fields
+    if (typeof body.company_logo_url === 'string') updates.company_logo_url = body.company_logo_url || null
+    if (typeof body.company_name === 'string') updates.company_name = body.company_name.trim() || null
+    if (typeof body.company_website === 'string') updates.company_website = body.company_website.trim() || null
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })

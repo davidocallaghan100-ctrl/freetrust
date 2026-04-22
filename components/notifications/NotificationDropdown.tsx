@@ -6,13 +6,24 @@ import NotificationItem from './NotificationItem'
 import type { DBNotification } from './NotificationBell'
 
 const TYPE_FILTERS = [
-  { label: 'All', value: 'all' },
-  { label: 'Messages', value: 'message' },
-  { label: 'Orders', value: 'order' },
-  { label: 'Trust', value: 'trust' },
-  { label: 'Reviews', value: 'review' },
-  { label: 'Likes', value: 'gig_liked' },
+  { label: 'All',       value: 'all' },
+  { label: 'Messages',  value: 'new_message' },
+  { label: 'Orders',    value: 'order' },
+  { label: 'Trust',     value: 'trust' },
+  { label: 'Reviews',   value: 'review_received' },
+  { label: 'Jobs',      value: 'job_application' },
+  { label: 'Community', value: 'new_follower' },
 ]
+
+// Types that map to each filter tab
+const FILTER_TYPE_GROUPS: Record<string, string[]> = {
+  new_message:     ['message', 'new_message'],
+  order:           ['order', 'order_placed', 'order_update'],
+  trust:           ['trust', 'wallet', 'wallet_transfer', 'payment', 'transfer_received', 'transfer_sent'],
+  review_received: ['review', 'review_received'],
+  job_application: ['job_application', 'new_job_application', 'job_match'],
+  new_follower:    ['new_follower', 'connection_request', 'connection_accepted', 'gig_liked', 'post_like', 'listing_liked', 'event', 'event_rsvp'],
+}
 
 interface Props {
   notifications: DBNotification[]
@@ -35,7 +46,10 @@ export default function NotificationDropdown({
 
   const filtered = filter === 'all'
     ? notifications
-    : notifications.filter(n => n.type === filter)
+    : notifications.filter(n => {
+        const group = FILTER_TYPE_GROUPS[filter]
+        return group ? group.includes(n.type) : n.type === filter
+      })
 
   const hasUnread = filtered.some(n => !n.read)
 
@@ -43,15 +57,16 @@ export default function NotificationDropdown({
     <>
       <style>{`
         .notif-dropdown {
-          position: absolute;
-          top: calc(100% + 8px);
-          right: 0;
+          position: fixed;
+          top: 62px;
+          right: 12px;
           width: 360px;
+          max-width: calc(100vw - 24px);
           background: #1e293b;
           border: 1px solid rgba(56,189,248,0.15);
           border-radius: 12px;
           box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-          z-index: 2000;
+          z-index: 9999;
           overflow: hidden;
         }
         @media (max-width: 480px) {
@@ -61,6 +76,7 @@ export default function NotificationDropdown({
             left: 0;
             right: 0;
             width: 100%;
+            max-width: 100%;
             border-radius: 0;
             border-left: none;
             border-right: none;
