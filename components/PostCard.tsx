@@ -690,7 +690,7 @@ export default function PostCard({
           <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, marginBottom: 2 }}>
             {post.top_comment.author_name ?? 'A member'}
           </div>
-          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
             {post.top_comment.content}
           </div>
         </Link>
@@ -956,7 +956,7 @@ function CommentRow({
           ) : (
             <div style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', marginBottom: '2px' }}>{cName}</div>
           )}
-          <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5 }}>{comment.content}</div>
+          <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{comment.content}</div>
         </div>
         {/* Like row + Val badge */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', marginLeft: '4px' }}>
