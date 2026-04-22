@@ -347,6 +347,7 @@ export default function PostCard({
   const [commentCount,      setCommentCount]      = useState(commentInitial)
   const [newComment,        setNewComment]        = useState('')
   const [submitting,        setSubmitting]        = useState(false)
+  const [commentExpanded,   setCommentExpanded]   = useState(false)
   const [showShare,         setShowShare]         = useState(false)
   const [shareCount,        setShareCount]        = useState(post.share_count ?? 0)
   const [showMenu,          setShowMenu]          = useState(false)
@@ -360,6 +361,7 @@ export default function PostCard({
   const reactionPickerRef = useRef<HTMLDivElement | null>(null)
   const reactBtnWrapRef = useRef<HTMLDivElement | null>(null)
   const [pickerPos, setPickerPos] = useState<{ top: number; left: number } | null>(null)
+  const commentTextareaRef = useRef<HTMLTextAreaElement | null>(null)
 
   // Close reaction picker on outside click
   useEffect(() => {
@@ -532,6 +534,14 @@ export default function PostCard({
   }
 
   useEffect(() => { if (expanded) loadComments() }, [expanded, loadComments])
+
+  // Auto-focus comment textarea when comments panel opens
+  useEffect(() => {
+    if (showComments) {
+      const timer = setTimeout(() => commentTextareaRef.current?.focus(), 50)
+      return () => clearTimeout(timer)
+    }
+  }, [showComments])
 
   // Close owner menu on outside click — defer listener to next tick so
   // the opening click doesn't immediately trigger it
@@ -791,21 +801,105 @@ export default function PostCard({
                 }}
               />
             ))}
-            <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-              <input
-                style={{ flex: 1, background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: '10px', padding: '8px 12px', color: '#f1f5f9', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }}
-                placeholder="Write a comment…"
-                value={newComment}
-                onChange={e => setNewComment(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitComment() } }}
-              />
-              <button
-                onClick={submitComment}
-                disabled={submitting || !newComment.trim()}
-                style={{ background: '#38bdf8', border: 'none', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', fontWeight: 700, color: '#0f172a', cursor: 'pointer', fontFamily: 'inherit', opacity: (submitting || !newComment.trim()) ? 0.5 : 1 }}
-              >
-                {submitting ? '…' : 'Post'}
-              </button>
+            {/* Comment composer */}
+            <div style={{ marginTop: '8px' }}>
+              {/* Textarea wrapper */}
+              <div style={{ position: 'relative' }}>
+                <textarea
+                  ref={commentTextareaRef}
+                  style={{
+                    width: '100%',
+                    minHeight: commentExpanded ? '220px' : '60px',
+                    maxHeight: commentExpanded ? '220px' : '150px',
+                    background: 'rgba(56,189,248,0.05)',
+                    border: '1px solid rgba(56,189,248,0.15)',
+                    borderRadius: '12px',
+                    padding: '10px 40px 10px 12px',
+                    color: '#f1f5f9',
+                    fontSize: '13px',
+                    outline: 'none',
+                    fontFamily: 'inherit',
+                    resize: 'none',
+                    overflowY: commentExpanded ? 'auto' : 'hidden',
+                    lineHeight: '1.5',
+                    boxSizing: 'border-box',
+                    display: 'block',
+                    transition: 'min-height 0.15s, max-height 0.15s',
+                  }}
+                  placeholder="Write a comment…"
+                  value={newComment}
+                  maxLength={500}
+                  rows={2}
+                  onChange={e => {
+                    setNewComment(e.target.value)
+                    if (!commentExpanded) {
+                      const el = e.target
+                      el.style.height = 'auto'
+                      el.style.height = Math.min(el.scrollHeight, 150) + 'px'
+                    }
+                  }}
+                  onKeyDown={() => { /* Enter adds newline naturally; no submit on Enter */ }}
+                  onFocus={e => { e.currentTarget.style.borderColor = 'rgba(56,189,248,0.4)' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = 'rgba(56,189,248,0.15)' }}
+                />
+                {/* Expand/collapse toggle */}
+                <button
+                  type="button"
+                  onClick={() => setCommentExpanded(v => !v)}
+                  title={commentExpanded ? 'Collapse' : 'Expand for more space'}
+                  style={{
+                    position: 'absolute',
+                    top: '8px',
+                    right: '8px',
+                    background: 'rgba(56,189,248,0.12)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    width: '24px',
+                    height: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    color: '#38bdf8',
+                    lineHeight: 1,
+                    padding: 0,
+                  }}
+                >
+                  {commentExpanded ? '▲' : '▼'}
+                </button>
+              </div>
+
+              {/* Character counter + Post button row */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
+                <span style={{
+                  fontSize: '11px',
+                  color: newComment.length > 450 ? '#f87171' : '#475569',
+                  opacity: newComment.length > 0 ? 1 : 0,
+                  transition: 'opacity 0.15s',
+                }}>
+                  {newComment.length} / 500
+                </span>
+                <button
+                  onClick={submitComment}
+                  disabled={submitting || !newComment.trim()}
+                  style={{
+                    background: '#38bdf8',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '8px 20px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    color: '#0f172a',
+                    cursor: submitting || !newComment.trim() ? 'not-allowed' : 'pointer',
+                    fontFamily: 'inherit',
+                    opacity: (submitting || !newComment.trim()) ? 0.5 : 1,
+                    transition: 'opacity 0.15s',
+                  }}
+                >
+                  {submitting ? '…' : 'Post'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
