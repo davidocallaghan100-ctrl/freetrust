@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import type { User } from '@supabase/supabase-js'
 import LocationFilter from '@/components/location/LocationFilter'
 // Aliased: the file already has a local `LocationBadge` for the
 // remote/hybrid/on_site location_type pill (see line ~88). Importing as
@@ -340,11 +341,18 @@ export default function JobsPage() {
   const [locationType, setLocationType] = useState<LocationType>('all')
   const [category, setCategory] = useState('All')
   const [applyJob, setApplyJob] = useState<RemoteJob | null>(null)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   // Globalisation — structured location filter state
   const [filterLoc, setFilterLoc]           = useState<StructuredLocation>(EMPTY_LOCATION)
   const [searchRadiusKm, setSearchRadiusKm] = useState<RadiusValue>(0)
   const [countryFilter, setCountryFilter]   = useState<string | null>(null)
   const [filterRemote, setFilterRemote]     = useState(false)
+
+  // Load current user for "My Jobs" button visibility
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => setCurrentUser(data.user ?? null))
+  }, [])
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 350)
@@ -493,9 +501,16 @@ export default function JobsPage() {
               <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.4rem' }}>Jobs</h1>
               <p style={{ color: '#64748b', margin: 0 }}>Remote, hybrid, and on-site opportunities worldwide</p>
             </div>
-            <Link href="/jobs/new" style={{ background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 8, padding: '0.6rem 1.3rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap', display: 'inline-block' }}>
-              + Post a Job
-            </Link>
+            <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              {currentUser && (
+                <Link href="/jobs/manage" style={{ background: 'transparent', color: '#94a3b8', border: '1px solid rgba(148,163,184,0.3)', borderRadius: 8, padding: '0.6rem 1.3rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap', display: 'inline-block' }}>
+                  📋 My Jobs
+                </Link>
+              )}
+              <Link href="/jobs/new" style={{ background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 8, padding: '0.6rem 1.3rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap', display: 'inline-block' }}>
+                + Post a Job
+              </Link>
+            </div>
           </div>
           <div className="jobs-hero-inner" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <div style={{ position: 'relative', flex: 1, maxWidth: 480 }}>
