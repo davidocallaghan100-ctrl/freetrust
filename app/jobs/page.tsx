@@ -187,6 +187,7 @@ function ApplyModal({ job, onClose }: { job: RemoteJob; onClose: () => void }) {
   const [coverNote, setCoverNote] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [descExpanded, setDescExpanded] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -229,6 +230,14 @@ function ApplyModal({ job, onClose }: { job: RemoteJob; onClose: () => void }) {
         onClick={e => e.stopPropagation()}
         style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 600, maxHeight: '90vh', overflowY: 'auto', padding: '0 0 32px' }}
       >
+        <style>{`
+          .ft-job-desc ul, .ft-job-desc ol { padding-left: 1.4em; margin: 0.5em 0; }
+          .ft-job-desc li { margin-bottom: 0.25em; }
+          .ft-job-desc p { margin: 0 0 0.6em; }
+          .ft-job-desc strong, .ft-job-desc b { color: #cbd5e1; }
+          .ft-job-desc a { color: #38bdf8; }
+          .ft-job-desc h1, .ft-job-desc h2, .ft-job-desc h3 { color: #e2e8f0; margin: 0.75em 0 0.4em; font-size: 0.95em; }
+        `}</style>
         {/* Handle bar */}
         <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
           <div style={{ width: 36, height: 4, background: '#334155', borderRadius: 2 }} />
@@ -285,10 +294,26 @@ function ApplyModal({ job, onClose }: { job: RemoteJob; onClose: () => void }) {
           </div>
         ) : (
           <div style={{ padding: '20px 20px 0' }}>
-            {job.description_snippet && (
+            {(job.description_snippet || job.description) && (
               <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: '12px 14px', marginBottom: 18 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>About the role</div>
-                <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6, margin: 0 }}>{job.description_snippet}</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>About the role</div>
+                  <button
+                    onClick={() => setDescExpanded(v => !v)}
+                    style={{ background: 'transparent', border: 'none', color: '#38bdf8', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: '2px 0', fontFamily: 'inherit' }}
+                  >
+                    {descExpanded ? 'Show less ↑' : 'Read more ↓'}
+                  </button>
+                </div>
+                {descExpanded && job.description ? (
+                  <div
+                    className="ft-job-desc"
+                    style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}
+                    dangerouslySetInnerHTML={{ __html: job.description }}
+                  />
+                ) : (
+                  <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6, margin: 0 }}>{job.description_snippet}</p>
+                )}
               </div>
             )}
             {job.tags.length > 0 && (
