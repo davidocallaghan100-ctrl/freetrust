@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-const VALID_STATUS = ['active', 'closed', 'filled', 'draft']
+const VALID_STATUS = ['active', 'paused', 'closed', 'filled', 'draft']
 const VALID_JOB_TYPE = ['full_time', 'part_time', 'contract', 'freelance', 'internship']
 const VALID_LOCATION_TYPE = ['remote', 'hybrid', 'on_site']
 

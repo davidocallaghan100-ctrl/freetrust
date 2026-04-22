@@ -226,6 +226,32 @@ export default function JobDetailPage() {
         <div>
           {/* Job header */}
           <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '2rem', marginBottom: '1.5rem' }}>
+            {/* Company logo + name */}
+            {(job.company_logo_url || job.company_name) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: 10, overflow: 'hidden', flexShrink: 0,
+                  background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(148,163,184,0.15)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {job.company_logo_url ? (
+                    <img src={job.company_logo_url} alt={job.company_name ?? 'Company'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#38bdf8' }}>
+                      {(job.company_name ?? 'J')[0].toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f1f5f9' }}>{job.company_name}</div>
+                  {job.company_website && (
+                    <a href={job.company_website} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: '#38bdf8', textDecoration: 'none' }}>
+                      {job.company_website.replace(/^https?:\/\//, '')}
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
               <span style={{ background: `${TYPE_COLORS[job.job_type]}18`, color: TYPE_COLORS[job.job_type], border: `1px solid ${TYPE_COLORS[job.job_type]}30`, borderRadius: 999, padding: '0.2rem 0.7rem', fontSize: '0.78rem', fontWeight: 600 }}>
                 {TYPE_LABELS[job.job_type]}

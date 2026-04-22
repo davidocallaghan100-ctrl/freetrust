@@ -428,6 +428,7 @@ async function fetchJobs(supabase: SupabaseLike, offset: number, limit: number) 
     .select(`
       id, poster_id, title, description, job_type, location_type, location,
       salary_min, salary_max, salary_currency, category, created_at,
+      company_logo_url, company_name,
       poster:profiles!poster_id(id, full_name, avatar_url, trust_balance)
     `)
     .eq('status', 'active')
@@ -439,22 +440,33 @@ async function fetchJobs(supabase: SupabaseLike, offset: number, limit: number) 
     return NextResponse.json({ posts: [], hasMore: false })
   }
 
-  const items: FeedItem[] = (data ?? []).map((j: Record<string, unknown>) => ({
-    id: `job-${j.id}`,
-    user_id: j.poster_id as string,
-    type: 'job',
-    content: (j.description as string) ?? null,
-    media_url: null,
-    media_type: null,
-    title: j.title as string,
-    link_url: `/jobs/${j.id}`,
-    likes_count: 0,
-    comments_count: 0,
-    saves_count: 0,
-    views_count: 0,
-    created_at: j.created_at as string,
-    profiles: Array.isArray(j.poster) ? (j.poster[0] ?? null) : ((j.poster as FeedItem['profiles']) ?? null),
-  }))
+  const items: FeedItem[] = (data ?? []).map((j: Record<string, unknown>) => {
+    const poster = Array.isArray(j.poster) ? (j.poster[0] ?? null) : ((j.poster as FeedItem['profiles']) ?? null)
+    const companyLogoUrl = (j.company_logo_url as string | null) ?? null
+    const companyName = (j.company_name as string | null) ?? null
+    // If there's a company logo, surface it as the post avatar by overriding the profiles avatar
+    const profilesWithLogo = companyLogoUrl && poster
+      ? { ...(poster as object), avatar_url: companyLogoUrl, full_name: companyName ?? (poster as { full_name?: string | null }).full_name }
+      : companyLogoUrl
+        ? { id: j.poster_id as string, full_name: companyName ?? 'FreeTrust Member', avatar_url: companyLogoUrl, trust_balance: null }
+        : poster
+    return {
+      id: `job-${j.id}`,
+      user_id: j.poster_id as string,
+      type: 'job',
+      content: (j.description as string) ?? null,
+      media_url: null,
+      media_type: null,
+      title: j.title as string,
+      link_url: `/jobs/${j.id}`,
+      likes_count: 0,
+      comments_count: 0,
+      saves_count: 0,
+      views_count: 0,
+      created_at: j.created_at as string,
+      profiles: profilesWithLogo as FeedItem['profiles'],
+    }
+  })
 
   return NextResponse.json({ posts: items, hasMore: items.length === limit })
 }
