@@ -109,6 +109,15 @@ function cityCoords(city?: string | null, country?: string | null): { lat: numbe
 // Categories treated as services (freelance/coaching/consulting type offerings)
 const SERVICE_CATEGORIES = new Set([
   'Coaching & Mentoring',
+  'Coaching',
+  'Mentoring',
+  'Advisory',
+  'Consulting',
+  'Design & Creative',
+  'Writing & Content',
+  'Tech & Development',
+  'Health & Wellness',
+  'Education & Tutoring',
   'coaching',
   'mentoring',
   'service',
@@ -137,11 +146,11 @@ export async function GET() {
 
     const [membersResult, eventsResult, listingsResult, jobsResult] =
       await Promise.allSettled([
-        // All members — we'll use city fallback coords for those without exact lat/lng
+        // All members — include those where show_on_map is true OR not set (null)
         admin
           .from('profiles')
           .select('id, username, full_name, avatar_url, bio, city, country, latitude, longitude, account_type, show_on_map')
-          .eq('show_on_map', true)
+          .neq('show_on_map', false)
           .limit(500),
 
         // Upcoming published events (in-person OR curated — curated always show)
@@ -159,11 +168,11 @@ export async function GET() {
           .eq('status', 'active')
           .limit(500),
 
-        // Active jobs — include those without lat/lng so we can use city fallback
+        // Active/open jobs — include those without lat/lng so we can use city fallback
         admin
           .from('jobs')
           .select('id, title, salary_min_eur, salary_max_eur, latitude, longitude, city, country, location_city, location_country, location_type, profiles!jobs_poster_id_fkey(latitude, longitude, city, country)')
-          .eq('status', 'active')
+          .in('status', ['active', 'open'])
           .limit(500),
       ])
 

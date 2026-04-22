@@ -37,30 +37,21 @@ const LAYER_CONFIG: Record<PinType, { label: string; color: string; glow: string
   job:     { label: 'Jobs',     color: '#38bdf8', glow: 'rgba(56,189,248,0.6)' },
 }
 
-// ─── Pin type icons ───────────────────────────────────────────────────────────
-const PIN_ICONS: Record<PinType, string> = {
-  member:  '👤',
-  event:   '📅',
-  product: '📦',
-  service: '🛠️',
-  job:     '💼',
-}
-
-// ─── PinMarker — image avatar or styled icon pin ─────────────────────────────
+// ─── PinMarker — compact dot pin ─────────────────────────────────────────────
 function PinMarker({ type, color, glow: _glow, imageUrl }: { type: PinType; color: string; glow: string; imageUrl?: string | null }) {
-  // Member with avatar: circular photo
+  // Member with avatar: small circular photo
   if (type === 'member' && imageUrl) {
     return (
-      <div style={{ position: 'relative', width: 36, height: 36, overflow: 'visible', cursor: 'pointer' }}>
+      <div style={{ position: 'relative', width: 26, height: 26, overflow: 'visible', cursor: 'pointer' }}>
         <img
           src={imageUrl}
           alt=""
           style={{
-            width: 36, height: 36,
+            width: 26, height: 26,
             borderRadius: '50%',
             objectFit: 'cover',
-            border: `2.5px solid ${color}`,
-            boxShadow: `0 2px 8px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)`,
+            border: `1.5px solid ${color}`,
+            boxShadow: `0 1px 4px rgba(0,0,0,0.55)`,
             display: 'block',
           }}
           onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
@@ -69,53 +60,17 @@ function PinMarker({ type, color, glow: _glow, imageUrl }: { type: PinType; colo
     )
   }
 
-  // Product/Service with cover image: small rounded square image
-  if ((type === 'product' || type === 'service') && imageUrl) {
-    return (
-      <div style={{ position: 'relative', width: 34, height: 34, cursor: 'pointer' }}>
-        <img
-          src={imageUrl}
-          alt=""
-          style={{
-            width: 34, height: 34,
-            borderRadius: 8,
-            objectFit: 'cover',
-            border: `2px solid ${color}`,
-            boxShadow: `0 2px 8px rgba(0,0,0,0.5)`,
-            display: 'block',
-          }}
-          onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-        />
-      </div>
-    )
-  }
-
-  // Icon pin: teardrop shape with emoji inside
-  const icon = PIN_ICONS[type]
+  // All other types: compact solid dot
   return (
-    <div style={{ position: 'relative', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      {/* Pin body */}
-      <div style={{
-        width: 36, height: 36,
-        borderRadius: '50% 50% 50% 0',
-        transform: 'rotate(-45deg)',
-        background: `linear-gradient(135deg, ${color}, ${color}cc)`,
-        border: '2px solid rgba(255,255,255,0.25)',
-        boxShadow: `0 3px 10px rgba(0,0,0,0.5), 0 0 12px ${color}55`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0,
-      }}>
-        <span style={{ transform: 'rotate(45deg)', fontSize: 16, lineHeight: 1 }}>{icon}</span>
-      </div>
-      {/* Pin tip dot */}
-      <div style={{
-        width: 5, height: 5,
-        borderRadius: '50%',
-        background: color,
-        marginTop: -1,
-        boxShadow: `0 1px 3px rgba(0,0,0,0.4)`,
-      }} />
-    </div>
+    <div style={{
+      width: 14, height: 14,
+      borderRadius: '50%',
+      background: color,
+      border: '1.5px solid rgba(255,255,255,0.85)',
+      boxShadow: `0 1px 4px rgba(0,0,0,0.55)`,
+      cursor: 'pointer',
+      flexShrink: 0,
+    }} />
   )
 }
 
@@ -456,19 +411,14 @@ export default function ActivityMap() {
         >
           {visiblePins.map(pin => {
             const cfg = LAYER_CONFIG[pin.type]
-            // Determine image URL: avatars for members, cover images for products/services
-            let imageUrl: string | null = null
-            if (pin.type === 'member')  imageUrl = (pin as MemberPin).avatar_url ?? null
-            if (pin.type === 'product') imageUrl = (pin as ProductPin).cover_image ?? null
-            if (pin.type === 'service') imageUrl = (pin as ServicePin).cover_image ?? null
-            // Use bottom anchor for teardrop pins (point at location), center for image pins
-            const hasImage = !!imageUrl
+            // Only pass avatar for member pins (dot pins don't use images)
+            const imageUrl: string | null = pin.type === 'member' ? ((pin as MemberPin).avatar_url ?? null) : null
             return (
               <Marker
                 key={`${pin.type}-${pin.id}`}
                 longitude={pin.longitude}
                 latitude={pin.latitude}
-                anchor={hasImage ? 'center' : 'bottom'}
+                anchor="center"
                 onClick={e => { e.originalEvent.stopPropagation(); setSelectedPin(pin) }}
               >
                 <PinMarker type={pin.type} color={cfg.color} glow={cfg.glow} imageUrl={imageUrl} />
