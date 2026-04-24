@@ -3,6 +3,10 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { compressImage } from '@/lib/image-compression'
+import dynamic from 'next/dynamic'
+import type { DeliveryZoneValue } from '@/components/DeliveryZoneMap'
+
+const DeliveryZonePicker = dynamic(() => import('@/components/DeliveryZonePicker'), { ssr: false })
 
 const CATEGORIES = [
   { id: 'technology',     label: 'Technology',  icon: '💻' },
@@ -22,6 +26,35 @@ const CATEGORIES = [
 const MAX_IMAGES = 8
 
 interface NewImage { type: 'new'; file: File; preview: string }
+
+const COUNTRY_OPTIONS: { code: string; name: string }[] = [
+  { code: 'IE', name: 'Ireland' },
+  { code: 'GB', name: 'United Kingdom' },
+  { code: 'US', name: 'United States' },
+  { code: 'CA', name: 'Canada' },
+  { code: 'AU', name: 'Australia' },
+  { code: 'DE', name: 'Germany' },
+  { code: 'FR', name: 'France' },
+  { code: 'ES', name: 'Spain' },
+  { code: 'IT', name: 'Italy' },
+  { code: 'NL', name: 'Netherlands' },
+  { code: 'BE', name: 'Belgium' },
+  { code: 'PT', name: 'Portugal' },
+  { code: 'PL', name: 'Poland' },
+  { code: 'SE', name: 'Sweden' },
+  { code: 'NO', name: 'Norway' },
+  { code: 'DK', name: 'Denmark' },
+  { code: 'FI', name: 'Finland' },
+  { code: 'CH', name: 'Switzerland' },
+  { code: 'AT', name: 'Austria' },
+  { code: 'NZ', name: 'New Zealand' },
+  { code: 'JP', name: 'Japan' },
+  { code: 'SG', name: 'Singapore' },
+  { code: 'IN', name: 'India' },
+  { code: 'BR', name: 'Brazil' },
+  { code: 'MX', name: 'Mexico' },
+  { code: 'ZA', name: 'South Africa' },
+]
 
 export default function NewProductPage() {
   const router = useRouter()
@@ -48,6 +81,12 @@ export default function NewProductPage() {
   const [stock, setStock] = useState('')
   const [tags, setTags] = useState('')
   const [images, setImages] = useState<NewImage[]>([])
+
+  // Delivery zone (physical products only)
+  const [deliveryScope, setDeliveryScope] = useState<'local' | 'national' | 'international' | 'worldwide' | ''>('')
+  const [deliveryZone, setDeliveryZone] = useState<DeliveryZoneValue | null>(null)
+  const [deliveryCountries, setDeliveryCountries] = useState<string[]>([])
+  const [deliveryNotes, setDeliveryNotes] = useState('')
 
   useEffect(() => {
     const supabase = createClient()
@@ -181,6 +220,12 @@ export default function NewProductPage() {
       return
     }
 
+    if (productType === 'physical') {
+      if (!deliveryScope) { setError('Please select a delivery scope.'); return }
+      if (deliveryScope === 'local' && !deliveryZone) { setError('Please click the map to set your delivery origin.'); return }
+      if (deliveryScope === 'national' && deliveryCountries.length === 0) { setError('Please select a country.'); return }
+    }
+
     setLoading(true)
     setError('')
 
@@ -230,6 +275,14 @@ export default function NewProductPage() {
         // POST handler didn't destructure a `stock` field, leading to
         // products always showing "out of stock" on the detail page.
         ...(stock && productType === 'physical' ? { stock_qty: parseInt(stock) } : {}),
+        ...(productType === 'physical' ? {
+          delivery_scope: deliveryScope || null,
+          delivery_origin_lat: deliveryZone?.lat ?? null,
+          delivery_origin_lng: deliveryZone?.lng ?? null,
+          delivery_radius_km: deliveryZone?.radiusKm ?? null,
+          delivery_countries: deliveryCountries.length > 0 ? deliveryCountries : null,
+          delivery_notes: deliveryNotes.trim() || null,
+        } : {}),
       }
       console.log('[product submit] payload:', JSON.stringify(payload))
 
@@ -554,6 +607,90 @@ export default function NewProductPage() {
               </div>
             )}
           </div>
+
+          {/* Delivery Zone — physical products only */}
+          {productType === 'physical' && (
+            <div style={{ background: '#111827', border: '1px solid #374151', borderRadius: 14, padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f1f5f9' }}>🚚 Delivery Zone</span>
+                <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: 600 }}>required</span>
+              </div>
+              <p style={{ margin: 0, color: '#9ca3af', fontSize: '13px' }}>Let buyers know where you can deliver to.</p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {(['local', 'national', 'international', 'worldwide'] as const).map((scope) => (
+                  <label key={scope} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', color: '#e5e7eb' }}>
+                    <input
+                      type="radio"
+                      name="deliveryScope"
+                      value={scope}
+                      checked={deliveryScope === scope}
+                      onChange={() => setDeliveryScope(scope)}
+                      style={{ accentColor: '#38bdf8', marginTop: '2px', flexShrink: 0 }}
+                    />
+                    <span style={{ fontSize: '14px' }}>
+                      {scope === 'local' && <><strong>📍 Local</strong> — set a delivery radius on the map</>}
+                      {scope === 'national' && <><strong>🏴 National</strong> — deliver within a country</>}
+                      {scope === 'international' && <><strong>✈️ International</strong> — select specific countries</>}
+                      {scope === 'worldwide' && <><strong>🌍 Worldwide</strong> — deliver anywhere</>}
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              {deliveryScope === 'local' && (
+                <DeliveryZonePicker value={deliveryZone} onChange={setDeliveryZone} />
+              )}
+
+              {deliveryScope === 'national' && (
+                <div>
+                  <label style={{ ...labelStyle, marginBottom: 6 }}>Country</label>
+                  <select
+                    value={deliveryCountries[0] || 'IE'}
+                    onChange={(e) => setDeliveryCountries([e.target.value])}
+                    style={{ ...inputStyle, maxWidth: 300 }}
+                  >
+                    {COUNTRY_OPTIONS.map((c) => (
+                      <option key={c.code} value={c.code}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {deliveryScope === 'international' && (
+                <div>
+                  <label style={{ ...labelStyle, marginBottom: 6 }}>Select countries (hold Ctrl/Cmd for multiple)</label>
+                  <select
+                    multiple
+                    value={deliveryCountries}
+                    onChange={(e) => setDeliveryCountries(Array.from(e.target.selectedOptions, (o) => o.value))}
+                    style={{ ...inputStyle, height: 180, maxWidth: 400 }}
+                  >
+                    {COUNTRY_OPTIONS.map((c) => (
+                      <option key={c.code} value={c.code}>{c.name}</option>
+                    ))}
+                  </select>
+                  {deliveryCountries.length > 0 && (
+                    <p style={{ color: '#9ca3af', fontSize: 12, marginTop: 4 }}>
+                      {deliveryCountries.length} countr{deliveryCountries.length === 1 ? 'y' : 'ies'} selected
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div>
+                <label style={{ ...labelStyle, marginBottom: 6 }}>Delivery notes (optional, max 200 chars)</label>
+                <textarea
+                  value={deliveryNotes}
+                  onChange={(e) => setDeliveryNotes(e.target.value.slice(0, 200))}
+                  placeholder="e.g. Free delivery on orders over €50, 2–3 business days…"
+                  rows={3}
+                  style={{ ...inputStyle, resize: 'vertical' }}
+                />
+                <p style={{ color: '#475569', fontSize: 12, marginTop: 4 }}>{deliveryNotes.length}/200</p>
+              </div>
+            </div>
+          )}
 
           {/* Error */}
           {error && (
