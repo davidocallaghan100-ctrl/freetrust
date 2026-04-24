@@ -122,6 +122,12 @@ export async function POST(request: NextRequest) {
       images = [],
       cover_image = null,
       stock_qty = null,
+      delivery_scope = null,
+      delivery_origin_lat = null,
+      delivery_origin_lng = null,
+      delivery_radius_km = null,
+      delivery_countries = null,
+      delivery_notes = null,
     } = body as Record<string, unknown>
 
     if (!title || typeof title !== 'string' || title.trim().length < 3) {
@@ -185,6 +191,12 @@ export async function POST(request: NextRequest) {
       images: imagesLiteral,
       cover_image: coverImageResolved,
       stock_qty: stockResolved,
+      delivery_scope: (delivery_scope as string | null) ?? null,
+      delivery_origin_lat: (delivery_origin_lat as number | null) ?? null,
+      delivery_origin_lng: (delivery_origin_lng as number | null) ?? null,
+      delivery_radius_km: (delivery_radius_km as number | null) ?? null,
+      delivery_countries: Array.isArray(delivery_countries) && delivery_countries.length > 0 ? delivery_countries : null,
+      delivery_notes: (delivery_notes as string | null) ?? null,
       status: 'active',
     }
     console.log('[listings POST] insertPayload:', JSON.stringify(insertPayload))

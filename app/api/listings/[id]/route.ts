@@ -73,6 +73,12 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       'stock_qty',
       'condition',
       'shipping_options',
+      'delivery_scope',
+      'delivery_origin_lat',
+      'delivery_origin_lng',
+      'delivery_radius_km',
+      'delivery_countries',
+      'delivery_notes',
     ] as const
     type AllowedKey = typeof allowed[number]
     const updates: Partial<Record<AllowedKey, unknown>> = {}

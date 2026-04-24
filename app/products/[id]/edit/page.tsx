@@ -158,7 +158,7 @@ export default function EditListingPage() {
 
       setLoading(false)
     }
-    load()
+    load().catch(() => { setNotAllowed(true); setLoading(false) })
   }, [id])
 
   function set(field: keyof ListingForm, value: string) {

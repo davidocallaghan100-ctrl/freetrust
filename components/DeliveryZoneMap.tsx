@@ -51,9 +51,14 @@ interface DeliveryZoneMapProps {
 // ─── Mapbox token (reuse existing project token) ─────────────────────────────
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 
-// MapLibre can render Mapbox styles — we pass the token via transformRequest
+// Use the Mapbox Styles REST API URL directly — maplibre-gl fetches this over
+// plain HTTPS with no special transformRequest needed (unlike mapbox:// URIs).
 function getMapStyle(): string {
-  return 'mapbox://styles/mapbox/streets-v12'
+  if (MAPBOX_TOKEN) {
+    return `https://api.mapbox.com/styles/v1/mapbox/streets-v12?access_token=${MAPBOX_TOKEN}`
+  }
+  // Fallback: OpenFreeMap — free, no key, good-looking streets tiles
+  return 'https://tiles.openfreemap.org/styles/liberty'
 }
 
 // ─── Reverse geocode via Mapbox Geocoding API ─────────────────────────────────
@@ -169,24 +174,6 @@ export default function DeliveryZoneMap({
       center: value ? [value.lng, value.lat] : [-7.9, 53.4],
       zoom: value ? 7 : 6,
       interactive,
-      transformRequest: (url: string, resourceType?: maplibregl.ResourceType) => {
-        // Inject Mapbox token for all Mapbox API requests
-        if (MAPBOX_TOKEN && (url.startsWith('https://api.mapbox.com') || url.startsWith('https://events.mapbox.com'))) {
-          return {
-            url: url.includes('?')
-              ? `${url}&access_token=${MAPBOX_TOKEN}`
-              : `${url}?access_token=${MAPBOX_TOKEN}`,
-          }
-        }
-        // Resolve mapbox:// sprite/glyphs/tile URLs
-        if (MAPBOX_TOKEN && url.startsWith('mapbox://')) {
-          const path = url.replace('mapbox://', '')
-          return {
-            url: `https://api.mapbox.com/${path}${path.includes('?') ? '&' : '?'}access_token=${MAPBOX_TOKEN}`,
-          }
-        }
-        return { url }
-      },
     })
 
     mapRef.current = map
