@@ -11,6 +11,7 @@ import ListingQualityBadge from '@/components/marketplace/ListingQualityBadge'
 import ReviewsSection from '@/components/ReviewsSection'
 
 const AppleGooglePayButton = dynamic(() => import('@/components/payments/AppleGooglePayButton'), { ssr: false })
+const DeliveryZoneMap = dynamic(() => import('@/components/DeliveryZoneMap'), { ssr: false })
 
 // ─── Supabase client ──────────────────────────────────────────────────────────
 
@@ -66,6 +67,13 @@ type Listing = {
   service_mode: string | null
   seller?: Seller
   reviews?: Review[]
+  // Delivery zone
+  delivery_scope?: 'local' | 'national' | 'international' | 'worldwide' | null
+  delivery_origin_lat?: number | null
+  delivery_origin_lng?: number | null
+  delivery_radius_km?: number | null
+  delivery_countries?: string[] | null
+  delivery_notes?: string | null
 }
 
 // ─── Cart helpers (localStorage) ─────────────────────────────────────────────
@@ -630,6 +638,62 @@ export default function ProductDetailPage() {
                       : '30-day returns. Item must be in original condition.'}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Delivery Zone card (physical products with delivery_scope set) */}
+            {isPhysical && listing.delivery_scope && (
+              <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, padding: '1rem' }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: accentSky, marginBottom: '12px' }}>
+                  🚚 Delivery Zone
+                </div>
+
+                {listing.delivery_scope === 'local' &&
+                  listing.delivery_origin_lat != null &&
+                  listing.delivery_origin_lng != null && (
+                    <div>
+                      <DeliveryZoneMap
+                        value={{
+                          lat: Number(listing.delivery_origin_lat),
+                          lng: Number(listing.delivery_origin_lng),
+                          radiusKm: listing.delivery_radius_km ?? 25,
+                        }}
+                        interactive={false}
+                        height={250}
+                      />
+                      <p style={{ marginTop: '10px', color: muted, fontSize: '0.78rem' }}>
+                        Delivers within {listing.delivery_radius_km ?? 25} km of origin
+                      </p>
+                    </div>
+                  )}
+
+                {listing.delivery_scope === 'national' && (
+                  <p style={{ color: muted, fontSize: '0.78rem', margin: 0 }}>
+                    🏴 National delivery
+                    {listing.delivery_countries?.length
+                      ? ` (${listing.delivery_countries.join(', ')})`
+                      : ''}
+                  </p>
+                )}
+
+                {listing.delivery_scope === 'international' && (
+                  <p style={{ color: muted, fontSize: '0.78rem', margin: 0 }}>
+                    ✈️ International delivery to:{' '}
+                    {listing.delivery_countries?.join(', ') || 'selected countries'}
+                  </p>
+                )}
+
+                {listing.delivery_scope === 'worldwide' && (
+                  <p style={{ color: muted, fontSize: '0.78rem', margin: 0 }}>
+                    🌍 Worldwide delivery
+                  </p>
+                )}
+
+                {listing.delivery_notes && (
+                  <p style={{ marginTop: '10px', color: '#6b7280', fontSize: '0.75rem', fontStyle: 'italic', margin: '10px 0 0' }}>
+                    {listing.delivery_notes}
+                  </p>
+                )}
               </div>
             )}
 

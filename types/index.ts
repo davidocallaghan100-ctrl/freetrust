@@ -14,6 +14,17 @@ export interface Profile {
 
 export type ListingStatus = 'draft' | 'active' | 'sold' | 'archived'
 
+export type DeliveryScope = 'local' | 'national' | 'international' | 'worldwide'
+
+export type DeliveryZone = {
+  scope: DeliveryScope
+  originLat?: number | null
+  originLng?: number | null
+  radiusKm?: number | null
+  countries?: string[] | null
+  notes?: string | null
+}
+
 export interface Listing {
   id: string
   seller_id: string
@@ -30,6 +41,13 @@ export interface Listing {
   updated_at: string
   seller?: Profile
   category?: Category
+  // Delivery zone fields (physical products only)
+  delivery_scope?: DeliveryScope | null
+  delivery_origin_lat?: number | null
+  delivery_origin_lng?: number | null
+  delivery_radius_km?: number | null
+  delivery_countries?: string[] | null
+  delivery_notes?: string | null
 }
 
 export interface Category {

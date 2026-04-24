@@ -4,6 +4,10 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { compressImage } from '@/lib/image-compression'
+import dynamic from 'next/dynamic'
+import type { DeliveryZoneValue } from '@/components/DeliveryZoneMap'
+
+const DeliveryZonePicker = dynamic(() => import('@/components/DeliveryZonePicker'), { ssr: false })
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -34,6 +38,35 @@ const POST_TYPES: { type: PostType; icon: string; label: string; desc: string }[
 ]
 
 const CATEGORIES = ['General', 'Business', 'Creative', 'Tech', 'Social', 'Education', 'Health', 'Finance', 'Events', 'Other']
+
+const COUNTRY_OPTIONS: { code: string; name: string }[] = [
+  { code: 'IE', name: 'Ireland' },
+  { code: 'GB', name: 'United Kingdom' },
+  { code: 'US', name: 'United States' },
+  { code: 'CA', name: 'Canada' },
+  { code: 'AU', name: 'Australia' },
+  { code: 'DE', name: 'Germany' },
+  { code: 'FR', name: 'France' },
+  { code: 'ES', name: 'Spain' },
+  { code: 'IT', name: 'Italy' },
+  { code: 'NL', name: 'Netherlands' },
+  { code: 'BE', name: 'Belgium' },
+  { code: 'PT', name: 'Portugal' },
+  { code: 'PL', name: 'Poland' },
+  { code: 'SE', name: 'Sweden' },
+  { code: 'NO', name: 'Norway' },
+  { code: 'DK', name: 'Denmark' },
+  { code: 'FI', name: 'Finland' },
+  { code: 'CH', name: 'Switzerland' },
+  { code: 'AT', name: 'Austria' },
+  { code: 'NZ', name: 'New Zealand' },
+  { code: 'JP', name: 'Japan' },
+  { code: 'SG', name: 'Singapore' },
+  { code: 'IN', name: 'India' },
+  { code: 'BR', name: 'Brazil' },
+  { code: 'MX', name: 'Mexico' },
+  { code: 'ZA', name: 'South Africa' },
+]
 
 const s = {
   page: { minHeight: '100vh', padding: '2rem 1.5rem', maxWidth: '820px', margin: '0 auto' },
@@ -200,6 +233,12 @@ export default function CreatePage() {
   // Link preview
   const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null)
   const [linkLoading, setLinkLoading] = useState(false)
+
+  // Delivery zone (physical products only)
+  const [deliveryScope, setDeliveryScope] = useState<'local' | 'national' | 'international' | 'worldwide' | ''>('')
+  const [deliveryZone, setDeliveryZone] = useState<DeliveryZoneValue | null>(null)
+  const [deliveryCountries, setDeliveryCountries] = useState<string[]>([])
+  const [deliveryNotes, setDeliveryNotes] = useState('')
 
   // Load the orgs the current user can post on behalf of, once on
   // mount. Queries organisation_members filtered to owner/admin and
@@ -576,6 +615,18 @@ export default function CreatePage() {
     if (['photo', 'video', 'short'].includes(selectedType) && uploadedMediaUrl) {
       data = { ...data, media_url: uploadedMediaUrl }
     }
+    // Inject delivery zone fields for physical products
+    if (selectedType === 'product' && (f('product_type') || 'physical') === 'physical') {
+      data = {
+        ...data,
+        delivery_scope: deliveryScope || null,
+        delivery_origin_lat: deliveryZone?.lat ?? null,
+        delivery_origin_lng: deliveryZone?.lng ?? null,
+        delivery_radius_km: deliveryZone?.radiusKm ?? null,
+        delivery_countries: deliveryCountries.length > 0 ? deliveryCountries : null,
+        delivery_notes: deliveryNotes.trim() || null,
+      }
+    }
     // Only include organisation_id for types where it's honoured
     // server-side (text / article / photo). The publish route strips
     // it for other types anyway, but sending it explicitly keeps the
@@ -620,10 +671,19 @@ export default function CreatePage() {
       case 'job':
       case 'event':
       case 'service':
-      case 'product':
         if (!title) return 'Title is required'
         if (!f('description').trim()) return 'Description is required'
         if (selectedType === 'event' && !f('start_date')) return 'Start date is required'
+        break
+      case 'product':
+        if (!title) return 'Title is required'
+        if (!f('description').trim()) return 'Description is required'
+        // Delivery zone validation for physical products
+        if ((f('product_type') || 'physical') === 'physical') {
+          if (!deliveryScope) return 'Please select a delivery scope'
+          if (deliveryScope === 'local' && !deliveryZone) return 'Please click the map to set your delivery origin'
+          if (deliveryScope === 'national' && deliveryCountries.length === 0) return 'Please select a country'
+        }
         break
       case 'poll':
         if (!f('question').trim()) return 'Poll needs a question'
@@ -1142,6 +1202,106 @@ export default function CreatePage() {
               <label style={s.label}>Image URLs (one per line)</label>
               <textarea style={{ ...s.textarea, minHeight: '80px' }} placeholder="https://image1.com&#10;https://image2.com" value={f('images')} onChange={e => setField('images', e.target.value)} />
             </div>
+
+            {/* ── Delivery Zone (physical products only) ── */}
+            {(f('product_type') || 'physical') === 'physical' && (
+              <div style={{ marginTop: '24px', padding: '16px', borderRadius: '12px', border: '1px solid #374151', background: '#0f172a' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px', color: '#f3f4f6', marginTop: 0 }}>
+                  🚚 Delivery Zone <span style={{ color: '#ef4444', fontSize: '12px' }}>required</span>
+                </h3>
+                <p style={{ color: '#9ca3af', fontSize: '13px', marginBottom: '16px', marginTop: 0 }}>
+                  Let buyers know where you can deliver to.
+                </p>
+
+                {/* Scope radio buttons */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+                  {(['local', 'national', 'international', 'worldwide'] as const).map((scope) => (
+                    <label key={scope} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', color: '#e5e7eb' }}>
+                      <input
+                        type="radio"
+                        name="deliveryScope"
+                        value={scope}
+                        checked={deliveryScope === scope}
+                        onChange={() => setDeliveryScope(scope)}
+                        style={{ accentColor: '#3b82f6', marginTop: '2px', flexShrink: 0 }}
+                      />
+                      <span style={{ fontSize: '14px' }}>
+                        {scope === 'local' && <><strong>📍 Local</strong> — set a delivery radius on the map</>}
+                        {scope === 'national' && <><strong>🏴 National</strong> — deliver within a country</>}
+                        {scope === 'international' && <><strong>✈️ International</strong> — select specific countries</>}
+                        {scope === 'worldwide' && <><strong>🌍 Worldwide</strong> — deliver anywhere</>}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+
+                {/* Local: interactive map picker */}
+                {deliveryScope === 'local' && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <DeliveryZonePicker value={deliveryZone} onChange={setDeliveryZone} />
+                  </div>
+                )}
+
+                {/* National: single country */}
+                {deliveryScope === 'national' && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', color: '#9ca3af', fontSize: '13px', marginBottom: '6px' }}>Country</label>
+                    <select
+                      value={deliveryCountries[0] || 'IE'}
+                      onChange={(e) => setDeliveryCountries([e.target.value])}
+                      style={{ ...s.select, maxWidth: '300px' }}
+                    >
+                      {COUNTRY_OPTIONS.map((c) => (
+                        <option key={c.code} value={c.code}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* International: multi-select */}
+                {deliveryScope === 'international' && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', color: '#9ca3af', fontSize: '13px', marginBottom: '6px' }}>
+                      Select countries (hold Ctrl / Cmd for multiple)
+                    </label>
+                    <select
+                      multiple
+                      value={deliveryCountries}
+                      onChange={(e) =>
+                        setDeliveryCountries(Array.from(e.target.selectedOptions, (o) => o.value))
+                      }
+                      style={{ ...s.select, height: '180px', maxWidth: '400px' }}
+                    >
+                      {COUNTRY_OPTIONS.map((c) => (
+                        <option key={c.code} value={c.code}>{c.name}</option>
+                      ))}
+                    </select>
+                    {deliveryCountries.length > 0 && (
+                      <p style={{ color: '#9ca3af', fontSize: '12px', marginTop: '4px' }}>
+                        {deliveryCountries.length} countr{deliveryCountries.length === 1 ? 'y' : 'ies'} selected
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Delivery notes */}
+                <div style={{ marginTop: '12px' }}>
+                  <label style={{ display: 'block', color: '#9ca3af', fontSize: '13px', marginBottom: '6px' }}>
+                    Delivery notes (optional, max 200 chars)
+                  </label>
+                  <textarea
+                    value={deliveryNotes}
+                    onChange={(e) => setDeliveryNotes(e.target.value.slice(0, 200))}
+                    placeholder="e.g. Free delivery on orders over €50, 2-3 business days…"
+                    rows={3}
+                    style={{ ...s.textarea, minHeight: 'unset' }}
+                  />
+                  <p style={{ color: '#64748b', fontSize: '12px', marginTop: '4px' }}>
+                    {deliveryNotes.length}/200
+                  </p>
+                </div>
+              </div>
+            )}
           </>
         )
 

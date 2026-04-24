@@ -457,17 +457,63 @@ export async function POST(req: NextRequest) {
       const deliveryDaysRaw = data.delivery_days ? Number(data.delivery_days) : null
       const deliveryDays = deliveryDaysRaw && deliveryDaysRaw > 0 ? deliveryDaysRaw : null
 
+      // ── Delivery zone validation for physical products ─────────────────
+      const productType = (data.product_type as string) || 'physical'
+      if (productType === 'physical') {
+        const dScope = data.delivery_scope as string | null | undefined
+        if (!dScope) {
+          return fail('Delivery scope is required for physical products', 400)
+        }
+        const validScopes = ['local', 'national', 'international', 'worldwide']
+        if (!validScopes.includes(dScope)) {
+          return fail('Invalid delivery scope', 400)
+        }
+        if (dScope === 'local') {
+          const dLat = data.delivery_origin_lat
+          const dLng = data.delivery_origin_lng
+          const dKm  = data.delivery_radius_km
+          if (dLat == null || dLng == null || dKm == null) {
+            return fail('Please set a delivery location on the map', 400)
+          }
+          const radiusNum = Number(dKm)
+          if (!Number.isFinite(radiusNum) || radiusNum < 1 || radiusNum > 500) {
+            return fail('Delivery radius must be between 1 and 500 km', 400)
+          }
+        }
+        if (dScope === 'national' || dScope === 'international') {
+          const countries = data.delivery_countries
+          if (!Array.isArray(countries) || countries.length === 0) {
+            return fail('Please select at least one country', 400)
+          }
+        }
+        const dNotes = data.delivery_notes as string | null | undefined
+        if (dNotes && dNotes.length > 200) {
+          return fail('Delivery notes must be 200 characters or less', 400)
+        }
+      }
+
       const { error } = await admin.from('listings').insert({
         seller_id: user.id,
         title,
         description,
         price,
         currency: currencyCode,
-        product_type: (data.product_type as string) || 'physical',
+        product_type: productType,
         status: 'active',
         images: imagesLiteral,
         tags:   tagsLiteral,
         delivery_days: deliveryDays,
+        // ── Delivery zone fields ────────────────────────────────────────
+        delivery_scope:      productType === 'physical' ? (data.delivery_scope ?? null) : null,
+        delivery_origin_lat: productType === 'physical' ? (data.delivery_origin_lat ?? null) : null,
+        delivery_origin_lng: productType === 'physical' ? (data.delivery_origin_lng ?? null) : null,
+        delivery_radius_km:  productType === 'physical' && data.delivery_radius_km != null
+          ? Number(data.delivery_radius_km)
+          : null,
+        delivery_countries:  productType === 'physical' && Array.isArray(data.delivery_countries)
+          ? data.delivery_countries
+          : null,
+        delivery_notes:      productType === 'physical' ? (data.delivery_notes ?? null) : null,
         // ── Globalisation fields ────────────────────────────────────────
         country:        struct.country ?? null,
         region:         struct.region ?? null,
