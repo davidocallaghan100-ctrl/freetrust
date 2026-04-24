@@ -167,6 +167,16 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // Service worker must never be cached — stale sw.js causes the
+        // browser to run old precache manifests after a new deploy, which
+        // results in loading loops (old JS chunks served from cache).
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+        ],
+      },
+      {
         source: '/(.*)',
         headers: [
           // Prevent MIME sniffing
@@ -192,7 +202,7 @@ const nextConfig = {
               // Allow all https images + blob — Mapbox tiles come from various CDN subdomains
               "img-src 'self' data: blob: https:",
               // blob: in connect-src needed for Mapbox tile worker blob URLs
-              "connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://*.mapbox.com https://*.tiles.mapbox.com https://*.cartocdn.com https://basemaps.cartocdn.com https://unpkg.com https://tiles.openfreemap.org https://*.openfreemap.org",
+              "connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://*.mapbox.com https://*.tiles.mapbox.com https://fonts.mapbox.com https://*.cartocdn.com https://basemaps.cartocdn.com https://unpkg.com https://tiles.openfreemap.org https://*.openfreemap.org",
               // Both worker-src and child-src needed for Mapbox GL web workers across browsers
               "worker-src 'self' blob:",
               "child-src 'self' blob:",

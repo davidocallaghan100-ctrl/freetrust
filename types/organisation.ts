@@ -66,4 +66,28 @@ export interface Organisation {
   foundedYear?: number;
   employeeCount?: string;
   tags: string[];
+  investment_intent?: InvestmentIntent | null;
+}
+
+// ── Investment Intent ──────────────────────────────────────────────────────────
+
+export type InvestmentVisibility = 'public' | 'private';
+export type FundingStage = 'Pre-Seed' | 'Seed' | 'Series A' | 'Growth' | 'Other';
+
+export interface InvestmentDetails {
+  amountRaising?: number | null;
+  currency?: string | null;
+  fundingStage?: FundingStage | null;
+  useOfFunds?: string | null;
+  currentTraction?: string | null;
+  expectedCloseDate?: string | null;
+  pitchDeckUrl?: string | null;
+  existingInvestors?: string | null;
+}
+
+export interface InvestmentIntent {
+  isSeekingInvestment: boolean;
+  investmentDetails?: InvestmentDetails;
+  visibility: InvestmentVisibility;
+  sharedWithESG: boolean;
 }

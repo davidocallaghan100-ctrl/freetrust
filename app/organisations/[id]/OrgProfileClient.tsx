@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import VerifiedBadge from "@/components/organisation/VerifiedBadge";
+import InvestmentSection from "@/components/organisation/InvestmentSection";
 import Avatar from "@/components/Avatar";
 import { createClient } from "@/lib/supabase/client";
+import type { InvestmentIntent } from "@/types/organisation";
 import {
   UserGroupIcon,
   StarIcon,
@@ -57,6 +59,7 @@ interface Organisation {
   updated_at: string;
   isFollowing: boolean;
   userId: string | null;
+  investment_intent?: InvestmentIntent | null;
 }
 
 interface OrgMember {
@@ -614,12 +617,21 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
 
         {/* Tags */}
         {org.tags && org.tags.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: org.investment_intent?.isSeekingInvestment ? 8 : 16 }}>
             {org.tags.map(tag => (
               <span key={tag} style={{ background: "rgba(109,40,217,0.15)", border: "1px solid rgba(109,40,217,0.25)", borderRadius: 20, padding: "3px 10px", fontSize: 11, color: "#a78bfa", fontWeight: 500 }}>
                 {tag}
               </span>
             ))}
+          </div>
+        )}
+
+        {/* Seeking Investment badge */}
+        {org.investment_intent?.isSeekingInvestment && (
+          <div style={{ marginBottom: 16 }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: 20, padding: "4px 12px", fontSize: 12, color: "#34d399", fontWeight: 600 }}>
+              💰 Seeking Investment
+            </span>
           </div>
         )}
 
@@ -687,6 +699,12 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
                 <p style={{ fontSize: 14, color: "#c4b5fd", lineHeight: 1.65, margin: 0 }}>{org.impact_statement}</p>
               </div>
             )}
+
+            {/* Investment Intent */}
+            <InvestmentSection
+              investmentIntent={org.investment_intent}
+              isOwner={canManageOrg}
+            />
 
             {/* SDGs */}
             {org.sdgs && org.sdgs.length > 0 && (

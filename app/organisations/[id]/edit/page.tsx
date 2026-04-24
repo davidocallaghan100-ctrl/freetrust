@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { compressImage } from '@/lib/image-compression'
+import type { InvestmentIntent, FundingStage } from '@/types/organisation'
 
 type OrgForm = {
   name: string
@@ -15,6 +16,52 @@ type OrgForm = {
   founded_year: string
   impact_statement: string
   tags: string
+}
+
+type InvestmentForm = {
+  isSeekingInvestment: boolean
+  visibility: 'public' | 'private'
+  sharedWithESG: boolean
+  amountRaising: string
+  currency: string
+  fundingStage: '' | FundingStage
+  useOfFunds: string
+  currentTraction: string
+  expectedCloseDate: string
+  pitchDeckUrl: string
+  existingInvestors: string
+}
+
+const DEFAULT_INVESTMENT: InvestmentForm = {
+  isSeekingInvestment: false,
+  visibility: 'private',
+  sharedWithESG: false,
+  amountRaising: '',
+  currency: '€',
+  fundingStage: '',
+  useOfFunds: '',
+  currentTraction: '',
+  expectedCloseDate: '',
+  pitchDeckUrl: '',
+  existingInvestors: '',
+}
+
+function intentToForm(intent: InvestmentIntent | null | undefined): InvestmentForm {
+  if (!intent) return DEFAULT_INVESTMENT
+  const d = intent.investmentDetails ?? {}
+  return {
+    isSeekingInvestment: intent.isSeekingInvestment,
+    visibility: intent.visibility ?? 'private',
+    sharedWithESG: intent.sharedWithESG ?? false,
+    amountRaising: d.amountRaising != null ? String(d.amountRaising) : '',
+    currency: d.currency ?? '€',
+    fundingStage: d.fundingStage ?? '',
+    useOfFunds: d.useOfFunds ?? '',
+    currentTraction: d.currentTraction ?? '',
+    expectedCloseDate: d.expectedCloseDate ?? '',
+    pitchDeckUrl: d.pitchDeckUrl ?? '',
+    existingInvestors: d.existingInvestors ?? '',
+  }
 }
 
 export default function EditOrgPage() {
@@ -43,6 +90,8 @@ export default function EditOrgPage() {
     name: '', tagline: '', description: '', website: '',
     location: '', sector: '', founded_year: '', impact_statement: '', tags: '',
   })
+
+  const [investment, setInvestment] = useState<InvestmentForm>(DEFAULT_INVESTMENT)
 
   useEffect(() => {
     if (!id) return
@@ -100,6 +149,10 @@ export default function EditOrgPage() {
           impact_statement: org.impact_statement || '',
           tags: (org.tags || []).join(', '),
         })
+
+        // Load existing investment intent if present
+        const existingIntent = org.investment_intent as InvestmentIntent | null | undefined
+        setInvestment(intentToForm(existingIntent))
       } catch (err) {
         console.error('[org-edit] load error:', err)
         setError('Could not load organisation. Please try again.')
@@ -113,6 +166,10 @@ export default function EditOrgPage() {
 
   function set(field: keyof OrgForm, value: string) {
     setForm(f => ({ ...f, [field]: value }))
+  }
+
+  function setInv<K extends keyof InvestmentForm>(field: K, value: InvestmentForm[K]) {
+    setInvestment(s => ({ ...s, [field]: value }))
   }
 
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -167,6 +224,25 @@ export default function EditOrgPage() {
 
     const tags = form.tags.split(',').map(t => t.trim()).filter(Boolean)
 
+    // Build investment_intent payload
+    const investmentIntent: InvestmentIntent | null = investment.isSeekingInvestment
+      ? {
+          isSeekingInvestment: true,
+          visibility: investment.visibility,
+          sharedWithESG: investment.sharedWithESG,
+          investmentDetails: {
+            amountRaising: investment.amountRaising ? parseFloat(investment.amountRaising) : null,
+            currency: investment.currency || null,
+            fundingStage: (investment.fundingStage as FundingStage) || null,
+            useOfFunds: investment.useOfFunds.trim() || null,
+            currentTraction: investment.currentTraction.trim() || null,
+            expectedCloseDate: investment.expectedCloseDate || null,
+            pitchDeckUrl: investment.pitchDeckUrl.trim() || null,
+            existingInvestors: investment.existingInvestors.trim() || null,
+          },
+        }
+      : null
+
     // Use the PATCH API route — this verifies authorisation server-side
     // and uses the admin client to bypass RLS, so both org creators AND
     // platform admins can save changes without RLS blocking the write.
@@ -185,6 +261,7 @@ export default function EditOrgPage() {
         tags,
         logo_url: logoUrl || null,
         cover_url: coverUrl || null,
+        investment_intent: investmentIntent,
       }),
     })
 
@@ -331,6 +408,224 @@ export default function EditOrgPage() {
             <label style={labelStyle}>Tags <span style={{ fontWeight: 400, color: muted }}>(comma-separated)</span></label>
             <input style={inputStyle} value={form.tags} onChange={e => set('tags', e.target.value)} placeholder="e.g. AI, SaaS, sustainability" />
           </div>
+        </section>
+
+        {/* ── Seeking Investment ── */}
+        <section style={{ background: card, border: `1px solid ${investment.isSeekingInvestment ? 'rgba(52,211,153,0.3)' : border}`, borderRadius: 14, padding: '1.25rem', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: investment.isSeekingInvestment ? '1.25rem' : 0 }}>
+            <h3 style={{ fontWeight: 700, fontSize: '0.95rem', margin: 0, color: investment.isSeekingInvestment ? '#34d399' : text }}>
+              💰 Seeking Investment
+            </h3>
+            {/* Toggle button */}
+            <button
+              type="button"
+              onClick={() => setInv('isSeekingInvestment', !investment.isSeekingInvestment)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                background: investment.isSeekingInvestment ? 'rgba(52,211,153,0.15)' : '#1f2937',
+                border: `1px solid ${investment.isSeekingInvestment ? 'rgba(52,211,153,0.3)' : border}`,
+                borderRadius: 10, padding: '0.45rem 0.9rem',
+                fontSize: '0.8rem', fontWeight: 700,
+                color: investment.isSeekingInvestment ? '#34d399' : muted,
+                cursor: 'pointer',
+              }}
+            >
+              {/* Pill toggle track */}
+              <span style={{
+                width: 28, height: 16, borderRadius: 20,
+                background: investment.isSeekingInvestment ? '#34d399' : '#374151',
+                display: 'inline-block', position: 'relative', transition: 'background 0.2s',
+                flexShrink: 0,
+              }}>
+                <span style={{
+                  position: 'absolute', top: 2,
+                  left: investment.isSeekingInvestment ? 14 : 2,
+                  width: 12, height: 12, borderRadius: '50%',
+                  background: '#fff', transition: 'left 0.2s',
+                }} />
+              </span>
+              {investment.isSeekingInvestment ? 'Enabled' : 'Disabled'}
+            </button>
+          </div>
+
+          {investment.isSeekingInvestment && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+              {/* Amount + Currency */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label style={labelStyle}>Amount raising</label>
+                  <input
+                    style={inputStyle}
+                    type="number"
+                    min="0"
+                    value={investment.amountRaising}
+                    onChange={e => setInv('amountRaising', e.target.value)}
+                    placeholder="e.g. 500000"
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Currency</label>
+                  <select
+                    style={{ ...inputStyle, cursor: 'pointer' }}
+                    value={investment.currency}
+                    onChange={e => setInv('currency', e.target.value)}
+                  >
+                    <option value="€">€ EUR</option>
+                    <option value="$">$ USD</option>
+                    <option value="£">£ GBP</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Funding Stage */}
+              <div>
+                <label style={labelStyle}>Funding stage</label>
+                <select
+                  style={{ ...inputStyle, cursor: 'pointer' }}
+                  value={investment.fundingStage}
+                  onChange={e => setInv('fundingStage', e.target.value as InvestmentForm['fundingStage'])}
+                >
+                  <option value="">Select stage…</option>
+                  {(['Pre-Seed', 'Seed', 'Series A', 'Growth', 'Other'] as FundingStage[]).map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Use of Funds */}
+              <div>
+                <label style={labelStyle}>Use of funds</label>
+                <textarea
+                  style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }}
+                  value={investment.useOfFunds}
+                  onChange={e => setInv('useOfFunds', e.target.value)}
+                  placeholder="How will the investment be used?"
+                  maxLength={500}
+                />
+              </div>
+
+              {/* Current Traction */}
+              <div>
+                <label style={labelStyle}>
+                  Current traction{' '}
+                  <span style={{ fontWeight: 400, color: muted }}>(key metrics or milestones)</span>
+                </label>
+                <textarea
+                  style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }}
+                  value={investment.currentTraction}
+                  onChange={e => setInv('currentTraction', e.target.value)}
+                  placeholder="e.g. 50 paying clients, €20k MRR, 3 partnerships signed…"
+                  maxLength={500}
+                />
+              </div>
+
+              {/* Expected Close Date */}
+              <div>
+                <label style={labelStyle}>
+                  Expected close date{' '}
+                  <span style={{ fontWeight: 400, color: muted }}>(optional)</span>
+                </label>
+                <input
+                  style={inputStyle}
+                  type="date"
+                  value={investment.expectedCloseDate}
+                  onChange={e => setInv('expectedCloseDate', e.target.value)}
+                />
+              </div>
+
+              {/* Pitch Deck URL */}
+              <div>
+                <label style={labelStyle}>
+                  Pitch deck URL{' '}
+                  <span style={{ fontWeight: 400, color: muted }}>(optional — Google Drive, Docsend, etc.)</span>
+                </label>
+                <input
+                  style={inputStyle}
+                  value={investment.pitchDeckUrl}
+                  onChange={e => setInv('pitchDeckUrl', e.target.value)}
+                  placeholder="https://…"
+                  maxLength={500}
+                />
+              </div>
+
+              {/* Existing Investors */}
+              <div>
+                <label style={labelStyle}>
+                  Existing investors{' '}
+                  <span style={{ fontWeight: 400, color: muted }}>(optional)</span>
+                </label>
+                <input
+                  style={inputStyle}
+                  value={investment.existingInvestors}
+                  onChange={e => setInv('existingInvestors', e.target.value)}
+                  placeholder="e.g. Enterprise Ireland, angel investors…"
+                  maxLength={300}
+                />
+              </div>
+
+              {/* Visibility toggle */}
+              <div>
+                <label style={labelStyle}>Visibility</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                  {(['private', 'public'] as const).map(v => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setInv('visibility', v)}
+                      style={{
+                        padding: '0.65rem',
+                        borderRadius: 10,
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        border: `1px solid ${investment.visibility === v ? accent : border}`,
+                        background: investment.visibility === v ? 'rgba(139,92,246,0.12)' : '#1f2937',
+                        color: investment.visibility === v ? accent : muted,
+                      }}
+                    >
+                      {v === 'private' ? '🔒 Private' : '🌐 Public'}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: muted, marginTop: 6, lineHeight: 1.5 }}>
+                  {investment.visibility === 'private'
+                    ? 'Investment details are only visible to you and org admins.'
+                    : 'Investment details are visible on your public profile to all visitors.'}
+                </div>
+              </div>
+
+              {/* ESG Network checkbox */}
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 10,
+                  cursor: 'pointer',
+                  padding: '0.75rem',
+                  background: investment.sharedWithESG ? 'rgba(16,185,129,0.06)' : '#1f2937',
+                  border: `1px solid ${investment.sharedWithESG ? 'rgba(16,185,129,0.25)' : border}`,
+                  borderRadius: 10,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={investment.sharedWithESG}
+                  onChange={e => setInv('sharedWithESG', e.target.checked)}
+                  style={{ width: 16, height: 16, marginTop: 2, accentColor: '#34d399', flexShrink: 0 }}
+                />
+                <div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: investment.sharedWithESG ? '#34d399' : text }}>
+                    🌿 Share with ESG investor network
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: muted, marginTop: 3, lineHeight: 1.5 }}>
+                    Your investment summary may be included in curated deal drops and investor communications. This does not automatically make your profile public.
+                  </div>
+                </div>
+              </label>
+
+            </div>
+          )}
         </section>
 
         {/* Save */}

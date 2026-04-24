@@ -150,7 +150,7 @@ export async function PATCH(
     const allowed = [
       'name', 'tagline', 'description', 'website', 'location',
       'sector', 'founded_year', 'impact_statement', 'tags',
-      'logo_url', 'cover_url',
+      'logo_url', 'cover_url', 'investment_intent',
     ]
     const payload: Record<string, unknown> = {}
     for (const key of allowed) {
