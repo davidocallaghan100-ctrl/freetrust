@@ -659,22 +659,46 @@ export default function NewProductPage() {
 
               {deliveryScope === 'international' && (
                 <div>
-                  <label style={{ ...labelStyle, marginBottom: 6 }}>Select countries (hold Ctrl/Cmd for multiple)</label>
-                  <select
-                    multiple
-                    value={deliveryCountries}
-                    onChange={(e) => setDeliveryCountries(Array.from(e.target.selectedOptions, (o) => o.value))}
-                    style={{ ...inputStyle, height: 180, maxWidth: 400 }}
-                  >
-                    {COUNTRY_OPTIONS.map((c) => (
-                      <option key={c.code} value={c.code}>{c.name}</option>
-                    ))}
-                  </select>
+                  <label style={{ ...labelStyle, marginBottom: 6 }}>Select countries</label>
                   {deliveryCountries.length > 0 && (
-                    <p style={{ color: '#9ca3af', fontSize: 12, marginTop: 4 }}>
-                      {deliveryCountries.length} countr{deliveryCountries.length === 1 ? 'y' : 'ies'} selected
+                    <p style={{ color: '#9ca3af', fontSize: 12, marginBottom: 8, marginTop: 0 }}>
+                      {deliveryCountries.length} countr{deliveryCountries.length === 1 ? 'y' : 'ies'} selected: {deliveryCountries.join(', ')}
                     </p>
                   )}
+                  <div style={{
+                    maxHeight: 220,
+                    overflowY: 'auto',
+                    border: '1px solid #374151',
+                    borderRadius: 8,
+                    background: '#0f172a',
+                  }}>
+                    {COUNTRY_OPTIONS.map((c) => {
+                      const checked = deliveryCountries.includes(c.code)
+                      return (
+                        <label key={c.code} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: '10px 14px',
+                          cursor: 'pointer',
+                          borderBottom: '1px solid #1f2937',
+                          background: checked ? 'rgba(56,189,248,0.08)' : 'transparent',
+                        }}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() =>
+                              setDeliveryCountries((prev) =>
+                                checked ? prev.filter((x) => x !== c.code) : [...prev, c.code]
+                              )
+                            }
+                            style={{ accentColor: '#38bdf8', width: 18, height: 18, flexShrink: 0 }}
+                          />
+                          <span style={{ fontSize: 14, color: '#e5e7eb' }}>{c.name}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
 
