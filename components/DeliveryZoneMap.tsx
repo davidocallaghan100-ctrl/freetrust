@@ -48,25 +48,20 @@ interface DeliveryZoneMapProps {
   height?: number
 }
 
-// ─── Map style — uses MapLibre demo tiles (no key required) ──────────────────
-// If a MapTiler key is set we use their streets style for better visuals.
-const MAPTILER_KEY =
-  process.env.NEXT_PUBLIC_MAPTILER_KEY || ''
+// ─── Mapbox token (reuse existing project token) ─────────────────────────────
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 
+// MapLibre can render Mapbox styles — we pass the token via transformRequest
 function getMapStyle(): string {
-  if (MAPTILER_KEY) {
-    return `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`
-  }
-  // Fallback: MapLibre demo tiles (free, no key)
-  return 'https://demotiles.maplibre.org/style.json'
+  return 'mapbox://styles/mapbox/streets-v12'
 }
 
-// ─── Reverse geocode via MapTiler (gracefully degraded) ──────────────────────
+// ─── Reverse geocode via Mapbox Geocoding API ─────────────────────────────────
 async function reverseGeocode(lat: number, lng: number): Promise<string> {
-  if (!MAPTILER_KEY) return `${lat.toFixed(4)}, ${lng.toFixed(4)}`
+  if (!MAPBOX_TOKEN) return `${lat.toFixed(4)}, ${lng.toFixed(4)}`
   try {
     const res = await fetch(
-      `https://api.maptiler.com/geocoding/${lng},${lat}.json?key=${MAPTILER_KEY}`
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_TOKEN}&types=place,locality,neighborhood&limit=1`
     )
     const data = await res.json()
     if (data.features?.[0]?.place_name) return data.features[0].place_name as string
@@ -174,6 +169,24 @@ export default function DeliveryZoneMap({
       center: value ? [value.lng, value.lat] : [-7.9, 53.4],
       zoom: value ? 7 : 6,
       interactive,
+      transformRequest: (url: string, resourceType?: maplibregl.ResourceType) => {
+        // Inject Mapbox token for all Mapbox API requests
+        if (MAPBOX_TOKEN && (url.startsWith('https://api.mapbox.com') || url.startsWith('https://events.mapbox.com'))) {
+          return {
+            url: url.includes('?')
+              ? `${url}&access_token=${MAPBOX_TOKEN}`
+              : `${url}?access_token=${MAPBOX_TOKEN}`,
+          }
+        }
+        // Resolve mapbox:// sprite/glyphs/tile URLs
+        if (MAPBOX_TOKEN && url.startsWith('mapbox://')) {
+          const path = url.replace('mapbox://', '')
+          return {
+            url: `https://api.mapbox.com/${path}${path.includes('?') ? '&' : '?'}access_token=${MAPBOX_TOKEN}`,
+          }
+        }
+        return { url }
+      },
     })
 
     mapRef.current = map
