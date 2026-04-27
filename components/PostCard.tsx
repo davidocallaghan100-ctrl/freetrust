@@ -19,6 +19,7 @@ export type FeedPost = {
   media_type?: string | null
   metadata?: Record<string, unknown>
   created_at: string
+  updated_at?: string | null
   like_count?: number
   likes_count?: number
   comment_count?: number
@@ -356,6 +357,13 @@ export default function PostCard({
   const [showMenu,          setShowMenu]          = useState(false)
   const [deleting,          setDeleting]          = useState(false)
   const [deleted,           setDeleted]           = useState(false)
+  const [editing,           setEditing]           = useState(false)
+  const [editedContent,     setEditedContent]     = useState(post.content ?? '')
+  const [editedTitle,       setEditedTitle]       = useState(post.title ?? '')
+  const [savingEdit,        setSavingEdit]        = useState(false)
+  const [postContent,       setPostContent]       = useState(post.content)
+  const [postTitle,         setPostTitle]         = useState(post.title ?? null)
+  const [postUpdatedAt,     setPostUpdatedAt]     = useState(post.updated_at ?? null)
 
   // Poll state (optimistic updates)
   const [localVoteCounts, setLocalVoteCounts] = useState<Record<number, number>>(post.poll_vote_counts ?? {})
@@ -425,6 +433,31 @@ export default function PostCard({
       if (res.ok) { setDeleted(true); onDelete?.(post.id) }
     } catch { /* silent */ }
     finally { setDeleting(false); setShowMenu(false) }
+  }
+
+  const handleSaveEdit = async () => {
+    setSavingEdit(true)
+    try {
+      const res = await fetch(`/api/feed/posts/${post.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: editedContent, title: editedTitle || undefined }),
+      })
+      const data = await res.json().catch(() => ({} as { error?: string; post?: FeedPost }))
+      if (!res.ok) {
+        alert(data.error ?? 'Failed to edit post')
+        return
+      }
+      const updated = data.post
+      setPostContent(updated?.content ?? editedContent)
+      setPostTitle(updated?.title ?? (editedTitle || null))
+      setPostUpdatedAt(updated?.updated_at ?? new Date().toISOString())
+      setEditing(false)
+    } catch {
+      alert('Failed to edit post')
+    } finally {
+      setSavingEdit(false)
+    }
   }
 
   const typeInfo  = TYPE_META[post.type] ?? TYPE_META.text
@@ -610,6 +643,7 @@ export default function PostCard({
             )}
             <span style={{ fontSize: '11px', color: '#334155' }}>·</span>
             <span style={{ fontSize: '12px', color: '#475569' }}>{formatTime(post.created_at)}</span>
+            {postUpdatedAt && postUpdatedAt !== post.created_at && <span style={{ fontSize: '12px', color: '#64748b' }}>edited</span>}
           </div>
         </div>
         {/* Type badge */}
@@ -620,14 +654,27 @@ export default function PostCard({
         )}
         {/* ── Owner menu ── */}
         {isOwner && (
-          <div style={{ position: 'relative', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+          <div style={{ position: 'relative', flexShrink: 0, zIndex: 20 }} onClick={e => e.stopPropagation()}>
             <button
               onClick={() => setShowMenu(v => !v)}
-              style={{ background: 'none', border: 'none', color: '#475569', fontSize: '20px', cursor: 'pointer', padding: '4px 8px', borderRadius: '8px', lineHeight: 1 }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(148,163,184,0.18)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(148,163,184,0.08)')}
+              style={{ background: 'rgba(148,163,184,0.08)', border: 'none', color: '#94a3b8', fontSize: '20px', cursor: 'pointer', padding: '6px 10px', borderRadius: '8px', lineHeight: 1, minWidth: '32px', minHeight: '32px' }}
               aria-label="Post options"
             >⋯</button>
             {showMenu && (
               <div style={{ position: 'absolute', top: '100%', right: 0, background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', overflow: 'hidden', zIndex: 100, minWidth: '150px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+                {post.type !== 'poll' && (
+                  <button
+                    onClick={() => { setEditedContent(postContent ?? ''); setEditedTitle(postTitle ?? ''); setEditing(true); setShowMenu(false) }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '11px 14px', background: 'none', border: 'none', color: '#38bdf8', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(56,189,248,0.08)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    <span>✏️</span>
+                    <span>Edit post</span>
+                  </button>
+                )}
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
@@ -646,19 +693,53 @@ export default function PostCard({
 
       {/* ── Body ── */}
       <div style={{ padding: '0 16px', minWidth: 0, overflow: 'hidden' }}>
-        {post.title ? (
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f1f5f9', margin: '0 0 8px', lineHeight: 1.4, wordBreak: 'break-word' }}>{String(post.title)}</h3>
-        ) : null}
-        {/* For polls, content is stored as JSON — don't render it as body text;
-            the poll UI block below handles rendering. */}
-        {post.content && post.type !== 'poll' ? (
-          <p style={{ fontSize: '14px', lineHeight: 1.65, color: '#cbd5e1', margin: '0 0 12px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
-            {!expanded && post.content.length > 280
-              ? <>{post.content.slice(0, 280)}<Link href={canonicalUrl} style={{ color: '#38bdf8', textDecoration: 'none' }}> …more</Link></>
-              : post.content
-            }
-          </p>
-        ) : null}
+        {editing ? (
+          <div style={{ marginBottom: '12px' }}>
+            {postTitle ? (
+              <input
+                value={editedTitle}
+                onChange={e => setEditedTitle(e.target.value)}
+                maxLength={200}
+                style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '10px', padding: '10px 12px', color: '#f1f5f9', fontSize: '16px', fontWeight: 700, fontFamily: 'inherit', marginBottom: '10px', boxSizing: 'border-box' }}
+              />
+            ) : null}
+            <textarea
+              value={editedContent}
+              onChange={e => setEditedContent(e.target.value)}
+              rows={8}
+              maxLength={5000}
+              style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '10px', padding: '10px 12px', color: '#cbd5e1', fontSize: '14px', lineHeight: 1.65, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', marginBottom: '10px' }}
+            />
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => { setEditedContent(postContent ?? ''); setEditedTitle(postTitle ?? ''); setEditing(false) }}
+                disabled={savingEdit}
+                style={{ background: 'transparent', border: '1px solid #334155', borderRadius: '8px', padding: '8px 12px', color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px' }}
+              >Cancel</button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={savingEdit}
+                style={{ background: '#38bdf8', border: 'none', borderRadius: '8px', padding: '8px 12px', color: '#0f172a', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', fontWeight: 700 }}
+              >{savingEdit ? 'Saving…' : 'Save'}</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {postTitle ? (
+              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f1f5f9', margin: '0 0 8px', lineHeight: 1.4, wordBreak: 'break-word' }}>{String(postTitle)}</h3>
+            ) : null}
+            {/* For polls, content is stored as JSON — don't render it as body text;
+                the poll UI block below handles rendering. */}
+            {postContent && post.type !== 'poll' ? (
+              <p style={{ fontSize: '14px', lineHeight: 1.65, color: '#cbd5e1', margin: '0 0 12px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                {!expanded && postContent.length > 280
+                  ? <>{postContent.slice(0, 280)}<Link href={canonicalUrl} style={{ color: '#38bdf8', textDecoration: 'none' }}> …more</Link></>
+                  : postContent
+                }
+              </p>
+            ) : null}
+          </>
+        )}
       </div>
 
       {/* ── Media ── */}

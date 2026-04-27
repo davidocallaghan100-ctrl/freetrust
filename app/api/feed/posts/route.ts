@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
        .from('feed_posts')
        .select(`
          id, user_id, type, content, media_url, media_type, title, link_url,
-         trust_reward, likes_count, comments_count, saves_count, views_count, created_at,
+         trust_reward, likes_count, comments_count, saves_count, views_count, created_at, updated_at,
          posted_as_organisation_id,
          profiles!feed_posts_user_id_fkey(id, full_name, avatar_url, trust_balance),
          posted_as_organisation:organisations!posted_as_organisation_id(id, name, slug, logo_url)
