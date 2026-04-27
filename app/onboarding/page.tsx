@@ -322,7 +322,7 @@ export default function OnboardingPage() {
                   {photoUploading ? 'Uploading…' : avatarUrl ? '✓ Change photo' : 'Upload photo'}
                 </button>
                 <div style={{ fontSize: '0.72rem', color: avatarUrl ? '#34d399' : '#f87171', fontWeight: 600 }}>
-                  {avatarUrl ? '✓ Photo set' : '* Required — helps build trust'}
+                  {avatarUrl ? '✓ Photo set' : '* Required — must show your face'}
                 </div>
               </div>
               <input
@@ -461,7 +461,7 @@ export default function OnboardingPage() {
 
             {!avatarUrl && firstName.trim() && lastName.trim() && (
               <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 10, padding: '0.6rem 0.85rem', fontSize: '0.8rem', color: '#fca5a5', marginBottom: '0.75rem' }}>
-                📷 Please upload a profile photo — it builds trust with other members.
+                📷 A real photo of your face is required. Accounts without one will be archived.
               </div>
             )}
             <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -475,7 +475,7 @@ export default function OnboardingPage() {
                   // where the disabled button can look like dead UI.
                   if (!firstName.trim()) return setNameError('Please enter your first name.')
                   if (!lastName.trim())  return setNameError('Please enter your last name.')
-                  if (!avatarUrl)        return setNameError('Please upload a profile photo to continue.')
+                  if (!avatarUrl)        return setNameError('A real face photo is required to join FreeTrust.')
                   setNameError(null)
                   next()
                 }}

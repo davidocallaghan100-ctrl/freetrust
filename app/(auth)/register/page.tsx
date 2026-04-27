@@ -585,6 +585,23 @@ export default function RegisterPage() {
                 <span>No bots. No fake profiles. <strong>Real trust.</strong> FreeTrust is a human-only platform.</span>
               </div>
 
+              <div style={{
+                display: 'flex', alignItems: 'flex-start', gap: 8,
+                background: 'rgba(251,191,36,0.07)',
+                border: '1px solid rgba(251,191,36,0.2)',
+                borderRadius: 10,
+                padding: '10px 12px',
+                marginBottom: 18,
+                fontSize: 12,
+                color: '#fde68a',
+                lineHeight: 1.55,
+              }}>
+                <span style={{ fontSize: 15, flexShrink: 0 }}>📷</span>
+                <span>
+                  <strong>Real face photo required.</strong> During onboarding you&rsquo;ll upload a profile photo showing your face. Accounts without a genuine face photo will be archived. No logos, avatars, or stock images.
+                </span>
+              </div>
+
               <button className="btn-google" type="button" onClick={handleGoogleSignup} disabled={googleLoading}>
                 {googleLoading ? (
                   <span className="spinner" style={{ borderColor: 'rgba(30,41,59,0.2)', borderTopColor: '#1e293b' }} />
