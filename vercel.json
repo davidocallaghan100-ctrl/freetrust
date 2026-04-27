@@ -32,6 +32,10 @@
     {
       "path": "/api/cron/monthly-statement",
       "schedule": "0 7 1 * *"
+    },
+    {
+      "path": "/api/cron/scheduled-post-fanout",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

@@ -38,11 +38,12 @@ export async function notifyAllMembersNewPost(params: NewPostFanoutParams): Prom
   try {
     const admin = createAdminClient()
 
-    // 1. Fetch all members except the author
+    // 1. Fetch all active (non-archived) members except the author
     const { data: profiles, error: fetchErr } = await admin
       .from('profiles')
       .select('id, full_name, email')
       .neq('id', authorId)
+      .is('deleted_at', null)
       .not('email', 'is', null)
 
     if (fetchErr || !profiles || profiles.length === 0) {
