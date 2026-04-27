@@ -76,15 +76,20 @@ export async function GET(req: NextRequest) {
     // with + concatenation collapses it to `string` and the result type
     // degrades to GenericStringError, breaking every downstream access.
     // See commit 5a71dce for the bug history.
-    let query = supabase
-      .from('feed_posts')
-      .select(`
-        id, user_id, type, content, media_url, media_type, title, link_url,
-        trust_reward, likes_count, comments_count, saves_count, views_count, created_at,
-        posted_as_organisation_id,
-        profiles!feed_posts_user_id_fkey(id, full_name, avatar_url, trust_balance),
-        posted_as_organisation:organisations!posted_as_organisation_id(id, name, slug, logo_url)
-      `)
+     // Only show posts with created_at <= now so future-scheduled posts
+     // don't surface prematurely when inserted with a future timestamp.
+     const nowIso = new Date().toISOString()
+
+     let query = supabase
+       .from('feed_posts')
+       .select(`
+         id, user_id, type, content, media_url, media_type, title, link_url,
+         trust_reward, likes_count, comments_count, saves_count, views_count, created_at,
+         posted_as_organisation_id,
+         profiles!feed_posts_user_id_fkey(id, full_name, avatar_url, trust_balance),
+         posted_as_organisation:organisations!posted_as_organisation_id(id, name, slug, logo_url)
+       `)
+       .lte('created_at', nowIso)
 
     if (filter === 'photos') {
       query = query.or('type.eq.photo,media_type.eq.image')
