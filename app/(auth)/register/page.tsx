@@ -189,7 +189,7 @@ export default function RegisterPage() {
 
       // Branch on whether signUp returned a live session:
       //   - session present  → email confirmation disabled; auto-sign-in.
-      //     Award the ₮25 bonus now and redirect to /onboarding (handled by
+      //     Award the ₮200 bonus now and redirect to /onboarding (handled by
       //     the useEffect via setSuccess(true)).
       //   - session missing  → email confirmation required. Show the
       //     "check your email" UI and DON'T call the bonus route (it would
@@ -497,7 +497,7 @@ export default function RegisterPage() {
       {trustToast && (
         <div className="trust-toast">
           <span>₮</span>
-          <span>₮25 Trust awarded! Welcome to FreeTrust 🎉</span>
+          <span>₮200 Trust awarded! Welcome to FreeTrust 🎉</span>
         </div>
       )}
 
@@ -549,7 +549,7 @@ export default function RegisterPage() {
                 textAlign: 'left',
               }}>
                 <strong style={{ color: '#38bdf8' }}>Next step:</strong> click the link in that email
-                to activate your account. You&rsquo;ll then get <strong style={{ color: '#38bdf8' }}>₮25 Trust</strong>
+                to activate your account. You&rsquo;ll then get <strong style={{ color: '#38bdf8' }}>₮200 Trust</strong>
                 {' '}as a founding member bonus and be redirected to onboarding.
               </div>
               <p style={{ fontSize: 12, color: '#64748b', textAlign: 'center', margin: 0 }}>
@@ -577,7 +577,7 @@ export default function RegisterPage() {
               <div className="perks-strip">
                 <div className="perk">✅ Free forever</div>
                 <div className="perk">🙋 Real people only</div>
-                <div className="perk">₮ Earn ₮25 on signup</div>
+                <div className="perk">₮ Earn ₮200 on signup</div>
               </div>
 
               <div className="real-person-banner">
@@ -770,7 +770,7 @@ export default function RegisterPage() {
                   By signing up you agree to our{' '}
                   <Link href="/terms">Terms of Service</Link> and{' '}
                   <Link href="/privacy">Privacy Policy</Link>.
-                  You&apos;ll receive ₮25 Trust tokens to start.
+                  You&apos;ll receive ₮200 Trust tokens to start.
                 </p>
               </form>
             </>

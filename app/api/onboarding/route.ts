@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { toPgTagArray } from '@/lib/supabase/text-array'
 
 // POST /api/onboarding — save onboarding profile data
-// NOTE: ₮25 trust is awarded exclusively in /auth/callback on signup.
+// NOTE: ₮200 trust is awarded exclusively in /auth/callback on signup.
 //       Do NOT award trust here — it would double-count for email signups.
 export async function POST(request: NextRequest) {
   try {
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
       console.warn('[POST /api/onboarding] extended update warning:', extendedError.message)
     }
 
-    // Read trust balance to confirm ₮25 was already issued at signup
+    // Read trust balance to confirm ₮200 was already issued at signup
     const { data: tb } = await supabase
       .from('trust_balances')
       .select('balance')
