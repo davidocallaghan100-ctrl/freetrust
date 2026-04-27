@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     // Parallel queries across all tables
     const [membersRes, servicesRes, productsRes, eventsRes, articlesRes, orgsRes, grassrootsRes] = await Promise.allSettled([
       (() => {
-        let qb = supabase.from('profiles').select('id, full_name, location, avatar_url').limit(browseMode ? 12 : perType)
+        let qb = supabase.from('profiles').select('id, full_name, location, avatar_url').is('deleted_at', null).limit(browseMode ? 12 : perType)
         if (tsq) {
           qb = qb.textSearch('search_vector', tsq, { type: 'websearch', config: 'english' })
         }

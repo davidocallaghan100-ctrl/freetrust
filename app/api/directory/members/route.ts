@@ -107,6 +107,7 @@ export async function GET() {
   const { data: profilesData, error: profilesError } = await supabase
     .from('profiles')
     .select('id, full_name, avatar_url, bio, location, role, created_at, linkedin_url, instagram_url, twitter_url, github_url, tiktok_url, youtube_url, website_url')
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(1000)
 
