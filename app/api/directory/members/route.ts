@@ -55,6 +55,15 @@ interface Diagnostic {
   profile_ids_sample: string[]
 }
 
+const ARCHIVED_PROFILE_IDS = new Set([
+  '46ac102a-d461-46e0-bacc-78567f2fd710',
+  '7db8f8de-0804-4a5b-9033-b4cf1f0a36e5',
+  '8cb69359-96df-4c73-807d-1d3edff4da35',
+  'b1aaf6c0-315d-4bf2-b292-9a9b4e897a22',
+  'cac90d84-4bdb-4c5f-98e9-21740d81588a',
+  '6b26e087-ee47-4064-a446-45cf92189715',
+])
+
 export async function GET() {
   const startedAt = Date.now()
   const diag: Diagnostic = {
@@ -120,7 +129,7 @@ export async function GET() {
     )
   }
 
-  const profiles = profilesData ?? []
+  const profiles = (profilesData ?? []).filter((p: { id: string }) => !ARCHIVED_PROFILE_IDS.has(p.id))
   diag.profiles_total = profiles.length
   diag.profile_ids_sample = profiles.slice(0, 50).map((p: { id: string }) => p.id)
 
