@@ -114,6 +114,7 @@ export async function fetchSearchResults({
       let membersQuery = supabase
         .from('profiles')
         .select('id, full_name, bio, location, avatar_url, role')
+        .is('deleted_at', null)
       if (q) membersQuery = membersQuery.ilike('full_name', pattern)
       if (location) membersQuery = membersQuery.ilike('location', `%${location}%`)
       membersQuery = membersQuery.limit(5)

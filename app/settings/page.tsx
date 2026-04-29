@@ -222,7 +222,9 @@ function SettingsPageInner() {
         .danger-btn { background: transparent; border: 1px solid #ef4444; color: #ef4444; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
         .danger-btn:hover { background: #ef4444; color: white; }
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
-        .modal-box { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 28px; max-width: 400px; width: 100%; }
+        .modal-box { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 28px; max-width: 400px; width: 100%; max-height: calc(100vh - 40px); overflow-y: auto; }
+        .danger-row { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; border-top: 1px solid #1e293b; gap: 16px; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
         .avatar-wrap { position: relative; width: 80px; height: 80px; border-radius: 50%; overflow: hidden; cursor: pointer; flex-shrink: 0; }
         .avatar-img { width: 100%; height: 100%; object-fit: cover; }
         .avatar-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; background: linear-gradient(135deg, #38bdf8, #0284c7); color: white; }
@@ -238,6 +240,10 @@ function SettingsPageInner() {
           .settings-sidebar { width: 100%; }
           .sidebar-tabs { display: flex; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
           .tab-btn { white-space: nowrap; padding: 8px 12px; }
+          .danger-row { flex-direction: column; align-items: stretch; }
+          .danger-row .danger-btn { width: 100%; }
+          .modal-actions { flex-direction: column-reverse; }
+          .modal-actions button { width: 100%; }
         }
       `}</style>
 
@@ -1582,10 +1588,13 @@ function DangerTab({ onDeleted }: { onDeleted: () => void }) {
     setDeleting(true)
     try {
       const res = await fetch('/api/settings/delete-account', { method: 'DELETE' })
+      const data = await res.json().catch(() => null) as { error?: string; warning?: string } | null
       if (res.ok) {
+        if (data?.warning) window.alert(data.warning)
+        await createClient().auth.signOut().catch(() => {})
         onDeleted()
       } else {
-        setError('Failed to delete account. Please try again.')
+        setError(data?.error ?? 'Failed to delete account. Please try again.')
         setDeleting(false)
       }
     } catch {
@@ -1600,7 +1609,7 @@ function DangerTab({ onDeleted }: { onDeleted: () => void }) {
         <h2 className="section-title" style={{ color: '#f87171' }}>Danger Zone</h2>
         <p className="section-desc">These actions are irreversible. Please proceed with caution.</p>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0', borderTop: '1px solid #1e293b' }}>
+        <div className="danger-row">
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, color: '#f1f5f9' }}>Delete your account</div>
             <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
@@ -1632,7 +1641,7 @@ function DangerTab({ onDeleted }: { onDeleted: () => void }) {
               style={{ marginBottom: 12 }}
             />
             {error && <p style={{ color: '#f87171', fontSize: 12, marginBottom: 10 }}>{error}</p>}
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <div className="modal-actions">
               <button
                 onClick={() => { setShowModal(false); setConfirmText(''); setError('') }}
                 style={{ background: 'transparent', border: '1px solid #334155', color: '#94a3b8', borderRadius: 8, padding: '8px 16px', fontSize: 14, cursor: 'pointer' }}

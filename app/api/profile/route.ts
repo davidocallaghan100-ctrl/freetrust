@@ -16,6 +16,7 @@ export async function GET() {
       .from('profiles')
       .select('*')
       .eq('id', user.id)
+      .is('deleted_at', null)
       .single()
 
     if (error) {

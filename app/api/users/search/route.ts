@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
       .from('profiles')
       .select('id, full_name, username, email, avatar_url')
       .neq('id', user.id) // exclude self
+      .is('deleted_at', null)
       .or(`full_name.ilike.${searchTerm},username.ilike.${searchTerm},email.ilike.${searchTerm}`)
       .limit(10)
 

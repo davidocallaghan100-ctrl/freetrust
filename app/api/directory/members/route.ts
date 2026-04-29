@@ -93,10 +93,9 @@ export async function GET() {
     )
   }
 
-  // ── STEP 1. Fetch ALL profiles — the single source of truth ──────────────
+  // ── STEP 1. Fetch all visible profiles — the single source of truth ──────
   // This is the ONLY query that determines who appears in the directory.
-  // No filters. No joins. No WHERE clause. Just every row in profiles,
-  // newest first. If this returns 13 rows, the response has 13 members.
+  // Soft-deleted profiles (`deleted_at` set) must remain hidden everywhere.
   //
   // NOTE: the select string MUST be a single string literal (no `+`
   // concatenation). Supabase's typed client infers the row type from the

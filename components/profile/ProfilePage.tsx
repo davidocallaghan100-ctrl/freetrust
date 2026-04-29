@@ -238,6 +238,7 @@ export default function ProfilePage() {
         .from('profiles')
         .select('*')
         .eq('id', userId)
+        .is('deleted_at', null)
         .single()
       if (prof) {
         setProfile(prof)

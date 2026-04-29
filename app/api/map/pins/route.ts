@@ -150,6 +150,7 @@ export async function GET() {
         admin
           .from('profiles')
           .select('id, username, full_name, avatar_url, bio, city, country, latitude, longitude, account_type, show_on_map')
+          .is('deleted_at', null)
           .neq('show_on_map', false)
           .limit(500),
 
