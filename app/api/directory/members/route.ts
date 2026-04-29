@@ -8,22 +8,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
 //
 // SOURCE OF TRUTH: `public.profiles`.
 //
-// The directory is built EXCLUSIVELY from rows in the profiles table. There
-// is no join with auth.users anywhere in this route, and no step in this
-// route can filter rows OUT of the profiles query's result. If a row exists
-// in profiles, it will appear in this endpoint's response — full stop.
-//
-// This was an important fix after a bug where members signed up via
-// alternate auth paths (OAuth / Google) ended up with profile rows whose
-// `id` no longer existed in auth.users. The route used to (effectively)
-// gate visibility on auth.users membership, dropping those users. The
-// structure below isolates the profiles read from everything else so that
-// bug cannot regress:
-//
-//   1. Fetch ALL profiles (primary data source)
-//   2. Enrich with trust balances + follower counts (optional decoration)
-//   3. Fire-and-forget backfill from auth.users (optional side effect,
-//      does not run before step 1, cannot affect the response)
+// The directory is built EXCLUSIVELY from visible rows in the profiles table.
+// It must never read from auth.users or create profiles as a side effect of a
+// GET request. Profile creation belongs to the Supabase auth trigger
+// (`public.handle_new_user`), not this read endpoint; otherwise deleted users
+// can be resurrected the next time someone opens /members.
 //
 // Every step after step 1 is wrapped in its own try/catch so enrichment
 // failures degrade gracefully to zero-filled defaults rather than dropping
@@ -38,8 +27,7 @@ interface Diagnostic {
   trust_balances_error: string | null
   follower_rows_fetched: number
   follower_rows_error: string | null
-  // Backfill side-effect — runs AFTER the response data is ready, so
-  // failures here are purely cosmetic for the NEXT request.
+  // Deprecated backfill counters retained for diagnostics/client compatibility.
   auth_users_fetched: number
   auth_users_pages_fetched: number
   profiles_missing: number
@@ -54,15 +42,6 @@ interface Diagnostic {
   // response size sane.
   profile_ids_sample: string[]
 }
-
-const ARCHIVED_PROFILE_IDS = new Set([
-  '46ac102a-d461-46e0-bacc-78567f2fd710',
-  '7db8f8de-0804-4a5b-9033-b4cf1f0a36e5',
-  '8cb69359-96df-4c73-807d-1d3edff4da35',
-  'b1aaf6c0-315d-4bf2-b292-9a9b4e897a22',
-  'cac90d84-4bdb-4c5f-98e9-21740d81588a',
-  '6b26e087-ee47-4064-a446-45cf92189715',
-])
 
 export async function GET() {
   const startedAt = Date.now()
@@ -129,7 +108,7 @@ export async function GET() {
     )
   }
 
-  const profiles = (profilesData ?? []).filter((p: { id: string }) => !ARCHIVED_PROFILE_IDS.has(p.id))
+  const profiles = profilesData ?? []
   diag.profiles_total = profiles.length
   diag.profile_ids_sample = profiles.slice(0, 50).map((p: { id: string }) => p.id)
 
@@ -230,98 +209,14 @@ export async function GET() {
     }
   })
 
-  // ── STEP 4. Fire-and-forget backfill from auth.users ─────────────────────
-  // IMPORTANT — this runs AFTER the response data is ready. It cannot
-  // affect `members` above. Its only purpose is to create profile rows
-  // for auth.users who don't have one yet, so they appear on the NEXT
-  // request. Errors here are logged into `_diagnostic.backfill_error`
-  // and never fail the response.
-  //
-  // This is deliberately awaited (rather than truly fire-and-forget) so
-  // that the response is atomic — a user refreshing rapidly after a
-  // signup gets the backfill before the second request's profiles
-  // query runs. We could kick it off as a non-awaited Promise but
-  // serverless function containers can die the instant the response
-  // flushes, killing an un-awaited side effect mid-flight.
-  try {
-    const allAuthUsers: Array<{ id: string; email: string | null; user_metadata: Record<string, unknown> | null }> = []
-    const PER_PAGE = 1000
-    const MAX_PAGES = 20
-
-    for (let page = 1; page <= MAX_PAGES; page++) {
-      const { data: pageData, error: pageErr } = await supabase.auth.admin.listUsers({
-        page,
-        perPage: PER_PAGE,
-      })
-      if (pageErr) {
-        console.error(`[members backfill] listUsers page=${page} error:`, pageErr.message)
-        diag.backfill_error = pageErr.message
-        break
-      }
-      const pageUsers = pageData?.users ?? []
-      diag.auth_users_pages_fetched = page
-      if (pageUsers.length === 0) break
-      for (const u of pageUsers) {
-        allAuthUsers.push({
-          id: u.id,
-          email: u.email ?? null,
-          user_metadata: (u.user_metadata as Record<string, unknown> | null) ?? null,
-        })
-      }
-      if (pageUsers.length < PER_PAGE) break
-    }
-
-    diag.auth_users_fetched = allAuthUsers.length
-
-    if (allAuthUsers.length > 0) {
-      // Build a set of existing profile ids from STEP 1's result — no
-      // extra query needed. This is the "profiles is the source of
-      // truth" invariant: we use what the profiles query already told
-      // us, rather than re-querying profiles with a filter.
-      const existingIds = new Set(ids)
-      const missing = allAuthUsers.filter(u => !existingIds.has(u.id))
-      diag.profiles_missing = missing.length
-
-      if (missing.length > 0) {
-        const rows = missing.map(u => ({
-          id: u.id,
-          email: u.email ?? `${u.id}@placeholder.local`,
-          full_name:
-            (u.user_metadata?.full_name as string | undefined) ??
-            (u.user_metadata?.name as string | undefined) ??
-            null,
-        }))
-
-        // Chunk the upsert — some Postgres drivers bail on very large VALUES.
-        const CHUNK = 500
-        let upserted = 0
-        for (let i = 0; i < rows.length; i += CHUNK) {
-          const slice = rows.slice(i, i + CHUNK)
-          const { error: upsertErr } = await supabase
-            .from('profiles')
-            .upsert(slice, { onConflict: 'id', ignoreDuplicates: true })
-          if (upsertErr) {
-            console.error(`[members backfill] upsert chunk ${i}..${i + slice.length} error:`, upsertErr.message)
-            diag.backfill_error = upsertErr.message
-          } else {
-            upserted += slice.length
-          }
-        }
-        diag.profiles_upserted = upserted
-        console.log(`[members backfill] upserted ${upserted} / ${missing.length} missing profiles`)
-      }
-    }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    console.error('[members backfill] top-level error:', msg)
-    diag.backfill_error = msg
-  }
+  // No auth.users backfill here. The former implementation listed auth users
+  // and upserted missing profile rows on every read, which resurrected deleted
+  // accounts. New profiles are created by the `public.handle_new_user` trigger.
 
   diag.duration_ms = Date.now() - startedAt
   console.log(
     `[GET /api/directory/members] done: ${members.length} members ` +
-    `(profiles=${diag.profiles_total}, auth=${diag.auth_users_fetched}, ` +
-    `backfilled=${diag.profiles_upserted}, ${diag.duration_ms}ms)`,
+    `(profiles=${diag.profiles_total}, ${diag.duration_ms}ms)`,
   )
 
   return NextResponse.json(
