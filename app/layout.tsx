@@ -2,6 +2,11 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import Script from "next/script";
 import "./globals.css";
+// Globally load MapLibre styles so maps inside dynamic({ ssr:false })
+// components always have canvas sizing rules available at mount.
+// Without this, on mobile the stylesheet can arrive after the map
+// initialises and the canvas ends up 0×0 inside a visible wrapper.
+import "maplibre-gl/dist/maplibre-gl.css";
 import { CurrencyProvider } from "@/context/CurrencyContext";
 import AppShell from "@/components/AppShell";
 import PWAInstallBanner from "@/components/PWAInstallBanner";

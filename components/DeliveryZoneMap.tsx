@@ -2,6 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
+// NOTE: the maplibre stylesheet is also imported globally in app/layout.tsx
+// so the canvas always has sizing rules at mount time (mobile Safari needs
+// the stylesheet to be present before the map initialises or the canvas
+// ends up 0×0). Keeping this import here too is harmless — CSS modules
+// dedupe — and makes this component self-contained for unit tests.
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 // ─── Haversine circle polygon (64 points, no external dep) ───────────────────
@@ -89,6 +94,11 @@ export default function DeliveryZoneMap({
   const [radiusKm, setRadiusKm] = useState<number>(value?.radiusKm ?? 25)
   const [placeName, setPlaceName] = useState<string>('')
   const [geoLoading, setGeoLoading] = useState(false)
+  // Track map lifecycle so we can render a visible loading/fallback state
+  // while tiles fetch (mobile) and so a style-fetch failure doesn't leave
+  // the user staring at an empty black rectangle.
+  const [mapReady, setMapReady] = useState(false)
+  const [mapError, setMapError] = useState<string | null>(null)
 
   // Keep a ref so map event handlers always see the current value without
   // recreating the map on every render.
@@ -178,7 +188,22 @@ export default function DeliveryZoneMap({
 
     mapRef.current = map
 
+    // Surface errors so we render a visible fallback instead of a
+    // blank black rectangle if the style or tiles fail to load.
+    map.on('error', (e) => {
+      console.error('[DeliveryZoneMap] map error:', e.error?.message ?? e)
+      setMapError(e.error?.message ?? 'Map failed to load')
+    })
+
     map.on('load', () => {
+      setMapReady(true)
+      // Mobile Safari frequently mounts the canvas at 0×0 when the map is
+      // inside a just-revealed conditional (e.g. "Local" radio click). Force
+      // a resize on load and again on the next frame to guarantee the canvas
+      // picks up its container dimensions.
+      map.resize()
+      requestAnimationFrame(() => map.resize())
+
       if (value) {
         placeMarker(map, value.lat, value.lng)
         updateCircle(map, value.lat, value.lng, value.radiusKm)
@@ -199,7 +224,16 @@ export default function DeliveryZoneMap({
       }
     })
 
+    // Extra safety: if the container element's size changes after mount
+    // (mobile accordion reveal, orientation change, keyboard dismiss) keep
+    // the canvas in sync.
+    const ro = new ResizeObserver(() => {
+      try { map.resize() } catch { /* map already removed */ }
+    })
+    ro.observe(mapContainer.current)
+
     return () => {
+      ro.disconnect()
       map.remove()
       mapRef.current = null
       markerRef.current = null
@@ -245,16 +279,75 @@ export default function DeliveryZoneMap({
 
   return (
     <div style={{ width: '100%' }}>
-      {/* Map canvas */}
+      {/* Map canvas — positioned wrapper so we can overlay loading/error
+          states without the canvas losing its dimensions. `minHeight` and
+          explicit `height` protect against the mobile Safari 0×0 bug when
+          this map is revealed inside a conditional. */}
       <div
-        ref={mapContainer}
         style={{
+          position: 'relative',
           width: '100%',
           height: `${height}px`,
+          minHeight: `${height}px`,
           borderRadius: '12px',
           overflow: 'hidden',
+          background: '#0f172a',
+          border: '1px solid #1f2937',
         }}
-      />
+      >
+        <div
+          ref={mapContainer}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+          }}
+        />
+        {!mapReady && !mapError && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#9ca3af',
+              fontSize: 14,
+              pointerEvents: 'none',
+              background:
+                'linear-gradient(90deg, rgba(30,41,59,0.4) 0%, rgba(51,65,85,0.4) 50%, rgba(30,41,59,0.4) 100%)',
+              backgroundSize: '200% 100%',
+              animation: 'dzm-shimmer 1.4s linear infinite',
+            }}
+          >
+            Loading map…
+          </div>
+        )}
+        {mapError && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center',
+              color: '#fca5a5',
+              fontSize: 13,
+              padding: 16,
+              gap: 6,
+            }}
+          >
+            <span>⚠️ Map couldn&apos;t load</span>
+            <span style={{ color: '#94a3b8', fontSize: 12 }}>
+              Check your connection, or type coordinates manually below.
+            </span>
+          </div>
+        )}
+        <style>{`@keyframes dzm-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+      </div>
 
       {/* Interactive controls */}
       {interactive && (
