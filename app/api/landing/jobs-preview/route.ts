@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { REAL_JOB_SOURCE_FILTER } from '@/lib/dataIntegrity'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,6 +16,7 @@ export async function GET(request: NextRequest) {
       .from('jobs')
       .select('id, title, job_type, location_type, location, city, salary_min, salary_max, salary_currency, created_at, poster:profiles!poster_id(full_name)')
       .eq('status', 'active')
+      .or(REAL_JOB_SOURCE_FILTER)
       .order('created_at', { ascending: false })
       .limit(limit)
 

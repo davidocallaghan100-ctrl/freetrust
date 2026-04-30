@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { REAL_JOB_SOURCE_FILTER } from '@/lib/dataIntegrity'
 
 // GET /api/users/[id]/activity?page=1&limit=20
 // Returns a unified chronological feed of everything this user has created:
@@ -32,6 +33,7 @@ export async function GET(
         .from('jobs')
         .select('id, title, job_type, location_type, status, applicant_count, company_logo_url, created_at')
         .eq('poster_id', userId)
+        .or(REAL_JOB_SOURCE_FILTER)
         .order('created_at', { ascending: false })
         .limit(50),
       admin

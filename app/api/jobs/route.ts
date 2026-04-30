@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { awardTrust } from '@/lib/trust/award'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
+import { REAL_JOB_SOURCE_FILTER } from '@/lib/dataIntegrity'
 
 /**
  * Decode a Supabase JWT locally — no network call needed.
@@ -72,6 +73,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('jobs')
       .select('*, poster:profiles!poster_id(id, full_name, bio, created_at, linkedin_url, instagram_url, twitter_url, github_url, tiktok_url, youtube_url, website_url), org:organisations!org_id(id, name, slug, logo_url, is_verified)')
+      .or(REAL_JOB_SOURCE_FILTER)
       .order('created_at', { ascending: false })
       .limit(100)
 

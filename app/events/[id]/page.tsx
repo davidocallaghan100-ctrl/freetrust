@@ -8,6 +8,7 @@ import PriceDisplay from '@/components/currency/PriceDisplay'
 import LocationBadge from '@/components/location/LocationBadge'
 import { type CurrencyCode } from '@/context/CurrencyContext'
 import { type MapEvent } from '@/components/events/EventsMap'
+import { REAL_EVENT_SOURCE_FILTER } from '@/lib/dataIntegrity'
 
 // Dynamically import the map to avoid SSR Leaflet errors
 const EventsMap = dynamic(() => import('@/components/events/EventsMap'), { ssr: false })
@@ -136,6 +137,7 @@ export default function EventDetailPage() {
             external_url, status, is_platform_curated
           `)
           .eq('id', id)
+          .or(REAL_EVENT_SOURCE_FILTER)
           .maybeSingle()
         if (error || !data) { setNotFound(true); return }
         setEvent(data as DBEvent)

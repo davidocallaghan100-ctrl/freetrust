@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { REAL_EVENT_SOURCE_FILTER } from '@/lib/dataIntegrity'
 
 interface SearchHit {
   id: string
@@ -70,7 +71,7 @@ export async function GET(req: NextRequest) {
       })(),
 
       (() => {
-        let qb = supabase.from('events').select('id, title, starts_at, category').eq('status', 'published').gte('starts_at', new Date().toISOString()).limit(browseMode ? 8 : perType)
+        let qb = supabase.from('events').select('id, title, starts_at, category').eq('status', 'published').or(REAL_EVENT_SOURCE_FILTER).gte('starts_at', new Date().toISOString()).limit(browseMode ? 8 : perType)
         if (tsq) {
           qb = qb.textSearch('search_vector', tsq, { type: 'websearch', config: 'english' })
         }

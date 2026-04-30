@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { REAL_JOB_SOURCE_FILTER } from '@/lib/dataIntegrity'
 
 /**
  * GET /api/organisations/[id]/jobs
@@ -31,6 +32,7 @@ export async function GET(
       .from('jobs')
       .select('id, title, job_type, location_type, location, category, status, created_at, applicant_count, company_logo_url, poster:profiles!poster_id(id, full_name, avatar_url)')
       .eq('org_id', orgId)
+      .or(REAL_JOB_SOURCE_FILTER)
       .order('created_at', { ascending: false })
 
     if (error) {

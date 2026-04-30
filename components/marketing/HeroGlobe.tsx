@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Map, { type MapRef, Marker, Popup } from 'react-map-gl/mapbox'
 import { createClient } from '@supabase/supabase-js'
+import { REAL_JOB_SOURCE_FILTER } from '@/lib/dataIntegrity'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
 const MAPBOX_TOKEN  = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
@@ -55,6 +56,7 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
       .from('jobs')
       .select('id, title, location_label, latitude, longitude')
       .eq('status', 'active')
+      .or(REAL_JOB_SOURCE_FILTER)
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
       .order('created_at', { ascending: false })

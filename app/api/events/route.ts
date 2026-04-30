@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { awardTrust } from '@/lib/trust/award'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
+import { REAL_EVENT_SOURCE_FILTER } from '@/lib/dataIntegrity'
 
 // ── API key auth for external event ingestion ────────────────────────────────
 //
@@ -45,6 +46,7 @@ export async function GET(request: NextRequest) {
       .from('events')
       .select(`*, profiles:creator_id(id, full_name, avatar_url)`)
       .eq('status', 'published')
+      .or(REAL_EVENT_SOURCE_FILTER)
       .order('starts_at', { ascending: true })
 
     if (upcoming)      query = query.gte('starts_at', new Date().toISOString())

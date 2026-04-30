@@ -1,15 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import type { SearchParams, SearchResponse, SearchResult } from './types'
-
-// Demo fallback results for when DB tables don't have data yet
-const DEMO_RESULTS: SearchResult[] = [
-  { id: 's1', title: 'Web Development', subtitle: 'Full-stack development service', description: 'Professional web development for startups and SMEs. React, Next.js, Node.js.', href: '/services/web-development', category: 'service', location: 'London, UK', price: 500, trustScore: 92 },
-  { id: 's2', title: 'Logo Design', subtitle: 'Brand identity design', description: 'Custom logo and brand identity packages tailored to your business.', href: '/services/logo-design', category: 'service', location: 'Remote', price: 150, trustScore: 88 },
-  { id: 'p1', title: 'FreeTrust Pro Plan', subtitle: 'Premium subscription', description: 'Unlock advanced features including verified badges, analytics, and priority support.', href: '/products/pro-plan', category: 'product', price: 29, trustScore: 95 },
-  { id: 'e1', title: 'Freelancer Meetup', subtitle: 'Networking event', description: 'Monthly meetup for freelancers and independent professionals.', href: '/events/freelancer-meetup', category: 'event', location: 'London, UK', date: 'Apr 18, 2026', trustScore: 78 },
-  { id: 'o1', title: 'Tech Guild', subtitle: 'Professional organisation', description: "A community for tech professionals, freelancers, and founders.", href: '/organisations/tech-guild', category: 'organisation', location: 'Global', trustScore: 85 },
-  { id: 'm1', title: 'David O Callaghan', subtitle: 'Founder & Developer', description: 'Building FreeTrust — open-source trust infrastructure for modern applications.', href: '/members/davidocallaghan', category: 'member', location: 'Global', trustScore: 91 },
-]
+import { REAL_EVENT_SOURCE_FILTER } from '@/lib/dataIntegrity'
 
 export async function fetchSearchResults({
   query,
@@ -63,6 +54,7 @@ export async function fetchSearchResults({
       let eventsQuery = supabase
         .from('events')
         .select('id, title, description, start_date, location, cover_url, attendee_count')
+        .or(REAL_EVENT_SOURCE_FILTER)
       if (q) eventsQuery = eventsQuery.or(`title.ilike.${pattern},description.ilike.${pattern}`)
       if (location) eventsQuery = eventsQuery.ilike('location', `%${location}%`)
       eventsQuery = eventsQuery.limit(5)
@@ -162,14 +154,12 @@ export async function fetchSearchResults({
       }
     }
   } catch {
-    // Supabase query failed; fall through to demo fallback
+    // Supabase query failed; keep the results empty. FreeTrust must never
+    // substitute fake/demo content for real marketplace data.
   }
 
-  // If no real results, use demo fallback so the page isn't empty
-  const sourceResults = allResults.length > 0 ? allResults : DEMO_RESULTS
-
   const qLower = q.toLowerCase()
-  let filtered = sourceResults.filter((r) => {
+  let filtered = allResults.filter((r) => {
     if (qLower && !r.title.toLowerCase().includes(qLower) && !r.description?.toLowerCase().includes(qLower)) return false
     if (category && category !== 'all' && r.category !== category) return false
     if (location && !r.location?.toLowerCase().includes(location.toLowerCase())) return false

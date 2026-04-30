@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { REAL_JOB_SOURCE_FILTER } from '@/lib/dataIntegrity'
 
 interface Job {
   id: string
@@ -88,6 +89,7 @@ export default function JobDetailPage() {
           .from('jobs')
           .select('*, poster:profiles!poster_id(id, full_name, bio, created_at, trust_balance)')
           .eq('id', id)
+          .or(REAL_JOB_SOURCE_FILTER)
           .single()
         if (data) {
           setJob(data as Job)
@@ -96,6 +98,7 @@ export default function JobDetailPage() {
             .from('jobs')
             .select('id, title, job_type, location_type, salary_min, salary_max, salary_currency, poster:profiles!poster_id(full_name)')
             .eq('status', 'active')
+            .or(REAL_JOB_SOURCE_FILTER)
             .eq('category', (data as Job).category)
             .neq('id', id)
             .limit(3)

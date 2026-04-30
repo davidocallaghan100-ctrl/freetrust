@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { notifyAllMembersNewPost } from '@/lib/notifications/new-post-fanout'
+import { REAL_EVENT_SOURCE_FILTER, REAL_JOB_SOURCE_FILTER } from '@/lib/dataIntegrity'
 
 // Shape returned to the client — matches FeedPost in components/PostCard
 type FeedItem = {
@@ -468,6 +469,7 @@ async function fetchJobs(supabase: SupabaseLike, offset: number, limit: number) 
       poster:profiles!poster_id(id, full_name, avatar_url, trust_balance)
     `)
     .eq('status', 'active')
+    .or(REAL_JOB_SOURCE_FILTER)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
 
@@ -515,6 +517,7 @@ async function fetchEvents(supabase: SupabaseLike, offset: number, limit: number
       creator:profiles!creator_id(id, full_name, avatar_url, trust_balance)
     `)
     .eq('status', 'published')
+    .or(REAL_EVENT_SOURCE_FILTER)
     .gte('starts_at', new Date().toISOString())
     .order('starts_at', { ascending: true })
     .range(offset, offset + limit - 1)

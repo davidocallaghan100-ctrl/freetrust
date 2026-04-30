@@ -7,6 +7,7 @@ import { FAQS } from '@/lib/faq'
 import ROICalculator from './ROICalculator'
 import { createClient } from '@/lib/supabase/client'
 import HeroGlobe from './HeroGlobe'
+import { REAL_EVENT_SOURCE_FILTER, REAL_JOB_SOURCE_FILTER } from '@/lib/dataIntegrity'
 
 // HeroGlobe is imported from ./HeroGlobe — Mapbox GL realistic globe with auto-rotation
 
@@ -355,6 +356,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           .from('events')
           .select('id, title, starts_at, city, country, category, attendee_count, is_online')
           .eq('status', 'published')
+          .or(REAL_EVENT_SOURCE_FILTER)
           .gte('starts_at', now)
           .order('starts_at', { ascending: true })
           .limit(6)
@@ -372,6 +374,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           .from('jobs')
           .select('id, title, company_name, city, country, location_type, salary_min, salary_max, salary_currency, job_type')
           .eq('status', 'active')
+          .or(REAL_JOB_SOURCE_FILTER)
           .order('created_at', { ascending: false })
           .limit(6)
         setHomeJobs((data as HomeJob[]) ?? [])

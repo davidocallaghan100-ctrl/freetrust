@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { REAL_EVENT_SOURCE_FILTER, REAL_JOB_SOURCE_FILTER } from '@/lib/dataIntegrity'
 
 // GET /api/organisations/[id]/activity
 // Returns a unified feed of everything posted on behalf of this org:
@@ -21,12 +22,14 @@ export async function GET(
         .from('jobs')
         .select('id, title, job_type, location_type, status, applicant_count, company_logo_url, created_at')
         .eq('org_id', orgId)
+        .or(REAL_JOB_SOURCE_FILTER)
         .order('created_at', { ascending: false })
         .limit(50),
       admin
         .from('events')
         .select('id, title, start_date, location, is_online, cover_url, attendee_count, created_at')
         .eq('org_id', orgId)
+        .or(REAL_EVENT_SOURCE_FILTER)
         .order('created_at', { ascending: false })
         .limit(50),
       admin

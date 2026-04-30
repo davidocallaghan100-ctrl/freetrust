@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import { REAL_EVENT_SOURCE_FILTER } from "@/lib/dataIntegrity";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -83,6 +84,8 @@ export default function CalendarPage() {
         const { data } = await supabase
           .from("events")
           .select("*")
+          .eq("status", "published")
+          .or(REAL_EVENT_SOURCE_FILTER)
           .order("starts_at", { ascending: true });
         if (data && data.length > 0) {
           setEvents(data.map((e: Record<string, unknown>) => ({
@@ -1079,4 +1082,3 @@ function EventModal({
     </div>
   );
 }
-

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { REAL_EVENT_SOURCE_FILTER } from '@/lib/dataIntegrity'
 import LocationFilter from '@/components/location/LocationFilter'
 import LocationBadge from '@/components/location/LocationBadge'
 import EventsMap, { type MapEvent } from '@/components/events/EventsMap'
@@ -282,6 +283,7 @@ export default function EventsPage() {
           .from('events')
           .select('id, title, description, starts_at, ends_at, is_online, meeting_url, attendee_count, is_paid, ticket_price, ticket_price_eur, currency_code, country, region, city, latitude, longitude, location_label, venue_name, category, organiser_name, is_platform_curated, external_url')
           .eq('status', 'published')
+          .or(REAL_EVENT_SOURCE_FILTER)
           .or(`starts_at.is.null,starts_at.gte.${oneDayAgo}`)
           .order('starts_at', { ascending: true, nullsFirst: false })
           .limit(200)
