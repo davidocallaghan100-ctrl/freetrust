@@ -51,7 +51,7 @@ export async function GET() {
 
       admin
         .from('events')
-        .select('id, title, starts_at, venue_name, latitude, longitude, city, country, ticket_price, is_paid, is_online, is_platform_curated, external_source, organizer_id')
+        .select('id, title, starts_at, venue_name, latitude, longitude, city, country, ticket_price, is_paid, is_online, is_platform_curated, external_source')
         .eq('status', 'published')
         .or(REAL_EVENT_SOURCE_FILTER)
         .gte('starts_at', new Date().toISOString())
