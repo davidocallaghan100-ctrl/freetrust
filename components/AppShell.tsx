@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Nav from './Nav'
 import Sidebar from './Sidebar'
@@ -204,6 +205,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             color: '#475569',
             marginTop: '2rem',
           }}>
+            <div style={{ marginBottom: '0.5rem' }}>
+              <Link href="/trust-economy" style={{ color: '#94a3b8', textDecoration: 'none', fontWeight: 600 }}>Trust Economy</Link>
+            </div>
             &copy; 2026 FreeTrust. All rights reserved.
           </footer>
         </main>
