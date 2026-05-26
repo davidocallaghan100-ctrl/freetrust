@@ -65,6 +65,29 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      // ── Stripe Identity ────────────────────────────────────────────────
+      // All three identity events share the same endpoint + signing secret;
+      // Stripe dispatches them as the verification session moves between
+      // states. metadata.user_id is set when we create the session in
+      // /api/profile/identity-verification.
+      case "identity.verification_session.created": {
+        const session = event.data.object as Stripe.Identity.VerificationSession;
+        await handleIdentityVerificationCreated(session);
+        break;
+      }
+
+      case "identity.verification_session.verified": {
+        const session = event.data.object as Stripe.Identity.VerificationSession;
+        await handleIdentityVerificationVerified(session);
+        break;
+      }
+
+      case "identity.verification_session.requires_input": {
+        const session = event.data.object as Stripe.Identity.VerificationSession;
+        await handleIdentityVerificationRequiresInput(session);
+        break;
+      }
+
       default:
         console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
     }
@@ -853,3 +876,153 @@ async function handleFounderInvestment(session: Stripe.Checkout.Session) {
   }).catch(e => console.error('[Founder] notification failed:', e));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Stripe Identity handlers
+// ─────────────────────────────────────────────────────────────────────────────
+// Pulled the user_id off `metadata.user_id`, which we set when the session
+// is created in /api/profile/identity-verification. If metadata is missing
+// or invalid we log and return 200 — never throw, because Stripe retries
+// indefinitely on 5xx and a malformed event we can't act on will just
+// pollute the retry queue forever.
+
+function extractIdentityUserId(session: Stripe.Identity.VerificationSession): string | null {
+  const uid = (session.metadata as Record<string, string> | null)?.user_id;
+  if (!uid || typeof uid !== 'string' || uid.length < 8) return null;
+  return uid;
+}
+
+async function handleIdentityVerificationCreated(
+  session: Stripe.Identity.VerificationSession,
+) {
+  const userId = extractIdentityUserId(session);
+  if (!userId) {
+    console.warn('[Stripe Identity] created event missing metadata.user_id', { sessionId: session.id });
+    return;
+  }
+
+  const admin = createAdminClient();
+  // Upsert pending state. attempt_count increments only when the row
+  // already exists — first-time row stays at 0 attempts because the
+  // very act of creating-then-using is one full attempt cycle that
+  // we count on the `verified` / `requires_input` terminal events.
+  const { data: existing } = await admin
+    .from('profile_verifications')
+    .select('id, attempt_count')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (existing) {
+    await admin
+      .from('profile_verifications')
+      .update({
+        stripe_verification_session_id: session.id,
+        status: 'pending',
+        last_attempt_at: new Date().toISOString(),
+        attempt_count: (existing.attempt_count ?? 0) + 1,
+      })
+      .eq('user_id', userId);
+  } else {
+    await admin
+      .from('profile_verifications')
+      .insert({
+        user_id: userId,
+        stripe_verification_session_id: session.id,
+        status: 'pending',
+        last_attempt_at: new Date().toISOString(),
+        attempt_count: 1,
+      });
+  }
+
+  console.log('[Stripe Identity] verification pending', { userId, sessionId: session.id });
+}
+
+async function handleIdentityVerificationVerified(
+  session: Stripe.Identity.VerificationSession,
+) {
+  const userId = extractIdentityUserId(session);
+  if (!userId) {
+    console.warn('[Stripe Identity] verified event missing metadata.user_id', { sessionId: session.id });
+    return;
+  }
+
+  const admin = createAdminClient();
+
+  // 1. Mark status=verified + verified_at. Idempotent — if a duplicate
+  //    event arrives the row is just re-set to the same values.
+  const { error: updateErr } = await admin
+    .from('profile_verifications')
+    .update({
+      status: 'verified',
+      verified_at: new Date().toISOString(),
+      stripe_verification_session_id: session.id,
+    })
+    .eq('user_id', userId);
+
+  if (updateErr) {
+    console.error('[Stripe Identity] failed to mark verified:', updateErr.message);
+    return;
+  }
+
+  // 2. Grant the +₮100 bonus via the SECURITY DEFINER RPC. The RPC is
+  //    idempotent (checks bonus_granted_at IS NULL inside a row-lock),
+  //    so receiving this event twice will not double-grant.
+  const { data: newBalance, error: rpcErr } = await admin.rpc('grant_verification_bonus', {
+    p_user_id: userId,
+  });
+
+  if (rpcErr) {
+    console.error('[Stripe Identity] grant_verification_bonus RPC failed:', rpcErr.message);
+    // Don't return — the status update already succeeded. The bonus
+    // will be retried on the next event or via a manual reconcile.
+  } else {
+    console.log('[Stripe Identity] verified + bonus granted', { userId, newBalance });
+  }
+
+  // 3. Audit breadcrumb — logActivity is order-scoped so it doesn't fit
+  //    here. Use a structured console log instead so it lands in Vercel
+  //    logs in a grep-able shape.
+  console.log('[Audit] identity.verified', {
+    user_id: userId,
+    session_id: session.id,
+    timestamp: new Date().toISOString(),
+  });
+
+  // 4. Notification — fire-and-forget.
+  void insertNotification({
+    userId,
+    type: 'identity_verified',
+    title: "You're verified! +₮100 TrustCoins earned",
+    body: 'Your Verified badge is now visible on your profile.',
+    link: '/settings?tab=verification',
+  }).catch(e => console.error('[Stripe Identity] notification failed:', e));
+}
+
+async function handleIdentityVerificationRequiresInput(
+  session: Stripe.Identity.VerificationSession,
+) {
+  const userId = extractIdentityUserId(session);
+  if (!userId) {
+    console.warn('[Stripe Identity] requires_input event missing metadata.user_id', { sessionId: session.id });
+    return;
+  }
+
+  const admin = createAdminClient();
+  await admin
+    .from('profile_verifications')
+    .update({
+      status: 'failed',
+      stripe_verification_session_id: session.id,
+    })
+    .eq('user_id', userId);
+
+  console.log('[Stripe Identity] verification failed (requires_input)', { userId, sessionId: session.id });
+
+  // Notify the user so they know to retry from /settings.
+  void insertNotification({
+    userId,
+    type: 'identity_verification_failed',
+    title: 'Identity verification needs another try',
+    body: 'Stripe couldn\'t confirm your identity from the document provided. Tap to try again.',
+    link: '/settings?tab=verification',
+  }).catch(e => console.error('[Stripe Identity] notification failed:', e));
+}
