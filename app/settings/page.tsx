@@ -71,7 +71,7 @@ interface TrustLedgerEntry {
   created_at: string
 }
 
-type Tab = 'account' | 'content' | 'privacy' | 'notifications' | 'trust' | 'referral' | 'stripe' | 'security' | 'danger'
+type Tab = 'account' | 'content' | 'privacy' | 'notifications' | 'trust' | 'referral' | 'stripe' | 'verification' | 'security' | 'danger'
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'account',       label: 'Account',        icon: '👤' },
@@ -81,6 +81,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'trust',         label: 'Trust Breakdown', icon: '₮'  },
   { id: 'referral',      label: 'Refer & Earn',    icon: '🎁' },
   { id: 'stripe',        label: 'Stripe Connect',  icon: '💳' },
+  { id: 'verification',  label: 'Verification',    icon: '✅' },
   { id: 'security',      label: 'Security',        icon: '🛡️'  },
   { id: 'danger',        label: 'Danger Zone',     icon: '⚠️'  },
 ]
@@ -127,7 +128,7 @@ function SettingsPageInner() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<Tab>(
-    ['account', 'privacy', 'notifications', 'trust', 'referral', 'stripe', 'security', 'danger'].includes(initialTab)
+    ['account', 'privacy', 'notifications', 'trust', 'referral', 'stripe', 'verification', 'security', 'danger'].includes(initialTab)
       ? initialTab
       : 'account'
   )
@@ -287,6 +288,9 @@ function SettingsPageInner() {
           )}
           {activeTab === 'stripe' && (
             <StripeTab profile={profile} />
+          )}
+          {activeTab === 'verification' && (
+            <VerificationTab />
           )}
           {activeTab === 'security' && (
             <SecurityTab user={user} />
@@ -1368,6 +1372,222 @@ function StripeTab({ profile }: { profile: Profile }) {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// ── Verification Tab ──────────────────────────────────────────────────────────
+
+interface VerificationStatus {
+  status: 'unverified' | 'pending' | 'verified' | 'failed'
+  verified_at: string | null
+  bonus_granted_at: string | null
+  last_attempt_at: string | null
+}
+
+function VerificationTab() {
+  const [data, setData] = useState<VerificationStatus | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/profile/identity-verification', { cache: 'no-store' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`)
+      setData(json as VerificationStatus)
+      setError(null)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[verification] load failed:', msg)
+      setError(msg)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { void load() }, [load])
+
+  const startVerification = useCallback(async () => {
+    setSubmitting(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/profile/identity-verification', { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`)
+
+      if (json.status === 'verified') {
+        await load()
+        return
+      }
+
+      const clientSecret: string | undefined = json.client_secret
+      if (!clientSecret) throw new Error('No client_secret returned from server')
+
+      // Lazy-import to avoid pulling Stripe.js into the bundle for users
+      // who never visit this tab.
+      const publishable = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+      if (!publishable) throw new Error('Stripe publishable key not configured')
+
+      const { loadStripe } = await import('@stripe/stripe-js')
+      const stripe = await loadStripe(publishable)
+      if (!stripe) throw new Error('Stripe.js failed to load')
+
+      const result = await stripe.verifyIdentity(clientSecret)
+      if (result.error) {
+        console.error('[verification] stripe.verifyIdentity error:', result.error)
+        // Stripe shows its own UI for user-facing errors; just refresh
+        // local state. The webhook will reconcile on its own.
+      }
+      await load()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[verification] start failed:', msg)
+      setError(msg)
+    } finally {
+      setSubmitting(false)
+    }
+  }, [load])
+
+  const fmtDate = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' }) : ''
+
+  const status = data?.status ?? 'unverified'
+
+  return (
+    <div className="settings-card">
+      <h2 className="section-title">✅ Identity Verification</h2>
+      <p className="section-desc">
+        Verify your identity to earn ₮100 TrustCoins and display the Verified badge on your profile.
+        Verification is handled securely by Stripe — we never see or store your ID document.
+      </p>
+
+      {loading && (
+        <div style={{ padding: 20, color: '#64748b', fontSize: 14 }}>Loading verification status…</div>
+      )}
+
+      {error && (
+        <div style={{ padding: '12px 16px', borderRadius: 10, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', color: '#f87171', fontSize: 13, marginBottom: 16 }}>
+          {error}
+        </div>
+      )}
+
+      {!loading && status === 'unverified' && (
+        <div style={{
+          padding: 20,
+          borderRadius: 14,
+          background: 'rgba(16,185,129,0.06)',
+          border: '1px solid rgba(16,185,129,0.2)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <span style={{ fontSize: 22 }}>🛡️</span>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9' }}>Not verified yet</div>
+          </div>
+          <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6, margin: '0 0 16px' }}>
+            Tap the button below to start verification. You&apos;ll need a government-issued photo ID
+            and a few seconds for a selfie check. The whole flow typically takes under two minutes.
+          </p>
+          <button
+            disabled={submitting}
+            onClick={startVerification}
+            style={{
+              background: '#10b981',
+              color: '#06281f',
+              border: 'none',
+              borderRadius: 10,
+              padding: '11px 22px',
+              fontSize: 14,
+              fontWeight: 800,
+              cursor: submitting ? 'wait' : 'pointer',
+              opacity: submitting ? 0.7 : 1,
+            }}
+          >
+            {submitting ? 'Starting…' : 'Verify now →'}
+          </button>
+        </div>
+      )}
+
+      {!loading && status === 'pending' && (
+        <div style={{
+          padding: 20,
+          borderRadius: 14,
+          background: 'rgba(245,158,11,0.08)',
+          border: '1px solid rgba(245,158,11,0.25)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <span style={{ fontSize: 22 }}>⏳</span>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9' }}>Verification in progress</div>
+          </div>
+          <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6, margin: 0 }}>
+            Verification is typically completed within a few minutes. We&apos;ll notify you the moment
+            your status changes. You can safely close this page.
+          </p>
+          {data?.last_attempt_at && (
+            <div style={{ fontSize: 11, color: '#64748b', marginTop: 10 }}>Started {fmtDate(data.last_attempt_at)}</div>
+          )}
+        </div>
+      )}
+
+      {!loading && status === 'verified' && (
+        <div style={{
+          padding: 20,
+          borderRadius: 14,
+          background: 'rgba(16,185,129,0.1)',
+          border: '1px solid rgba(16,185,129,0.3)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <span style={{ fontSize: 24, color: '#10b981' }}>✓</span>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#10b981' }}>You&apos;re verified</div>
+          </div>
+          {data?.verified_at && (
+            <div style={{ fontSize: 13, color: '#cbd5e1' }}>
+              Verified on <strong style={{ color: '#f1f5f9' }}>{fmtDate(data.verified_at)}</strong>
+            </div>
+          )}
+          {data?.bonus_granted_at && (
+            <div style={{ fontSize: 13, color: '#34d399', marginTop: 6 }}>
+              +₮100 TrustCoins earned · credited {fmtDate(data.bonus_granted_at)}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!loading && status === 'failed' && (
+        <div style={{
+          padding: 20,
+          borderRadius: 14,
+          background: 'rgba(248,113,113,0.08)',
+          border: '1px solid rgba(248,113,113,0.25)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <span style={{ fontSize: 22 }}>⚠️</span>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9' }}>Verification needs another try</div>
+          </div>
+          <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6, margin: '0 0 14px' }}>
+            Stripe couldn&apos;t confirm your identity from the document provided. This is usually because
+            the photo was blurry or the document was cut off. Try again with a clearer photo in good lighting.
+          </p>
+          <button
+            disabled={submitting}
+            onClick={startVerification}
+            style={{
+              background: '#f87171',
+              color: '#3a0d0d',
+              border: 'none',
+              borderRadius: 10,
+              padding: '11px 22px',
+              fontSize: 14,
+              fontWeight: 800,
+              cursor: submitting ? 'wait' : 'pointer',
+              opacity: submitting ? 0.7 : 1,
+            }}
+          >
+            {submitting ? 'Starting…' : 'Try again →'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
