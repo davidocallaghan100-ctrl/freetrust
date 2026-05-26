@@ -1,7 +1,9 @@
 'use client'
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import SocialLinks, { type SocialUrls } from '@/components/social/SocialLinks'
+import UserVerifiedBadge from '@/components/profile/UserVerifiedBadge'
+import { createClient } from '@/lib/supabase/client'
 
 const CATEGORIES = ['All', 'Freelancers', 'Businesses', 'Developers', 'Designers', 'Marketers', 'Consultants']
 
@@ -70,6 +72,12 @@ export default function MemberDirectoryPage() {
   const [activeCategory, setActiveCategory] = useState('All')
   const [search, setSearch] = useState('')
   const [members, setMembers] = useState<Member[]>([])
+  // Map of user_id → verified_at ISO. Populated from the public
+  // profile_verification_badges view (verified rows only by definition).
+  // Querying the view keeps private fields (session id, attempts) out of
+  // the client bundle.
+  const [verifiedMap, setVerifiedMap] = useState<Record<string, string>>({})
+  const supabaseRef = useRef(createClient())
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
@@ -172,6 +180,28 @@ export default function MemberDirectoryPage() {
   }, [])
 
   useEffect(() => { load('initial') }, [load])
+
+  // Pull verified badges for the currently-loaded members in a single
+  // round-trip. The view returns only verified rows, so any user_id
+  // present in the result is a verified member.
+  useEffect(() => {
+    if (members.length === 0) return
+    let cancelled = false
+    const ids = members.map(m => m.id)
+    ;(async () => {
+      const { data } = await supabaseRef.current
+        .from('profile_verification_badges')
+        .select('user_id, verified_at')
+        .in('user_id', ids)
+      if (cancelled || !data) return
+      const next: Record<string, string> = {}
+      for (const row of data as { user_id: string; verified_at: string | null }[]) {
+        if (row.verified_at) next[row.user_id] = row.verified_at
+      }
+      setVerifiedMap(next)
+    })().catch(() => { /* view may not exist yet — show no badges */ })
+    return () => { cancelled = true }
+  }, [members])
 
   // ── Mobile staleness fixes ─────────────────────────────────────────────
   // Three mobile-specific reasons a member list can go stale, all of
@@ -410,7 +440,12 @@ export default function MemberDirectoryPage() {
                   </div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f1f5f9', lineHeight: 1.2 }}>{name}</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f1f5f9', lineHeight: 1.2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span>{name}</span>
+                    {verifiedMap[member.id] && (
+                      <UserVerifiedBadge verifiedAt={verifiedMap[member.id]} compact />
+                    )}
+                  </div>
                   {member.location && <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>📍 {member.location}</div>}
                 </div>
                 <div style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.2rem 0.55rem', fontSize: '0.78rem', fontWeight: 700, color: '#38bdf8', flexShrink: 0 }}>

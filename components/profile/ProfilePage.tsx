@@ -15,6 +15,7 @@ import {
 } from '@/lib/grassroots/categories'
 import type { User } from '@supabase/supabase-js'
 import ActivityFeed, { type ActivityItem as FeedItem } from '@/components/profile/ActivityFeed'
+import UserVerifiedBadge from '@/components/profile/UserVerifiedBadge'
 import { getTierForBalance } from '@/lib/trust/tiers'
 
 interface Profile {
@@ -220,6 +221,11 @@ export default function ProfilePage() {
   const [vatNumber, setVatNumber] = useState('')
   const [vatSaving, setVatSaving] = useState(false)
   const [vatSaved, setVatSaved] = useState(false)
+
+  // Verification badge — read from the public profile_verification_badges view
+  // (status='verified' only). Reads via the view (NOT profile_verifications)
+  // so we never see the Stripe session id or attempt details.
+  const [verifiedAt, setVerifiedAt] = useState<string | null>(null)
 
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
@@ -583,6 +589,28 @@ export default function ProfilePage() {
     }
     init()
   }, [viewingId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load verified badge for the currently-displayed profile. Reads
+  // from the public profile_verification_badges view (status='verified'
+  // only by definition) so we never touch private fields like the
+  // Stripe session id or attempt count.
+  useEffect(() => {
+    const targetId = profile?.id
+    if (!targetId) {
+      setVerifiedAt(null)
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      const { data } = await supabase
+        .from('profile_verification_badges')
+        .select('verified_at')
+        .eq('user_id', targetId)
+        .maybeSingle()
+      if (!cancelled) setVerifiedAt((data?.verified_at as string | undefined) ?? null)
+    })().catch(() => { /* table may not exist yet — show no badge */ })
+    return () => { cancelled = true }
+  }, [profile?.id, supabase])
 
   // Award ₮10 bonus when profile hits 100%
   useEffect(() => {
@@ -1103,8 +1131,9 @@ export default function ProfilePage() {
 
           {/* Name + meta — offset for avatar */}
           <div style={{ paddingTop: '2.5rem' }}>
-            <h1 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: '0.3rem' }}>
+            <h1 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: '0.3rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               {profile?.full_name ?? user?.email ?? 'Member'}
+              {verifiedAt && <UserVerifiedBadge verifiedAt={verifiedAt} compact />}
             </h1>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center', fontSize: '0.85rem', color: '#64748b', marginBottom: '0.5rem' }}>
               {profile?.location && <span>📍 {profile.location}</span>}
