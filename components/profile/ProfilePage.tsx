@@ -15,6 +15,7 @@ import {
 } from '@/lib/grassroots/categories'
 import type { User } from '@supabase/supabase-js'
 import ActivityFeed, { type ActivityItem as FeedItem } from '@/components/profile/ActivityFeed'
+import { getTierForBalance } from '@/lib/trust/tiers'
 
 interface Profile {
   id: string
@@ -116,12 +117,17 @@ interface GrassrootsListing {
   created_at: string
 }
 
+// Wraps the shared tier ladder (lib/trust/tiers.ts) — single source of
+// truth shared with the wallet page and the Trust Economy page.
 function getTrustLevel(balance: number) {
-  if (balance >= 5000) return { label: 'FreeTrust Ambassador', icon: '👑', color: '#f59e0b', nextAt: null,  next: 'Max level reached' }
-  if (balance >= 1000) return { label: 'Community Leader',    icon: '🏆', color: '#a78bfa', nextAt: 5000, next: 'Ambassador at ₮5000' }
-  if (balance >= 500)  return { label: 'Verified Member',     icon: '✅', color: '#34d399', nextAt: 1000, next: 'Leader at ₮1000' }
-  if (balance >= 100)  return { label: 'Trusted Member',      icon: '⭐', color: '#38bdf8', nextAt: 500,  next: 'Verified at ₮500' }
-  return                      { label: 'New Member',          icon: '🌱', color: '#94a3b8', nextAt: 100,  next: 'Trusted at ₮100' }
+  const { current, next, toNext } = getTierForBalance(balance)
+  return {
+    label: current.name,
+    icon:  current.icon,
+    color: current.color,
+    nextAt: next ? next.threshold : null,
+    next:   next ? `${next.name} at ₮${next.threshold.toLocaleString()} (₮${toNext.toLocaleString()} away)` : 'Top tier reached',
+  }
 }
 
 function timeAgo(ts: string) {
@@ -1112,9 +1118,13 @@ export default function ProfilePage() {
             <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.6rem' }}>
               <span><strong style={{ color: '#f1f5f9' }}>{followerCount}</strong> followers</span>
               <span><strong style={{ color: '#f1f5f9' }}>{profile?.following_count ?? 0}</strong> following</span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: `${trustLevel.color}18`, border: `1px solid ${trustLevel.color}40`, borderRadius: 999, padding: '0.15rem 0.65rem', fontSize: '0.78rem', fontWeight: 700, color: trustLevel.color }}>
+              <Link
+                href={`/trust-economy#tier-${getTierForBalance(trustBalance).current.rank}`}
+                title="View the Trust Economy ladder"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: `${trustLevel.color}18`, border: `1px solid ${trustLevel.color}40`, borderRadius: 999, padding: '0.15rem 0.65rem', fontSize: '0.78rem', fontWeight: 700, color: trustLevel.color, textDecoration: 'none' }}
+              >
                 {trustLevel.icon} {trustLevel.label}
-              </span>
+              </Link>
             </div>
             {/* Social Links — full row, all platforms with non-empty URLs.
                 Renders nothing if the user has zero social links, so the

@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useCurrency } from '@/context/CurrencyContext'
+import { TIERS, getTierForBalance } from '@/lib/trust/tiers'
 
 // Apple Pay / Google Pay button — client-only (uses browser Payment Request API)
 const AppleGooglePayButton = dynamic(
@@ -51,13 +52,19 @@ interface TrustAction {
 }
 
 // ── Trust level config ────────────────────────────────────────────────────────
+// Tier ladder lives in @/lib/trust/tiers — single source of truth shared
+// across wallet, profile, AI assistant and the Trust Economy page.
 
 function getTrustLevel(score: number) {
-  if (score >= 5000) return { label: 'FreeTrust Ambassador', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', icon: '👑', nextAt: null,  next: 'Max level reached' }
-  if (score >= 1000) return { label: 'Community Leader',    color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', icon: '🏆', nextAt: 5000, next: '5000 to Ambassador' }
-  if (score >= 500)  return { label: 'Verified Member',     color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: '✅', nextAt: 1000, next: '1000 to Leader' }
-  if (score >= 100)  return { label: 'Trusted Member',      color: '#38bdf8', bg: 'rgba(56,189,248,0.12)',  icon: '⭐', nextAt: 500,  next: '500 to Verified' }
-  return              { label: 'New Member',              color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', icon: '🌱', nextAt: 100,  next: '100 to Trusted' }
+  const { current, next, toNext } = getTierForBalance(score)
+  return {
+    label: current.name,
+    color: current.color,
+    bg: current.bg,
+    icon: current.icon,
+    nextAt: next ? next.threshold : null,
+    next: next ? `₮${toNext.toLocaleString()} to ${next.name}` : 'Max tier reached',
+  }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -713,18 +720,11 @@ function WalletPageInner() {
     }
   }
 
-  const trustLevel   = getTrustLevel(data?.trust.balance ?? 0)
-  const nextAt       = trustLevel.nextAt
-  const progress     = nextAt ? Math.min(((data?.trust.balance ?? 0) / nextAt) * 100, 100) : 100
-  const prevLevelAt  = data?.trust.balance !== undefined ? (
-    data.trust.balance >= 5000 ? 1000 :
-    data.trust.balance >= 1000 ? 500 :
-    data.trust.balance >= 500 ? 100 :
-    data.trust.balance >= 100 ? 0 : 0
-  ) : 0
-  const levelProgress = nextAt
-    ? Math.min(((( data?.trust.balance ?? 0) - prevLevelAt) / (nextAt - prevLevelAt)) * 100, 100)
-    : 100
+  const trustLevel    = getTrustLevel(data?.trust.balance ?? 0)
+  const tierProgress  = getTierForBalance(data?.trust.balance ?? 0)
+  const nextAt        = trustLevel.nextAt
+  const progress      = nextAt ? Math.min(((data?.trust.balance ?? 0) / nextAt) * 100, 100) : 100
+  const levelProgress = Math.round(tierProgress.progress * 100)
 
   const MAIN_TABS = [
     { id: 'wallet', label: '💳 Wallet',     },
@@ -972,32 +972,42 @@ function WalletPageInner() {
               <TrustHistoryBar months={trustHistory} />
             </div>
 
-            {/* Trust breakdown */}
+            {/* Trust breakdown — full 10-tier ladder (lib/trust/tiers.ts) */}
             <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#94a3b8', marginBottom: '14px' }}>Level Milestones</div>
-              {[
-                { label: 'New Member',           at: 0,    icon: '🌱', color: '#94a3b8' },
-                { label: 'Trusted Member',       at: 100,  icon: '⭐', color: '#38bdf8' },
-                { label: 'Verified Member',      at: 500,  icon: '✅', color: '#34d399' },
-                { label: 'Community Leader',     at: 1000, icon: '🏆', color: '#a78bfa' },
-                { label: 'FreeTrust Ambassador', at: 5000, icon: '👑', color: '#f59e0b' },
-              ].map(lvl => {
-                const reached = (data?.trust.balance ?? 0) >= lvl.at
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#94a3b8' }}>Level Milestones</div>
+                <Link href="/trust-economy" style={{ fontSize: '11px', fontWeight: 700, color: '#fbbf24', textDecoration: 'none' }}>Learn more →</Link>
+              </div>
+              {TIERS.map(lvl => {
+                const reached = (data?.trust.balance ?? 0) >= lvl.threshold
                 return (
-                  <div key={lvl.label} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid rgba(51,65,85,0.5)' }}>
-                    <span style={{ fontSize: '20px', width: '28px', textAlign: 'center' }}>{lvl.icon}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: reached ? '#f1f5f9' : '#475569' }}>{lvl.label}</div>
-                      <div style={{ fontSize: '11px', color: '#475569' }}>₮{lvl.at.toLocaleString()}+</div>
+                  <Link key={lvl.rank} href={`/trust-economy#tier-${lvl.rank}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid rgba(51,65,85,0.5)' }}>
+                      <span style={{ fontSize: '20px', width: '28px', textAlign: 'center' }}>{lvl.icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: reached ? '#f1f5f9' : '#475569' }}>{lvl.name}</div>
+                        <div style={{ fontSize: '11px', color: '#475569' }}>₮{lvl.threshold.toLocaleString()}+</div>
+                      </div>
+                      {reached ? (
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: lvl.color, background: `${lvl.color}15`, padding: '3px 10px', borderRadius: '20px' }}>✓ Reached</span>
+                      ) : (
+                        <span style={{ fontSize: '11px', color: '#334155' }}>₮{(lvl.threshold - (data?.trust.balance ?? 0)).toLocaleString()} away</span>
+                      )}
                     </div>
-                    {reached ? (
-                      <span style={{ fontSize: '11px', fontWeight: 700, color: lvl.color, background: `${lvl.color}15`, padding: '3px 10px', borderRadius: '20px' }}>✓ Reached</span>
-                    ) : (
-                      <span style={{ fontSize: '11px', color: '#334155' }}>₮{(lvl.at - (data?.trust.balance ?? 0)).toLocaleString()} away</span>
-                    )}
-                  </div>
+                  </Link>
                 )
               })}
+            </div>
+
+            {/* Trust Economy CTA card */}
+            <div style={{ background: 'linear-gradient(135deg, rgba(251,191,36,0.12), rgba(245,158,11,0.08))', border: '1px solid rgba(251,191,36,0.25)', borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '14px', fontWeight: 800, color: '#fbbf24', marginBottom: '4px' }}>The Trust Economy</div>
+              <div style={{ fontSize: '12px', color: '#cbd5e1', marginBottom: '12px', lineHeight: 1.5 }}>
+                Build your trust. Earn your tier. Discover how reputation becomes opportunity on FreeTrust.
+              </div>
+              <Link href="/trust-economy" style={{ display: 'inline-block', background: '#fbbf24', color: '#1e293b', fontSize: '12px', fontWeight: 800, padding: '8px 14px', borderRadius: '8px', textDecoration: 'none' }}>
+                Learn how it works →
+              </Link>
             </div>
 
             {/* Actions to earn more */}

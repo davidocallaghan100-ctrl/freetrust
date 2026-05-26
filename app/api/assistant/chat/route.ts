@@ -21,7 +21,8 @@ PLATFORM KNOWLEDGE:
 Trust Economy:
 - Trust (₮) is earned by: completing orders ₮5-20, getting 5-star reviews ₮10, completing profile ₮10, posting articles ₮5, joining communities ₮2, inviting friends ₮15, first listing ₮25
 - Trust can be spent on: boosting listings, premium features, donating to impact projects
-- Trust milestones: ₮100 = Trusted Member, ₮500 = Verified Pro, ₮1000 = FreeTrust Elite
+- Trust tier ladder (10 tiers, threshold → name): ₮0 Newcomer · ₮100 Active Member · ₮250 Contributor · ₮500 Established Member · ₮1,000 FreeTrust Pro · ₮2,000 Community Leader · ₮5,000 Trust Champion · ₮7,500 Impact Leader · ₮10,000 FreeTrust Elite · ₮25,000 Founding Pillar. See /trust-economy for the full ladder.
+- The green "Verified" badge (Stripe Identity) is SEPARATE from tier progression — it confirms the member's real-world identity and grants a one-off ₮100 bonus.
 - Trust score affects search ranking and buyer confidence
 
 Payments & Escrow:
