@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import Link from 'next/link'
 import Nav from './Nav'
 import Sidebar from './Sidebar'
 import BottomNav from './BottomNav'
@@ -204,7 +205,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             color: '#475569',
             marginTop: '2rem',
           }}>
-            &copy; 2026 FreeTrust. All rights reserved.
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.45rem' }}>
+              <Link href="/trust-economy" style={{ color: '#94a3b8', textDecoration: 'none', fontWeight: 700 }}>Trust Economy</Link>
+              <span style={{ color: '#334155' }}>·</span>
+              <Link href="/privacy" style={{ color: '#64748b', textDecoration: 'none' }}>Privacy</Link>
+              <span style={{ color: '#334155' }}>·</span>
+              <Link href="/terms" style={{ color: '#64748b', textDecoration: 'none' }}>Terms</Link>
+            </div>
+            <div>&copy; 2026 FreeTrust. All rights reserved.</div>
           </footer>
         </main>
       </div>

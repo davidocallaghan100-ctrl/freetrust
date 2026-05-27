@@ -122,6 +122,7 @@ function getTrustLevel(balance: number) {
   const index = TIERS.findIndex(t => t.tier === tier.tier)
   const nextTier = TIERS[index + 1] ?? null
   return {
+    tier: tier.tier,
     label: tier.label,
     icon: tier.icon,
     color: tier.color,
@@ -192,6 +193,7 @@ export default function ProfilePage() {
   const [coverUploading, setCoverUploading] = useState(false)
   const [coverHover, setCoverHover] = useState(false)
   const [avatarHover, setAvatarHover] = useState(false)
+  const [trustEconomyHover, setTrustEconomyHover] = useState(false)
   const [activity, setActivity] = useState<ActivityItem[]>([])
   const [loadingActivity, setLoadingActivity] = useState(false)
   const [services, setServices] = useState<ServiceListing[]>([])
@@ -1174,29 +1176,48 @@ export default function ProfilePage() {
         )}
 
         {/* Trust Economy */}
-        <div className="profile-card">
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '1rem', letterSpacing: '0.06em' }}>TRUST ECONOMY</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-            <div>
-              <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.25rem' }}>Balance</div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#38bdf8' }}>₮{trustBalance.toLocaleString()}</div>
+        <Link
+          href={`/trust-economy#tier-${trustLevel.tier}`}
+          style={{ color: 'inherit', textDecoration: 'none', display: 'block' }}
+          onMouseEnter={() => setTrustEconomyHover(true)}
+          onMouseLeave={() => setTrustEconomyHover(false)}
+          aria-label="View the full FreeTrust Trust Economy ladder"
+        >
+          <div
+            className="profile-card"
+            style={{
+              cursor: 'pointer',
+              border: trustEconomyHover ? '1px solid rgba(251,191,36,0.38)' : '1px solid rgba(56,189,248,0.1)',
+              background: trustEconomyHover ? 'linear-gradient(135deg,#1e293b,rgba(251,191,36,0.06))' : '#1e293b',
+              transition: 'border-color 0.18s ease, background 0.18s ease',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.06em' }}>TRUST ECONOMY</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 800, color: trustEconomyHover ? '#fbbf24' : '#475569' }}>View ladder →</div>
             </div>
-            <div>
-              <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.25rem' }}>Level</div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: trustLevel.color }}>{trustLevel.label}</div>
-              <div style={{ fontSize: '0.72rem', color: '#475569' }}>{trustLevel.next}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.4rem' }}>Progress</div>
-              {trustLevel.nextAt !== null && (
-                <div style={{ height: 6, background: 'rgba(56,189,248,0.1)', borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.min((trustBalance / trustLevel.nextAt) * 100, 100)}%`, height: '100%', background: `linear-gradient(90deg,#38bdf8,${trustLevel.color})`, borderRadius: 3 }} />
-                </div>
-              )}
-              <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '0.25rem' }}>{trustBalance}{trustLevel.nextAt !== null ? `/${trustLevel.nextAt}` : ' MAX'}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+              <div>
+                <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.25rem' }}>Balance</div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#38bdf8' }}>₮{trustBalance.toLocaleString()}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.25rem' }}>Level</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: trustLevel.color }}>{trustLevel.label}</div>
+                <div style={{ fontSize: '0.72rem', color: '#475569' }}>{trustLevel.next}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.4rem' }}>Progress</div>
+                {trustLevel.nextAt !== null && (
+                  <div style={{ height: 6, background: 'rgba(56,189,248,0.1)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ width: `${Math.min((trustBalance / trustLevel.nextAt) * 100, 100)}%`, height: '100%', background: `linear-gradient(90deg,#38bdf8,${trustLevel.color})`, borderRadius: 3 }} />
+                  </div>
+                )}
+                <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '0.25rem' }}>{trustBalance}{trustLevel.nextAt !== null ? `/${trustLevel.nextAt}` : ' MAX'}</div>
+              </div>
             </div>
           </div>
-        </div>
+        </Link>
 
         {/* Delivery Performance (OTIF) — shown for any seller profile */}
         {(viewingId || user?.id) && (
