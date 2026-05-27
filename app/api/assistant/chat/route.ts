@@ -1,10 +1,12 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { TIERS } from '@/lib/trust/tiers'
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
 const SLACK_BOT_TOKEN   = process.env.SLACK_BOT_TOKEN   // DavidsAIOS bot
 const OS_COMMANDS_CHANNEL = 'C0AQP8K79T9'
+const TRUST_MILESTONES = TIERS.map(t => `Tier ${t.tier}: ₮${t.minBalance.toLocaleString()} = ${t.label}`).join(', ')
 
 // ─── FreeTrust knowledge base ────────────────────────────────────────────────
 const SYSTEM_PROMPT = `You are Trust Assistant, the friendly AI helper for FreeTrust — a trust-based social commerce platform where reputation is the currency.
@@ -21,7 +23,7 @@ PLATFORM KNOWLEDGE:
 Trust Economy:
 - Trust (₮) is earned by: completing orders ₮5-20, getting 5-star reviews ₮10, completing profile ₮10, posting articles ₮5, joining communities ₮2, inviting friends ₮15, first listing ₮25
 - Trust can be spent on: boosting listings, premium features, donating to impact projects
-- Trust milestones: ₮100 = Trusted Member, ₮500 = Verified Pro, ₮1000 = FreeTrust Elite
+- Trust milestones: ${TRUST_MILESTONES}
 - Trust score affects search ranking and buyer confidence
 
 Payments & Escrow:
