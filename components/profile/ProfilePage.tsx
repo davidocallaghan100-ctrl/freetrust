@@ -15,6 +15,7 @@ import {
 } from '@/lib/grassroots/categories'
 import type { User } from '@supabase/supabase-js'
 import ActivityFeed, { type ActivityItem as FeedItem } from '@/components/profile/ActivityFeed'
+import { TIERS, getTierForBalance } from '@/lib/trust/tiers'
 
 interface Profile {
   id: string
@@ -117,11 +118,16 @@ interface GrassrootsListing {
 }
 
 function getTrustLevel(balance: number) {
-  if (balance >= 5000) return { label: 'FreeTrust Ambassador', icon: '👑', color: '#f59e0b', nextAt: null,  next: 'Max level reached' }
-  if (balance >= 1000) return { label: 'Community Leader',    icon: '🏆', color: '#a78bfa', nextAt: 5000, next: 'Ambassador at ₮5000' }
-  if (balance >= 500)  return { label: 'Verified Member',     icon: '✅', color: '#34d399', nextAt: 1000, next: 'Leader at ₮1000' }
-  if (balance >= 100)  return { label: 'Trusted Member',      icon: '⭐', color: '#38bdf8', nextAt: 500,  next: 'Verified at ₮500' }
-  return                      { label: 'New Member',          icon: '🌱', color: '#94a3b8', nextAt: 100,  next: 'Trusted at ₮100' }
+  const tier = getTierForBalance(balance)
+  const index = TIERS.findIndex(t => t.tier === tier.tier)
+  const nextTier = TIERS[index + 1] ?? null
+  return {
+    label: tier.label,
+    icon: tier.icon,
+    color: tier.color,
+    nextAt: nextTier?.minBalance ?? null,
+    next: nextTier ? `${nextTier.label} at ₮${nextTier.minBalance.toLocaleString()}` : 'Max level reached',
+  }
 }
 
 function timeAgo(ts: string) {
