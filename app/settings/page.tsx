@@ -1,5 +1,6 @@
 'use client'
 
+
 import { useEffect, useState, useRef, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -9,6 +10,7 @@ import LocationPicker from '@/components/location/LocationPicker'
 import { EMPTY_LOCATION, type StructuredLocation } from '@/lib/geo'
 import { CURRENCIES, useCurrency, type CurrencyCode } from '@/context/CurrencyContext'
 import { SOCIAL_PLATFORMS, isValidSocialUrl, normaliseSocialUrl } from '@/components/social/SocialLinks'
+import { loadStripe } from '@stripe/stripe-js'
 
 // Per-platform placeholder text shown in the social links form. Hardcoded
 // rather than embedded in the SocialLinks component so the public-facing
@@ -70,6 +72,8 @@ interface TrustLedgerEntry {
   description: string | null
   created_at: string
 }
+
+type IdentityVerificationStatus = 'unverified' | 'pending' | 'verified' | 'failed' | 'unconfigured'
 
 type Tab = 'account' | 'content' | 'privacy' | 'notifications' | 'trust' | 'referral' | 'stripe' | 'security' | 'danger'
 
@@ -1465,6 +1469,8 @@ function SecurityTab({ user }: { user: { email?: string } }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <IdentityVerificationCard />
+
       {/* Password change */}
       <div className="card">
         <h2 className="section-title">Change Password</h2>
@@ -1568,6 +1574,128 @@ function SecurityTab({ user }: { user: { email?: string } }) {
           Sign out all sessions
         </button>
       </div>
+    </div>
+  )
+}
+
+function IdentityVerificationCard() {
+  const [status, setStatus] = useState<IdentityVerificationStatus>('unverified')
+  const [verifiedAt, setVerifiedAt] = useState<string | null>(null)
+  const [attempts, setAttempts] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [starting, setStarting] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+
+  const loadStatus = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/profile/identity-verification', { cache: 'no-store' })
+      const data = await res.json().catch(() => null) as {
+        status?: IdentityVerificationStatus
+        verified_at?: string | null
+        attempt_count?: number
+        error?: string
+      } | null
+      setStatus(data?.status ?? (res.ok ? 'unverified' : 'unconfigured'))
+      setVerifiedAt(data?.verified_at ?? null)
+      setAttempts(Number(data?.attempt_count ?? 0))
+      if (!res.ok && data?.error) setError(data.error)
+    } catch {
+      setError('Could not load identity verification status.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadStatus()
+  }, [loadStatus])
+
+  const startVerification = async () => {
+    setStarting(true)
+    setError('')
+    setMessage('')
+    try {
+      const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+      if (!publishableKey) {
+        setError('Stripe Identity is not configured yet. Missing publishable key.')
+        return
+      }
+
+      const res = await fetch('/api/profile/identity-verification', { method: 'POST' })
+      const data = await res.json().catch(() => null) as { client_secret?: string; error?: string } | null
+      if (!res.ok || !data?.client_secret) {
+        setError(data?.error ?? 'Could not start identity verification.')
+        return
+      }
+
+      const stripe = await loadStripe(publishableKey)
+      if (!stripe) {
+        setError('Could not load Stripe Identity. Please try again.')
+        return
+      }
+
+      const result = await stripe.verifyIdentity(data.client_secret)
+      if (result.error) {
+        setError(result.error.message ?? 'Identity verification was not completed.')
+        await loadStatus()
+        return
+      }
+
+      setMessage('Verification submitted. Stripe will notify FreeTrust when the review completes.')
+      await loadStatus()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not start identity verification.')
+    } finally {
+      setStarting(false)
+    }
+  }
+
+  const badge = (() => {
+    if (status === 'verified') return { icon: '✅', label: 'Verified profile', color: '#34d399', border: 'rgba(52,211,153,0.35)', bg: 'rgba(52,211,153,0.10)' }
+    if (status === 'pending') return { icon: '⏳', label: 'Review pending', color: '#38bdf8', border: 'rgba(56,189,248,0.35)', bg: 'rgba(56,189,248,0.10)' }
+    if (status === 'failed') return { icon: '⚠️', label: 'Action needed', color: '#f59e0b', border: 'rgba(245,158,11,0.35)', bg: 'rgba(245,158,11,0.10)' }
+    if (status === 'unconfigured') return { icon: '🛠️', label: 'Setup required', color: '#f59e0b', border: 'rgba(245,158,11,0.35)', bg: 'rgba(245,158,11,0.10)' }
+    return { icon: '🛡️', label: 'Not verified yet', color: '#94a3b8', border: 'rgba(148,163,184,0.28)', bg: 'rgba(148,163,184,0.08)' }
+  })()
+
+  return (
+    <div className="card">
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+          <h2 className="section-title">Identity Verification</h2>
+          <p className="section-desc" style={{ marginBottom: 14 }}>
+            Verify your identity with Stripe Identity to earn the official FreeTrust profile badge and a one-time ₮100 Trust Coin bonus.
+          </p>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, border: `1px solid ${badge.border}`, background: badge.bg, color: badge.color, borderRadius: 999, padding: '6px 12px', fontSize: 13, fontWeight: 800 }}>
+            <span>{badge.icon}</span>
+            <span>{loading ? 'Loading…' : badge.label}</span>
+          </div>
+          {status === 'verified' && verifiedAt && (
+            <div style={{ fontSize: 12, color: '#64748b', marginTop: 10 }}>Verified {new Date(verifiedAt).toLocaleDateString('en-IE')}</div>
+          )}
+          {attempts > 0 && status !== 'verified' && (
+            <div style={{ fontSize: 12, color: '#64748b', marginTop: 10 }}>Verification attempts: {attempts}</div>
+          )}
+        </div>
+        <button
+          className="save-btn"
+          onClick={startVerification}
+          disabled={loading || starting || status === 'verified' || status === 'unconfigured'}
+          style={{ whiteSpace: 'nowrap', background: status === 'failed' ? '#f59e0b' : '#38bdf8' }}
+        >
+          {starting ? 'Opening Stripe…' : status === 'failed' ? 'Try again' : status === 'pending' ? 'Continue verification' : status === 'verified' ? 'Verified' : 'Verify identity'}
+        </button>
+      </div>
+
+      <div style={{ background: '#0f172a', border: '1px solid rgba(56,189,248,0.12)', borderRadius: 10, padding: '12px 14px', marginTop: 18, fontSize: 13, lineHeight: 1.6, color: '#94a3b8' }}>
+        Stripe handles the document check. FreeTrust stores only the verification status, timestamps, and Stripe session ID — not your ID documents.
+      </div>
+
+      {message && <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#6ee7b7', marginTop: 14 }}>{message}</div>}
+      {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#fca5a5', marginTop: 14 }}>{error}</div>}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { buildIcon } from '@/lib/pwa/icon-builder'
 
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 export async function GET() {
   return buildIcon(180)
 }

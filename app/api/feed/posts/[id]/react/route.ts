@@ -7,6 +7,28 @@ import { sendPushNotification } from '@/lib/push/sendPushNotification'
 
 const VALID = new Set(['trust', 'love', 'insightful', 'collab'])
 
+async function canReactAsOrganisation(admin: ReturnType<typeof createAdminClient>, userId: string, organisationId: string) {
+  const { data: membership } = await admin
+    .from('organisation_members')
+    .select('role')
+    .eq('user_id', userId)
+    .eq('organisation_id', organisationId)
+    .in('role', ['owner', 'admin'])
+    .maybeSingle()
+
+  if (membership) return true
+
+  const { data: created } = await admin
+    .from('organisations')
+    .select('id')
+    .eq('id', organisationId)
+    .eq('creator_id', userId)
+    .eq('status', 'active')
+    .maybeSingle()
+
+  return Boolean(created)
+}
+
 // POST /api/feed/posts/[id]/react { type }
 // - If user has no reaction → insert
 // - If user has the same reaction → delete (toggle off)
@@ -24,20 +46,36 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await req.json().catch(() => ({})) as { type?: string }
+    const body = await req.json().catch(() => ({})) as { type?: string; posted_as_organisation_id?: string | null }
     const type = (body.type ?? '').trim().toLowerCase()
     if (!VALID.has(type)) {
       return NextResponse.json({ error: 'Invalid reaction type' }, { status: 400 })
     }
 
     const admin = createAdminClient()
+    const postedAsOrganisationId = typeof body.posted_as_organisation_id === 'string' && body.posted_as_organisation_id.trim()
+      ? body.posted_as_organisation_id.trim()
+      : null
+
+    if (postedAsOrganisationId) {
+      const allowed = await canReactAsOrganisation(admin, user.id, postedAsOrganisationId)
+      if (!allowed) {
+        return NextResponse.json({ error: 'You are not allowed to react as this page' }, { status: 403 })
+      }
+    }
 
     // Check existing reaction
-    const { data: existing } = await admin
+    let existingQuery = admin
       .from('feed_reactions')
       .select('id, reaction_type')
       .eq('post_id', postId)
       .eq('user_id', user.id)
+
+    existingQuery = postedAsOrganisationId
+      ? existingQuery.eq('posted_as_organisation_id', postedAsOrganisationId)
+      : existingQuery.is('posted_as_organisation_id', null)
+
+    const { data: existing } = await existingQuery
       .maybeSingle()
 
     let userReaction: string | null = null
@@ -58,7 +96,7 @@ export async function POST(
     } else {
       const { error: insertErr } = await admin
         .from('feed_reactions')
-        .insert({ post_id: postId, user_id: user.id, reaction_type: type })
+        .insert({ post_id: postId, user_id: user.id, reaction_type: type, posted_as_organisation_id: postedAsOrganisationId })
       if (insertErr) {
         // If table doesn't exist yet, return a clear error
         if (insertErr.code === '42P01') {
@@ -78,12 +116,22 @@ export async function POST(
         .eq('id', postId)
         .maybeSingle()
       if (postData?.user_id && postData.user_id !== user.id) {
-        const { data: reactor } = await admin
-          .from('profiles')
-          .select('full_name')
-          .eq('id', user.id)
-          .maybeSingle()
-        const reactorName = reactor?.full_name ?? 'Someone'
+        let reactorName = 'Someone'
+        if (postedAsOrganisationId) {
+          const { data: org } = await admin
+            .from('organisations')
+            .select('name')
+            .eq('id', postedAsOrganisationId)
+            .maybeSingle()
+          reactorName = org?.name ?? 'A page'
+        } else {
+          const { data: reactor } = await admin
+            .from('profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .maybeSingle()
+          reactorName = reactor?.full_name ?? 'Someone'
+        }
         sendEmail({
           type: 'new_reaction',
           userId: postData.user_id,

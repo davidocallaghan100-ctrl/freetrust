@@ -23,6 +23,13 @@ const FILTERS: { key: Filter; label: string }[] = [
 ]
 
 const TRENDING_TAGS = ['#TrustEconomy', '#FreelanceLife', '#ImpactInvesting', '#BuildInPublic', '#SustainableBusiness', '#CreatorEconomy']
+const PULL_REFRESH_THRESHOLD = 78
+const PULL_REFRESH_MAX = 118
+const INTERACTIVE_SELECTOR = 'button, a, input, textarea, select, [role="button"]'
+
+const isInteractiveTarget = (target: EventTarget | null) => {
+  return target instanceof Element && Boolean(target.closest(INTERACTIVE_SELECTOR))
+}
 
 const EMPTY_META: Record<Filter, { icon: string; title: string; sub: string }> = {
   all:      { icon: '🌱', title: 'No posts yet',         sub: 'Be the first to share something!' },
@@ -49,15 +56,21 @@ function ComposerCard() {
   const supabase = createClient()
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [userName,  setUserName]  = useState<string | null>(null)
+  const [signedIn, setSignedIn] = useState(false)
 
   useEffect(() => {
     const load = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user) {
+          setSignedIn(true)
           const { data } = await supabase.from('profiles').select('full_name, avatar_url').eq('id', session.user.id).maybeSingle()
           setAvatarUrl(data?.avatar_url ?? null)
           setUserName(data?.full_name ?? null)
+        } else {
+          setSignedIn(false)
+          setAvatarUrl(null)
+          setUserName(null)
         }
       } catch { /* silent */ }
     }
@@ -69,17 +82,17 @@ function ComposerCard() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <Avatar url={avatarUrl} name={userName} size={40} />
         <button
-          onClick={() => router.push('/create')}
+          onClick={() => router.push(signedIn ? '/create' : '/login?redirect=%2Fcreate')}
           style={{ flex: 1, textAlign: 'left', background: '#0f172a', border: '1px solid #334155', borderRadius: '999px', padding: '0.65rem 1.1rem', fontSize: '0.9rem', color: '#475569', cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}
         >
-          What&apos;s on your mind?
+          {signedIn ? 'What\'s on your mind?' : 'Sign in to post on FreeTrust'}
         </button>
         <button
-          onClick={() => router.push('/create')}
+          onClick={() => router.push(signedIn ? '/create' : '/login?redirect=%2Fcreate')}
           style={{ flexShrink: 0, background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 8, padding: '0.55rem 1rem', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
-          title="Create a new post"
+          title={signedIn ? 'Create a new post' : 'Sign in to create a post'}
         >
-          + Post
+          {signedIn ? '+ Post' : 'Sign in'}
         </button>
       </div>
     </div>
@@ -99,12 +112,17 @@ export default function FeedPage() {
   const [hasMore,       setHasMore]       = useState(true)
   const [loading,       setLoading]       = useState(true)
   const [loadingMore,   setLoadingMore]   = useState(false)
+  const [refreshing,    setRefreshing]    = useState(false)
+  const [pullDistance,  setPullDistance]  = useState(0)
   const [scope,         setScope]         = useState<FeedScope>('discover')
   const [activeFilter,  setActiveFilter]  = useState<Filter>('all')
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined)
   const [newPostsAvailable, setNewPostsAvailable] = useState(0)
   const newestSeenAtRef = useRef<string | null>(null)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
+  const pullStartYRef = useRef<number | null>(null)
+  const pullActiveRef = useRef(false)
+  const penDragRef = useRef<{ active: boolean; startY: number; lastY: number; total: number }>({ active: false, startY: 0, lastY: 0, total: 0 })
 
   // ── URL <-> filter sync ──
   // On mount, restore filter from ?filter=X. After mount, every filter
@@ -133,10 +151,11 @@ export default function FeedPage() {
 
   // Server param: when scope=following, override the filter param
   const apiFilter = scope === 'following' && activeFilter === 'all' ? 'following' : activeFilter
+  const signedIn = Boolean(currentUserId)
 
   const fetchPosts = useCallback(async (pageNum: number, append = false) => {
     try {
-      const res  = await fetch(`/api/feed/posts?page=${pageNum}&filter=${apiFilter}`)
+      const res  = await fetch(`/api/feed/posts?page=${pageNum}&filter=${apiFilter}`, { cache: 'no-store' })
       const data = await res.json()
       const newPosts: FeedPost[] = (data.posts ?? []).map((p: Record<string, unknown>) => ({
         ...p,
@@ -153,15 +172,18 @@ export default function FeedPage() {
     finally { setLoading(false); setLoadingMore(false) }
   }, [apiFilter])
 
-  // Load current user ID once on mount for delete ownership check
+  // Load current user ID once on mount for delete ownership checks.
+  // Do not trust a cached ID before Supabase confirms an active session: a
+  // logged-out browser can otherwise keep stale owner/profile UI visible.
   useEffect(() => {
-    const cached = sessionStorage.getItem('ft_uid')
-    if (cached) setCurrentUserId(cached)
     const supabase = createClient()
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
         setCurrentUserId(data.user.id)
         sessionStorage.setItem('ft_uid', data.user.id)
+      } else {
+        setCurrentUserId(undefined)
+        sessionStorage.removeItem('ft_uid')
       }
     }).catch(() => {})
   }, [])
@@ -220,27 +242,163 @@ export default function FeedPage() {
   }, [activeFilter, currentUserId])
 
   const refreshFromTop = useCallback(async () => {
+    if (refreshing) return
+    setRefreshing(true)
     setNewPostsAvailable(0)
     setLoading(true)
     setPage(1)
     await fetchPosts(1, false)
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [fetchPosts])
+    setRefreshing(false)
+  }, [fetchPosts, refreshing])
+
+  const handleTouchStart = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+    if (loading || refreshing || window.scrollY > 2) return
+    if (isInteractiveTarget(event.target)) return
+    pullStartYRef.current = event.touches[0]?.clientY ?? null
+    pullActiveRef.current = false
+  }, [loading, refreshing])
+
+  const handleTouchMove = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+    if (pullStartYRef.current === null || loading || refreshing || window.scrollY > 2) return
+    const currentY = event.touches[0]?.clientY ?? pullStartYRef.current
+    const delta = currentY - pullStartYRef.current
+    if (delta <= 0) {
+      setPullDistance(0)
+      pullActiveRef.current = false
+      return
+    }
+    const eased = Math.min(PULL_REFRESH_MAX, Math.round(Math.pow(delta, 0.82) * 2.25))
+    setPullDistance(eased)
+    pullActiveRef.current = eased >= PULL_REFRESH_THRESHOLD
+  }, [loading, refreshing])
+
+  const handleTouchEnd = useCallback(async () => {
+    const shouldRefresh = pullActiveRef.current && pullDistance >= PULL_REFRESH_THRESHOLD
+    pullStartYRef.current = null
+    pullActiveRef.current = false
+    if (!shouldRefresh) {
+      setPullDistance(0)
+      return
+    }
+    setPullDistance(PULL_REFRESH_THRESHOLD)
+    await refreshFromTop()
+    setPullDistance(0)
+  }, [pullDistance, refreshFromTop])
+
+  const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    // Android styluses/S Pens can arrive as pointerType="pen" rather than
+    // regular touch scrolling. Provide a small manual scroll fallback so a
+    // pen drag moves the feed just like a finger, while leaving normal touch
+    // and mouse wheel behavior untouched.
+    if (event.pointerType !== 'pen' || isInteractiveTarget(event.target)) return
+    try { event.currentTarget.setPointerCapture(event.pointerId) } catch { /* noop */ }
+    penDragRef.current = { active: true, startY: event.clientY, lastY: event.clientY, total: 0 }
+    pullStartYRef.current = window.scrollY <= 2 ? event.clientY : null
+    pullActiveRef.current = false
+  }, [])
+
+  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = penDragRef.current
+    if (!drag.active || event.pointerType !== 'pen') return
+
+    const dy = event.clientY - drag.lastY
+    drag.lastY = event.clientY
+    drag.total += Math.abs(dy)
+
+    if (window.scrollY <= 2 && event.clientY > drag.startY) {
+      const pullDelta = event.clientY - drag.startY
+      const eased = Math.min(PULL_REFRESH_MAX, Math.round(Math.pow(pullDelta, 0.82) * 2.25))
+      setPullDistance(eased)
+      pullActiveRef.current = eased >= PULL_REFRESH_THRESHOLD
+      event.preventDefault()
+      return
+    }
+
+    setPullDistance(0)
+    pullActiveRef.current = false
+    window.scrollBy({ top: -dy, behavior: 'auto' })
+    event.preventDefault()
+  }, [])
+
+  const finishPenDrag = useCallback(async (event?: React.PointerEvent<HTMLDivElement>) => {
+    const drag = penDragRef.current
+    if (!drag.active) return
+    const shouldRefresh = pullActiveRef.current && pullDistance >= PULL_REFRESH_THRESHOLD
+    penDragRef.current = { active: false, startY: 0, lastY: 0, total: 0 }
+    pullStartYRef.current = null
+    pullActiveRef.current = false
+    if (event && drag.total > 6) event.preventDefault()
+    if (!shouldRefresh) {
+      setPullDistance(0)
+      return
+    }
+    setPullDistance(PULL_REFRESH_THRESHOLD)
+    await refreshFromTop()
+    setPullDistance(0)
+  }, [pullDistance, refreshFromTop])
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif' }}>
+    <div
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={() => { pullStartYRef.current = null; pullActiveRef.current = false; setPullDistance(0) }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={finishPenDrag}
+      onPointerCancel={() => { penDragRef.current = { active: false, startY: 0, lastY: 0, total: 0 }; pullStartYRef.current = null; pullActiveRef.current = false; setPullDistance(0) }}
+      style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', overscrollBehaviorY: 'contain', touchAction: 'pan-y' }}
+    >
       <style>{`
+        html, body { overscroll-behavior-y: contain; }
         .feed-grid { display: grid; grid-template-columns: 1fr 272px; gap: 1.5rem; max-width: 1080px; margin: 0 auto; padding: 1.5rem; align-items: start; }
         .feed-main-col { min-width: 0; width: 100%; overflow: hidden; }
         .feed-sidebar-col { position: sticky; top: 110px; display: flex; flex-direction: column; gap: 1rem; }
         @media (max-width: 800px) {
-          .feed-grid { grid-template-columns: 1fr !important; padding: 0.75rem !important; gap: 0; }
+          .feed-grid { grid-template-columns: 1fr !important; padding: 0 !important; gap: 0; max-width: none !important; }
+          .feed-main-col { overflow: visible !important; }
           .feed-sidebar-col { display: none !important; }
+          .feed-main-col > div:not(.feed-filter-pills) { margin-left: 0.75rem; margin-right: 0.75rem; }
+          .feed-filter-pills { padding-left: 0.75rem; padding-right: 0.75rem; }
+          .ft-post-card { border-left: 0 !important; border-right: 0 !important; border-radius: 0 !important; }
+          .ft-post-card .ft-post-media-wrap { padding-left: 0 !important; padding-right: 0 !important; }
+          .ft-post-card .ft-photo-carousel-frame { border-left: 0 !important; border-right: 0 !important; border-radius: 0 !important; }
         }
         .feed-filter-pills { display: flex; gap: 0.4rem; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; margin-bottom: 1rem; scrollbar-width: none; }
         .feed-filter-pills::-webkit-scrollbar { display: none; }
         .feed-filter-pills button { flex-shrink: 0; }
       `}</style>
+
+      {/* Pull-to-refresh indicator for mobile/PWA users */}
+      <div
+        aria-live="polite"
+        aria-label={refreshing ? 'Refreshing newsfeed' : pullDistance >= PULL_REFRESH_THRESHOLD ? 'Release to refresh newsfeed' : 'Pull down to refresh newsfeed'}
+        style={{
+          position: 'fixed',
+          top: 88,
+          left: '50%',
+          transform: `translate(-50%, ${Math.max(-46, pullDistance - 72)}px)`,
+          opacity: pullDistance > 8 || refreshing ? 1 : 0,
+          pointerEvents: 'none',
+          zIndex: 120,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '8px 13px',
+          borderRadius: 999,
+          border: '1px solid rgba(56,189,248,0.32)',
+          background: 'rgba(15,23,42,0.94)',
+          color: pullDistance >= PULL_REFRESH_THRESHOLD || refreshing ? '#7dd3fc' : '#94a3b8',
+          boxShadow: '0 12px 30px rgba(0,0,0,0.38), 0 0 22px rgba(56,189,248,0.16)',
+          fontSize: 12,
+          fontWeight: 800,
+          transition: refreshing ? 'opacity 160ms ease' : 'opacity 120ms ease, transform 120ms ease',
+        }}
+      >
+        <span style={{ display: 'inline-flex', transform: refreshing ? 'rotate(360deg)' : `rotate(${Math.min(180, pullDistance * 1.8)}deg)`, transition: refreshing ? 'transform 650ms linear' : 'transform 120ms ease' }}>↻</span>
+        <span>{refreshing ? 'Refreshing…' : pullDistance >= PULL_REFRESH_THRESHOLD ? 'Release to refresh' : 'Pull to refresh'}</span>
+      </div>
 
       {/* New posts toast */}
       {newPostsAvailable > 0 && (
@@ -328,7 +486,7 @@ export default function FeedPage() {
               <p style={{ marginBottom: '1.5rem' }}>
                 {scope === 'following' && activeFilter === 'all'
                   ? 'Find collaborators to follow on the People page, then their posts will appear here.'
-                  : EMPTY_META[activeFilter].sub}
+                  : signedIn ? EMPTY_META[activeFilter].sub : 'Sign in to create the first post in this view.'}
               </p>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
                 {scope === 'following' && activeFilter === 'all' ? (
@@ -337,7 +495,7 @@ export default function FeedPage() {
                     <button onClick={() => setScope('discover')} style={{ padding: '0.6rem 1.4rem', borderRadius: '8px', background: 'transparent', border: '1px solid rgba(56,189,248,0.3)', color: '#38bdf8', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit' }}>Browse Discover</button>
                   </>
                 ) : (
-                  <Link href="/create" style={{ padding: '0.6rem 1.4rem', borderRadius: '8px', background: '#38bdf8', color: '#0f172a', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none' }}>Create a post</Link>
+                  <Link href={signedIn ? '/create' : '/login?redirect=%2Fcreate'} style={{ padding: '0.6rem 1.4rem', borderRadius: '8px', background: '#38bdf8', color: '#0f172a', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none' }}>{signedIn ? 'Create a post' : 'Sign in to post'}</Link>
                 )}
               </div>
             </div>

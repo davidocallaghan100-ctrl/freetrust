@@ -21,6 +21,34 @@ interface LinkPreview {
   url: string
 }
 
+interface SpotifyTrack {
+  id: string
+  name: string
+  artists: string
+  album: string | null
+  image: string | null
+  url: string
+  uri: string
+  durationMs: number
+  previewUrl: string | null
+  previewSource?: 'spotify' | 'itunes' | null
+}
+
+type TextOverlayStyle = 'classic' | 'story' | 'neon' | 'caption' | 'minimal'
+type TextOverlayPosition = 'top' | 'center' | 'bottom'
+
+type TextOverlayOption = {
+  id: TextOverlayStyle
+  label: string
+  description: string
+  sampleStyle: React.CSSProperties
+}
+
+interface DirectStorageUploadResult {
+  publicUrl: string
+  storagePath: string
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const POST_TYPES: { type: PostType; icon: string; label: string; desc: string }[] = [
@@ -36,6 +64,127 @@ const POST_TYPES: { type: PostType; icon: string; label: string; desc: string }[
   { type: 'product',  icon: '📦',  label: 'Product',      desc: 'List a product'          },
   { type: 'poll',     icon: '📊',  label: 'Poll',         desc: 'Get opinions'            },
 ]
+
+const PHOTO_UPLOAD_TIMEOUT_MS = 45_000
+const VIDEO_UPLOAD_TIMEOUT_MS = 120_000
+
+const TEXT_OVERLAY_OPTIONS: TextOverlayOption[] = [
+  {
+    id: 'classic',
+    label: 'Classic',
+    description: 'Bold white headline with soft shadow',
+    sampleStyle: { color: '#ffffff', fontWeight: 900, textShadow: '0 3px 14px rgba(0,0,0,0.9)', letterSpacing: '-0.03em' },
+  },
+  {
+    id: 'story',
+    label: 'Story',
+    description: 'Rounded social-story pill',
+    sampleStyle: { color: '#0f172a', background: 'rgba(255,255,255,0.92)', fontWeight: 850, borderRadius: 999, padding: '0.26rem 0.68rem', boxShadow: '0 10px 28px rgba(0,0,0,0.28)' },
+  },
+  {
+    id: 'neon',
+    label: 'Neon',
+    description: 'Electric emerald glow',
+    sampleStyle: { color: '#bbf7d0', fontWeight: 900, textShadow: '0 0 8px rgba(34,197,94,0.95), 0 0 24px rgba(56,189,248,0.55)' },
+  },
+  {
+    id: 'caption',
+    label: 'Caption Bar',
+    description: 'Readable dark subtitle strip',
+    sampleStyle: { color: '#f8fafc', background: 'rgba(2,6,23,0.72)', fontWeight: 800, borderRadius: 12, padding: '0.38rem 0.7rem', backdropFilter: 'blur(8px)' },
+  },
+  {
+    id: 'minimal',
+    label: 'Minimal',
+    description: 'Clean small uppercase label',
+    sampleStyle: { color: '#f8fafc', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', textShadow: '0 2px 10px rgba(0,0,0,0.75)' },
+  },
+]
+
+function normaliseTextOverlayStyle(value: string): TextOverlayStyle {
+  return TEXT_OVERLAY_OPTIONS.some(option => option.id === value) ? value as TextOverlayStyle : 'classic'
+}
+
+function normaliseTextOverlayPosition(value: string): TextOverlayPosition {
+  return value === 'top' || value === 'center' || value === 'bottom' ? value : 'bottom'
+}
+
+function getTextOverlayStyle(style: TextOverlayStyle): React.CSSProperties {
+  const option = TEXT_OVERLAY_OPTIONS.find(item => item.id === style) ?? TEXT_OVERLAY_OPTIONS[0]
+  return option.sampleStyle
+}
+
+function getTextOverlayPositionStyle(position: TextOverlayPosition): React.CSSProperties {
+  if (position === 'top') return { alignItems: 'center', justifyContent: 'flex-start', paddingTop: '12%' }
+  if (position === 'center') return { alignItems: 'center', justifyContent: 'center' }
+  return { alignItems: 'center', justifyContent: 'flex-end', paddingBottom: '12%' }
+}
+
+function encodeStoragePath(path: string) {
+  return path.split('/').map(segment => encodeURIComponent(segment)).join('/')
+}
+
+async function uploadToSupabaseStorageDirect(params: {
+  bucket: string
+  storagePath: string
+  file: File
+  contentType: string
+  accessToken: string
+  timeoutMs: number
+}): Promise<DirectStorageUploadResult> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '')
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!supabaseUrl || !anonKey) {
+    throw new Error('Supabase upload config is missing')
+  }
+
+  const encodedPath = encodeStoragePath(params.storagePath)
+  const uploadUrl = `${supabaseUrl}/storage/v1/object/${params.bucket}/${encodedPath}`
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), params.timeoutMs)
+
+  try {
+    const res = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        apikey: anonKey,
+        authorization: `Bearer ${params.accessToken}`,
+        'cache-control': '31536000',
+        'content-type': params.contentType,
+        'x-upsert': 'false',
+      },
+      body: params.file,
+      signal: controller.signal,
+    })
+
+    if (!res.ok) {
+      let detail = `${res.status} ${res.statusText}`.trim()
+      try {
+        const data = await res.json() as { error?: string; message?: string }
+        detail = data.error || data.message || detail
+      } catch {
+        try {
+          const text = await res.text()
+          if (text.trim()) detail = text.slice(0, 180)
+        } catch { /* ignore */ }
+      }
+      throw new Error(detail)
+    }
+
+    return {
+      publicUrl: `${supabaseUrl}/storage/v1/object/public/${params.bucket}/${encodedPath}`,
+      storagePath: params.storagePath,
+    }
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      const seconds = Math.round(params.timeoutMs / 1000)
+      throw new Error(`Upload timed out after ${seconds}s. Please try again on Wi‑Fi or choose a smaller photo.`)
+    }
+    throw err
+  } finally {
+    window.clearTimeout(timeout)
+  }
+}
 
 const CATEGORIES = ['General', 'Business', 'Creative', 'Tech', 'Social', 'Education', 'Health', 'Finance', 'Events', 'Other']
 
@@ -131,6 +280,7 @@ const s = {
   }),
   previewCard: { background: '#0f172a', border: '1px solid #334155', borderRadius: '12px', padding: '1.25rem', marginTop: '1rem' },
   linkPreviewCard: { background: '#0f172a', border: '1px solid #334155', borderRadius: '10px', overflow: 'hidden', marginTop: '0.75rem' },
+  musicCard: { background: 'linear-gradient(135deg, rgba(30,215,96,0.14), rgba(15,23,42,0.98))', border: '1px solid rgba(30,215,96,0.32)', borderRadius: '12px', padding: '0.75rem', marginTop: '0.75rem' },
   pollOption: { display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' },
   draftBadge: { display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: '#64748b', marginLeft: '0.5rem' },
 }
@@ -228,11 +378,20 @@ export default function CreatePage() {
   // Media upload state
   const [uploadingMedia, setUploadingMedia] = useState(false)
   const [uploadedMediaUrl, setUploadedMediaUrl] = useState<string | null>(null)
+  const [uploadedPhotoUrls, setUploadedPhotoUrls] = useState<string[]>([])
   const [uploadProgress, setUploadProgress] = useState<string>('')
 
   // Link preview
   const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null)
   const [linkLoading, setLinkLoading] = useState(false)
+
+  // Spotify music attachment for photo posts. Stores the selected
+  // track as a normal Spotify URL in feed_posts.link_url so no schema
+  // migration is required; PostCard renders it with the official embed.
+  const [spotifyQuery, setSpotifyQuery] = useState('')
+  const [spotifyResults, setSpotifyResults] = useState<SpotifyTrack[]>([])
+  const [spotifyLoading, setSpotifyLoading] = useState(false)
+  const [spotifyConfigured, setSpotifyConfigured] = useState(true)
 
   // Delivery zone (physical products only)
   const [deliveryScope, setDeliveryScope] = useState<'local' | 'national' | 'international' | 'worldwide' | ''>('')
@@ -301,9 +460,10 @@ export default function CreatePage() {
     }
   }, [selectedType])
 
-  // Direct client-to-Supabase upload. Bypasses /api/upload/media and Vercel's
-  // 4.5 MB body size limit entirely — the file goes straight from the user's
-  // browser to the feed-media bucket using their authenticated session.
+  // Direct client-to-Supabase upload. Uses the Storage REST endpoint with an
+  // AbortController timeout instead of storage-js `.upload()`, because mobile
+  // PWA uploads could otherwise sit on "Uploading…" indefinitely when the
+  // underlying request stalled.
   //
   // Requires the feed-media bucket RLS policy from
   // supabase/migrations/20260412_feed_media_bucket.sql which allows
@@ -318,25 +478,33 @@ export default function CreatePage() {
   //   * user.id + random suffix aggressively sanitised so
   //     @supabase/storage-js can't throw a synchronous "The string did not
   //     match the expected pattern" DOMException on path validation
-  //   * .upload() wrapped in its own try/catch to capture sync throws
-  //     (storage-js throws DOMException *before* the HTTP call on some
-  //     code paths, bypassing the { data, error } return channel)
-  //   * .getPublicUrl() wrapped too, since it also builds URLs
+  //   * Upload request is abortable and returns a clear timeout error instead
+  //     of leaving the form disabled forever
+  //   * Public URL is derived from the known bucket/path, avoiding another
+  //     storage-js URL-building call on the hot path
   //   * step breadcrumb surfaced in every error so the next mobile bug
   //     report tells us exactly which line failed
   const handleFileUpload = async (rawFile: File, _type: 'photo' | 'video' | 'short') => {
     // `_type` is kept for call-site compatibility; the kind is re-derived from
     // the actual MIME type below so we don't trust the UI's label.
     setUploadingMedia(true)
-    setUploadProgress('Uploading…')
-    setUploadedMediaUrl(null)
+    setUploadProgress(_type === 'photo' ? 'Preparing photo…' : 'Preparing upload…')
+    if (_type !== 'photo') setUploadedMediaUrl(null)
 
     // Client-side image compression — no-op for videos because
     // compressImage early-returns on non-image MIMEs. For camera
     // photos (8–15 MB) this shrinks to ~2 MB so direct uploads are
-    // quick on mobile data even though the /create page bypasses
-    // Vercel's 4.5 MB body limit anyway.
-    const file = await compressImage(rawFile, 2)
+    // quick on mobile data before the browser sends anything over the network.
+    let file: File
+    try {
+      file = await compressImage(rawFile, 2)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[create/upload] compression failed:', msg)
+      setUploadProgress(`Upload failed [prepare] — ${msg}`)
+      setUploadingMedia(false)
+      return
+    }
 
     // Step breadcrumb — updated before every operation so a sync throw
     // caught by the outer handler tells us WHICH line blew up rather than
@@ -399,9 +567,18 @@ export default function CreatePage() {
       //        under folders named after the user's own id) ───────────────
       step = 'auth'
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const [{ data: { user } }, { data: sessionData }] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase.auth.getSession(),
+      ])
       if (!user) {
         setUploadProgress('Upload failed — please sign in and try again')
+        setUploadingMedia(false)
+        return
+      }
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) {
+        setUploadProgress('Upload failed — your session was not ready. Please refresh and try again.')
         setUploadingMedia(false)
         return
       }
@@ -445,25 +622,24 @@ export default function CreatePage() {
       setUploadProgress(`Uploading ${(file.size / 1024 / 1024).toFixed(1)} MB…`)
 
       // ── 5. Upload ───────────────────────────────────────────────────────
-      // Wrapped in its own try/catch so a sync DOMException from storage-js
-      // (path/URL/header validation inside fetch) is captured with the
-      // step + storagePath intact rather than escaping to the outer handler
-      // as an opaque "Upload failed" string.
+      // Use an abortable fetch to the Supabase Storage REST API. This keeps
+      // uploads direct from the phone to Supabase, but guarantees the UI will
+      // recover with a clear timeout message if the mobile network/PWA stalls.
       step = 'upload'
-      let uploadError: { message?: string } | null = null
+      let publicUrl: string
       try {
-        const result = await supabase
-          .storage
-          .from('feed-media')
-          .upload(storagePath, file, {
-            contentType: fileType,
-            upsert: false,
-            cacheControl: '31536000',
-          })
-        uploadError = result.error
+        const uploaded = await uploadToSupabaseStorageDirect({
+          bucket: 'feed-media',
+          storagePath,
+          file,
+          contentType: fileType,
+          accessToken,
+          timeoutMs: isVideo ? VIDEO_UPLOAD_TIMEOUT_MS : PHOTO_UPLOAD_TIMEOUT_MS,
+        })
+        publicUrl = uploaded.publicUrl
       } catch (thrown) {
         const msg = thrown instanceof Error ? thrown.message : String(thrown)
-        console.error('[create/upload] storage.upload threw synchronously:', {
+        console.error('[create/upload] direct storage upload failed:', {
           step,
           message: msg,
           storagePath,
@@ -473,14 +649,6 @@ export default function CreatePage() {
           fileSize: file.size,
           userId: user.id,
         })
-        setUploadProgress(`Upload failed [${step}] — ${msg}`)
-        setUploadingMedia(false)
-        return
-      }
-
-      if (uploadError) {
-        console.error('[create/upload] storage error:', uploadError, 'step:', step, 'path:', storagePath)
-        const msg = uploadError.message || 'unknown storage error'
         if (msg.toLowerCase().includes('bucket not found')) {
           setUploadProgress('Upload failed — the feed-media bucket does not exist. Run the migration in Supabase SQL editor.')
         } else if (msg.toLowerCase().includes('row-level security') || msg.toLowerCase().includes('policy')) {
@@ -496,29 +664,17 @@ export default function CreatePage() {
         return
       }
 
-      // ── 6. Public URL ───────────────────────────────────────────────────
-      // Also wrapped because getPublicUrl builds a URL internally — the
-      // same class of sync DOMException could in theory originate here.
-      step = 'public-url'
-      let publicUrl: string | undefined
-      try {
-        const { data: urlData } = supabase.storage.from('feed-media').getPublicUrl(storagePath)
-        publicUrl = urlData?.publicUrl
-      } catch (thrown) {
-        const msg = thrown instanceof Error ? thrown.message : String(thrown)
-        console.error('[create/upload] getPublicUrl threw synchronously:', msg, 'path:', storagePath)
-        setUploadProgress(`Upload failed [${step}] — ${msg}`)
-        setUploadingMedia(false)
-        return
+      if (_type === 'photo') {
+        setUploadedPhotoUrls(prev => {
+          const next = [...prev, publicUrl]
+          setUploadedMediaUrl(next[0] ?? publicUrl)
+          setUploadProgress(`✓ ${next.length} photo${next.length === 1 ? '' : 's'} ready`)
+          return next
+        })
+      } else {
+        setUploadedMediaUrl(publicUrl)
+        setUploadProgress('✓ Upload complete')
       }
-      if (!publicUrl) {
-        setUploadProgress('Upload failed — could not resolve public URL')
-        setUploadingMedia(false)
-        return
-      }
-
-      setUploadedMediaUrl(publicUrl)
-      setUploadProgress('✓ Upload complete')
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[create/upload] unhandled at step', step, ':', err)
@@ -560,6 +716,7 @@ export default function CreatePage() {
       }
     } catch { /* ignore */ }
     setUploadedMediaUrl(null)
+    setUploadedPhotoUrls([])
     setUploadProgress('')
   }, [selectedType])
 
@@ -586,6 +743,125 @@ export default function CreatePage() {
   const setField = (key: string, value: string) => setFormData(prev => ({ ...prev, [key]: value }))
   const f = (key: string) => formData[key] ?? ''
 
+  const selectedSpotifyTrack: SpotifyTrack | null = (() => {
+    if (!f('spotify_track_id')) return null
+    return {
+      id: f('spotify_track_id'),
+      name: f('spotify_track_name'),
+      artists: f('spotify_track_artists'),
+      album: f('spotify_track_album') || null,
+      image: f('spotify_track_image') || null,
+      url: f('spotify_url'),
+      uri: f('spotify_uri'),
+      durationMs: Number(f('spotify_duration_ms') || 0),
+      previewUrl: f('spotify_preview_url') || null,
+      previewSource: (f('spotify_preview_source') as SpotifyTrack['previewSource']) || null,
+    }
+  })()
+
+  const textOverlayText = f('text_overlay_text').trim()
+  const textOverlayStyle = normaliseTextOverlayStyle(f('text_overlay_style'))
+  const textOverlayPosition = normaliseTextOverlayPosition(f('text_overlay_position'))
+
+  const renderTextOverlay = (compact = false) => {
+    if (!textOverlayText) return null
+    const overlayStyle = getTextOverlayStyle(textOverlayStyle)
+    return (
+      <div
+        aria-label={`Text overlay: ${textOverlayText}`}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 4,
+          pointerEvents: 'none',
+          display: 'flex',
+          textAlign: 'center',
+          paddingLeft: compact ? '8%' : '10%',
+          paddingRight: compact ? '8%' : '10%',
+          ...getTextOverlayPositionStyle(textOverlayPosition),
+        }}
+      >
+        <div style={{
+          maxWidth: '100%',
+          fontSize: compact ? 'clamp(1rem, 6vw, 1.65rem)' : 'clamp(1.25rem, 7vw, 2.25rem)',
+          lineHeight: 1.05,
+          whiteSpace: 'pre-wrap',
+          overflowWrap: 'anywhere',
+          ...overlayStyle,
+        }}>
+          {textOverlayText}
+        </div>
+      </div>
+    )
+  }
+
+  const renderTextOverlayEditor = (helperText: string) => (
+    <div style={s.fieldGroup}>
+      <label style={s.label}>Text over media</label>
+      <p style={{ color: '#64748b', fontSize: '0.82rem', marginTop: 0, marginBottom: '0.6rem', lineHeight: 1.45 }}>
+        {helperText}
+      </p>
+      <textarea
+        style={{ ...s.textarea, minHeight: '76px' }}
+        placeholder="Add text to place over the photo or video…"
+        maxLength={90}
+        value={f('text_overlay_text')}
+        onChange={e => setField('text_overlay_text', e.target.value)}
+      />
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', marginTop: '0.35rem', color: '#64748b', fontSize: '0.74rem' }}>
+        <span>Optional — leave blank for no overlay</span>
+        <span>{f('text_overlay_text').length}/90</span>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(116px, 1fr))', gap: '0.55rem', marginTop: '0.75rem' }}>
+        {TEXT_OVERLAY_OPTIONS.map(option => {
+          const active = textOverlayStyle === option.id
+          return (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => setField('text_overlay_style', option.id)}
+              style={{
+                border: active ? '1.5px solid #38bdf8' : '1px solid #334155',
+                background: active ? 'rgba(56,189,248,0.12)' : '#0f172a',
+                borderRadius: 12,
+                padding: '0.65rem',
+                cursor: 'pointer',
+                textAlign: 'left',
+                color: '#f8fafc',
+                fontFamily: 'inherit',
+              }}
+            >
+              <span style={{ display: 'inline-flex', fontSize: '0.9rem', lineHeight: 1, marginBottom: 7, ...option.sampleStyle }}>Aa</span>
+              <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: active ? '#38bdf8' : '#e2e8f0' }}>{option.label}</span>
+              <span style={{ display: 'block', marginTop: 2, color: '#64748b', fontSize: '0.68rem', lineHeight: 1.25 }}>{option.description}</span>
+            </button>
+          )
+        })}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', marginTop: '0.75rem' }}>
+        {(['top', 'center', 'bottom'] as TextOverlayPosition[]).map(position => {
+          const active = textOverlayPosition === position
+          return (
+            <button
+              key={position}
+              type="button"
+              onClick={() => setField('text_overlay_position', position)}
+              style={{ ...s.visPill(active), textTransform: 'capitalize' }}
+            >
+              {position === 'top' ? '⬆️ Top' : position === 'center' ? '⏺ Center' : '⬇️ Bottom'}
+            </button>
+          )
+        })}
+      </div>
+      {textOverlayText && (
+        <div style={{ position: 'relative', marginTop: '0.75rem', borderRadius: 14, overflow: 'hidden', minHeight: 150, border: '1px solid #334155', background: 'linear-gradient(135deg, #0f172a, #0f766e 55%, #020617)' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 72% 26%, rgba(255,255,255,0.22), transparent 23%), linear-gradient(180deg, transparent, rgba(0,0,0,0.28))' }} />
+          {renderTextOverlay(true)}
+        </div>
+      )}
+    </div>
+  )
+
   const discardDraft = () => {
     if (selectedType) localStorage.removeItem(getDraftKey(selectedType))
     setSelectedType(null)
@@ -606,13 +882,84 @@ export default function CreatePage() {
     setLinkLoading(false)
   }
 
+  const searchSpotify = async (query: string) => {
+    const q = query.trim()
+    setSpotifyQuery(query)
+    if (q.length < 2) {
+      setSpotifyResults([])
+      return
+    }
+    setSpotifyLoading(true)
+    try {
+      const res = await fetch(`/api/spotify/search?q=${encodeURIComponent(q)}`)
+      const data = await res.json() as { tracks?: SpotifyTrack[]; configured?: boolean }
+      setSpotifyConfigured(data.configured !== false)
+      setSpotifyResults(data.tracks ?? [])
+    } catch {
+      setSpotifyResults([])
+    } finally {
+      setSpotifyLoading(false)
+    }
+  }
+
+  const selectSpotifyTrack = (track: SpotifyTrack) => {
+    setField('spotify_track_id', track.id)
+    setField('spotify_track_name', track.name)
+    setField('spotify_track_artists', track.artists)
+    setField('spotify_track_album', track.album ?? '')
+    setField('spotify_track_image', track.image ?? '')
+    setField('spotify_url', track.url)
+    setField('spotify_uri', track.uri)
+    setField('spotify_duration_ms', String(track.durationMs))
+    setField('spotify_preview_url', track.previewUrl ?? '')
+    setField('spotify_preview_source', track.previewSource ?? '')
+    setSpotifyResults([])
+    setSpotifyQuery('')
+  }
+
+  const clearSpotifyTrack = () => {
+    ;['spotify_track_id', 'spotify_track_name', 'spotify_track_artists', 'spotify_track_album', 'spotify_track_image', 'spotify_url', 'spotify_uri', 'spotify_duration_ms', 'spotify_preview_url', 'spotify_preview_source']
+      .forEach(key => setField(key, ''))
+  }
+
+  const handlePhotoFiles = async (files: FileList | null) => {
+    const selected = Array.from(files ?? [])
+    if (selected.length === 0) return
+    const availableSlots = Math.max(0, 10 - uploadedPhotoUrls.length)
+    const toUpload = selected.slice(0, availableSlots)
+    if (toUpload.length === 0) {
+      showToastMsg('❌ You can add up to 10 photos per post')
+      return
+    }
+    if (selected.length > availableSlots) {
+      showToastMsg(`Only adding ${availableSlots} more photo${availableSlots === 1 ? '' : 's'} — max 10 per post`)
+    }
+    setField('file_names', [...uploadedPhotoUrls.map((_, i) => `Photo ${i + 1}`), ...toUpload.map(file => file.name)].join(', '))
+    for (let i = 0; i < toUpload.length; i += 1) {
+      setUploadProgress(`Uploading photo ${i + 1} of ${toUpload.length}…`)
+      await handleFileUpload(toUpload[i], 'photo')
+    }
+  }
+
+  const removeUploadedPhoto = (index: number) => {
+    setUploadedPhotoUrls(prev => {
+      const next = prev.filter((_, i) => i !== index)
+      setUploadedMediaUrl(next[0] ?? null)
+      setUploadProgress(next.length > 0 ? `✓ ${next.length} photo${next.length === 1 ? '' : 's'} ready` : '')
+      return next
+    })
+  }
+
   const buildPublishPayload = () => {
     if (!selectedType) return null
     let data: Record<string, unknown> = { ...formData }
     if (selectedType === 'poll') {
       data = { ...data, options: pollOptions.filter(o => o.trim()), question: f('question') }
     }
-    if (['photo', 'video', 'short'].includes(selectedType) && uploadedMediaUrl) {
+    if (selectedType === 'photo' && (uploadedPhotoUrls.length > 0 || uploadedMediaUrl)) {
+      const photoUrls = uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : (uploadedMediaUrl ? [uploadedMediaUrl] : [])
+      data = { ...data, media_url: photoUrls[0] ?? uploadedMediaUrl, media_urls: photoUrls }
+    } else if (['video', 'short'].includes(selectedType) && uploadedMediaUrl) {
       data = { ...data, media_url: uploadedMediaUrl }
     }
     // Inject delivery zone fields for physical products
@@ -661,6 +1008,8 @@ export default function CreatePage() {
         if (!f('body').trim()) return 'Article needs body content'
         break
       case 'photo':
+        if (uploadedPhotoUrls.length === 0 && !uploadedMediaUrl) return 'Upload at least one photo before publishing'
+        break
       case 'video':
       case 'short':
         if (!uploadedMediaUrl) return 'Upload a file before publishing'
@@ -882,32 +1231,102 @@ export default function CreatePage() {
         return (
           <>
             <div style={s.fieldGroup}>
-              <label style={s.label}>Photo</label>
+              <label style={s.label}>Photos</label>
+              <p style={{ color: '#64748b', fontSize: '0.82rem', marginTop: 0, marginBottom: '0.6rem', lineHeight: 1.45 }}>
+                Add up to 10 photos. People can swipe or tap through them in the feed.
+              </p>
               {/* Explicit MIME list INCLUDING HEIC/HEIF — iOS Safari's
                   `image/*` wildcard filters HEIC out of the picker on some
                   builds, so iPhone users would tap their camera roll and
                   see nothing happen. Listing the types explicitly is the
                   only reliable fix. image/* stays at the end as a catch-all
                   for anything else the browser might surface. */}
-              <input type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,image/*" style={{ ...s.input, padding: '0.5rem' }} onChange={e => {
-                const file = e.target.files?.[0]
-                if (file) {
-                  setField('file_names', file.name)
-                  handleFileUpload(file, 'photo')
-                }
+              <input type="file" multiple accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,image/*" style={{ ...s.input, padding: '0.5rem' }} onChange={e => {
+                void handlePhotoFiles(e.target.files)
+                e.currentTarget.value = ''
               }} />
               {uploadProgress && (
                 <div style={{ marginTop: '0.5rem', fontSize: '0.82rem', color: uploadProgress.startsWith('✓') ? '#34d399' : uploadProgress.startsWith('Upload') ? '#f87171' : '#64748b' }}>
                   {uploadingMedia ? '⏳ ' : ''}{uploadProgress}
                 </div>
               )}
-              {uploadedMediaUrl && selectedType === 'photo' && (
-                <img src={uploadedMediaUrl} alt="preview" style={{ marginTop: '0.75rem', maxWidth: '100%', maxHeight: '300px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #334155' }} />
+              {uploadedPhotoUrls.length > 0 && selectedType === 'photo' && (
+                <div style={{ marginTop: '0.75rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))', gap: '0.6rem' }}>
+                  {uploadedPhotoUrls.map((url, i) => (
+                    <div key={`${url}-${i}`} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1px solid #334155', background: '#0f172a', aspectRatio: '1 / 1' }}>
+                      <img src={url} alt={`Preview ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      <span style={{ position: 'absolute', top: 6, left: 6, background: 'rgba(15,23,42,0.8)', color: '#f8fafc', borderRadius: 999, padding: '2px 7px', fontSize: '0.72rem', fontWeight: 800 }}>{i + 1}</span>
+                      <button type="button" onClick={() => removeUploadedPhoto(i)} style={{ position: 'absolute', top: 5, right: 5, width: 28, height: 28, borderRadius: '50%', border: '1px solid rgba(248,113,113,0.5)', background: 'rgba(15,23,42,0.86)', color: '#fecaca', cursor: 'pointer', fontWeight: 800 }} aria-label={`Remove photo ${i + 1}`}>×</button>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
             <div style={s.fieldGroup}>
               <label style={s.label}>Caption</label>
               <textarea style={s.textarea} placeholder="Write a caption…" value={f('caption')} onChange={e => setField('caption', e.target.value)} />
+            </div>
+            {renderTextOverlayEditor('Pick a popular text style and position. The overlay appears on top of the photo carousel in the feed.')}
+            <div style={s.fieldGroup}>
+              <label style={s.label}>🎵 Add music from Spotify</label>
+              <p style={{ color: '#64748b', fontSize: '0.82rem', marginTop: 0, marginBottom: '0.6rem', lineHeight: 1.45 }}>
+                Choose a track to sit with this photo. The speaker plays a real preview when one is available; otherwise the song still displays without fake audio.
+              </p>
+              <input
+                style={s.input}
+                placeholder="Search Spotify tracks…"
+                value={spotifyQuery}
+                onChange={e => searchSpotify(e.target.value)}
+              />
+              {!spotifyConfigured && (
+                <div style={{ marginTop: '0.5rem', color: '#fbbf24', fontSize: '0.8rem', lineHeight: 1.45 }}>
+                  Spotify search needs API credentials. Paste a Spotify track URL below for now.
+                </div>
+              )}
+              {spotifyLoading && <div style={{ marginTop: '0.5rem', color: '#64748b', fontSize: '0.8rem' }}>Searching Spotify…</div>}
+              {spotifyResults.length > 0 && (
+                <div style={{ marginTop: '0.5rem', border: '1px solid #334155', borderRadius: 10, overflow: 'hidden', background: '#0f172a' }}>
+                  {spotifyResults.map(track => (
+                    <button
+                      key={track.id}
+                      type="button"
+                      onClick={() => selectSpotifyTrack(track)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid #1e293b', padding: '0.65rem 0.75rem', cursor: 'pointer', color: '#f1f5f9', textAlign: 'left', fontFamily: 'inherit' }}
+                    >
+                      {track.image ? <img src={track.image} alt="" style={{ width: 42, height: 42, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} /> : <span style={{ width: 42, height: 42, borderRadius: 6, background: '#1e293b', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>🎵</span>}
+                      <span style={{ minWidth: 0, flex: 1 }}>
+                        <strong style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{track.name}</strong>
+                        <span style={{ color: '#94a3b8', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{track.artists}</span>
+                      </span>
+                      <span style={{ flexShrink: 0, borderRadius: 999, padding: '3px 7px', fontSize: '0.68rem', fontWeight: 800, color: track.previewUrl ? '#bbf7d0' : '#fbbf24', background: track.previewUrl ? 'rgba(22,163,74,0.18)' : 'rgba(251,191,36,0.12)', border: `1px solid ${track.previewUrl ? 'rgba(34,197,94,0.28)' : 'rgba(251,191,36,0.25)'}` }}>
+                        {track.previewUrl ? (track.previewSource === 'itunes' ? 'Apple preview' : 'Preview') : 'No preview'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selectedSpotifyTrack && (
+                <div style={s.musicCard}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    {selectedSpotifyTrack.image ? <img src={selectedSpotifyTrack.image} alt="" style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover' }} /> : <span style={{ width: 56, height: 56, borderRadius: 8, background: '#0f172a', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>🎵</span>}
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ color: '#bbf7d0', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Selected track</div>
+                      <div style={{ color: '#f1f5f9', fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedSpotifyTrack.name}</div>
+                      <div style={{ color: '#94a3b8', fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedSpotifyTrack.artists}</div>
+                      <div style={{ color: selectedSpotifyTrack.previewUrl ? '#86efac' : '#fbbf24', fontSize: '0.76rem', marginTop: 2 }}>
+                        {selectedSpotifyTrack.previewUrl ? (selectedSpotifyTrack.previewSource === 'itunes' ? 'Speaker will play Apple/iTunes preview' : 'Speaker will play Spotify preview') : 'Preview unavailable — song title will show only'}
+                      </div>
+                    </div>
+                    <button type="button" onClick={clearSpotifyTrack} style={{ ...s.btnSecondary, padding: '0.45rem 0.7rem' }}>Remove</button>
+                  </div>
+                </div>
+              )}
+              <input
+                style={{ ...s.input, marginTop: '0.75rem' }}
+                placeholder="Or paste Spotify track URL…"
+                value={f('spotify_url')}
+                onChange={e => setField('spotify_url', e.target.value)}
+              />
             </div>
             <div style={s.fieldGroup}>
               <label style={s.label}>Alt Text</label>
@@ -934,7 +1353,10 @@ export default function CreatePage() {
                 </div>
               )}
               {uploadedMediaUrl && selectedType === 'video' && (
-                <video src={uploadedMediaUrl} controls style={{ marginTop: '0.75rem', maxWidth: '100%', maxHeight: '300px', borderRadius: '8px' }} />
+                <div style={{ position: 'relative', marginTop: '0.75rem', maxWidth: '100%', borderRadius: '8px', overflow: 'hidden', background: '#020617' }}>
+                  <video src={uploadedMediaUrl} controls style={{ width: '100%', maxHeight: '300px', display: 'block' }} />
+                  {renderTextOverlay(true)}
+                </div>
               )}
             </div>
             <div style={s.fieldGroup}>
@@ -945,6 +1367,7 @@ export default function CreatePage() {
               <label style={s.label}>Description</label>
               <textarea style={s.textarea} placeholder="What's this video about?" value={f('description')} onChange={e => setField('description', e.target.value)} />
             </div>
+            {renderTextOverlayEditor('Add a headline-style overlay that sits over the video in the feed.')}
           </>
         )
 
@@ -966,7 +1389,10 @@ export default function CreatePage() {
                 </div>
               )}
               {uploadedMediaUrl && selectedType === 'short' && (
-                <video src={uploadedMediaUrl} controls style={{ marginTop: '0.75rem', maxWidth: '100%', maxHeight: '400px', borderRadius: '8px', aspectRatio: '9/16', background: '#000' }} />
+                <div style={{ position: 'relative', marginTop: '0.75rem', maxWidth: 260, borderRadius: '8px', overflow: 'hidden', background: '#000' }}>
+                  <video src={uploadedMediaUrl} controls style={{ width: '100%', maxHeight: '400px', aspectRatio: '9/16', display: 'block', background: '#000' }} />
+                  {renderTextOverlay(true)}
+                </div>
               )}
             </div>
             <div style={s.fieldGroup}>
@@ -977,6 +1403,7 @@ export default function CreatePage() {
               <label style={s.label}>Audio Description</label>
               <input style={s.input} placeholder="Describe the audio for accessibility…" value={f('audio_desc')} onChange={e => setField('audio_desc', e.target.value)} />
             </div>
+            {renderTextOverlayEditor('Add a short, social-story style overlay for this vertical video.')}
           </>
         )
 
@@ -1416,6 +1843,35 @@ export default function CreatePage() {
             <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>⏱ Ends in {f('duration') || '7d'}</div>
           </div>
         )
+
+      case 'photo': {
+        const photoUrls = uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : (uploadedMediaUrl ? [uploadedMediaUrl] : [])
+        return (
+          <div style={s.previewCard}>
+            {photoUrls.length > 0 ? (
+              <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', border: '1px solid #334155', background: '#020617', marginBottom: '0.9rem' }}>
+                <img src={photoUrls[0]} alt="Preview" style={{ width: '100%', maxHeight: '420px', objectFit: 'contain', display: 'block' }} />
+                {renderTextOverlay(false)}
+                {photoUrls.length > 1 && (
+                  <div style={{ position: 'absolute', right: 10, top: 10, background: 'rgba(15,23,42,0.82)', color: '#f8fafc', borderRadius: 999, padding: '4px 9px', fontSize: '0.78rem', fontWeight: 800 }}>
+                    1/{photoUrls.length}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ color: '#64748b', marginBottom: '0.75rem' }}>Upload photos to preview your carousel.</div>
+            )}
+            {photoUrls.length > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginBottom: '0.8rem' }}>
+                {photoUrls.map((_, i) => <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: i === 0 ? '#38bdf8' : '#475569' }} />)}
+              </div>
+            )}
+            <div style={{ fontSize: '0.95rem', color: '#cbd5e1', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+              {f('caption') || 'Your caption will appear here.'}
+            </div>
+          </div>
+        )
+      }
 
       case 'job':
         return (

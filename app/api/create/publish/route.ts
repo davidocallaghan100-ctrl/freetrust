@@ -7,6 +7,7 @@ import { toPgUrlArray, toPgTagArray } from '@/lib/supabase/text-array'
 import { awardTrust } from '@/lib/trust/award'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 import { assertStripeConnectedForPaidListing } from '@/lib/stripe/connect-gate'
+import { findServiceCategoryByLabel } from '@/lib/service-categories'
 
 // Map UI-friendly labels (from the create form) to the DB CHECK constraint
 // values defined in lib/supabase/jobs-schema.sql.
@@ -20,6 +21,72 @@ const JOB_TYPE_MAP: Record<string, string> = {
 
 function fail(message: string, status = 500) {
   return NextResponse.json({ error: message }, { status })
+}
+
+const MEDIA_URLS_MARKER_PREFIX = '[[FT_MEDIA_URLS:'
+const SPOTIFY_MARKER_PREFIX = '[[FT_SPOTIFY:'
+const TEXT_OVERLAY_MARKER_PREFIX = '[[FT_TEXT_OVERLAY:'
+
+function normaliseMediaUrls(raw: unknown, fallback: string | null) {
+  const urls = Array.isArray(raw)
+    ? raw.filter((value): value is string => typeof value === 'string')
+    : []
+  const clean = urls
+    .map(url => url.trim())
+    .filter(url => /^https?:\/\//i.test(url))
+  if (fallback && /^https?:\/\//i.test(fallback) && !clean.includes(fallback)) {
+    clean.unshift(fallback)
+  }
+  return Array.from(new Set(clean)).slice(0, 10)
+}
+
+function appendMediaUrlsMarker(content: string, urls: string[]) {
+  if (urls.length <= 1) return content
+  const encoded = Buffer.from(JSON.stringify(urls), 'utf8').toString('base64url')
+  const spacer = content.trim() ? '\n\n' : ''
+  return `${content}${spacer}${MEDIA_URLS_MARKER_PREFIX}${encoded}]]`
+}
+
+function appendSpotifyMarker(content: string, data: Record<string, unknown>) {
+  const url = typeof data.spotify_url === 'string' && data.spotify_url.trim().startsWith('http')
+    ? data.spotify_url.trim()
+    : null
+  if (!url) return content
+  const markerData = {
+    id: typeof data.spotify_track_id === 'string' ? data.spotify_track_id : null,
+    name: typeof data.spotify_track_name === 'string' ? data.spotify_track_name : null,
+    artists: typeof data.spotify_track_artists === 'string' ? data.spotify_track_artists : null,
+    image: typeof data.spotify_track_image === 'string' ? data.spotify_track_image : null,
+    url,
+    previewUrl: typeof data.spotify_preview_url === 'string' && data.spotify_preview_url.trim().startsWith('http')
+      ? data.spotify_preview_url.trim()
+      : null,
+    previewSource: typeof data.spotify_preview_source === 'string' ? data.spotify_preview_source : null,
+  }
+  // If the user pasted a URL manually, the feed card can fetch the title
+  // client-side. We still keep the URL marker-free to avoid storing empty
+  // labels in the caption.
+  if (!markerData.name && !markerData.artists) return content
+  const encoded = Buffer.from(JSON.stringify(markerData), 'utf8').toString('base64url')
+  const spacer = content.trim() ? '\n\n' : ''
+  return `${content}${spacer}${SPOTIFY_MARKER_PREFIX}${encoded}]]`
+}
+
+function appendTextOverlayMarker(content: string, data: Record<string, unknown>) {
+  const text = typeof data.text_overlay_text === 'string' ? data.text_overlay_text.trim().slice(0, 90) : ''
+  if (!text) return content
+  const rawStyle = typeof data.text_overlay_style === 'string' ? data.text_overlay_style : 'classic'
+  const rawPosition = typeof data.text_overlay_position === 'string' ? data.text_overlay_position : 'bottom'
+  const allowedStyles = new Set(['classic', 'story', 'neon', 'caption', 'minimal'])
+  const allowedPositions = new Set(['top', 'center', 'bottom'])
+  const markerData = {
+    text,
+    style: allowedStyles.has(rawStyle) ? rawStyle : 'classic',
+    position: allowedPositions.has(rawPosition) ? rawPosition : 'bottom',
+  }
+  const encoded = Buffer.from(JSON.stringify(markerData), 'utf8').toString('base64url')
+  const spacer = content.trim() ? '\n\n' : ''
+  return `${content}${spacer}${TEXT_OVERLAY_MARKER_PREFIX}${encoded}]]`
 }
 
 // ── Globalisation helpers ──────────────────────────────────────────────────
@@ -91,9 +158,11 @@ export async function POST(req: NextRequest) {
       data?: Record<string, unknown>
       visibility?: string
       // Optional: publish this post under an organisation's identity
-      // instead of the caller's personal profile. Only honoured for
-      // type ∈ {text, article, photo} — other types have their own
-      // author context (product = seller, event = organiser, etc.).
+      // instead of the caller's personal profile. Honoured for
+      // type ∈ {text, article, photo, service, product}. Feed/article
+      // posts use it as the public byline; services/products store it
+      // as the offering organisation while seller_id remains the
+      // accountable human.
       // Server verifies the caller is the org creator or has role
       // owner/admin in organisation_members.
       organisation_id?: string
@@ -119,11 +188,10 @@ export async function POST(req: NextRequest) {
 
     // ── Post-as-organisation auth check ─────────────────────────────────────
     // Resolve once, reuse in the article + feed_posts branches below.
-    // Only allowed for text/article/photo per product spec; on every
-    // other type we silently drop the field so a stale client or a
-    // malicious caller can't smuggle an org byline onto a product/
-    // service/job listing where it would be misleading.
-    const ALLOWED_ORG_TYPES = new Set(['text', 'article', 'photo'])
+    // Only allowed for text/article/photo/service/product; on every other type
+    // we silently drop the field so a stale client or malicious caller
+    // can't smuggle an org byline/owner onto unrelated content.
+    const ALLOWED_ORG_TYPES = new Set(['text', 'article', 'photo', 'service', 'product'])
     let postedAsOrganisationId: string | null = null
     if (body.organisation_id && ALLOWED_ORG_TYPES.has(type)) {
       const orgId = body.organisation_id
@@ -373,6 +441,7 @@ export async function POST(req: NextRequest) {
       // from is_remote so the filter works for gigs published through
       // this route. 'online' = remote, 'offline' = in-person.
       const serviceMode = isRemote ? 'online' : 'offline'
+      const serviceCategory = findServiceCategoryByLabel(category)
 
       const { data: inserted, error } = await admin.from('listings').insert({
         seller_id: user.id,
@@ -382,6 +451,7 @@ export async function POST(req: NextRequest) {
         currency: currencyCode,
         product_type: 'service',
         category: category ?? 'General',
+        category_id: serviceCategory?.id ?? null,
         service_mode: serviceMode,
         status: 'active',
         // ── Globalisation fields ────────────────────────────────────────
@@ -404,6 +474,7 @@ export async function POST(req: NextRequest) {
                           ? (data.images[0] as string)
                           : null,
         service_radius: Number.isFinite(serviceRadius) ? serviceRadius : null,
+        organisation_id: postedAsOrganisationId,
       }).select('id').single()
       if (error) {
         console.error('[publish service]', error)
@@ -524,6 +595,7 @@ export async function POST(req: NextRequest) {
         is_remote:      false,
         currency_code:  currencyCode,
         price_eur:      priceEur,
+        organisation_id: postedAsOrganisationId,
       })
       if (error) {
         console.error('[publish product]', error)
@@ -545,28 +617,37 @@ export async function POST(req: NextRequest) {
     // ── text/photo/video/short/link/poll → feed_posts ──────────────────────
     else {
       const mediaUrl = (data.media_url as string | null | undefined) ?? null
+      const photoMediaUrls = type === 'photo' ? normaliseMediaUrls(data.media_urls, mediaUrl) : []
+      const primaryMediaUrl = type === 'photo' ? (photoMediaUrls[0] ?? mediaUrl) : mediaUrl
 
       // Validation per type
       if (type === 'text' && !String(data.content ?? '').trim()) {
         return fail('Text post cannot be empty', 400)
       }
-      if ((type === 'photo' || type === 'video' || type === 'short') && !mediaUrl) {
+      if ((type === 'photo' || type === 'video' || type === 'short') && !primaryMediaUrl) {
         return fail('Upload a file before publishing', 400)
       }
       if (type === 'link' && !String(data.url ?? '').trim()) {
         return fail('Link URL is required', 400)
       }
 
+      const spotifyUrl = typeof data.spotify_url === 'string' && data.spotify_url.trim().startsWith('http')
+        ? data.spotify_url.trim()
+        : null
+
+      const photoCaption = appendSpotifyMarker(appendTextOverlayMarker(appendMediaUrlsMarker(String(data.caption ?? ''), photoMediaUrls), data), data)
+      const videoDescription = appendTextOverlayMarker(String(data.description ?? ''), data)
+      const shortCaption = appendTextOverlayMarker(String(data.caption ?? ''), data)
       const typeContentMap: Record<string, { content: string; media_url?: string | null; title?: string; link_url?: string }> = {
         text:  { content: String(data.content ?? '').trim() },
-        photo: { content: String(data.caption ?? ''), media_url: mediaUrl },
-        video: { content: String(data.description ?? ''), title: String(data.title ?? ''), media_url: mediaUrl },
-        short: { content: String(data.caption ?? ''), media_url: mediaUrl },
+        photo: { content: photoCaption, media_url: primaryMediaUrl, link_url: spotifyUrl ?? undefined },
+        video: { content: videoDescription, title: String(data.title ?? ''), media_url: primaryMediaUrl },
+        short: { content: shortCaption, media_url: primaryMediaUrl },
         link:  { content: String(data.description ?? ''), link_url: String(data.url ?? ''), title: String(data.link_title ?? '') },
         poll:  { content: JSON.stringify({ question: data.question, options: data.options, duration: data.duration }), title: String(data.question ?? '') },
       }
 
-      const mapped = typeContentMap[type] ?? { content: String(data.content ?? ''), media_url: mediaUrl }
+      const mapped = typeContentMap[type] ?? { content: String(data.content ?? ''), media_url: primaryMediaUrl }
 
       const { error } = await admin.from('feed_posts').insert({
         user_id: user.id,

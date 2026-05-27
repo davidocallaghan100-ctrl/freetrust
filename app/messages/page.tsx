@@ -1,4 +1,6 @@
 'use client'
+
+
 import React, { Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -84,6 +86,7 @@ function MessagesPageInner() {
   // gone. Now we surface the real Supabase error in a banner above the
   // input with a Retry button.
   const [sendError, setSendError] = useState<string | null>(null)
+  const [safetyWarning, setSafetyWarning] = useState<string | null>(null)
   const [pendingResend, setPendingResend] = useState<{ id: string; text: string } | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showNewModal, setShowNewModal] = useState(false)
@@ -256,19 +259,19 @@ function MessagesPageInner() {
   }, [showNewModal])
 
   const loadMessages = useCallback(async (convId: string) => {
-    const supabase = createClient()
     try {
-      const { data } = await supabase
-        .from('messages')
-        .select('*, sender:profiles(id, full_name, avatar_url)')
-        .eq('conversation_id', convId)
-        .order('created_at', { ascending: true })
-      if (data && data.length > 0) {
-        setMessages(data as Message[])
+      const res = await fetch(`/api/messages/${convId}`, { cache: 'no-store' })
+      if (!res.ok) {
+        console.error('[messages] loadMessages failed:', res.status)
+        setMessages([])
         return
       }
-    } catch { /* fall through */ }
-    setMessages([])
+      const data = await res.json() as { messages?: Message[] }
+      setMessages(data.messages ?? [])
+    } catch (err) {
+      console.error('[messages] loadMessages threw:', err)
+      setMessages([])
+    }
   }, [])
 
   useEffect(() => {
@@ -280,7 +283,9 @@ function MessagesPageInner() {
       .channel(`msgs:${activeId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${activeId}` },
         (payload) => {
-          setMessages(prev => [...prev, payload.new as Message])
+          setMessages(prev => prev.some(msg => msg.id === payload.new.id)
+            ? prev
+            : [...prev, payload.new as Message])
           setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
         })
       .subscribe()
@@ -331,29 +336,46 @@ function MessagesPageInner() {
   const selectConversation = (id: string) => {
     setActiveId(id)
     setMobileView('thread')
+    setSafetyWarning(null)
+    setSendError(null)
+    setPendingResend(null)
     // Mark as read
     setConversations(prev => prev.map(c => c.id === id ? { ...c, unread_count: 0 } : c))
   }
 
   const doSend = async (text: string, optimisticId: string) => {
     if (!activeId || !userId) return
-    const supabase = createClient()
-    const { error } = await supabase.from('messages').insert({
-      conversation_id: activeId,
-      sender_id: userId,
-      content: text,
-      status: 'sent',
+    const res = await fetch(`/api/messages/${activeId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: text }),
     })
-    if (error) {
+    const data = await res.json().catch(() => ({})) as {
+      error?: string
+      message?: Message
+      warning?: string | null
+    }
+    if (!res.ok || !data.message) {
       // Surface the real Supabase error instead of swallowing it.
       // The optimistic bubble stays on screen (so the user doesn't
       // lose what they typed), but we mark the send as failed and
       // offer a Retry button so they know it never reached the DB.
-      console.error('[messages] insert failed:', error)
-      setSendError(error.message || 'Message failed to send')
+      console.error('[messages] insert failed:', data.error || res.status)
+      setSendError(data.error || 'Message failed to send')
       setPendingResend({ id: optimisticId, text })
       return
     }
+    setMessages(prev => {
+      const serverMessage = data.message as Message
+      const replaced = prev.map(msg => msg.id === optimisticId ? serverMessage : msg)
+      const seen = new Set<string>()
+      return replaced.filter(msg => {
+        if (seen.has(msg.id)) return false
+        seen.add(msg.id)
+        return true
+      })
+    })
+    setSafetyWarning(data.warning ?? null)
     setSendError(null)
     setPendingResend(null)
   }
@@ -364,6 +386,7 @@ function MessagesPageInner() {
     setInput('')
     setSending(true)
     setSendError(null)
+    setSafetyWarning(null)
 
     // Optimistic
     const optimisticId = `opt_${Date.now()}`
@@ -425,37 +448,45 @@ function MessagesPageInner() {
         .msg-root {
           height: calc(100vh - 58px);
           height: calc(100dvh - 58px);
-          background: #0f172a;
+          background:
+            radial-gradient(circle at 20% 10%, rgba(45,212,191,0.08), transparent 28%),
+            radial-gradient(circle at 80% 0%, rgba(56,189,248,0.07), transparent 24%),
+            #07111f;
           color: #f1f5f9;
           font-family: system-ui;
           display: flex;
           overflow: hidden;
         }
-        .msg-sidebar { width: 320px; flex-shrink: 0; border-right: 1px solid rgba(56,189,248,0.1); display: flex; flex-direction: column; background: #111827; }
-        .msg-thread { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        .msg-sidebar { width: 320px; flex-shrink: 0; border-right: 1px solid rgba(56,189,248,0.1); display: flex; flex-direction: column; background: rgba(10,20,35,0.94); }
+        .msg-thread { flex: 1; display: flex; flex-direction: column; min-height: 0; background: linear-gradient(180deg, rgba(7,17,31,0.98), rgba(5,15,28,0.98)); }
         .msg-conv-item { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.9rem 1rem; cursor: pointer; border-bottom: 1px solid rgba(56,189,248,0.05); transition: background 0.12s; }
         .msg-conv-item:hover { background: rgba(56,189,248,0.04); }
         .msg-conv-item.active { background: rgba(56,189,248,0.08); border-left: 2px solid #38bdf8; }
         .msg-bubble-wrap { display: flex; margin-bottom: 0.4rem; }
         .msg-bubble-wrap.sent { justify-content: flex-end; }
         .msg-bubble-wrap.recv { justify-content: flex-start; }
-        .msg-bubble { max-width: 72%; padding: 0.6rem 0.9rem; border-radius: 14px; font-size: 0.88rem; line-height: 1.5; word-break: break-word; }
-        .msg-bubble.sent { background: #38bdf8; color: #0f172a; border-bottom-right-radius: 4px; }
-        .msg-bubble.recv { background: #1e293b; color: #e2e8f0; border-bottom-left-radius: 4px; border: 1px solid rgba(56,189,248,0.1); }
+        .msg-bubble { max-width: 72%; padding: 0.7rem 0.9rem 0.45rem; border-radius: 20px; font-size: 0.92rem; line-height: 1.5; word-break: break-word; box-shadow: 0 10px 28px rgba(0,0,0,0.18); }
+        .msg-bubble.sent { background: linear-gradient(135deg,#22d3ee,#0ea5e9); color: #effcff; border-bottom-right-radius: 6px; }
+        .msg-bubble.recv { background: rgba(30,41,59,0.96); color: #e2e8f0; border-bottom-left-radius: 6px; border: 1px solid rgba(148,163,184,0.1); }
+        .msg-bubble-time { display: block; margin-top: 0.3rem; font-size: 0.68rem; line-height: 1; opacity: 0.7; text-align: right; }
+        .msg-safety-chip { align-self: center; margin: 0.85rem 1rem 0; padding: 0.45rem 0.7rem; border: 1px solid rgba(45,212,191,0.22); border-radius: 999px; background: rgba(20,184,166,0.08); color: #8ff7e5; font-size: 0.76rem; font-weight: 650; }
+        .msg-thread-scroll { flex: 1; overflow-y: auto; padding: 1rem 1.25rem 1.25rem; background-image: radial-gradient(rgba(45,212,191,0.08) 1px, transparent 1px); background-size: 34px 34px; }
         .msg-input-area {
-          padding: 0.85rem 1rem;
+          padding: 0.8rem 1rem;
           border-top: 1px solid rgba(56,189,248,0.1);
           display: flex;
           gap: 0.65rem;
-          align-items: flex-end;
-          background: #111827;
+          align-items: center;
+          background: rgba(10,20,35,0.96);
           flex-shrink: 0;
         }
-        .msg-textarea { flex: 1; background: #1e293b; border: 1px solid rgba(56,189,248,0.15); border-radius: 10px; color: #f1f5f9; font-family: inherit; font-size: 0.9rem; padding: 0.65rem 0.9rem; resize: none; outline: none; max-height: 120px; overflow-y: auto; }
+        .msg-textarea { flex: 1; background: rgba(30,41,59,0.95); border: 1px solid rgba(148,163,184,0.18); border-radius: 999px; color: #f1f5f9; font-family: inherit; font-size: 16px; padding: 0.74rem 1rem; resize: none; outline: none; max-height: 120px; overflow-y: auto; }
         .msg-textarea:focus { border-color: rgba(56,189,248,0.35); }
-        .msg-send-btn { background: #38bdf8; border: none; border-radius: 10px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: opacity 0.15s; }
+        .msg-send-btn { background: linear-gradient(135deg,#2dd4bf,#38bdf8); border: none; border-radius: 999px; width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: opacity 0.15s, transform 0.15s; box-shadow: 0 10px 24px rgba(34,211,238,0.18); }
         .msg-send-btn:hover { opacity: 0.88; }
+        .msg-send-btn:active { transform: scale(0.97); }
         .msg-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .msg-plus-btn { width: 44px; height: 44px; border-radius: 999px; border: 1px solid rgba(45,212,191,0.25); background: rgba(15,23,42,0.86); color: #5eead4; font-size: 1.35rem; line-height: 1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         @media (max-width: 768px) {
           .msg-sidebar { width: 100%; border-right: none; }
           .msg-thread { width: 100%; }
@@ -467,6 +498,7 @@ function MessagesPageInner() {
           .msg-input-area {
             padding-bottom: calc(0.85rem + 64px + env(safe-area-inset-bottom, 0px));
           }
+          .msg-bubble { max-width: 84%; font-size: 0.96rem; }
         }
       `}</style>
 
@@ -543,24 +575,27 @@ function MessagesPageInner() {
         ) : (
           <>
             {/* Thread header */}
-            <div style={{ padding: '0.9rem 1.25rem', borderBottom: '1px solid rgba(56,189,248,0.1)', display: 'flex', alignItems: 'center', gap: '0.75rem', background: '#111827' }}>
-              <button onClick={() => { setActiveId(null); setMobileView('list') }} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '1.2rem', padding: '0.1rem 0.4rem', lineHeight: 1 }}>
+            <div style={{ padding: '0.9rem 1.25rem', borderBottom: '1px solid rgba(56,189,248,0.1)', display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(10,20,35,0.96)' }}>
+              <button onClick={() => { setActiveId(null); setMobileView('list') }} style={{ background: 'none', border: 'none', color: '#dbeafe', cursor: 'pointer', fontSize: '1.35rem', padding: '0.1rem 0.4rem', lineHeight: 1 }}>
                 ←
               </button>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: pickGradient(activeConv?.other_user.id || ''), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#0f172a', flexShrink: 0 }}>
+              <div style={{ width: 42, height: 42, borderRadius: '50%', background: pickGradient(activeConv?.other_user.id || ''), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 800, color: '#0f172a', flexShrink: 0, position: 'relative', boxShadow: '0 0 0 2px rgba(45,212,191,0.45)' }}>
                 {getInitials(activeConv?.other_user.full_name)}
+                <span aria-hidden="true" style={{ position: 'absolute', right: -3, bottom: -3, width: 16, height: 16, borderRadius: '50%', background: '#2dd4bf', color: '#042f2e', border: '2px solid #0a1423', fontSize: '0.62rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>✓</span>
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{activeConv?.other_user.full_name || 'Unknown'}</div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Member</div>
+                <div style={{ fontSize: '0.75rem', color: '#93c5fd' }}>Active Member · FreeTrust protected</div>
               </div>
-              <button onClick={() => router.push(`/profile?id=${activeConv?.other_user.id}`)} style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 7, padding: '0.35rem 0.75rem', fontSize: '0.78rem', color: '#38bdf8', cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={() => router.push(`/profile?id=${activeConv?.other_user.id}`)} style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 999, padding: '0.38rem 0.72rem', fontSize: '0.76rem', color: '#7dd3fc', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}>
                 View Profile
               </button>
             </div>
 
+            <div className="msg-safety-chip">🛡 Verified member conversation · payments stay inside FreeTrust</div>
+
             {/* Messages */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem' }}>
+            <div className="msg-thread-scroll">
               {messages.map((msg, i) => {
                 const isSent = msg.sender_id === userId || msg.sender_id === 'me'
                 const prevMsg = messages[i - 1]
@@ -579,7 +614,10 @@ function MessagesPageInner() {
                         </div>
                       )}
                       <div className={`msg-bubble ${isSent ? 'sent' : 'recv'}`}>
-                        {msg.content}
+                        <div>{msg.content}</div>
+                        <span className="msg-bubble-time">
+                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{isSent ? ' ✓✓' : ''}
+                        </span>
                       </div>
                     </div>
                   </React.Fragment>
@@ -641,15 +679,40 @@ function MessagesPageInner() {
               </div>
             )}
 
+            {safetyWarning && !sendError && (
+              <div
+                role="status"
+                style={{
+                  margin: '0 1rem',
+                  background: 'rgba(20,184,166,0.08)',
+                  border: '1px solid rgba(45,212,191,0.24)',
+                  borderRadius: 12,
+                  padding: '0.55rem 0.8rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.55rem',
+                  fontSize: '0.78rem',
+                  color: '#99f6e4',
+                  flexShrink: 0,
+                }}
+              >
+                <span>🛡</span>
+                <span>{safetyWarning}</span>
+              </div>
+            )}
+
             {/* Input */}
             <div className="msg-input-area">
+              <button className="msg-plus-btn" type="button" aria-label="Add attachment" title="Attachments coming soon">
+                +
+              </button>
               <textarea
                 ref={inputRef}
                 className="msg-textarea"
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Type a message… (Enter to send)"
+                placeholder="Type a message…"
                 rows={1}
               />
               <button className="msg-send-btn" onClick={sendMessage} disabled={!input.trim() || sending} title="Send">

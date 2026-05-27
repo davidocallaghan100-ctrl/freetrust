@@ -15,16 +15,32 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json().catch(() => ({})) as { content?: unknown; title?: unknown }
+    const body = await request.json().catch(() => ({})) as { content?: unknown; title?: unknown; link_url?: unknown; media_url?: unknown; media_urls?: unknown }
     const hasContent = typeof body.content === 'string'
     const hasTitle = typeof body.title === 'string'
+    const hasLinkUrl = typeof body.link_url === 'string' || body.link_url === null
+    const hasMediaUrl = typeof body.media_url === 'string' || body.media_url === null
+    const hasMediaUrls = Array.isArray(body.media_urls)
 
-    if (!hasContent && !hasTitle) {
-      return NextResponse.json({ error: 'content or title is required' }, { status: 400 })
+    if (!hasContent && !hasTitle && !hasLinkUrl && !hasMediaUrl && !hasMediaUrls) {
+      return NextResponse.json({ error: 'content, title, link_url, or media is required' }, { status: 400 })
     }
 
     const content = hasContent ? (body.content as string).trim() : undefined
     const title = hasTitle ? (body.title as string).trim() : undefined
+    const linkUrl = hasLinkUrl
+      ? (typeof body.link_url === 'string' && body.link_url.trim().startsWith('http') ? body.link_url.trim() : null)
+      : undefined
+    const mediaUrls = hasMediaUrls
+      ? Array.from(new Set((body.media_urls as unknown[])
+          .filter((value): value is string => typeof value === 'string')
+          .map(url => url.trim())
+          .filter(url => /^https?:\/\//i.test(url))))
+          .slice(0, 10)
+      : undefined
+    const mediaUrl = hasMediaUrl
+      ? (typeof body.media_url === 'string' && /^https?:\/\//i.test(body.media_url.trim()) ? body.media_url.trim() : null)
+      : (mediaUrls !== undefined ? (mediaUrls[0] ?? null) : undefined)
 
     if (content !== undefined && content.length > 5000) {
       return NextResponse.json({ error: 'Post too long (max 5000 chars)' }, { status: 400 })
@@ -53,11 +69,20 @@ export async function PATCH(
       return NextResponse.json({ error: 'Poll posts cannot be edited once live' }, { status: 400 })
     }
 
-    const update: { content?: string; title?: string | null; updated_at: string } = {
+    if ((hasMediaUrl || hasMediaUrls) && post.type !== 'photo') {
+      return NextResponse.json({ error: 'Media editing is only supported for photo posts' }, { status: 400 })
+    }
+
+    const update: { content?: string; title?: string | null; link_url?: string | null; media_url?: string | null; media_type?: string | null; updated_at: string } = {
       updated_at: new Date().toISOString(),
     }
     if (content !== undefined) update.content = content
     if (title !== undefined) update.title = title || null
+    if (linkUrl !== undefined) update.link_url = linkUrl
+    if (mediaUrl !== undefined) {
+      update.media_url = mediaUrl
+      update.media_type = mediaUrl ? 'image' : null
+    }
 
     const { data: updatedPost, error: updateError } = await supabase
       .from('feed_posts')

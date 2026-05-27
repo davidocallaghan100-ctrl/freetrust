@@ -6,6 +6,7 @@ export default function SellerConnectPage() {
   const [status, setStatus] = useState<'loading' | 'not_started' | 'pending' | 'complete'>('loading')
   const [info, setInfo] = useState<{ charges_enabled?: boolean; payouts_enabled?: boolean; account_id?: string } | null>(null)
   const [redirecting, setRedirecting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     checkStatus()
@@ -13,24 +14,38 @@ export default function SellerConnectPage() {
 
   const checkStatus = async () => {
     try {
+      setError(null)
       const res = await fetch('/api/stripe/connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status' }) })
       if (res.status === 404) { setStatus('not_started'); return }
       const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? `Could not check Stripe status (HTTP ${res.status})`)
+        setStatus('pending')
+        return
+      }
       setInfo(data)
       setStatus(data.onboarded ? 'complete' : 'pending')
-    } catch {
-      setStatus('not_started')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not check Stripe status')
+      setStatus('pending')
     }
   }
 
   const startOnboarding = async () => {
     setRedirecting(true)
     try {
+      setError(null)
       const res = await fetch('/api/stripe/connect')
       const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? `Could not start Stripe onboarding (HTTP ${res.status})`)
+        return
+      }
       if (data.url) window.location.href = data.url
       else if (data.onboarded) { setStatus('complete'); setInfo(data); setRedirecting(false) }
-    } catch {
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not start Stripe onboarding')
+    } finally {
       setRedirecting(false)
     }
   }
@@ -38,9 +53,16 @@ export default function SellerConnectPage() {
   const openDashboard = async () => {
     setRedirecting(true)
     try {
+      setError(null)
       const res = await fetch('/api/stripe/connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'dashboard' }) })
       const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? `Could not open Stripe dashboard (HTTP ${res.status})`)
+        return
+      }
       if (data.url) window.open(data.url, '_blank')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not open Stripe dashboard')
     } finally {
       setRedirecting(false)
     }
@@ -64,6 +86,13 @@ export default function SellerConnectPage() {
 
         {status === 'loading' && (
           <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>Checking your account…</div>
+        )}
+
+        {error && status !== 'loading' && (
+          <div style={{ marginTop: '1.25rem', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.28)', borderRadius: 14, padding: '1rem', color: '#fecaca', fontSize: '0.86rem', lineHeight: 1.55 }}>
+            <strong style={{ color: '#fca5a5' }}>Stripe status needs attention.</strong><br />
+            {error}
+          </div>
         )}
 
         {status === 'not_started' && (

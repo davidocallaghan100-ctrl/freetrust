@@ -6,27 +6,49 @@ import { insertNotification } from '@/lib/notifications/insert'
 import { sendEmail } from '@/lib/email/send'
 
 // GET — returns { following: [...], followers: [...], followingIds: string[] }
-export async function GET(_req: NextRequest) {
+// Optional ?userId=<profile id> lets public profile pages show the same
+// follower/following cards without loading the current user's whole profile.
+// The payload stays public-safe: profile id/name/avatar/bio/location only.
+export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const requestedUserId = req.nextUrl.searchParams.get('userId')
+    const targetUserId = requestedUserId || user?.id
+    if (!targetUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const admin = createAdminClient()
 
-    const [followingRes, followersRes] = await Promise.all([
+    // Pull joined profile rows, then drop archived/soft-deleted users so
+    // they never appear in the user's followers/following lists or cards.
+    // We fetch `deleted_at` explicitly for the filter and then strip it
+    // before returning so the client payload is unchanged.
+    const [followingRows, followersRows] = await Promise.all([
       admin
         .from('user_follows')
-        .select('following_id, profiles!following_id(id, full_name, avatar_url, bio, location)')
-        .eq('follower_id', user.id),
+        .select('following_id, profiles!following_id(id, full_name, avatar_url, bio, location, deleted_at)')
+        .eq('follower_id', targetUserId)
+        .then((res) => res.data ?? []),
       admin
         .from('user_follows')
-        .select('follower_id, profiles!follower_id(id, full_name, avatar_url, bio, location)')
-        .eq('following_id', user.id),
+        .select('follower_id, profiles!follower_id(id, full_name, avatar_url, bio, location, deleted_at)')
+        .eq('following_id', targetUserId)
+        .then((res) => res.data ?? []),
     ])
 
-    const following = (followingRes.data ?? []).map((r: Record<string, unknown>) => r.profiles).filter(Boolean)
-    const followers = (followersRes.data ?? []).map((r: Record<string, unknown>) => r.profiles).filter(Boolean)
+    const stripDeletedAt = (profile: Record<string, unknown> | null | undefined) => {
+      if (!profile) return null
+      if (profile.deleted_at) return null
+      const { deleted_at: _omit, ...rest } = profile as Record<string, unknown> & { deleted_at?: unknown }
+      return rest
+    }
+
+    const following = (followingRows as Array<Record<string, unknown>>)
+      .map((r) => stripDeletedAt(r.profiles as Record<string, unknown> | null | undefined))
+      .filter(Boolean)
+    const followers = (followersRows as Array<Record<string, unknown>>)
+      .map((r) => stripDeletedAt(r.profiles as Record<string, unknown> | null | undefined))
+      .filter(Boolean)
     const followingIds = (following as Array<{ id: string }>).map((p) => p.id)
 
     return NextResponse.json({ following, followers, followingIds }, {

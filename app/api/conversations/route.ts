@@ -26,6 +26,23 @@ import { createAdminClient } from '@/lib/supabase/admin'
 // but using the service role means the API route never depends on
 // the caller's session having the right policies loaded.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const NEW_CONVERSATION_RATE_LIMIT_WINDOW_MS = 60_000
+const NEW_CONVERSATION_RATE_LIMIT_MAX = 10
+
+const newConversationRateBuckets = new Map<string, number[]>()
+
+function checkNewConversationRateLimit(userId: string): boolean {
+  const now = Date.now()
+  const recent = (newConversationRateBuckets.get(userId) ?? [])
+    .filter(ts => now - ts < NEW_CONVERSATION_RATE_LIMIT_WINDOW_MS)
+  if (recent.length >= NEW_CONVERSATION_RATE_LIMIT_MAX) {
+    newConversationRateBuckets.set(userId, recent)
+    return false
+  }
+  recent.push(now)
+  newConversationRateBuckets.set(userId, recent)
+  return true
+}
 
 export async function POST(req: NextRequest) {
   console.log('[conversations] POST called')
@@ -77,6 +94,22 @@ export async function POST(req: NextRequest) {
 
     const admin = createAdminClient()
 
+    const { data: recipientProfile, error: recipientErr } = await admin
+      .from('profiles')
+      .select('id')
+      .eq('id', recipientId)
+      .maybeSingle()
+
+    if (recipientErr) {
+      console.error('[conversations] ERROR: recipient profile check failed:', recipientErr)
+      return NextResponse.json({ error: 'Could not verify recipient' }, { status: 500 })
+    }
+
+    if (!recipientProfile) {
+      console.warn('[conversations] ERROR: recipient not found:', recipientId)
+      return NextResponse.json({ error: 'Recipient not found' }, { status: 404 })
+    }
+
     // Dedup lookup — fetch every conversation the caller is in,
     // then check which of those also contain the recipient. Two
     // round-trips instead of a self-join because the RLS-friendly
@@ -115,6 +148,13 @@ export async function POST(req: NextRequest) {
           created: false,
         })
       }
+    }
+
+    if (!checkNewConversationRateLimit(user.id)) {
+      return NextResponse.json(
+        { error: 'You are starting conversations too quickly. Please wait a moment and try again.' },
+        { status: 429 },
+      )
     }
 
     // Create a new conversation. We insert via the admin client so

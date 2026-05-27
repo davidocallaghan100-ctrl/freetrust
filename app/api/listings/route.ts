@@ -1,10 +1,12 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { toPgUrlArray, toPgTagArray } from '@/lib/supabase/text-array'
 import { awardTrust } from '@/lib/trust/award'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 import { assertStripeConnectedForPaidListing } from '@/lib/stripe/connect-gate'
+import { findServiceCategoryByLabel } from '@/lib/service-categories'
 
 // GET /api/listings — list active listings (public) or all own listings (authenticated)
 export async function GET(request: NextRequest) {
@@ -128,6 +130,7 @@ export async function POST(request: NextRequest) {
       delivery_radius_km = null,
       delivery_countries = null,
       delivery_notes = null,
+      organisation_id = null,
     } = body as Record<string, unknown>
 
     if (!title || typeof title !== 'string' || title.trim().length < 3) {
@@ -174,6 +177,33 @@ export async function POST(request: NextRequest) {
       ? Math.floor(stock_qty)
       : null
 
+    let organisationIdResolved: string | null = null
+    if (typeof organisation_id === 'string' && organisation_id.trim()) {
+      const orgId = organisation_id.trim()
+      const admin = createAdminClient()
+      const { data: membership } = await admin
+        .from('organisation_members')
+        .select('role')
+        .eq('organisation_id', orgId)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      const isMember = membership?.role === 'owner' || membership?.role === 'admin'
+      let authorised = isMember
+      if (!authorised) {
+        const { data: org } = await admin
+          .from('organisations')
+          .select('creator_id')
+          .eq('id', orgId)
+          .maybeSingle()
+        authorised = org?.creator_id === user.id
+      }
+      if (!authorised) {
+        console.warn('[POST /api/listings] user', user.id, 'tried to list as org', orgId, '— not authorised')
+        return NextResponse.json({ error: 'You are not authorised to list as that organisation' }, { status: 403 })
+      }
+      organisationIdResolved = orgId
+    }
+
     const insertPayload = {
       seller_id: user.id,
       title: (title as string).trim(),
@@ -181,7 +211,7 @@ export async function POST(request: NextRequest) {
       price,
       currency,
       product_type: resolvedProductType,
-      category_id: (category_id as string | null) ?? null,
+      category_id: (category_id as string | null) ?? (resolvedProductType === 'service' ? findServiceCategoryByLabel(category as string | null)?.id ?? null : null),
       category: (category as string | null) ?? null,
       service_mode: service_mode,
       location: (location as string | null) ?? null,
@@ -197,6 +227,7 @@ export async function POST(request: NextRequest) {
       delivery_radius_km: (delivery_radius_km as number | null) ?? null,
       delivery_countries: Array.isArray(delivery_countries) && delivery_countries.length > 0 ? delivery_countries : null,
       delivery_notes: (delivery_notes as string | null) ?? null,
+      organisation_id: organisationIdResolved,
       status: 'active',
     }
     console.log('[listings POST] insertPayload:', JSON.stringify(insertPayload))

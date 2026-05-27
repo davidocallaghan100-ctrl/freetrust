@@ -71,7 +71,7 @@ function MemberCard({ member }: { member: Member }) {
     catch { setFollowing(prev) }
   }
 
-  // Profile completeness: avatar + bio + location = Verified Member badge
+  // Profile completeness: avatar + bio + location = complete profile badge
   const completionFields = [member.avatar_url, member.bio, member.location, member.full_name].filter(Boolean).length
   const completionPct = Math.round((completionFields / 4) * 100)
   const isVerified = !!(member.avatar_url && member.bio && member.location)

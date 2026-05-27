@@ -206,8 +206,8 @@ export async function GET(request: NextRequest) {
               console.error('[auth/callback] Failed to send welcome email:', err)
             }
 
-            // Redirect new users to onboarding
-            return NextResponse.redirect(`${origin}/onboarding`)
+            // Send new members straight to the feed after signup/login.
+            return NextResponse.redirect(`${origin}/feed`)
           }
         }
       } catch (err) {

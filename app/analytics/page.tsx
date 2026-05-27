@@ -505,7 +505,7 @@ export default function AnalyticsDashboard() {
               <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Current Trust Score</div>
               <div style={{ fontSize: '52px', fontWeight: 800, color: '#38bdf8', lineHeight: 1 }}>₮{trustStats.current.toFixed(0)}</div>
               <div style={{ marginTop: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', background: trustStats.verified ? 'rgba(52,211,153,0.15)' : 'rgba(100,116,139,0.15)', color: trustStats.verified ? '#34d399' : '#64748b', fontSize: '12px', fontWeight: 600 }}>
-                {trustStats.verified ? '✅ Verified Member' : '⚪ Not yet verified'}
+                {trustStats.verified ? '✅ Active Member' : '⚪ Not yet active'}
               </div>
             </div>
 

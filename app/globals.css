@@ -1249,6 +1249,386 @@ input, textarea, select {
 }
 
 /* ============================================================
+   POLICY PAGES
+   Cleaner readable legal/policy layout inside the authenticated
+   FreeTrust shell. These classes intentionally avoid Tailwind-only
+   utilities because this app also ships a custom global reset.
+   ============================================================ */
+
+.ft-policy-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.14), transparent 34rem),
+    linear-gradient(180deg, #0f172a 0%, #0b1120 42%, #080b14 100%);
+  color: #e5edf8;
+}
+
+.ft-policy-wrap {
+  width: min(100%, 1080px);
+  margin: 0 auto;
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+.ft-policy-hero {
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  border-radius: 28px;
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(17, 24, 39, 0.78)),
+    radial-gradient(circle at 16% 0%, rgba(45, 212, 191, 0.2), transparent 26rem);
+  padding: clamp(1.3rem, 4vw, 3rem);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+  overflow: hidden;
+}
+
+.ft-policy-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  color: #93c5fd;
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.ft-policy-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+  padding: 0.38rem 0.82rem;
+  border: 1px solid rgba(45, 212, 191, 0.28);
+  border-radius: 999px;
+  background: rgba(45, 212, 191, 0.1);
+  color: #99f6e4;
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.ft-policy-hero h1 {
+  max-width: 820px;
+  margin: 0;
+  color: #f8fafc;
+  font-size: clamp(2.15rem, 5.3vw, 4.35rem);
+  line-height: 0.98;
+  letter-spacing: -0.06em;
+}
+
+.ft-policy-subtitle {
+  max-width: 780px;
+  margin-top: 1rem;
+  color: #b9c5d8;
+  font-size: clamp(0.98rem, 1.7vw, 1.12rem);
+  line-height: 1.72;
+}
+
+.ft-policy-meta {
+  margin-top: 0.8rem;
+  color: #7dd3fc;
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.ft-policy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 1.35rem;
+}
+
+.ft-policy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0.68rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.72);
+  color: #dbeafe;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.ft-policy-btn-primary {
+  border-color: transparent;
+  background: linear-gradient(135deg, #2dd4bf, #38bdf8);
+  color: #07111f;
+  box-shadow: 0 14px 34px rgba(56, 189, 248, 0.22);
+}
+
+.ft-policy-intro {
+  margin: 1.4rem 0 0;
+  border: 1px solid rgba(148, 163, 184, 0.13);
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.64);
+  padding: 1.1rem 1.2rem;
+  color: #cbd5e1;
+  line-height: 1.75;
+}
+
+.ft-policy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.ft-policy-stack {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.ft-policy-card {
+  border: 1px solid rgba(125, 211, 252, 0.12);
+  border-radius: 22px;
+  background: rgba(15, 23, 42, 0.82);
+  padding: clamp(1rem, 2.4vw, 1.35rem);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.16);
+}
+
+.ft-policy-card h2 {
+  margin: 0 0 0.62rem;
+  color: #f8fafc;
+  font-size: clamp(1.05rem, 2vw, 1.32rem);
+  letter-spacing: -0.03em;
+}
+
+.ft-policy-content,
+.ft-policy-card p {
+  color: #aebbd0;
+  font-size: 0.94rem;
+  line-height: 1.8;
+}
+
+.ft-policy-content p + p {
+  margin-top: 0.85rem;
+}
+
+.ft-policy-content strong {
+  color: #f8fafc;
+}
+
+.ft-policy-content a,
+.ft-policy-link {
+  color: #7dd3fc;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.ft-policy-content a:hover,
+.ft-policy-link:hover,
+.ft-policy-back:hover {
+  color: #bae6fd;
+  text-decoration: underline;
+}
+
+.ft-policy-content ul {
+  display: grid;
+  gap: 0.58rem;
+  margin-top: 0.85rem;
+  list-style: none;
+}
+
+.ft-policy-content li {
+  position: relative;
+  padding-left: 1.1rem;
+  color: #aebbd0;
+}
+
+.ft-policy-content li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.78em;
+  width: 0.38rem;
+  height: 0.38rem;
+  border-radius: 999px;
+  background: #38bdf8;
+}
+
+.ft-policy-callout,
+.ft-policy-content div[class*="rounded"] {
+  margin-top: 1rem;
+  border: 1px solid rgba(45, 212, 191, 0.18) !important;
+  border-radius: 16px !important;
+  background: rgba(45, 212, 191, 0.07) !important;
+  padding: 1rem !important;
+}
+
+.ft-policy-danger {
+  margin-top: 1rem;
+  border: 1px solid rgba(251, 113, 133, 0.16);
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(127, 29, 29, 0.22), rgba(15, 23, 42, 0.78));
+  padding: clamp(1rem, 3vw, 1.4rem);
+}
+
+.ft-policy-danger h2 {
+  margin: 0 0 1rem;
+  color: #fff1f2;
+}
+
+.ft-policy-bad-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.72rem;
+}
+
+.ft-policy-bad-list li {
+  display: flex;
+  gap: 0.6rem;
+  border: 1px solid rgba(251, 113, 133, 0.14);
+  border-radius: 14px;
+  background: rgba(2, 6, 23, 0.34);
+  padding: 0.85rem;
+  color: #d7dce8;
+  font-size: 0.9rem;
+}
+
+.ft-policy-report {
+  margin-top: 1rem;
+  border: 1px solid rgba(45, 212, 191, 0.16);
+  border-radius: 24px;
+  background: rgba(15, 23, 42, 0.78);
+  padding: clamp(1.1rem, 3vw, 1.6rem);
+  text-align: center;
+}
+
+.ft-policy-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.2rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+  padding-top: 1.2rem;
+  color: #64748b;
+  font-size: 0.84rem;
+}
+
+.ft-policy-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+}
+
+@media (max-width: 900px) {
+  .ft-policy-grid,
+  .ft-policy-bad-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .ft-policy-wrap {
+    padding: 1rem;
+  }
+
+  .ft-policy-hero {
+    border-radius: 22px;
+  }
+
+  .ft-policy-actions,
+  .ft-policy-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ft-policy-btn {
+    width: 100%;
+  }
+}
+
+/* ============================================================
+   FEED POST DETAIL
+   Keep expanded posts card-like on desktop, but edge-to-edge on
+   phones so there is no outer outline or side gutter.
+   ============================================================ */
+.ft-post-detail-page {
+  min-height: 100vh;
+  background: #0f172a;
+  color: #f1f5f9;
+  font-family: system-ui, sans-serif;
+}
+
+.ft-post-detail-shell {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 20px 16px 80px;
+}
+
+.ft-post-detail-nav {
+  margin-bottom: 16px;
+}
+
+.ft-post-detail-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  background: #1e293b;
+  padding: 6px 12px;
+  color: #64748b;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.ft-post-detail-related {
+  margin-top: 24px;
+}
+
+@media (max-width: 700px) {
+  .ft-post-detail-shell {
+    max-width: none;
+    padding: 0 0 80px;
+  }
+
+  .ft-post-detail-nav {
+    margin-bottom: 0;
+    padding: 12px 12px 10px;
+  }
+
+  .ft-post-detail-shell > .ft-post-card--expanded {
+    border: 0 !important;
+    border-radius: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  .ft-post-detail-shell > .ft-post-card--expanded .ft-post-media-wrap {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .ft-post-detail-shell > .ft-post-card--expanded .ft-photo-carousel {
+    margin-bottom: 0 !important;
+  }
+
+  .ft-post-detail-shell > .ft-post-card--expanded .ft-photo-carousel-frame {
+    border: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .ft-post-detail-shell > .ft-post-card--expanded .ft-soundtrack-strip {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-top: 0 !important;
+    border-right: 0 !important;
+    border-left: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .ft-post-detail-related {
+    margin-top: 18px;
+    padding: 0 12px;
+  }
+}
+
+/* ============================================================
    REACT-BIG-CALENDAR OVERRIDES
    Wrapped in .ft-calendar-wrap so our selectors have higher
    specificity (0,2,0) than the library's (0,1,0) rules,

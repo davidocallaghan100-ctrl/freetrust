@@ -1,6 +1,14 @@
 import { Suspense } from 'react'
 import ProfilePage from '@/components/profile/ProfilePage'
 
+// Auth-sensitive page: never prerender or edge-cache the own-profile shell.
+// Public profiles still work via /profile?id=..., but /profile must always
+// resolve against the current request cookies so signed-in users don't see a
+// stale anonymous "sign in / sign up" state from Vercel's static cache.
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+export const fetchCache = 'force-no-store'
+
 export default function Page() {
   return (
     <Suspense fallback={

@@ -1,7 +1,8 @@
 export const dynamic = 'force-dynamic'
 // ============================================================================
 // POST /api/calendar/google/connect
-// Generates the Google OAuth2 URL scoped to calendar access and returns it.
+// Generates the Google OAuth2 URL scoped to the minimum Calendar access needed
+// for FreeTrust's two-way event sync and returns it.
 // The client redirects the user to this URL.  After consent, Google redirects
 // back to GOOGLE_REDIRECT_URI (/api/calendar/google/callback).
 // ============================================================================
@@ -30,8 +31,11 @@ export async function POST(req: NextRequest) {
     const url = oauth2.generateAuthUrl({
       access_type: 'offline',
       prompt:      'consent',   // force consent screen so we always get refresh_token
+      include_granted_scopes: true,
       scope: [
-        'https://www.googleapis.com/auth/calendar',
+        // Minimal scope for reading and writing events on the user's calendars.
+        // Do not request https://www.googleapis.com/auth/calendar here: it grants
+        // broader calendar-management access and makes Google verification harder.
         'https://www.googleapis.com/auth/calendar.events',
       ],
       state: user.id,           // pass user id through OAuth flow

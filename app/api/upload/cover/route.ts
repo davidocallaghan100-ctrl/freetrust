@@ -51,7 +51,13 @@ export async function POST(req: NextRequest) {
     // Update profile using user client (respects RLS — user can only update own row)
     const { error: dbError } = await supabase
       .from('profiles')
-      .update({ cover_url })
+      .update({
+        cover_url,
+        cover_position_x: 50,
+        cover_position_y: 50,
+        cover_rotation: 0,
+        cover_scale: 1,
+      })
       .eq('id', user.id)
 
     if (dbError) {

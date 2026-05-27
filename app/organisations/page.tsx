@@ -61,6 +61,11 @@ export default function OrganisationsPage() {
   const [search, setSearch] = useState('')
   const [orgs, setOrgs] = useState<Org[]>([])
   const [loading, setLoading] = useState(true)
+  const [managedOrgIds, setManagedOrgIds] = useState<Set<string>>(new Set())
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
+  const [openOptionsOrgId, setOpenOptionsOrgId] = useState<string | null>(null)
+  const [deletingOrgId, setDeletingOrgId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -76,6 +81,58 @@ export default function OrganisationsPage() {
     load()
   }, [])
 
+  useEffect(() => {
+    async function loadMine() {
+      try {
+        const [mineRes, profileRes] = await Promise.all([
+          fetch('/api/organisations/mine'),
+          fetch('/api/profile'),
+        ])
+        if (profileRes.ok) {
+          const profileData = await profileRes.json()
+          setIsPlatformAdmin(profileData?.profile?.role === 'admin')
+        }
+        if (!mineRes.ok) return
+        const data = await mineRes.json()
+        const ids = (data.organisations ?? [])
+          .map((org: { id?: string }) => org.id)
+          .filter(Boolean) as string[]
+        setManagedOrgIds(new Set(ids))
+      } catch { /* not signed in or not an org admin */ }
+    }
+    loadMine()
+  }, [])
+
+  async function deleteOrganisation(org: Org) {
+    const confirmed = window.confirm(
+      `Delete ${org.name}? This will permanently remove the organisation from FreeTrust. This cannot be undone.`
+    )
+    if (!confirmed) return
+
+    setDeletingOrgId(org.id)
+    setDeleteError(null)
+    try {
+      const res = await fetch(`/api/organisations/${org.id}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setDeleteError(data?.error ?? `Could not delete organisation (HTTP ${res.status})`)
+        return
+      }
+
+      setOrgs(prev => prev.filter(item => item.id !== org.id))
+      setManagedOrgIds(prev => {
+        const next = new Set(prev)
+        next.delete(org.id)
+        return next
+      })
+      setOpenOptionsOrgId(null)
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Could not delete organisation')
+    } finally {
+      setDeletingOrgId(null)
+    }
+  }
+
   const filtered = orgs.filter(o => {
     const q = search.toLowerCase()
     const nameMatch = !q || (o.name ?? '').toLowerCase().includes(q) || (o.description ?? '').toLowerCase().includes(q) || (o.location ?? '').toLowerCase().includes(q)
@@ -87,6 +144,7 @@ export default function OrganisationsPage() {
     <div style={S.page}>
       <style>{`
         .org-card:hover { border-color: rgba(56,189,248,0.35) !important; transform: translateY(-2px); }
+        .org-options-menu a:hover, .org-options-menu button:hover { background: rgba(148,163,184,0.12) !important; }
         @media (max-width: 640px) { .org-grid { padding: 1rem !important; gap: 0.875rem !important; } }
       `}</style>
 
@@ -144,77 +202,117 @@ export default function OrganisationsPage() {
           </div>
         )}
 
+        {deleteError && (
+          <div style={{ gridColumn: '1/-1', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', color: '#fca5a5', borderRadius: 10, padding: '0.85rem 1rem', fontSize: '0.88rem' }}>
+            {deleteError}
+          </div>
+        )}
+
         {filtered.map(org => {
           const name = org.name ?? 'Unknown'
+          const canManage = isPlatformAdmin || managedOrgIds.has(org.id)
           return (
-            <Link key={org.id} href={`/organisations/${org.id}`} className="org-card" style={S.card}>
-              {/* Cover photo — 96px strip with hashGradient fallback.
-                  Orgs created before the cover upload feature existed
-                  still get a coloured header instead of an empty bar. */}
-              <div style={{ ...S.cover, background: hashGradient(name) }}>
-                {org.cover_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={org.cover_url}
-                    alt=""
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                  />
-                )}
-              </div>
-
-              <div style={S.cardBody}>
-              {/* Header */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                {org.logo_url ? (
-                  <img src={org.logo_url} alt={name} style={{ width: 52, height: 52, borderRadius: 12, objectFit: 'cover', flexShrink: 0, background: '#0f172a' }} />
-                ) : (
-                  <div style={{ width: 52, height: 52, borderRadius: 12, background: hashGradient(name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem', color: '#0f172a', flexShrink: 0 }}>
-                    {initials(name)}
-                  </div>
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '1rem', fontWeight: 700, color: '#f1f5f9', lineHeight: 1.2 }}>{name}</span>
-                    {org.is_verified && <span style={{ fontSize: '13px' }} title="Verified">✅</span>}
-                  </div>
-                  {org.type && <div style={{ fontSize: '0.75rem', color: '#38bdf8', marginTop: '0.2rem', fontWeight: 600 }}>{org.type}</div>}
-                  {org.location && <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.1rem' }}>📍 {org.location}</div>}
-                </div>
-                {org.trust_score > 0 && (
-                  <div style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.2rem 0.55rem', fontSize: '0.78rem', fontWeight: 700, color: '#38bdf8', flexShrink: 0 }}>
-                    ₮{org.trust_score}
-                  </div>
-                )}
-              </div>
-
-              {/* Description */}
-              {org.description && (
-                <p style={{ fontSize: '0.83rem', color: '#64748b', lineHeight: 1.6, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>
-                  {org.description}
-                </p>
-              )}
-
-              {/* Tags */}
-              {(org.tags ?? []).length > 0 && (
-                <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                  {(org.tags ?? []).slice(0, 4).map(tag => (
-                    <span key={tag} style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.72rem', color: '#94a3b8' }}>{tag}</span>
-                  ))}
+            <div key={org.id} className="org-card" style={{ ...S.card, position: 'relative' }}>
+              {canManage && (
+                <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 5 }}>
+                  <button
+                    type="button"
+                    aria-haspopup="menu"
+                    aria-expanded={openOptionsOrgId === org.id}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpenOptionsOrgId(openOptionsOrgId === org.id ? null : org.id) }}
+                    style={{ width: 34, height: 34, borderRadius: 999, border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(15,23,42,0.82)', color: '#f8fafc', cursor: 'pointer', fontSize: 18, lineHeight: 1, boxShadow: '0 10px 24px rgba(0,0,0,0.28)' }}
+                    title="Organisation options"
+                  >
+                    ⋯
+                  </button>
+                  {openOptionsOrgId === org.id && (
+                    <div className="org-options-menu" role="menu" style={{ position: 'absolute', top: 40, right: 0, width: 184, background: '#0f172a', border: '1px solid rgba(148,163,184,0.22)', borderRadius: 12, padding: 6, boxShadow: '0 18px 44px rgba(0,0,0,0.45)' }}>
+                      <Link href={`/organisations/${org.id}/edit`} role="menuitem" style={{ display: 'block', padding: '0.65rem 0.75rem', borderRadius: 8, color: '#cbd5e1', textDecoration: 'none', fontSize: '0.84rem', fontWeight: 600 }}>
+                        ✏️ Edit organisation
+                      </Link>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        disabled={deletingOrgId === org.id}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteOrganisation(org) }}
+                        style={{ width: '100%', textAlign: 'left', padding: '0.65rem 0.75rem', borderRadius: 8, border: 'none', background: 'transparent', color: '#f87171', fontSize: '0.84rem', fontWeight: 700, cursor: deletingOrgId === org.id ? 'wait' : 'pointer', fontFamily: 'inherit' }}
+                      >
+                        {deletingOrgId === org.id ? 'Deleting…' : '🗑️ Delete organisation'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Footer */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(56,189,248,0.06)', paddingTop: '0.75rem', marginTop: 'auto' }}>
-                <span style={{ fontSize: '0.75rem', color: '#475569' }}>
-                  👥 {org.members_count ?? 0} member{(org.members_count ?? 0) !== 1 ? 's' : ''}
-                  {org.sector ? ` · ${org.sector}` : ''}
-                </span>
-                <span style={{ background: 'transparent', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 7, padding: '0.4rem 0.9rem', fontSize: '0.8rem', fontWeight: 600, color: '#38bdf8' }}>
-                  View →
-                </span>
-              </div>
-              </div>{/* /S.cardBody */}
-            </Link>
+              <Link href={`/organisations/${org.id}`} style={{ display: 'flex', flexDirection: 'column', flex: 1, color: 'inherit', textDecoration: 'none' }}>
+                {/* Cover photo — 96px strip with hashGradient fallback.
+                    Orgs created before the cover upload feature existed
+                    still get a coloured header instead of an empty bar. */}
+                <div style={{ ...S.cover, background: hashGradient(name) }}>
+                  {org.cover_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={org.cover_url}
+                      alt=""
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    />
+                  )}
+                </div>
+
+                <div style={S.cardBody}>
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                  {org.logo_url ? (
+                    <img src={org.logo_url} alt={name} style={{ width: 52, height: 52, borderRadius: 12, objectFit: 'cover', flexShrink: 0, background: '#0f172a' }} />
+                  ) : (
+                    <div style={{ width: 52, height: 52, borderRadius: 12, background: hashGradient(name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem', color: '#0f172a', flexShrink: 0 }}>
+                      {initials(name)}
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '1rem', fontWeight: 700, color: '#f1f5f9', lineHeight: 1.2, paddingRight: canManage ? 34 : 0 }}>{name}</span>
+                      {org.is_verified && <span style={{ fontSize: '13px' }} title="Verified">✅</span>}
+                    </div>
+                    {org.type && <div style={{ fontSize: '0.75rem', color: '#38bdf8', marginTop: '0.2rem', fontWeight: 600 }}>{org.type}</div>}
+                    {org.location && <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.1rem' }}>📍 {org.location}</div>}
+                  </div>
+                  {org.trust_score > 0 && (
+                    <div style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.2rem 0.55rem', fontSize: '0.78rem', fontWeight: 700, color: '#38bdf8', flexShrink: 0, marginRight: canManage ? 36 : 0 }}>
+                      ₮{org.trust_score}
+                    </div>
+                  )}
+                </div>
+
+                {/* Description */}
+                {org.description && (
+                  <p style={{ fontSize: '0.83rem', color: '#64748b', lineHeight: 1.6, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>
+                    {org.description}
+                  </p>
+                )}
+
+                {/* Tags */}
+                {(org.tags ?? []).length > 0 && (
+                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                    {(org.tags ?? []).slice(0, 4).map(tag => (
+                      <span key={tag} style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.72rem', color: '#94a3b8' }}>{tag}</span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Footer */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(56,189,248,0.06)', paddingTop: '0.75rem', marginTop: 'auto' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#475569' }}>
+                    👥 {org.members_count ?? 0} member{(org.members_count ?? 0) !== 1 ? 's' : ''}
+                    {org.sector ? ` · ${org.sector}` : ''}
+                  </span>
+                  <span style={{ background: 'transparent', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 7, padding: '0.4rem 0.9rem', fontSize: '0.8rem', fontWeight: 600, color: '#38bdf8' }}>
+                    View →
+                  </span>
+                </div>
+                </div>{/* /S.cardBody */}
+              </Link>
+            </div>
           )
         })}
       </div>

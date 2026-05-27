@@ -4,6 +4,12 @@ import { REAL_EVENT_SOURCE_FILTER } from '@/lib/dataIntegrity'
 
 export const dynamic = 'force-dynamic'
 
+function isUsableEventImage(url: string | null): url is string {
+  if (!url) return false
+  if (url.endsWith('/images/classic-events/')) return false
+  return /^https?:\/\//i.test(url)
+}
+
 // GET /api/landing/events-preview?after=<ISO>&limit=4
 // Returns the next N upcoming published events for the landing page strip.
 export async function GET(request: NextRequest) {
@@ -15,7 +21,7 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient()
     const { data, error } = await supabase
       .from('events')
-      .select('id, title, starts_at, is_online, location_label, venue_name, city, is_paid, ticket_price, currency_code, category, attendee_count')
+      .select('id, title, starts_at, cover_image_url, is_online, location_label, venue_name, city, country, is_paid, ticket_price, currency_code, category, attendee_count')
       .eq('status', 'published')
       .or(REAL_EVENT_SOURCE_FILTER)
       .gte('starts_at', after)
@@ -27,7 +33,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([], { status: 200 })
     }
 
-    return NextResponse.json(data ?? [])
+    const normalized = (data ?? []).map((event) => ({
+      ...event,
+      cover_image_url: isUsableEventImage(event.cover_image_url) ? event.cover_image_url : null,
+    }))
+
+    return NextResponse.json(normalized, {
+      headers: { 'Cache-Control': 'no-store, max-age=0' },
+    })
   } catch (err) {
     console.error('[landing/events-preview] unexpected error:', err)
     return NextResponse.json([], { status: 200 })

@@ -2,6 +2,11 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import Script from "next/script";
 import "./globals.css";
+// Globally load MapLibre styles so maps inside dynamic({ ssr:false })
+// components always have canvas sizing rules available at mount.
+// Without this, on mobile the stylesheet can arrive after the map
+// initialises and the canvas ends up 0×0 inside a visible wrapper.
+import "maplibre-gl/dist/maplibre-gl.css";
 import { CurrencyProvider } from "@/context/CurrencyContext";
 import AppShell from "@/components/AppShell";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
@@ -20,11 +25,11 @@ const geistMono = localFont({
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://freetrust.co'
 
-// Absolute URL to the OG image generated on demand by app/og-image.png/route.tsx
-// (uses next/og under the hood — no binary file in the repo). The URL is the
-// stable literal /og-image.png so deep-links from WhatsApp, Twitter, LinkedIn,
-// Slack etc. all resolve cleanly.
-const OG_IMAGE = `${BASE_URL}/og-image.png`
+// Use the static app logo for share previews. Some mobile messengers are
+// inconsistent with dynamic `next/og` image routes, but reliably fetch static
+// PNG assets from /public. The versioned icon URL also busts stale preview
+// caches when links are re-shared.
+const OG_IMAGE = `${BASE_URL}/icons/freetrust-share-logo-20260524.png`
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
@@ -59,7 +64,7 @@ export const metadata: Metadata = {
     siteName: 'FreeTrust',
     title: 'FreeTrust — The Community Economy Marketplace',
     description: 'FreeTrust is the community economy marketplace built around Trust Coin (₮). Buy, sell, find jobs, and build trust — member-owned, community-first.',
-    images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: 'FreeTrust — The Community Economy Marketplace' }],
+    images: [{ url: OG_IMAGE, width: 512, height: 512, type: 'image/png', alt: 'FreeTrust logo' }],
   },
   twitter: {
     card: 'summary_large_image',

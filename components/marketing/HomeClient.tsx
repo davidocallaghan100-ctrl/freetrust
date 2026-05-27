@@ -5,9 +5,7 @@ import { useCurrency } from '@/context/CurrencyContext'
 import FAQAccordion from '@/components/marketing/FAQAccordion'
 import { FAQS } from '@/lib/faq'
 import ROICalculator from './ROICalculator'
-import { createClient } from '@/lib/supabase/client'
 import HeroGlobe from './HeroGlobe'
-import { REAL_EVENT_SOURCE_FILTER, REAL_JOB_SOURCE_FILTER } from '@/lib/dataIntegrity'
 
 // HeroGlobe is imported from ./HeroGlobe — Mapbox GL realistic globe with auto-rotation
 
@@ -250,9 +248,16 @@ type FeaturedProduct = {
 
 // ── Value props ───────────────────────────────────────────────────────────────
 const VALUE_PROPS = [
-  { icon: '🙋', title: 'Real people. No bots.', desc: 'Every member is a verified human. We have zero tolerance for fake profiles, automated accounts or bots — your trust score depends on it.' },
+  { icon: '🙋', title: 'Real people. No bots.', desc: 'FreeTrust is built around real member identity, abuse prevention and trust signals — not anonymous accounts or fake marketplace activity.' },
   { icon: '₮', title: 'Trust is your currency', desc: 'Every transaction, review, and contribution earns Trust tokens. Higher Trust = lower fees and better visibility across the platform.' },
   { icon: '🌍', title: 'Commerce with purpose', desc: '1% of every transaction funds community impact projects. Buy, sell and connect knowing your activity does more good in the world.' },
+]
+
+const SECURITY_PROOFS = [
+  { icon: '🛡️', title: 'Protected conversations', desc: 'Messages run through participant checks, content limits and safety prompts that remind members to keep payments inside FreeTrust.' },
+  { icon: '💳', title: 'On-platform payments', desc: 'Marketplace checkout rejects missing listings, self-purchases and invalid prices instead of creating unsafe fallback orders.' },
+  { icon: '🔐', title: 'Account safety layers', desc: 'Email sessions, server-side checks, rate limits and Trust signals help reduce spam, impersonation and automated abuse.' },
+  { icon: '📜', title: 'Clear trust policies', desc: 'Privacy, Terms and Trust & Safety policies explain what is allowed, what is protected, and how FreeTrust responds to abuse.' },
 ]
 
 // ── Preview types for homepage sections ───────────────────────────────────────
@@ -260,8 +265,11 @@ type HomeEvent = {
   id: string
   title: string
   starts_at: string | null
+  cover_image_url: string | null
   city: string | null
   country: string | null
+  location_label: string | null
+  venue_name: string | null
   category: string | null
   attendee_count: number | null
   is_online: boolean
@@ -278,6 +286,21 @@ type HomeJob = {
   salary_max: number | null
   salary_currency: string | null
   job_type: string | null
+}
+
+async function fetchJsonWithTimeout<T>(url: string, fallback: T, timeoutMs = 8000): Promise<T> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    const res = await fetch(url, { cache: 'no-store', signal: controller.signal })
+    if (!res.ok) return fallback
+    return (await res.json()) as T
+  } catch {
+    return fallback
+  } finally {
+    clearTimeout(timeout)
+  }
 }
 
 interface HomeRentShare {
@@ -349,36 +372,16 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
 
   useEffect(() => {
     const load = async () => {
-      try {
-        const supabase = createClient()
-        const now = new Date().toISOString()
-        const { data } = await supabase
-          .from('events')
-          .select('id, title, starts_at, city, country, category, attendee_count, is_online')
-          .eq('status', 'published')
-          .or(REAL_EVENT_SOURCE_FILTER)
-          .gte('starts_at', now)
-          .order('starts_at', { ascending: true })
-          .limit(6)
-        setHomeEvents((data as HomeEvent[]) ?? [])
-      } catch { setHomeEvents([]) }
+      const data = await fetchJsonWithTimeout<HomeEvent[]>('/api/landing/events-preview?limit=6', [])
+      setHomeEvents(data)
     }
     void load()
   }, [])
 
   useEffect(() => {
     const load = async () => {
-      try {
-        const supabase = createClient()
-        const { data } = await supabase
-          .from('jobs')
-          .select('id, title, company_name, city, country, location_type, salary_min, salary_max, salary_currency, job_type')
-          .eq('status', 'active')
-          .or(REAL_JOB_SOURCE_FILTER)
-          .order('created_at', { ascending: false })
-          .limit(6)
-        setHomeJobs((data as HomeJob[]) ?? [])
-      } catch { setHomeJobs([]) }
+      const data = await fetchJsonWithTimeout<HomeJob[]>('/api/landing/jobs-preview?limit=6', [])
+      setHomeJobs(data)
     }
     void load()
   }, [])
@@ -424,6 +427,8 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
         /* Mobile resets */
         @media (max-width: 768px) {
           .hero-inner { flex-direction: column !important; text-align: center; }
+          .hero-globe-stack { margin-bottom: -1.4rem !important; }
+          .hero-frameless-logo { width: 118px !important; margin-top: -1.1rem !important; }
           .hero-text { align-items: center !important; }
           .hero-cta { flex-direction: column !important; width: 100% !important; }
           .hero-cta a, .hero-cta button { width: 100% !important; text-align: center; justify-content: center; }
@@ -457,11 +462,24 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           <div className="hero-inner" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '3rem', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
 
             {/* Left: rotating globe */}
-            <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'center' }} className="bubble-col">
+            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }} className="bubble-col hero-globe-stack">
               <style>{`
                 @media (max-width: 640px) { .bubble-col > div { transform: scale(0.78); transform-origin: center top; } }
               `}</style>
               <HeroGlobe size={220} />
+              <img
+                className="hero-frameless-logo"
+                src="/icons/freetrust-mark-perfect-transparent-20260521.png"
+                alt="FreeTrust trust knot logo"
+                style={{
+                  width: 140,
+                  height: 'auto',
+                  marginTop: '-0.45rem',
+                  filter: 'drop-shadow(0 0 22px rgba(56,189,248,0.52)) drop-shadow(0 0 16px rgba(52,211,153,0.28))',
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                }}
+              />
             </div>
 
             {/* Right: headline + CTAs */}
@@ -476,7 +494,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
               </h1>
 
               <p style={{ fontSize: '1.05rem', color: '#94a3b8', margin: 0, lineHeight: 1.65, maxWidth: 480 }}>
-                FreeTrust is the community economy platform — earn TrustCoins (₮) for every contribution, spend them to grow.
+                FreeTrust is the secure community economy platform — verified members, protected messaging, on-platform payments and TrustCoins (₮) for every contribution.
               </p>
 
               <div className="hero-cta" style={{ display: 'flex', flexDirection: 'row', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -492,7 +510,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
               <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.8rem', color: '#64748b' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> Free to join — ₮200 on signup</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> Real people only — no bots</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> No subscription</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> Payments stay inside FreeTrust</span>
               </div>
 
               {/* Server-rendered live stats strip — matches the summary
@@ -691,6 +709,35 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
         </div>
       </section>
 
+      {/* ── SECURITY & TRUST POLICIES ── */}
+      <section style={{ borderBottom: '1px solid rgba(56,189,248,0.06)', background: 'radial-gradient(ellipse 80% 80% at 50% 0%, rgba(45,212,191,0.08) 0%, transparent 65%), rgba(2,6,23,0.34)' }}>
+        <div className="lp-sec">
+          <div style={{ textAlign: 'center', marginBottom: '2.25rem' }}>
+            <div style={{ display: 'inline-block', background: 'rgba(45,212,191,0.1)', border: '1px solid rgba(45,212,191,0.3)', borderRadius: 999, padding: '0.3rem 0.9rem', fontSize: '0.72rem', color: '#2dd4bf', fontWeight: 800, letterSpacing: '0.08em', marginBottom: '0.85rem' }}>🛡 TRUST & SAFETY</div>
+            <h2 className="section-h2" style={{ fontSize: 'clamp(1.6rem,4vw,2.4rem)', fontWeight: 900, margin: '0 0 0.65rem', letterSpacing: '-0.5px' }}>Security is part of the product</h2>
+            <p style={{ color: '#94a3b8', fontSize: '0.95rem', maxWidth: 650, margin: '0 auto', lineHeight: 1.7 }}>
+              FreeTrust is designed to make safer community commerce the default: verify who you are dealing with, keep payments on-platform, and use clear policies when something feels wrong.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))', gap: '1rem' }}>
+            {SECURITY_PROOFS.map(item => (
+              <div key={item.title} style={{ background: 'rgba(15,23,42,0.76)', border: '1px solid rgba(45,212,191,0.15)', borderRadius: 14, padding: '1.25rem', boxShadow: '0 18px 42px rgba(0,0,0,0.18)' }}>
+                <div style={{ fontSize: '1.65rem', marginBottom: '0.65rem' }}>{item.icon}</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 850, color: '#f8fafc', marginBottom: '0.45rem' }}>{item.title}</div>
+                <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.65, margin: 0 }}>{item.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ marginTop: '1.1rem', display: 'flex', gap: '0.65rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <Link href="/safety" style={{ color: '#0f172a', background: 'linear-gradient(135deg,#2dd4bf,#38bdf8)', borderRadius: 999, padding: '0.65rem 1.05rem', fontSize: '0.82rem', fontWeight: 850, textDecoration: 'none' }}>Read Trust & Safety →</Link>
+            <Link href="/privacy" style={{ color: '#99f6e4', border: '1px solid rgba(45,212,191,0.25)', background: 'rgba(45,212,191,0.06)', borderRadius: 999, padding: '0.65rem 1.05rem', fontSize: '0.82rem', fontWeight: 750, textDecoration: 'none' }}>Privacy Policy</Link>
+            <Link href="/terms" style={{ color: '#bae6fd', border: '1px solid rgba(56,189,248,0.22)', background: 'rgba(56,189,248,0.06)', borderRadius: 999, padding: '0.65rem 1.05rem', fontSize: '0.82rem', fontWeight: 750, textDecoration: 'none' }}>Terms of Service</Link>
+          </div>
+        </div>
+      </section>
+
       {/* ── WHO IS FREETRUST FOR? (4 personas) ── */}
       <section style={{ borderBottom: '1px solid rgba(56,189,248,0.06)', background: 'rgba(56,189,248,0.02)' }}>
         <div className="lp-sec">
@@ -856,28 +903,41 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
                 const dateStr = ev.starts_at
                   ? new Date(ev.starts_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
                   : 'Date TBC'
-                const location = ev.is_online ? 'Online' : [ev.city, ev.country].filter(Boolean).join(', ') || 'In Person'
+                const location = ev.is_online ? 'Online' : ev.venue_name || ev.location_label || [ev.city, ev.country].filter(Boolean).join(', ') || 'In Person'
+                const eventImage = ev.cover_image_url || null
                 return (
-                  <Link key={ev.id} href={`/events/${ev.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 280 }}>
+                  <Link key={ev.id} href={`/events/${ev.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 310 }}>
                     <div
-                      style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '1.1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer', height: '100%' }}
+                      style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer', height: '100%' }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.12)' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
-                        <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.3, flex: 1 }}>{ev.title}</div>
-                        <span style={{ flexShrink: 0, background: `${catColor}18`, border: `1px solid ${catColor}40`, color: catColor, fontSize: '0.62rem', fontWeight: 700, padding: '2px 7px', borderRadius: 999 }}>{cat}</span>
+                      <div style={{ height: 104, background: `linear-gradient(135deg, ${catColor}33, rgba(15,23,42,0.96))`, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: '2rem', opacity: 0.9 }}>📅</span>
+                        {eventImage && (
+                          <img
+                            src={eventImage}
+                            alt=""
+                            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                            onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                          />
+                        )}
+                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(15,23,42,0.05), rgba(15,23,42,0.72))' }} />
+                        <span style={{ position: 'absolute', left: 10, bottom: 10, background: `${catColor}E6`, color: '#020617', fontSize: '0.62rem', fontWeight: 900, padding: '3px 8px', borderRadius: 999 }}>{cat}</span>
+                        {ev.is_online && <span style={{ position: 'absolute', right: 10, bottom: 10, fontSize: '0.62rem', fontWeight: 900, background: 'rgba(56,189,248,0.9)', color: '#020617', padding: '3px 8px', borderRadius: 999 }}>ONLINE</span>}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.76rem', color: '#64748b' }}>
-                        <span style={{ color: '#38bdf8', fontWeight: 600 }}>🗓 {dateStr}</span>
-                        <span>📍 {location}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        {(ev.attendee_count ?? 0) > 0
-                          ? <span style={{ fontSize: '0.72rem', color: '#475569' }}>👥 {(ev.attendee_count ?? 0).toLocaleString()} attending</span>
-                          : <span style={{ fontSize: '0.72rem', color: '#38bdf8' }}>✨ Be the first to attend!</span>
-                        }
-                        {ev.is_online && <span style={{ fontSize: '0.62rem', fontWeight: 800, background: 'rgba(56,189,248,0.12)', color: '#38bdf8', padding: '2px 7px', borderRadius: 999 }}>ONLINE</span>}
+                      <div style={{ padding: '0.95rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{ev.title}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.74rem', color: '#64748b', minWidth: 0 }}>
+                          <span style={{ color: '#38bdf8', fontWeight: 700, flexShrink: 0 }}>🗓 {dateStr}</span>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📍 {location}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          {(ev.attendee_count ?? 0) > 0
+                            ? <span style={{ fontSize: '0.72rem', color: '#64748b' }}>👥 {(ev.attendee_count ?? 0).toLocaleString()} attending</span>
+                            : <span style={{ fontSize: '0.72rem', color: '#38bdf8' }}>✨ Be the first to attend!</span>
+                          }
+                        </div>
                       </div>
                     </div>
                   </Link>
@@ -1104,8 +1164,14 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
       </section>
 
       {/* ── 9. FOOTER ── */}
-      <footer style={{ borderTop: '1px solid rgba(56,189,248,0.08)', padding: '1.5rem 1.25rem', textAlign: 'center', color: '#475569', fontSize: '0.8rem' }}>
-        <div className="footer-links" style={{ display: 'flex', gap: '1.25rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+      <footer style={{ borderTop: '1px solid rgba(56,189,248,0.08)', padding: '1.75rem 1.25rem 1.5rem', textAlign: 'center', color: '#475569', fontSize: '0.8rem', background: 'rgba(2,6,23,0.35)' }}>
+        <div style={{ maxWidth: 760, margin: '0 auto 1rem', padding: '0.85rem 1rem', border: '1px solid rgba(45,212,191,0.16)', borderRadius: 14, background: 'rgba(15,23,42,0.72)' }}>
+          <div style={{ color: '#e2e8f0', fontWeight: 850, marginBottom: '0.35rem' }}>🛡 FreeTrust is built for safer community commerce</div>
+          <div style={{ color: '#94a3b8', fontSize: '0.76rem', lineHeight: 1.55 }}>
+            Verified member flows, protected messaging, on-platform payments, abuse reporting and clear Trust & Safety policies help keep the marketplace accountable.
+          </div>
+        </div>
+        <div className="footer-links" style={{ display: 'flex', gap: '1.25rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '0.65rem' }}>
           <span>© 2026 FreeTrust</span>
           <Link href="/services"  style={{ color: '#475569', textDecoration: 'none' }}>Services</Link>
           <Link href="/products"  style={{ color: '#475569', textDecoration: 'none' }}>Products</Link>
@@ -1114,7 +1180,13 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           <Link href="/impact"    style={{ color: '#475569', textDecoration: 'none' }}>Impact</Link>
           <Link href="/register"  style={{ color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>Join free →</Link>
         </div>
-        <div style={{ fontSize: '0.72rem', color: '#334155' }}>Trust-based commerce for a better internet.</div>
+        <div className="footer-links" style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '0.65rem' }}>
+          <Link href="/safety"  style={{ color: '#2dd4bf', textDecoration: 'none', fontWeight: 700 }}>Trust & Safety</Link>
+          <Link href="/privacy" style={{ color: '#64748b', textDecoration: 'none' }}>Privacy Policy</Link>
+          <Link href="/terms"   style={{ color: '#64748b', textDecoration: 'none' }}>Terms of Service</Link>
+          <span style={{ color: '#475569' }}>Payments stay inside FreeTrust</span>
+        </div>
+        <div style={{ fontSize: '0.72rem', color: '#334155' }}>Trust-based commerce for a safer internet.</div>
       </footer>
     </main>
   )

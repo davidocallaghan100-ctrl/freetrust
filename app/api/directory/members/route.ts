@@ -29,6 +29,8 @@ interface Diagnostic {
   trust_balances_error: string | null
   follower_rows_fetched: number
   follower_rows_error: string | null
+  verification_badges_fetched: number
+  verification_badges_error: string | null
   // Deprecated backfill counters retained for diagnostics/client compatibility.
   auth_users_fetched: number
   auth_users_pages_fetched: number
@@ -54,6 +56,8 @@ export async function GET() {
     trust_balances_error: null,
     follower_rows_fetched: 0,
     follower_rows_error: null,
+    verification_badges_fetched: 0,
+    verification_badges_error: null,
     auth_users_fetched: 0,
     auth_users_pages_fetched: 0,
     profiles_missing: 0,
@@ -95,7 +99,7 @@ export async function GET() {
   // TS2345 errors. Keep it on one line.
   const { data: profilesData, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, full_name, avatar_url, bio, location, role, created_at, linkedin_url, instagram_url, twitter_url, github_url, tiktok_url, youtube_url, website_url')
+    .select('id, full_name, avatar_url, bio, location, role, created_at, is_verified, verified_at, verification_status, professional_headline, linkedin_url, instagram_url, twitter_url, github_url, tiktok_url, youtube_url, website_url')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(1000)
@@ -125,6 +129,7 @@ export async function GET() {
   const ids = profiles.map((p: { id: string }) => p.id)
   const balanceMap: Record<string, number> = {}
   const followerMap: Record<string, number> = {}
+  const verificationBadgeMap: Record<string, { status: string; verified_at: string | null }> = {}
 
   if (ids.length > 0) {
     try {
@@ -166,6 +171,26 @@ export async function GET() {
       console.error('[GET /api/directory/members] user_follows threw:', msg)
       diag.follower_rows_error = msg
     }
+
+    try {
+      const { data: badges, error: badgesErr } = await supabase
+        .from('profile_verification_badges')
+        .select('user_id, status, verified_at')
+        .in('user_id', ids)
+      if (badgesErr) {
+        console.warn('[GET /api/directory/members] profile_verification_badges query error:', badgesErr.message)
+        diag.verification_badges_error = badgesErr.message
+      } else {
+        for (const b of (badges ?? []) as { user_id: string; status: string; verified_at: string | null }[]) {
+          verificationBadgeMap[b.user_id] = { status: b.status, verified_at: b.verified_at }
+        }
+        diag.verification_badges_fetched = Object.keys(verificationBadgeMap).length
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.warn('[GET /api/directory/members] profile_verification_badges threw:', msg)
+      diag.verification_badges_error = msg
+    }
   }
 
   // ── STEP 3. Shape the response. Every row from STEP 1 makes it in. ───────
@@ -178,6 +203,10 @@ export async function GET() {
       location: string | null
       role: string | null
       created_at: string
+      is_verified?: boolean | null
+      verified_at?: string | null
+      verification_status?: string | null
+      professional_headline?: string | null
       linkedin_url?: string | null
       instagram_url?: string | null
       twitter_url?: string | null
@@ -198,6 +227,12 @@ export async function GET() {
       created_at: p.created_at,
       trust_balance: balanceMap[p.id] ?? 0,
       follower_count: followerMap[p.id] ?? 0,
+      is_verified: verificationBadgeMap[p.id]?.status === 'verified',
+      verified_at: verificationBadgeMap[p.id]?.verified_at ?? null,
+      verification_status: verificationBadgeMap[p.id]?.status ?? null,
+      profile_verification_status: verificationBadgeMap[p.id]?.status ?? null,
+      profile_identity_verified_at: verificationBadgeMap[p.id]?.verified_at ?? null,
+      professional_headline: p.professional_headline ?? null,
       skills: [] as string[],
       // Social links — passed straight through. Empty strings/nulls are
       // hidden by the SocialLinks component on the client.

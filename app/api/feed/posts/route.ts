@@ -14,13 +14,14 @@ type FeedItem = {
   media_type: string | null
   title: string | null
   link_url: string | null
+  metadata?: Record<string, unknown> | null
   trust_reward?: number | null
   likes_count: number
   comments_count: number
   saves_count: number
   views_count: number
   created_at: string
-  profiles: { id: string; full_name: string | null; avatar_url: string | null; trust_balance?: number | null } | null
+  profiles: { id: string; full_name: string | null; avatar_url: string | null; trust_balance?: number | null; is_verified?: boolean | null; verified_at?: string | null; verification_status?: string | null; profile_verification_status?: string | null; profile_identity_verified_at?: string | null } | null
   // Display override for "post as organisation" — when set, PostCard
   // renders the org's logo / name / slug in place of the author's
   // profile block. Null for normal personal posts. The `posted_as_
@@ -38,6 +39,51 @@ type FeedItem = {
   user_poll_vote?: number | null
 }
 
+type SupabaseLike = Awaited<ReturnType<typeof createClient>>
+
+function normaliseProfile(profile: unknown): FeedItem['profiles'] {
+  return Array.isArray(profile) ? (profile[0] ?? null) : ((profile as FeedItem['profiles']) ?? null)
+}
+
+async function withProfileVerificationBadges<T extends { profiles: FeedItem['profiles'] }>(
+  supabase: SupabaseLike,
+  items: T[],
+): Promise<T[]> {
+  const ids = Array.from(new Set(items.map(item => item.profiles?.id).filter((id): id is string => Boolean(id))))
+  if (ids.length === 0) return items
+
+  const { data, error } = await supabase
+    .from('profile_verification_badges')
+    .select('user_id, status, verified_at')
+    .in('user_id', ids)
+
+  if (error) {
+    console.warn('[feed/posts] profile_verification_badges lookup skipped:', error.message)
+    return items
+  }
+
+  const badges: Record<string, { status: string; verified_at: string | null }> = {}
+  for (const row of (data ?? []) as { user_id: string; status: string; verified_at: string | null }[]) {
+    badges[row.user_id] = { status: row.status, verified_at: row.verified_at }
+  }
+
+  return items.map(item => {
+    const badge = item.profiles?.id ? badges[item.profiles.id] : null
+    if (!item.profiles || !badge) return item
+    return {
+      ...item,
+      profiles: {
+        ...item.profiles,
+        is_verified: badge.status === 'verified',
+        verified_at: badge.verified_at,
+        verification_status: badge.status,
+        profile_verification_status: badge.status,
+        profile_identity_verified_at: badge.verified_at,
+      },
+    }
+  })
+}
+
 export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient()
@@ -48,8 +94,12 @@ export async function GET(req: NextRequest) {
     const filter = (searchParams.get('filter') ?? searchParams.get('tab') ?? 'all').toLowerCase()
     const legacyType = searchParams.get('type')
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
-    const limit = 20
+    const requestedLimit = parseInt(searchParams.get('limit') ?? '20', 10)
+    const limit = Math.min(50, Math.max(1, Number.isFinite(requestedLimit) ? requestedLimit : 20))
     const offset = (page - 1) * limit
+    const authorId = searchParams.get('authorId')?.trim() || null
+    const organisationId = searchParams.get('organisationId')?.trim() || null
+    const isProfileScoped = Boolean(authorId || organisationId)
 
     // ── Side-table filters: query a different table and map to FeedItem ─────
     if (filter === 'articles') {
@@ -68,7 +118,7 @@ export async function GET(req: NextRequest) {
     // ── feed_posts query (all/discover / photos / videos / trending / following) ─────
     // For 'discover' (default) we fetch a wider candidate set, then re-rank in
     // memory using a smart score combining recency + engagement + author trust.
-    const isDiscover = filter === 'all' || filter === 'discover'
+    const isDiscover = !isProfileScoped && (filter === 'all' || filter === 'discover')
     const candidateMultiplier = isDiscover ? 3 : 1
     const fetchLimit = limit * candidateMultiplier
 
@@ -87,10 +137,16 @@ export async function GET(req: NextRequest) {
          id, user_id, type, content, media_url, media_type, title, link_url,
          trust_reward, likes_count, comments_count, saves_count, views_count, created_at, updated_at,
          posted_as_organisation_id,
-         profiles!feed_posts_user_id_fkey(id, full_name, avatar_url, trust_balance),
+          profiles!feed_posts_user_id_fkey(id, full_name, avatar_url, trust_balance, is_verified, verified_at, verification_status),
          posted_as_organisation:organisations!posted_as_organisation_id(id, name, slug, logo_url)
        `)
        .lte('created_at', nowIso)
+
+    if (organisationId) {
+      query = query.eq('posted_as_organisation_id', organisationId)
+    } else if (authorId) {
+      query = query.eq('user_id', authorId).is('posted_as_organisation_id', null)
+    }
 
     if (filter === 'photos') {
       query = query.or('type.eq.photo,media_type.eq.image')
@@ -331,8 +387,13 @@ export async function GET(req: NextRequest) {
         })
     }
 
+    const postsWithBadges = await withProfileVerificationBadges(supabase, enriched.map((p) => ({
+      ...(p as FeedItem),
+      profiles: normaliseProfile((p as { profiles?: unknown }).profiles),
+    })))
+
     return NextResponse.json({
-      posts: enriched,
+      posts: postsWithBadges,
       hasMore: enriched.length === limit,
     })
   } catch (err) {
@@ -345,8 +406,6 @@ export async function GET(req: NextRequest) {
 // Each one queries a different table and maps the result to the FeedItem shape
 // so PostCard can render them without changes.
 
-type SupabaseLike = Awaited<ReturnType<typeof createClient>>
-
 async function fetchArticles(supabase: SupabaseLike, offset: number, limit: number) {
   const { data, error } = await supabase
     .from('articles')
@@ -354,7 +413,7 @@ async function fetchArticles(supabase: SupabaseLike, offset: number, limit: numb
       id, author_id, title, slug, excerpt, body, featured_image_url,
       created_at, published_at,
       posted_as_organisation_id,
-      author:profiles!author_id(id, full_name, avatar_url, trust_balance),
+      author:profiles!author_id(id, full_name, avatar_url, trust_balance, is_verified, verified_at, verification_status),
       posted_as_organisation:organisations!posted_as_organisation_id(id, name, slug, logo_url)
     `)
     .eq('status', 'published')
@@ -410,13 +469,13 @@ async function fetchArticles(supabase: SupabaseLike, offset: number, limit: numb
       saves_count: 0,
       views_count: 0,
       created_at: (a.published_at as string) ?? (a.created_at as string),
-      profiles: Array.isArray(a.author) ? (a.author[0] ?? null) : ((a.author as FeedItem['profiles']) ?? null),
+      profiles: normaliseProfile(a.author),
       posted_as_organisation_id: (a.posted_as_organisation_id as string | null) ?? null,
       posted_as_organisation: postedAsOrg,
     }
   })
 
-  return NextResponse.json({ posts: items, hasMore: items.length === limit })
+  return NextResponse.json({ posts: await withProfileVerificationBadges(supabase, items), hasMore: items.length === limit })
 }
 
 async function fetchServices(supabase: SupabaseLike, offset: number, limit: number) {
@@ -427,7 +486,7 @@ async function fetchServices(supabase: SupabaseLike, offset: number, limit: numb
     .from('listings')
     .select(`
       id, seller_id, title, description, category, price, currency, cover_image, created_at,
-      seller:profiles!seller_id(id, full_name, avatar_url, trust_balance)
+      seller:profiles!seller_id(id, full_name, avatar_url, trust_balance, is_verified, verified_at, verification_status)
     `)
     .eq('product_type', 'service')
     .eq('status', 'active')
@@ -453,10 +512,10 @@ async function fetchServices(supabase: SupabaseLike, offset: number, limit: numb
     saves_count: 0,
     views_count: 0,
     created_at: s.created_at as string,
-    profiles: Array.isArray(s.seller) ? (s.seller[0] ?? null) : ((s.seller as FeedItem['profiles']) ?? null),
+    profiles: normaliseProfile(s.seller),
   }))
 
-  return NextResponse.json({ posts: items, hasMore: items.length === limit })
+  return NextResponse.json({ posts: await withProfileVerificationBadges(supabase, items), hasMore: items.length === limit })
 }
 
 async function fetchJobs(supabase: SupabaseLike, offset: number, limit: number) {
@@ -466,7 +525,7 @@ async function fetchJobs(supabase: SupabaseLike, offset: number, limit: number) 
       id, poster_id, title, description, job_type, location_type, location,
       salary_min, salary_max, salary_currency, category, created_at,
       company_logo_url, company_name,
-      poster:profiles!poster_id(id, full_name, avatar_url, trust_balance)
+      poster:profiles!poster_id(id, full_name, avatar_url, trust_balance, is_verified, verified_at, verification_status)
     `)
     .eq('status', 'active')
     .or(REAL_JOB_SOURCE_FILTER)
@@ -479,7 +538,7 @@ async function fetchJobs(supabase: SupabaseLike, offset: number, limit: number) 
   }
 
   const items: FeedItem[] = (data ?? []).map((j: Record<string, unknown>) => {
-    const poster = Array.isArray(j.poster) ? (j.poster[0] ?? null) : ((j.poster as FeedItem['profiles']) ?? null)
+    const poster = normaliseProfile(j.poster)
     const companyLogoUrl = (j.company_logo_url as string | null) ?? null
     const companyName = (j.company_name as string | null) ?? null
     // If there's a company logo, surface it as the post avatar by overriding the profiles avatar
@@ -506,7 +565,7 @@ async function fetchJobs(supabase: SupabaseLike, offset: number, limit: number) 
     }
   })
 
-  return NextResponse.json({ posts: items, hasMore: items.length === limit })
+  return NextResponse.json({ posts: await withProfileVerificationBadges(supabase, items), hasMore: items.length === limit })
 }
 
 async function fetchEvents(supabase: SupabaseLike, offset: number, limit: number) {
@@ -514,7 +573,7 @@ async function fetchEvents(supabase: SupabaseLike, offset: number, limit: number
     .from('events')
     .select(`
       id, creator_id, title, description, starts_at, ends_at, venue_name, is_online, cover_image_url, category, created_at,
-      creator:profiles!creator_id(id, full_name, avatar_url, trust_balance)
+      creator:profiles!creator_id(id, full_name, avatar_url, trust_balance, is_verified, verified_at, verification_status)
     `)
     .eq('status', 'published')
     .or(REAL_EVENT_SOURCE_FILTER)
@@ -541,10 +600,10 @@ async function fetchEvents(supabase: SupabaseLike, offset: number, limit: number
     saves_count: 0,
     views_count: 0,
     created_at: (e.starts_at as string) ?? (e.created_at as string),
-    profiles: Array.isArray(e.creator) ? (e.creator[0] ?? null) : ((e.creator as FeedItem['profiles']) ?? null),
+    profiles: normaliseProfile(e.creator),
   }))
 
-  return NextResponse.json({ posts: items, hasMore: items.length === limit })
+  return NextResponse.json({ posts: await withProfileVerificationBadges(supabase, items), hasMore: items.length === limit })
 }
 
 export async function POST(req: NextRequest) {
@@ -573,7 +632,7 @@ export async function POST(req: NextRequest) {
       .select(`
         id, user_id, type, content, media_url, media_type, title, link_url,
         trust_reward, likes_count, comments_count, saves_count, views_count, created_at,
-        profiles!feed_posts_user_id_fkey(id, full_name, avatar_url, trust_balance)
+        profiles!feed_posts_user_id_fkey(id, full_name, avatar_url, trust_balance, is_verified, verified_at, verification_status)
       `)
       .single()
 

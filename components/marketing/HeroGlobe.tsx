@@ -47,6 +47,7 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
   const pad          = 60
   const [jobs, setJobs]               = useState<Job[]>([])
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
+  const [mapReady, setMapReady]       = useState(false)
 
   // Fetch active jobs with coordinates
   useEffect(() => {
@@ -133,6 +134,16 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
         /* Hide Mapbox branding */
         .mapboxgl-ctrl-logo { display: none !important; }
         .mapboxgl-ctrl-attrib { display: none !important; }
+        .hg-instant-globe {
+          background:
+            radial-gradient(circle at 34% 24%, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0.12) 15%, transparent 32%),
+            radial-gradient(ellipse at 36% 42%, rgba(52,211,153,0.56) 0%, rgba(52,211,153,0.44) 12%, transparent 24%),
+            radial-gradient(ellipse at 62% 32%, rgba(45,212,191,0.48) 0%, rgba(45,212,191,0.34) 10%, transparent 22%),
+            radial-gradient(ellipse at 54% 62%, rgba(34,197,94,0.42) 0%, rgba(34,197,94,0.28) 12%, transparent 25%),
+            radial-gradient(circle at 48% 50%, rgba(14,165,233,0.42) 0%, rgba(15,23,42,0.1) 55%, rgba(2,6,23,0.7) 100%),
+            linear-gradient(135deg, rgba(56,189,248,0.92), rgba(14,116,144,0.82) 46%, rgba(2,6,23,0.96));
+          box-shadow: inset -26px -22px 40px rgba(2,6,23,0.48), inset 18px 12px 30px rgba(255,255,255,0.08);
+        }
       `}</style>
 
       <div style={{
@@ -178,6 +189,19 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
             className="hg-map-clip"
             style={{ width: size, height: size, borderRadius: '50%', position: 'relative' }}
           >
+            <div
+              className="hg-instant-globe"
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '50%',
+                opacity: mapReady ? 0 : 1,
+                transition: 'opacity 260ms ease',
+                pointerEvents: 'none',
+                zIndex: 1,
+              }}
+            />
             <Map
               ref={mapRef}
               mapboxAccessToken={MAPBOX_TOKEN}
@@ -186,7 +210,7 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
               initialViewState={{ longitude: -8, latitude: 20, zoom: 0.5 }}
               attributionControl={false}
               logoPosition="bottom-right"
-              style={{ width: size, height: size }}
+              style={{ width: size, height: size, opacity: mapReady ? 1 : 0, transition: 'opacity 260ms ease' }}
               dragPan={true}
               dragRotate={false}
               keyboard={false}
@@ -195,6 +219,7 @@ export default function HeroGlobe({ size = 220 }: { size?: number }) {
               touchZoomRotate={true}
               touchPitch={false}
               cooperativeGestures={false}
+              onLoad={() => setMapReady(true)}
               onError={e => console.warn('[HeroGlobe]', e)}
             >
               {/* Job location pins */}

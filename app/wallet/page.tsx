@@ -1,12 +1,14 @@
 'use client'
+
+
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
-import dynamic from 'next/dynamic'
+import nextDynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useCurrency } from '@/context/CurrencyContext'
 
 // Apple Pay / Google Pay button — client-only (uses browser Payment Request API)
-const AppleGooglePayButton = dynamic(
+const AppleGooglePayButton = nextDynamic(
   () => import('@/components/payments/AppleGooglePayButton'),
   { ssr: false }
 )
@@ -55,7 +57,7 @@ interface TrustAction {
 function getTrustLevel(score: number) {
   if (score >= 5000) return { label: 'FreeTrust Ambassador', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', icon: '👑', nextAt: null,  next: 'Max level reached' }
   if (score >= 1000) return { label: 'Community Leader',    color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', icon: '🏆', nextAt: 5000, next: '5000 to Ambassador' }
-  if (score >= 500)  return { label: 'Verified Member',     color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: '✅', nextAt: 1000, next: '1000 to Leader' }
+  if (score >= 500)  return { label: 'Active Member',       color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: '✅', nextAt: 1000, next: '1000 to Leader' }
   if (score >= 100)  return { label: 'Trusted Member',      color: '#38bdf8', bg: 'rgba(56,189,248,0.12)',  icon: '⭐', nextAt: 500,  next: '500 to Verified' }
   return              { label: 'New Member',              color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', icon: '🌱', nextAt: 100,  next: '100 to Trusted' }
 }
@@ -233,7 +235,7 @@ function AddFundsModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
               onClose()
               window.location.href = '/wallet?topup=success'
             }}
-            onError={(msg) => setError(msg)}
+            onError={(msg: string) => setError(msg)}
             style={{ marginBottom: 12 }}
           />
         )}
@@ -978,7 +980,7 @@ function WalletPageInner() {
               {[
                 { label: 'New Member',           at: 0,    icon: '🌱', color: '#94a3b8' },
                 { label: 'Trusted Member',       at: 100,  icon: '⭐', color: '#38bdf8' },
-                { label: 'Verified Member',      at: 500,  icon: '✅', color: '#34d399' },
+                { label: 'Active Member',        at: 500,  icon: '✅', color: '#34d399' },
                 { label: 'Community Leader',     at: 1000, icon: '🏆', color: '#a78bfa' },
                 { label: 'FreeTrust Ambassador', at: 5000, icon: '👑', color: '#f59e0b' },
               ].map(lvl => {

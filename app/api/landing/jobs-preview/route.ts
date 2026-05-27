@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient()
     const { data, error } = await supabase
       .from('jobs')
-      .select('id, title, job_type, location_type, location, city, salary_min, salary_max, salary_currency, created_at, poster:profiles!poster_id(full_name)')
+      .select('id, title, company_name, company_logo_url, job_type, location_type, location, city, country, salary_min, salary_max, salary_currency, created_at, poster:profiles!poster_id(full_name)')
       .eq('status', 'active')
       .or(REAL_JOB_SOURCE_FILTER)
       .order('created_at', { ascending: false })
@@ -25,7 +25,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([], { status: 200 })
     }
 
-    return NextResponse.json(data ?? [])
+    const normalized = (data ?? []).map((job: any) => ({
+      ...job,
+      company_name: job.company_name ?? job.poster?.full_name ?? 'FreeTrust Member',
+    }))
+
+    return NextResponse.json(normalized, {
+      headers: { 'Cache-Control': 'no-store, max-age=0' },
+    })
   } catch (err) {
     console.error('[landing/jobs-preview] unexpected error:', err)
     return NextResponse.json([], { status: 200 })

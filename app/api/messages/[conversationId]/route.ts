@@ -5,6 +5,50 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { insertNotification } from '@/lib/notifications/insert'
 import { sendEmail } from '@/lib/email/send'
 
+const MAX_MESSAGE_CHARS = 2000
+const MESSAGE_RATE_LIMIT_WINDOW_MS = 60_000
+const MESSAGE_RATE_LIMIT_MAX = 20
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const messageRateBuckets = new Map<string, number[]>()
+
+const OFF_PLATFORM_PAYMENT_RE = /\b(?:cash\s?app|venmo|paypal|revolut|western\s+union|bank\s+transfer|wire\s+transfer|pay\s+outside|outside\s+free\s*trust|off\s*platform|send\s+me\s+money|crypto|bitcoin|btc|usdt)\b/i
+
+function normalizeMessageContent(input: string): string {
+  return input.replace(/\0/g, '').replace(/\r\n/g, '\n').trim()
+}
+
+function checkMessageRateLimit(userId: string, conversationId: string): boolean {
+  const key = `${userId}:${conversationId}`
+  const now = Date.now()
+  const recent = (messageRateBuckets.get(key) ?? []).filter(ts => now - ts < MESSAGE_RATE_LIMIT_WINDOW_MS)
+  if (recent.length >= MESSAGE_RATE_LIMIT_MAX) {
+    messageRateBuckets.set(key, recent)
+    return false
+  }
+  recent.push(now)
+  messageRateBuckets.set(key, recent)
+  return true
+}
+
+async function getOtherParticipantIds(conversationId: string, userId: string): Promise<string[] | null> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('conversation_participants')
+    .select('user_id')
+    .eq('conversation_id', conversationId)
+    .neq('user_id', userId)
+
+  if (error) {
+    console.error('[api/messages/:id] other participants check failed:', error)
+    return null
+  }
+
+  return (data ?? [])
+    .map(row => row.user_id)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0)
+}
+
 // Participation check uses the admin (service-role) client so it
 // bypasses RLS cleanly. We've already validated `user.id` from the
 // auth session via the user-session client, so looking up whether
@@ -48,6 +92,9 @@ export async function GET(
     }
 
     const { conversationId } = params
+    if (!UUID_RE.test(conversationId)) {
+      return NextResponse.json({ error: 'Invalid conversation id' }, { status: 400 })
+    }
 
     const isParticipant = await assertParticipant(conversationId, user.id)
     if (!isParticipant) {
@@ -102,12 +149,25 @@ export async function POST(
     }
 
     const { conversationId } = params
+    if (!UUID_RE.test(conversationId)) {
+      return NextResponse.json({ error: 'Invalid conversation id' }, { status: 400 })
+    }
+
     const body = await request.json().catch(() => null) as { content?: unknown } | null
     const rawContent = body?.content
     if (typeof rawContent !== 'string' || !rawContent.trim()) {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 })
     }
-    const content = rawContent.trim()
+    const content = normalizeMessageContent(rawContent)
+    if (!content) {
+      return NextResponse.json({ error: 'Content is required' }, { status: 400 })
+    }
+    if (content.length > MAX_MESSAGE_CHARS) {
+      return NextResponse.json(
+        { error: `Message is too long. Please keep messages under ${MAX_MESSAGE_CHARS} characters.` },
+        { status: 400 },
+      )
+    }
 
     const isParticipant = await assertParticipant(conversationId, user.id)
     if (!isParticipant) {
@@ -115,6 +175,36 @@ export async function POST(
     }
 
     const admin = createAdminClient()
+
+    const otherParticipantIds = await getOtherParticipantIds(conversationId, user.id)
+    if (!otherParticipantIds || otherParticipantIds.length === 0) {
+      return NextResponse.json({ error: 'Conversation recipient is unavailable' }, { status: 409 })
+    }
+
+    const { data: recipientProfiles, error: recipientErr } = await admin
+      .from('profiles')
+      .select('id')
+      .in('id', otherParticipantIds)
+
+    if (recipientErr) {
+      console.error('[POST /api/messages/:id] recipient profile check failed:', recipientErr)
+      return NextResponse.json({ error: 'Could not verify conversation recipient' }, { status: 500 })
+    }
+
+    if ((recipientProfiles ?? []).length === 0) {
+      return NextResponse.json({ error: 'Conversation recipient is unavailable' }, { status: 409 })
+    }
+
+    if (!checkMessageRateLimit(user.id, conversationId)) {
+      return NextResponse.json(
+        { error: 'You are sending messages too quickly. Please wait a moment and try again.' },
+        { status: 429 },
+      )
+    }
+
+    const safetyWarning = OFF_PLATFORM_PAYMENT_RE.test(content)
+      ? 'For your protection, keep payments and order details inside FreeTrust.'
+      : null
 
     // Insert message via the admin client for the same reason as
     // the GET path — decouples from the RLS migration having run.
@@ -196,7 +286,7 @@ export async function POST(
       }
     })()
 
-    return NextResponse.json({ message })
+    return NextResponse.json({ message, warning: safetyWarning })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[POST /api/messages/:id]', msg, err)

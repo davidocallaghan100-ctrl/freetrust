@@ -17,7 +17,7 @@ const KB: { patterns: RegExp[]; answer: string; links?: { label: string; href: s
   },
   {
     patterns: [/fee|commission|how much.*cost|pricing|how.*charge|cost to sell/i],
-    answer: `FreeTrust uses a **sliding fee structure based on your Trust Score**:\n\n• 🌱 New (₮0–99) → 5% fee\n• 🔵 Active (₮100–499) → 3% fee\n• 💚 Verified (₮500–999) → 2% fee\n• 💜 Top Trusted (₮1000–4999) → 1% fee\n• 🏆 Elite (₮5000+) → **0% fee forever**\n\nThe more you contribute, the less you pay. That's the FreeTrust promise.`,
+    answer: `FreeTrust uses a **sliding fee structure based on your Trust Score**:\n\n• 🌱 New (₮0–99) → 5% fee\n• 🔵 Active (₮100–499) → 3% fee\n• 💚 Highly Active (₮500–999) → 2% fee\n• 💜 Top Trusted (₮1000–4999) → 1% fee\n• 🏆 Elite (₮5000+) → **0% fee forever**\n\nThe more you contribute, the less you pay. That's the FreeTrust promise.`,
     links: [{ label: 'Start earning Trust', href: '/analytics' }],
   },
   {

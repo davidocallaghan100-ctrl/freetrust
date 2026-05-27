@@ -9,6 +9,26 @@ const stripe = process.env.STRIPE_SECRET_KEY
 
 const SERVICE_FEE_RATE = 0.08 // 8%
 
+function getListingSellerId(listing: Record<string, unknown>): string | null {
+  const sellerId = listing.user_id ?? listing.seller_id
+  return typeof sellerId === 'string' && sellerId.trim() ? sellerId : null
+}
+
+function isListingUnavailable(listing: Record<string, unknown>): boolean {
+  if (listing.deleted_at) return true
+  if (listing.is_active === false || listing.active === false) return true
+  if (typeof listing.status === 'string' && ['archived', 'deleted', 'inactive', 'draft', 'paused'].includes(listing.status.toLowerCase())) {
+    return true
+  }
+  return false
+}
+
+function priceToPence(price: unknown): number | null {
+  const value = typeof price === 'number' ? price : typeof price === 'string' ? Number(price) : NaN
+  if (!Number.isFinite(value) || value <= 0) return null
+  return Math.round(value * 100)
+}
+
 export async function POST(req: NextRequest) {
   if (!stripe) {
     return NextResponse.json({ error: 'Payments not configured' }, { status: 503 })
@@ -21,10 +41,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await req.json()
-    const { service_id, package_tier = 'Basic' } = body
+    const body = await req.json().catch(() => null) as { service_id?: unknown; package_tier?: unknown } | null
+    const service_id = body?.service_id
+    const package_tier = typeof body?.package_tier === 'string' && body.package_tier.trim()
+      ? body.package_tier.trim()
+      : 'Basic'
 
-    if (!service_id) {
+    if (typeof service_id !== 'string' || !service_id.trim()) {
       return NextResponse.json({ error: 'Missing service_id' }, { status: 400 })
     }
 
@@ -37,64 +60,29 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (serviceError || !service) {
-      // Use a default price if listing not found (for demo/mock data)
-      const mockPrice = 10000 // £100 in pence
-      const feePence = Math.round(mockPrice * SERVICE_FEE_RATE)
-      const payoutPence = mockPrice - feePence
-
-      // Insert order record
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          buyer_id: user.id,
-          seller_id: user.id, // fallback for mock
-          listing_id: service_id,
-          title: `Service ${service_id}`,
-          amount: mockPrice,
-          status: 'pending_escrow',
-        })
-        .select()
-        .single()
-
-      if (orderError || !order) {
-        return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
-      }
-
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-      const session = await stripe.checkout.sessions.create({
-        mode: 'payment',
-        // Auto-enables Apple Pay, Google Pay, Link etc based on buyer device
-        customer_email: user.email,
-        line_items: [{
-          price_data: {
-            currency: 'eur',
-            product_data: { name: `Service ${service_id}` },
-            unit_amount: mockPrice,
-          },
-          quantity: 1,
-        }],
-        payment_intent_data: {
-          // Escrow: hold funds until release_payment captures + transfers.
-          capture_method: 'manual',
-          metadata: {
-            order_id: order.id,
-            order_type: 'service',
-            buyer_id: user.id,
-            fee_pence: String(feePence),
-            payout_pence: String(payoutPence),
-          },
-        },
-        metadata: { order_id: order.id, order_type: 'service' },
-        success_url: `${baseUrl}/orders/${order.id}/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${baseUrl}/services/${service_id}`,
-      })
-
-      await supabase.from('orders').update({ stripe_session_id: session.id }).eq('id', order.id)
-
-      return NextResponse.json({ url: session.url, order_id: order.id })
+      console.warn('[Checkout Service] listing not found:', service_id, serviceError)
+      return NextResponse.json({ error: 'Service listing not found' }, { status: 404 })
     }
 
-    const amountPence = Math.round((service.price || 100) * 100)
+    const serviceRecord = service as Record<string, unknown>
+    if (isListingUnavailable(serviceRecord)) {
+      return NextResponse.json({ error: 'Service listing is not available for checkout' }, { status: 409 })
+    }
+
+    const sellerId = getListingSellerId(serviceRecord)
+    if (!sellerId) {
+      return NextResponse.json({ error: 'Service seller is not available for checkout' }, { status: 409 })
+    }
+
+    if (sellerId === user.id) {
+      return NextResponse.json({ error: 'You cannot buy your own service' }, { status: 400 })
+    }
+
+    const amountPence = priceToPence(serviceRecord.price)
+    if (!amountPence) {
+      return NextResponse.json({ error: 'Service price is not available for checkout' }, { status: 409 })
+    }
+
     const feePence = Math.round(amountPence * SERVICE_FEE_RATE)
     const payoutPence = amountPence - feePence
 
@@ -103,7 +91,7 @@ export async function POST(req: NextRequest) {
       .from('orders')
       .insert({
         buyer_id: user.id,
-        seller_id: service.user_id || service.seller_id || user.id,
+        seller_id: sellerId,
         listing_id: service.id,
         title: service.title,
         amount: amountPence,
@@ -141,7 +129,7 @@ export async function POST(req: NextRequest) {
           order_type: 'service',
           item_id: service.id,
           buyer_id: user.id,
-          seller_id: service.user_id || service.seller_id || '',
+          seller_id: sellerId,
           fee_pence: String(feePence),
           payout_pence: String(payoutPence),
         },

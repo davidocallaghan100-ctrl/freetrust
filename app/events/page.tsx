@@ -103,8 +103,8 @@ function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void
   const { format: currencyFormat } = useCurrency()
 
   return (
-    <Link href={`/events/${ev.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
-    <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer', height: '100%' }}
+    <Link href={`/events/${ev.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', minWidth: 0, maxWidth: '100%' }}>
+    <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer', height: '100%', minWidth: 0, maxWidth: '100%' }}
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 8px 32px rgba(56,189,248,0.15)' }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
 
@@ -140,13 +140,13 @@ function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void
       </div>
 
       {/* Card body */}
-      <div style={{ padding: '1rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.3 }}>{ev.title}</div>
+      <div style={{ padding: '1rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: 0 }}>
+        <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.3, overflowWrap: 'anywhere' }}>{ev.title}</div>
 
         {/* Date + time row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: '#38bdf8', fontWeight: 600 }}>
-          <span>🗓</span>
-          <span>{formatEventDate(ev.date).full}{ev.time ? ` · ${ev.time}` : ''}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: '#38bdf8', fontWeight: 600, minWidth: 0 }}>
+          <span style={{ flexShrink: 0 }}>🗓</span>
+          <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{formatEventDate(ev.date).full}{ev.time ? ` · ${ev.time}` : ''}</span>
         </div>
 
         {/* Location */}
@@ -164,22 +164,22 @@ function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void
 
         {/* Organiser / Curated badge */}
         {ev.is_platform_curated ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', paddingTop: '0.25rem', borderTop: '1px solid rgba(56,189,248,0.07)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', paddingTop: '0.25rem', borderTop: '1px solid rgba(56,189,248,0.07)', minWidth: 0 }}>
             <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#a78bfa', background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.25)', padding: '2px 8px', borderRadius: 999 }}>📌 Curated by FreeTrust</span>
           </div>
         ) : ev.organiser ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingTop: '0.25rem', borderTop: '1px solid rgba(56,189,248,0.07)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingTop: '0.25rem', borderTop: '1px solid rgba(56,189,248,0.07)', minWidth: 0 }}>
             {ev.organiserAvatar
               ? <img src={ev.organiserAvatar} alt={ev.organiser} style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
               : <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#334155', flexShrink: 0 }} />
             }
-            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{ev.organiser}</span>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.organiser}</span>
             {ev.organiserTrust && <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#38bdf8', fontWeight: 700, background: 'rgba(56,189,248,0.08)', padding: '1px 6px', borderRadius: 6 }}>₮{ev.organiserTrust.toLocaleString()}</span>}
           </div>
         ) : null}
 
         {/* Footer: attendees + buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem', minWidth: 0, flexWrap: 'wrap' }}>
           {ev.rsvpCount > 0 ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: '#64748b' }}>
               <span>👥</span>
@@ -414,14 +414,15 @@ export default function EventsPage() {
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
       <style>{`
-        .ev-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.25rem; }
+        .ev-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1.25rem; }
+        .ev-grid > * { min-width: 0; max-width: 100%; }
         .ev-filter-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; }
         .ev-filter-row { display: flex; gap: 0.5rem; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
         .ev-filter-row::-webkit-scrollbar { display: none; }
         .ev-create-btn { background: linear-gradient(135deg,#38bdf8,#0284c7); color: #fff; padding: 0.6rem 1.25rem; border-radius: 10px; font-weight: 700; font-size: 0.88rem; text-decoration: none; flex-shrink: 0; min-height: 44px; display: flex; align-items: center; white-space: nowrap; }
-        @media (max-width: 1024px) { .ev-grid { grid-template-columns: repeat(2,1fr) !important; } }
+        @media (max-width: 1024px) { .ev-grid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; } }
         @media (max-width: 640px) {
-          .ev-grid { grid-template-columns: 1fr !important; }
+          .ev-grid { grid-template-columns: minmax(0,1fr) !important; }
           .ev-header-row { flex-direction: column !important; align-items: flex-start !important; }
           .ev-create-btn { width: 100%; justify-content: center; }
         }

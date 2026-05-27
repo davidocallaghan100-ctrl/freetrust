@@ -91,6 +91,7 @@ export default function ConnectionsPage() {
         .from('profiles')
         .select('id, full_name, bio, avatar_url, location, created_at')
         .neq('id', user.id)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(24)
 

@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'Privacy Policy | FreeTrust',
-  description: 'Privacy Policy for FreeTrust, operated by Airpal Technology Ltd.',
+  description: 'Privacy Policy for FreeTrust, a registered business in Ireland.',
 }
 
 const sections = [
@@ -15,14 +15,12 @@ const sections = [
         <p>
           FreeTrust (&ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;) is a trust-based platform for
           freelancers, gig workers, and community members to connect, sell services and products, attend
-          events, and manage their work. FreeTrust is operated by{' '}
-          <strong className="text-white">Airpal Technology Ltd</strong>, a company registered in the Republic
-          of Ireland.
+          events, and manage their work. FreeTrust is a registered business in Ireland.
         </p>
         <p className="mt-3">
           If you have any questions about this Privacy Policy, please contact us at{' '}
-          <a href="mailto:davidocallaghan100@gmail.com" className="text-[#38bdf8] hover:underline">
-            davidocallaghan100@gmail.com
+          <a href="mailto:hello@freetrust.co" className="text-[#38bdf8] hover:underline">
+            hello@freetrust.co
           </a>
           .
         </p>
@@ -196,8 +194,8 @@ const sections = [
         </ul>
         <p className="mt-3">
           To exercise any of these rights, please contact us at{' '}
-          <a href="mailto:davidocallaghan100@gmail.com" className="text-[#38bdf8] hover:underline">
-            davidocallaghan100@gmail.com
+          <a href="mailto:hello@freetrust.co" className="text-[#38bdf8] hover:underline">
+            hello@freetrust.co
           </a>
           . We will respond within 30 days.
         </p>
@@ -235,11 +233,11 @@ const sections = [
       <>
         <p>If you have any questions, concerns, or requests regarding this Privacy Policy, please contact:</p>
         <div className="mt-3 p-4 rounded-xl bg-[#13131a] border border-[#2a2a3a]">
-          <p className="text-white font-semibold">Airpal Technology Ltd</p>
-          <p className="text-[#94a3b8]">Operating as FreeTrust</p>
+          <p className="text-white font-semibold">FreeTrust</p>
+          <p className="text-[#94a3b8]">Registered business in Ireland</p>
           <p className="mt-2">
-            <a href="mailto:davidocallaghan100@gmail.com" className="text-[#38bdf8] hover:underline">
-              davidocallaghan100@gmail.com
+            <a href="mailto:hello@freetrust.co" className="text-[#38bdf8] hover:underline">
+              hello@freetrust.co
             </a>
           </p>
           <p className="text-[#94a3b8] mt-1">Republic of Ireland</p>
@@ -251,57 +249,53 @@ const sections = [
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-[#94a3b8]">
-      {/* Header */}
-      <div className="border-b border-[#2a2a3a] bg-[#13131a]">
-        <div className="max-w-3xl mx-auto px-4 py-8">
-          <Link href="/" className="text-[#38bdf8] text-sm hover:underline mb-4 inline-block">
-            ← Back to FreeTrust
-          </Link>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-[#38bdf8]/20 flex items-center justify-center text-xl">
-              🔒
-            </div>
-            <h1 className="text-2xl font-bold text-white">Privacy Policy</h1>
+    <div className="ft-policy-page">
+      <div className="ft-policy-wrap">
+        <section className="ft-policy-hero">
+          <Link href="/" className="ft-policy-back">← Back to FreeTrust</Link>
+          <div className="ft-policy-eyebrow">
+            🔒 Privacy
           </div>
-          <p className="text-[#94a3b8] text-sm">
-            Last updated: April 2026 &nbsp;·&nbsp; Operated by Airpal Technology Ltd
+          <h1>Privacy Policy</h1>
+          <p className="ft-policy-subtitle">
+            How FreeTrust collects, uses and protects personal data while you use the community economy platform.
           </p>
-        </div>
-      </div>
+          <p className="ft-policy-meta">
+            Last updated: April 2026 &nbsp;·&nbsp; Registered business in Ireland
+          </p>
+          <div className="ft-policy-actions">
+            <Link href="/safety" className="ft-policy-btn">Trust &amp; Safety</Link>
+            <Link href="/terms" className="ft-policy-btn">Terms of Service</Link>
+            <Link href="/register" className="ft-policy-btn ft-policy-btn-primary">Join FreeTrust safely →</Link>
+          </div>
+        </section>
 
-      {/* Content */}
-      <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-        <p className="text-[#94a3b8] leading-relaxed">
-          This Privacy Policy explains how FreeTrust, operated by Airpal Technology Ltd, collects,
+        <p className="ft-policy-intro">
+          This Privacy Policy explains how FreeTrust, a registered business in Ireland, collects,
           uses, and protects your personal data when you use our platform at{' '}
-          <a href="https://freetrust.co" className="text-[#38bdf8] hover:underline">
+          <a href="https://freetrust.co" className="ft-policy-link">
             freetrust.co
           </a>
           . Please read this policy carefully.
         </p>
 
-        {sections.map((section) => (
-          <div
-            key={section.id}
-            id={section.id}
-            className="bg-[#13131a] border border-[#2a2a3a] rounded-2xl p-5"
-          >
-            <h2 className="text-white font-semibold text-lg mb-3">{section.title}</h2>
-            <div className="leading-relaxed text-sm">{section.content}</div>
-          </div>
-        ))}
-      </div>
+        <section className="ft-policy-stack">
+          {sections.map((section) => (
+            <article key={section.id} id={section.id} className="ft-policy-card">
+              <h2>{section.title}</h2>
+              <div className="ft-policy-content">{section.content}</div>
+            </article>
+          ))}
+        </section>
 
-      {/* Footer */}
-      <div className="border-t border-[#2a2a3a] mt-8">
-        <div className="max-w-3xl mx-auto px-4 py-6 flex flex-col sm:flex-row gap-3 items-center justify-between text-sm text-[#94a3b8]">
-          <p>© 2026 Airpal Technology Ltd · FreeTrust</p>
-          <div className="flex gap-4">
-            <Link href="/terms" className="text-[#38bdf8] hover:underline">Terms of Service</Link>
-            <Link href="/" className="hover:text-white">Home</Link>
+        <footer className="ft-policy-footer">
+          <p>© 2026 FreeTrust · Registered business in Ireland</p>
+          <div className="ft-policy-footer-links">
+            <Link href="/terms" className="ft-policy-link">Terms of Service</Link>
+            <Link href="/safety" className="ft-policy-link">Trust &amp; Safety</Link>
+            <Link href="/" className="ft-policy-link">Home</Link>
           </div>
-        </div>
+        </footer>
       </div>
     </div>
   )

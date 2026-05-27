@@ -382,6 +382,16 @@ export const OFFLINE_CATEGORIES: ServiceCategory[] = [
 
 export const ALL_CATEGORIES: ServiceCategory[] = [...ONLINE_CATEGORIES, ...OFFLINE_CATEGORIES]
 
+function normaliseCategoryLabel(value: string) {
+  return value.trim().toLowerCase().replace(/&/g, 'and').replace(/\s+/g, ' ')
+}
+
+export function findServiceCategoryByLabel(label: string | null | undefined): ServiceCategory | null {
+  if (!label) return null
+  const normalised = normaliseCategoryLabel(label)
+  return ALL_CATEGORIES.find(cat => normaliseCategoryLabel(cat.label) === normalised) ?? null
+}
+
 // Delivery options for products
 export interface DeliveryOption {
   id: string

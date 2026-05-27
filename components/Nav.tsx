@@ -7,6 +7,14 @@ import Avatar from '@/components/Avatar'
 import { createClient } from '@/lib/supabase/client'
 import CurrencySwitcher from '@/components/CurrencySwitcher'
 
+const FREETRUST_LOGO_SRC = '/icons/freetrust-mark-perfect-transparent-20260521.png'
+const FREETRUST_LOGO_STYLE = {
+  flexShrink: 0,
+  display: 'block',
+  objectFit: 'contain' as const,
+  filter: 'drop-shadow(0 0 8px rgba(56,189,248,0.55)) drop-shadow(0 0 5px rgba(52,211,153,0.35))',
+}
+
 const DRAWER_SECTIONS = [
   {
     label: 'DIGITAL',
@@ -53,6 +61,40 @@ const DRAWER_SECTIONS = [
   },
 ]
 
+type AdminPage = {
+  id: string
+  name: string
+  slug: string | null
+  logo_url: string | null
+  userRole?: string | null
+}
+
+type FeedIdentity =
+  | { type: 'personal'; id: string; name: string; username: string | null; avatar_url: string | null }
+  | { type: 'org'; id: string; name: string; slug: string | null; logo_url: string | null; userRole?: string | null }
+
+const FEED_IDENTITY_KEY = 'freetrust.feed.identity.v1'
+
+function clearStoredFeedIdentity() {
+  try { window.localStorage.removeItem(FEED_IDENTITY_KEY) } catch { /* ignore storage */ }
+}
+
+function pageHref(page: AdminPage) {
+  return `/organisations/${encodeURIComponent(page.slug || page.id)}`
+}
+
+function normalisePages(pages: AdminPage[]) {
+  const seen = new Set<string>()
+  return pages
+    .filter(page => page?.id && page?.name)
+    .filter(page => {
+      if (seen.has(page.id)) return false
+      seen.add(page.id)
+      return true
+    })
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
 export default function Nav() {
   const router   = useRouter()
   const pathname = usePathname()
@@ -66,6 +108,9 @@ export default function Nav() {
   const [loading,     setLoading]     = useState(true)
   const [profileOpen, setProfileOpen] = useState(false)
   const [drawerOpen,  setDrawerOpen]  = useState(false)
+  const [adminPages, setAdminPages] = useState<AdminPage[]>([])
+  const [pagesLoading, setPagesLoading] = useState(true)
+  const [feedIdentity, setFeedIdentity] = useState<FeedIdentity | null>(null)
 
   const profileRef = useRef<HTMLDivElement>(null)
 
@@ -79,10 +124,102 @@ export default function Nav() {
             supabase.from('profiles').select('full_name, avatar_url').eq('id', session.user.id).maybeSingle(),
             supabase.from('trust_balances').select('balance').eq('user_id', session.user.id).maybeSingle(),
           ])
-          setUser({ id: session.user.id, email: session.user.email ?? null, name: profileRes.data?.full_name ?? null, avatar: profileRes.data?.avatar_url ?? null })
+          const nextUser = { id: session.user.id, email: session.user.email ?? null, name: profileRes.data?.full_name ?? null, avatar: profileRes.data?.avatar_url ?? null }
+          setUser(nextUser)
           setWalletBalance(walletRes.data?.balance ?? null)
+          try {
+            const personal: FeedIdentity = { type: 'personal', id: nextUser.id, name: nextUser.name ?? 'My profile', username: null, avatar_url: nextUser.avatar }
+            window.localStorage.setItem(FEED_IDENTITY_KEY, JSON.stringify(personal))
+            setFeedIdentity(personal)
+          } catch { /* ignore storage */ }
+          await loadAdminPages(session.user.id, session.access_token)
+        } else {
+          setUser(null)
+          setWalletBalance(null)
+          setAdminPages([])
+          setFeedIdentity(null)
+          clearStoredFeedIdentity()
+          setPagesLoading(false)
         }
       } finally { setLoading(false) }
+    }
+    const loadAdminPages = async (userId: string, accessToken?: string) => {
+      setPagesLoading(true)
+      try {
+        let pages: AdminPage[] = []
+        try {
+          const res = await fetch('/api/organisations/mine', {
+            cache: 'no-store',
+            headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+          })
+          const data = await res.json().catch(() => ({ organisations: [] as AdminPage[] })) as { organisations?: AdminPage[] }
+          pages = normalisePages(data.organisations ?? [])
+        } catch {
+          pages = []
+        }
+
+        if (pages.length === 0) {
+          const { data: memberships } = await supabase
+            .from('organisation_members')
+            .select('organisation_id, role')
+            .eq('user_id', userId)
+            .in('role', ['owner', 'admin'])
+
+          const roleByOrgId = new Map<string, string>()
+          const orgIds = (memberships ?? [])
+            .map(membership => {
+              const organisationId = (membership as { organisation_id?: string | null }).organisation_id
+              const role = (membership as { role?: string | null }).role
+              if (organisationId && role) roleByOrgId.set(organisationId, role)
+              return organisationId
+            })
+            .filter((id): id is string => Boolean(id))
+
+          const directPages: AdminPage[] = []
+          if (orgIds.length > 0) {
+            const { data: orgs } = await supabase
+              .from('organisations')
+              .select('id, name, slug, logo_url')
+              .in('id', orgIds)
+              .eq('status', 'active')
+
+            directPages.push(...((orgs ?? []) as Array<{ id: string; name: string; slug: string | null; logo_url: string | null }>).map(org => ({
+              id: org.id,
+              name: org.name,
+              slug: org.slug,
+              logo_url: org.logo_url,
+              userRole: roleByOrgId.get(org.id) ?? 'admin',
+            })))
+          }
+
+          const { data: createdOrgs } = await supabase
+            .from('organisations')
+            .select('id, name, slug, logo_url')
+            .eq('creator_id', userId)
+            .eq('status', 'active')
+
+          directPages.push(...((createdOrgs ?? []) as Array<{ id: string; name: string; slug: string | null; logo_url: string | null }>).map(org => ({
+            id: org.id,
+            name: org.name,
+            slug: org.slug,
+            logo_url: org.logo_url,
+            userRole: 'owner',
+          })))
+
+          pages = normalisePages(directPages)
+        }
+
+        setAdminPages(pages)
+        setFeedIdentity(current => {
+          if (current?.type !== 'org') return current
+          const refreshed = pages.find(page => page.id === current.id)
+          return refreshed ? { type: 'org', ...refreshed } : current
+        })
+      } catch {
+        setAdminPages([])
+      } finally {
+        setPagesLoading(false)
+      }
     }
     init()
 
@@ -92,9 +229,16 @@ export default function Nav() {
           supabase.from('profiles').select('full_name, avatar_url').eq('id', session.user.id).maybeSingle(),
           supabase.from('trust_balances').select('balance').eq('user_id', session.user.id).maybeSingle(),
         ])
-        setUser({ id: session.user.id, email: session.user.email ?? null, name: profileRes.data?.full_name ?? null, avatar: profileRes.data?.avatar_url ?? null })
+        const nextUser = { id: session.user.id, email: session.user.email ?? null, name: profileRes.data?.full_name ?? null, avatar: profileRes.data?.avatar_url ?? null }
+        setUser(nextUser)
         setWalletBalance(walletRes.data?.balance ?? null)
-      } else { setUser(null); setWalletBalance(null) }
+        try {
+          const personal: FeedIdentity = { type: 'personal', id: nextUser.id, name: nextUser.name ?? 'My profile', username: null, avatar_url: nextUser.avatar }
+          window.localStorage.setItem(FEED_IDENTITY_KEY, JSON.stringify(personal))
+          setFeedIdentity(personal)
+        } catch { /* ignore storage */ }
+        await loadAdminPages(session.user.id, session.access_token)
+      } else { setUser(null); setWalletBalance(null); setAdminPages([]); setFeedIdentity(null); clearStoredFeedIdentity(); setPagesLoading(false) }
       setLoading(false)
     })
     return () => subscription.unsubscribe()
@@ -112,6 +256,31 @@ export default function Nav() {
   /* ── close drawer on route change ── */
   useEffect(() => { setDrawerOpen(false) }, [pathname])
 
+  /* ── keep top-left switcher synced with page/profile changes elsewhere ── */
+  useEffect(() => {
+    const syncIdentity = (event?: Event) => {
+      if (!user) {
+        setFeedIdentity(null)
+        return
+      }
+      const detail = event && 'detail' in event ? (event as CustomEvent<FeedIdentity>).detail : null
+      if (detail) {
+        setFeedIdentity(detail)
+        return
+      }
+      try {
+        const raw = window.localStorage.getItem(FEED_IDENTITY_KEY)
+        if (raw) setFeedIdentity(JSON.parse(raw) as FeedIdentity)
+      } catch { /* ignore storage */ }
+    }
+    window.addEventListener('freetrust:feed-identity-change', syncIdentity)
+    window.addEventListener('storage', syncIdentity)
+    return () => {
+      window.removeEventListener('freetrust:feed-identity-change', syncIdentity)
+      window.removeEventListener('storage', syncIdentity)
+    }
+  }, [user])
+
   /* ── lock body scroll when drawer open ── */
   useEffect(() => {
     document.body.style.overflow = drawerOpen ? 'hidden' : ''
@@ -120,6 +289,8 @@ export default function Nav() {
 
   const handleSignOut = async () => {
     setDrawerOpen(false)
+    setProfileOpen(false)
+    clearStoredFeedIdentity()
     await supabase.auth.signOut()
     router.push('/')
     router.refresh()
@@ -127,6 +298,20 @@ export default function Nav() {
 
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/')
+
+  const chooseFeedIdentity = (href: string, identity: FeedIdentity) => {
+    setFeedIdentity(identity)
+    setProfileOpen(false)
+    try {
+      window.localStorage.setItem(FEED_IDENTITY_KEY, JSON.stringify(identity))
+      window.dispatchEvent(new CustomEvent('freetrust:feed-identity-change', { detail: identity }))
+    } catch { /* ignore storage */ }
+    if (pathname !== href) router.push(href)
+  }
+
+  const activeProfileIdentity = feedIdentity?.type === 'org'
+    ? { name: feedIdentity.name, image: feedIdentity.logo_url, subtitle: feedIdentity.userRole === 'admin' ? 'Admin page' : 'Owner page' }
+    : { name: user?.name ?? 'Your Profile', image: user?.avatar ?? null, subtitle: user?.email ?? '' }
 
   return (
     <>
@@ -141,20 +326,54 @@ export default function Nav() {
         {/* Profile avatar — top left */}
         {!loading && user && (
           <div ref={profileRef} style={{ position: 'relative', flexShrink: 0 }}>
-            <Link href="/profile" style={{ display: 'flex', alignItems: 'center', padding: '3px', borderRadius: '50%', outline: 'none', textDecoration: 'none' }} aria-label="Your profile">
-              <Avatar url={user.avatar} name={user.name} email={user.email} size={32} />
-            </Link>
+            <button
+              type="button"
+              onClick={() => setProfileOpen(v => !v)}
+              style={{ display: 'flex', alignItems: 'center', padding: '3px', borderRadius: '50%', outline: 'none', background: 'transparent', border: 'none', cursor: 'pointer' }}
+              aria-label="Switch profile or admin page"
+              aria-expanded={profileOpen}
+              aria-haspopup="menu"
+            >
+              <Avatar url={activeProfileIdentity.image} name={activeProfileIdentity.name} email={user.email} size={32} />
+            </button>
             {profileOpen && (
               <div style={{ position: 'fixed', left: '12px', top: '62px', background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', minWidth: '220px', maxWidth: 'calc(100vw - 24px)', overflow: 'hidden', zIndex: 200 }}>
                 <div style={{ padding: '12px 16px', borderBottom: '1px solid #334155', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Avatar url={user.avatar} name={user.name} email={user.email} size={38} />
+                  <Avatar url={activeProfileIdentity.image} name={activeProfileIdentity.name} email={user.email} size={38} />
                   <div style={{ overflow: 'hidden', flex: 1 }}>
-                    <div style={{ fontSize: '13px', color: '#f1f5f9', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name ?? 'Your Profile'}</div>
-                    <Link href="/profile" onClick={() => setProfileOpen(false)} style={{ fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none' }}>{user.email}</Link>
+                    <div style={{ fontSize: '13px', color: '#f1f5f9', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeProfileIdentity.name}</div>
+                    <Link href={feedIdentity?.type === 'org' ? pageHref(feedIdentity) : '/profile'} onClick={() => setProfileOpen(false)} style={{ fontSize: '11px', color: feedIdentity?.type === 'org' ? '#86efac' : '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none' }}>{activeProfileIdentity.subtitle}</Link>
                   </div>
                 </div>
+                <div style={{ padding: '8px 8px 4px' }}>
+                  <div style={{ color: '#94a3b8', fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '2px 8px 7px' }}>
+                    Switch profile/page
+                  </div>
+                  <button type="button" onClick={() => chooseFeedIdentity('/profile', { type: 'personal', id: user.id, name: user.name ?? 'My profile', username: null, avatar_url: user.avatar })} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '8px', fontSize: '13px', color: '#f8fafc', textDecoration: 'none', borderRadius: 10, background: (pathname.startsWith('/profile') || feedIdentity?.type === 'personal') ? 'rgba(56,189,248,0.12)' : 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                    <Avatar url={user.avatar} name={user.name} email={user.email} size={30} />
+                    <span style={{ minWidth: 0, flex: 1 }}>
+                      <span style={{ display: 'block', fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name ?? 'My profile'}</span>
+                      <span style={{ display: 'block', color: '#94a3b8', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Personal profile</span>
+                    </span>
+                    {feedIdentity?.type === 'personal' ? <span style={{ color: '#38bdf8', fontSize: 14 }}>✓</span> : null}
+                  </button>
+                  {pagesLoading ? (
+                    <div style={{ color: '#94a3b8', fontSize: 12, padding: '8px' }}>Loading your pages…</div>
+                  ) : adminPages.length === 0 ? (
+                    <div style={{ color: '#64748b', fontSize: 12, padding: '8px' }}>No admin pages found on this session.</div>
+                  ) : adminPages.map(page => (
+                    <button key={page.id} type="button" onClick={() => chooseFeedIdentity(pageHref(page), { type: 'org', ...page })} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '8px', fontSize: '13px', color: '#f8fafc', textDecoration: 'none', borderRadius: 10, background: feedIdentity?.type === 'org' && feedIdentity.id === page.id ? 'rgba(34,197,94,0.12)' : 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                      <Avatar url={page.logo_url} name={page.name} size={30} />
+                      <span style={{ minWidth: 0, flex: 1 }}>
+                        <span style={{ display: 'block', fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{page.name}</span>
+                        <span style={{ display: 'block', color: '#86efac', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{page.userRole === 'admin' ? 'Admin page' : 'Owner page'}</span>
+                      </span>
+                      {feedIdentity?.type === 'org' && feedIdentity.id === page.id ? <span style={{ color: '#22c55e', fontSize: 14 }}>✓</span> : null}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ height: 1, background: '#334155' }} />
                 {[
-                  { href: '/profile',     label: '👤 Your Profile' },
                   { href: '/create',      label: '✏️ Create Post'  },
                   { href: '/dashboard',   label: '📊 Dashboard'    },
                   { href: '/wallet',      label: '💎 Wallet'       },
@@ -177,7 +396,7 @@ export default function Nav() {
 
         {/* Logo — always links to landing page */}
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
-          <img src="https://davidocallaghan100829028694.adaptive.ai/cdn/freetrust-logo-v1.png" alt="FreeTrust" style={{ width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0, display: 'block' }} />
+          <img src={FREETRUST_LOGO_SRC} alt="FreeTrust" style={{ ...FREETRUST_LOGO_STYLE, width: '34px', height: '34px' }} />
           <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '15px', letterSpacing: '-0.3px' }}>FreeTrust</span>
         </Link>
 
@@ -272,7 +491,7 @@ export default function Nav() {
         {/* Drawer header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #1e293b', height: '58px', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <img src="https://davidocallaghan100829028694.adaptive.ai/cdn/freetrust-logo-v1.png" alt="FreeTrust" style={{ width: '26px', height: '26px', borderRadius: '6px' }} />
+            <img src={FREETRUST_LOGO_SRC} alt="FreeTrust" style={{ ...FREETRUST_LOGO_STYLE, width: '28px', height: '28px' }} />
             <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '15px', letterSpacing: '-0.3px' }}>FreeTrust</span>
           </div>
           <button onClick={() => setDrawerOpen(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', background: '#1e293b', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#94a3b8', fontSize: '16px' }} aria-label="Close menu">
@@ -334,7 +553,7 @@ export default function Nav() {
           <div style={{ padding: '8px 20px 4px', fontSize: '10px', fontWeight: 700, color: '#475569', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
             ACCOUNT
           </div>
-          {[
+          {user && [
             { href: '/profile',    label: 'Profile',             icon: '👤' },
             { href: '/analytics',  label: 'Analytics Dashboard', icon: '📊' },
             { href: '/settings',   label: 'Settings',            icon: '⚙️' },
@@ -372,10 +591,16 @@ export default function Nav() {
               Sign Out
             </button>
           ) : (
-            <Link href="/login" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', fontSize: '14px', color: '#38bdf8', textDecoration: 'none', borderLeft: '3px solid transparent' }}>
-              <span style={{ fontSize: '16px', lineHeight: 1 }}>🔑</span>
-              Sign In
-            </Link>
+            <>
+              <Link href="/login" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', fontSize: '14px', color: '#38bdf8', textDecoration: 'none', borderLeft: '3px solid transparent' }}>
+                <span style={{ fontSize: '16px', lineHeight: 1 }}>🔑</span>
+                Sign In
+              </Link>
+              <Link href="/register" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', fontSize: '14px', color: '#c4b5fd', textDecoration: 'none', borderLeft: '3px solid transparent' }}>
+                <span style={{ fontSize: '16px', lineHeight: 1 }}>✨</span>
+                Create Account
+              </Link>
+            </>
           )}
         </div>
       </nav>

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import VerifiedBadge from "@/components/organisation/VerifiedBadge";
 import InvestmentSection from "@/components/organisation/InvestmentSection";
 import Avatar from "@/components/Avatar";
+import PostCard, { type FeedPost } from "@/components/PostCard";
 import { createClient } from "@/lib/supabase/client";
 import type { InvestmentIntent } from "@/types/organisation";
 import {
@@ -30,7 +31,7 @@ import {
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type OrgTab = "overview" | "members" | "followers" | "reviews" | "jobs" | "activity";
+type OrgTab = "overview" | "services" | "products" | "posts" | "members" | "followers" | "reviews" | "jobs" | "activity";
 
 interface Organisation {
   id: string;
@@ -117,6 +118,34 @@ interface OrgJob {
   salary_min: number | null;
   salary_max: number | null;
   salary_currency: string | null;
+}
+
+interface OrgService {
+  id: string;
+  title: string;
+  description: string | null;
+  price: number | null;
+  currency: string | null;
+  service_mode: string | null;
+  cover_image: string | null;
+  avg_rating: number | null;
+  review_count: number | null;
+  created_at: string;
+}
+
+interface OrgProduct {
+  id: string;
+  title: string;
+  description: string | null;
+  price: number | null;
+  currency: string | null;
+  product_type: string | null;
+  cover_image: string | null;
+  images: string[] | null;
+  stock_qty: number | null;
+  avg_rating: number | null;
+  review_count: number | null;
+  created_at: string;
 }
 
 interface OrgActivityItem {
@@ -287,6 +316,18 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
   const [jobsLoading, setJobsLoading] = useState(false);
   const [jobsLoaded, setJobsLoaded] = useState(false);
 
+  const [orgServices, setOrgServices] = useState<OrgService[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
+  const [servicesLoaded, setServicesLoaded] = useState(false);
+
+  const [orgProducts, setOrgProducts] = useState<OrgProduct[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [productsLoaded, setProductsLoaded] = useState(false);
+
+  const [orgPosts, setOrgPosts] = useState<FeedPost[]>([]);
+  const [postsLoading, setPostsLoading] = useState(false);
+  const [postsLoaded, setPostsLoaded] = useState(false);
+
   const [orgActivity, setOrgActivity] = useState<OrgActivityItem[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityLoaded, setActivityLoaded] = useState(false);
@@ -296,6 +337,8 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
   const [reviewContent, setReviewContent] = useState("");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+  const [deletingOrg, setDeletingOrg] = useState(false);
   // Role of the current user within this org, if any. Used to
   // decide whether to show the Edit button and the member Remove
   // buttons. `null` means "not a member or still loading". The
@@ -308,6 +351,10 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
   useEffect(() => {
     const sb = createClient();
     sb.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id || null));
+    fetch("/api/profile")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => setIsPlatformAdmin(data?.profile?.role === "admin"))
+      .catch(() => setIsPlatformAdmin(false));
   }, []);
 
   // Fetch the current user's membership role whenever we have both
@@ -333,10 +380,34 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
   // and the member Remove buttons below.
   const canManageOrg = Boolean(
     org && currentUserId &&
-    (currentUserId === org.creator_id ||
+    (isPlatformAdmin ||
+     currentUserId === org.creator_id ||
      userMemberRole === "admin" ||
      userMemberRole === "owner")
   );
+
+  async function handleDeleteOrganisation() {
+    if (!org || deletingOrg) return;
+    const confirmed = window.confirm(
+      `Delete ${org.name}? This will permanently remove the organisation from FreeTrust. This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setDeletingOrg(true);
+    try {
+      const res = await fetch(`/api/organisations/${org.id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        window.alert(data?.error ?? `Could not delete organisation (HTTP ${res.status})`);
+        return;
+      }
+      router.push("/organisations");
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Could not delete organisation");
+    } finally {
+      setDeletingOrg(false);
+    }
+  }
 
   async function handleRemoveMember(userId: string, fullName: string) {
     if (!org) return;
@@ -418,6 +489,63 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
   }, [activeTab, org, id, jobsLoaded, jobsLoading]);
 
   useEffect(() => {
+    if (activeTab === "services" && org && !servicesLoaded && !servicesLoading) {
+      setServicesLoading(true);
+      const sb = createClient();
+      void (async () => {
+        try {
+          const { data } = await sb.from("listings")
+            .select("id, title, description, price, currency, service_mode, cover_image, avg_rating, review_count, created_at")
+            .eq("organisation_id", org.id)
+            .eq("product_type", "service")
+            .eq("status", "active")
+            .order("created_at", { ascending: false });
+          setOrgServices((data ?? []) as OrgService[]);
+          setServicesLoaded(true);
+        } catch {
+          // Non-critical: leave the services tab empty if this query fails.
+        } finally {
+          setServicesLoading(false);
+        }
+      })();
+    }
+  }, [activeTab, org, servicesLoaded, servicesLoading]);
+
+  useEffect(() => {
+    if (activeTab === "products" && org && !productsLoaded && !productsLoading) {
+      setProductsLoading(true);
+      const sb = createClient();
+      void (async () => {
+        try {
+          const { data } = await sb.from("listings")
+            .select("id, title, description, price, currency, product_type, cover_image, images, stock_qty, avg_rating, review_count, created_at")
+            .eq("organisation_id", org.id)
+            .neq("product_type", "service")
+            .eq("status", "active")
+            .order("created_at", { ascending: false });
+          setOrgProducts((data ?? []) as OrgProduct[]);
+          setProductsLoaded(true);
+        } catch {
+          // Non-critical: leave the products tab empty if this query fails.
+        } finally {
+          setProductsLoading(false);
+        }
+      })();
+    }
+  }, [activeTab, org, productsLoaded, productsLoading]);
+
+  useEffect(() => {
+    if (activeTab === "posts" && org && !postsLoaded && !postsLoading) {
+      setPostsLoading(true);
+      fetch(`/api/feed/posts?organisationId=${encodeURIComponent(org.id)}&limit=12`, { cache: "no-store" })
+        .then(r => r.ok ? r.json() : { posts: [] })
+        .then((d: { posts?: FeedPost[] }) => { setOrgPosts(d.posts ?? []); setPostsLoaded(true); })
+        .catch(() => {})
+        .finally(() => setPostsLoading(false));
+    }
+  }, [activeTab, org, postsLoaded, postsLoading]);
+
+  useEffect(() => {
     if (activeTab === "activity" && org && !activityLoaded && !activityLoading) {
       setActivityLoading(true);
       // Fetch jobs, events, listings for this org in parallel
@@ -432,12 +560,18 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
         for (const e of (eventsData.events ?? [])) {
           items.push({ id: `event-${e.id}`, type: "event", title: `📅 Created event: ${e.title}`, href: `/events/${e.id}`, created_at: e.created_at });
         }
+        for (const s of orgServices) {
+          items.push({ id: `service-${s.id}`, type: "listing", title: `🛠 Listed service: ${s.title}`, href: `/services/${s.id}`, created_at: s.created_at });
+        }
+        for (const p of orgProducts) {
+          items.push({ id: `product-${p.id}`, type: "listing", title: `📦 Listed product: ${p.title}`, href: `/products/${p.id}`, created_at: p.created_at });
+        }
         items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         setOrgActivity(items);
         setActivityLoaded(true);
       }).finally(() => setActivityLoading(false));
     }
-  }, [activeTab, org, id, activityLoaded, activityLoading]);
+  }, [activeTab, org, id, activityLoaded, activityLoading, orgServices, orgProducts]);
 
   async function handleReviewSubmit() {
     if (!reviewContent.trim()) return;
@@ -486,6 +620,9 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
 
   const tabs: { key: OrgTab; label: string; count?: number }[] = [
     { key: "overview", label: "Overview" },
+    { key: "services", label: "Services", count: orgServices.length || undefined },
+    { key: "products", label: "Products", count: orgProducts.length || undefined },
+    { key: "posts", label: "Posts", count: orgPosts.length || undefined },
     { key: "jobs", label: "Jobs", count: orgJobs.length || undefined },
     { key: "activity", label: "Activity" },
     { key: "members", label: "Members", count: org.members_count },
@@ -582,6 +719,12 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
               ✏️ Edit
             </Link>
           )}
+          {canManageOrg && (
+            <button onClick={handleDeleteOrganisation} disabled={deletingOrg}
+              style={{ display: "flex", alignItems: "center", gap: 6, borderRadius: 12, padding: "9px 18px", fontSize: 14, fontWeight: 700, cursor: deletingOrg ? "wait" : "pointer", background: "rgba(248,113,113,0.12)", color: "#f87171", border: "1px solid rgba(248,113,113,0.35)", opacity: deletingOrg ? 0.7 : 1 }}>
+              {deletingOrg ? "Deleting…" : "🗑️ Delete"}
+            </button>
+          )}
         </div>
 
         {/* Meta chips */}
@@ -649,24 +792,26 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
         </div>
 
         {/* Tabs */}
-        <div style={{ borderBottom: "1px solid #1e293b", marginBottom: 20, display: "flex", overflowX: "auto", scrollbarWidth: "none" }}>
-          {tabs.map(t => (
-            <button key={t.key} onClick={() => setActiveTab(t.key)}
-              style={{
-                flexShrink: 0, padding: "10px 14px", fontSize: 13, fontWeight: activeTab === t.key ? 600 : 400,
-                color: activeTab === t.key ? "#f1f5f9" : "#475569",
-                background: "none", border: "none", cursor: "pointer",
-                borderBottom: activeTab === t.key ? "2px solid #7c3aed" : "2px solid transparent",
-                marginBottom: -1, whiteSpace: "nowrap",
-              }}>
-              {t.label}
-              {t.count !== undefined && t.count > 0 && (
-                <span style={{ marginLeft: 5, fontSize: 10, fontWeight: 600, borderRadius: 10, padding: "1px 6px", background: activeTab === t.key ? "rgba(124,58,237,0.25)" : "#1e293b", color: activeTab === t.key ? "#a78bfa" : "#64748b" }}>
-                  {t.count}
-                </span>
-              )}
-            </button>
-          ))}
+        <div style={{ borderBottom: "1px solid #1e293b", marginBottom: 20, overflow: "hidden" }}>
+          <div style={{ display: "flex", overflowX: "auto", overflowY: "hidden", scrollbarWidth: "none", WebkitOverflowScrolling: "touch", touchAction: "pan-x", whiteSpace: "nowrap" }}>
+            {tabs.map(t => (
+              <button key={t.key} onClick={() => setActiveTab(t.key)}
+                style={{
+                  flex: "0 0 auto", padding: "10px 14px", fontSize: 13, fontWeight: activeTab === t.key ? 600 : 400,
+                  color: activeTab === t.key ? "#f1f5f9" : "#475569",
+                  background: "none", border: "none", cursor: "pointer",
+                  borderBottom: activeTab === t.key ? "2px solid #7c3aed" : "2px solid transparent",
+                  marginBottom: -1, whiteSpace: "nowrap",
+                }}>
+                {t.label}
+                {t.count !== undefined && t.count > 0 && (
+                  <span style={{ marginLeft: 5, fontSize: 10, fontWeight: 600, borderRadius: 10, padding: "1px 6px", background: activeTab === t.key ? "rgba(124,58,237,0.25)" : "#1e293b", color: activeTab === t.key ? "#a78bfa" : "#64748b" }}>
+                    {t.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -755,6 +900,152 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
                 )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ── SERVICES ── */}
+        {activeTab === "services" && (
+          <div>
+            <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 14 }}>
+              Services offered by {org.name}
+            </div>
+            {canManageOrg && (
+              <Link
+                href={`/seller/gigs/create?orgId=${encodeURIComponent(org.id)}`}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.25)", borderRadius: 14, padding: "12px 0", fontSize: 14, fontWeight: 600, color: "#7dd3fc", cursor: "pointer", marginBottom: 16, textDecoration: "none" }}
+              >
+                <BriefcaseIcon style={{ width: 16, height: 16 }} />
+                Offer a Service as {org.name}
+              </Link>
+            )}
+            {servicesLoading ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {[1, 2, 3].map(i => <div key={i} style={{ height: 98, borderRadius: 16, background: "#0f172a", border: "1px solid #1e293b" }} />)}
+              </div>
+            ) : orgServices.length === 0 ? (
+              <EmptyState
+                icon={<BriefcaseIcon style={{ width: 28, height: 28, color: "#475569" }} />}
+                title="No services listed yet"
+                sub={canManageOrg ? "List the first service on behalf of this organisation." : "This organisation hasn't listed any services yet."}
+              />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {orgServices.map(service => (
+                  <Link key={service.id} href={`/services/${service.id}`} style={{ display: "flex", alignItems: "flex-start", gap: 12, background: "#0f172a", border: "1px solid #1e293b", borderRadius: 16, padding: 14, textDecoration: "none" }}>
+                    {service.cover_image ? (
+                      <img src={service.cover_image} alt="" style={{ width: 54, height: 54, borderRadius: 12, objectFit: "cover", flexShrink: 0, background: "#1e293b" }} />
+                    ) : (
+                      <div style={{ width: 54, height: 54, borderRadius: 12, background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.18)", color: "#7dd3fc", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 22 }}>🛠</div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", lineHeight: 1.35, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{service.title}</div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: "#34d399", whiteSpace: "nowrap", flexShrink: 0 }}>
+                          €{Number(service.price ?? 0).toLocaleString("en-IE", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        </div>
+                      </div>
+                      {service.description && <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5, margin: "6px 0 0", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{service.description}</p>}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                        {service.service_mode && <span style={{ fontSize: 11, color: "#7dd3fc", background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.18)", borderRadius: 999, padding: "2px 8px" }}>{service.service_mode === "online" ? "🌐 Online" : service.service_mode === "offline" ? "📍 In person" : service.service_mode}</span>}
+                        <span style={{ fontSize: 11, color: "#fbbf24" }}>⭐ {service.avg_rating && (service.review_count ?? 0) > 0 ? Number(service.avg_rating).toFixed(1) : "New"} ({service.review_count ?? 0})</span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── PRODUCTS ── */}
+        {activeTab === "products" && (
+          <div>
+            <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 14 }}>
+              Products offered by {org.name}
+            </div>
+            {canManageOrg && (
+              <Link
+                href={`/products/new?orgId=${encodeURIComponent(org.id)}`}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.25)", borderRadius: 14, padding: "12px 0", fontSize: 14, fontWeight: 600, color: "#7dd3fc", cursor: "pointer", marginBottom: 16, textDecoration: "none" }}
+              >
+                <span style={{ fontSize: 16 }}>📦</span>
+                Offer a Product as {org.name}
+              </Link>
+            )}
+            {productsLoading ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {[1, 2, 3].map(i => <div key={i} style={{ height: 98, borderRadius: 16, background: "#0f172a", border: "1px solid #1e293b" }} />)}
+              </div>
+            ) : orgProducts.length === 0 ? (
+              <EmptyState
+                icon={<span style={{ fontSize: 28, color: "#475569" }}>📦</span>}
+                title="No products listed yet"
+                sub={canManageOrg ? "List the first product on behalf of this organisation." : "This organisation hasn't listed any products yet."}
+              />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {orgProducts.map(product => {
+                  const cover = product.cover_image ?? (Array.isArray(product.images) ? product.images[0] : null);
+                  return (
+                    <Link key={product.id} href={`/products/${product.id}`} style={{ display: "flex", alignItems: "flex-start", gap: 12, background: "#0f172a", border: "1px solid #1e293b", borderRadius: 16, padding: 14, textDecoration: "none" }}>
+                      {cover ? (
+                        <img src={cover} alt="" style={{ width: 54, height: 54, borderRadius: 12, objectFit: "cover", flexShrink: 0, background: "#1e293b" }} />
+                      ) : (
+                        <div style={{ width: 54, height: 54, borderRadius: 12, background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.18)", color: "#7dd3fc", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 22 }}>📦</div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", lineHeight: 1.35, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{product.title}</div>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: "#34d399", whiteSpace: "nowrap", flexShrink: 0 }}>
+                            €{Number(product.price ?? 0).toLocaleString("en-IE", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                          </div>
+                        </div>
+                        {product.description && <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5, margin: "6px 0 0", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{product.description}</p>}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                          {product.product_type && <span style={{ fontSize: 11, color: "#7dd3fc", background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.18)", borderRadius: 999, padding: "2px 8px" }}>{product.product_type === "digital" ? "💾 Digital" : "📦 Physical"}</span>}
+                          {product.product_type === "physical" && <span style={{ fontSize: 11, color: product.stock_qty == null || product.stock_qty > 0 ? "#34d399" : "#f87171" }}>{product.stock_qty == null ? "In stock" : product.stock_qty > 0 ? `${product.stock_qty} in stock` : "Out of stock"}</span>}
+                          <span style={{ fontSize: 11, color: "#fbbf24" }}>⭐ {product.avg_rating && (product.review_count ?? 0) > 0 ? Number(product.avg_rating).toFixed(1) : "New"} ({product.review_count ?? 0})</span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── POSTS ── */}
+        {activeTab === "posts" && (
+          <div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>
+                Posts from {org.name}
+              </div>
+              {canManageOrg && (
+                <Link href={`/create?orgId=${encodeURIComponent(org.id)}`} style={{ fontSize: 12, fontWeight: 700, color: "#7dd3fc", border: "1px solid rgba(56,189,248,0.25)", borderRadius: 8, padding: "5px 10px", textDecoration: "none" }}>+ Post</Link>
+              )}
+            </div>
+            {postsLoading ? (
+              <div style={{ color: "#64748b", fontSize: 14 }}>Loading posts…</div>
+            ) : orgPosts.length === 0 ? (
+              <EmptyState
+                icon={<BuildingOfficeIcon style={{ width: 28, height: 28, color: "#475569" }} />}
+                title="No posts yet"
+                sub={canManageOrg ? "Create the first social post as this organisation." : "This organisation hasn't shared any posts yet."}
+              />
+            ) : (
+              <div style={{ margin: "0 -16px" }}>
+                {orgPosts.map(post => (
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    currentUserId={currentUserId ?? undefined}
+                    onDelete={postId => setOrgPosts(prev => prev.filter(p => p.id !== postId))}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
 

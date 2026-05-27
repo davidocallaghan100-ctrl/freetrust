@@ -1,9 +1,10 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 const POST_TYPES = [
   { value: 'text', label: '✏️ Text Post', desc: 'Share your thoughts' },
+  { value: 'link', label: '🔗 Link / Spotify', desc: 'Preview a page or song' },
   { value: 'video', label: '🎬 Video', desc: 'Share a video link' },
   { value: 'article', label: '📰 Article', desc: 'Share an article' },
   { value: 'listing', label: '🛍️ Listing', desc: 'Promote a product or service' },
@@ -26,6 +27,7 @@ const S: Record<string, React.CSSProperties> = {
   typeBtnDesc: { fontSize: '0.75rem', color: '#64748b' },
   textarea: { width: '100%', minHeight: 140, background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, padding: '0.75rem', color: '#f1f5f9', fontSize: '0.92rem', resize: 'vertical' as const, outline: 'none', fontFamily: 'system-ui', boxSizing: 'border-box' as const, marginBottom: '1rem' },
   input: { width: '100%', background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, padding: '0.65rem 0.75rem', color: '#f1f5f9', fontSize: '0.92rem', outline: 'none', fontFamily: 'system-ui', boxSizing: 'border-box' as const, marginBottom: '1rem' },
+  chip: { display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(139,92,246,0.16)', border: '1px solid rgba(139,92,246,0.35)', color: '#ddd6fe', borderRadius: 999, padding: '0.25rem 0.6rem', fontSize: '0.78rem', fontWeight: 700, marginRight: 6, marginBottom: 8 },
   charCount: { fontSize: '0.75rem', color: '#64748b', textAlign: 'right' as const, marginTop: '-0.75rem', marginBottom: '1rem' },
   actions: { display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' },
   cancelBtn: { background: 'transparent', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, padding: '0.6rem 1.25rem', color: '#94a3b8', fontSize: '0.88rem', cursor: 'pointer' },
@@ -33,13 +35,53 @@ const S: Record<string, React.CSSProperties> = {
   error: { background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 8, padding: '0.75rem 1rem', color: '#f87171', fontSize: '0.85rem', marginBottom: '1rem' },
 }
 
+type OrganisationOption = { id: string; name: string; slug: string | null; logo_url?: string | null }
+
+function extractFirstUrl(text: string) {
+  return text.match(/https?:\/\/[^\s<]+/i)?.[0]?.replace(/[),.;!?]+$/, '') ?? ''
+}
+
+function isSpotifyUrl(raw: string) {
+  try { return new URL(raw).hostname.endsWith('spotify.com') }
+  catch { return false }
+}
+
+function slugify(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
 export default function NewFeedPostPage() {
   const router = useRouter()
   const [type, setType] = useState('text')
   const [content, setContent] = useState('')
   const [mediaUrl, setMediaUrl] = useState('')
+  const [orgQuery, setOrgQuery] = useState('')
+  const [orgResults, setOrgResults] = useState<OrganisationOption[]>([])
+  const [taggedOrgs, setTaggedOrgs] = useState<OrganisationOption[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const q = orgQuery.trim()
+    if (q.length < 2) { setOrgResults([]); return }
+    let cancelled = false
+    const timer = setTimeout(() => {
+      fetch(`/api/organisations?search=${encodeURIComponent(q)}&limit=8`)
+        .then(res => res.ok ? res.json() : Promise.reject(new Error('search failed')))
+        .then((data: { organisations?: OrganisationOption[] }) => { if (!cancelled) setOrgResults(data.organisations ?? []) })
+        .catch(() => { if (!cancelled) setOrgResults([]) })
+    }, 200)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [orgQuery])
+
+  const tagOrganisation = (org: OrganisationOption) => {
+    const slug = org.slug || slugify(org.name)
+    const mention = `@${slug}`
+    if (!content.includes(mention)) setContent(prev => `${prev}${prev && !prev.endsWith(' ') ? ' ' : ''}${mention} `)
+    setTaggedOrgs(prev => prev.some(o => o.id === org.id) ? prev : [...prev, org])
+    setOrgQuery('')
+    setOrgResults([])
+  }
 
   const handleSubmit = async () => {
     setError('')
@@ -47,12 +89,21 @@ export default function NewFeedPostPage() {
       setError('Please write something before posting.')
       return
     }
+    const attachedUrl = mediaUrl.trim() || extractFirstUrl(content)
+    const spotify = isSpotifyUrl(attachedUrl)
+    const payloadType = attachedUrl && (type === 'text' || type === 'link' || spotify) ? 'link' : type
     setSubmitting(true)
     try {
       const res = await fetch('/api/feed/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, content: content.trim(), media_url: mediaUrl.trim() || null }),
+        body: JSON.stringify({
+          type: payloadType,
+          content: content.trim(),
+          media_url: type === 'video' && attachedUrl && !spotify ? attachedUrl : null,
+          media_type: spotify ? 'spotify' : null,
+          link_url: attachedUrl || null,
+        }),
       })
       if (res.status === 401) {
         router.push('/login')
@@ -71,7 +122,7 @@ export default function NewFeedPostPage() {
     }
   }
 
-  const showMediaField = ['video', 'article', 'listing', 'event'].includes(type)
+  const showMediaField = true
 
   return (
     <div style={S.page}>
@@ -122,15 +173,39 @@ export default function NewFeedPostPage() {
 
           {showMediaField && (
             <>
-              <label style={S.label}>{type === 'video' ? 'Video URL' : 'Link / Media URL'} (optional)</label>
+              <label style={S.label}>{type === 'video' ? 'Video URL' : 'Spotify / Link URL'} (optional)</label>
               <input
                 type="url"
                 style={S.input}
-                placeholder={type === 'video' ? 'https://youtube.com/watch?v=...' : 'https://...'}
+                placeholder={type === 'video' ? 'https://youtube.com/watch?v=...' : 'https://open.spotify.com/track/... or https://...'}
                 value={mediaUrl}
                 onChange={e => setMediaUrl(e.target.value)}
               />
             </>
+          )}
+
+          <label style={S.label}>Tag organisations (optional)</label>
+          <input
+            type="text"
+            style={{ ...S.input, marginBottom: orgResults.length > 0 ? 0 : '0.5rem' }}
+            placeholder="Search organisations to tag with @slug"
+            value={orgQuery}
+            onChange={e => setOrgQuery(e.target.value)}
+          />
+          {orgResults.length > 0 && (
+            <div style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, overflow: 'hidden', marginBottom: '0.75rem' }}>
+              {orgResults.map(org => (
+                <button key={org.id} type="button" onClick={() => tagOrganisation(org)} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid #1e293b', padding: '0.65rem 0.75rem', color: '#f1f5f9', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+                  <span style={{ width: 28, height: 28, borderRadius: 999, background: 'rgba(139,92,246,0.2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#c4b5fd', fontWeight: 800 }}>{org.logo_url ? '🏢' : org.name.slice(0, 1).toUpperCase()}</span>
+                  <span><strong>{org.name}</strong><br /><span style={{ color: '#64748b', fontSize: '0.75rem' }}>@{org.slug || slugify(org.name)}</span></span>
+                </button>
+              ))}
+            </div>
+          )}
+          {taggedOrgs.length > 0 && (
+            <div style={{ marginBottom: '1rem' }}>
+              {taggedOrgs.map(org => <span key={org.id} style={S.chip}>@{org.slug || slugify(org.name)} · {org.name}</span>)}
+            </div>
           )}
 
           <div style={S.actions}>

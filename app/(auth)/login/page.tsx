@@ -169,10 +169,11 @@ function LoginForm() {
         .auth-logo { display: flex; align-items: center; gap: 8px; text-decoration: none; margin-bottom: 26px; }
         .auth-logo-mark {
           width: 34px; height: 34px;
-          background: linear-gradient(135deg, #38bdf8, #0284c7);
           border-radius: 9px;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 13px; font-weight: 900; color: #0f172a; letter-spacing: -0.5px; flex-shrink: 0;
+          display: block;
+          object-fit: cover;
+          flex-shrink: 0;
+          box-shadow: 0 0 18px rgba(56,189,248,0.22);
         }
         .auth-logo-text { font-size: 18px; font-weight: 800; color: #f1f5f9; letter-spacing: -0.3px; }
         .auth-logo-text span { color: #38bdf8; }
@@ -359,7 +360,7 @@ function LoginForm() {
 
         <div className="auth-card">
           <Link href="/" className="auth-logo">
-            <div className="auth-logo-mark">FT</div>
+            <img className="auth-logo-mark" src="/icons/freetrust-logo-website-20260521.png" alt="FreeTrust" />
             <span className="auth-logo-text">Free<span>Trust</span></span>
           </Link>
 

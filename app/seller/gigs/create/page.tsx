@@ -1,8 +1,8 @@
 
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useEffect, useState, useRef, useCallback } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { compressImage } from '@/lib/image-compression'
 
@@ -32,6 +32,13 @@ type GigFormData = {
   images: File[]
   tags: string[]
   skills: string[]
+}
+
+type ManagedOrganisation = {
+  id: string
+  name: string
+  slug?: string | null
+  logo_url?: string | null
 }
 
 const STEPS = [
@@ -137,7 +144,17 @@ const initialForm: GigFormData = {
 }
 
 export default function CreateGigPage() {
+  return (
+    <Suspense fallback={<div style={styles.page} />}>
+      <CreateGigPageContent />
+    </Suspense>
+  )
+}
+
+function CreateGigPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const requestedOrgId = searchParams.get('orgId')
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<GigFormData>(initialForm)
   const [tagInput, setTagInput] = useState('')
@@ -153,6 +170,25 @@ export default function CreateGigPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dragCounter = useRef(0)
   const [isDragging, setIsDragging] = useState(false)
+  const [managedOrgs, setManagedOrgs] = useState<ManagedOrganisation[]>([])
+  const [selectedOrgId, setSelectedOrgId] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/organisations/mine', { cache: 'no-store' })
+      .then(res => res.ok ? res.json() : null)
+      .then((data: { organisations?: ManagedOrganisation[] } | null) => {
+        if (cancelled) return
+        const orgs = data?.organisations ?? []
+        setManagedOrgs(orgs)
+        if (requestedOrgId && orgs.some(org => org.id === requestedOrgId || org.slug === requestedOrgId)) {
+          const org = orgs.find(o => o.id === requestedOrgId || o.slug === requestedOrgId)
+          setSelectedOrgId(org?.id ?? '')
+        }
+      })
+      .catch(() => { if (!cancelled) setManagedOrgs([]) })
+    return () => { cancelled = true }
+  }, [requestedOrgId])
 
   const updateForm = (field: keyof GigFormData, value: unknown) => {
     setForm(prev => ({ ...prev, [field]: value }))
@@ -425,6 +461,7 @@ export default function CreateGigPage() {
           structured_location: structuredLocation,
           is_remote: isRemote,
           currency_code: 'EUR',
+          organisation_id: selectedOrgId || undefined,
         }),
       })
 
@@ -474,6 +511,28 @@ export default function CreateGigPage() {
             <p style={styles.subtitle}>Fill in the details to list your service</p>
           </div>
         </div>
+
+        {managedOrgs.length > 0 && (
+          <div style={{ marginBottom: '1rem', background: 'rgba(15,23,42,0.78)', border: '1px solid rgba(56,189,248,0.18)', borderRadius: 14, padding: '0.9rem 1rem' }}>
+            <label htmlFor="gig-org" style={{ display: 'block', fontSize: '0.76rem', fontWeight: 800, letterSpacing: '0.06em', color: '#7dd3fc', textTransform: 'uppercase', marginBottom: 6 }}>
+              Offer this service as
+            </label>
+            <select
+              id="gig-org"
+              value={selectedOrgId}
+              onChange={e => setSelectedOrgId(e.target.value)}
+              style={{ width: '100%', background: '#020617', border: '1px solid #334155', borderRadius: 10, padding: '0.7rem 0.8rem', color: '#f8fafc', fontSize: '0.92rem', fontFamily: 'inherit', outline: 'none' }}
+            >
+              <option value="">My personal profile</option>
+              {managedOrgs.map(org => (
+                <option key={org.id} value={org.id}>{org.name}</option>
+              ))}
+            </select>
+            <div style={{ marginTop: 7, color: '#94a3b8', fontSize: '0.78rem', lineHeight: 1.45 }}>
+              Organisation services appear on that organisation profile. You remain the accountable seller for payouts and edits.
+            </div>
+          </div>
+        )}
 
         {/* Stepper */}
         <div style={styles.stepper}>

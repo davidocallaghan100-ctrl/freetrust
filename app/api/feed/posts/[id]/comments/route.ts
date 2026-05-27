@@ -1,8 +1,31 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail } from '@/lib/email/send'
 import { sendPushNotification } from '@/lib/push/sendPushNotification'
+
+async function canPostAsOrganisation(admin: ReturnType<typeof createAdminClient>, userId: string, organisationId: string) {
+  const { data: membership } = await admin
+    .from('organisation_members')
+    .select('role')
+    .eq('user_id', userId)
+    .eq('organisation_id', organisationId)
+    .in('role', ['owner', 'admin'])
+    .maybeSingle()
+
+  if (membership) return true
+
+  const { data: created } = await admin
+    .from('organisations')
+    .select('id')
+    .eq('id', organisationId)
+    .eq('creator_id', userId)
+    .eq('status', 'active')
+    .maybeSingle()
+
+  return Boolean(created)
+}
 
 export async function GET(
   req: NextRequest,
@@ -15,8 +38,9 @@ export async function GET(
     const { data: comments, error } = await supabase
       .from('feed_comments')
       .select(`
-        id, content, created_at,
-        profiles!feed_comments_user_id_fkey(id, full_name, avatar_url)
+        id, content, created_at, posted_as_organisation_id,
+        profiles!feed_comments_user_id_fkey(id, full_name, avatar_url),
+        posted_as_organisation:organisations!feed_comments_posted_as_organisation_id_fkey(id, name, slug, logo_url)
       `)
       .eq('post_id', id)
       .order('created_at', { ascending: true })
@@ -48,17 +72,29 @@ export async function POST(
 
     const body = await req.json()
     const content = (body?.content ?? '').trim()
+    const postedAsOrganisationId = typeof body?.posted_as_organisation_id === 'string' && body.posted_as_organisation_id.trim()
+      ? body.posted_as_organisation_id.trim()
+      : null
 
     if (!content) {
       return NextResponse.json({ error: 'Comment content is required' }, { status: 400 })
     }
 
+    const admin = createAdminClient()
+    if (postedAsOrganisationId) {
+      const allowed = await canPostAsOrganisation(admin, user.id, postedAsOrganisationId)
+      if (!allowed) {
+        return NextResponse.json({ error: 'You are not allowed to comment as this page' }, { status: 403 })
+      }
+    }
+
     const { data: comment, error: insertError } = await supabase
       .from('feed_comments')
-      .insert({ post_id: id, user_id: user.id, content })
+      .insert({ post_id: id, user_id: user.id, content, posted_as_organisation_id: postedAsOrganisationId })
       .select(`
-        id, content, created_at,
-        profiles!feed_comments_user_id_fkey(id, full_name, avatar_url)
+        id, content, created_at, posted_as_organisation_id,
+        profiles!feed_comments_user_id_fkey(id, full_name, avatar_url),
+        posted_as_organisation:organisations!feed_comments_posted_as_organisation_id_fkey(id, name, slug, logo_url)
       `)
       .single()
 
@@ -82,12 +118,22 @@ export async function POST(
 
       // Email the post author (preference-checked, skip self-comments)
       if (postData.user_id && postData.user_id !== user.id) {
-        const { data: commenter } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', user.id)
-          .maybeSingle()
-        const commenterName = commenter?.full_name ?? 'Someone'
+        let commenterName = 'Someone'
+        if (postedAsOrganisationId) {
+          const { data: org } = await admin
+            .from('organisations')
+            .select('name')
+            .eq('id', postedAsOrganisationId)
+            .maybeSingle()
+          commenterName = org?.name ?? 'A page'
+        } else {
+          const { data: commenter } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .maybeSingle()
+          commenterName = commenter?.full_name ?? 'Someone'
+        }
         const preview = content.length > 200 ? content.slice(0, 200) + '…' : content
         sendEmail({
           type: 'new_comment',

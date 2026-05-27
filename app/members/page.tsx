@@ -45,9 +45,19 @@ interface Member {
   skills: string[] | null
   account_type: string | null
   trust_balance: number
+  is_verified?: boolean | null
+  verified_at?: string | null
+  verification_status?: string | null
+  profile_verification_status?: string | null
+  profile_identity_verified_at?: string | null
+  professional_headline?: string | null
   // Social link fields — surfaced under the avatar on each member card.
   // Empty fields are filtered out by the SocialLinks component.
   socials?: SocialUrls
+}
+
+function memberVerified(member: Member) {
+  return member.profile_verification_status === 'verified'
 }
 
 const S: Record<string, React.CSSProperties> = {
@@ -131,6 +141,7 @@ export default function MemberDirectoryPage() {
           twitter_url?: string | null; github_url?: string | null
           tiktok_url?: string | null; youtube_url?: string | null
           website_url?: string | null
+          is_verified?: boolean | null; verified_at?: string | null; verification_status?: string | null; profile_verification_status?: string | null; profile_identity_verified_at?: string | null; professional_headline?: string | null
         }
         return {
           id: p.id,
@@ -141,6 +152,12 @@ export default function MemberDirectoryPage() {
           skills: [],
           account_type: 'individual',
           trust_balance: p.trust_balance ?? 0,
+          is_verified: p.is_verified ?? false,
+          verified_at: p.verified_at ?? null,
+          verification_status: p.verification_status ?? null,
+          profile_verification_status: p.profile_verification_status ?? null,
+          profile_identity_verified_at: p.profile_identity_verified_at ?? null,
+          professional_headline: p.professional_headline ?? null,
           socials: {
             linkedin_url:  p.linkedin_url  ?? null,
             instagram_url: p.instagram_url ?? null,
@@ -246,7 +263,7 @@ export default function MemberDirectoryPage() {
 
   const filtered = members.filter(m => {
     const q = search.toLowerCase()
-    const nameMatch = !q || (m.full_name ?? '').toLowerCase().includes(q) || (m.bio ?? '').toLowerCase().includes(q) || (m.location ?? '').toLowerCase().includes(q)
+    const nameMatch = !q || (m.full_name ?? '').toLowerCase().includes(q) || (m.bio ?? '').toLowerCase().includes(q) || (m.location ?? '').toLowerCase().includes(q) || (m.professional_headline ?? '').toLowerCase().includes(q)
     return categoryMatch(m, activeCategory) && nameMatch
   })
 
@@ -410,7 +427,13 @@ export default function MemberDirectoryPage() {
                   </div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f1f5f9', lineHeight: 1.2 }}>{name}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap', fontSize: '1rem', fontWeight: 700, color: '#f1f5f9', lineHeight: 1.2 }}>
+                    <span>{name}</span>
+                    {memberVerified(member) && (
+                      <span title="Profile details verified by FreeTrust" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.35)', borderRadius: 999, padding: '1px 6px', color: '#34d399', fontSize: '0.66rem', fontWeight: 800 }}>✓</span>
+                    )}
+                  </div>
+                  {member.professional_headline && <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginTop: '0.22rem', fontWeight: 600 }}>{member.professional_headline}</div>}
                   {member.location && <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>📍 {member.location}</div>}
                 </div>
                 <div style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.2rem 0.55rem', fontSize: '0.78rem', fontWeight: 700, color: '#38bdf8', flexShrink: 0 }}>

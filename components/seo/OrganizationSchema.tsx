@@ -8,7 +8,7 @@ export function OrganizationSchema() {
     '@type': 'Organization',
     name: 'FreeTrust',
     url: 'https://freetrust.co',
-    logo: 'https://freetrust.co/og-image.png',
+    logo: 'https://freetrust.co/icons/icon-512x512.png',
     foundingDate: '2024',
     description: 'FreeTrust is the community economy marketplace built around Trust Coin (₮). Buy, sell, find jobs, and build trust — member-owned, community-first.',
     sameAs: [

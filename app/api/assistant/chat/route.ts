@@ -21,7 +21,7 @@ PLATFORM KNOWLEDGE:
 Trust Economy:
 - Trust (₮) is earned by: completing orders ₮5-20, getting 5-star reviews ₮10, completing profile ₮10, posting articles ₮5, joining communities ₮2, inviting friends ₮15, first listing ₮25
 - Trust can be spent on: boosting listings, premium features, donating to impact projects
-- Trust milestones: ₮100 = Trusted Member, ₮500 = Verified Pro, ₮1000 = FreeTrust Elite
+- Trust milestones: ₮100 = Trusted Member, ₮500 = Active Pro, ₮1000 = FreeTrust Elite
 - Trust score affects search ranking and buyer confidence
 
 Payments & Escrow:

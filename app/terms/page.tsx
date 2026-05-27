@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'Terms of Service | FreeTrust',
-  description: 'Terms of Service for FreeTrust, operated by Airpal Technology Ltd.',
+  description: 'Terms of Service for FreeTrust, a registered business in Ireland.',
 }
 
 const sections = [
@@ -16,7 +16,7 @@ const sections = [
         <a href="https://freetrust.co" className="text-[#38bdf8] hover:underline">freetrust.co</a>{' '}
         (&ldquo;Platform&rdquo;), you agree to be bound by these Terms of Service (&ldquo;Terms&rdquo;). If you do not
         agree to these Terms, you may not access or use the Platform. These Terms constitute a legally
-        binding agreement between you and Airpal Technology Ltd, operating as FreeTrust.
+        binding agreement between you and FreeTrust.
       </p>
     ),
   },
@@ -26,9 +26,7 @@ const sections = [
     content: (
       <>
         <p>
-          FreeTrust is a trust-based community platform operated by{' '}
-          <strong className="text-white">Airpal Technology Ltd</strong>, a company registered in the
-          Republic of Ireland. The Platform enables:
+          FreeTrust is a trust-based community platform and registered business in Ireland. The Platform enables:
         </p>
         <ul className="mt-3 space-y-2 list-disc list-inside text-[#94a3b8]">
           <li>Freelancers and gig workers to list and sell services and products</li>
@@ -141,10 +139,10 @@ const sections = [
     content: (
       <p>
         The FreeTrust Platform, including its design, software, branding, and original content, is
-        owned by Airpal Technology Ltd and protected by intellectual property laws. You may not copy,
+        owned by FreeTrust and protected by intellectual property laws. You may not copy,
         reproduce, modify, distribute, or create derivative works based on the Platform or its content
         without our prior written permission. The FreeTrust name, logo, and associated marks are
-        trademarks of Airpal Technology Ltd.
+        trademarks of FreeTrust.
       </p>
     ),
   },
@@ -166,7 +164,7 @@ const sections = [
     content: (
       <>
         <p>
-          To the maximum extent permitted by applicable law, Airpal Technology Ltd and its directors,
+          To the maximum extent permitted by applicable law, FreeTrust and its directors,
           employees, and agents shall not be liable for any indirect, incidental, special,
           consequential, or punitive damages arising from:
         </p>
@@ -254,11 +252,11 @@ const sections = [
       <>
         <p>For any questions about these Terms, please contact:</p>
         <div className="mt-3 p-4 rounded-xl bg-[#13131a] border border-[#2a2a3a]">
-          <p className="text-white font-semibold">Airpal Technology Ltd</p>
-          <p className="text-[#94a3b8]">Operating as FreeTrust</p>
+          <p className="text-white font-semibold">FreeTrust</p>
+          <p className="text-[#94a3b8]">Registered business in Ireland</p>
           <p className="mt-2">
-            <a href="mailto:davidocallaghan100@gmail.com" className="text-[#38bdf8] hover:underline">
-              davidocallaghan100@gmail.com
+            <a href="mailto:hello@freetrust.co" className="text-[#38bdf8] hover:underline">
+              hello@freetrust.co
             </a>
           </p>
           <p className="text-[#94a3b8] mt-1">Republic of Ireland</p>
@@ -270,53 +268,49 @@ const sections = [
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-[#94a3b8]">
-      {/* Header */}
-      <div className="border-b border-[#2a2a3a] bg-[#13131a]">
-        <div className="max-w-3xl mx-auto px-4 py-8">
-          <Link href="/" className="text-[#38bdf8] text-sm hover:underline mb-4 inline-block">
-            ← Back to FreeTrust
-          </Link>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-[#00d4aa]/20 flex items-center justify-center text-xl">
-              📋
-            </div>
-            <h1 className="text-2xl font-bold text-white">Terms of Service</h1>
+    <div className="ft-policy-page">
+      <div className="ft-policy-wrap">
+        <section className="ft-policy-hero">
+          <Link href="/" className="ft-policy-back">← Back to FreeTrust</Link>
+          <div className="ft-policy-eyebrow">
+            📋 Terms
           </div>
-          <p className="text-[#94a3b8] text-sm">
-            Last updated: April 2026 &nbsp;·&nbsp; Operated by Airpal Technology Ltd
+          <h1>Terms of Service</h1>
+          <p className="ft-policy-subtitle">
+            The rules for using FreeTrust, creating listings, transacting with members and participating safely.
           </p>
-        </div>
-      </div>
+          <p className="ft-policy-meta">
+            Last updated: April 2026 &nbsp;·&nbsp; Registered business in Ireland
+          </p>
+          <div className="ft-policy-actions">
+            <Link href="/safety" className="ft-policy-btn">Trust &amp; Safety</Link>
+            <Link href="/privacy" className="ft-policy-btn">Privacy Policy</Link>
+            <Link href="/register" className="ft-policy-btn ft-policy-btn-primary">Join FreeTrust safely →</Link>
+          </div>
+        </section>
 
-      {/* Content */}
-      <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-        <p className="text-[#94a3b8] leading-relaxed">
+        <p className="ft-policy-intro">
           Please read these Terms of Service carefully before using FreeTrust. These Terms govern your
-          access to and use of the FreeTrust platform, operated by Airpal Technology Ltd.
+          access to and use of the FreeTrust platform, a registered business in Ireland.
         </p>
 
-        {sections.map((section) => (
-          <div
-            key={section.id}
-            id={section.id}
-            className="bg-[#13131a] border border-[#2a2a3a] rounded-2xl p-5"
-          >
-            <h2 className="text-white font-semibold text-lg mb-3">{section.title}</h2>
-            <div className="leading-relaxed text-sm">{section.content}</div>
-          </div>
-        ))}
-      </div>
+        <section className="ft-policy-stack">
+          {sections.map((section) => (
+            <article key={section.id} id={section.id} className="ft-policy-card">
+              <h2>{section.title}</h2>
+              <div className="ft-policy-content">{section.content}</div>
+            </article>
+          ))}
+        </section>
 
-      {/* Footer */}
-      <div className="border-t border-[#2a2a3a] mt-8">
-        <div className="max-w-3xl mx-auto px-4 py-6 flex flex-col sm:flex-row gap-3 items-center justify-between text-sm text-[#94a3b8]">
-          <p>© 2026 Airpal Technology Ltd · FreeTrust</p>
-          <div className="flex gap-4">
-            <Link href="/privacy" className="text-[#38bdf8] hover:underline">Privacy Policy</Link>
-            <Link href="/" className="hover:text-white">Home</Link>
+        <footer className="ft-policy-footer">
+          <p>© 2026 FreeTrust · Registered business in Ireland</p>
+          <div className="ft-policy-footer-links">
+            <Link href="/privacy" className="ft-policy-link">Privacy Policy</Link>
+            <Link href="/safety" className="ft-policy-link">Trust &amp; Safety</Link>
+            <Link href="/" className="ft-policy-link">Home</Link>
           </div>
-        </div>
+        </footer>
       </div>
     </div>
   )

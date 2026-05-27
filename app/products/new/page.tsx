@@ -1,6 +1,6 @@
 'use client'
-import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import React, { Suspense, useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { compressImage } from '@/lib/image-compression'
 import dynamic from 'next/dynamic'
@@ -26,6 +26,13 @@ const CATEGORIES = [
 const MAX_IMAGES = 8
 
 interface NewImage { type: 'new'; file: File; preview: string }
+
+type ManagedOrganisation = {
+  id: string
+  name: string
+  slug?: string | null
+  logo_url?: string | null
+}
 
 const COUNTRY_OPTIONS: { code: string; name: string }[] = [
   { code: 'IE', name: 'Ireland' },
@@ -57,7 +64,17 @@ const COUNTRY_OPTIONS: { code: string; name: string }[] = [
 ]
 
 export default function NewProductPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', paddingTop: 64 }} />}>
+      <NewProductPageContent />
+    </Suspense>
+  )
+}
+
+function NewProductPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const requestedOrgId = searchParams.get('orgId')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [authChecking, setAuthChecking] = useState(true)
@@ -81,6 +98,8 @@ export default function NewProductPage() {
   const [stock, setStock] = useState('')
   const [tags, setTags] = useState('')
   const [images, setImages] = useState<NewImage[]>([])
+  const [managedOrgs, setManagedOrgs] = useState<ManagedOrganisation[]>([])
+  const [selectedOrgId, setSelectedOrgId] = useState('')
 
   // Delivery zone (physical products only)
   const [deliveryScope, setDeliveryScope] = useState<'local' | 'national' | 'international' | 'worldwide' | ''>('')
@@ -92,12 +111,30 @@ export default function NewProductPage() {
     const supabase = createClient()
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session?.user) {
-        router.replace('/login?next=/products/new')
+        router.replace(`/login?next=${encodeURIComponent(requestedOrgId ? `/products/new?orgId=${requestedOrgId}` : '/products/new')}`)
       } else {
         setAuthChecking(false)
       }
     })
-  }, [router])
+  }, [router, requestedOrgId])
+
+  useEffect(() => {
+    if (authChecking) return
+    let cancelled = false
+    fetch('/api/organisations/mine', { cache: 'no-store' })
+      .then(res => res.ok ? res.json() : null)
+      .then((data: { organisations?: ManagedOrganisation[] } | null) => {
+        if (cancelled) return
+        const orgs = data?.organisations ?? []
+        setManagedOrgs(orgs)
+        if (requestedOrgId && orgs.some(org => org.id === requestedOrgId || org.slug === requestedOrgId)) {
+          const org = orgs.find(o => o.id === requestedOrgId || o.slug === requestedOrgId)
+          setSelectedOrgId(org?.id ?? '')
+        }
+      })
+      .catch(() => { if (!cancelled) setManagedOrgs([]) })
+    return () => { cancelled = true }
+  }, [authChecking, requestedOrgId])
 
   useEffect(() => {
     return () => {
@@ -270,6 +307,7 @@ export default function NewProductPage() {
         tags: tagList,
         images: uploadedImages,
         cover_image: uploadedImages[0] ?? null,
+        ...(selectedOrgId ? { organisation_id: selectedOrgId } : {}),
         // Renamed from `stock` → `stock_qty` to match the DB column. The
         // previous shape was silently dropped by the server because the
         // POST handler didn't destructure a `stock` field, leading to
@@ -440,6 +478,25 @@ export default function NewProductPage() {
               ))}
             </div>
           </div>
+
+          {managedOrgs.length > 0 && (
+            <div>
+              <label style={labelStyle}>Offer this product as</label>
+              <select
+                value={selectedOrgId}
+                onChange={e => setSelectedOrgId(e.target.value)}
+                style={inputStyle}
+              >
+                <option value="">My personal profile</option>
+                {managedOrgs.map(org => (
+                  <option key={org.id} value={org.id}>{org.name}</option>
+                ))}
+              </select>
+              <p style={{ margin: '0.4rem 0 0', color: '#64748b', fontSize: '0.78rem', lineHeight: 1.45 }}>
+                Organisation products appear on that organisation&apos;s Products tab while you stay the accountable seller.
+              </p>
+            </div>
+          )}
 
           {/* Category */}
           <div>

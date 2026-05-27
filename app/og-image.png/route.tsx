@@ -2,6 +2,8 @@ import { ImageResponse } from 'next/og'
 
 export const runtime = 'edge'
 
+const LOGO_URL = 'https://freetrust.co/icons/icon-512x512.png'
+
 // GET /og-image.png — branded social share image (1200x630, served at the
 // exact URL the user specified so deep-links and external references stay
 // stable). Generated on demand by next/og — no binary file is committed.
@@ -50,19 +52,21 @@ export async function GET() {
 
         {/* Main content stack */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1 }}>
-          {/* Trust token mark */}
-          <div style={{
-            width: 110, height: 110,
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #00b4d8 0%, #0096c7 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: 36,
-            boxShadow: '0 0 80px rgba(0,180,216,0.55)',
-          }}>
-            <span style={{ fontSize: 62, fontWeight: 900, color: '#0a1628', lineHeight: 1 }}>₮</span>
-          </div>
+          {/* Brand mark */}
+          <img
+            src={LOGO_URL}
+            alt="FreeTrust"
+            width={110}
+            height={110}
+            style={{
+              width: 110,
+              height: 110,
+              borderRadius: 24,
+              objectFit: 'cover',
+              marginBottom: 36,
+              boxShadow: '0 0 80px rgba(0,180,216,0.45)',
+            }}
+          />
 
           {/* Wordmark */}
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: 22 }}>

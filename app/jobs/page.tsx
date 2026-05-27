@@ -111,11 +111,6 @@ const LOC_FILTER_LABELS: Record<LocationType, string> = { all: 'All', remote: 'R
 
 const CATEGORIES = ['All', 'Tech', 'Design', 'Marketing', 'Sales', 'Finance', 'AI', 'Data', 'DevOps', 'Product', 'Writing', 'QA']
 
-function daysAgo(iso: string) {
-  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
-  return diff === 0 ? 'Today' : diff === 1 ? 'Yesterday' : `${diff}d ago`
-}
-
 function formatSalary(min: number | null, max: number | null, currency: string): string | null {
   if (!min && !max) return null
   const sym = currency === 'GBP' ? '£' : currency === 'EUR' ? '€' : '$'
@@ -654,7 +649,6 @@ export default function JobsPage() {
                         )}
                       </div>
                     </div>
-                    <span style={{ fontSize: '0.72rem', color: '#475569', flexShrink: 0 }}>{daysAgo(job.created_at)}</span>
                   </div>
 
                   {/* Title + badges */}

@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type')
     const sector = searchParams.get('sector')
+    const search = (searchParams.get('search') ?? searchParams.get('q') ?? '').trim()
     const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100)
 
     let query = supabase
@@ -24,6 +25,10 @@ export async function GET(request: NextRequest) {
 
     if (type) query = query.eq('type', type)
     if (sector) query = query.eq('sector', sector)
+    if (search) {
+      const escaped = search.replace(/[%_]/g, '\\$&')
+      query = query.or(`name.ilike.%${escaped}%,slug.ilike.%${escaped}%,sector.ilike.%${escaped}%`)
+    }
 
     const { data, error } = await query
 

@@ -38,7 +38,7 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState(false)
   // True when signUp returned without a session — user must click the link in
   // their confirmation email to activate the account. We show a distinct UI
-  // for this case and DON'T auto-redirect to /onboarding (which is gated by
+  // for this case and DON'T auto-redirect to a protected route (which is gated by
   // middleware and would bounce the user back to /login).
   const [needsConfirmation, setNeedsConfirmation] = useState(false)
   const [confirmationEmail, setConfirmationEmail] = useState('')
@@ -47,12 +47,12 @@ export default function RegisterPage() {
   const [trustToast, setTrustToast] = useState(false)
   const [inAppInfo, setInAppInfo] = useState<InAppBrowserInfo | null>(null)
 
-  // Auto-redirect to onboarding after success — ONLY when we have a session.
+  // Auto-redirect to the feed after success — ONLY when we have a session.
   // With email confirmation enabled, signUp returns session=null and we show
   // the confirmation UI instead.
   useEffect(() => {
     if (!success || needsConfirmation) return
-    const t = setTimeout(() => router.push('/onboarding'), 1500)
+    const t = setTimeout(() => router.push('/feed'), 1500)
     return () => clearTimeout(t)
   }, [success, needsConfirmation, router])
 
@@ -189,7 +189,7 @@ export default function RegisterPage() {
 
       // Branch on whether signUp returned a live session:
       //   - session present  → email confirmation disabled; auto-sign-in.
-      //     Award the ₮200 bonus now and redirect to /onboarding (handled by
+      //     Award the ₮200 bonus now and redirect to /feed (handled by
       //     the useEffect via setSuccess(true)).
       //   - session missing  → email confirmation required. Show the
       //     "check your email" UI and DON'T call the bonus route (it would
@@ -227,7 +227,7 @@ export default function RegisterPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
+          redirectTo: `${window.location.origin}/auth/callback?next=/feed`,
           queryParams: { prompt: 'select_account', access_type: 'offline' },
           // Explicit default — Supabase performs the window.location.href
           // navigation internally. We could set this to true to get the
@@ -294,10 +294,11 @@ export default function RegisterPage() {
         .auth-logo { display: flex; align-items: center; gap: 8px; text-decoration: none; margin-bottom: 24px; }
         .auth-logo-mark {
           width: 34px; height: 34px;
-          background: linear-gradient(135deg, #38bdf8, #0284c7);
           border-radius: 9px;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 13px; font-weight: 900; color: #0f172a; letter-spacing: -0.5px; flex-shrink: 0;
+          display: block;
+          object-fit: cover;
+          flex-shrink: 0;
+          box-shadow: 0 0 18px rgba(16,185,129,0.22);
         }
         .auth-logo-text { font-size: 18px; font-weight: 800; color: #f1f5f9; letter-spacing: -0.3px; }
         .auth-logo-text span { color: #38bdf8; }
@@ -524,7 +525,7 @@ export default function RegisterPage() {
 
         <div className="auth-card">
           <Link href="/" className="auth-logo">
-            <div className="auth-logo-mark">FT</div>
+            <img className="auth-logo-mark" src="/icons/freetrust-logo-website-20260521.png" alt="FreeTrust" />
             <span className="auth-logo-text">Free<span>Trust</span></span>
           </Link>
 
@@ -550,7 +551,7 @@ export default function RegisterPage() {
               }}>
                 <strong style={{ color: '#38bdf8' }}>Next step:</strong> click the link in that email
                 to activate your account. You&rsquo;ll then get <strong style={{ color: '#38bdf8' }}>₮200 Trust</strong>
-                {' '}as a founding member bonus and be redirected to onboarding.
+                {' '}as a founding member bonus and be redirected to the feed.
               </div>
               <p style={{ fontSize: 12, color: '#64748b', textAlign: 'center', margin: 0 }}>
                 Can&rsquo;t find it? Check your spam folder or{' '}

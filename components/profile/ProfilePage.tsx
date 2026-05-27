@@ -14,7 +14,8 @@ import {
   GRASSROOTS_GREEN,
 } from '@/lib/grassroots/categories'
 import type { User } from '@supabase/supabase-js'
-import ActivityFeed, { type ActivityItem as FeedItem } from '@/components/profile/ActivityFeed'
+import ActivityFeed, { type ActivityItem as CreatedItem } from '@/components/profile/ActivityFeed'
+import PostCard, { type FeedPost } from '@/components/PostCard'
 
 interface Profile {
   id: string
@@ -23,6 +24,10 @@ interface Profile {
   bio?: string | null
   avatar_url?: string | null
   cover_url?: string | null
+  cover_position_x?: number | null
+  cover_position_y?: number | null
+  cover_rotation?: number | null
+  cover_scale?: number | null
   location?: string | null
   website?: string | null
   trust_balance?: number | null
@@ -51,6 +56,22 @@ interface Profile {
   // VAT / accounting fields (20260419000006_seller_accounting.sql)
   vat_registered?: boolean | null
   vat_number?:     string | null
+  is_verified?: boolean | null
+  verified_at?: string | null
+  verification_status?: string | null
+  profile_verification_status?: string | null
+  profile_identity_verified_at?: string | null
+  verification_submitted_at?: string | null
+  verification_details?: { note?: string | null; [key: string]: unknown } | null
+  professional_headline?: string | null
+  professional_experience?: ProfessionalExperienceEntry[] | null
+}
+
+interface ProfessionalExperienceEntry {
+  role?: string | null
+  organization?: string | null
+  period?: string | null
+  description?: string | null
 }
 
 // Map of preset hobby label → emoji icon. Kept in sync with the
@@ -98,6 +119,21 @@ interface ServiceListing {
   created_at: string
 }
 
+interface ProductListing {
+  id: string
+  title: string
+  description?: string | null
+  price: number | null
+  currency?: string | null
+  product_type?: string | null
+  cover_image?: string | null
+  images?: string[] | null
+  stock_qty?: number | null
+  avg_rating?: number | null
+  review_count?: number | null
+  created_at: string
+}
+
 interface GrassrootsListing {
   id: string
   title: string
@@ -116,12 +152,153 @@ interface GrassrootsListing {
   created_at: string
 }
 
+interface ConnectionProfile {
+  id: string
+  full_name?: string | null
+  avatar_url?: string | null
+  bio?: string | null
+  location?: string | null
+}
+
+type ProfileTab = 'overview' | 'services' | 'products' | 'grassroots' | 'posts' | 'activity' | 'following' | 'followers'
+
+type CoverSettings = {
+  positionX: number
+  positionY: number
+  rotation: number
+  scale: number
+}
+
+const DEFAULT_COVER_SETTINGS: CoverSettings = {
+  positionX: 50,
+  positionY: 50,
+  rotation: 0,
+  scale: 1,
+}
+
+function clampNumber(value: unknown, min: number, max: number, fallback: number) {
+  const numeric = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(numeric)) return fallback
+  return Math.min(max, Math.max(min, numeric))
+}
+
+function normalizeRotation(value: unknown) {
+  const numeric = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(numeric)) return 0
+  const roundedToQuarterTurn = Math.round(numeric / 90) * 90
+  return ((roundedToQuarterTurn % 360) + 360) % 360
+}
+
+function getCoverSettingsFromProfile(profile: Profile | null | undefined): CoverSettings {
+  return {
+    positionX: clampNumber(profile?.cover_position_x, 0, 100, DEFAULT_COVER_SETTINGS.positionX),
+    positionY: clampNumber(profile?.cover_position_y, 0, 100, DEFAULT_COVER_SETTINGS.positionY),
+    rotation: normalizeRotation(profile?.cover_rotation),
+    scale: clampNumber(profile?.cover_scale, 1, 2, DEFAULT_COVER_SETTINGS.scale),
+  }
+}
+
+function getCoverImageStyle(settings: CoverSettings) {
+  const rotation = normalizeRotation(settings.rotation)
+  const needsQuarterTurnCompensation = rotation === 90 || rotation === 270
+  const renderScale = clampNumber(settings.scale, 1, 2, 1) * (needsQuarterTurnCompensation ? 1.35 : 1)
+  return {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover' as const,
+    objectPosition: `${clampNumber(settings.positionX, 0, 100, 50)}% ${clampNumber(settings.positionY, 0, 100, 50)}%`,
+    transform: `rotate(${rotation}deg) scale(${renderScale})`,
+    transformOrigin: 'center center',
+    transition: 'transform 0.2s ease, object-position 0.2s ease',
+  }
+}
+
 function getTrustLevel(balance: number) {
   if (balance >= 5000) return { label: 'FreeTrust Ambassador', icon: '👑', color: '#f59e0b', nextAt: null,  next: 'Max level reached' }
   if (balance >= 1000) return { label: 'Community Leader',    icon: '🏆', color: '#a78bfa', nextAt: 5000, next: 'Ambassador at ₮5000' }
-  if (balance >= 500)  return { label: 'Verified Member',     icon: '✅', color: '#34d399', nextAt: 1000, next: 'Leader at ₮1000' }
-  if (balance >= 100)  return { label: 'Trusted Member',      icon: '⭐', color: '#38bdf8', nextAt: 500,  next: 'Verified at ₮500' }
+  if (balance >= 500)  return { label: 'Active Member',       icon: '✅', color: '#34d399', nextAt: 1000, next: 'Leader at ₮1000' }
+  if (balance >= 100)  return { label: 'Trusted Member',      icon: '⭐', color: '#38bdf8', nextAt: 500,  next: 'Active at ₮500' }
   return                      { label: 'New Member',          icon: '🌱', color: '#94a3b8', nextAt: 100,  next: 'Trusted at ₮100' }
+}
+
+function isProfileVerified(profile: Profile | null | undefined) {
+  return profile?.profile_verification_status === 'verified'
+}
+
+function verificationLabel(profile: Profile | null | undefined) {
+  if (isProfileVerified(profile)) return 'Verified profile'
+  if (profile?.verification_status === 'submitted') return 'Verification submitted'
+  return 'Not verified yet'
+}
+
+function VerifiedBadge({ compact = false }: { compact?: boolean }) {
+  return (
+    <span
+      title="Profile details verified by FreeTrust"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: compact ? 3 : 5,
+        padding: compact ? '1px 6px' : '0.18rem 0.65rem',
+        borderRadius: 999,
+        background: 'rgba(52,211,153,0.12)',
+        border: '1px solid rgba(52,211,153,0.35)',
+        color: '#34d399',
+        fontSize: compact ? '0.68rem' : '0.76rem',
+        fontWeight: 800,
+        lineHeight: 1.2,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      ✓{!compact && ' Verified'}
+    </span>
+  )
+}
+
+function normaliseExperience(raw: unknown): ProfessionalExperienceEntry[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map(entry => {
+      const item = entry && typeof entry === 'object' ? entry as Record<string, unknown> : {}
+      return {
+        role: typeof item.role === 'string' ? item.role : '',
+        organization: typeof item.organization === 'string' ? item.organization : '',
+        period: typeof item.period === 'string' ? item.period : '',
+        description: typeof item.description === 'string' ? item.description : '',
+      }
+    })
+    .filter(entry => entry.role || entry.organization || entry.description)
+}
+
+function experienceToText(entries: ProfessionalExperienceEntry[] | null | undefined) {
+  return normaliseExperience(entries).map(entry => {
+    const title = [entry.role, entry.organization].filter(Boolean).join(' @ ')
+    const period = entry.period ? ` (${entry.period})` : ''
+    const description = entry.description ? ` — ${entry.description}` : ''
+    return `${title}${period}${description}`.trim()
+  }).join('\n')
+}
+
+function parseExperienceText(value: string): ProfessionalExperienceEntry[] {
+  return value
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .slice(0, 12)
+    .map(line => {
+      const [left, ...descriptionParts] = line.split(' — ')
+      const description = descriptionParts.join(' — ').trim()
+      const periodMatch = left.match(/\(([^)]+)\)\s*$/)
+      const period = periodMatch?.[1]?.trim() ?? ''
+      const withoutPeriod = periodMatch ? left.slice(0, periodMatch.index).trim() : left.trim()
+      const [rolePart, ...orgParts] = withoutPeriod.split(' @ ')
+      return {
+        role: rolePart.trim(),
+        organization: orgParts.join(' @ ').trim(),
+        period,
+        description,
+      }
+    })
 }
 
 function timeAgo(ts: string) {
@@ -181,25 +358,38 @@ export default function ProfilePage() {
     full_name: '', bio: '', location: '', website: '',
     linkedin_url: '', instagram_url: '', twitter_url: '', github_url: '',
     tiktok_url: '', youtube_url: '', website_url: '',
+    professional_headline: '', professional_experience_text: '', verification_details_text: '',
   })
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [coverUploading, setCoverUploading] = useState(false)
+  const [coverSettings, setCoverSettings] = useState<CoverSettings>(DEFAULT_COVER_SETTINGS)
+  const [coverSettingsSaving, setCoverSettingsSaving] = useState(false)
   const [coverHover, setCoverHover] = useState(false)
   const [avatarHover, setAvatarHover] = useState(false)
   const [activity, setActivity] = useState<ActivityItem[]>([])
   const [loadingActivity, setLoadingActivity] = useState(false)
   const [services, setServices] = useState<ServiceListing[]>([])
   const [showAllServices, setShowAllServices] = useState(false)
+  const [products, setProducts] = useState<ProductListing[]>([])
+  const [showAllProducts, setShowAllProducts] = useState(false)
   const [grassroots, setGrassroots] = useState<GrassrootsListing[]>([])
   const [showAllGrassroots, setShowAllGrassroots] = useState(false)
+  const [activeTab, setActiveTab] = useState<ProfileTab>('overview')
+  const [followers, setFollowers] = useState<ConnectionProfile[]>([])
+  const [following, setFollowing] = useState<ConnectionProfile[]>([])
+  const [connectionsLoading, setConnectionsLoading] = useState(false)
+  const [connectionsLoaded, setConnectionsLoaded] = useState(false)
   // Unified activity feed (jobs + listings + events + reviews)
-  const [activityFeedItems, setActivityFeedItems] = useState<FeedItem[]>([])
+  const [activityFeedItems, setActivityFeedItems] = useState<CreatedItem[]>([])
   const [activityFeedLoading, setActivityFeedLoading] = useState(false)
   const [activityFeedLoaded, setActivityFeedLoaded] = useState(false)
-  const [showPostsSection, setShowPostsSection] = useState(false)
+  const [profilePosts, setProfilePosts] = useState<FeedPost[]>([])
+  const [profilePostsLoading, setProfilePostsLoading] = useState(false)
+  const [profilePostsLoaded, setProfilePostsLoaded] = useState(false)
   const [bonusAwarded, setBonusAwarded] = useState(false)
   const [toast, setToast] = useState('')
   const [isOwnProfile, setIsOwnProfile] = useState(true)
+  const [sessionRestoreSuspected, setSessionRestoreSuspected] = useState(false)
   const [isFollowing, setIsFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
   const [followerCount, setFollowerCount] = useState(0)
@@ -241,19 +431,36 @@ export default function ProfilePage() {
         .is('deleted_at', null)
         .single()
       if (prof) {
-        setProfile(prof)
+        let loadedProfile = prof as Profile
+        const { data: badge, error: badgeError } = await supabase
+          .from('profile_verification_badges')
+          .select('status, verified_at')
+          .eq('user_id', userId)
+          .maybeSingle()
+        if (!badgeError && badge) {
+          loadedProfile = {
+            ...loadedProfile,
+            profile_verification_status: (badge as { status?: string | null }).status ?? null,
+            profile_identity_verified_at: (badge as { verified_at?: string | null }).verified_at ?? null,
+          }
+        }
+        setProfile(loadedProfile)
+        setCoverSettings(getCoverSettingsFromProfile(loadedProfile))
         setForm({
-          full_name: prof.full_name ?? '',
-          bio: prof.bio ?? '',
-          location: prof.location ?? '',
-          website: prof.website ?? '',
-          linkedin_url:  (prof as Profile & { linkedin_url?: string }).linkedin_url  ?? '',
-          instagram_url: (prof as Profile & { instagram_url?: string }).instagram_url ?? '',
-          twitter_url:   (prof as Profile & { twitter_url?: string }).twitter_url   ?? '',
-          github_url:    (prof as Profile & { github_url?: string }).github_url    ?? '',
-          tiktok_url:    (prof as Profile & { tiktok_url?: string }).tiktok_url    ?? '',
-          youtube_url:   (prof as Profile & { youtube_url?: string }).youtube_url   ?? '',
-          website_url:   (prof as Profile & { website_url?: string }).website_url   ?? '',
+          full_name: loadedProfile.full_name ?? '',
+          bio: loadedProfile.bio ?? '',
+          location: loadedProfile.location ?? '',
+          website: loadedProfile.website ?? '',
+          linkedin_url:  loadedProfile.linkedin_url  ?? '',
+          instagram_url: loadedProfile.instagram_url ?? '',
+          twitter_url:   loadedProfile.twitter_url   ?? '',
+          github_url:    loadedProfile.github_url    ?? '',
+          tiktok_url:    loadedProfile.tiktok_url    ?? '',
+          youtube_url:   loadedProfile.youtube_url   ?? '',
+          website_url:   loadedProfile.website_url   ?? '',
+          professional_headline: loadedProfile.professional_headline ?? '',
+          professional_experience_text: experienceToText(loadedProfile.professional_experience),
+          verification_details_text: loadedProfile.verification_details?.note ?? '',
         })
         setVatRegistered(!!(prof as Profile & { vat_registered?: boolean }).vat_registered)
         setVatNumber(String((prof as Profile & { vat_number?: string }).vat_number ?? ''))
@@ -312,6 +519,22 @@ export default function ProfilePage() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const loadProducts = useCallback(async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from('listings')
+        .select('id, title, description, price, currency, product_type, cover_image, images, stock_qty, avg_rating, review_count, created_at')
+        .eq('seller_id', userId)
+        .neq('product_type', 'service')
+        .is('organisation_id', null)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+      setProducts((data ?? []) as ProductListing[])
+    } catch (err) {
+      console.error('loadProducts error:', err)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Load this user's active grassroots listings. Cast to unknown[] then
   // GrassrootsListing[] because supabase-js generated types don't know
   // about grassroots_listings yet — same untyped-row pattern services use.
@@ -321,7 +544,7 @@ export default function ProfilePage() {
     try {
       const res = await fetch(`/api/users/${userId}/activity?limit=30`)
       if (res.ok) {
-        const data = await res.json() as { items?: FeedItem[] }
+        const data = await res.json() as { items?: CreatedItem[] }
         setActivityFeedItems(data.items ?? [])
         setActivityFeedLoaded(true)
       }
@@ -329,6 +552,38 @@ export default function ProfilePage() {
       setActivityFeedLoading(false)
     }
   }, [activityFeedLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadProfilePosts = useCallback(async (userId: string) => {
+    if (profilePostsLoaded) return
+    setProfilePostsLoading(true)
+    try {
+      const res = await fetch(`/api/feed/posts?authorId=${encodeURIComponent(userId)}&limit=12`, { cache: 'no-store' })
+      if (res.ok) {
+        const data = await res.json() as { posts?: FeedPost[] }
+        setProfilePosts(data.posts ?? [])
+        setProfilePostsLoaded(true)
+      }
+    } catch { /* non-critical */ } finally {
+      setProfilePostsLoading(false)
+    }
+  }, [profilePostsLoaded])
+
+  const loadConnections = useCallback(async (userId: string) => {
+    if (connectionsLoaded || connectionsLoading) return
+    setConnectionsLoading(true)
+    try {
+      const res = await fetch(`/api/connections?userId=${encodeURIComponent(userId)}`, { cache: 'no-store' })
+      if (res.ok) {
+        const data = await res.json() as { followers?: ConnectionProfile[]; following?: ConnectionProfile[] }
+        setFollowers(data.followers ?? [])
+        setFollowing(data.following ?? [])
+        setFollowerCount(data.followers?.length ?? 0)
+        setConnectionsLoaded(true)
+      }
+    } catch { /* non-critical */ } finally {
+      setConnectionsLoading(false)
+    }
+  }, [connectionsLoaded, connectionsLoading])
 
   const loadGrassroots = useCallback(async (userId: string) => {
     try {
@@ -497,13 +752,22 @@ export default function ProfilePage() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Safety net: if loading hasn't resolved within 8 seconds, force it false.
-  // Guards against supabase.auth.getUser() hanging on slow/offline connections
-  // and against the lastInitIdRef early-return on component remount.
+  const hasSupabaseCookie = () => (
+    typeof document !== 'undefined' && document.cookie.split(';').some(c => c.trim().startsWith('sb-'))
+  )
+
+  // Safety net: if auth/profile loading is still stuck after 15 seconds, do
+  // not drop signed-in users into the old anonymous "sign in" prompt. Mobile
+  // browsers can be slow to restore Supabase cookies after OAuth redirects; if
+  // we can see an sb-* cookie, show an explicit "restoring session" state with
+  // retry controls instead of making the user think they must sign up again.
   useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 8000)
+    const t = setTimeout(() => {
+      if (hasSupabaseCookie() && isOwnProfile) setSessionRestoreSuspected(true)
+      setLoading(false)
+    }, 15000)
     return () => clearTimeout(t)
-  }, [])
+  }, [isOwnProfile])
 
   useEffect(() => {
     if (lastInitIdRef.current === viewingId) {
@@ -513,11 +777,76 @@ export default function ProfilePage() {
       return
     }
     lastInitIdRef.current = viewingId
+    setActiveTab('overview')
+    setServices([])
+    setProducts([])
+    setGrassroots([])
+    setActivity([])
+    setProfilePosts([])
+    setFollowers([])
+    setFollowing([])
+    setActivityFeedItems([])
+    setActivityFeedLoaded(false)
+    setProfilePostsLoaded(false)
+    setConnectionsLoaded(false)
 
     const init = async () => {
       try {
-        const { data: { user: u } } = await supabase.auth.getUser()
+        const getUserWithRetry = async () => {
+          for (let attempt = 0; attempt < 3; attempt++) {
+            const { data: { user: currentUser }, error } = await supabase.auth.getUser()
+            if (currentUser || error) return currentUser
+
+            // Fallback through getSession() because immediately after an OAuth
+            // redirect the browser cookie can exist before getUser() has a
+            // network answer. If getSession() can decode a user, use it.
+            const { data: { session } } = await supabase.auth.getSession()
+            if (session?.user) return session.user
+
+            await new Promise(resolve => window.setTimeout(resolve, 500))
+          }
+
+          // Final fallback: ask the server to resolve the Supabase session from
+          // request cookies. This covers OAuth/mobile cases where the server has
+          // valid auth cookies but the browser client has not restored them yet.
+          // Returning the server user prevents the own-profile page from showing
+          // the anonymous "Sign in" state immediately after Google login.
+          try {
+            const res = await fetch('/api/profile', { cache: 'no-store' })
+            if (res.ok) {
+              const data = await res.json() as { user?: User | null; profile?: Profile | null }
+              if (data.profile) {
+                setProfile(data.profile)
+                setCoverSettings(getCoverSettingsFromProfile(data.profile))
+                setForm({
+                  full_name: data.profile.full_name ?? '',
+                  bio: data.profile.bio ?? '',
+                  location: data.profile.location ?? '',
+                  website: data.profile.website ?? '',
+                  linkedin_url:  data.profile.linkedin_url  ?? '',
+                  instagram_url: data.profile.instagram_url ?? '',
+                  twitter_url:   data.profile.twitter_url   ?? '',
+                  github_url:    data.profile.github_url    ?? '',
+                  tiktok_url:    data.profile.tiktok_url    ?? '',
+                  youtube_url:   data.profile.youtube_url   ?? '',
+                  website_url:   data.profile.website_url   ?? '',
+                  professional_headline: data.profile.professional_headline ?? '',
+                  professional_experience_text: experienceToText(data.profile.professional_experience),
+                  verification_details_text: data.profile.verification_details?.note ?? '',
+                })
+                setVatRegistered(!!data.profile.vat_registered)
+                setVatNumber(String(data.profile.vat_number ?? ''))
+              }
+              if (data.user) return data.user
+            }
+          } catch { /* fall through to anonymous/recovery state */ }
+
+          return null
+        }
+
+        const u = await getUserWithRetry()
         setUser(u)
+        if (u) setSessionRestoreSuspected(false)
 
         if (viewingId && (!u || viewingId !== u.id)) {
           // Viewing someone else's profile
@@ -525,10 +854,6 @@ export default function ProfilePage() {
           await Promise.all([
             loadProfile(viewingId),
             loadTrust(viewingId),
-            loadActivity(viewingId),
-            loadServices(viewingId),
-            loadGrassroots(viewingId),
-            loadActivityFeed(viewingId),
           ])
 
           // Get real follower count and check if current user follows them
@@ -551,7 +876,7 @@ export default function ProfilePage() {
         } else if (u) {
           // Own profile
           setIsOwnProfile(true)
-          await Promise.all([loadProfile(u.id), loadTrust(), loadActivity(u.id), loadServices(u.id), loadGrassroots(u.id), loadActivityFeed(u.id)])
+          await Promise.all([loadProfile(u.id), loadTrust()])
 
           // Real follower count from user_follows
           const { count } = await supabase
@@ -567,16 +892,34 @@ export default function ProfilePage() {
           ])
           setBuyingCount(buyRes.count ?? 0)
           setSellingCount(sellRes.count ?? 0)
+        } else if (!viewingId && !u && hasSupabaseCookie()) {
+          // Own profile requested, auth cookie present, but user not restored.
+          // Keep the UX in a recovery state instead of showing the anonymous
+          // sign-in/signup prompt to someone who just signed in.
+          setIsOwnProfile(true)
+          setSessionRestoreSuspected(true)
         }
-        // If neither branch ran (no viewingId, no user) loading is released in finally
       } catch (err) {
         console.error('init error:', err)
+        if (!viewingId && hasSupabaseCookie()) setSessionRestoreSuspected(true)
       } finally {
         setLoading(false)
       }
     }
     init()
   }, [viewingId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const displayedProfileId = viewingId && (!user || viewingId !== user.id) ? viewingId : (user?.id ?? profile?.id ?? null)
+
+  useEffect(() => {
+    if (!displayedProfileId) return
+    if (activeTab === 'services' && services.length === 0) void loadServices(displayedProfileId)
+    if (activeTab === 'products' && products.length === 0) void loadProducts(displayedProfileId)
+    if (activeTab === 'grassroots' && grassroots.length === 0) void loadGrassroots(displayedProfileId)
+    if (activeTab === 'posts') void loadProfilePosts(displayedProfileId)
+    if (activeTab === 'activity' && activity.length === 0) void loadActivity(displayedProfileId)
+    if ((activeTab === 'followers' || activeTab === 'following')) void loadConnections(displayedProfileId)
+  }, [activeTab, displayedProfileId, services.length, products.length, grassroots.length, activity.length, loadServices, loadProducts, loadGrassroots, loadProfilePosts, loadActivity, loadConnections])
 
   // Award ₮10 bonus when profile hits 100%
   useEffect(() => {
@@ -650,6 +993,15 @@ export default function ProfilePage() {
           tiktok_url:    form.tiktok_url    || null,
           youtube_url:   form.youtube_url   || null,
           website_url:   form.website_url   || null,
+          professional_headline: form.professional_headline || null,
+          professional_experience: parseExperienceText(form.professional_experience_text),
+          ...(form.verification_details_text.trim()
+            ? { verification_details: { note: form.verification_details_text.trim() } }
+            : {}),
+          cover_position_x: coverSettings.positionX,
+          cover_position_y: coverSettings.positionY,
+          cover_rotation:   coverSettings.rotation,
+          cover_scale:      coverSettings.scale,
         }),
       })
 
@@ -665,6 +1017,7 @@ export default function ProfilePage() {
 
       // Success — merge the server-returned row back into local state
       setProfile(prev => prev ? { ...prev, ...updated } : prev)
+      setCoverSettings(getCoverSettingsFromProfile(updated as Profile))
       setForm({
         full_name:     (updated.full_name     ?? ''),
         bio:           (updated.bio           ?? ''),
@@ -677,6 +1030,9 @@ export default function ProfilePage() {
         tiktok_url:    (updated.tiktok_url    ?? ''),
         youtube_url:   (updated.youtube_url   ?? ''),
         website_url:   (updated.website_url   ?? ''),
+        professional_headline: updated.professional_headline ?? '',
+        professional_experience_text: experienceToText(updated.professional_experience),
+        verification_details_text: updated.verification_details?.note ?? form.verification_details_text,
       })
       setEditing(false)
       showToast('Profile saved!')
@@ -744,7 +1100,15 @@ export default function ProfilePage() {
       const res = await fetch('/api/upload/cover', { method: 'POST', body: fd })
       if (!res.ok) throw new Error('Upload failed')
       const data = await res.json() as { url: string }
-      setProfile(prev => ({ ...prev!, cover_url: data.url }))
+      setCoverSettings(DEFAULT_COVER_SETTINGS)
+      setProfile(prev => ({
+        ...prev!,
+        cover_url: data.url,
+        cover_position_x: DEFAULT_COVER_SETTINGS.positionX,
+        cover_position_y: DEFAULT_COVER_SETTINGS.positionY,
+        cover_rotation: DEFAULT_COVER_SETTINGS.rotation,
+        cover_scale: DEFAULT_COVER_SETTINGS.scale,
+      }))
       showToast('Cover photo updated!')
     } catch (err) {
       console.error('cover upload error:', err)
@@ -752,6 +1116,39 @@ export default function ProfilePage() {
     } finally {
       setCoverUploading(false)
       if (coverInputRef.current) coverInputRef.current.value = ''
+    }
+  }
+
+  const handleCoverSettingsSave = async () => {
+    if (!user) {
+      showToast('Sign in to adjust your cover photo.')
+      return
+    }
+    setCoverSettingsSaving(true)
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cover_position_x: coverSettings.positionX,
+          cover_position_y: coverSettings.positionY,
+          cover_rotation: coverSettings.rotation,
+          cover_scale: coverSettings.scale,
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { error?: string }
+        throw new Error(data.error ?? 'Cover adjustment failed')
+      }
+      const { profile: updated } = await res.json() as { profile: Partial<Profile> }
+      setProfile(prev => prev ? { ...prev, ...updated } : prev)
+      setCoverSettings(getCoverSettingsFromProfile(updated as Profile))
+      showToast('Cover photo fit saved!')
+    } catch (err) {
+      console.error('cover settings save error:', err)
+      showToast('Cover adjustment failed. Please try again.')
+    } finally {
+      setCoverSettingsSaving(false)
     }
   }
 
@@ -826,6 +1223,21 @@ export default function ProfilePage() {
     milestone: '🏆',
   }
 
+  const profileTabs: { key: ProfileTab; label: string; count?: number }[] = [
+    { key: 'overview', label: 'Overview' },
+    { key: 'services', label: 'Services', count: services.length || undefined },
+    { key: 'products', label: 'Products', count: products.length || undefined },
+    { key: 'grassroots', label: 'Grassroots', count: grassroots.length || undefined },
+    { key: 'posts', label: 'Posts', count: profilePosts.length || undefined },
+    { key: 'activity', label: 'Activity' },
+    { key: 'following', label: 'Following', count: following.length || profile?.following_count || undefined },
+    { key: 'followers', label: 'Followers', count: followerCount || undefined },
+  ]
+
+  const hasStripeAccount = Boolean(profile?.stripe_account_id)
+  const stripeFullyOnboarded = Boolean(profile?.stripe_onboarded || profile?.stripe_onboarding_complete)
+  const showStripePrompt = Boolean(isOwnProfile && user && profile && !stripeFullyOnboarded)
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', background: '#0f172a' }}>
@@ -836,11 +1248,34 @@ export default function ProfilePage() {
   }
 
   if (!user && isOwnProfile) {
+    const maybeRestoringSession = sessionRestoreSuspected || hasSupabaseCookie()
+    if (maybeRestoringSession) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', background: '#0f172a', color: '#f1f5f9', gap: '1rem', padding: '1.5rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '3rem' }}>⏳</div>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Restoring your session…</h3>
+          <p style={{ color: '#94a3b8', maxWidth: 460, margin: 0, lineHeight: 1.5 }}>
+            You appear to have just signed in, but your browser has not finished restoring the session yet. Try reloading once — you do not need to sign up again.
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <button onClick={() => window.location.reload()} style={{ background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 8, padding: '0.6rem 1.4rem', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit' }}>Try again</button>
+            <Link href="/login?redirect=/profile" style={{ background: 'transparent', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.35)', borderRadius: 8, padding: '0.6rem 1.4rem', fontWeight: 700, textDecoration: 'none', fontSize: '0.9rem' }}>Sign in again</Link>
+          </div>
+        </div>
+      )
+    }
+
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', background: '#0f172a', color: '#f1f5f9', gap: '1rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', background: '#0f172a', color: '#f1f5f9', gap: '1rem', padding: '1.5rem', textAlign: 'center' }}>
         <div style={{ fontSize: '3rem' }}>🔒</div>
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Sign in to view your profile</h3>
-        <Link href="/login" style={{ background: '#38bdf8', color: '#0f172a', borderRadius: 8, padding: '0.6rem 1.4rem', fontWeight: 700, textDecoration: 'none', fontSize: '0.9rem' }}>Sign In</Link>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Your session expired or didn&apos;t load</h3>
+        <p style={{ color: '#94a3b8', maxWidth: 420, margin: 0, lineHeight: 1.5 }}>
+          Sign in again to view and edit your profile. If you just signed in, try reloading first — you do not need to create a new account.
+        </p>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button onClick={() => window.location.reload()} style={{ background: 'transparent', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.35)', borderRadius: 8, padding: '0.6rem 1.4rem', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit' }}>Try again</button>
+          <Link href="/login?redirect=/profile" style={{ background: '#38bdf8', color: '#0f172a', borderRadius: 8, padding: '0.6rem 1.4rem', fontWeight: 700, textDecoration: 'none', fontSize: '0.9rem' }}>Sign in again</Link>
+        </div>
       </div>
     )
   }
@@ -859,54 +1294,34 @@ export default function ProfilePage() {
     <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        .profile-card { background: #1e293b; border: 1px solid rgba(56,189,248,0.1); border-radius: 14px; padding: 1.5rem; margin-bottom: 1.25rem; }
-        .profile-input { width: 100%; background: rgba(15,23,42,0.7); border: 1px solid rgba(148,163,184,0.18); border-radius: 8px; padding: 10px 12px; font-size: 15px; color: #f1f5f9; outline: none; font-family: inherit; box-sizing: border-box; }
+        .profile-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 16px; padding: 1rem; margin-bottom: 0.875rem; }
+        .profile-input { width: 100%; background: rgba(15,23,42,0.7); border: 1px solid rgba(148,163,184,0.18); border-radius: 8px; padding: 10px 12px; font-size: 16px; color: #f1f5f9; outline: none; font-family: inherit; box-sizing: border-box; }
         .profile-input:focus { border-color: rgba(56,189,248,0.4); }
         .profile-label { font-size: 12px; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
         .cover-overlay { opacity: 0; transition: opacity 0.2s; }
         .cover-wrap:hover .cover-overlay { opacity: 1; }
+        .profile-tab-scroll::-webkit-scrollbar { display: none; }
+        .profile-avatar-frame { width: 132px; height: 132px; }
+        .profile-avatar-frame > img,
+        .profile-avatar-frame > div:first-child { width: 132px !important; height: 132px !important; }
+        @media (max-width: 640px) {
+          .profile-shell { padding-left: 16px !important; padding-right: 16px !important; }
+          .profile-cover { height: 260px !important; margin-top: 0 !important; }
+          .profile-avatar-overlap { top: -96px !important; }
+          .profile-avatar-frame { width: 96px !important; height: 96px !important; }
+          .profile-avatar-frame > img,
+          .profile-avatar-frame > div:first-child { width: 96px !important; height: 96px !important; }
+          .profile-action-row { justify-content: flex-start !important; padding-top: 0.85rem !important; }
+          .profile-action-row > div { width: 100%; }
+          .profile-action-row a,
+          .profile-action-row button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+        }
       `}</style>
 
       {/* Toast */}
       {toast && (
         <div style={{ position: 'fixed', top: 70, right: 20, background: '#1e293b', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 10, padding: '12px 20px', fontSize: '0.88rem', color: '#f1f5f9', zIndex: 1000, boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
           {toast}
-        </div>
-      )}
-
-      {/* Connect Stripe banner — own profile, no Stripe Connect yet.
-          Paid listings require an onboarded Stripe account; this
-          surfaces the ask up-front so sellers don't discover the
-          412 gate only when they try to publish. Hidden once either
-          stripe_onboarded or stripe_onboarding_complete flips true
-          (the two columns are kept in sync by a DB trigger). */}
-      {isOwnProfile && user && profile && !(profile.stripe_onboarded || profile.stripe_onboarding_complete) && (
-        <div style={{ background: 'linear-gradient(90deg,rgba(251,191,36,0.08),rgba(251,146,60,0.05))', borderBottom: '1px solid rgba(251,191,36,0.2)', padding: '0.7rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '1.1rem' }}>💳</span>
-          <div style={{ flex: 1, minWidth: 220 }}>
-            <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f1f5f9' }}>
-              Connect Stripe to sell on FreeTrust
-            </div>
-            <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: 2 }}>
-              You need a connected Stripe account to publish a paid listing or receive payouts. Takes ~2 minutes.
-            </div>
-          </div>
-          <Link
-            href="/wallet?connect=true"
-            style={{
-              background:    'linear-gradient(135deg,#fbbf24,#f59e0b)',
-              color:         '#0f172a',
-              border:        'none',
-              borderRadius:  8,
-              padding:       '0.5rem 1rem',
-              fontSize:      '0.82rem',
-              fontWeight:    800,
-              textDecoration:'none',
-              flexShrink:    0,
-            }}
-          >
-            Connect Stripe →
-          </Link>
         </div>
       )}
 
@@ -933,14 +1348,14 @@ export default function ProfilePage() {
 
       {/* Cover photo */}
       <div
-        className={isOwnProfile ? 'cover-wrap' : ''}
-        style={{ position: 'relative', height: '220px', cursor: isOwnProfile ? 'pointer' : 'default', overflow: 'hidden' }}
+        className={`${isOwnProfile ? 'cover-wrap ' : ''}profile-cover`}
+        style={{ position: 'relative', height: '260px', marginTop: 0, cursor: isOwnProfile ? 'pointer' : 'default', overflow: 'hidden' }}
         onClick={() => isOwnProfile && !coverUploading && coverInputRef.current?.click()}
         onMouseEnter={() => isOwnProfile && setCoverHover(true)}
         onMouseLeave={() => isOwnProfile && setCoverHover(false)}
       >
         {profile?.cover_url ? (
-          <img src={profile.cover_url} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={profile.cover_url} alt="cover" style={getCoverImageStyle(coverSettings)} />
         ) : (
           <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, rgba(56,189,248,0.15) 100%)' }} />
         )}
@@ -962,28 +1377,64 @@ export default function ProfilePage() {
             )}
           </div>
         )}
+        {isOwnProfile && (
+          <button
+            type="button"
+            aria-label="Adjust cover photo frame"
+            title="Adjust cover photo frame"
+            onClick={event => {
+              event.stopPropagation()
+              setSaveError(null)
+              setEditing(true)
+              window.setTimeout(() => editFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+            }}
+            style={{
+              position: 'absolute',
+              right: 14,
+              bottom: 14,
+              zIndex: 5,
+              width: 46,
+              height: 46,
+              minWidth: 46,
+              minHeight: 46,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(15,23,42,0.78)',
+              border: '1px solid rgba(125,211,252,0.55)',
+              borderRadius: 14,
+              color: '#7dd3fc',
+              fontSize: 22,
+              cursor: 'pointer',
+              boxShadow: '0 10px 28px rgba(2,6,23,0.45)',
+              backdropFilter: 'blur(10px)',
+              fontFamily: 'inherit',
+            }}
+          >
+            🖼️
+          </button>
+        )}
       </div>
 
       {/* Profile header */}
-      <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 1.5rem' }}>
+      <div className="profile-shell" style={{ maxWidth: 860, margin: '0 auto', padding: '0 1rem' }}>
         <div style={{ position: 'relative', marginBottom: '1rem' }}>
           {/* Avatar — overlaps cover */}
           <div
-            style={{ position: 'absolute', top: '-52px', left: 0, cursor: isOwnProfile ? 'pointer' : 'default' }}
+            className="profile-avatar-overlap"
+            style={{ position: 'absolute', top: '-74px', left: 0, cursor: isOwnProfile ? 'pointer' : 'default' }}
             onMouseEnter={() => isOwnProfile && setAvatarHover(true)}
             onMouseLeave={() => isOwnProfile && setAvatarHover(false)}
             onClick={() => isOwnProfile && !avatarUploading && avatarInputRef.current?.click()}
             title={isOwnProfile ? 'Change profile photo' : undefined}
           >
-            <div style={{ position: 'relative', width: 96, height: 96 }}>
+            <div className="profile-avatar-frame" style={{ position: 'relative' }}>
               <Avatar
                 url={profile?.avatar_url}
                 name={profile?.full_name}
                 email={isOwnProfile ? user?.email : undefined}
-                size={96}
+                size={132}
               />
-              {/* Ring */}
-              <div style={{ position: 'absolute', inset: -3, borderRadius: '50%', border: '3px solid #0f172a', pointerEvents: 'none' }} />
               {/* Uploading — own profile only */}
               {isOwnProfile && avatarUploading && (
                 <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(15,23,42,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1000,7 +1451,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Edit button — own profile only */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.75rem' }}>
+          <div className="profile-action-row" style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.75rem' }}>
             {isOwnProfile ? (
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
               <button
@@ -1096,10 +1547,16 @@ export default function ProfilePage() {
           </div>
 
           {/* Name + meta — offset for avatar */}
-          <div style={{ paddingTop: '2.5rem' }}>
-            <h1 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: '0.3rem' }}>
-              {profile?.full_name ?? user?.email ?? 'Member'}
+          <div style={{ paddingTop: '4.25rem' }}>
+            <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap', fontSize: '1.6rem', fontWeight: 800, marginBottom: '0.3rem' }}>
+              <span>{profile?.full_name ?? user?.email ?? 'Member'}</span>
+              {isProfileVerified(profile) && <VerifiedBadge />}
             </h1>
+            {profile?.professional_headline && (
+              <div style={{ color: '#cbd5e1', fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.45rem' }}>
+                {profile.professional_headline}
+              </div>
+            )}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center', fontSize: '0.85rem', color: '#64748b', marginBottom: '0.5rem' }}>
               {profile?.location && <span>📍 {profile.location}</span>}
               {profile?.website && (
@@ -1131,8 +1588,97 @@ export default function ProfilePage() {
               }}
               size="md"
             />
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, margin: '1rem 0 1.25rem' }}>
+              {[
+                { value: followerCount.toLocaleString(), label: 'Followers' },
+                { value: (profile?.following_count ?? following.length ?? 0).toLocaleString(), label: 'Following' },
+                { value: `₮${trustBalance.toLocaleString()}`, label: 'Trust' },
+              ].map(stat => (
+                <div key={stat.label} style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 16, padding: '13px 8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#f1f5f9', lineHeight: 1 }}>{stat.value}</div>
+                  <div style={{ fontSize: 10, color: '#475569', marginTop: 5, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>{stat.label}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ borderBottom: '1px solid #1e293b', marginBottom: 20, overflow: 'hidden' }}>
+              <div className="profile-tab-scroll" style={{ display: 'flex', overflowX: 'auto', overflowY: 'hidden', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x', whiteSpace: 'nowrap' }}>
+                {profileTabs.map(tab => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    style={{
+                      flex: '0 0 auto',
+                      padding: '10px 14px',
+                      fontSize: 13,
+                      fontWeight: activeTab === tab.key ? 700 : 500,
+                      color: activeTab === tab.key ? '#f1f5f9' : '#475569',
+                      background: 'none',
+                      border: 'none',
+                      borderBottom: activeTab === tab.key ? '2px solid #38bdf8' : '2px solid transparent',
+                      marginBottom: -1,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {tab.label}
+                    {tab.count !== undefined && tab.count > 0 && (
+                      <span style={{ marginLeft: 5, fontSize: 10, fontWeight: 700, borderRadius: 10, padding: '1px 6px', background: activeTab === tab.key ? 'rgba(56,189,248,0.18)' : '#1e293b', color: activeTab === tab.key ? '#7dd3fc' : '#64748b' }}>
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
+
+        {activeTab === 'overview' && (
+          <>
+        {/* Stripe Connect prompt — kept inside the profile body so the cover
+            photo cannot overlap/crush the CTA on mobile. If a Connect account
+            already exists, use setup/recovery wording instead of asking the
+            member to connect again. */}
+        {showStripePrompt && (
+          <div className="profile-card" style={{ borderColor: 'rgba(251,191,36,0.28)', background: 'linear-gradient(135deg,rgba(251,191,36,0.10),rgba(15,23,42,0.92))' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem' }}>
+              <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(251,191,36,0.14)', border: '1px solid rgba(251,191,36,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, flexShrink: 0 }}>
+                💳
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f8fafc', lineHeight: 1.25 }}>
+                  {hasStripeAccount ? 'Finish Stripe payout setup' : 'Connect Stripe to sell on FreeTrust'}
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#cbd5e1', marginTop: 5, lineHeight: 1.5 }}>
+                  {hasStripeAccount
+                    ? 'Your Stripe account is saved on FreeTrust, but payouts are not marked active yet. Open setup to finish verification or refresh your status.'
+                    : 'Connect a Stripe account to receive payouts for paid services and products.'}
+                </div>
+                <Link
+                  href="/seller/connect"
+                  style={{
+                    display:       'inline-flex',
+                    alignItems:    'center',
+                    justifyContent:'center',
+                    minHeight:     42,
+                    marginTop:     12,
+                    background:    'linear-gradient(135deg,#fbbf24,#f59e0b)',
+                    color:         '#0f172a',
+                    borderRadius:  10,
+                    padding:       '0.55rem 1rem',
+                    fontSize:      '0.84rem',
+                    fontWeight:    850,
+                    textDecoration:'none',
+                  }}
+                >
+                  {hasStripeAccount ? 'Open Stripe setup →' : 'Connect Stripe →'}
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Profile Completeness Bar */}
         {completeness < 100 && (
@@ -1162,6 +1708,27 @@ export default function ProfilePage() {
               <div>
                 <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f1f5f9' }}>Profile 100% complete!</div>
                 <div style={{ fontSize: '0.78rem', color: '#64748b' }}>You earned ₮10 Trust for completing your profile.</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {(isOwnProfile || isProfileVerified(profile) || profile?.verification_status === 'submitted') && (
+          <div className="profile-card" style={{ border: `1px solid ${isProfileVerified(profile) ? 'rgba(52,211,153,0.3)' : 'rgba(56,189,248,0.18)'}` }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+              <span style={{ fontSize: '1.35rem' }}>{isProfileVerified(profile) ? '✅' : profile?.verification_status === 'submitted' ? '🛡️' : '🔎'}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: 3 }}>
+                  <div style={{ fontWeight: 800, color: '#f1f5f9', fontSize: '0.95rem' }}>{verificationLabel(profile)}</div>
+                  {isProfileVerified(profile) && <VerifiedBadge compact />}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.55 }}>
+                  {isProfileVerified(profile)
+                    ? `FreeTrust has reviewed this member's identity${profile?.profile_identity_verified_at ? ` on ${new Date(profile.profile_identity_verified_at).toLocaleDateString('en-IE')}` : ''}.`
+                    : profile?.verification_status === 'submitted'
+                      ? 'Verification details have been submitted for FreeTrust review. A badge is shown only after review.'
+                      : 'Submit professional and identity details from Edit Profile to request review.'}
+                </div>
               </div>
             </div>
           </div>
@@ -1243,6 +1810,127 @@ export default function ProfilePage() {
           >
             <h3 style={{ marginBottom: '1rem', fontWeight: 700, fontSize: '1rem' }}>Edit Profile</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ border: '1px solid rgba(56,189,248,0.18)', borderRadius: 14, padding: '0.85rem', background: 'rgba(56,189,248,0.04)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: '0.75rem' }}>
+                  <div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#f1f5f9' }}>🖼 Cover photo fit</div>
+                    <div style={{ fontSize: '0.74rem', color: '#94a3b8', lineHeight: 1.45, marginTop: 2 }}>
+                      Rotate, zoom, and reposition the cover so the important part sits perfectly in the banner.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => coverInputRef.current?.click()}
+                    disabled={coverUploading}
+                    style={{ flexShrink: 0, minHeight: 40, background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.28)', borderRadius: 9, padding: '0.45rem 0.7rem', fontSize: '0.76rem', fontWeight: 700, color: '#38bdf8', cursor: coverUploading ? 'default' : 'pointer', opacity: coverUploading ? 0.65 : 1, fontFamily: 'inherit' }}
+                  >
+                    {coverUploading ? 'Uploading…' : 'Change photo'}
+                  </button>
+                </div>
+
+                <div style={{ position: 'relative', height: 138, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(148,163,184,0.18)', background: '#020617', marginBottom: '0.85rem' }}>
+                  {profile?.cover_url ? (
+                    <img src={profile.cover_url} alt="Cover preview" style={getCoverImageStyle(coverSettings)} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, rgba(56,189,248,0.15) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '0.82rem' }}>
+                      Add a cover photo first
+                    </div>
+                  )}
+                  <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12 }} />
+                </div>
+
+                <div style={{ display: 'grid', gap: '0.75rem' }}>
+                  <div>
+                    <label className="profile-label" htmlFor="cover-y">Vertical focus</label>
+                    <input
+                      id="cover-y"
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={coverSettings.positionY}
+                      onChange={e => setCoverSettings(s => ({ ...s, positionY: Number(e.target.value) }))}
+                      style={{ width: '100%', accentColor: '#38bdf8' }}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#64748b' }}><span>Top</span><span>Bottom</span></div>
+                  </div>
+                  <div>
+                    <label className="profile-label" htmlFor="cover-x">Horizontal focus</label>
+                    <input
+                      id="cover-x"
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={coverSettings.positionX}
+                      onChange={e => setCoverSettings(s => ({ ...s, positionX: Number(e.target.value) }))}
+                      style={{ width: '100%', accentColor: '#38bdf8' }}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#64748b' }}><span>Left</span><span>Right</span></div>
+                  </div>
+                  <div>
+                    <label className="profile-label" htmlFor="cover-scale">Zoom</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr 44px', alignItems: 'center', gap: 8 }}>
+                      <button
+                        type="button"
+                        aria-label="Zoom cover photo out"
+                        onClick={() => setCoverSettings(s => ({ ...s, scale: clampNumber(s.scale - 0.1, 1, 2, 1) }))}
+                        style={{ minHeight: 42, background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.18)', borderRadius: 9, color: '#cbd5e1', fontSize: 18, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit' }}
+                      >
+                        −
+                      </button>
+                      <input
+                        id="cover-scale"
+                        type="range"
+                        min="1"
+                        max="2"
+                        step="0.05"
+                        value={coverSettings.scale}
+                        onChange={e => setCoverSettings(s => ({ ...s, scale: Number(e.target.value) }))}
+                        style={{ width: '100%', accentColor: '#38bdf8' }}
+                      />
+                      <button
+                        type="button"
+                        aria-label="Zoom cover photo in"
+                        onClick={() => setCoverSettings(s => ({ ...s, scale: clampNumber(s.scale + 0.1, 1, 2, 1) }))}
+                        style={{ minHeight: 42, background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 9, color: '#7dd3fc', fontSize: 18, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit' }}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#64748b', marginTop: 2 }}><span>Zoom out</span><span>{Math.round(coverSettings.scale * 100)}%</span><span>Zoom in</span></div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => setCoverSettings(s => ({ ...s, rotation: normalizeRotation(s.rotation - 90) }))}
+                      style={{ minHeight: 42, background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.18)', borderRadius: 9, color: '#cbd5e1', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
+                      ↶ Rotate
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCoverSettings(s => ({ ...s, rotation: normalizeRotation(s.rotation + 90) }))}
+                      style={{ minHeight: 42, background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.18)', borderRadius: 9, color: '#cbd5e1', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
+                      Rotate ↷
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCoverSettings(DEFAULT_COVER_SETTINGS)}
+                      style={{ minHeight: 42, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.18)', borderRadius: 9, color: '#fca5a5', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
+                      Reset
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCoverSettingsSave}
+                    disabled={coverSettingsSaving || !profile?.cover_url}
+                    style={{ minHeight: 44, background: 'linear-gradient(135deg,#38bdf8,#818cf8)', border: 'none', borderRadius: 10, padding: '0.65rem', fontSize: '0.86rem', fontWeight: 800, color: '#0f172a', cursor: coverSettingsSaving || !profile?.cover_url ? 'default' : 'pointer', opacity: coverSettingsSaving || !profile?.cover_url ? 0.6 : 1, fontFamily: 'inherit' }}
+                  >
+                    {coverSettingsSaving ? 'Saving cover fit…' : 'Save cover fit'}
+                  </button>
+                </div>
+              </div>
               {[
                 { label: 'Full Name', key: 'full_name', placeholder: 'Your name', type: 'text' },
                 { label: 'Bio', key: 'bio', placeholder: 'Tell the community about yourself', type: 'text' },
@@ -1260,6 +1948,46 @@ export default function ProfilePage() {
                   />
                 </div>
               ))}
+              <div style={{ borderTop: '1px solid rgba(148,163,184,0.12)', paddingTop: '0.85rem' }}>
+                <label className="profile-label" style={{ marginBottom: '0.75rem', display: 'block' }}>💼 Professional profile</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  <input
+                    className="profile-input"
+                    type="text"
+                    placeholder="Headline, e.g. Founder · Product strategist · Community builder"
+                    value={form.professional_headline}
+                    onChange={e => setForm(f => ({ ...f, professional_headline: e.target.value }))}
+                  />
+                  <textarea
+                    className="profile-input"
+                    placeholder={'Experience — one per line\nRole @ Organisation (Dates) — Short description'}
+                    value={form.professional_experience_text}
+                    onChange={e => setForm(f => ({ ...f, professional_experience_text: e.target.value }))}
+                    rows={5}
+                    style={{ resize: 'vertical', minHeight: 120, lineHeight: 1.5 }}
+                  />
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', lineHeight: 1.45 }}>
+                    Example: <span style={{ color: '#94a3b8' }}>Founder @ Example Studio (2021–present) — Building trusted community products.</span>
+                  </div>
+                </div>
+              </div>
+              <div style={{ borderTop: '1px solid rgba(148,163,184,0.12)', paddingTop: '0.85rem' }}>
+                <label className="profile-label" style={{ marginBottom: '0.75rem', display: 'block' }}>🛡️ Profile verification request</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  <div style={{ background: isProfileVerified(profile) ? 'rgba(52,211,153,0.08)' : 'rgba(56,189,248,0.06)', border: `1px solid ${isProfileVerified(profile) ? 'rgba(52,211,153,0.22)' : 'rgba(56,189,248,0.18)'}`, borderRadius: 10, padding: '0.7rem 0.8rem', fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.5 }}>
+                    <strong style={{ color: isProfileVerified(profile) ? '#34d399' : '#38bdf8' }}>{verificationLabel(profile)}.</strong>{' '}
+                    Verified badges are granted only after FreeTrust review; saving this form cannot self-verify your profile.
+                  </div>
+                  <textarea
+                    className="profile-input"
+                    placeholder="Add links or notes FreeTrust can review: professional website, public social profiles, credentials, business registry, or other proof."
+                    value={form.verification_details_text}
+                    onChange={e => setForm(f => ({ ...f, verification_details_text: e.target.value }))}
+                    rows={4}
+                    style={{ resize: 'vertical', minHeight: 105, lineHeight: 1.5 }}
+                  />
+                </div>
+              </div>
               {/* Social links */}
               <div style={{ borderTop: '1px solid rgba(148,163,184,0.12)', paddingTop: '0.75rem' }}>
                 <label className="profile-label" style={{ marginBottom: '0.75rem', display: 'block' }}>🔗 Social Links</label>
@@ -1324,6 +2052,23 @@ export default function ProfilePage() {
           </div>
         ) : null}
 
+        {!editing && normaliseExperience(profile?.professional_experience).length > 0 && (
+          <div className="profile-card">
+            <h3 style={{ marginBottom: '0.9rem', fontWeight: 700, fontSize: '1rem' }}>Professional Experience</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+              {normaliseExperience(profile?.professional_experience).map((entry, index) => (
+                <div key={`${entry.role}-${entry.organization}-${index}`} style={{ borderLeft: '2px solid rgba(56,189,248,0.35)', paddingLeft: '0.85rem' }}>
+                  <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.35 }}>
+                    {entry.role || 'Professional role'}{entry.organization ? <span style={{ color: '#94a3b8', fontWeight: 700 }}> @ {entry.organization}</span> : null}
+                  </div>
+                  {entry.period && <div style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: 700, marginTop: 2 }}>{entry.period}</div>}
+                  {entry.description && <div style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.6, marginTop: 5 }}>{entry.description}</div>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Hobbies — pill chips. Only shown if the user has at least one
             hobby set. Presets (Music, Art, etc.) render with an emoji
             icon from HOBBY_ICONS; custom free-text hobbies render as a
@@ -1360,15 +2105,27 @@ export default function ProfilePage() {
           </div>
         )}
 
+          </>
+        )}
+
         {/* Services Section */}
-        {services.length > 0 && (
+        {activeTab === 'services' && (
           <div className="profile-card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.06em' }}>SERVICES ({services.length})</div>
-              <Link href="/seller/gigs/create" style={{ fontSize: '0.75rem', color: '#38bdf8', textDecoration: 'none', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 6, padding: '0.25rem 0.6rem' }}>
-                + Add Service
-              </Link>
+              {isOwnProfile && (
+                <Link href="/seller/gigs/create" style={{ fontSize: '0.75rem', color: '#38bdf8', textDecoration: 'none', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 6, padding: '0.25rem 0.6rem' }}>
+                  + Add Service
+                </Link>
+              )}
             </div>
+            {services.length === 0 ? (
+              <div style={{ padding: '2.25rem 1rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🛠</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.35rem' }}>No services listed yet</div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>{isOwnProfile ? 'Add your first service to show it on your profile.' : 'Services from this member will appear here.'}</div>
+              </div>
+            ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {(showAllServices ? services : services.slice(0, 4)).map(svc => (
                 <Link
@@ -1402,6 +2159,7 @@ export default function ProfilePage() {
                 </Link>
               ))}
             </div>
+            )}
             {services.length > 4 && (
               <button
                 onClick={() => setShowAllServices(s => !s)}
@@ -1413,11 +2171,87 @@ export default function ProfilePage() {
           </div>
         )}
 
+        {/* Products Section */}
+        {activeTab === 'products' && (
+          <div className="profile-card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.06em' }}>PRODUCTS ({products.length})</div>
+              {isOwnProfile && (
+                <Link href="/products/new" style={{ fontSize: '0.75rem', color: '#38bdf8', textDecoration: 'none', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 6, padding: '0.25rem 0.6rem' }}>
+                  + Add Product
+                </Link>
+              )}
+            </div>
+            {products.length === 0 ? (
+              <div style={{ padding: '2.25rem 1rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>📦</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.35rem' }}>No products listed yet</div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>{isOwnProfile ? 'Add your first product to show it on your profile.' : 'Products from this member will appear here.'}</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {(showAllProducts ? products : products.slice(0, 4)).map(product => {
+                  const cover = product.cover_image ?? (Array.isArray(product.images) ? product.images[0] : null)
+                  return (
+                    <Link
+                      key={product.id}
+                      href={`/products/${product.id}`}
+                      style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', textDecoration: 'none', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.1)', borderRadius: 10, padding: '0.85rem 1rem', transition: 'border-color 0.15s' }}
+                    >
+                      {cover ? (
+                        <img src={cover} alt={product.title} style={{ width: 54, height: 54, borderRadius: 12, objectFit: 'cover', flexShrink: 0, background: '#1e293b' }} />
+                      ) : (
+                        <div style={{ width: 54, height: 54, borderRadius: 12, background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.18)', color: '#7dd3fc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22 }}>📦</div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
+                          <div style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                            {product.title}
+                          </div>
+                          <div style={{ flexShrink: 0, textAlign: 'right', fontSize: '1rem', fontWeight: 800, color: '#34d399', whiteSpace: 'nowrap' }}>
+                            €{Number(product.price ?? 0).toLocaleString('en-IE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                          </div>
+                        </div>
+                        {product.description && (
+                          <div style={{ color: '#64748b', fontSize: '0.75rem', lineHeight: 1.5, marginTop: '0.35rem', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                            {product.description}
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.45rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                          {product.product_type && (
+                            <span style={{ fontSize: '0.68rem', color: '#38bdf8', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.1rem 0.45rem' }}>
+                              {product.product_type === 'digital' ? '💾 Digital' : '📦 Physical'}
+                            </span>
+                          )}
+                          {product.product_type === 'physical' && (
+                            <span style={{ fontSize: '0.68rem', color: product.stock_qty == null || product.stock_qty > 0 ? '#34d399' : '#f87171' }}>
+                              {product.stock_qty == null ? 'In stock' : product.stock_qty > 0 ? `${product.stock_qty} in stock` : 'Out of stock'}
+                            </span>
+                          )}
+                          <span style={{ fontSize: '0.68rem', color: '#f59e0b' }}>⭐ {product.avg_rating && (product.review_count ?? 0) > 0 ? Number(product.avg_rating).toFixed(1) : 'New'} ({product.review_count ?? 0})</span>
+                        </div>
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+            {products.length > 4 && (
+              <button
+                onClick={() => setShowAllProducts(s => !s)}
+                style={{ marginTop: '0.75rem', width: '100%', background: 'transparent', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.5rem', fontSize: '0.82rem', color: '#38bdf8', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                {showAllProducts ? 'Show less' : `Show all ${products.length} products`}
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Grassroots Section — same shape as Services so the visual rhythm
             stays consistent. Only renders when the user has at least one
             active listing. Green accent matches the rest of the
             grassroots section. */}
-        {grassroots.length > 0 && (
+        {activeTab === 'grassroots' && (
           <div className="profile-card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.06em' }}>
@@ -1439,6 +2273,13 @@ export default function ProfilePage() {
                 </Link>
               )}
             </div>
+            {grassroots.length === 0 ? (
+              <div style={{ padding: '2.25rem 1rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🌱</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.35rem' }}>No grassroots listings yet</div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>{isOwnProfile ? 'Post grassroots work to show it on your profile.' : 'Grassroots listings from this member will appear here.'}</div>
+              </div>
+            ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {(showAllGrassroots ? grassroots : grassroots.slice(0, 4)).map(g => {
                 const cat = GRASSROOTS_CATEGORIES_BY_SLUG[g.category]
@@ -1552,6 +2393,7 @@ export default function ProfilePage() {
                 )
               })}
             </div>
+            )}
             {grassroots.length > 4 && (
               <button
                 onClick={() => setShowAllGrassroots(s => !s)}
@@ -1574,46 +2416,12 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Posts & Activity Section */}
-        <div className="profile-card">
-          {/* Header with toggle between Posts and Activity */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button
-                onClick={() => setShowPostsSection(false)}
-                style={{
-                  fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.06em',
-                  background: !showPostsSection ? 'rgba(56,189,248,0.12)' : 'transparent',
-                  border: !showPostsSection ? '1px solid rgba(56,189,248,0.3)' : '1px solid transparent',
-                  borderRadius: 6, padding: '0.2rem 0.65rem', color: !showPostsSection ? '#38bdf8' : '#64748b',
-                  cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >
-                ACTIVITY
-              </button>
-              <button
-                onClick={() => setShowPostsSection(true)}
-                style={{
-                  fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.06em',
-                  background: showPostsSection ? 'rgba(56,189,248,0.12)' : 'transparent',
-                  border: showPostsSection ? '1px solid rgba(56,189,248,0.3)' : '1px solid transparent',
-                  borderRadius: 6, padding: '0.2rem 0.65rem', color: showPostsSection ? '#38bdf8' : '#64748b',
-                  cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >
-                POSTS
-              </button>
+        {/* Activity Section */}
+        {activeTab === 'activity' && (
+          <div className="profile-card">
+            <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: 14 }}>
+              Recent activity
             </div>
-            {showPostsSection && isOwnProfile && (
-              <Link href="/jobs/new" style={{ fontSize: '0.72rem', color: '#38bdf8', textDecoration: 'none', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 6, padding: '0.2rem 0.6rem' }}>
-                + Post Job
-              </Link>
-            )}
-          </div>
-
-          {/* Activity tab — original timeline */}
-          {!showPostsSection && (
-            <>
               {loadingActivity ? (
                 <div style={{ color: '#64748b', fontSize: '0.88rem' }}>Loading activity…</div>
               ) : activity.length === 0 ? (
@@ -1640,24 +2448,95 @@ export default function ProfilePage() {
                   ))}
                 </div>
               )}
-            </>
-          )}
+          </div>
+        )}
 
-          {/* Posts tab — unified jobs + listings + events feed */}
-          {showPostsSection && (
-            <ActivityFeed
-              items={activityFeedItems}
-              loading={activityFeedLoading}
-              emptyTitle="Nothing posted yet"
-              emptySubtitle="Jobs, services, events and listings created by this member will appear here."
-              emptyCtaHref={isOwnProfile ? '/jobs/new' : undefined}
-              emptyCtaLabel={isOwnProfile ? '💼 Post a Job' : undefined}
-            />
-          )}
-        </div>
+        {/* Posts tab — real social feed posts by this member */}
+        {activeTab === 'posts' && (
+          <div className="profile-card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
+                Posts from {profile?.full_name ?? 'this member'}
+              </div>
+              {isOwnProfile && (
+                <Link href="/create" style={{ fontSize: 12, fontWeight: 700, color: '#7dd3fc', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 8, padding: '5px 10px', textDecoration: 'none' }}>
+                  + Post
+                </Link>
+              )}
+            </div>
+            {profilePostsLoading ? (
+              <div style={{ color: '#64748b', fontSize: '0.88rem' }}>Loading posts…</div>
+            ) : profilePosts.length === 0 ? (
+              <div style={{ padding: '2.5rem 1rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📝</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f1f5f9', marginBottom: '0.4rem' }}>No posts yet</div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', maxWidth: 280, margin: '0 auto', lineHeight: 1.5 }}>Social posts from this member will appear here.</div>
+                {isOwnProfile && (
+                  <Link href="/create" style={{ display: 'inline-block', marginTop: '1rem', fontSize: '0.82rem', fontWeight: 600, color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 8, padding: '0.45rem 1rem', textDecoration: 'none' }}>
+                    Create your first post
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <div style={{ margin: '0 -0.75rem' }}>
+                {profilePosts.map(post => (
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    currentUserId={user?.id}
+                    onDelete={postId => setProfilePosts(prev => prev.filter(p => p.id !== postId))}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {(activeTab === 'followers' || activeTab === 'following') && (
+          <div className="profile-card">
+            <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: 14 }}>
+              {activeTab === 'followers'
+                ? `${followerCount} follower${followerCount !== 1 ? 's' : ''}`
+                : `${profile?.following_count ?? following.length} following`}
+            </div>
+            {connectionsLoading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[1, 2, 3].map(i => <div key={i} style={{ height: 72, borderRadius: 16, background: '#0f172a', border: '1px solid #1e293b' }} />)}
+              </div>
+            ) : (activeTab === 'followers' ? followers : following).length === 0 ? (
+              <div style={{ padding: '2.25rem 1rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>{activeTab === 'followers' ? '👥' : '➡️'}</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.35rem' }}>
+                  {activeTab === 'followers' ? 'No followers yet' : 'Not following anyone yet'}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', maxWidth: 280, margin: '0 auto', lineHeight: 1.5 }}>
+                  {activeTab === 'followers' ? 'Followers will appear here as the community grows.' : 'Members this profile follows will appear here.'}
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {(activeTab === 'followers' ? followers : following).map(person => (
+                  <Link key={person.id} href={`/profile?id=${person.id}`} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 16, background: 'rgba(15,23,42,0.6)', border: '1px solid #1e293b', textDecoration: 'none' }}>
+                    <div style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', background: '#1e293b', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {person.avatar_url
+                        ? <img src={person.avatar_url} alt={person.full_name ?? 'Member'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <span style={{ color: '#64748b', fontWeight: 800 }}>{(person.full_name ?? 'M').slice(0, 1).toUpperCase()}</span>}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{person.full_name ?? 'Member'}</div>
+                      {person.location && <div style={{ fontSize: 12, color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📍 {person.location}</div>}
+                      {person.bio && <div style={{ fontSize: 12, color: '#64748b', marginTop: 2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{person.bio}</div>}
+                    </div>
+                    <span style={{ color: '#38bdf8', fontSize: 18, flexShrink: 0 }}>→</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Seller Tools — own profile only */}
-        {isOwnProfile && (
+        {activeTab === 'overview' && isOwnProfile && (
           <div className="profile-card">
             <h3 style={{ marginBottom: '1rem', fontWeight: 700, fontSize: '1rem' }}>🏪 Seller Tools</h3>
             {/* Accounting link */}
@@ -1728,7 +2607,7 @@ export default function ProfilePage() {
         )}
 
         {/* Account info — own profile only */}
-        {isOwnProfile && user && (
+        {activeTab === 'overview' && isOwnProfile && user && (
           <div className="profile-card">
             <h3 style={{ marginBottom: '0.75rem', fontWeight: 700, fontSize: '1rem' }}>Account</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.88rem', color: '#64748b' }}>

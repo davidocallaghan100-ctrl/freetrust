@@ -83,7 +83,9 @@ const withPWA = nextPwa({
       // Core navigation targets — cache the HTML so the shell loads offline
       urlPattern: ({ url }) => {
         const pathname = new URL(url, 'http://x').pathname
-        return ['/', '/feed', '/wallet', '/profile'].some(p => pathname === p || pathname.startsWith(`${p}/`))
+        // Do not cache /profile: it is auth-sensitive and must always resolve
+        // against the latest Supabase session cookies after Google OAuth.
+        return ['/', '/feed', '/wallet'].some(p => pathname === p || pathname.startsWith(`${p}/`))
       },
       handler: 'NetworkFirst',
       options: {

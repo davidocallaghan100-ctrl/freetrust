@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ONLINE_CATEGORIES, OFFLINE_CATEGORIES } from '@/lib/service-categories'
+import { ONLINE_CATEGORIES, OFFLINE_CATEGORIES, findServiceCategoryByLabel } from '@/lib/service-categories'
 import LocationFilter from '@/components/location/LocationFilter'
 import LocationBadge from '@/components/location/LocationBadge'
 import PriceDisplay from '@/components/currency/PriceDisplay'
@@ -254,6 +254,8 @@ export default function ServicesPage() {
   const [isAdmin, setIsAdmin]     = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string | number; title: string } | null>(null)
   const [deleting, setDeleting]   = useState(false)
+  const [loadingServices, setLoadingServices] = useState(true)
+  const [servicesError, setServicesError] = useState<string | null>(null)
 
   // Collapsible sidebar sections — persisted to localStorage
   const [onlineOpen, setOnlineOpen] = useState(true)
@@ -344,19 +346,20 @@ export default function ServicesPage() {
     }
   }
 
-  // Load real Supabase data
+  // Load real marketplace data from a same-origin no-store API route.
+  // This avoids iOS/PWA stale client-side Supabase states and makes the
+  // Services Marketplace rehydrate from production data on every visit.
   useEffect(() => {
-    const supabase = createClient();
+    let cancelled = false;
     (async () => {
       try {
-        const { data } = await supabase
-          .from('listings')
-          .select('id, title, description, price, currency, service_mode, tags, location, cover_image, avg_rating, review_count, country, city, region, latitude, longitude, location_label, is_remote, currency_code, price_eur, seller:profiles!seller_id(id, full_name, avatar_url, linkedin_url, instagram_url, twitter_url, github_url, tiktok_url, youtube_url, website_url)')
-          .eq('product_type', 'service')
-          .eq('status', 'active')
-          .order('created_at', { ascending: false })
-          .limit(200)
-        if (data) {
+        setLoadingServices(true)
+        setServicesError(null)
+        const res = await fetch('/api/services/marketplace', { cache: 'no-store' })
+        const payload = await res.json().catch(() => null) as { services?: Record<string, unknown>[]; error?: string } | null
+        if (!res.ok) throw new Error(payload?.error ?? `Services request failed (${res.status})`)
+        const data = payload?.services ?? []
+        if (!cancelled) {
           const mapped: Service[] = data.map((s: Record<string, unknown>) => {
             const seller = s.seller as {
               id?: string
@@ -373,6 +376,10 @@ export default function ServicesPage() {
             const name = seller?.full_name ?? 'Unknown'
             const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
             const mode = (s.service_mode as string) ?? 'online'
+            const categoryLabel = typeof s.category === 'string' ? s.category : ''
+            const categoryInfo = (typeof s.category_id === 'string' && s.category_id)
+              ? [...ONLINE_CATEGORIES, ...OFFLINE_CATEGORIES].find(cat => cat.id === s.category_id)
+              : findServiceCategoryByLabel(categoryLabel)
             return {
               id: s.id as string,
               title: s.title as string,
@@ -386,9 +393,9 @@ export default function ServicesPage() {
               price: Number(s.price ?? 0),
               currency: String(s.currency_code ?? s.currency ?? 'EUR'),
               delivery: mode === 'online' ? 'Online' : 'In-person',
-              tags: (s.tags as string[]) ?? [],
-              category: '',
-              categoryId: undefined,
+              tags: Array.isArray(s.tags) ? (s.tags as string[]) : [],
+              category: categoryInfo?.label ?? categoryLabel,
+              categoryId: categoryInfo?.id,
               desc: (s.description as string) ?? '',
               trust: 90,
               badge: Number(s.review_count ?? 0) > 50 ? 'Top Rated' : null,
@@ -416,8 +423,14 @@ export default function ServicesPage() {
           })
           setServices(mapped)
         }
-      } catch (err) { console.error('[services page]', err) }
+      } catch (err) {
+        console.error('[services page]', err)
+        if (!cancelled) setServicesError(err instanceof Error ? err.message : 'Could not load services')
+      } finally {
+        if (!cancelled) setLoadingServices(false)
+      }
     })()
+    return () => { cancelled = true }
   }, [])
 
   // Filter & sort
@@ -729,7 +742,21 @@ export default function ServicesPage() {
             )}
           </div>
 
-          {filtered.length === 0 ? (
+          {loadingServices ? (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+              <div style={{ fontSize: '34px', marginBottom: '12px' }}>🛠️</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8' }}>Loading services…</div>
+            </div>
+          ) : servicesError ? (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+              <div style={{ fontSize: '34px', marginBottom: '12px' }}>⚠️</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8', marginBottom: 6 }}>Services could not load</div>
+              <div style={{ fontSize: '13px', marginBottom: 20 }}>Pull to refresh or try again in a moment.</div>
+              <button onClick={() => window.location.reload()} style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '10px 24px', borderRadius: 10, fontWeight: 700, border: 'none', fontSize: '14px' }}>
+                Reload services
+              </button>
+            </div>
+          ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
               <div style={{ fontSize: '40px', marginBottom: '12px' }}>🛠️</div>
               <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8', marginBottom: '6px' }}>

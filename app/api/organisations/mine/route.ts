@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -9,15 +10,24 @@ import { createAdminClient } from '@/lib/supabase/admin'
  * Used by the Post Job / Post Service / Create Event forms to show
  * the "Post as Organisation" selector (LinkedIn-style business pages).
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const admin = createAdminClient()
+    let { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      const token = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim()
+      if (token) {
+        const tokenAuth = await admin.auth.getUser(token)
+        user = tokenAuth.data.user
+        authError = tokenAuth.error
+      }
+    }
+
     if (authError || !user) {
       return NextResponse.json({ organisations: [] })
     }
-
-    const admin = createAdminClient()
 
     // Get all orgs where user is owner or admin (via membership table)
     const { data: memberships, error: memErr } = await admin
