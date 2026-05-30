@@ -89,11 +89,15 @@ export default async function Page() {
   // — the displayed accordion and the JSON-LD can never drift apart.
   const organizationLd = {
     '@context':        'https://schema.org',
-    '@type':           'Organization',
+    '@type':           ['Organization', 'OnlineBusiness'],
+    '@id':             `${BASE_URL}/#organization`,
     name:              'FreeTrust',
+    alternateName:     ['FreeTrust.co', 'FreeTrust Community Economy'],
     url:               BASE_URL,
-    description:       "The community economy marketplace",
+    description:       "FreeTrust is the community economy marketplace where trust is currency — verified members, protected messaging, on-platform payments, TrustCoins, listings, jobs, events, articles and communities.",
     logo:              `${BASE_URL}/icons/icon-512x512.png`,
+    image:             `${BASE_URL}/icons/freetrust-share-logo-20260524.png`,
+    slogan:            'The community economy marketplace where trust is currency.',
     sameAs: [
       'https://twitter.com/freetrust',
     ],
@@ -102,9 +106,11 @@ export default async function Page() {
   const websiteLd = {
     '@context':   'https://schema.org',
     '@type':      'WebSite',
+    '@id':        `${BASE_URL}/#website`,
     name:         'FreeTrust',
     url:          BASE_URL,
-    description:  "The community economy marketplace",
+    publisher:    { '@id': `${BASE_URL}/#organization` },
+    description:  "The community economy marketplace for trusted services, products, jobs, events, articles and communities.",
     inLanguage:   'en',
     potentialAction: {
       '@type':       'SearchAction',

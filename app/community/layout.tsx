@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Communities | FreeTrust',
     description: 'Join communities on FreeTrust and connect with like-minded members. Learn, collaborate, and earn Trust Coins in the community economy.',
-    url: `${BASE}/community`,
+    url: `${BASE}/communities`,
     images: [{ url: `${BASE}/api/og?title=Communities&category=Community`, width: 1200, height: 630 }],
   },
   twitter: {
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     title: 'Communities | FreeTrust',
     description: 'Join communities on FreeTrust and connect with like-minded members. Learn, collaborate, and earn Trust Coins in the community economy.',
   },
-  alternates: { canonical: `${BASE}/community` },
+  alternates: { canonical: `${BASE}/communities` },
 }
 
 export default function CommunityLayout({ children }: { children: React.ReactNode }) {
