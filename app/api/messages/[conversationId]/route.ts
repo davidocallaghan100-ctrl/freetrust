@@ -4,6 +4,13 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { insertNotification } from '@/lib/notifications/insert'
 import { sendEmail } from '@/lib/email/send'
+import {
+  ALLOWED_MESSAGE_ATTACHMENT_TYPES,
+  MAX_MESSAGE_ATTACHMENTS,
+  MAX_MESSAGE_ATTACHMENT_BYTES,
+  normalizeMessageAttachments,
+  type MessageAttachment,
+} from '@/lib/messageAttachments'
 
 const MAX_MESSAGE_CHARS = 2000
 const MESSAGE_RATE_LIMIT_WINDOW_MS = 60_000
@@ -16,6 +23,19 @@ const OFF_PLATFORM_PAYMENT_RE = /\b(?:cash\s?app|venmo|paypal|revolut|western\s+
 
 function normalizeMessageContent(input: string): string {
   return input.replace(/\0/g, '').replace(/\r\n/g, '\n').trim()
+}
+
+function validateAttachmentPayload(attachments: MessageAttachment[], userId: string, conversationId: string): string | null {
+  if (attachments.length > MAX_MESSAGE_ATTACHMENTS) {
+    return `You can attach up to ${MAX_MESSAGE_ATTACHMENTS} files per message.`
+  }
+  for (const attachment of attachments) {
+    if (!attachment.url || !attachment.name || !attachment.type) return 'Attachment metadata is incomplete.'
+    if (!attachment.url.startsWith(`${userId}/${conversationId}/`)) return 'Attachment path is not valid for this conversation.'
+    if (attachment.size > MAX_MESSAGE_ATTACHMENT_BYTES) return `${attachment.name} is too large. The limit is 10 MB per file.`
+    if (!ALLOWED_MESSAGE_ATTACHMENT_TYPES.has(attachment.type)) return `${attachment.name} is not a supported file type.`
+  }
+  return null
 }
 
 function checkMessageRateLimit(userId: string, conversationId: string): boolean {
@@ -153,14 +173,19 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid conversation id' }, { status: 400 })
     }
 
-    const body = await request.json().catch(() => null) as { content?: unknown } | null
+    const body = await request.json().catch(() => null) as { content?: unknown; attachments?: unknown } | null
     const rawContent = body?.content
-    if (typeof rawContent !== 'string' || !rawContent.trim()) {
+    const attachments = normalizeMessageAttachments(body?.attachments)
+    if (typeof rawContent !== 'string') {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 })
     }
     const content = normalizeMessageContent(rawContent)
-    if (!content) {
-      return NextResponse.json({ error: 'Content is required' }, { status: 400 })
+    const attachmentError = validateAttachmentPayload(attachments, user.id, conversationId)
+    if (attachmentError) {
+      return NextResponse.json({ error: attachmentError }, { status: 400 })
+    }
+    if (!content && attachments.length === 0) {
+      return NextResponse.json({ error: 'Message content or an attachment is required' }, { status: 400 })
     }
     if (content.length > MAX_MESSAGE_CHARS) {
       return NextResponse.json(
@@ -214,6 +239,7 @@ export async function POST(
         conversation_id: conversationId,
         sender_id:       user.id,
         content,
+        attachments,
       })
       .select()
       .single()

@@ -83,6 +83,7 @@ export async function sendMessage(payload: NewMessagePayload): Promise<Message> 
       conversation_id: conversationId,
       sender_id: user.id,
       content: payload.content.trim(),
+      attachments: payload.attachments ?? [],
       metadata: payload.contextType
         ? { contextType: payload.contextType, contextId: payload.contextId }
         : {},
@@ -221,4 +222,3 @@ export async function getTotalUnreadCount(): Promise<number> {
 
   return total
 }
-

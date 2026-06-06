@@ -51,7 +51,7 @@ export async function GET() {
     const enriched = await Promise.all((conversations || []).map(async (conv) => {
       const { data: lastMsg } = await supabase
         .from('messages')
-        .select('id, sender_id, content, created_at')
+        .select('id, sender_id, content, created_at, attachments')
         .eq('conversation_id', conv.id)
         .order('created_at', { ascending: false })
         .limit(1)

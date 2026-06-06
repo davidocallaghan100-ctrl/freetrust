@@ -4,6 +4,13 @@ import { createClient } from '@/lib/supabase/client'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { RealtimeChannel } from '@supabase/supabase-js'
+import MessageAttachments from '@/components/messaging/MessageAttachments'
+import {
+  formatAttachmentSize,
+  uploadMessageAttachments,
+  validateMessageAttachmentFiles,
+  type MessageAttachment,
+} from '@/lib/messageAttachments'
 
 interface Profile {
   id:         string
@@ -17,6 +24,7 @@ interface Message {
   sender_id:       string
   content:         string
   created_at:      string
+  attachments?:    MessageAttachment[]
   sender?:         Profile
 }
 
@@ -48,12 +56,14 @@ export default function ConversationPage() {
   const [messages,  setMessages]  = useState<Message[]>([])
   const [otherUser, setOtherUser] = useState<Profile | null>(null)
   const [input,     setInput]     = useState('')
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([])
   const [sending,   setSending]   = useState(false)
   const [loading,   setLoading]   = useState(true)
   const [sendError, setSendError] = useState<string | null>(null)
 
   const bottomRef  = useRef<HTMLDivElement>(null)
   const inputRef   = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const channelRef = useRef<RealtimeChannel | null>(null)
 
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -235,8 +245,10 @@ export default function ConversationPage() {
   // but the conversation sort order never updates.
   const send = async () => {
     const text = input.trim()
-    if (!text || !userId) return
+    if ((!text && attachedFiles.length === 0) || !userId) return
     setInput('')
+    const filesToSend = attachedFiles
+    setAttachedFiles([])
     setSending(true)
     setSendError(null)
 
@@ -247,15 +259,19 @@ export default function ConversationPage() {
       sender_id:       userId,
       content:         text,
       created_at:      new Date().toISOString(),
+      attachments:     filesToSend.map(file => ({ url: '', type: file.type, name: file.name, size: file.size })),
     }
     setMessages(prev => [...prev, optimistic])
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
 
     try {
+      const uploadedAttachments = filesToSend.length > 0
+        ? await uploadMessageAttachments(createClient(), filesToSend, { userId, conversationId })
+        : []
       const res = await fetch(`/api/messages/${conversationId}`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ content: text }),
+        body:    JSON.stringify({ content: text, attachments: uploadedAttachments }),
       })
       const data = await res.json().catch(() => null) as
         | { message?: Message; error?: string }
@@ -269,6 +285,7 @@ export default function ConversationPage() {
         // they don't lose what they typed.
         setMessages(prev => prev.filter(m => m.id !== optimisticId))
         setInput(text)
+        setAttachedFiles(filesToSend)
         return
       }
       // Success: swap the optimistic bubble for the real one if
@@ -286,6 +303,7 @@ export default function ConversationPage() {
       setSendError(msg)
       setMessages(prev => prev.filter(m => m.id !== optimisticId))
       setInput(text)
+      setAttachedFiles(filesToSend)
     } finally {
       setSending(false)
       inputRef.current?.focus()
@@ -297,6 +315,19 @@ export default function ConversationPage() {
       e.preventDefault()
       void send()
     }
+  }
+
+  const onPickFiles = (files: FileList | null) => {
+    if (!files) return
+    const nextFiles = Array.from(files)
+    const error = validateMessageAttachmentFiles(nextFiles, attachedFiles.length)
+    if (error) {
+      setSendError(error)
+    } else {
+      setSendError(null)
+      setAttachedFiles(prev => [...prev, ...nextFiles])
+    }
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   // Auto-scroll to bottom whenever the message list changes.
@@ -358,6 +389,49 @@ export default function ConversationPage() {
           gap: 0.65rem;
           align-items: flex-end;
           background: #111827;
+          flex-shrink: 0;
+        }
+        .conv-input-stack {
+          border-top: 1px solid rgba(56,189,248,0.1);
+          background: #111827;
+          flex-shrink: 0;
+        }
+        .conv-attachment-preview-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.45rem;
+          padding: 0.7rem 1rem 0;
+        }
+        .conv-attachment-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          max-width: 100%;
+          border: 1px solid rgba(56,189,248,0.18);
+          border-radius: 999px;
+          background: rgba(30,41,59,0.92);
+          color: #cbd5e1;
+          padding: 0.35rem 0.5rem 0.35rem 0.65rem;
+          font-size: 0.72rem;
+        }
+        .conv-attachment-remove {
+          border: none;
+          border-radius: 999px;
+          background: rgba(248,113,113,0.15);
+          color: #fca5a5;
+          width: 22px;
+          height: 22px;
+          cursor: pointer;
+        }
+        .conv-attach-btn {
+          width: 44px;
+          height: 44px;
+          border-radius: 10px;
+          border: 1px solid rgba(56,189,248,0.18);
+          background: #1e293b;
+          color: #38bdf8;
+          font-size: 1.4rem;
+          cursor: pointer;
           flex-shrink: 0;
         }
 
@@ -524,7 +598,8 @@ export default function ConversationPage() {
                   </div>
                 )}
                 <div className={`conv-bubble ${isSent ? 'sent' : 'recv'}${isPending ? ' pending' : ''}`}>
-                  {msg.content}
+                  {msg.content && <div>{msg.content}</div>}
+                  <MessageAttachments attachments={msg.attachments ?? []} compact />
                 </div>
               </div>
             </div>
@@ -562,7 +637,44 @@ export default function ConversationPage() {
       )}
 
       {/* Input */}
-      <div className="conv-input-area">
+      <div className="conv-input-stack">
+        {attachedFiles.length > 0 && (
+          <div className="conv-attachment-preview-row" aria-label="Selected attachments">
+            {attachedFiles.map((file, index) => (
+              <span className="conv-attachment-chip" key={`${file.name}-${file.lastModified}-${index}`}>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
+                <span style={{ opacity: 0.68 }}>{formatAttachmentSize(file.size)}</span>
+                <button
+                  type="button"
+                  className="conv-attachment-remove"
+                  onClick={() => setAttachedFiles(prev => prev.filter((_, i) => i !== index))}
+                  aria-label={`Remove ${file.name}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="conv-input-area">
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          hidden
+          accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,text/plain,text/csv,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/zip"
+          onChange={e => onPickFiles(e.target.files)}
+        />
+        <button
+          type="button"
+          className="conv-attach-btn"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={sending}
+          aria-label="Attach files"
+          title="Attach image or file"
+        >
+          +
+        </button>
         <textarea
           ref={inputRef}
           className="conv-textarea"
@@ -576,7 +688,7 @@ export default function ConversationPage() {
         <button
           className="conv-send-btn"
           onClick={send}
-          disabled={!input.trim() || sending}
+          disabled={(!input.trim() && attachedFiles.length === 0) || sending}
           aria-label="Send message"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -584,6 +696,7 @@ export default function ConversationPage() {
             <polygon points="22 2 15 22 11 13 2 9 22 2" />
           </svg>
         </button>
+        </div>
       </div>
     </div>
   )

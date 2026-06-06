@@ -25,6 +25,8 @@ export interface Message {
   updated_at: string
   is_deleted: boolean
   metadata: Record<string, unknown>
+  reply_to_id?: string | null
+  attachments?: Array<{ url: string; type: string; name: string; size: number }>
   sender?: Profile
 }
 
@@ -44,5 +46,5 @@ export interface NewMessagePayload {
   conversationId?: string
   contextType?: 'listing' | 'profile' | 'direct'
   contextId?: string
+  attachments?: Array<{ url: string; type: string; name: string; size: number }>
 }
-

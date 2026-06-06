@@ -5,6 +5,13 @@ import React, { Suspense, useState, useEffect, useRef, useCallback } from 'react
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import MessageDrawer from '@/components/profile/MessageDrawer'
+import MessageAttachments from '@/components/messaging/MessageAttachments'
+import {
+  formatAttachmentSize,
+  uploadMessageAttachments,
+  validateMessageAttachmentFiles,
+  type MessageAttachment,
+} from '@/lib/messageAttachments'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface Profile {
@@ -20,6 +27,7 @@ interface Message {
   sender_id: string
   content: string
   created_at: string
+  attachments?: MessageAttachment[]
   sender?: Profile
 }
 
@@ -61,6 +69,13 @@ function formatTime(iso: string): string {
   return d.toLocaleDateString()
 }
 
+function messagePreview(message: Message): string {
+  if (message.content) return message.content
+  const count = message.attachments?.length ?? 0
+  if (count === 0) return ''
+  return count === 1 ? '📎 Attachment' : `📎 ${count} attachments`
+}
+
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function MessagesPage() {
@@ -79,6 +94,7 @@ function MessagesPageInner() {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([])
   const [sending, setSending] = useState(false)
   // Inline error for failed sends. Previously `catch { /* optimistic stays */ }`
   // meant a failed INSERT left the optimistic bubble on screen with no
@@ -102,6 +118,7 @@ function MessagesPageInner() {
   const [mobileView, setMobileView] = useState<'list' | 'thread'>('list')
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -339,16 +356,17 @@ function MessagesPageInner() {
     setSafetyWarning(null)
     setSendError(null)
     setPendingResend(null)
+    setAttachedFiles([])
     // Mark as read
     setConversations(prev => prev.map(c => c.id === id ? { ...c, unread_count: 0 } : c))
   }
 
-  const doSend = async (text: string, optimisticId: string) => {
-    if (!activeId || !userId) return
+  const doSend = async (text: string, optimisticId: string, attachments: MessageAttachment[]): Promise<boolean> => {
+    if (!activeId || !userId) return false
     const res = await fetch(`/api/messages/${activeId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: text }),
+      body: JSON.stringify({ content: text, attachments }),
     })
     const data = await res.json().catch(() => ({})) as {
       error?: string
@@ -363,7 +381,7 @@ function MessagesPageInner() {
       console.error('[messages] insert failed:', data.error || res.status)
       setSendError(data.error || 'Message failed to send')
       setPendingResend({ id: optimisticId, text })
-      return
+      return false
     }
     setMessages(prev => {
       const serverMessage = data.message as Message
@@ -378,12 +396,15 @@ function MessagesPageInner() {
     setSafetyWarning(data.warning ?? null)
     setSendError(null)
     setPendingResend(null)
+    return true
   }
 
   const sendMessage = async () => {
-    if (!input.trim() || !activeId || !userId) return
+    if ((!input.trim() && attachedFiles.length === 0) || !activeId || !userId) return
     const text = input.trim()
+    const filesToSend = attachedFiles
     setInput('')
+    setAttachedFiles([])
     setSending(true)
     setSendError(null)
     setSafetyWarning(null)
@@ -396,12 +417,17 @@ function MessagesPageInner() {
       sender_id: userId,
       content: text,
       created_at: new Date().toISOString(),
+      attachments: filesToSend.map(file => ({ url: '', type: file.type, name: file.name, size: file.size })),
     }
     setMessages(prev => [...prev, optimistic])
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
 
     try {
-      await doSend(text, optimisticId)
+      const uploadedAttachments = filesToSend.length > 0
+        ? await uploadMessageAttachments(createClient(), filesToSend, { userId, conversationId: activeId })
+        : []
+      const sent = await doSend(text, optimisticId, uploadedAttachments)
+      if (!sent) setAttachedFiles(filesToSend)
     } catch (err) {
       // Network / runtime error — same treatment as the Supabase
       // error branch above so the user can see the failure reason
@@ -410,6 +436,7 @@ function MessagesPageInner() {
       console.error('[messages] sendMessage threw:', msg)
       setSendError(msg)
       setPendingResend({ id: optimisticId, text })
+      setAttachedFiles(filesToSend)
     }
     setSending(false)
     inputRef.current?.focus()
@@ -420,7 +447,7 @@ function MessagesPageInner() {
     setSending(true)
     setSendError(null)
     try {
-      await doSend(pendingResend.text, pendingResend.id)
+      await doSend(pendingResend.text, pendingResend.id, [])
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       setSendError(msg)
@@ -430,6 +457,19 @@ function MessagesPageInner() {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
+  }
+
+  const onPickFiles = (files: FileList | null) => {
+    if (!files) return
+    const nextFiles = Array.from(files)
+    const error = validateMessageAttachmentFiles(nextFiles, attachedFiles.length)
+    if (error) {
+      setSendError(error)
+    } else {
+      setSendError(null)
+      setAttachedFiles(prev => [...prev, ...nextFiles])
+    }
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const activeConv = conversations.find(c => c.id === activeId)
@@ -479,6 +519,38 @@ function MessagesPageInner() {
           align-items: center;
           background: rgba(10,20,35,0.96);
           flex-shrink: 0;
+        }
+        .msg-input-stack {
+          border-top: 1px solid rgba(56,189,248,0.1);
+          background: rgba(10,20,35,0.96);
+          flex-shrink: 0;
+        }
+        .msg-attachment-preview-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.45rem;
+          padding: 0.7rem 1rem 0;
+        }
+        .msg-attachment-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          max-width: 100%;
+          border: 1px solid rgba(45,212,191,0.2);
+          border-radius: 999px;
+          background: rgba(15,23,42,0.86);
+          color: #cbd5e1;
+          padding: 0.35rem 0.5rem 0.35rem 0.65rem;
+          font-size: 0.72rem;
+        }
+        .msg-attachment-remove {
+          border: none;
+          border-radius: 999px;
+          background: rgba(248,113,113,0.15);
+          color: #fca5a5;
+          width: 22px;
+          height: 22px;
+          cursor: pointer;
         }
         .msg-textarea { flex: 1; background: rgba(30,41,59,0.95); border: 1px solid rgba(148,163,184,0.18); border-radius: 999px; color: #f1f5f9; font-family: inherit; font-size: 16px; padding: 0.74rem 1rem; resize: none; outline: none; max-height: 120px; overflow-y: auto; }
         .msg-textarea:focus { border-color: rgba(56,189,248,0.35); }
@@ -555,7 +627,7 @@ function MessagesPageInner() {
                 </div>
                 {conv.last_message && (
                   <div style={{ fontSize: '0.78rem', color: conv.unread_count > 0 ? '#94a3b8' : '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: conv.unread_count > 0 ? 600 : 400 }}>
-                    {conv.last_message.sender_id === userId ? 'You: ' : ''}{conv.last_message.content}
+                    {conv.last_message.sender_id === userId ? 'You: ' : ''}{messagePreview(conv.last_message)}
                   </div>
                 )}
               </div>
@@ -614,8 +686,9 @@ function MessagesPageInner() {
                         </div>
                       )}
                       <div className={`msg-bubble ${isSent ? 'sent' : 'recv'}`}>
-                        <div>{msg.content}</div>
-                        <span className="msg-bubble-time">
+                         {msg.content && <div>{msg.content}</div>}
+                         <MessageAttachments attachments={msg.attachments ?? []} compact />
+                         <span className="msg-bubble-time">
                           {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{isSent ? ' ✓✓' : ''}
                         </span>
                       </div>
@@ -702,8 +775,42 @@ function MessagesPageInner() {
             )}
 
             {/* Input */}
-            <div className="msg-input-area">
-              <button className="msg-plus-btn" type="button" aria-label="Add attachment" title="Attachments coming soon">
+            <div className="msg-input-stack">
+              {attachedFiles.length > 0 && (
+                <div className="msg-attachment-preview-row" aria-label="Selected attachments">
+                  {attachedFiles.map((file, index) => (
+                    <span className="msg-attachment-chip" key={`${file.name}-${file.lastModified}-${index}`}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
+                      <span style={{ opacity: 0.68 }}>{formatAttachmentSize(file.size)}</span>
+                      <button
+                        type="button"
+                        className="msg-attachment-remove"
+                        onClick={() => setAttachedFiles(prev => prev.filter((_, i) => i !== index))}
+                        aria-label={`Remove ${file.name}`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="msg-input-area">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                hidden
+                accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,text/plain,text/csv,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/zip"
+                onChange={e => onPickFiles(e.target.files)}
+              />
+              <button
+                className="msg-plus-btn"
+                type="button"
+                aria-label="Add attachment"
+                title="Attach image or file"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={sending}
+              >
                 +
               </button>
               <textarea
@@ -715,11 +822,12 @@ function MessagesPageInner() {
                 placeholder="Type a message…"
                 rows={1}
               />
-              <button className="msg-send-btn" onClick={sendMessage} disabled={!input.trim() || sending} title="Send">
+              <button className="msg-send-btn" onClick={sendMessage} disabled={(!input.trim() && attachedFiles.length === 0) || sending} title="Send">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
                 </svg>
               </button>
+              </div>
             </div>
           </>
         )}

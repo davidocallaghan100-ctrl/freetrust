@@ -3,6 +3,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { RealtimeChannel } from '@supabase/supabase-js'
+import MessageAttachments from '@/components/messaging/MessageAttachments'
+import {
+  formatAttachmentSize,
+  uploadMessageAttachments,
+  validateMessageAttachmentFiles,
+  type MessageAttachment,
+} from '@/lib/messageAttachments'
 
 // Inline message drawer — opens on top of the profile page as a
 // slide-in panel so clicking "Message" NEVER leaves the current URL.
@@ -32,6 +39,7 @@ interface Message {
   sender_id:       string
   content:         string
   created_at:      string
+  attachments?:    MessageAttachment[]
 }
 
 export interface MessageDrawerProps {
@@ -55,12 +63,14 @@ export default function MessageDrawer({
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [messages,       setMessages]       = useState<Message[]>([])
   const [input,          setInput]          = useState('')
+  const [attachedFiles,  setAttachedFiles]  = useState<File[]>([])
   const [setupLoading,   setSetupLoading]   = useState(false)
   const [sending,        setSending]        = useState(false)
   const [error,          setError]          = useState<string | null>(null)
 
   const bottomRef  = useRef<HTMLDivElement>(null)
   const inputRef   = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const channelRef = useRef<RealtimeChannel | null>(null)
 
   // Close handler — resets all state + tears down the realtime
@@ -74,6 +84,7 @@ export default function MessageDrawer({
     setConversationId(null)
     setMessages([])
     setInput('')
+    setAttachedFiles([])
     setError(null)
     setSetupLoading(false)
     setSending(false)
@@ -217,8 +228,10 @@ export default function MessageDrawer({
 
   const send = async () => {
     const text = input.trim()
-    if (!text || !conversationId || !currentUserId) return
+    if ((!text && attachedFiles.length === 0) || !conversationId || !currentUserId) return
     setInput('')
+    const filesToSend = attachedFiles
+    setAttachedFiles([])
     // Reset textarea height after clearing
     if (inputRef.current) {
       inputRef.current.style.height = 'auto'
@@ -233,15 +246,19 @@ export default function MessageDrawer({
       sender_id:       currentUserId,
       content:         text,
       created_at:      new Date().toISOString(),
+      attachments:     filesToSend.map(file => ({ url: '', type: file.type, name: file.name, size: file.size })),
     }
     setMessages(prev => [...prev, optimistic])
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 40)
 
     try {
+      const uploadedAttachments = filesToSend.length > 0
+        ? await uploadMessageAttachments(createClient(), filesToSend, { userId: currentUserId, conversationId })
+        : []
       const res = await fetch(`/api/messages/${conversationId}`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ content: text }),
+        body:    JSON.stringify({ content: text, attachments: uploadedAttachments }),
       })
       const data = await res.json().catch(() => null) as
         | { message?: Message; error?: string }
@@ -250,6 +267,7 @@ export default function MessageDrawer({
         setError(data?.error || `Failed to send (HTTP ${res.status})`)
         setMessages(prev => prev.filter(m => m.id !== optimisticId))
         setInput(text)
+        setAttachedFiles(filesToSend)
         return
       }
       if (data?.message) {
@@ -265,6 +283,7 @@ export default function MessageDrawer({
       setError(msg)
       setMessages(prev => prev.filter(m => m.id !== optimisticId))
       setInput(text)
+      setAttachedFiles(filesToSend)
     } finally {
       setSending(false)
       inputRef.current?.focus()
@@ -276,6 +295,19 @@ export default function MessageDrawer({
       e.preventDefault()
       void send()
     }
+  }
+
+  const onPickFiles = (files: FileList | null) => {
+    if (!files) return
+    const nextFiles = Array.from(files)
+    const validationError = validateMessageAttachmentFiles(nextFiles, attachedFiles.length)
+    if (validationError) {
+      setError(validationError)
+    } else {
+      setError(null)
+      setAttachedFiles(prev => [...prev, ...nextFiles])
+    }
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   if (!open) return null
@@ -341,6 +373,51 @@ export default function MessageDrawer({
           background: #111827;
           position: relative;
           z-index: 10001;
+        }
+        .drawer-input-stack {
+          flex-shrink: 0;
+          border-top: 1px solid rgba(56,189,248,0.1);
+          background: #111827;
+          position: relative;
+          z-index: 10001;
+        }
+        .drawer-attachment-preview-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.4rem;
+          padding: 0.65rem 0.75rem 0;
+        }
+        .drawer-attachment-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          max-width: 100%;
+          border: 1px solid rgba(52,211,153,0.2);
+          border-radius: 999px;
+          background: rgba(30,41,59,0.92);
+          color: #cbd5e1;
+          padding: 0.32rem 0.45rem 0.32rem 0.6rem;
+          font-size: 0.7rem;
+        }
+        .drawer-attachment-remove {
+          border: none;
+          border-radius: 999px;
+          background: rgba(248,113,113,0.15);
+          color: #fca5a5;
+          width: 22px;
+          height: 22px;
+          cursor: pointer;
+        }
+        .drawer-attach {
+          width: 44px; height: 44px;
+          border: 1px solid rgba(52,211,153,0.22);
+          border-radius: 10px;
+          background: #1e293b;
+          color: #34d399;
+          display: inline-flex; align-items: center; justify-content: center;
+          cursor: pointer;
+          flex-shrink: 0;
+          font-size: 1.35rem;
         }
         .drawer-textarea {
           flex: 1;
@@ -499,7 +576,8 @@ export default function MessageDrawer({
                 )}
                 <div style={{ display: 'flex', justifyContent: isSent ? 'flex-end' : 'flex-start', marginBottom: '0.35rem' }}>
                   <div className={`drawer-bubble ${isSent ? 'sent' : 'recv'}${isPend ? ' pending' : ''}`}>
-                    {m.content}
+                    {m.content && <div>{m.content}</div>}
+                    <MessageAttachments attachments={m.attachments ?? []} compact />
                   </div>
                 </div>
               </div>
@@ -509,7 +587,44 @@ export default function MessageDrawer({
         </div>
 
         {/* Input */}
-        <div className="drawer-input-row">
+        <div className="drawer-input-stack">
+          {attachedFiles.length > 0 && (
+            <div className="drawer-attachment-preview-row" aria-label="Selected attachments">
+              {attachedFiles.map((file, index) => (
+                <span className="drawer-attachment-chip" key={`${file.name}-${file.lastModified}-${index}`}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
+                  <span style={{ opacity: 0.68 }}>{formatAttachmentSize(file.size)}</span>
+                  <button
+                    type="button"
+                    className="drawer-attachment-remove"
+                    onClick={() => setAttachedFiles(prev => prev.filter((_, i) => i !== index))}
+                    aria-label={`Remove ${file.name}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="drawer-input-row">
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            hidden
+            accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,text/plain,text/csv,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/zip"
+            onChange={e => onPickFiles(e.target.files)}
+          />
+          <button
+            type="button"
+            className="drawer-attach"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={!conversationId || setupLoading || sending}
+            aria-label="Attach files"
+            title="Attach image or file"
+          >
+            +
+          </button>
           <textarea
             ref={inputRef}
             className="drawer-textarea"
@@ -531,7 +646,7 @@ export default function MessageDrawer({
             type="button"
             className="drawer-send"
             onClick={send}
-            disabled={!input.trim() || !conversationId || sending || setupLoading}
+            disabled={(!input.trim() && attachedFiles.length === 0) || !conversationId || sending || setupLoading}
             aria-label="Send message"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -539,6 +654,7 @@ export default function MessageDrawer({
               <polygon points="22 2 15 22 11 13 2 9 22 2" />
             </svg>
           </button>
+          </div>
         </div>
       </aside>
     </>
