@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { REAL_EVENT_SOURCE_FILTER } from '@/lib/dataIntegrity'
+import { eventPosterDataUri, isUsableEventImage } from '@/lib/events/display'
 
 export const dynamic = 'force-dynamic'
-
-function isUsableEventImage(url: string | null): url is string {
-  if (!url) return false
-  if (url.endsWith('/images/classic-events/')) return false
-  return /^https?:\/\//i.test(url)
-}
 
 // GET /api/landing/events-preview?after=<ISO>&limit=4
 // Returns the next N upcoming published events for the landing page strip.
@@ -35,7 +30,14 @@ export async function GET(request: NextRequest) {
 
     const normalized = (data ?? []).map((event) => ({
       ...event,
-      cover_image_url: isUsableEventImage(event.cover_image_url) ? event.cover_image_url : null,
+      cover_image_url: isUsableEventImage(event.cover_image_url)
+        ? event.cover_image_url
+        : eventPosterDataUri({
+            title: event.title,
+            category: event.category,
+            startsAt: event.starts_at,
+            location: event.venue_name ?? event.location_label ?? [event.city, event.country].filter(Boolean).join(', '),
+          }),
     }))
 
     return NextResponse.json(normalized, {

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useCurrency } from '@/context/CurrencyContext'
 import FAQAccordion from '@/components/marketing/FAQAccordion'
 import { FAQS } from '@/lib/faq'
+import { eventPosterDataUri, isUsableEventImage } from '@/lib/events/display'
 import ROICalculator from './ROICalculator'
 import HeroGlobe from './HeroGlobe'
 
@@ -904,7 +905,9 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
                   ? new Date(ev.starts_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
                   : 'Date TBC'
                 const location = ev.is_online ? 'Online' : ev.venue_name || ev.location_label || [ev.city, ev.country].filter(Boolean).join(', ') || 'In Person'
-                const eventImage = ev.cover_image_url || null
+                const eventImage = isUsableEventImage(ev.cover_image_url)
+                  ? ev.cover_image_url
+                  : eventPosterDataUri({ title: ev.title, category: ev.category, startsAt: ev.starts_at, location })
                 return (
                   <Link key={ev.id} href={`/events/${ev.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 310 }}>
                     <div

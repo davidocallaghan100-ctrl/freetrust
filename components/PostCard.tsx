@@ -160,6 +160,36 @@ function InlineVerifiedBadge() {
   )
 }
 
+function metadataString(metadata: FeedPost['metadata'] | null | undefined, key: string): string | null {
+  const value = metadata?.[key]
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+function metadataBoolean(metadata: FeedPost['metadata'] | null | undefined, key: string): boolean {
+  return metadata?.[key] === true
+}
+
+function normaliseAuthorHref(href: string | null): string | null {
+  if (!href) return null
+  // Keep feed-card author links inside FreeTrust. External company websites
+  // remain available from the job detail page instead of being routed through
+  // Next's internal Link component.
+  return href.startsWith('/') ? href : null
+}
+
+function getAuthorDisplayOverride(metadata: FeedPost['metadata'] | null | undefined) {
+  const name = metadataString(metadata, 'feed_author_name')
+  if (!name) return null
+  return {
+    name,
+    avatar_url: metadataString(metadata, 'feed_author_avatar_url'),
+    href: normaliseAuthorHref(metadataString(metadata, 'feed_author_href')),
+    subtitle: metadataString(metadata, 'feed_author_subtitle'),
+    hidePersonalByline: metadataBoolean(metadata, 'feed_hide_personal_byline'),
+    suppressOwnerMenu: metadataBoolean(metadata, 'feed_suppress_owner_menu'),
+  }
+}
+
 type FeedIdentity =
   | { type: 'personal'; id: string; name: string; username: string | null; avatar_url: string | null }
   | { type: 'org'; id: string; name: string; slug: string | null; logo_url: string | null; userRole?: string | null }
@@ -1359,7 +1389,8 @@ export default function PostCard({
     }
   }
 
-  const isOwner = !!currentUserId && currentUserId === authorId
+  const authorDisplayOverride = getAuthorDisplayOverride(post.metadata)
+  const isOwner = !!currentUserId && currentUserId === authorId && !authorDisplayOverride?.suppressOwnerMenu
 
   const startEditing = () => {
     setEditedContent(stripInternalMarkers(postContent))
@@ -1591,14 +1622,14 @@ export default function PostCard({
   const humanId     = post.profiles?.id ?? null
   const humanVerified = isVerifiedProfile(post.profiles)
 
-  const name      = postedAsOrg ? postedAsOrg.name : humanName
-  const avatarUrl = postedAsOrg ? postedAsOrg.logo_url : humanAvatar
-  const trust     = postedAsOrg ? null : (post.profiles?.trust_balance ?? post.trust_score ?? null)
+  const name      = postedAsOrg ? postedAsOrg.name : (authorDisplayOverride?.name ?? humanName)
+  const avatarUrl = postedAsOrg ? postedAsOrg.logo_url : (authorDisplayOverride?.avatar_url ?? humanAvatar)
+  const trust     = (postedAsOrg || authorDisplayOverride) ? null : (post.profiles?.trust_balance ?? post.trust_score ?? null)
   // Link target — org profile for "as org" posts, personal profile
   // otherwise. Org links prefer slug, fall back to id if missing.
   const authorLinkHref = postedAsOrg
     ? (postedAsOrg.slug ? `/organisations/${postedAsOrg.slug}` : `/organisations/${postedAsOrg.id}`)
-    : `/profile?id=${humanId ?? ''}`
+    : (authorDisplayOverride?.href ?? `/profile?id=${humanId ?? ''}`)
 
   // Build media URL array
   const mediaUrls: string[] = (() => {
@@ -1778,8 +1809,10 @@ export default function PostCard({
               ) : (
                 <span style={{ fontSize: '12px', color: '#64748b' }}>via {humanName}{humanVerified ? ' ✓' : ''}</span>
               )
+            ) : authorDisplayOverride?.subtitle ? (
+              <span style={{ fontSize: '12px', color: '#475569' }}>{authorDisplayOverride.subtitle}</span>
             ) : (
-              post.profiles?.username && <span style={{ fontSize: '12px', color: '#475569' }}>@{post.profiles.username}</span>
+              !authorDisplayOverride?.hidePersonalByline && post.profiles?.username && <span style={{ fontSize: '12px', color: '#475569' }}>@{post.profiles.username}</span>
             )}
             <span style={{ fontSize: '11px', color: '#334155' }}>·</span>
             <span style={{ fontSize: '12px', color: '#475569' }}>{formatTime(post.created_at)}</span>

@@ -2,6 +2,12 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+const INTERNAL_FEED_MARKER_RE = /\n?\n?\[\[FT_(?:MEDIA_URLS|SPOTIFY|TEXT_OVERLAY):[A-Za-z0-9_-]+\]\]/g
+
+function stripInternalFeedMarkers(content: string) {
+  return content.replace(INTERNAL_FEED_MARKER_RE, '').trimEnd()
+}
+
 // PATCH /api/feed/posts/[id] — edit a post (owner only)
 export async function PATCH(
   request: NextRequest,
@@ -42,7 +48,12 @@ export async function PATCH(
       ? (typeof body.media_url === 'string' && /^https?:\/\//i.test(body.media_url.trim()) ? body.media_url.trim() : null)
       : (mediaUrls !== undefined ? (mediaUrls[0] ?? null) : undefined)
 
-    if (content !== undefined && content.length > 5000) {
+    // Photo posts store edit-only metadata (multi-photo URLs, Spotify preview data,
+    // and text-overlay settings) as hidden markers in `content`. The user-visible
+    // caption can be well below 5000 chars while those hidden markers push the raw
+    // string over the limit, especially after adding photos. Count only the visible
+    // text so valid photo edits are not rejected with a misleading length error.
+    if (content !== undefined && stripInternalFeedMarkers(content).length > 5000) {
       return NextResponse.json({ error: 'Post too long (max 5000 chars)' }, { status: 400 })
     }
 

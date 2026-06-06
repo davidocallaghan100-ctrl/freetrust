@@ -522,10 +522,11 @@ async function fetchJobs(supabase: SupabaseLike, offset: number, limit: number) 
   const { data, error } = await supabase
     .from('jobs')
     .select(`
-      id, poster_id, title, description, job_type, location_type, location,
+      id, poster_id, org_id, title, description, job_type, location_type, location,
       salary_min, salary_max, salary_currency, category, created_at,
-      company_logo_url, company_name,
-      poster:profiles!poster_id(id, full_name, avatar_url, trust_balance, is_verified, verified_at, verification_status)
+      company_logo_url, company_name, company_website,
+      poster:profiles!poster_id(id, full_name, avatar_url, trust_balance, is_verified, verified_at, verification_status),
+      org:organisations!org_id(id, name, slug, logo_url)
     `)
     .eq('status', 'active')
     .or(REAL_JOB_SOURCE_FILTER)
@@ -539,14 +540,35 @@ async function fetchJobs(supabase: SupabaseLike, offset: number, limit: number) 
 
   const items: FeedItem[] = (data ?? []).map((j: Record<string, unknown>) => {
     const poster = normaliseProfile(j.poster)
+    const orgRaw = j.org
+    const postedAsOrg = Array.isArray(orgRaw)
+      ? (orgRaw[0] ?? null)
+      : (orgRaw as FeedItem['posted_as_organisation']) ?? null
     const companyLogoUrl = (j.company_logo_url as string | null) ?? null
-    const companyName = (j.company_name as string | null) ?? null
-    // If there's a company logo, surface it as the post avatar by overriding the profiles avatar
-    const profilesWithLogo = companyLogoUrl && poster
-      ? { ...(poster as object), avatar_url: companyLogoUrl, full_name: companyName ?? (poster as { full_name?: string | null }).full_name }
-      : companyLogoUrl
-        ? { id: j.poster_id as string, full_name: companyName ?? 'FreeTrust Member', avatar_url: companyLogoUrl, trust_balance: null }
-        : poster
+    const companyName = ((j.company_name as string | null) ?? '').trim() || null
+    const displayCompanyName = postedAsOrg?.name ?? companyName
+    // External/API-ingested jobs are stored under a system/admin poster_id so
+    // the FK stays valid, but the feed should visibly attribute the card to
+    // the real company supplied by the job source. Keep the poster profile in
+    // place for data lineage while sending explicit display metadata to
+    // PostCard so David's personal profile is not shown as the job owner.
+    const profilesWithCompany = displayCompanyName || companyLogoUrl
+      ? {
+          ...(poster ?? { id: j.poster_id as string, trust_balance: null }),
+          full_name: displayCompanyName ?? poster?.full_name ?? 'FreeTrust Member',
+          avatar_url: companyLogoUrl ?? postedAsOrg?.logo_url ?? poster?.avatar_url ?? null,
+        }
+      : poster
+    const authorOverride = !postedAsOrg && displayCompanyName
+      ? {
+          feed_author_name: displayCompanyName,
+          feed_author_avatar_url: companyLogoUrl,
+          feed_author_href: `/jobs/${j.id}`,
+          feed_author_subtitle: 'Job owner',
+          feed_hide_personal_byline: true,
+          feed_suppress_owner_menu: true,
+        }
+      : null
     return {
       id: `job-${j.id}`,
       user_id: j.poster_id as string,
@@ -561,7 +583,10 @@ async function fetchJobs(supabase: SupabaseLike, offset: number, limit: number) 
       saves_count: 0,
       views_count: 0,
       created_at: j.created_at as string,
-      profiles: profilesWithLogo as FeedItem['profiles'],
+      profiles: profilesWithCompany as FeedItem['profiles'],
+      metadata: authorOverride,
+      posted_as_organisation_id: (j.org_id as string | null) ?? null,
+      posted_as_organisation: postedAsOrg,
     }
   })
 

@@ -9,6 +9,7 @@ import LocationBadge from '@/components/location/LocationBadge'
 import { type CurrencyCode } from '@/context/CurrencyContext'
 import { type MapEvent } from '@/components/events/EventsMap'
 import { REAL_EVENT_SOURCE_FILTER } from '@/lib/dataIntegrity'
+import { eventPosterDataUri, isUsableEventImage, stripEventSourceAttribution } from '@/lib/events/display'
 
 // Dynamically import the map to avoid SSR Leaflet errors
 const EventsMap = dynamic(() => import('@/components/events/EventsMap'), { ssr: false })
@@ -42,6 +43,7 @@ interface DBEvent {
   longitude: number | null
   location_label: string | null
   external_url: string | null
+  cover_image_url: string | null
   status: string
   is_platform_curated: boolean
 }
@@ -134,7 +136,7 @@ export default function EventDetailPage() {
             max_attendees, attendee_count,
             organiser_name, organiser_bio,
             country, city, latitude, longitude, location_label,
-            external_url, status, is_platform_curated
+            external_url, cover_image_url, status, is_platform_curated
           `)
           .eq('id', id)
           .or(REAL_EVENT_SOURCE_FILTER)
@@ -177,6 +179,10 @@ export default function EventDetailPage() {
   const duration = formatDuration(event.starts_at, event.ends_at)
   const gradient = (event.category && CAT_GRADIENTS[event.category]) ?? hashGradient(event.title)
   const catColor = (event.category && CAT_COLORS[event.category]) ?? '#38bdf8'
+  const heroImage = isUsableEventImage(event.cover_image_url)
+    ? event.cover_image_url
+    : eventPosterDataUri({ title: event.title, category: event.category, startsAt: event.starts_at, location: event.location_label ?? event.venue_name ?? event.country })
+  const cleanDescription = stripEventSourceAttribution(event.description)
 
   const attendeePct = (event.max_attendees && event.max_attendees > 0)
     ? Math.min(100, Math.round((event.attendee_count / event.max_attendees) * 100))
@@ -207,7 +213,14 @@ export default function EventDetailPage() {
       `}</style>
 
       {/* ── Hero ── */}
-      <div style={{ background: gradient, minHeight: 240, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '1.5rem 1.5rem 1.75rem' }}>
+      <div style={{ background: gradient, minHeight: 240, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '1.5rem 1.5rem 1.75rem', overflow: 'hidden' }}>
+        <img
+          src={heroImage}
+          alt=""
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+        />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(15,23,42,0.14), rgba(15,23,42,0.78))', pointerEvents: 'none' }} />
         {/* Back button */}
         <Link
           href="/events"
@@ -264,10 +277,10 @@ export default function EventDetailPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
             {/* Description */}
-            {event.description && (
+            {cleanDescription && (
               <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, padding: '1.5rem' }}>
                 <h2 style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9', margin: '0 0 12px' }}>About this event</h2>
-                <p style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.75, margin: 0, whiteSpace: 'pre-wrap' }}>{event.description}</p>
+                <p style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.75, margin: 0, whiteSpace: 'pre-wrap' }}>{cleanDescription}</p>
               </div>
             )}
 

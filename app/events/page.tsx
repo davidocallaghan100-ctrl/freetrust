@@ -10,6 +10,7 @@ import PriceDisplay from '@/components/currency/PriceDisplay'
 import { useCurrency, type CurrencyCode } from '@/context/CurrencyContext'
 import { EMPTY_LOCATION, haversineKm, type StructuredLocation, type RadiusValue } from '@/lib/geo'
 import { buildCountryOptions } from '@/lib/countries'
+import { eventPosterDataUri, isUsableEventImage, stripEventSourceAttribution } from '@/lib/events/display'
 
 type EventMode = 'online' | 'in-person'
 type TimeFilter = 'all' | 'this-week' | 'this-month'
@@ -33,6 +34,7 @@ interface EventItem {
   organiserAvatar?: string
   is_platform_curated?: boolean
   external_url?: string | null
+  cover_image_url?: string | null
   imageGradient?: string
   // Globalisation fields
   country?: string | null
@@ -101,6 +103,9 @@ function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void
   const catColor = CAT_COLORS[ev.category] ?? '#38bdf8'
   const gradient = CAT_GRADIENTS[ev.category] ?? ev.imageGradient ?? 'linear-gradient(135deg,#0284c7,#1e40af)'
   const { format: currencyFormat } = useCurrency()
+  const imageUrl = isUsableEventImage(ev.cover_image_url)
+    ? ev.cover_image_url
+    : eventPosterDataUri({ title: ev.title, category: ev.category, startsAt: ev.date.toISOString(), location: ev.location_label ?? ev.location })
 
   return (
     <Link href={`/events/${ev.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', minWidth: 0, maxWidth: '100%' }}>
@@ -109,7 +114,14 @@ function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
 
       {/* Cover / gradient header */}
-      <div style={{ height: 120, background: gradient, position: 'relative', flexShrink: 0 }}>
+      <div style={{ height: 120, background: gradient, position: 'relative', flexShrink: 0, overflow: 'hidden' }}>
+        <img
+          src={imageUrl}
+          alt=""
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+        />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(15,23,42,0.03), rgba(15,23,42,0.56))', pointerEvents: 'none' }} />
         {/* Date stamp */}
         <div style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(8px)', borderRadius: 10, padding: '6px 10px', textAlign: 'center', minWidth: 48 }}>
           <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{day}</div>
@@ -281,7 +293,7 @@ export default function EventsPage() {
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
         const { data, error } = await supabase
           .from('events')
-          .select('id, title, description, starts_at, ends_at, is_online, meeting_url, attendee_count, is_paid, ticket_price, ticket_price_eur, currency_code, country, region, city, latitude, longitude, location_label, venue_name, category, organiser_name, is_platform_curated, external_url')
+          .select('id, title, description, starts_at, ends_at, is_online, meeting_url, attendee_count, is_paid, ticket_price, ticket_price_eur, currency_code, country, region, city, latitude, longitude, location_label, venue_name, category, organiser_name, is_platform_curated, external_url, cover_image_url')
           .eq('status', 'published')
           .or(REAL_EVENT_SOURCE_FILTER)
           .or(`starts_at.is.null,starts_at.gte.${oneDayAgo}`)
@@ -306,7 +318,7 @@ export default function EventsPage() {
             mode: e.is_online ? 'online' : 'in-person',
             price: typeof e.ticket_price === 'number' ? (e.ticket_price as number) : null,
             rsvpCount: Number(e.attendee_count ?? 0),
-            description: String(e.description ?? ''),
+            description: stripEventSourceAttribution(String(e.description ?? '')),
             category: (e.category as string | null | undefined) ?? 'Community',
             // Globalisation fields
             country:        (e.country as string | null | undefined) ?? null,
@@ -319,6 +331,7 @@ export default function EventsPage() {
             organiser:           (e.is_platform_curated ? null : (e.organiser_name as string | null | undefined)) ?? undefined,
             is_platform_curated: (e.is_platform_curated as boolean | undefined) ?? false,
             external_url:        (e.external_url as string | null | undefined) ?? null,
+            cover_image_url:     (e.cover_image_url as string | null | undefined) ?? null,
           })))
         } else {
           setDbEvents([])
