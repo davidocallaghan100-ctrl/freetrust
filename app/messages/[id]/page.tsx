@@ -11,6 +11,12 @@ import {
   validateMessageAttachmentFiles,
   type MessageAttachment,
 } from '@/lib/messageAttachments'
+import {
+  applyReadReceipt,
+  isMessageReadByOther,
+  markMessagesRead,
+  type MessageReadReceipt,
+} from '@/lib/messageReadReceipts'
 
 interface Profile {
   id:         string
@@ -25,6 +31,8 @@ interface Message {
   content:         string
   created_at:      string
   attachments?:    MessageAttachment[]
+  reply_to_id?:     string | null
+  read_receipts?:   MessageReadReceipt[]
   sender?:         Profile
 }
 
@@ -57,6 +65,7 @@ export default function ConversationPage() {
   const [otherUser, setOtherUser] = useState<Profile | null>(null)
   const [input,     setInput]     = useState('')
   const [attachedFiles, setAttachedFiles] = useState<File[]>([])
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null)
   const [sending,   setSending]   = useState(false)
   const [loading,   setLoading]   = useState(true)
   const [sendError, setSendError] = useState<string | null>(null)
@@ -64,6 +73,8 @@ export default function ConversationPage() {
   const bottomRef  = useRef<HTMLDivElement>(null)
   const inputRef   = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const markedReadRef = useRef<Set<string>>(new Set())
   const channelRef = useRef<RealtimeChannel | null>(null)
 
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -175,6 +186,17 @@ export default function ConversationPage() {
           setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
         },
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'message_reads',
+        },
+        payload => {
+          setMessages(prev => applyReadReceipt(prev, payload.new as Record<string, unknown>))
+        },
+      )
       .subscribe()
 
     channelRef.current = channel
@@ -249,6 +271,8 @@ export default function ConversationPage() {
     setInput('')
     const filesToSend = attachedFiles
     setAttachedFiles([])
+    const replyTarget = replyingTo
+    setReplyingTo(null)
     setSending(true)
     setSendError(null)
 
@@ -260,6 +284,7 @@ export default function ConversationPage() {
       content:         text,
       created_at:      new Date().toISOString(),
       attachments:     filesToSend.map(file => ({ url: '', type: file.type, name: file.name, size: file.size })),
+      reply_to_id:     replyTarget?.id ?? null,
     }
     setMessages(prev => [...prev, optimistic])
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
@@ -271,7 +296,7 @@ export default function ConversationPage() {
       const res = await fetch(`/api/messages/${conversationId}`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ content: text, attachments: uploadedAttachments }),
+        body:    JSON.stringify({ content: text, attachments: uploadedAttachments, replyToId: replyTarget?.id ?? null }),
       })
       const data = await res.json().catch(() => null) as
         | { message?: Message; error?: string }
@@ -286,6 +311,7 @@ export default function ConversationPage() {
         setMessages(prev => prev.filter(m => m.id !== optimisticId))
         setInput(text)
         setAttachedFiles(filesToSend)
+        setReplyingTo(replyTarget)
         return
       }
       // Success: swap the optimistic bubble for the real one if
@@ -304,6 +330,7 @@ export default function ConversationPage() {
       setMessages(prev => prev.filter(m => m.id !== optimisticId))
       setInput(text)
       setAttachedFiles(filesToSend)
+      setReplyingTo(replyTarget)
     } finally {
       setSending(false)
       inputRef.current?.focus()
@@ -329,6 +356,46 @@ export default function ConversationPage() {
     }
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
+
+  const messagesById = new Map(messages.map(message => [message.id, message]))
+
+  const scrollToMessage = (id: string) => {
+    const target = messageRefs.current.get(id)
+    if (!target) return
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    target.classList.add('conv-message-highlight')
+    window.setTimeout(() => target.classList.remove('conv-message-highlight'), 1200)
+  }
+
+  useEffect(() => {
+    if (!userId || messages.length === 0) return
+    const unreadIncoming = messages.filter(message =>
+      !message.id.startsWith('opt_')
+      && message.sender_id !== userId
+      && !markedReadRef.current.has(message.id),
+    )
+    if (unreadIncoming.length === 0) return
+
+    const observer = new IntersectionObserver(entries => {
+      const visibleIds = entries
+        .filter(entry => entry.isIntersecting)
+        .map(entry => (entry.target as HTMLElement).dataset.messageId)
+        .filter((id): id is string => !!id && !markedReadRef.current.has(id))
+      if (visibleIds.length === 0) return
+      visibleIds.forEach(id => markedReadRef.current.add(id))
+      void markMessagesRead(createClient(), visibleIds, userId).catch(err => {
+        console.error('[messages/:id] mark read failed:', err)
+        visibleIds.forEach(id => markedReadRef.current.delete(id))
+      })
+    }, { threshold: 0.6 })
+
+    unreadIncoming.forEach(message => {
+      const element = messageRefs.current.get(message.id)
+      if (element) observer.observe(element)
+    })
+
+    return () => observer.disconnect()
+  }, [messages, userId])
 
   // Auto-scroll to bottom whenever the message list changes.
   useEffect(() => {
@@ -371,6 +438,43 @@ export default function ConversationPage() {
         .conv-bubble.sent { background: #38bdf8; color: #0f172a; border-bottom-right-radius: 4px; }
         .conv-bubble.recv { background: #1e293b; color: #e2e8f0; border-bottom-left-radius: 4px; border: 1px solid rgba(56,189,248,0.1); }
         .conv-bubble.pending { opacity: 0.6; }
+        .conv-message-highlight .conv-bubble { box-shadow: 0 0 0 3px rgba(251,191,36,0.55); }
+        .conv-reply-action {
+          align-self: center;
+          border: none;
+          background: transparent;
+          color: #64748b;
+          cursor: pointer;
+          font-size: 0.72rem;
+          padding: 0.25rem 0.4rem;
+        }
+        .conv-reply-action:hover { color: #38bdf8; }
+        .conv-quote {
+          border-left: 3px solid rgba(56,189,248,0.55);
+          border-radius: 8px;
+          padding: 0.38rem 0.55rem;
+          margin-bottom: 0.45rem;
+          background: rgba(15,23,42,0.18);
+          color: inherit;
+          width: 100%;
+          text-align: left;
+          cursor: pointer;
+          font: inherit;
+        }
+        .conv-quote-label { display: block; font-size: 0.68rem; font-weight: 800; opacity: 0.75; margin-bottom: 0.12rem; }
+        .conv-quote-text { display: block; font-size: 0.78rem; opacity: 0.86; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .conv-reply-preview {
+          margin: 0.7rem 1rem 0;
+          border: 1px solid rgba(56,189,248,0.2);
+          border-radius: 12px;
+          background: rgba(30,41,59,0.92);
+          padding: 0.58rem 0.7rem;
+          display: flex;
+          gap: 0.7rem;
+          align-items: center;
+        }
+        .conv-reply-preview-main { flex: 1; min-width: 0; }
+        .conv-reply-cancel { border: none; background: transparent; color: #94a3b8; font-size: 1.2rem; cursor: pointer; }
 
         .conv-header {
           padding: 0.9rem 1.25rem;
@@ -591,16 +695,40 @@ export default function ConversationPage() {
                   {new Date(msg.created_at).toLocaleString()}
                 </div>
               )}
-              <div style={{ display: 'flex', justifyContent: isSent ? 'flex-end' : 'flex-start', marginBottom: '0.3rem' }}>
+              <div
+                ref={el => {
+                  if (el) messageRefs.current.set(msg.id, el)
+                  else messageRefs.current.delete(msg.id)
+                }}
+                data-message-id={msg.id}
+                style={{ display: 'flex', justifyContent: isSent ? 'flex-end' : 'flex-start', marginBottom: '0.3rem', gap: '0.25rem' }}
+              >
                 {!isSent && otherUser && (
                   <div style={{ width: 26, height: 26, borderRadius: '50%', background: pickGradient(otherUser.id), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 700, color: '#0f172a', flexShrink: 0, marginRight: '0.4rem', alignSelf: 'flex-end' }}>
                     {getInitials(otherUser.full_name)}
                   </div>
                 )}
                 <div className={`conv-bubble ${isSent ? 'sent' : 'recv'}${isPending ? ' pending' : ''}`}>
+                  {msg.reply_to_id && (() => {
+                    const replied = messagesById.get(msg.reply_to_id)
+                    return (
+                      <button type="button" className="conv-quote" onClick={() => scrollToMessage(msg.reply_to_id!)}>
+                        <span className="conv-quote-label">Replying to {replied?.sender_id === userId ? 'you' : 'member'}</span>
+                        <span className="conv-quote-text">{replied?.content || (replied?.attachments?.length ? 'Attachment' : 'Original message')}</span>
+                      </button>
+                    )
+                  })()}
                   {msg.content && <div>{msg.content}</div>}
                   <MessageAttachments attachments={msg.attachments ?? []} compact />
+                  {isSent && !isPending && (
+                    <div style={{ marginTop: 4, fontSize: '0.68rem', textAlign: 'right', opacity: 0.72 }}>
+                      {isMessageReadByOther(msg, userId) ? '✓✓' : '✓'}
+                    </div>
+                  )}
                 </div>
+                <button type="button" className="conv-reply-action" onClick={() => { setReplyingTo(msg); inputRef.current?.focus() }} aria-label="Reply to message">
+                  Reply
+                </button>
               </div>
             </div>
           )
@@ -638,6 +766,17 @@ export default function ConversationPage() {
 
       {/* Input */}
       <div className="conv-input-stack">
+        {replyingTo && (
+          <div className="conv-reply-preview" role="status">
+            <div className="conv-reply-preview-main">
+              <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#38bdf8' }}>Replying to {replyingTo.sender_id === userId ? 'your message' : (otherUser?.full_name || 'member')}</div>
+              <div style={{ fontSize: '0.8rem', color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {replyingTo.content || (replyingTo.attachments?.length ? 'Attachment' : 'Message')}
+              </div>
+            </div>
+            <button type="button" className="conv-reply-cancel" onClick={() => setReplyingTo(null)} aria-label="Cancel reply">×</button>
+          </div>
+        )}
         {attachedFiles.length > 0 && (
           <div className="conv-attachment-preview-row" aria-label="Selected attachments">
             {attachedFiles.map((file, index) => (

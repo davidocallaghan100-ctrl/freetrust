@@ -10,6 +10,12 @@ import {
   validateMessageAttachmentFiles,
   type MessageAttachment,
 } from '@/lib/messageAttachments'
+import {
+  applyReadReceipt,
+  isMessageReadByOther,
+  markMessagesRead,
+  type MessageReadReceipt,
+} from '@/lib/messageReadReceipts'
 
 // Inline message drawer — opens on top of the profile page as a
 // slide-in panel so clicking "Message" NEVER leaves the current URL.
@@ -40,6 +46,8 @@ interface Message {
   content:         string
   created_at:      string
   attachments?:    MessageAttachment[]
+  reply_to_id?:     string | null
+  read_receipts?:   MessageReadReceipt[]
 }
 
 export interface MessageDrawerProps {
@@ -64,6 +72,7 @@ export default function MessageDrawer({
   const [messages,       setMessages]       = useState<Message[]>([])
   const [input,          setInput]          = useState('')
   const [attachedFiles,  setAttachedFiles]  = useState<File[]>([])
+  const [replyingTo,     setReplyingTo]     = useState<Message | null>(null)
   const [setupLoading,   setSetupLoading]   = useState(false)
   const [sending,        setSending]        = useState(false)
   const [error,          setError]          = useState<string | null>(null)
@@ -71,6 +80,8 @@ export default function MessageDrawer({
   const bottomRef  = useRef<HTMLDivElement>(null)
   const inputRef   = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const markedReadRef = useRef<Set<string>>(new Set())
   const channelRef = useRef<RealtimeChannel | null>(null)
 
   // Close handler — resets all state + tears down the realtime
@@ -85,6 +96,8 @@ export default function MessageDrawer({
     setMessages([])
     setInput('')
     setAttachedFiles([])
+    setReplyingTo(null)
+    markedReadRef.current.clear()
     setError(null)
     setSetupLoading(false)
     setSending(false)
@@ -197,6 +210,17 @@ export default function MessageDrawer({
               setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 40)
             },
           )
+          .on(
+            'postgres_changes',
+            {
+              event:  '*',
+              schema: 'public',
+              table:  'message_reads',
+            },
+            payload => {
+              setMessages(prev => applyReadReceipt(prev, payload.new as Record<string, unknown>))
+            },
+          )
           .subscribe()
         channelRef.current = channel
       } catch (err) {
@@ -232,6 +256,8 @@ export default function MessageDrawer({
     setInput('')
     const filesToSend = attachedFiles
     setAttachedFiles([])
+    const replyTarget = replyingTo
+    setReplyingTo(null)
     // Reset textarea height after clearing
     if (inputRef.current) {
       inputRef.current.style.height = 'auto'
@@ -247,6 +273,7 @@ export default function MessageDrawer({
       content:         text,
       created_at:      new Date().toISOString(),
       attachments:     filesToSend.map(file => ({ url: '', type: file.type, name: file.name, size: file.size })),
+      reply_to_id:     replyTarget?.id ?? null,
     }
     setMessages(prev => [...prev, optimistic])
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 40)
@@ -258,7 +285,7 @@ export default function MessageDrawer({
       const res = await fetch(`/api/messages/${conversationId}`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ content: text, attachments: uploadedAttachments }),
+        body:    JSON.stringify({ content: text, attachments: uploadedAttachments, replyToId: replyTarget?.id ?? null }),
       })
       const data = await res.json().catch(() => null) as
         | { message?: Message; error?: string }
@@ -268,6 +295,7 @@ export default function MessageDrawer({
         setMessages(prev => prev.filter(m => m.id !== optimisticId))
         setInput(text)
         setAttachedFiles(filesToSend)
+        setReplyingTo(replyTarget)
         return
       }
       if (data?.message) {
@@ -284,6 +312,7 @@ export default function MessageDrawer({
       setMessages(prev => prev.filter(m => m.id !== optimisticId))
       setInput(text)
       setAttachedFiles(filesToSend)
+      setReplyingTo(replyTarget)
     } finally {
       setSending(false)
       inputRef.current?.focus()
@@ -309,6 +338,46 @@ export default function MessageDrawer({
     }
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
+
+  const messagesById = new Map(messages.map(message => [message.id, message]))
+
+  const scrollToMessage = (id: string) => {
+    const target = messageRefs.current.get(id)
+    if (!target) return
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    target.classList.add('drawer-message-highlight')
+    window.setTimeout(() => target.classList.remove('drawer-message-highlight'), 1200)
+  }
+
+  useEffect(() => {
+    if (!open || !currentUserId || messages.length === 0) return
+    const unreadIncoming = messages.filter(message =>
+      !message.id.startsWith('opt_')
+      && message.sender_id !== currentUserId
+      && !markedReadRef.current.has(message.id),
+    )
+    if (unreadIncoming.length === 0) return
+
+    const observer = new IntersectionObserver(entries => {
+      const visibleIds = entries
+        .filter(entry => entry.isIntersecting)
+        .map(entry => (entry.target as HTMLElement).dataset.messageId)
+        .filter((id): id is string => !!id && !markedReadRef.current.has(id))
+      if (visibleIds.length === 0) return
+      visibleIds.forEach(id => markedReadRef.current.add(id))
+      void markMessagesRead(createClient(), visibleIds, currentUserId).catch(err => {
+        console.error('[drawer] mark read failed:', err)
+        visibleIds.forEach(id => markedReadRef.current.delete(id))
+      })
+    }, { threshold: 0.6 })
+
+    unreadIncoming.forEach(message => {
+      const element = messageRefs.current.get(message.id)
+      if (element) observer.observe(element)
+    })
+
+    return () => observer.disconnect()
+  }, [messages, currentUserId, open])
 
   if (!open) return null
 
@@ -459,6 +528,15 @@ export default function MessageDrawer({
         .drawer-bubble.sent { background: #34d399; color: #0f172a; border-bottom-right-radius: 4px; }
         .drawer-bubble.recv { background: #1e293b; color: #e2e8f0; border-bottom-left-radius: 4px; border: 1px solid rgba(56,189,248,0.1); }
         .drawer-bubble.pending { opacity: 0.6; }
+        .drawer-message-highlight .drawer-bubble { box-shadow: 0 0 0 3px rgba(251,191,36,0.55); }
+        .drawer-reply-action { align-self: center; border: none; background: transparent; color: #64748b; cursor: pointer; font-size: 0.7rem; padding: 0.2rem 0.35rem; }
+        .drawer-reply-action:hover { color: #34d399; }
+        .drawer-quote { border-left: 3px solid rgba(52,211,153,0.62); border-radius: 8px; padding: 0.35rem 0.5rem; margin-bottom: 0.42rem; background: rgba(15,23,42,0.18); color: inherit; width: 100%; text-align: left; cursor: pointer; font: inherit; }
+        .drawer-quote-label { display: block; font-size: 0.66rem; font-weight: 800; opacity: 0.75; margin-bottom: 0.1rem; }
+        .drawer-quote-text { display: block; font-size: 0.76rem; opacity: 0.86; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .drawer-reply-preview { margin: 0.65rem 0.75rem 0; border: 1px solid rgba(52,211,153,0.22); border-radius: 12px; background: rgba(30,41,59,0.92); padding: 0.55rem 0.65rem; display: flex; gap: 0.65rem; align-items: center; }
+        .drawer-reply-preview-main { flex: 1; min-width: 0; }
+        .drawer-reply-cancel { border: none; background: transparent; color: #94a3b8; font-size: 1.15rem; cursor: pointer; }
       `}</style>
 
       <div className="drawer-backdrop" onClick={close} />
@@ -574,11 +652,35 @@ export default function MessageDrawer({
                     {new Date(m.created_at).toLocaleString()}
                   </div>
                 )}
-                <div style={{ display: 'flex', justifyContent: isSent ? 'flex-end' : 'flex-start', marginBottom: '0.35rem' }}>
+                <div
+                  ref={el => {
+                    if (el) messageRefs.current.set(m.id, el)
+                    else messageRefs.current.delete(m.id)
+                  }}
+                  data-message-id={m.id}
+                  style={{ display: 'flex', justifyContent: isSent ? 'flex-end' : 'flex-start', marginBottom: '0.35rem', gap: '0.25rem' }}
+                >
                   <div className={`drawer-bubble ${isSent ? 'sent' : 'recv'}${isPend ? ' pending' : ''}`}>
+                    {m.reply_to_id && (() => {
+                      const replied = messagesById.get(m.reply_to_id)
+                      return (
+                        <button type="button" className="drawer-quote" onClick={() => scrollToMessage(m.reply_to_id!)}>
+                          <span className="drawer-quote-label">Replying to {replied?.sender_id === currentUserId ? 'you' : 'member'}</span>
+                          <span className="drawer-quote-text">{replied?.content || (replied?.attachments?.length ? 'Attachment' : 'Original message')}</span>
+                        </button>
+                      )
+                    })()}
                     {m.content && <div>{m.content}</div>}
                     <MessageAttachments attachments={m.attachments ?? []} compact />
+                    {isSent && !isPend && (
+                      <div style={{ marginTop: 4, fontSize: '0.66rem', textAlign: 'right', opacity: 0.72 }}>
+                        {isMessageReadByOther(m, currentUserId) ? '✓✓' : '✓'}
+                      </div>
+                    )}
                   </div>
+                  <button type="button" className="drawer-reply-action" onClick={() => { setReplyingTo(m); inputRef.current?.focus() }} aria-label="Reply to message">
+                    Reply
+                  </button>
                 </div>
               </div>
             )
@@ -588,6 +690,17 @@ export default function MessageDrawer({
 
         {/* Input */}
         <div className="drawer-input-stack">
+          {replyingTo && (
+            <div className="drawer-reply-preview" role="status">
+              <div className="drawer-reply-preview-main">
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#34d399' }}>Replying to {replyingTo.sender_id === currentUserId ? 'your message' : (recipient?.full_name || 'member')}</div>
+                <div style={{ fontSize: '0.78rem', color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {replyingTo.content || (replyingTo.attachments?.length ? 'Attachment' : 'Message')}
+                </div>
+              </div>
+              <button type="button" className="drawer-reply-cancel" onClick={() => setReplyingTo(null)} aria-label="Cancel reply">×</button>
+            </div>
+          )}
           {attachedFiles.length > 0 && (
             <div className="drawer-attachment-preview-row" aria-label="Selected attachments">
               {attachedFiles.map((file, index) => (

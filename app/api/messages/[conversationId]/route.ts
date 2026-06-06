@@ -131,7 +131,7 @@ export async function GET(
     const admin = createAdminClient()
     const { data: messages, error: msgErr } = await admin
       .from('messages')
-      .select('*, sender:profiles(id, full_name, avatar_url)')
+      .select('*, sender:profiles(id, full_name, avatar_url), read_receipts:message_reads(user_id, read_at)')
       .eq('conversation_id', conversationId)
       .order('created_at', { ascending: true })
 
@@ -173,9 +173,12 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid conversation id' }, { status: 400 })
     }
 
-    const body = await request.json().catch(() => null) as { content?: unknown; attachments?: unknown } | null
+    const body = await request.json().catch(() => null) as { content?: unknown; attachments?: unknown; replyToId?: unknown; reply_to_id?: unknown } | null
     const rawContent = body?.content
     const attachments = normalizeMessageAttachments(body?.attachments)
+    const replyToId = typeof body?.replyToId === 'string'
+      ? body.replyToId
+      : (typeof body?.reply_to_id === 'string' ? body.reply_to_id : null)
     if (typeof rawContent !== 'string') {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 })
     }
@@ -193,6 +196,9 @@ export async function POST(
         { status: 400 },
       )
     }
+    if (replyToId && !UUID_RE.test(replyToId)) {
+      return NextResponse.json({ error: 'Invalid reply target' }, { status: 400 })
+    }
 
     const isParticipant = await assertParticipant(conversationId, user.id)
     if (!isParticipant) {
@@ -200,6 +206,22 @@ export async function POST(
     }
 
     const admin = createAdminClient()
+
+    if (replyToId) {
+      const { data: replyTarget, error: replyErr } = await admin
+        .from('messages')
+        .select('id')
+        .eq('id', replyToId)
+        .eq('conversation_id', conversationId)
+        .maybeSingle()
+      if (replyErr) {
+        console.error('[POST /api/messages/:id] reply target check failed:', replyErr)
+        return NextResponse.json({ error: 'Could not verify reply target' }, { status: 500 })
+      }
+      if (!replyTarget) {
+        return NextResponse.json({ error: 'Reply target is not in this conversation' }, { status: 400 })
+      }
+    }
 
     const otherParticipantIds = await getOtherParticipantIds(conversationId, user.id)
     if (!otherParticipantIds || otherParticipantIds.length === 0) {
@@ -240,8 +262,9 @@ export async function POST(
         sender_id:       user.id,
         content,
         attachments,
+        reply_to_id:     replyToId,
       })
-      .select()
+      .select('*, read_receipts:message_reads(user_id, read_at)')
       .single()
 
     if (msgErr) {

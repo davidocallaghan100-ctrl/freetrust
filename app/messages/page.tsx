@@ -12,6 +12,12 @@ import {
   validateMessageAttachmentFiles,
   type MessageAttachment,
 } from '@/lib/messageAttachments'
+import {
+  applyReadReceipt,
+  isMessageReadByOther,
+  markMessagesRead,
+  type MessageReadReceipt,
+} from '@/lib/messageReadReceipts'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface Profile {
@@ -28,6 +34,8 @@ interface Message {
   content: string
   created_at: string
   attachments?: MessageAttachment[]
+  reply_to_id?: string | null
+  read_receipts?: MessageReadReceipt[]
   sender?: Profile
 }
 
@@ -95,6 +103,7 @@ function MessagesPageInner() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [attachedFiles, setAttachedFiles] = useState<File[]>([])
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null)
   const [sending, setSending] = useState(false)
   // Inline error for failed sends. Previously `catch { /* optimistic stays */ }`
   // meant a failed INSERT left the optimistic bubble on screen with no
@@ -119,6 +128,8 @@ function MessagesPageInner() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const markedReadRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     const supabase = createClient()
@@ -305,6 +316,10 @@ function MessagesPageInner() {
             : [...prev, payload.new as Message])
           setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
         })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reads' },
+        (payload) => {
+          setMessages(prev => applyReadReceipt(prev, payload.new as Record<string, unknown>))
+        })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [activeId, loadMessages])
@@ -357,16 +372,18 @@ function MessagesPageInner() {
     setSendError(null)
     setPendingResend(null)
     setAttachedFiles([])
+    setReplyingTo(null)
+    markedReadRef.current.clear()
     // Mark as read
     setConversations(prev => prev.map(c => c.id === id ? { ...c, unread_count: 0 } : c))
   }
 
-  const doSend = async (text: string, optimisticId: string, attachments: MessageAttachment[]): Promise<boolean> => {
+  const doSend = async (text: string, optimisticId: string, attachments: MessageAttachment[], replyToId: string | null): Promise<boolean> => {
     if (!activeId || !userId) return false
     const res = await fetch(`/api/messages/${activeId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: text, attachments }),
+      body: JSON.stringify({ content: text, attachments, replyToId }),
     })
     const data = await res.json().catch(() => ({})) as {
       error?: string
@@ -403,8 +420,10 @@ function MessagesPageInner() {
     if ((!input.trim() && attachedFiles.length === 0) || !activeId || !userId) return
     const text = input.trim()
     const filesToSend = attachedFiles
+    const replyTarget = replyingTo
     setInput('')
     setAttachedFiles([])
+    setReplyingTo(null)
     setSending(true)
     setSendError(null)
     setSafetyWarning(null)
@@ -418,6 +437,7 @@ function MessagesPageInner() {
       content: text,
       created_at: new Date().toISOString(),
       attachments: filesToSend.map(file => ({ url: '', type: file.type, name: file.name, size: file.size })),
+      reply_to_id: replyTarget?.id ?? null,
     }
     setMessages(prev => [...prev, optimistic])
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
@@ -426,8 +446,11 @@ function MessagesPageInner() {
       const uploadedAttachments = filesToSend.length > 0
         ? await uploadMessageAttachments(createClient(), filesToSend, { userId, conversationId: activeId })
         : []
-      const sent = await doSend(text, optimisticId, uploadedAttachments)
-      if (!sent) setAttachedFiles(filesToSend)
+      const sent = await doSend(text, optimisticId, uploadedAttachments, replyTarget?.id ?? null)
+      if (!sent) {
+        setAttachedFiles(filesToSend)
+        setReplyingTo(replyTarget)
+      }
     } catch (err) {
       // Network / runtime error — same treatment as the Supabase
       // error branch above so the user can see the failure reason
@@ -437,6 +460,7 @@ function MessagesPageInner() {
       setSendError(msg)
       setPendingResend({ id: optimisticId, text })
       setAttachedFiles(filesToSend)
+      setReplyingTo(replyTarget)
     }
     setSending(false)
     inputRef.current?.focus()
@@ -447,7 +471,7 @@ function MessagesPageInner() {
     setSending(true)
     setSendError(null)
     try {
-      await doSend(pendingResend.text, pendingResend.id, [])
+      await doSend(pendingResend.text, pendingResend.id, [], null)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       setSendError(msg)
@@ -471,6 +495,46 @@ function MessagesPageInner() {
     }
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
+
+  const messagesById = new Map(messages.map(message => [message.id, message]))
+
+  const scrollToMessage = (id: string) => {
+    const target = messageRefs.current.get(id)
+    if (!target) return
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    target.classList.add('msg-message-highlight')
+    window.setTimeout(() => target.classList.remove('msg-message-highlight'), 1200)
+  }
+
+  useEffect(() => {
+    if (!userId || !activeId || messages.length === 0) return
+    const unreadIncoming = messages.filter(message =>
+      !message.id.startsWith('opt_')
+      && message.sender_id !== userId
+      && !markedReadRef.current.has(message.id),
+    )
+    if (unreadIncoming.length === 0) return
+
+    const observer = new IntersectionObserver(entries => {
+      const visibleIds = entries
+        .filter(entry => entry.isIntersecting)
+        .map(entry => (entry.target as HTMLElement).dataset.messageId)
+        .filter((id): id is string => !!id && !markedReadRef.current.has(id))
+      if (visibleIds.length === 0) return
+      visibleIds.forEach(id => markedReadRef.current.add(id))
+      void markMessagesRead(createClient(), visibleIds, userId).catch(err => {
+        console.error('[messages] mark read failed:', err)
+        visibleIds.forEach(id => markedReadRef.current.delete(id))
+      })
+    }, { threshold: 0.6 })
+
+    unreadIncoming.forEach(message => {
+      const element = messageRefs.current.get(message.id)
+      if (element) observer.observe(element)
+    })
+
+    return () => observer.disconnect()
+  }, [messages, userId, activeId])
 
   const activeConv = conversations.find(c => c.id === activeId)
   const filteredConvs = conversations.filter(c =>
@@ -509,6 +573,15 @@ function MessagesPageInner() {
         .msg-bubble.sent { background: linear-gradient(135deg,#22d3ee,#0ea5e9); color: #effcff; border-bottom-right-radius: 6px; }
         .msg-bubble.recv { background: rgba(30,41,59,0.96); color: #e2e8f0; border-bottom-left-radius: 6px; border: 1px solid rgba(148,163,184,0.1); }
         .msg-bubble-time { display: block; margin-top: 0.3rem; font-size: 0.68rem; line-height: 1; opacity: 0.7; text-align: right; }
+        .msg-message-highlight .msg-bubble { box-shadow: 0 0 0 3px rgba(251,191,36,0.55), 0 10px 28px rgba(0,0,0,0.18); }
+        .msg-reply-action { align-self: center; border: none; background: transparent; color: #64748b; cursor: pointer; font-size: 0.72rem; padding: 0.25rem 0.4rem; }
+        .msg-reply-action:hover { color: #38bdf8; }
+        .msg-quote { border-left: 3px solid rgba(45,212,191,0.6); border-radius: 9px; padding: 0.38rem 0.55rem; margin-bottom: 0.45rem; background: rgba(15,23,42,0.18); color: inherit; width: 100%; text-align: left; cursor: pointer; font: inherit; }
+        .msg-quote-label { display: block; font-size: 0.68rem; font-weight: 800; opacity: 0.75; margin-bottom: 0.12rem; }
+        .msg-quote-text { display: block; font-size: 0.78rem; opacity: 0.86; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .msg-reply-preview { margin: 0.7rem 1rem 0; border: 1px solid rgba(45,212,191,0.22); border-radius: 12px; background: rgba(15,23,42,0.86); padding: 0.58rem 0.7rem; display: flex; gap: 0.7rem; align-items: center; }
+        .msg-reply-preview-main { flex: 1; min-width: 0; }
+        .msg-reply-cancel { border: none; background: transparent; color: #94a3b8; font-size: 1.2rem; cursor: pointer; }
         .msg-safety-chip { align-self: center; margin: 0.85rem 1rem 0; padding: 0.45rem 0.7rem; border: 1px solid rgba(45,212,191,0.22); border-radius: 999px; background: rgba(20,184,166,0.08); color: #8ff7e5; font-size: 0.76rem; font-weight: 650; }
         .msg-thread-scroll { flex: 1; overflow-y: auto; padding: 1rem 1.25rem 1.25rem; background-image: radial-gradient(rgba(45,212,191,0.08) 1px, transparent 1px); background-size: 34px 34px; }
         .msg-input-area {
@@ -679,19 +752,39 @@ function MessagesPageInner() {
                         {new Date(msg.created_at).toLocaleString()}
                       </div>
                     )}
-                    <div className={`msg-bubble-wrap ${isSent ? 'sent' : 'recv'}`}>
+                    <div
+                      ref={el => {
+                        if (el) messageRefs.current.set(msg.id, el)
+                        else messageRefs.current.delete(msg.id)
+                      }}
+                      data-message-id={msg.id}
+                      className={`msg-bubble-wrap ${isSent ? 'sent' : 'recv'}`}
+                      style={{ gap: '0.25rem' }}
+                    >
                       {!isSent && (
                         <div style={{ width: 28, height: 28, borderRadius: '50%', background: pickGradient(msg.sender_id), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 700, color: '#0f172a', flexShrink: 0, marginRight: '0.5rem', alignSelf: 'flex-end' }}>
                           {getInitials(activeConv?.other_user.full_name)}
                         </div>
                       )}
                       <div className={`msg-bubble ${isSent ? 'sent' : 'recv'}`}>
-                         {msg.content && <div>{msg.content}</div>}
-                         <MessageAttachments attachments={msg.attachments ?? []} compact />
-                         <span className="msg-bubble-time">
-                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{isSent ? ' ✓✓' : ''}
+                        {msg.reply_to_id && (() => {
+                          const replied = messagesById.get(msg.reply_to_id)
+                          return (
+                            <button type="button" className="msg-quote" onClick={() => scrollToMessage(msg.reply_to_id!)}>
+                              <span className="msg-quote-label">Replying to {replied?.sender_id === userId ? 'you' : 'member'}</span>
+                              <span className="msg-quote-text">{replied?.content || (replied?.attachments?.length ? 'Attachment' : 'Original message')}</span>
+                            </button>
+                          )
+                        })()}
+                        {msg.content && <div>{msg.content}</div>}
+                        <MessageAttachments attachments={msg.attachments ?? []} compact />
+                        <span className="msg-bubble-time">
+                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{isSent ? ` ${isMessageReadByOther(msg, userId) ? '✓✓' : '✓'}` : ''}
                         </span>
                       </div>
+                      <button type="button" className="msg-reply-action" onClick={() => { setReplyingTo(msg); inputRef.current?.focus() }} aria-label="Reply to message">
+                        Reply
+                      </button>
                     </div>
                   </React.Fragment>
                 )
@@ -776,6 +869,17 @@ function MessagesPageInner() {
 
             {/* Input */}
             <div className="msg-input-stack">
+              {replyingTo && (
+                <div className="msg-reply-preview" role="status">
+                  <div className="msg-reply-preview-main">
+                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#5eead4' }}>Replying to {replyingTo.sender_id === userId ? 'your message' : (activeConv?.other_user.full_name || 'member')}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {replyingTo.content || (replyingTo.attachments?.length ? 'Attachment' : 'Message')}
+                    </div>
+                  </div>
+                  <button type="button" className="msg-reply-cancel" onClick={() => setReplyingTo(null)} aria-label="Cancel reply">×</button>
+                </div>
+              )}
               {attachedFiles.length > 0 && (
                 <div className="msg-attachment-preview-row" aria-label="Selected attachments">
                   {attachedFiles.map((file, index) => (

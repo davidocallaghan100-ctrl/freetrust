@@ -27,6 +27,7 @@ export interface Message {
   metadata: Record<string, unknown>
   reply_to_id?: string | null
   attachments?: Array<{ url: string; type: string; name: string; size: number }>
+  read_receipts?: Array<{ user_id: string; read_at: string }>
   sender?: Profile
 }
 
