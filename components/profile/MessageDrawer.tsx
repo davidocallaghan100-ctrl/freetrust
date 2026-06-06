@@ -12,7 +12,7 @@ import {
 } from '@/lib/messageAttachments'
 import {
   applyReadReceipt,
-  isMessageReadByOther,
+  isMessageReadByAllOthers,
   markMessagesRead,
   type MessageReadReceipt,
 } from '@/lib/messageReadReceipts'
@@ -70,6 +70,7 @@ export default function MessageDrawer({
 }: MessageDrawerProps) {
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [messages,       setMessages]       = useState<Message[]>([])
+  const [participantIds, setParticipantIds] = useState<string[]>([])
   const [input,          setInput]          = useState('')
   const [attachedFiles,  setAttachedFiles]  = useState<File[]>([])
   const [replyingTo,     setReplyingTo]     = useState<Message | null>(null)
@@ -94,6 +95,7 @@ export default function MessageDrawer({
     }
     setConversationId(null)
     setMessages([])
+    setParticipantIds([])
     setInput('')
     setAttachedFiles([])
     setReplyingTo(null)
@@ -164,7 +166,7 @@ export default function MessageDrawer({
         // Load history
         const histRes = await fetch(`/api/messages/${convId}`, { cache: 'no-store' })
         const hist = await histRes.json().catch(() => null) as
-          | { messages?: Message[]; error?: string }
+          | { messages?: Message[]; participant_ids?: string[]; error?: string }
           | null
         if (cancelled) return
         if (!histRes.ok) {
@@ -173,6 +175,7 @@ export default function MessageDrawer({
           return
         }
         setMessages(hist?.messages ?? [])
+        setParticipantIds(Array.isArray(hist?.participant_ids) ? hist.participant_ids : [])
         setSetupLoading(false)
         setTimeout(() => bottomRef.current?.scrollIntoView(), 80)
         setTimeout(() => inputRef.current?.focus(), 120)
@@ -674,7 +677,7 @@ export default function MessageDrawer({
                     <MessageAttachments attachments={m.attachments ?? []} compact />
                     {isSent && !isPend && (
                       <div style={{ marginTop: 4, fontSize: '0.66rem', textAlign: 'right', opacity: 0.72 }}>
-                        {isMessageReadByOther(m, currentUserId) ? '✓✓' : '✓'}
+                        {isMessageReadByAllOthers(m, currentUserId, participantIds) ? '✓✓' : '✓'}
                       </div>
                     )}
                   </div>

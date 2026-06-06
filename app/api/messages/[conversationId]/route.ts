@@ -69,6 +69,34 @@ async function getOtherParticipantIds(conversationId: string, userId: string): P
     .filter((id): id is string => typeof id === 'string' && id.length > 0)
 }
 
+async function getParticipantIds(conversationId: string): Promise<string[] | null> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('conversation_participants')
+    .select('user_id')
+    .eq('conversation_id', conversationId)
+
+  if (error) {
+    console.error('[api/messages/:id] participants fetch failed:', error)
+    return null
+  }
+
+  return (data ?? [])
+    .map(row => row.user_id)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0)
+}
+
+function applyMessageAutoDeleteFilter<T extends { created_at: string }>(
+  messages: T[] | null,
+  autoDeleteDays: number | null | undefined,
+): T[] {
+  const allMessages = messages ?? []
+  if (!Number.isInteger(autoDeleteDays) || !autoDeleteDays || autoDeleteDays <= 0) return allMessages
+
+  const cutoffMs = Date.now() - autoDeleteDays * 24 * 60 * 60 * 1000
+  return allMessages.filter(message => new Date(message.created_at).getTime() >= cutoffMs)
+}
+
 // Participation check uses the admin (service-role) client so it
 // bypasses RLS cleanly. We've already validated `user.id` from the
 // auth session via the user-session client, so looking up whether
@@ -129,16 +157,33 @@ export async function GET(
     // participants, so it also trips the infinite-recursion bug
     // on a DB that hasn't had the fix applied yet.
     const admin = createAdminClient()
-    const { data: messages, error: msgErr } = await admin
-      .from('messages')
-      .select('*, sender:profiles(id, full_name, avatar_url), read_receipts:message_reads(user_id, read_at)')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true })
+    const [{ data: messages, error: msgErr }, participantIds, { data: profile, error: profileErr }] = await Promise.all([
+      admin
+        .from('messages')
+        .select('*, sender:profiles(id, full_name, avatar_url), read_receipts:message_reads(user_id, read_at)')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true }),
+      getParticipantIds(conversationId),
+      admin
+        .from('profiles')
+        .select('message_auto_delete_days')
+        .eq('id', user.id)
+        .maybeSingle(),
+    ])
 
     if (msgErr) {
       console.error('[GET /api/messages/:id] messages fetch failed:', msgErr)
       return NextResponse.json({ error: msgErr.message }, { status: 500 })
     }
+    if (profileErr) {
+      console.error('[GET /api/messages/:id] profile retention fetch failed:', profileErr)
+      return NextResponse.json({ error: profileErr.message }, { status: 500 })
+    }
+
+    const autoDeleteDays = typeof profile?.message_auto_delete_days === 'number'
+      ? profile.message_auto_delete_days
+      : null
+    const visibleMessages = applyMessageAutoDeleteFilter(messages ?? [], autoDeleteDays)
 
     // Mark as read — update last_read_at on the caller's
     // participant row. Also admin-client so RLS can't block it.
@@ -148,7 +193,7 @@ export async function GET(
       .eq('conversation_id', conversationId)
       .eq('user_id',         user.id)
 
-    return NextResponse.json({ messages: messages || [] })
+    return NextResponse.json({ messages: visibleMessages, participant_ids: participantIds ?? [] })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[GET /api/messages/:id]', msg, err)

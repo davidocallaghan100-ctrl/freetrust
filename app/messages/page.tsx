@@ -14,7 +14,7 @@ import {
 } from '@/lib/messageAttachments'
 import {
   applyReadReceipt,
-  isMessageReadByOther,
+  isMessageReadByAllOthers,
   markMessagesRead,
   type MessageReadReceipt,
 } from '@/lib/messageReadReceipts'
@@ -101,6 +101,7 @@ function MessagesPageInner() {
   const [conversations, setConversations] = useState<ConversationItem[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
+  const [participantIds, setParticipantIds] = useState<string[]>([])
   const [input, setInput] = useState('')
   const [attachedFiles, setAttachedFiles] = useState<File[]>([])
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
@@ -294,11 +295,13 @@ function MessagesPageInner() {
         setMessages([])
         return
       }
-      const data = await res.json() as { messages?: Message[] }
+      const data = await res.json() as { messages?: Message[]; participant_ids?: string[] }
       setMessages(data.messages ?? [])
+      setParticipantIds(Array.isArray(data.participant_ids) ? data.participant_ids : [])
     } catch (err) {
       console.error('[messages] loadMessages threw:', err)
       setMessages([])
+      setParticipantIds([])
     }
   }, [])
 
@@ -373,6 +376,7 @@ function MessagesPageInner() {
     setPendingResend(null)
     setAttachedFiles([])
     setReplyingTo(null)
+    setParticipantIds([])
     markedReadRef.current.clear()
     // Mark as read
     setConversations(prev => prev.map(c => c.id === id ? { ...c, unread_count: 0 } : c))
@@ -779,7 +783,7 @@ function MessagesPageInner() {
                         {msg.content && <div>{msg.content}</div>}
                         <MessageAttachments attachments={msg.attachments ?? []} compact />
                         <span className="msg-bubble-time">
-                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{isSent ? ` ${isMessageReadByOther(msg, userId) ? '✓✓' : '✓'}` : ''}
+                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{isSent ? ` ${isMessageReadByAllOthers(msg, userId, participantIds) ? '✓✓' : '✓'}` : ''}
                         </span>
                       </div>
                       <button type="button" className="msg-reply-action" onClick={() => { setReplyingTo(msg); inputRef.current?.focus() }} aria-label="Reply to message">

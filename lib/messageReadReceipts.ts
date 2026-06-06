@@ -11,9 +11,22 @@ export interface ReadableMessage {
   read_receipts?: MessageReadReceipt[] | null
 }
 
-export function isMessageReadByOther(message: ReadableMessage, currentUserId: string | null): boolean {
+export function isMessageReadByAllOthers(
+  message: ReadableMessage,
+  currentUserId: string | null,
+  participantIds: string[],
+): boolean {
   if (!currentUserId || message.sender_id !== currentUserId) return false
-  return (message.read_receipts ?? []).some(receipt => receipt.user_id !== currentUserId && !!receipt.read_at)
+  const requiredReaderIds = participantIds.filter(id => id && id !== currentUserId)
+  if (requiredReaderIds.length === 0) return false
+
+  const readers = new Set(
+    (message.read_receipts ?? [])
+      .filter(receipt => !!receipt.read_at)
+      .map(receipt => receipt.user_id),
+  )
+
+  return requiredReaderIds.every(id => readers.has(id))
 }
 
 export async function markMessagesRead(

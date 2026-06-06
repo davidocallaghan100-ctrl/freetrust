@@ -13,7 +13,7 @@ import {
 } from '@/lib/messageAttachments'
 import {
   applyReadReceipt,
-  isMessageReadByOther,
+  isMessageReadByAllOthers,
   markMessagesRead,
   type MessageReadReceipt,
 } from '@/lib/messageReadReceipts'
@@ -62,6 +62,7 @@ export default function ConversationPage() {
 
   const [userId,    setUserId]    = useState<string | null>(null)
   const [messages,  setMessages]  = useState<Message[]>([])
+  const [participantIds, setParticipantIds] = useState<string[]>([])
   const [otherUser, setOtherUser] = useState<Profile | null>(null)
   const [input,     setInput]     = useState('')
   const [attachedFiles, setAttachedFiles] = useState<File[]>([])
@@ -101,8 +102,9 @@ export default function ConversationPage() {
         return
       }
       setLoadError(null)
-      const data = await res.json() as { messages: Message[] }
+      const data = await res.json() as { messages: Message[]; participant_ids?: string[] }
       setMessages(data.messages ?? [])
+      setParticipantIds(Array.isArray(data.participant_ids) ? data.participant_ids : [])
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[messages/:id] load threw:', msg)
@@ -722,7 +724,7 @@ export default function ConversationPage() {
                   <MessageAttachments attachments={msg.attachments ?? []} compact />
                   {isSent && !isPending && (
                     <div style={{ marginTop: 4, fontSize: '0.68rem', textAlign: 'right', opacity: 0.72 }}>
-                      {isMessageReadByOther(msg, userId) ? '✓✓' : '✓'}
+                      {isMessageReadByAllOthers(msg, userId, participantIds) ? '✓✓' : '✓'}
                     </div>
                   )}
                 </div>

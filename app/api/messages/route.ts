@@ -2,6 +2,11 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+function getAutoDeleteCutoffIso(days: unknown): string | null {
+  if (!Number.isInteger(days) || typeof days !== 'number' || days <= 0) return null
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+}
+
 // GET /api/messages — list conversations for current user
 export async function GET() {
   try {
@@ -26,6 +31,18 @@ export async function GET() {
     }
 
     const convIds = participantRows.map(p => p.conversation_id)
+
+    const { data: profile, error: profileErr } = await supabase
+      .from('profiles')
+      .select('message_auto_delete_days')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (profileErr) {
+      return NextResponse.json({ error: profileErr.message }, { status: 500 })
+    }
+
+    const autoDeleteCutoffIso = getAutoDeleteCutoffIso(profile?.message_auto_delete_days)
 
     // Get conversations with last message
     const { data: conversations, error: convErr } = await supabase
@@ -53,6 +70,7 @@ export async function GET() {
         .from('messages')
         .select('id, sender_id, content, created_at, attachments')
         .eq('conversation_id', conv.id)
+        .gte('created_at', autoDeleteCutoffIso ?? '0001-01-01T00:00:00.000Z')
         .order('created_at', { ascending: false })
         .limit(1)
         .single()
@@ -68,6 +86,7 @@ export async function GET() {
           .eq('conversation_id', conv.id)
           .neq('sender_id', user.id)
           .gt('created_at', lastReadAt)
+          .gte('created_at', autoDeleteCutoffIso ?? '0001-01-01T00:00:00.000Z')
         unreadCount = count || 0
       }
 
@@ -162,7 +181,6 @@ export async function POST(request: NextRequest) {
         conversation_id: convId,
         sender_id: user.id,
         content: content.trim(),
-        status: 'sent',
       })
       .select()
       .single()

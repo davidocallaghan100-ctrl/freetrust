@@ -58,6 +58,18 @@ interface Profile {
   website_url?:   string | null
   // Map privacy
   show_on_map?: boolean | null
+  message_auto_delete_days?: number | null
+}
+
+const MESSAGE_AUTO_DELETE_OPTIONS = [null, 30, 90, 365] as const
+type MessageAutoDeleteDays = typeof MESSAGE_AUTO_DELETE_OPTIONS[number]
+
+function parseMessageAutoDeleteDays(value: string): MessageAutoDeleteDays {
+  if (value === 'never') return null
+  const parsed = Number(value)
+  return MESSAGE_AUTO_DELETE_OPTIONS.includes(parsed as MessageAutoDeleteDays)
+    ? (parsed as MessageAutoDeleteDays)
+    : null
 }
 
 interface TrustBalance {
@@ -666,11 +678,22 @@ function PrivacyTab({ profile, onSaved }: { profile: Profile; onSaved: (p: Profi
   const [showTrust, setShowTrust] = useState<boolean>((priv.show_trust_score as boolean) ?? true)
   const [showOnline, setShowOnline] = useState<boolean>((priv.show_online_status as boolean) ?? true)
   const [showOnMap, setShowOnMap] = useState<boolean>(profile.show_on_map !== false)
+  const [messageAutoDeleteDays, setMessageAutoDeleteDays] = useState<MessageAutoDeleteDays>(
+    MESSAGE_AUTO_DELETE_OPTIONS.includes(profile.message_auto_delete_days as MessageAutoDeleteDays)
+      ? (profile.message_auto_delete_days as MessageAutoDeleteDays)
+      : null,
+  )
   const [mapSaving, setMapSaving] = useState(false)
+  const [messageRetentionSaving, setMessageRetentionSaving] = useState(false)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
+  const [toastKind, setToastKind] = useState<'success' | 'error'>('success')
 
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
+  const showToast = (msg: string, kind: 'success' | 'error' = 'success') => {
+    setToastKind(kind)
+    setToast(msg)
+    setTimeout(() => setToast(''), 3000)
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -688,12 +711,37 @@ function PrivacyTab({ profile, onSaved }: { profile: Profile; onSaved: (p: Profi
         onSaved({ ...profile, privacy_settings: { profile_visibility: visibility, show_trust_score: showTrust, show_online_status: showOnline } })
         showToast('Privacy settings saved!')
       } else {
-        showToast('Failed to save.')
+        showToast('Failed to save.', 'error')
       }
     } catch {
-      showToast('Network error.')
+      showToast('Network error.', 'error')
     }
     setSaving(false)
+  }
+
+  const handleMessageAutoDeleteChange = async (value: string) => {
+    const nextDays = parseMessageAutoDeleteDays(value)
+    const previousDays = messageAutoDeleteDays
+
+    setMessageAutoDeleteDays(nextDays)
+    onSaved({ ...profile, message_auto_delete_days: nextDays })
+    setMessageRetentionSaving(true)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('profiles')
+        .update({ message_auto_delete_days: nextDays })
+        .eq('id', profile.id)
+      if (error) throw error
+      showToast('Message auto-delete saved')
+    } catch (err) {
+      console.error('[settings] message auto-delete save failed:', err)
+      setMessageAutoDeleteDays(previousDays)
+      onSaved({ ...profile, message_auto_delete_days: previousDays })
+      showToast('Could not save message auto-delete — try again', 'error')
+    } finally {
+      setMessageRetentionSaving(false)
+    }
   }
 
   const handleMapToggle = async (next: boolean) => {
@@ -766,6 +814,31 @@ function PrivacyTab({ profile, onSaved }: { profile: Profile; onSaved: (p: Profi
         </div>
       </div>
 
+      {/* Message retention */}
+      <div className="card" style={{ marginTop: 16 }}>
+        <h2 className="section-title">Message auto-delete</h2>
+        <p className="section-desc">Choose whether older messages disappear from your own message views.</p>
+
+        <div className="toggle-row" style={{ opacity: messageRetentionSaving ? 0.6 : 1 }}>
+          <div>
+            <div className="toggle-label">Hide older messages</div>
+            <div className="toggle-desc">Hides messages from your inbox after this period. The other person still keeps their copy.</div>
+          </div>
+          <select
+            className="select-input"
+            value={messageAutoDeleteDays ?? 'never'}
+            disabled={messageRetentionSaving}
+            onChange={e => handleMessageAutoDeleteChange(e.target.value)}
+            aria-label="Message auto-delete retention window"
+          >
+            <option value="never">Never</option>
+            <option value="30">30 days</option>
+            <option value="90">90 days</option>
+            <option value="365">1 year</option>
+          </select>
+        </div>
+      </div>
+
       {/* Map Privacy */}
       <div className="card" style={{ marginTop: 16 }}>
         <h2 className="section-title">📍 Activity Map</h2>
@@ -798,7 +871,14 @@ function PrivacyTab({ profile, onSaved }: { profile: Profile; onSaved: (p: Profi
         </div>
       </div>
 
-      {toast && <div className="success-toast">{toast}</div>}
+      {toast && (
+        <div
+          className="success-toast"
+          style={toastKind === 'error' ? { background: '#7f1d1d', borderColor: '#ef4444', color: '#fecaca' } : undefined}
+        >
+          {toast}
+        </div>
+      )}
     </div>
   )
 }
