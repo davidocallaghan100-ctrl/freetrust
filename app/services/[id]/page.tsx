@@ -53,6 +53,7 @@ type ServiceListing = {
   location: string | null
   images: string[] | null
   category_id: string | null
+  category: string | null
   delivery_types: string[] | null
   quality_score: number | null
   avg_rating: number | null
@@ -131,7 +132,7 @@ function MobileStickyBar({ svc }: { svc: ServiceListing }) {
   const currency = (svc.currency || 'GBP') as CurrencyCode
 
   return (
-    <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 48, background: '#0f172a', borderTop: '1px solid #1e293b', padding: '10px 16px 20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+    <div style={{ position: 'fixed', bottom: '60px', left: 0, right: 0, zIndex: 90, background: '#0f172a', borderTop: '1px solid #1e293b', padding: '10px 16px 12px', display: 'flex', gap: '10px', alignItems: 'center', boxShadow: '0 -10px 30px rgba(2,6,23,0.35)' }}>
       {/* Price pill */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '8px 12px', minWidth: 90 }}>
         <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Price</span>
@@ -237,7 +238,7 @@ export default function ServiceDetailPage() {
           .select(`
             id, title, description, price, currency,
             service_mode, tags, location,
-            images, category_id, delivery_types,
+            images, category_id, category, delivery_types,
             quality_score, avg_rating, review_count,
             seller:profiles!seller_id (
               id, full_name, avatar_url, bio, location
@@ -264,6 +265,7 @@ export default function ServiceDetailPage() {
             location: raw.location as string | null,
             images: raw.images as string[] | null,
             category_id: raw.category_id as string | null,
+            category: raw.category as string | null,
             delivery_types: raw.delivery_types as string[] | null,
             quality_score: (raw.quality_score as number | null) ?? null,
             avg_rating: (raw.avg_rating as number | null) ?? null,
@@ -291,6 +293,7 @@ export default function ServiceDetailPage() {
   if (notFound || !svc) return <NotFound />
 
   const catInfo = ALL_CATEGORIES.find(c => c.id === svc.category_id)
+    ?? ALL_CATEGORIES.find(c => c.label === svc.category)
   const reviewCount = svc.review_count ?? 0
   const rating = reviewCount > 0 ? (svc.avg_rating ?? 5) : 5
   const images = svc.images ?? []
@@ -331,7 +334,7 @@ export default function ServiceDetailPage() {
           .sd-right { position: static; display: none !important; }
           .sd-mobile-pkg { display: block !important; }
           .sd-mobile-bar { display: flex !important; }
-          .sd-main { padding-bottom: 100px !important; }
+          .sd-main { padding-bottom: 180px !important; }
         }
         @media (min-width: 769px) {
           .sd-mobile-pkg { display: none !important; }

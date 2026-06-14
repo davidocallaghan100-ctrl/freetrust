@@ -27,6 +27,14 @@ const MEDIA_URLS_MARKER_PREFIX = '[[FT_MEDIA_URLS:'
 const SPOTIFY_MARKER_PREFIX = '[[FT_SPOTIFY:'
 const TEXT_OVERLAY_MARKER_PREFIX = '[[FT_TEXT_OVERLAY:'
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function normaliseOptionalUuid(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return UUID_RE.test(trimmed) ? trimmed : null
+}
+
 function normaliseMediaUrls(raw: unknown, fallback: string | null) {
   const urls = Array.isArray(raw)
     ? raw.filter((value): value is string => typeof value === 'string')
@@ -451,7 +459,14 @@ export async function POST(req: NextRequest) {
         currency: currencyCode,
         product_type: 'service',
         category: category ?? 'General',
-        category_id: serviceCategory?.id ?? null,
+        // Production `listings.category_id` is a UUID FK from the original
+        // marketplace schema. Service category IDs in `lib/service-categories`
+        // are UI slugs such as "design-creative", not UUIDs. Writing those
+        // slugs here causes Postgres to reject the insert with
+        // "invalid input syntax for type uuid". Keep the human-readable
+        // category label in `category`; service browse/detail pages already
+        // derive the UI slug from that label when `category_id` is null.
+        category_id: normaliseOptionalUuid(serviceCategory?.id),
         service_mode: serviceMode,
         status: 'active',
         // ── Globalisation fields ────────────────────────────────────────
@@ -473,7 +488,11 @@ export async function POST(req: NextRequest) {
         cover_image:    Array.isArray(data.images) && data.images.length > 0 && typeof data.images[0] === 'string'
                           ? (data.images[0] as string)
                           : null,
-        service_radius: Number.isFinite(serviceRadius) ? serviceRadius : null,
+        // Production currently has `service_radius` as text (older schema),
+        // while some migrations/comments expect numeric. Sending a string
+        // keeps the current text column happy and still casts cleanly if the
+        // column is later migrated to numeric.
+        service_radius: typeof serviceRadius === 'number' && Number.isFinite(serviceRadius) ? String(serviceRadius) : null,
         organisation_id: postedAsOrganisationId,
       }).select('id').single()
       if (error) {

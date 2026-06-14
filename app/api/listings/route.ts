@@ -8,6 +8,14 @@ import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 import { assertStripeConnectedForPaidListing } from '@/lib/stripe/connect-gate'
 import { findServiceCategoryByLabel } from '@/lib/service-categories'
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function normaliseOptionalUuid(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return UUID_RE.test(trimmed) ? trimmed : null
+}
+
 // GET /api/listings — list active listings (public) or all own listings (authenticated)
 export async function GET(request: NextRequest) {
   try {
@@ -204,6 +212,17 @@ export async function POST(request: NextRequest) {
       organisationIdResolved = orgId
     }
 
+    const serviceCategory = resolvedProductType === 'service'
+      ? findServiceCategoryByLabel(category as string | null)
+      : null
+    const categoryIdResolved = normaliseOptionalUuid(category_id ?? serviceCategory?.id)
+
+    const serviceRadiusNum = typeof service_radius === 'number'
+      ? service_radius
+      : typeof service_radius === 'string' && service_radius.trim()
+        ? Number(service_radius)
+        : null
+
     const insertPayload = {
       seller_id: user.id,
       title: (title as string).trim(),
@@ -211,11 +230,17 @@ export async function POST(request: NextRequest) {
       price,
       currency,
       product_type: resolvedProductType,
-      category_id: (category_id as string | null) ?? (resolvedProductType === 'service' ? findServiceCategoryByLabel(category as string | null)?.id ?? null : null),
+      // `listings.category_id` is a UUID FK in production. The service
+      // category catalog uses UI slugs (e.g. "design-creative"), so never
+      // write those slugs into this UUID column. Keep service category labels
+      // in `category`; service browse/detail code maps labels back to slugs.
+      category_id: categoryIdResolved,
       category: (category as string | null) ?? null,
       service_mode: service_mode,
       location: (location as string | null) ?? null,
-      service_radius: (service_radius as number | null) ?? null,
+      // Production currently stores this as text; string form also casts if
+      // the column is later migrated to numeric.
+      service_radius: typeof serviceRadiusNum === 'number' && Number.isFinite(serviceRadiusNum) ? String(serviceRadiusNum) : null,
       delivery_types: deliveryTypesLiteral,
       tags: tagsLiteral,
       images: imagesLiteral,

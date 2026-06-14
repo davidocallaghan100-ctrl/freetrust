@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 
 // Minimal BeforeInstallPromptEvent shape — not in the standard DOM lib yet.
 type BIP = Event & {
@@ -8,8 +9,10 @@ type BIP = Event & {
 }
 
 export default function PWAInstallBanner() {
+  const pathname = usePathname()
   const [prompt, setPrompt] = useState<BIP | null>(null)
   const [show, setShow] = useState(false)
+  const hasMobileServiceCheckoutBar = /^\/services\/[^/]+/.test(pathname)
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -34,7 +37,7 @@ export default function PWAInstallBanner() {
     <div
       style={{
         position: 'fixed',
-        bottom: '80px',
+        bottom: hasMobileServiceCheckoutBar ? '160px' : '80px',
         left: '50%',
         transform: 'translateX(-50%)',
         background: '#00b4d8',

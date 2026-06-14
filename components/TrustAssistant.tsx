@@ -344,6 +344,10 @@ export default function TrustAssistant() {
   }
 
   const accent = '#38bdf8'
+  const hasMobileServiceCheckoutBar = /^\/services\/[^/]+/.test(pathname)
+  const floatingBottom = hasMobileServiceCheckoutBar ? 160 : 80
+  const hintBottom = hasMobileServiceCheckoutBar ? 238 : 158
+  const chatBottom = hasMobileServiceCheckoutBar ? 232 : 152
 
   return (
     <>
@@ -375,7 +379,7 @@ export default function TrustAssistant() {
       {/* ── Hint badge ── */}
       {showHintBadge && !open && hintShown && !dismissed && (
         <div style={{
-          position: 'fixed', bottom: 158, right: 20, zIndex: 9998,
+          position: 'fixed', bottom: hintBottom, right: 20, zIndex: 9998,
           background: '#1e293b', border: `1px solid ${accent}`, borderRadius: 12,
           padding: '10px 14px', maxWidth: 240, fontSize: '0.8rem', color: '#f1f5f9',
           boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
@@ -391,7 +395,7 @@ export default function TrustAssistant() {
       {/* ── Floating globe + dismiss ── */}
       {!dismissed && (
         <div style={{
-          position: 'fixed', bottom: 80, right: 14, zIndex: 9999,
+          position: 'fixed', bottom: floatingBottom, right: 14, zIndex: 9999,
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
         }}>
           {/* Dismiss ✕ button */}
@@ -433,7 +437,7 @@ export default function TrustAssistant() {
       {/* ── Chat window ── */}
       {open && (
         <div style={{
-          position: 'fixed', bottom: 152, right: 16, zIndex: 9998,
+          position: 'fixed', bottom: chatBottom, right: 16, zIndex: 9998,
           width: 'min(380px, calc(100vw - 32px))',
           height: 'min(560px, calc(100vh - 120px))',
           background: '#0d1627',

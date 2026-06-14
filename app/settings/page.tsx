@@ -40,6 +40,8 @@ interface Profile {
   privacy_settings: Record<string, unknown> | null
   notification_prefs: Record<string, unknown> | null
   stripe_account_id: string | null
+  stripe_onboarded?: boolean | null
+  stripe_onboarding_complete?: boolean | null
   // Globalisation fields
   country?: string | null
   region?: string | null
@@ -1397,6 +1399,7 @@ function ReferralTab() {
 
 function StripeTab({ profile }: { profile: Profile }) {
   const isConnected = !!profile.stripe_account_id
+  const stripeFullyOnboarded = Boolean(profile.stripe_onboarded || profile.stripe_onboarding_complete)
   const [connectUrl, setConnectUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -1418,11 +1421,53 @@ function StripeTab({ profile }: { profile: Profile }) {
         <h2 className="section-title">Stripe Connect</h2>
         <p className="section-desc">Connect your Stripe account to receive payments for your services and products.</p>
 
-        {isConnected ? (
+        {isConnected && !stripeFullyOnboarded ? (
+          <div>
+            <div style={{ border: '1px solid rgba(251,191,36,0.32)', background: 'linear-gradient(135deg,rgba(251,191,36,0.10),rgba(15,23,42,0.94))', borderRadius: 14, padding: 18, marginBottom: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                <div style={{ width: 46, height: 46, borderRadius: 14, background: 'rgba(251,191,36,0.14)', border: '1px solid rgba(251,191,36,0.30)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
+                  💳
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h3 style={{ margin: 0, fontSize: 19, lineHeight: 1.25, color: '#f8fafc', fontWeight: 850 }}>Finish Stripe payout setup</h3>
+                  <p style={{ margin: '8px 0 0', fontSize: 14, color: '#cbd5e1', lineHeight: 1.6 }}>
+                    Your Stripe account is saved on FreeTrust, but payouts are not marked active yet. Open setup to finish verification or refresh your status.
+                  </p>
+                  <a
+                    href="/seller/connect"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minHeight: 44,
+                      marginTop: 16,
+                      background: 'linear-gradient(135deg,#fbbf24,#f59e0b)',
+                      color: '#0f172a',
+                      borderRadius: 11,
+                      padding: '0.65rem 1.15rem',
+                      fontSize: 14,
+                      fontWeight: 900,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Open Stripe setup →
+                  </a>
+                </div>
+              </div>
+            </div>
+            <div className="stripe-badge">
+              <span>⏳</span>
+              <span>Stripe account saved</span>
+              {profile.stripe_account_id && (
+                <span style={{ color: '#64748b' }}>·· {profile.stripe_account_id.slice(-4)}</span>
+              )}
+            </div>
+          </div>
+        ) : isConnected ? (
           <div>
             <div className="stripe-badge" style={{ marginBottom: 16 }}>
               <span>✅</span>
-              <span>Stripe connected</span>
+              <span>Stripe payouts active</span>
               {profile.stripe_account_id && (
                 <span style={{ color: '#64748b' }}>·· {profile.stripe_account_id.slice(-4)}</span>
               )}

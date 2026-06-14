@@ -73,6 +73,7 @@ const CATEGORIES = [
   'Mental Health',
   'Food Poverty',
   'Environment',
+  'Animal Welfare',
   'Elderly Care',
   'Disability',
   'Rural Development',
@@ -242,6 +243,7 @@ function SuggestACauseForm() {
             <option value="Food Poverty">Food Poverty</option>
             <option value="Education">Education</option>
             <option value="Environment">Environment</option>
+            <option value="Animal Welfare">Animal Welfare</option>
             <option value="Elderly Care">Elderly Care</option>
             <option value="Disability">Disability</option>
             <option value="Rural Development">Rural Development</option>
@@ -384,6 +386,7 @@ export default function ImpactPage() {
     'Food Poverty',
     'Education',
     'Environment',
+    'Animal Welfare',
     'Elderly Care',
     'Disability',
     'Rural Development',

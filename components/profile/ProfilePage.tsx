@@ -160,7 +160,7 @@ interface ConnectionProfile {
   location?: string | null
 }
 
-type ProfileTab = 'overview' | 'services' | 'products' | 'grassroots' | 'posts' | 'activity' | 'following' | 'followers'
+type ProfileTab = 'overview' | 'trust' | 'services' | 'products' | 'grassroots' | 'posts' | 'activity' | 'following' | 'followers'
 
 type CoverSettings = {
   positionX: number
@@ -328,6 +328,40 @@ function calcCompleteness(profile: Profile | null, email: string | null): { pct:
   return { pct: Math.round((done / checks.length) * 100), missing }
 }
 
+const MEDIA_URLS_MARKER_RE = /\n?\n?\[\[FT_MEDIA_URLS:([A-Za-z0-9_-]+)\]\]/
+
+function decodeBase64UrlJson<T>(encoded: string): T | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const padded = encoded.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - encoded.length % 4) % 4)
+    const binary = window.atob(padded)
+    const bytes = Uint8Array.from(binary, char => char.charCodeAt(0))
+    return JSON.parse(new TextDecoder().decode(bytes)) as T
+  } catch {
+    return null
+  }
+}
+
+function decodeMediaUrlsFromPostContent(text: string | null | undefined) {
+  const encoded = text?.match(MEDIA_URLS_MARKER_RE)?.[1]
+  if (!encoded) return [] as string[]
+  const parsed = decodeBase64UrlJson<unknown>(encoded)
+  if (!Array.isArray(parsed)) return [] as string[]
+  return parsed.filter((value): value is string => typeof value === 'string' && /^https?:\/\//i.test(value)).slice(0, 10)
+}
+
+function getPhotoUrlsFromPost(post: FeedPost) {
+  const fromMetadata = Array.isArray(post.metadata?.media_urls)
+    ? post.metadata.media_urls.filter((value): value is string => typeof value === 'string' && /^https?:\/\//i.test(value))
+    : []
+  const urls = [
+    ...fromMetadata,
+    ...decodeMediaUrlsFromPostContent(post.content),
+    post.media_url,
+  ].filter((value): value is string => typeof value === 'string' && /^https?:\/\//i.test(value))
+  return Array.from(new Set(urls)).slice(0, 10)
+}
+
 export default function ProfilePage() {
   // IMPORTANT: createClient() must be called once per mount, not on every render.
   // Calling createBrowserClient on each render creates new auth listener instances
@@ -386,6 +420,9 @@ export default function ProfilePage() {
   const [profilePosts, setProfilePosts] = useState<FeedPost[]>([])
   const [profilePostsLoading, setProfilePostsLoading] = useState(false)
   const [profilePostsLoaded, setProfilePostsLoaded] = useState(false)
+  const [profilePhotoGridPosts, setProfilePhotoGridPosts] = useState<FeedPost[]>([])
+  const [profilePhotoGridLoading, setProfilePhotoGridLoading] = useState(false)
+  const [profilePhotoGridLoaded, setProfilePhotoGridLoaded] = useState(false)
   const [bonusAwarded, setBonusAwarded] = useState(false)
   const [toast, setToast] = useState('')
   const [isOwnProfile, setIsOwnProfile] = useState(true)
@@ -567,6 +604,21 @@ export default function ProfilePage() {
       setProfilePostsLoading(false)
     }
   }, [profilePostsLoaded])
+
+  const loadProfilePhotoGrid = useCallback(async (userId: string) => {
+    if (profilePhotoGridLoaded || profilePhotoGridLoading) return
+    setProfilePhotoGridLoading(true)
+    try {
+      const res = await fetch(`/api/feed/posts?authorId=${encodeURIComponent(userId)}&filter=photos&limit=18`, { cache: 'no-store' })
+      if (res.ok) {
+        const data = await res.json() as { posts?: FeedPost[] }
+        setProfilePhotoGridPosts((data.posts ?? []).filter(post => getPhotoUrlsFromPost(post).length > 0).slice(0, 18))
+        setProfilePhotoGridLoaded(true)
+      }
+    } catch { /* non-critical */ } finally {
+      setProfilePhotoGridLoading(false)
+    }
+  }, [profilePhotoGridLoaded, profilePhotoGridLoading])
 
   const loadConnections = useCallback(async (userId: string) => {
     if (connectionsLoaded || connectionsLoading) return
@@ -783,11 +835,14 @@ export default function ProfilePage() {
     setGrassroots([])
     setActivity([])
     setProfilePosts([])
+    setProfilePhotoGridPosts([])
     setFollowers([])
     setFollowing([])
     setActivityFeedItems([])
     setActivityFeedLoaded(false)
     setProfilePostsLoaded(false)
+    setProfilePhotoGridLoaded(false)
+    setProfilePhotoGridLoading(false)
     setConnectionsLoaded(false)
 
     const init = async () => {
@@ -913,13 +968,14 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!displayedProfileId) return
+    if (activeTab === 'overview') void loadProfilePhotoGrid(displayedProfileId)
     if (activeTab === 'services' && services.length === 0) void loadServices(displayedProfileId)
     if (activeTab === 'products' && products.length === 0) void loadProducts(displayedProfileId)
     if (activeTab === 'grassroots' && grassroots.length === 0) void loadGrassroots(displayedProfileId)
     if (activeTab === 'posts') void loadProfilePosts(displayedProfileId)
     if (activeTab === 'activity' && activity.length === 0) void loadActivity(displayedProfileId)
     if ((activeTab === 'followers' || activeTab === 'following')) void loadConnections(displayedProfileId)
-  }, [activeTab, displayedProfileId, services.length, products.length, grassroots.length, activity.length, loadServices, loadProducts, loadGrassroots, loadProfilePosts, loadActivity, loadConnections])
+  }, [activeTab, displayedProfileId, services.length, products.length, grassroots.length, activity.length, loadServices, loadProducts, loadGrassroots, loadProfilePosts, loadProfilePhotoGrid, loadActivity, loadConnections])
 
   // Award ₮10 bonus when profile hits 100%
   useEffect(() => {
@@ -1211,6 +1267,10 @@ export default function ProfilePage() {
 
   const { pct: completeness, missing } = calcCompleteness(profile, user?.email ?? null)
   const trustLevel = getTrustLevel(trustBalance)
+  const photoGridTiles = profilePhotoGridPosts
+    .map(post => ({ post, urls: getPhotoUrlsFromPost(post) }))
+    .filter(item => item.urls.length > 0)
+    .slice(0, 18)
 
   const activityIcon: Record<string, string> = {
     post: '📝',
@@ -1225,6 +1285,7 @@ export default function ProfilePage() {
 
   const profileTabs: { key: ProfileTab; label: string; count?: number }[] = [
     { key: 'overview', label: 'Overview' },
+    { key: 'trust', label: 'Trust' },
     { key: 'services', label: 'Services', count: services.length || undefined },
     { key: 'products', label: 'Products', count: products.length || undefined },
     { key: 'grassroots', label: 'Grassroots', count: grassroots.length || undefined },
@@ -1233,10 +1294,6 @@ export default function ProfilePage() {
     { key: 'following', label: 'Following', count: following.length || profile?.following_count || undefined },
     { key: 'followers', label: 'Followers', count: followerCount || undefined },
   ]
-
-  const hasStripeAccount = Boolean(profile?.stripe_account_id)
-  const stripeFullyOnboarded = Boolean(profile?.stripe_onboarded || profile?.stripe_onboarding_complete)
-  const showStripePrompt = Boolean(isOwnProfile && user && profile && !stripeFullyOnboarded)
 
   if (loading) {
     return (
@@ -1295,6 +1352,12 @@ export default function ProfilePage() {
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         .profile-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 16px; padding: 1rem; margin-bottom: 0.875rem; }
+        .profile-photo-grid-card { padding: 0; overflow: hidden; }
+        .profile-photo-grid-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 0 0.5rem; }
+        .profile-photo-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; background: #020617; }
+        .profile-photo-tile { position: relative; display: block; aspect-ratio: 3 / 4; overflow: hidden; background: #020617; }
+        .profile-photo-grid-view { font-size: 12px; font-weight: 800; color: #cbd5e1; text-decoration: none; line-height: 1; }
+        .profile-photo-grid-add { width: 30px; height: 30px; min-width: 30px; min-height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; border: 1px solid rgba(248,250,252,0.18); background: rgba(248,250,252,0.10); color: #f8fafc; font-size: 18px; font-weight: 850; line-height: 1; text-decoration: none; box-shadow: 0 8px 22px rgba(2,6,23,0.28); }
         .profile-input { width: 100%; background: rgba(15,23,42,0.7); border: 1px solid rgba(148,163,184,0.18); border-radius: 8px; padding: 10px 12px; font-size: 16px; color: #f1f5f9; outline: none; font-family: inherit; box-sizing: border-box; }
         .profile-input:focus { border-color: rgba(56,189,248,0.4); }
         .profile-label { font-size: 12px; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -1315,6 +1378,12 @@ export default function ProfilePage() {
           .profile-action-row > div { width: 100%; }
           .profile-action-row a,
           .profile-action-row button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+          .profile-photo-grid-card { margin-left: -16px; margin-right: -16px; border-left: 0 !important; border-right: 0 !important; border-radius: 0 !important; }
+          .profile-meta-panel { padding-top: 2.2rem !important; }
+          .profile-photo-grid-actions { padding: 0.1rem 16px 0.5rem; }
+          .profile-photo-grid { gap: 3px; }
+          .profile-photo-grid-view { font-size: 12px; color: #e2e8f0; }
+          .profile-photo-grid-add { width: 28px; height: 28px; min-width: 28px; min-height: 28px; font-size: 17px; }
         }
       `}</style>
 
@@ -1547,7 +1616,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Name + meta — offset for avatar */}
-          <div style={{ paddingTop: '4.25rem' }}>
+          <div className="profile-meta-panel" style={{ paddingTop: '4.25rem' }}>
             <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap', fontSize: '1.6rem', fontWeight: 800, marginBottom: '0.3rem' }}>
               <span>{profile?.full_name ?? user?.email ?? 'Member'}</span>
               {isProfileVerified(profile) && <VerifiedBadge />}
@@ -1637,79 +1706,47 @@ export default function ProfilePage() {
 
         {activeTab === 'overview' && (
           <>
-        {/* Stripe Connect prompt — kept inside the profile body so the cover
-            photo cannot overlap/crush the CTA on mobile. If a Connect account
-            already exists, use setup/recovery wording instead of asking the
-            member to connect again. */}
-        {showStripePrompt && (
-          <div className="profile-card" style={{ borderColor: 'rgba(251,191,36,0.28)', background: 'linear-gradient(135deg,rgba(251,191,36,0.10),rgba(15,23,42,0.92))' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem' }}>
-              <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(251,191,36,0.14)', border: '1px solid rgba(251,191,36,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, flexShrink: 0 }}>
-                💳
+        {(profilePhotoGridLoading || photoGridTiles.length > 0 || isOwnProfile) && (
+          <div className="profile-card profile-photo-grid-card" style={{ padding: photoGridTiles.length > 0 ? 0 : '1rem' }}>
+            <div className="profile-photo-grid-actions">
+                {photoGridTiles.length > 0 && (
+                  <Link href="#" className="profile-photo-grid-view" onClick={(event) => { event.preventDefault(); setActiveTab('posts') }}>
+                    View posts
+                  </Link>
+                )}
+                {isOwnProfile && (
+                  <Link href="/create" className="profile-photo-grid-add" aria-label="Add photo post" title="Add photo post">
+                    +
+                  </Link>
+                )}
+            </div>
+            {profilePhotoGridLoading ? (
+              <div className="profile-photo-grid" style={{ padding: photoGridTiles.length > 0 ? 0 : '1rem 0 0' }}>
+                {Array.from({ length: 9 }).map((_, index) => (
+                  <div key={index} className="profile-photo-tile" style={{ background: 'linear-gradient(135deg,rgba(30,41,59,0.9),rgba(15,23,42,0.92))' }} />
+                ))}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f8fafc', lineHeight: 1.25 }}>
-                  {hasStripeAccount ? 'Finish Stripe payout setup' : 'Connect Stripe to sell on FreeTrust'}
-                </div>
-                <div style={{ fontSize: '0.8rem', color: '#cbd5e1', marginTop: 5, lineHeight: 1.5 }}>
-                  {hasStripeAccount
-                    ? 'Your Stripe account is saved on FreeTrust, but payouts are not marked active yet. Open setup to finish verification or refresh your status.'
-                    : 'Connect a Stripe account to receive payouts for paid services and products.'}
-                </div>
-                <Link
-                  href="/seller/connect"
-                  style={{
-                    display:       'inline-flex',
-                    alignItems:    'center',
-                    justifyContent:'center',
-                    minHeight:     42,
-                    marginTop:     12,
-                    background:    'linear-gradient(135deg,#fbbf24,#f59e0b)',
-                    color:         '#0f172a',
-                    borderRadius:  10,
-                    padding:       '0.55rem 1rem',
-                    fontSize:      '0.84rem',
-                    fontWeight:    850,
-                    textDecoration:'none',
-                  }}
-                >
-                  {hasStripeAccount ? 'Open Stripe setup →' : 'Connect Stripe →'}
-                </Link>
+            ) : photoGridTiles.length > 0 ? (
+              <div className="profile-photo-grid">
+                {photoGridTiles.map(({ post, urls }) => (
+                  <Link key={post.id} href={`/feed/${post.id}`} aria-label="Open photo post" className="profile-photo-tile">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={urls[0]} alt={post.title ?? post.content?.slice(0, 80) ?? 'Photo post'} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    {urls.length > 1 && (
+                      <span aria-label={`${urls.length} photos`} style={{ position: 'absolute', top: 7, right: 7, width: 20, height: 20, borderRadius: 6, background: 'rgba(2,6,23,0.72)', border: '1px solid rgba(248,250,252,0.65)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#f8fafc', fontSize: 12, fontWeight: 900, boxShadow: '0 6px 16px rgba(0,0,0,0.35)' }}>
+                        ▣
+                      </span>
+                    )}
+                  </Link>
+                ))}
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Profile Completeness Bar */}
-        {completeness < 100 && (
-          <div className="profile-card" style={{ marginBottom: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f1f5f9' }}>Profile completeness</span>
-              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#38bdf8' }}>{completeness}%</span>
-            </div>
-            <div style={{ height: 6, background: 'rgba(56,189,248,0.1)', borderRadius: 3, marginBottom: '0.75rem', overflow: 'hidden' }}>
-              <div style={{ width: `${completeness}%`, height: '100%', background: 'linear-gradient(90deg, #38bdf8, #818cf8)', borderRadius: 3, transition: 'width 0.5s ease' }} />
-            </div>
-            <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-              Complete your profile to earn <strong style={{ color: '#38bdf8' }}>₮10 bonus</strong>. Missing:&nbsp;
-              {missing.map((m, i) => (
-                <span key={m}>
-                  <span style={{ color: '#94a3b8' }}>{m}</span>
-                  {i < missing.length - 1 && ', '}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-        {completeness === 100 && (
-          <div className="profile-card" style={{ marginBottom: '1.25rem', border: '1px solid rgba(56,189,248,0.3)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <span style={{ fontSize: '1.5rem' }}>✅</span>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f1f5f9' }}>Profile 100% complete!</div>
-                <div style={{ fontSize: '0.78rem', color: '#64748b' }}>You earned ₮10 Trust for completing your profile.</div>
+            ) : isOwnProfile ? (
+              <div style={{ padding: '2.25rem 1rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>📸</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.35rem' }}>No photo posts yet</div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', maxWidth: 300, margin: '0 auto', lineHeight: 1.5 }}>Upload photo posts and they will appear here in a clean grid on your profile overview.</div>
               </div>
-            </div>
+            ) : null}
           </div>
         )}
 
@@ -1733,31 +1770,6 @@ export default function ProfilePage() {
             </div>
           </div>
         )}
-
-        {/* Trust Economy */}
-        <div className="profile-card">
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '1rem', letterSpacing: '0.06em' }}>TRUST ECONOMY</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-            <div>
-              <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.25rem' }}>Balance</div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#38bdf8' }}>₮{trustBalance.toLocaleString()}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.25rem' }}>Level</div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: trustLevel.color }}>{trustLevel.label}</div>
-              <div style={{ fontSize: '0.72rem', color: '#475569' }}>{trustLevel.next}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.4rem' }}>Progress</div>
-              {trustLevel.nextAt !== null && (
-                <div style={{ height: 6, background: 'rgba(56,189,248,0.1)', borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.min((trustBalance / trustLevel.nextAt) * 100, 100)}%`, height: '100%', background: `linear-gradient(90deg,#38bdf8,${trustLevel.color})`, borderRadius: 3 }} />
-                </div>
-              )}
-              <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '0.25rem' }}>{trustBalance}{trustLevel.nextAt !== null ? `/${trustLevel.nextAt}` : ' MAX'}</div>
-            </div>
-          </div>
-        </div>
 
         {/* Delivery Performance (OTIF) — shown for any seller profile */}
         {(viewingId || user?.id) && (
@@ -2105,6 +2117,68 @@ export default function ProfilePage() {
           </div>
         )}
 
+          </>
+        )}
+
+        {activeTab === 'trust' && (
+          <>
+            {/* Profile Completeness Bar */}
+            {completeness < 100 && (
+              <div className="profile-card" style={{ marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f1f5f9' }}>Profile completeness</span>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#38bdf8' }}>{completeness}%</span>
+                </div>
+                <div style={{ height: 6, background: 'rgba(56,189,248,0.1)', borderRadius: 3, marginBottom: '0.75rem', overflow: 'hidden' }}>
+                  <div style={{ width: `${completeness}%`, height: '100%', background: 'linear-gradient(90deg, #38bdf8, #818cf8)', borderRadius: 3, transition: 'width 0.5s ease' }} />
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                  Complete your profile to earn <strong style={{ color: '#38bdf8' }}>₮10 bonus</strong>. Missing:&nbsp;
+                  {missing.map((m, i) => (
+                    <span key={m}>
+                      <span style={{ color: '#94a3b8' }}>{m}</span>
+                      {i < missing.length - 1 && ', '}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {completeness === 100 && (
+              <div className="profile-card" style={{ marginBottom: '1.25rem', border: '1px solid rgba(56,189,248,0.3)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ fontSize: '1.5rem' }}>✅</span>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f1f5f9' }}>Profile 100% complete!</div>
+                    <div style={{ fontSize: '0.78rem', color: '#64748b' }}>You earned ₮10 Trust for completing your profile.</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Trust Economy */}
+            <div className="profile-card">
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '1rem', letterSpacing: '0.06em' }}>TRUST ECONOMY</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.25rem' }}>Balance</div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#38bdf8' }}>₮{trustBalance.toLocaleString()}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.25rem' }}>Level</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: trustLevel.color }}>{trustLevel.label}</div>
+                  <div style={{ fontSize: '0.72rem', color: '#475569' }}>{trustLevel.next}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.4rem' }}>Progress</div>
+                  {trustLevel.nextAt !== null && (
+                    <div style={{ height: 6, background: 'rgba(56,189,248,0.1)', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ width: `${Math.min((trustBalance / trustLevel.nextAt) * 100, 100)}%`, height: '100%', background: `linear-gradient(90deg,#38bdf8,${trustLevel.color})`, borderRadius: 3 }} />
+                    </div>
+                  )}
+                  <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '0.25rem' }}>{trustBalance}{trustLevel.nextAt !== null ? `/${trustLevel.nextAt}` : ' MAX'}</div>
+                </div>
+              </div>
+            </div>
           </>
         )}
 

@@ -1,11 +1,54 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { detectInAppBrowser, type InAppBrowserInfo } from '@/lib/auth/in-app-browser'
 import OpenInBrowserModal from '@/components/OpenInBrowserModal'
+
+type OAuthProvider = 'apple' | 'google' | 'facebook' | 'linkedin_oidc'
+
+const OAUTH_PROVIDERS: Array<{
+  provider: OAuthProvider
+  label: string
+  icon: ReactNode
+  queryParams?: Record<string, string>
+  enabled?: boolean
+}> = [
+  {
+    provider: 'apple',
+    label: 'Continue with Apple',
+    icon: <span style={{ fontSize: 19, lineHeight: 1 }}></span>,
+  },
+  {
+    provider: 'google',
+    label: 'Continue with Google',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+    ),
+    queryParams: { prompt: 'select_account', access_type: 'offline' },
+  },
+  {
+    provider: 'facebook',
+    label: 'Continue with Facebook',
+    icon: <span aria-hidden="true" style={{ color: '#1877F2', fontSize: 18, fontWeight: 800, lineHeight: 1 }}>f</span>,
+    enabled: process.env.NEXT_PUBLIC_ENABLE_FACEBOOK_OAUTH === 'true',
+  },
+  {
+    provider: 'linkedin_oidc',
+    label: 'Continue with LinkedIn',
+    icon: <span aria-hidden="true" style={{ color: '#0A66C2', fontSize: 14, fontWeight: 800, lineHeight: 1 }}>in</span>,
+    enabled: process.env.NEXT_PUBLIC_ENABLE_LINKEDIN_OIDC === 'true',
+  },
+]
+
+const VISIBLE_OAUTH_PROVIDERS = OAUTH_PROVIDERS.filter(({ enabled = true }) => enabled)
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -33,7 +76,7 @@ export default function RegisterPage() {
   const [form, setForm] = useState({ first_name: '', last_name: '', email: '', password: '', confirm: '', website_url: '' })
   const [agreeHuman, setAgreeHuman] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [googleLoading, setGoogleLoading] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   // True when signUp returned without a session — user must click the link in
@@ -210,25 +253,28 @@ export default function RegisterPage() {
     }
   }
 
-  const handleGoogleSignup = async () => {
+  const handleOAuthSignup = async (provider: OAuthProvider, queryParams?: Record<string, string>) => {
     // Google returns Error 403: disallowed_useragent inside WebViews.
     // Detect the in-app browser BEFORE starting OAuth and show an
     // instructional modal instead — no code change makes OAuth work
     // inside Facebook/Instagram/TikTok/etc. in-app browsers.
-    const info = detectInAppBrowser()
-    if (info.isInApp) {
-      console.warn('[register] blocked Google OAuth — in-app browser detected:', info.browserName)
-      setInAppInfo(info)
-      return
+    if (provider === 'google') {
+      const info = detectInAppBrowser()
+      if (info.isInApp) {
+        console.warn('[register] blocked Google OAuth — in-app browser detected:', info.browserName)
+        setInAppInfo(info)
+        return
+      }
     }
 
-    setGoogleLoading(true)
+    setError('')
+    setOauthLoading(provider)
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback?next=/feed`,
-          queryParams: { prompt: 'select_account', access_type: 'offline' },
+          ...(queryParams ? { queryParams } : {}),
           // Explicit default — Supabase performs the window.location.href
           // navigation internally. We could set this to true to get the
           // URL back and navigate ourselves, but the default works fine
@@ -237,16 +283,16 @@ export default function RegisterPage() {
         },
       })
       if (error) {
-        console.error('[register] Google OAuth error:', error)
-        setError(error.message || 'Google sign-in failed. Please try again.')
-        setGoogleLoading(false)
+        console.error(`[register] ${provider} OAuth error:`, error)
+        setError(error.message || 'Social sign-in failed. Please try again.')
+        setOauthLoading(null)
       }
       // If no error, Supabase has already navigated away — nothing more to do
     } catch (err) {
-      console.error('[register] Google OAuth threw:', err)
-      const msg = err instanceof Error ? err.message : 'Google sign-in failed'
+      console.error(`[register] ${provider} OAuth threw:`, err)
+      const msg = err instanceof Error ? err.message : 'Social sign-in failed'
       setError(msg)
-      setGoogleLoading(false)
+      setOauthLoading(null)
     }
   }
 
@@ -263,7 +309,8 @@ export default function RegisterPage() {
           padding: 16px;
           background: #0f172a;
           position: relative;
-          overflow: hidden;
+          overflow-x: hidden;
+          overflow-y: auto;
         }
         .auth-page::before {
           content: '';
@@ -344,7 +391,8 @@ export default function RegisterPage() {
         .auth-sub a { color: #38bdf8; text-decoration: none; font-weight: 600; }
         .auth-sub a:hover { text-decoration: underline; }
 
-        .btn-google {
+        .oauth-list { display: grid; gap: 10px; margin-bottom: 2px; }
+        .btn-oauth {
           width: 100%;
           display: flex; align-items: center; justify-content: center; gap: 10px;
           padding: 13px 16px;
@@ -356,8 +404,8 @@ export default function RegisterPage() {
           box-shadow: 0 1px 4px rgba(0,0,0,0.35);
           min-height: 48px;
         }
-        .btn-google:hover:not(:disabled) { background: #f8fafc; transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0,0,0,0.3); }
-        .btn-google:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-oauth:hover:not(:disabled) { background: #f8fafc; transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0,0,0,0.3); }
+        .btn-oauth:disabled { opacity: 0.6; cursor: not-allowed; }
 
         .auth-divider { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
         .auth-divider-line { flex: 1; height: 1px; background: rgba(148,163,184,0.15); }
@@ -490,7 +538,7 @@ export default function RegisterPage() {
           .auth-heading { font-size: 20px; }
           .perks-strip { gap: 8px; padding: 8px 10px; }
           .perk { font-size: 11px; }
-          .btn-google { font-size: 14px; }
+          .btn-oauth { font-size: 14px; }
           .trust-toast { bottom: 16px; right: 16px; left: 16px; }
         }
       `}</style>
@@ -603,19 +651,25 @@ export default function RegisterPage() {
                 </span>
               </div>
 
-              <button className="btn-google" type="button" onClick={handleGoogleSignup} disabled={googleLoading}>
-                {googleLoading ? (
-                  <span className="spinner" style={{ borderColor: 'rgba(30,41,59,0.2)', borderTopColor: '#1e293b' }} />
-                ) : (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                  </svg>
-                )}
-                {googleLoading ? 'Redirecting…' : 'Continue with Google'}
-              </button>
+              <div className="oauth-list" aria-label="Social sign-up options">
+                {VISIBLE_OAUTH_PROVIDERS.map(({ provider, label, icon, queryParams }) => {
+                  const isLoading = oauthLoading === provider
+                  return (
+                    <button
+                      key={provider}
+                      className="btn-oauth"
+                      type="button"
+                      onClick={() => handleOAuthSignup(provider, queryParams)}
+                      disabled={oauthLoading !== null}
+                    >
+                      {isLoading ? (
+                        <span className="spinner" style={{ borderColor: 'rgba(30,41,59,0.2)', borderTopColor: '#1e293b' }} />
+                      ) : icon}
+                      {isLoading ? 'Redirecting…' : label}
+                    </button>
+                  )
+                })}
+              </div>
 
               <div className="auth-divider">
                 <div className="auth-divider-line" />
