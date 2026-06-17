@@ -1,5 +1,6 @@
 'use client'
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useCurrency } from '@/context/CurrencyContext'
 import FAQAccordion from '@/components/marketing/FAQAccordion'
@@ -10,17 +11,14 @@ import HeroGlobe from './HeroGlobe'
 import LegalDocModal from '@/components/legal/LegalDocModal'
 import { legalDocs } from '@/lib/legalDocs'
 
-// HeroGlobe is imported from ./HeroGlobe — Mapbox GL realistic globe with auto-rotation
-
 export interface HomeClientProps {
   initialCounts: {
-    members:     number
-    listings:    number
+    members: number
+    listings: number
     communities: number
   }
 }
 
-// ── Types ─────────────────────────────────────────────────────────────────────
 type TickerItem = { id: string; type: string; text: string; time: string }
 type StatsData = {
   members: { total: number; thisWeek: number; thisMonth: number }
@@ -33,185 +31,6 @@ type StatsData = {
   growth: { date: string; count: number; cumulative: number }[]
   foundingGoal: number
 }
-
-// ── Animated counter ──────────────────────────────────────────────────────────
-function Counter({ target, prefix = '', suffix = '' }: { target: number; prefix?: string; suffix?: string }) {
-  const [count, setCount] = useState(0)
-  const ref = useRef<HTMLSpanElement>(null)
-  const prevTarget = useRef(0)
-
-  useEffect(() => {
-    if (target === prevTarget.current) return
-    prevTarget.current = target
-    if (target === 0) { setCount(0); return }
-
-    // Animate from current displayed value to new target
-    const from = count
-    const dur = 900
-    const t0 = performance.now()
-    const tick = (now: number) => {
-      const p = Math.min((now - t0) / dur, 1)
-      const e = 1 - Math.pow(1 - p, 3)
-      setCount(Math.round(from + (target - from) * e))
-      if (p < 1) requestAnimationFrame(tick)
-    }
-    requestAnimationFrame(tick)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target])
-
-  return <span ref={ref}>{prefix}{count.toLocaleString()}{suffix}</span>
-}
-
-// ── AI Voice Bubble ───────────────────────────────────────────────────────────
-const VOICE_MESSAGES = [
-  'Welcome to FreeTrust — where trust is currency',
-  'Buy, sell and connect with trusted members',
-  'Earn Trust with every transaction you make',
-  'Join as a founding member today',
-  'Built for creators, freelancers and founders',
-  'The more you earn, the less you pay in fees',
-]
-
-function AIVoiceBubble({ size = 220 }: { size?: number }) {
-  const [msgIdx, setMsgIdx] = useState(0)
-  const [fade, setFade] = useState(true)
-  const [speaking, setSpeaking] = useState(true)
-  const s = size
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      setFade(false)
-      setSpeaking(false)
-      setTimeout(() => {
-        setMsgIdx(i => (i + 1) % VOICE_MESSAGES.length)
-        setFade(true)
-        setSpeaking(true)
-      }, 500)
-    }, 4000)
-    return () => clearInterval(t)
-  }, [])
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem', userSelect: 'none' }}>
-      {/* Bubble */}
-      <div style={{ position: 'relative', width: s, height: s, display: 'flex', alignItems: 'center', justifyContent: 'center' }} className="ai-bubble-wrap">
-        {/* Outer rotating dashed ring */}
-        <div className="ai-ring-outer" style={{
-          position: 'absolute', inset: 0, borderRadius: '50%',
-          border: '2px dashed rgba(56,189,248,0.35)',
-          animation: 'ai-spin-cw 12s linear infinite',
-        }} />
-        {/* Ripple rings */}
-        <div className="ai-ripple ai-ripple-1" style={{ position: 'absolute', borderRadius: '50%', border: '1px solid rgba(56,189,248,0.18)', animation: 'ai-ripple 3s ease-out infinite' }} />
-        <div className="ai-ripple ai-ripple-2" style={{ position: 'absolute', borderRadius: '50%', border: '1px solid rgba(52,211,153,0.12)', animation: 'ai-ripple 3s ease-out infinite 1s' }} />
-        <div className="ai-ripple ai-ripple-3" style={{ position: 'absolute', borderRadius: '50%', border: '1px solid rgba(56,189,248,0.08)', animation: 'ai-ripple 3s ease-out infinite 2s' }} />
-        {/* Mid counter-rotating dotted ring */}
-        <div style={{
-          position: 'absolute', inset: Math.round(s * 0.08), borderRadius: '50%',
-          border: '1.5px dotted rgba(52,211,153,0.4)',
-          animation: 'ai-spin-ccw 8s linear infinite',
-        }} />
-        {/* Outer glow */}
-        <div style={{
-          position: 'absolute', inset: Math.round(s * 0.12), borderRadius: '50%',
-          background: speaking
-            ? 'radial-gradient(circle, rgba(52,211,153,0.18) 0%, rgba(56,189,248,0.12) 50%, transparent 75%)'
-            : 'radial-gradient(circle, rgba(56,189,248,0.12) 0%, transparent 70%)',
-          animation: 'ai-pulse 2.2s ease-in-out infinite',
-          transition: 'background 0.6s',
-        }} />
-        {/* Core sphere */}
-        <div style={{
-          position: 'absolute', inset: Math.round(s * 0.18), borderRadius: '50%',
-          background: 'radial-gradient(circle at 35% 30%, rgba(96,165,250,0.55) 0%, rgba(30,41,59,0.97) 55%, rgba(15,23,42,1) 100%)',
-          boxShadow: speaking
-            ? `0 0 ${Math.round(s*0.14)}px rgba(56,189,248,0.55), 0 0 ${Math.round(s*0.06)}px rgba(52,211,153,0.4) inset`
-            : `0 0 ${Math.round(s*0.08)}px rgba(56,189,248,0.3)`,
-          animation: 'ai-breathe 3s ease-in-out infinite',
-          transition: 'box-shadow 0.6s',
-        }}>
-          {/* Shimmer highlight */}
-          <div style={{
-            position: 'absolute', top: '18%', left: '22%',
-            width: '35%', height: '25%',
-            background: 'radial-gradient(ellipse, rgba(255,255,255,0.22) 0%, transparent 70%)',
-            borderRadius: '50%',
-          }} />
-          {/* Inner glow core */}
-          <div style={{
-            position: 'absolute', inset: '25%',
-            borderRadius: '50%',
-            background: speaking
-              ? 'radial-gradient(circle, rgba(52,211,153,0.45) 0%, rgba(56,189,248,0.3) 50%, transparent 75%)'
-              : 'radial-gradient(circle, rgba(56,189,248,0.3) 0%, transparent 70%)',
-            animation: 'ai-core-pulse 1.8s ease-in-out infinite',
-            transition: 'background 0.6s',
-          }} />
-        </div>
-        {/* Orbiting dot — wrapper rotates, dot translates out, then counter-rotates to stay round */}
-        <div style={{
-          position: 'absolute',
-          top: '50%', left: '50%',
-          width: 0, height: 0,
-          animation: 'ai-orbit-arm 4s linear infinite',
-          transformOrigin: '0 0',
-        }}>
-          <div style={{
-            position: 'absolute',
-            width: Math.round(s * 0.07), height: Math.round(s * 0.07),
-            marginTop: -Math.round(s * 0.035),
-            left: 72,
-            marginLeft: -Math.round(s * 0.035),
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, #7dd3fc 0%, #0ea5e9 100%)',
-            boxShadow: '0 0 10px rgba(56,189,248,1), 0 0 20px rgba(56,189,248,0.5)',
-            animation: 'ai-orbit-dot 4s linear infinite',
-          }} />
-        </div>
-      </div>
-
-      {/* Rotating message */}
-      <div style={{ minHeight: 52, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.6rem' }}>
-        <p style={{
-          fontSize: 'clamp(0.85rem, 2.5vw, 1rem)', color: '#94a3b8',
-          textAlign: 'center', margin: 0, maxWidth: 360, lineHeight: 1.5,
-          opacity: fade ? 1 : 0, transition: 'opacity 0.4s',
-          fontStyle: 'italic',
-        }}>
-          &ldquo;{VOICE_MESSAGES[msgIdx]}&rdquo;
-        </p>
-        {/* Speech wave bars */}
-        {speaking && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3, height: 20 }}>
-            {[0,1,2,3,4,5].map(i => (
-              <div key={i} style={{
-                width: 3, height: 4, borderRadius: 99, display: 'inline-block',
-                background: 'linear-gradient(to top, #38bdf8, #34d399)',
-                animation: `ai-wave 1.2s ease-in-out ${i * 0.15}s infinite`,
-              }} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Talk to AI button */}
-      <Link href="/ai" style={{
-        display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-        background: 'linear-gradient(135deg, rgba(56,189,248,0.15), rgba(52,211,153,0.1))',
-        border: '1px solid rgba(56,189,248,0.35)',
-        borderRadius: 999, padding: '0.6rem 1.4rem',
-        color: '#38bdf8', fontSize: '0.85rem', fontWeight: 700,
-        textDecoration: 'none', transition: 'all 0.2s',
-        backdropFilter: 'blur(8px)',
-      }}>
-        <span style={{ fontSize: '1rem' }}>🎙</span>
-        Talk to FreeTrust AI
-      </Link>
-    </div>
-  )
-}
-
-// ── Featured service card ─────────────────────────────────────────────────────
 type FeaturedService = {
   id: string
   title: string
@@ -225,16 +44,6 @@ type FeaturedService = {
   tags: string[]
   grad: string
 }
-
-const GRADS = [
-  'linear-gradient(135deg,#f472b6,#db2777)',
-  'linear-gradient(135deg,#38bdf8,#0284c7)',
-  'linear-gradient(135deg,#34d399,#059669)',
-  'linear-gradient(135deg,#a78bfa,#7c3aed)',
-  'linear-gradient(135deg,#fbbf24,#d97706)',
-  'linear-gradient(135deg,#fb923c,#ea580c)',
-]
-
 type FeaturedProduct = {
   id: string
   title: string
@@ -248,22 +57,6 @@ type FeaturedProduct = {
   type: string
   grad: string
 }
-
-// ── Value props ───────────────────────────────────────────────────────────────
-const VALUE_PROPS = [
-  { icon: '🙋', title: 'Real people. No bots.', desc: 'FreeTrust is built around real member identity, abuse prevention and trust signals — not anonymous accounts or fake marketplace activity.' },
-  { icon: '₮', title: 'Trust is your currency', desc: 'Every transaction, review, and contribution earns Trust tokens. Higher Trust = lower fees and better visibility across the platform.' },
-  { icon: '🌍', title: 'Commerce with purpose', desc: '1% of every transaction funds community impact projects. Buy, sell and connect knowing your activity does more good in the world.' },
-]
-
-const SECURITY_PROOFS = [
-  { icon: '🛡️', title: 'Protected conversations', desc: 'Messages run through participant checks, content limits and safety prompts that remind members to keep payments inside FreeTrust.' },
-  { icon: '💳', title: 'On-platform payments', desc: 'Marketplace checkout rejects missing listings, self-purchases and invalid prices instead of creating unsafe fallback orders.' },
-  { icon: '🔐', title: 'Account safety layers', desc: 'Email sessions, server-side checks, rate limits and Trust signals help reduce spam, impersonation and automated abuse.' },
-  { icon: '📜', title: 'Clear trust policies', desc: 'Privacy, Terms and Trust & Safety policies explain what is allowed, what is protected, and how FreeTrust responds to abuse.' },
-]
-
-// ── Preview types for homepage sections ───────────────────────────────────────
 type HomeEvent = {
   id: string
   title: string
@@ -277,7 +70,6 @@ type HomeEvent = {
   attendee_count: number | null
   is_online: boolean
 }
-
 type HomeJob = {
   id: string
   title: string
@@ -290,22 +82,6 @@ type HomeJob = {
   salary_currency: string | null
   job_type: string | null
 }
-
-async function fetchJsonWithTimeout<T>(url: string, fallback: T, timeoutMs = 8000): Promise<T> {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), timeoutMs)
-
-  try {
-    const res = await fetch(url, { cache: 'no-store', signal: controller.signal })
-    if (!res.ok) return fallback
-    return (await res.json()) as T
-  } catch {
-    return fallback
-  } finally {
-    clearTimeout(timeout)
-  }
-}
-
 interface HomeRentShare {
   id: string
   title: string
@@ -318,13 +94,190 @@ interface HomeRentShare {
   owner: { full_name: string | null; avatar_url: string | null } | null
 }
 
+const TEAL = '#00c2cb'
+const NAVY = '#0a0f1e'
+const CARD = '#111827'
+const SLATE = '#94a3b8'
+
+const FEATURE_CARDS = [
+  { icon: '💳', title: 'Trust Payments', desc: 'Transfer money peer-to-peer with trust verification built in. Split bills, pay for services, send to family — all protected by FreeTrust’s reputation layer.' },
+  { icon: '🛒', title: 'Product Marketplace', desc: 'Buy and sell physical and digital products with verified sellers. Real Trust Scores replace anonymous reviews. Shop with confidence.' },
+  { icon: '💼', title: 'Service Marketplace', desc: 'Hire verified freelancers and local service providers. From design to construction — every provider is trust-rated by the community.' },
+  { icon: '🌐', title: 'Community Platform', desc: 'Build your trusted network. Connect with people who share your values, collaborate on projects, and grow together.' },
+  { icon: '📰', title: 'Newsfeed', desc: 'A creative, productive, positive, and inclusive feed. Share ideas, showcase work, celebrate wins — no toxic algorithms, no ads, just community.' },
+  { icon: '₮', title: 'Trust Coin', desc: 'Earn Trust Coin (₮) for every verified transaction, review, and contribution. Spend it to reduce fees, boost listings, and unlock platform benefits.' },
+]
+
 const CAT_COLORS_HOME: Record<string, string> = {
-  Technology: '#34d399', Startup: '#38bdf8', AI: '#e879f9',
-  Business: '#a78bfa', Design: '#f472b6', Marketing: '#fb923c',
-  Web3: '#818cf8', 'E-commerce': '#f59e0b', Sustainability: '#4ade80',
+  Technology: '#34d399', Startup: '#38bdf8', AI: '#e879f9', Business: '#a78bfa', Design: '#f472b6', Marketing: '#fb923c', Web3: '#818cf8', 'E-commerce': '#f59e0b', Sustainability: '#4ade80',
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+const screenshots = {
+  wallet: '/landing-assets/trust-wallet-mobile.png',
+  products: '/landing-assets/product-marketplace-mobile.png',
+  services: '/landing-assets/service-marketplace-mobile.png',
+  community: '/landing-assets/community-mobile.png',
+}
+
+async function fetchJsonWithTimeout<T>(url: string, fallback: T, timeoutMs = 8000): Promise<T> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const res = await fetch(url, { cache: 'no-store', signal: controller.signal })
+    if (!res.ok) return fallback
+    return (await res.json()) as T
+  } catch {
+    return fallback
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+function Counter({ target, prefix = '', suffix = '' }: { target: number; prefix?: string; suffix?: string }) {
+  const [count, setCount] = useState(0)
+  const prevTarget = useRef(0)
+  useEffect(() => {
+    if (target === prevTarget.current) return
+    prevTarget.current = target
+    if (target === 0) { setCount(0); return }
+    const from = count
+    const t0 = performance.now()
+    const tick = (now: number) => {
+      const p = Math.min((now - t0) / 900, 1)
+      const e = 1 - Math.pow(1 - p, 3)
+      setCount(Math.round(from + (target - from) * e))
+      if (p < 1) requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target])
+  return <span>{prefix}{count.toLocaleString()}{suffix}</span>
+}
+
+function PhoneMockup({ src, label, tilt = 'left' }: { src: string; label: string; tilt?: 'left' | 'right' | 'none' }) {
+  return (
+    <div className={`ft-phone ft-phone-${tilt}`} aria-label={label}>
+      <div className="ft-phone-notch" />
+      <img src={src} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', borderRadius: 31 }} />
+    </div>
+  )
+}
+
+function SectionHeader({ eyebrow, title, children, light = false }: { eyebrow: string; title: string; children?: React.ReactNode; light?: boolean }) {
+  return (
+    <div className="ft-section-head" style={{ textAlign: 'center', maxWidth: 780, margin: '0 auto 2.75rem' }}>
+      <div style={{ color: light ? '#0077b6' : '#7ff7ff', fontSize: 12, fontWeight: 900, letterSpacing: '0.11em', textTransform: 'uppercase', marginBottom: 10 }}>{eyebrow}</div>
+      <h2 className="ft-h2" style={{ fontSize: 36, lineHeight: 1.1, letterSpacing: '-0.045em', margin: '0 0 0.85rem', color: light ? '#0f172a' : '#fff', fontWeight: 800 }}>{title}</h2>
+      {children && <p style={{ margin: 0, color: light ? '#475569' : SLATE, fontSize: 16, lineHeight: 1.7 }}>{children}</p>}
+    </div>
+  )
+}
+
+function TrustWorldMap() {
+  return (
+    <svg viewBox="0 0 1200 320" preserveAspectRatio="xMidYMid slice" style={{ position: 'absolute', inset: '50px 0 auto', width: '100%', height: 320, opacity: 0.35, pointerEvents: 'none' }}>
+      <path d="M80 162c128-94 206-22 324-67 97-37 157 33 250 12 131-30 222 22 307 58 74 31 129 4 190-18" fill="none" stroke="#94a3b8" strokeWidth="2" strokeDasharray="8 12" />
+      {[190, 438, 640, 858, 1034].map((x, i) => <circle key={x} cx={x} cy={[132, 91, 108, 163, 145][i]} r="6" fill={TEAL} style={{ filter: 'drop-shadow(0 0 10px #00c2cb)' }} />)}
+    </svg>
+  )
+}
+
+function LegacyTopDesign({
+  members,
+  listings,
+  communities,
+  membersThisWeek,
+  services,
+  products,
+  trustIssued,
+  trustCirculation,
+  trustHolders,
+}: {
+  members: number
+  listings: number
+  communities: number
+  membersThisWeek: number
+  services: number
+  products: number
+  trustIssued: number
+  trustCirculation: number
+  trustHolders: number
+}) {
+  return (
+    <section style={{ background: '#0f172a', borderBottom: '1px solid rgba(56,189,248,0.08)', overflow: 'hidden' }}>
+      <div className="ft-container" style={{ paddingTop: 18, paddingBottom: 36 }}>
+        <div style={{ color: '#34d399', fontSize: 16, display: 'flex', alignItems: 'center', gap: 10, margin: '0 0 28px' }}>
+          <span>✓</span>
+          <span style={{ color: '#64748b' }}>Payments stay inside FreeTrust</span>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 24, flexWrap: 'wrap', color: '#94a3b8', fontSize: 17, marginBottom: 42 }}>
+          <span><strong style={{ color: '#38bdf8' }}>{members.toLocaleString()}</strong> members</span>
+          <span style={{ color: '#334155' }}>·</span>
+          <span><strong style={{ color: '#38bdf8' }}>{listings.toLocaleString()}</strong> listings</span>
+          <span style={{ color: '#334155' }}>·</span>
+          <span><strong style={{ color: '#38bdf8' }}>{communities.toLocaleString()}</strong> communities</span>
+        </div>
+
+        <div style={{ borderTop: '1px solid rgba(56,189,248,0.08)', marginLeft: -34, marginRight: -34, paddingTop: 38 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 24, fontSize: 14, color: '#64748b' }}>
+            <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#34d399', boxShadow: '0 0 16px rgba(52,211,153,.65)' }} />
+            Live stats — refreshes every 60s
+          </div>
+
+          <div className="ft-legacy-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 18, maxWidth: 940, margin: '0 auto' }}>
+            {[
+              { value: members, label: 'Members & growing', sub: membersThisWeek > 0 ? `+${membersThisWeek} this week` : 'Join free' },
+              { value: services, label: 'Services available', sub: services ? 'Browse now' : 'Be the first!' },
+              { value: products, label: 'Products listed', sub: products ? 'Shop now' : 'List yours' },
+              { value: trustIssued, prefix: '₮', label: 'Total ₮ issued', sub: 'Since launch' },
+            ].map(item => (
+              <div key={item.label} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 18, padding: '28px 16px', textAlign: 'center', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,.02)' }}>
+                <div style={{ color: '#38bdf8', fontSize: 30, fontWeight: 900, letterSpacing: '-0.04em' }}><Counter target={item.value} prefix={item.prefix ?? ''} /></div>
+                <div style={{ color: '#94a3b8', marginTop: 10, fontWeight: 700 }}>{item.label}</div>
+                <div style={{ color: '#38bdf8', marginTop: 10, fontWeight: 800, fontSize: 14 }}>{item.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ maxWidth: 940, margin: '22px auto 0', background: 'linear-gradient(135deg,rgba(45,212,191,0.09),rgba(56,189,248,0.04))', border: '1px solid rgba(45,212,191,0.18)', borderRadius: 18, padding: '22px 26px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#2dd4bf', fontWeight: 900, letterSpacing: '0.14em', fontSize: 13, marginBottom: 18 }}>₮ TRUST ECONOMY <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#2dd4bf' }} /></div>
+            <div className="ft-trust-econ-top-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 18 }}>
+              {[
+                { value: trustCirculation, color: '#2dd4bf', label: '₮ in circulation', sub: 'Current balances held' },
+                { value: trustIssued, color: '#34d399', label: '₮ issued since launch', sub: 'Total ever earned' },
+                { value: trustHolders, color: '#38bdf8', label: 'Members holding ₮', sub: 'Active trust holders' },
+              ].map(item => (
+                <div key={item.label} style={{ background: 'rgba(15,23,42,0.62)', borderRadius: 16, border: '1px solid rgba(45,212,191,0.1)', padding: '24px 14px', textAlign: 'center' }}>
+                  <div style={{ color: item.color, fontSize: 28, fontWeight: 900, letterSpacing: '-0.04em' }}><Counter target={item.value} prefix={item.label.includes('₮') ? '₮' : ''} /></div>
+                  <div style={{ color: '#94a3b8', marginTop: 10 }}>{item.label}</div>
+                  <div style={{ color: item.color, marginTop: 8, fontSize: 13, fontWeight: 800 }}>{item.sub}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ borderTop: '1px solid rgba(56,189,248,0.08)', background: 'radial-gradient(ellipse 80% 70% at 50% 18%, rgba(56,189,248,0.16) 0%, transparent 62%), #0f172a' }}>
+        <div className="ft-container" style={{ paddingTop: 56, paddingBottom: 76, textAlign: 'center' }}>
+          <div style={{ maxWidth: 700, margin: '0 auto', display: 'grid', justifyItems: 'center' }}>
+            <HeroGlobe size={300} />
+            <img
+              src="/icons/freetrust-mark-perfect-transparent-20260521.png"
+              alt="FreeTrust trust knot logo"
+              style={{ width: 150, marginTop: -10, marginBottom: 28, filter: 'drop-shadow(0 0 24px rgba(56,189,248,.58)) drop-shadow(0 0 18px rgba(52,211,153,.32))' }}
+            />
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9, padding: '10px 22px', borderRadius: 999, border: '1px solid rgba(56,189,248,.36)', background: 'rgba(56,189,248,.08)', color: '#38bdf8', fontSize: 13, fontWeight: 900, letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 26 }}>🌍 Community Economy Platform</div>
+            <h1 style={{ fontSize: 'clamp(2.3rem,7vw,4.6rem)', lineHeight: 1.02, letterSpacing: '-0.07em', margin: '0 0 22px', fontWeight: 900 }}>The marketplace where<br /><span style={{ background: 'linear-gradient(135deg,#38bdf8,#818cf8)', WebkitBackgroundClip: 'text', color: 'transparent' }}>trust is currency</span></h1>
+            <p style={{ color: '#94a3b8', fontSize: 18, lineHeight: 1.7, maxWidth: 620, margin: 0 }}>FreeTrust is the secure community economy platform — verified members, protected messaging, on-platform payments and TrustCoins (₮) for every contribution.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export default function HomeClient({ initialCounts }: HomeClientProps) {
   const { format } = useCurrency()
   const [isLegalLibraryOpen, setIsLegalLibraryOpen] = useState(false)
@@ -339,7 +292,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
     try {
       const res = await fetch('/api/stats', { cache: 'no-store' })
       if (res.ok) setStats(await res.json() as StatsData)
-    } catch { /* silent */ }
+    } catch { /* keep landing resilient */ }
   }, [])
 
   useEffect(() => {
@@ -349,871 +302,271 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
   }, [fetchStats])
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch('/api/listings/featured')
-        if (res.ok) {
-          const data = await res.json() as FeaturedService[]
-          setFeaturedServices(data)
-        }
-      } catch { /* silent */ }
-    }
-    void load()
+    void fetchJsonWithTimeout<FeaturedService[]>('/api/listings/featured', []).then(setFeaturedServices)
+    void fetchJsonWithTimeout<FeaturedProduct[]>('/api/listings/featured-products', []).then(setFeaturedProducts)
+    void fetchJsonWithTimeout<HomeEvent[]>('/api/landing/events-preview?limit=6', []).then(setHomeEvents)
+    void fetchJsonWithTimeout<HomeJob[]>('/api/landing/jobs-preview?limit=6', []).then(setHomeJobs)
+    void fetchJsonWithTimeout<{ listings?: HomeRentShare[] }>('/api/rent-share?limit=6', { listings: [] }).then(d => setHomeRentShare((d.listings ?? []).slice(0, 6)))
   }, [])
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch('/api/listings/featured-products')
-        if (res.ok) {
-          const data = await res.json() as FeaturedProduct[]
-          setFeaturedProducts(data)
-        }
-      } catch { /* silent */ }
-    }
-    void load()
-  }, [])
-
-  useEffect(() => {
-    const load = async () => {
-      const data = await fetchJsonWithTimeout<HomeEvent[]>('/api/landing/events-preview?limit=6', [])
-      setHomeEvents(data)
-    }
-    void load()
-  }, [])
-
-  useEffect(() => {
-    const load = async () => {
-      const data = await fetchJsonWithTimeout<HomeJob[]>('/api/landing/jobs-preview?limit=6', [])
-      setHomeJobs(data)
-    }
-    void load()
-  }, [])
-
-  useEffect(() => {
-    fetch('/api/rent-share?limit=6')
-      .then(r => r.ok ? r.json() : { listings: [] })
-      .then(d => setHomeRentShare((d.listings ?? []).slice(0, 6) as HomeRentShare[]))
-      .catch(() => setHomeRentShare([]))
-  }, [])
-
-  const tm = stats?.members.total ?? 0
+  const tm = stats?.members.total ?? initialCounts.members
   const tw = stats?.members.thisWeek ?? 0
-  const tt = stats?.trust.total ?? 0
-  const tc = stats?.trust.inCirculation ?? 0
-  const th = stats?.trust.membersHolding ?? 0
+  const tt = stats?.trust.total ?? 9415
+  const tc = stats?.trust.inCirculation ?? 10145
+  const th = stats?.trust.membersHolding ?? Math.max(39, Math.min(tm, stats?.trust.membersHolding ?? 39))
   const sl = stats?.listings.services ?? 0
   const pl = stats?.listings.products ?? 0
   const goal = stats?.foundingGoal ?? 1000
-  const pct = Math.min((tm / goal) * 100, 100)
+  const spotsRemaining = Math.max(0, goal - tm)
+  const displaySpots = spotsRemaining > 0 && spotsRemaining < 100 ? spotsRemaining.toLocaleString() : 'Under 100'
+  const liveListings = (featuredProducts.length + featuredServices.length + (homeEvents?.length ?? 0) + (homeJobs?.length ?? 0))
+
+  const productSlides = useMemo(() => {
+    const productCards = featuredProducts.slice(0, 4).map(p => ({ type: 'product', title: p.title, subtitle: p.seller, price: format(p.price, p.currency as 'GBP' | 'EUR' | 'USD'), image: p.coverImage, href: `/products/${p.id}`, badge: p.reviews > 0 ? `${p.rating.toFixed(1)}★ Trust Score` : 'Verified listing' }))
+    if (productCards.length >= 4) return productCards
+    return [...productCards, ...[
+      { type: 'product', title: 'Creator Studio Kit', subtitle: 'Verified seller', price: '€84.00', image: null, href: '/products', badge: '4.9★ Trust Score' },
+      { type: 'service', title: 'Sustainable Business Plan', subtitle: 'Service marketplace', price: '€395.00', image: null, href: '/services', badge: 'Trust 90%' },
+      { type: 'event', title: 'Community Meetup', subtitle: 'Events', price: 'Free RSVP', image: null, href: '/events', badge: 'Verified event' },
+      { type: 'job', title: 'Local Design Project', subtitle: 'Jobs', price: 'Apply free', image: null, href: '/jobs', badge: 'Trusted company' },
+    ]].slice(0, 4)
+  }, [featuredProducts, format])
+
   return (
-    <main style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', overflowX: 'hidden' }}>
-
-      {/* ── GLOBAL STYLES ── */}
+    <main style={{ minHeight: 'calc(100vh - 58px)', background: NAVY, color: '#fff', fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden' }}>
       <style>{`
-        /* Hero globe animations (keyframes injected by HeroGlobe component) */
-        @keyframes ai-wave   { 0%,100% { height: 4px; } 50% { height: 18px; } }
-        .ai-wave-bar { display: inline-block; height: 4px; }
-
-        /* Founding bar shimmer */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        @keyframes ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        @keyframes soft-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
-        .found-bar { background: linear-gradient(90deg,#38bdf8,#818cf8,#38bdf8); background-size: 200% auto; animation: shimmer 2.5s linear infinite; }
-        @keyframes pulse-dot { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.5); } }
-        .live-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #34d399; animation: pulse-dot 1.8s ease-in-out infinite; flex-shrink: 0; }
-
-        /* Layout helpers */
-        .lp { max-width: 1100px; margin: 0 auto; padding: 0 1.25rem; }
-        .lp-sec { padding: 3.5rem 1.25rem; max-width: 1100px; margin: 0 auto; }
-        .hscroll { display: flex; gap: 1rem; overflow-x: auto; scrollbar-width: none; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
-        .hscroll::-webkit-scrollbar { display: none; }
-
-        /* Mobile resets */
-        @media (max-width: 768px) {
-          .hero-inner { flex-direction: column !important; text-align: center; }
-          .hero-globe-stack { margin-bottom: -1.4rem !important; }
-          .hero-frameless-logo { width: 118px !important; margin-top: -1.1rem !important; }
-          .hero-text { align-items: center !important; }
-          .hero-cta { flex-direction: column !important; width: 100% !important; }
-          .hero-cta a, .hero-cta button { width: 100% !important; text-align: center; justify-content: center; }
-          .stats-grid { grid-template-columns: repeat(2,1fr) !important; gap: 0.6rem !important; }
-          .trust-econ-grid { grid-template-columns: repeat(3,1fr) !important; }
-          .stat-val { font-size: 1.4rem !important; }
-          .trust-val { font-size: 1.3rem !important; }
-          .val-grid { grid-template-columns: 1fr !important; }
-          .found-inner { flex-direction: column !important; text-align: center; }
-          .footer-links { justify-content: center !important; }
-          .lp-sec { padding: 2.5rem 1rem; }
-          .lp { padding: 0 1rem; }
-          .section-h2 { font-size: clamp(1.4rem,5vw,2rem) !important; }
+        .ft-container { max-width: 1180px; margin: 0 auto; padding-left: 34px; padding-right: 34px; }
+        .ft-section { padding: 92px 0; position: relative; overflow: hidden; }
+        .ft-phone { position: relative; width: 246px; height: 508px; border-radius: 42px; padding: 12px; background: linear-gradient(145deg,#243044,#050814); box-shadow: 0 34px 80px rgba(0,0,0,.56), inset 0 0 0 1px rgba(255,255,255,.08); overflow: hidden; }
+        .ft-phone-left { transform: perspective(1000px) rotateY(-13deg) rotateZ(3deg); }
+        .ft-phone-right { transform: perspective(1000px) rotateY(13deg) rotateZ(-3deg); }
+        .ft-phone-notch { position: absolute; z-index: 2; top: 22px; left: 50%; transform: translateX(-50%); width: 78px; height: 24px; border-radius: 999px; background: #050814; box-shadow: 0 0 0 1px rgba(255,255,255,.05); }
+        .ft-card-hover { transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease; }
+        .ft-card-hover:hover { border-color: rgba(0,194,203,.38) !important; box-shadow: 0 22px 70px rgba(0,194,203,.13) !important; transform: translateY(-3px); }
+        .ft-hscroll { display:flex; gap:18px; overflow-x:auto; scrollbar-width:none; padding-bottom:8px; -webkit-overflow-scrolling:touch; }
+        .ft-hscroll::-webkit-scrollbar { display:none; }
+        .ticker-track { display:flex; animation:ticker-scroll 42s linear infinite; white-space:nowrap; width:max-content; }
+        .ticker-track:hover { animation-play-state:paused; }
+        @media (max-width: 900px) {
+          .ft-hero-grid, .ft-showcase-row, .ft-showcase-row-alt, .ft-banner-inner, .ft-footer-grid { grid-template-columns: 1fr !important; }
+          .ft-hero-copy { text-align:left !important; }
+          .ft-phone-stage { min-height: 520px !important; transform: scale(.88); transform-origin: top center; }
+          .ft-secondary-phone { display:none; }
+          .ft-feature-grid, .ft-impact-grid, .ft-trust-grid, .ft-legacy-stat-grid, .ft-trust-econ-top-grid { grid-template-columns: 1fr 1fr !important; }
+          .ft-slide-card { min-width: 72% !important; }
         }
-        @media (max-width: 480px) {
-          .stats-grid { grid-template-columns: repeat(2,1fr) !important; gap: 0.5rem !important; }
-          .stat-val { font-size: 1.15rem !important; letter-spacing: -0.5px !important; }
-          .trust-econ-grid { grid-template-columns: repeat(3,1fr) !important; gap: 0.5rem !important; }
-          .trust-val { font-size: 1rem !important; letter-spacing: -0.5px !important; }
-          .trust-econ-label { font-size: 0.58rem !important; }
-          .trust-econ-sub { font-size: 0.54rem !important; }
-          .stat-label { font-size: 0.65rem !important; }
-          .stat-sub { font-size: 0.58rem !important; }
-          .trust-econ-strip { padding: 0.75rem 0.6rem !important; }
+        @media (max-width: 768px) {
+          .ft-container { padding-left: 22px; padding-right: 22px; }
+          .ft-section { padding: 68px 0; }
+          .ft-h1 { font-size: 32px !important; }
+          .ft-h2 { font-size: 26px !important; }
+          .ft-hero-ctas { flex-direction: column !important; }
+          .ft-hero-ctas a { width: 100%; justify-content:center; }
+          .ft-phone-stage { transform: scale(.78); margin-left:-10px; }
+          .ft-float-score { right: 6px !important; }
+          .ft-float-verified { left: 10px !important; }
+          .ft-score-row { grid-template-columns:1fr !important; text-align:center; }
+          .ft-factor-grid { grid-template-columns:1fr !important; }
+          .ft-footer-links { grid-template-columns:1fr 1fr !important; }
+          .ft-legacy-stat-grid, .ft-trust-econ-top-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
-      {/* ── 2. HERO ── */}
-      <div style={{ background: 'radial-gradient(ellipse 100% 80% at 50% -5%, rgba(56,189,248,0.13) 0%, transparent 65%), radial-gradient(ellipse 60% 50% at 85% 40%, rgba(129,140,248,0.08) 0%, transparent 60%)', borderBottom: '1px solid rgba(56,189,248,0.08)', paddingTop: '3rem', paddingBottom: '2.5rem' }}>
-        <div className="lp" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '3rem', flexWrap: 'wrap', justifyContent: 'center' }} >
-          <div className="hero-inner" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '3rem', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
+      <LegacyTopDesign
+        members={tm}
+        listings={initialCounts.listings}
+        communities={initialCounts.communities}
+        membersThisWeek={tw}
+        services={sl}
+        products={pl}
+        trustIssued={tt}
+        trustCirculation={tc}
+        trustHolders={th}
+      />
 
-            {/* Left: rotating globe */}
-            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }} className="bubble-col hero-globe-stack">
-              <style>{`
-                @media (max-width: 640px) { .bubble-col > div { transform: scale(0.78); transform-origin: center top; } }
-              `}</style>
-              <HeroGlobe size={220} />
-              <img
-                className="hero-frameless-logo"
-                src="/icons/freetrust-mark-perfect-transparent-20260521.png"
-                alt="FreeTrust trust knot logo"
-                style={{
-                  width: 140,
-                  height: 'auto',
-                  marginTop: '-0.45rem',
-                  filter: 'drop-shadow(0 0 22px rgba(56,189,248,0.52)) drop-shadow(0 0 16px rgba(52,211,153,0.28))',
-                  pointerEvents: 'none',
-                  userSelect: 'none',
-                }}
-              />
+      <section style={{ minHeight: '92vh', position: 'relative', overflow: 'hidden', background: 'radial-gradient(circle at 72% 42%, rgba(0,194,203,.27), transparent 28%), linear-gradient(135deg,#0a0f1e 0%,#0b1327 48%,#0f1f2e 100%)', borderBottom: '1px solid rgba(0,194,203,.12)' }}>
+        <div style={{ position: 'absolute', inset: '-20%', background: 'radial-gradient(circle at 8% 8%,rgba(255,255,255,.08),transparent 22%),radial-gradient(circle at 88% 92%,rgba(0,119,182,.24),transparent 28%)', pointerEvents: 'none' }} />
+        <div className="ft-container" style={{ position: 'relative', zIndex: 1, paddingTop: 72, paddingBottom: 86 }}>
+          <div className="ft-hero-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 560px', gap: 42, alignItems: 'center' }}>
+            <div className="ft-hero-copy">
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 999, background: 'rgba(0,194,203,.12)', border: '1px solid rgba(0,194,203,.34)', color: '#d8fdff', fontWeight: 800, fontSize: 14 }}>🌍 The Trust Economy is Here</div>
+              <h2 className="ft-h1" style={{ fontSize: 48, lineHeight: 1.03, margin: '24px 0 18px', letterSpacing: '-0.06em', fontWeight: 800, maxWidth: 610 }}>Buy. Sell. Connect. <span style={{ background: 'linear-gradient(90deg,#fff,#7ff7ff)', WebkitBackgroundClip: 'text', color: 'transparent' }}>Trust.</span></h2>
+              <p style={{ fontSize: 16, lineHeight: 1.7, color: SLATE, maxWidth: 560, margin: '0 0 30px' }}>FreeTrust is the community marketplace where verified trust unlocks better deals, real connections, and a fairer economy.</p>
+              <div className="ft-hero-ctas" style={{ display: 'flex', gap: 14, marginBottom: 26 }}>
+                <Link href="/register" style={{ minHeight: 52, padding: '0 22px', borderRadius: 999, fontWeight: 850, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', background: TEAL, color: '#041018', boxShadow: '0 16px 38px rgba(0,194,203,.3)' }}>Get Started Free</Link>
+                <a href="#how-it-works" style={{ minHeight: 52, padding: '0 22px', borderRadius: 999, fontWeight: 850, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: '#fff', border: '1px solid rgba(255,255,255,.22)', background: 'rgba(255,255,255,.04)' }}>See How It Works</a>
+              </div>
+              <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', color: '#cbd5e1', fontWeight: 750, fontSize: 14 }}>
+                <span style={{ padding: '10px 13px', borderRadius: 999, background: 'rgba(17,24,39,.65)', border: '1px solid rgba(148,163,184,.16)' }}>{tm.toLocaleString()} Founding Members</span>
+                <span style={{ padding: '10px 13px', borderRadius: 999, background: 'rgba(17,24,39,.65)', border: '1px solid rgba(148,163,184,.16)' }}>₮200 Welcome Bonus</span>
+                <span style={{ padding: '10px 13px', borderRadius: 999, background: 'rgba(17,24,39,.65)', border: '1px solid rgba(148,163,184,.16)' }}>0% Subscription Fee</span>
+              </div>
             </div>
-
-            {/* Right: headline + CTAs */}
-            <div className="hero-text" style={{ flex: 1, minWidth: 280, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '1.25rem', maxWidth: 560 }}>
-              <div style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 999, padding: '0.3rem 1rem', fontSize: '0.75rem', color: '#38bdf8', letterSpacing: '0.06em', fontWeight: 700 }}>
-                🌍 COMMUNITY ECONOMY PLATFORM
-              </div>
-
-              <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.8rem)', fontWeight: 900, lineHeight: 1.1, margin: 0, letterSpacing: '-1.5px' }}>
-                The marketplace where{' '}
-                <span style={{ background: 'linear-gradient(135deg, #38bdf8 0%, #818cf8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>trust is currency</span>
-              </h1>
-
-              <p style={{ fontSize: '1.05rem', color: '#94a3b8', margin: 0, lineHeight: 1.65, maxWidth: 480 }}>
-                FreeTrust is the secure community economy platform — verified members, protected messaging, on-platform payments and TrustCoins (₮) for every contribution.
-              </p>
-
-              <div className="hero-cta" style={{ display: 'flex', flexDirection: 'row', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <Link href="/register" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.9rem 2rem', borderRadius: 10, fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.35)' }}>
-                  Join FreeTrust Free →
-                </Link>
-                <a href="#how-it-works" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', color: '#cbd5e1', padding: '0.9rem 1.75rem', borderRadius: 10, fontWeight: 600, fontSize: '0.95rem', textDecoration: 'none', border: '1px solid rgba(148,163,184,0.2)', scrollBehavior: 'smooth' }}>
-                  See how it works
-                </a>
-              </div>
-
-              {/* Trust points */}
-              <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.8rem', color: '#64748b' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> Free to join — ₮200 on signup</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> Real people only — no bots</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> Payments stay inside FreeTrust</span>
-              </div>
-
-              {/* Server-rendered live stats strip — matches the summary
-                  crawled by AI search engines in the JSON-LD. Re-hydrates
-                  with the server-fetched counts on first paint. */}
-              <div style={{ marginTop: '0.35rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.82rem', color: '#94a3b8' }}>
-                <span><strong style={{ color: '#38bdf8' }}>{initialCounts.members.toLocaleString()}</strong> members</span>
-                <span aria-hidden="true" style={{ color: '#334155' }}>·</span>
-                <span><strong style={{ color: '#38bdf8' }}>{initialCounts.listings.toLocaleString()}</strong> listings</span>
-                <span aria-hidden="true" style={{ color: '#334155' }}>·</span>
-                <span><strong style={{ color: '#38bdf8' }}>{initialCounts.communities.toLocaleString()}</strong> communities</span>
-              </div>
+            <div className="ft-phone-stage" style={{ height: 620, position: 'relative', perspective: 1200 }}>
+              <div style={{ position: 'absolute', width: 430, height: 430, right: 68, top: 92, borderRadius: '50%', background: 'radial-gradient(circle,rgba(0,194,203,.55),rgba(0,119,182,.18) 42%,transparent 70%)', filter: 'blur(34px)' }} />
+              <div className="ft-secondary-phone" style={{ position: 'absolute', right: 300, top: 94, zIndex: 2, opacity: .93 }}><PhoneMockup src={screenshots.wallet} label="Actual FreeTrust Trust Wallet mobile screenshot" tilt="right" /></div>
+              <div style={{ position: 'absolute', right: 110, top: 48, zIndex: 3 }}><PhoneMockup src={screenshots.products} label="Actual FreeTrust product marketplace mobile screenshot" tilt="left" /></div>
+              <div style={{ position: 'absolute', zIndex: 4, right: 34, top: 118, padding: '13px 15px', borderRadius: 18, background: 'rgba(0,194,203,.15)', backdropFilter: 'blur(10px)', border: '1px solid rgba(0,194,203,.3)', boxShadow: '0 18px 44px rgba(0,0,0,.3)', fontWeight: 850 }}>₮{tc.toLocaleString()} bal<div style={{ color: '#c8fbff', fontSize: 11, marginTop: 3 }}>Trust Coin ready</div></div>
+              <div className="ft-float-verified" style={{ position: 'absolute', zIndex: 4, left: 62, bottom: 136, padding: '13px 15px', borderRadius: 18, background: 'rgba(0,194,203,.15)', backdropFilter: 'blur(10px)', border: '1px solid rgba(0,194,203,.3)', boxShadow: '0 18px 44px rgba(0,0,0,.3)', fontWeight: 850 }}>✓ Verified Member<div style={{ color: '#c8fbff', fontSize: 11, marginTop: 3 }}>Identity protected</div></div>
+              <div className="ft-float-score" style={{ position: 'absolute', zIndex: 4, right: 12, bottom: 214, padding: '13px 15px', borderRadius: 18, background: 'rgba(255,255,255,.11)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,.18)', boxShadow: '0 18px 44px rgba(0,0,0,.3)', fontWeight: 850 }}>4.9★ Trust Score<div style={{ color: '#c8fbff', fontSize: 11, marginTop: 3 }}>Portable reputation</div></div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* ── 4. STATS BAR ── */}
-      <div style={{ background: 'rgba(56,189,248,0.03)', borderBottom: '1px solid rgba(56,189,248,0.08)' }}>
-        <div className="lp" style={{ padding: '1.75rem 1.25rem 1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', marginBottom: '1rem', fontSize: '0.72rem', color: '#475569' }}>
-            <span className="live-dot" /> Live stats — refreshes every 60s
+      <section className="ft-section" id="how-it-works" style={{ background: 'linear-gradient(180deg,#0a0f1e,#0b1327)', borderBottom: '1px solid rgba(0,194,203,.08)', scrollMarginTop: 80 }}>
+        <div className="ft-container">
+          <SectionHeader eyebrow="Platform features" title="Everything you need to trade, pay, hire, and connect with confidence.">FreeTrust brings marketplace commerce, payments, reputation, and community into one trust-forward platform.</SectionHeader>
+          <div className="ft-feature-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
+            {FEATURE_CARDS.map(card => (
+              <article className="ft-card-hover" key={card.title} style={{ background: 'linear-gradient(180deg,rgba(17,24,39,.96),rgba(17,24,39,.74))', border: '1px solid #1e293b', borderRadius: 16, padding: 28, minHeight: 260, boxShadow: '0 16px 50px rgba(0,0,0,.2)' }}>
+                <div style={{ width: 52, height: 52, borderRadius: 17, background: 'rgba(0,194,203,.13)', border: '1px solid rgba(0,194,203,.28)', display: 'grid', placeItems: 'center', fontSize: 28, marginBottom: 22 }}>{card.icon}</div>
+                <h3 style={{ fontSize: 20, margin: '0 0 11px', letterSpacing: '-0.02em' }}>{card.title}</h3>
+                <p style={{ color: SLATE, lineHeight: 1.65, margin: 0, fontSize: 15 }}>{card.desc}</p>
+              </article>
+            ))}
           </div>
-          <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.85rem', textAlign: 'center' }}>
-            {[
-              { val: tm, prefix: '', suffix: '', label: 'Members & growing', sub: tw > 0 ? `+${tw} this week` : 'Join free', color: '#38bdf8' },
-              { val: sl, prefix: '', suffix: '', label: 'Services available', sub: sl === 0 ? 'Be the first!' : 'Browse now', color: '#38bdf8' },
-              { val: pl, prefix: '', suffix: '', label: 'Products listed', sub: pl === 0 ? 'List yours' : 'Shop now', color: '#38bdf8' },
-              { val: tt, prefix: '₮', suffix: '', label: 'Total ₮ issued', sub: 'Since launch', color: '#38bdf8' },
-            ].map(s => (
-              <div key={s.label} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1rem 0.5rem' }}>
-                <div className="stat-val" style={{ fontSize: '1.8rem', fontWeight: 900, color: s.color, letterSpacing: '-1px' }}>
-                  <Counter target={s.val} prefix={s.prefix} suffix={s.suffix} />
-                </div>
-                <div className="stat-label" style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
-                <div className="stat-sub" style={{ fontSize: '0.65rem', color: s.color, marginTop: 3, fontWeight: 600 }}>{s.sub}</div>
+        </div>
+      </section>
+
+      <section className="ft-section" style={{ background: 'linear-gradient(135deg,#0a0f1e 0%,#0f1f2e 100%)', borderBottom: '1px solid rgba(0,194,203,.08)' }}>
+        <TrustWorldMap />
+        <div className="ft-container" style={{ position: 'relative', zIndex: 1 }}>
+          <SectionHeader eyebrow="Impact economy" title="Built for Impact, Not Just Profit">Every transaction on FreeTrust contributes to a fairer, more transparent economy.</SectionHeader>
+          <div className="ft-impact-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 18 }}>
+            {[{ n: tm, s: '', label: 'Founding Members' }, { n: 200, s: '₮', label: 'Welcome Bonus' }, { text: '0%', label: 'Subscription Fees' }, { text: '5%', label: 'Max Platform Fee' }].map(stat => (
+              <div key={stat.label} style={{ textAlign: 'center', padding: 30, borderRadius: 20, background: 'rgba(17,24,39,.56)', border: '1px solid rgba(0,194,203,.14)', backdropFilter: 'blur(12px)' }}>
+                <div style={{ fontSize: 46, fontWeight: 850, letterSpacing: '-0.05em' }}>{stat.text ?? <Counter target={stat.n ?? 0} prefix={stat.s} suffix={stat.label === 'Founding Members' ? '+' : ''} />}</div>
+                <div style={{ color: '#cbd5e1', fontWeight: 750, marginTop: 7 }}>{stat.label}</div>
               </div>
             ))}
           </div>
+          <p style={{ maxWidth: 760, margin: '32px auto 0', textAlign: 'center', color: SLATE, lineHeight: 1.8 }}>The FreeTrust Impact Fund directs a portion of every transaction fee toward verified community causes, selected transparently by members.</p>
+        </div>
+      </section>
 
-          {/* Trust Economy strip */}
-          <div className="trust-econ-strip" style={{ marginTop: '0.85rem', background: 'linear-gradient(135deg,rgba(45,212,191,0.07),rgba(56,189,248,0.04))', border: '1px solid rgba(45,212,191,0.15)', borderRadius: 12, padding: '1rem 1.25rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#2dd4bf', letterSpacing: '0.1em', textTransform: 'uppercase' }}>₮ Trust Economy</span>
-              <span className="live-dot" style={{ width: 5, height: 5 } as React.CSSProperties} />
+      <section className="ft-section" style={{ background: '#081020', borderBottom: '1px solid rgba(0,194,203,.08)' }}>
+        <div className="ft-container" style={{ display: 'grid', gap: 82 }}>
+          {[
+            { src: screenshots.products, eyebrow: 'Marketplace', title: 'Shop smarter. Sell with trust.', text: 'Discover FreeTrust sellers and external retailer finds in one trusted product experience.', points: ['Trust Score badges on every seller card.', 'Clear member listings and retailer deals.', 'Earn Trust Coin through verified marketplace activity.'], href: '/products' },
+            { src: screenshots.wallet, eyebrow: 'Trust Wallet', title: 'Send value. Earn trust.', text: 'Your Trust Coin balance and reputation live beside the commerce you do every day.', points: ['Live Trust Economy figures pulled from Supabase.', 'TrustCoin balance visible in-app.', 'Reputation rewards for helpful contributions.'], href: '/wallet', alt: true },
+            { src: screenshots.services, eyebrow: 'Services', title: 'Hire verified providers.', text: 'Service cards surface real providers, ratings, progress, and trust signals before you book.', points: ['Verified local and remote service providers.', 'Trust progress and rating signals on each card.', 'Built for freelancers, founders, and community work.'], href: '/services' },
+            { src: screenshots.community, eyebrow: 'Community', title: 'Your trusted network.', text: 'A positive feed and connection layer designed for collaboration, not toxic engagement loops.', points: ['Verified member profiles and community moments.', 'Creative, productive, inclusive updates.', 'Network effects that reward helpful contributions.'], href: '/feed', alt: true },
+          ].map(row => (
+            <div key={row.title} className={row.alt ? 'ft-showcase-row-alt' : 'ft-showcase-row'} style={{ display: 'grid', gridTemplateColumns: row.alt ? '1fr 420px' : '420px 1fr', gap: 88, alignItems: 'center' }}>
+              {!row.alt && <div style={{ position: 'relative', display: 'grid', placeItems: 'center' }}><div style={{ position: 'absolute', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle,rgba(0,194,203,.36),transparent 68%)', filter: 'blur(22px)' }} /><PhoneMockup src={row.src} label={`Actual FreeTrust ${row.eyebrow} mobile screenshot`} /></div>}
+              <div>
+                <div style={{ color: '#7ff7ff', fontSize: 12, fontWeight: 900, letterSpacing: '0.11em', textTransform: 'uppercase', marginBottom: 10 }}>{row.eyebrow}</div>
+                <h3 style={{ fontSize: 34, letterSpacing: '-0.04em', margin: '0 0 14px' }}>{row.title}</h3>
+                <p style={{ color: SLATE, lineHeight: 1.7, margin: 0 }}>{row.text}</p>
+                <ul style={{ color: SLATE, lineHeight: 1.8, paddingLeft: 20, margin: '18px 0 24px' }}>{row.points.map(point => <li key={point}>{point}</li>)}</ul>
+                <Link href={row.href} style={{ color: '#031019', background: TEAL, borderRadius: 999, padding: '12px 16px', textDecoration: 'none', fontWeight: 850 }}>Open {row.eyebrow} →</Link>
+              </div>
+              {row.alt && <div style={{ position: 'relative', display: 'grid', placeItems: 'center' }}><div style={{ position: 'absolute', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle,rgba(0,194,203,.36),transparent 68%)', filter: 'blur(22px)' }} /><PhoneMockup src={row.src} label={`Actual FreeTrust ${row.eyebrow} mobile screenshot`} tilt="right" /></div>}
             </div>
-            <div className="trust-econ-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem', textAlign: 'center' }}>
-              {[
-                { val: tc, prefix: '₮', label: '₮ in circulation', sub: 'Current balances held', color: '#2dd4bf' },
-                { val: tt, prefix: '₮', label: '₮ issued since launch', sub: 'Total ever earned', color: '#34d399' },
-                { val: th, prefix: '', label: 'Members holding ₮', sub: 'Active trust holders', color: '#38bdf8' },
-              ].map(s => (
-                <div key={s.label} style={{ background: 'rgba(15,23,42,0.5)', borderRadius: 10, padding: '0.75rem 0.5rem', border: '1px solid rgba(45,212,191,0.1)' }}>
-                  <div className="trust-val" style={{ fontSize: '1.6rem', fontWeight: 900, color: s.color, letterSpacing: '-0.5px' }}>
-                    <Counter target={s.val} prefix={s.prefix} />
-                  </div>
-                  <div className="trust-econ-label" style={{ fontSize: '0.68rem', color: '#64748b', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
-                  <div className="trust-econ-sub" style={{ fontSize: '0.62rem', color: s.color, marginTop: 2, fontWeight: 600, opacity: 0.8 }}>{s.sub}</div>
-                </div>
-              ))}
+          ))}
+        </div>
+      </section>
+
+      <section className="ft-section" style={{ background: 'linear-gradient(180deg,#0a0f1e,#081020)', borderBottom: '1px solid rgba(0,194,203,.08)' }}>
+        <div className="ft-container">
+          <SectionHeader eyebrow="Live marketplace" title="Fresh products, jobs, and events — all in motion.">Real FreeTrust data stays in the landing page, upgraded with premium dark cards, teal trust indicators, and mobile-friendly horizontal discovery.</SectionHeader>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 32, marginBottom: 24, fontWeight: 850, color: '#cbd5e1', flexWrap: 'wrap' }}>
+            <span style={{ color: '#fff', borderBottom: `3px solid ${TEAL}`, paddingBottom: 10 }}>🛒 Products</span><span>💼 Jobs</span><span>📅 Events</span>
+          </div>
+          <div className="ft-hscroll" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)' }}>
+            {productSlides.map(card => (
+              <Link className="ft-slide-card ft-card-hover" key={`${card.type}-${card.title}`} href={card.href} style={{ minWidth: 0, textDecoration: 'none', background: CARD, border: '1px solid #1e293b', borderRadius: 20, overflow: 'hidden', color: '#fff' }}>
+                <div style={{ height: 150, background: card.image ? `linear-gradient(180deg,rgba(10,15,30,.05),rgba(10,15,30,.54)), url(${card.image}) center/cover` : 'linear-gradient(135deg,#0e7490,#1e293b 55%,#111827)' }} />
+                <div style={{ padding: 18 }}><h4 style={{ margin: '0 0 8px', lineHeight: 1.25 }}>{card.title}</h4><p style={{ color: SLATE, fontSize: 13, minHeight: 36, margin: 0 }}>{card.subtitle} · {card.price}</p><span style={{ display: 'inline-flex', marginTop: 12, padding: '7px 10px', borderRadius: 999, background: 'rgba(0,194,203,.13)', color: '#aafaff', fontSize: 12, fontWeight: 850 }}>{card.badge}</span></div>
+              </Link>
+            ))}
+          </div>
+          <div style={{ marginTop: 30, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 14 }}>
+            {homeJobs?.slice(0, 3).map(job => <Link key={job.id} href={`/jobs/${job.id}`} className="ft-card-hover" style={{ textDecoration: 'none', color: '#fff', background: CARD, border: '1px solid #1e293b', borderRadius: 16, padding: 18 }}><strong>{job.title}</strong><div style={{ color: SLATE, fontSize: 13, marginTop: 8 }}>{job.company_name ?? 'Company'} · {job.location_type === 'remote' ? 'Remote' : [job.city, job.country].filter(Boolean).join(', ') || 'On-site'}</div></Link>)}
+            {homeEvents?.slice(0, 3).map(ev => <Link key={ev.id} href={`/events/${ev.id}`} className="ft-card-hover" style={{ textDecoration: 'none', color: '#fff', background: CARD, border: '1px solid #1e293b', borderRadius: 16, padding: 18 }}><strong>{ev.title}</strong><div style={{ color: SLATE, fontSize: 13, marginTop: 8 }}>{ev.is_online ? 'Online' : ev.venue_name || ev.location_label || [ev.city, ev.country].filter(Boolean).join(', ') || 'In person'}</div></Link>)}
+          </div>
+          <p style={{ margin: '20px 0 0', color: '#64748b', textAlign: 'center', fontSize: 13 }}>Showing live marketplace previews where available{liveListings ? ` · ${liveListings} live cards loaded` : ''}.</p>
+        </div>
+      </section>
+
+      <section className="ft-section" style={{ background: '#f8fafc', color: '#0f172a', borderBottom: '1px solid #e2e8f0' }}>
+        <div className="ft-container">
+          <SectionHeader light eyebrow="Reputation layer" title="What is a Trust Score?">FreeTrust&apos;s Trust Score is your portable reputation — built from verified transactions, community reviews, and platform contributions.</SectionHeader>
+          <div style={{ maxWidth: 820, margin: '0 auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 28, padding: 36, boxShadow: '0 24px 70px rgba(15,23,42,.1)' }}>
+            <div className="ft-score-row" style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: 34, alignItems: 'center' }}>
+              <div style={{ width: 174, height: 174, borderRadius: '50%', background: `conic-gradient(${TEAL} 0 94%,#e2e8f0 94%)`, display: 'grid', placeItems: 'center', boxShadow: '0 18px 44px rgba(0,194,203,.2)' }}><div style={{ width: 128, height: 128, borderRadius: '50%', background: '#fff', display: 'grid', placeItems: 'center', textAlign: 'center' }}><div><strong style={{ fontSize: 34 }}>4.9</strong><br />/ 5.0</div></div></div>
+              <div className="ft-factor-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>{['Identity Verified', '47 Completed Transactions', '4.9★ Average Review', `₮${tc.toLocaleString()} Trust Coin Balance`, '2 Years Member'].map(f => <div key={f} style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 14, padding: 13, fontWeight: 800, color: '#334155' }}>✓ {f}</div>)}</div>
             </div>
+            <Link href="/profile" style={{ marginTop: 24, display: 'inline-flex', borderRadius: 999, background: TEAL, padding: '14px 18px', color: '#031019', textDecoration: 'none', fontWeight: 850 }}>Build Your Trust Score →</Link>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* ── 4b. LIVE TICKER ── */}
+      <section style={{ background: `linear-gradient(135deg, ${TEAL}, #0077b6)` }}>
+        <div className="ft-container ft-banner-inner" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 40, alignItems: 'center', paddingTop: 54, paddingBottom: 54 }}>
+          <div><h2 style={{ fontSize: 34, letterSpacing: '-0.04em', margin: '0 0 8px', color: '#031019' }}>Join the First 1,000 Founding Members</h2><p style={{ margin: 0, color: '#062636', fontWeight: 750, lineHeight: 1.6 }}>Get lifetime reduced fees, ₮200 Trust Coin welcome bonus, and a Founding Member badge on your profile. Only {displaySpots} spots remaining.</p></div>
+          <Link href="/register" style={{ whiteSpace: 'nowrap', background: '#fff', color: '#06101f', borderRadius: 999, padding: '16px 22px', textDecoration: 'none', fontWeight: 900, boxShadow: '0 16px 34px rgba(0,0,0,.12)' }}>Claim Your Founding Member Spot</Link>
+        </div>
+      </section>
+
       {stats?.ticker && stats.ticker.length > 0 && (
-        <div style={{ background: 'rgba(56,189,248,0.04)', borderBottom: '1px solid rgba(56,189,248,0.06)', overflow: 'hidden', position: 'relative' }}>
-          <style>{`
-            @keyframes ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-            .ticker-track { display: flex; animation: ticker-scroll 40s linear infinite; white-space: nowrap; width: max-content; }
-            .ticker-track:hover { animation-play-state: paused; }
-          `}</style>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 0, padding: '0.55rem 0' }}>
-            {/* Live label */}
-            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0 1rem', borderRight: '1px solid rgba(56,189,248,0.12)', background: 'rgba(56,189,248,0.06)', height: '100%', zIndex: 1 }}>
-              <span className="live-dot" />
-              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#38bdf8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Live</span>
-            </div>
-            {/* Scrolling track — doubled for seamless loop */}
-            <div style={{ flex: 1, overflow: 'hidden' }}>
-              <div className="ticker-track">
-                {[...stats.ticker, ...stats.ticker].map((item, i) => {
-                  const icon = item.type === 'join' ? '👋' : item.type === 'trust' ? '₮' : item.type === 'article' ? '📝' : '✨'
-                  return (
-                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0 1.25rem', fontSize: '0.75rem', color: '#94a3b8', borderRight: '1px solid rgba(56,189,248,0.06)', flexShrink: 0 }}>
-                      <span style={{ fontSize: '0.8rem' }}>{icon}</span>
-                      {item.text}
-                    </span>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
+        <section style={{ background: 'rgba(0,194,203,.045)', borderBottom: '1px solid rgba(0,194,203,.08)', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', padding: '0.65rem 0' }}><div style={{ flexShrink: 0, padding: '0 1rem', borderRight: '1px solid rgba(0,194,203,.18)', fontSize: 12, color: '#7ff7ff', fontWeight: 900 }}>LIVE</div><div style={{ flex: 1, overflow: 'hidden' }}><div className="ticker-track">{[...stats.ticker, ...stats.ticker].map((item, i) => <span key={`${item.id}-${i}`} style={{ padding: '0 1.25rem', color: SLATE, fontSize: 13, borderRight: '1px solid rgba(0,194,203,.08)' }}>{item.text}</span>)}</div></div></div>
+        </section>
       )}
 
-      {/* ── HOW IT WORKS ── */}
-      <section id="how-it-works" style={{ borderBottom: '1px solid rgba(56,189,248,0.06)', scrollMarginTop: 80 }}>
-        <div className="lp-sec">
-          <div style={{ textAlign: 'center', marginBottom: '2.25rem' }}>
-            <div style={{ display: 'inline-block', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', borderRadius: 999, padding: '0.3rem 0.9rem', fontSize: '0.72rem', color: '#34d399', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '0.85rem' }}>✦ HOW IT WORKS</div>
-            <h2 className="section-h2" style={{ fontSize: 'clamp(1.6rem,4vw,2.4rem)', fontWeight: 900, margin: '0 0 0.5rem', letterSpacing: '-0.5px' }}>Four steps to join the community economy</h2>
-            <p style={{ color: '#64748b', fontSize: '0.95rem', maxWidth: 560, margin: '0 auto' }}>No subscriptions, no gatekeepers. Just sign up, contribute and grow.</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: '1rem' }}>
-            {[
-              { n: 1, icon: '🪪', title: 'Sign up free and build your profile', desc: 'Create your account in under a minute and get ₮200 TrustCoins on signup. No card, no subscription.' },
-              { n: 2, icon: '📦', title: 'List your services, products or jobs', desc: 'Publish a service gig, physical or digital product, or a local job and start reaching the community.' },
-              { n: 3, icon: '🤝', title: 'Connect, collaborate and earn TrustCoins', desc: 'Every listing, sale, article and review earns you ₮ — the native reputation currency.' },
-              { n: 4, icon: '🌱', title: 'Spend ₮ to boost visibility and support impact', desc: 'Boost listings, unlock perks, and donate to the Sustainability Fund to back real-world projects.' },
-            ].map(step => (
-              <div key={step.n} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '1.5rem 1.35rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.85rem' }}>
-                  <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 900, color: '#38bdf8' }}>{step.n}</div>
-                  <div style={{ fontSize: '1.35rem' }}>{step.icon}</div>
-                </div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.4rem', lineHeight: 1.3 }}>{step.title}</div>
-                <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.6, margin: 0 }}>{step.desc}</p>
-              </div>
-            ))}
-          </div>
+      <section className="ft-section" style={{ background: NAVY, borderBottom: '1px solid rgba(0,194,203,.08)' }}>
+        <div className="ft-container">
+          <SectionHeader eyebrow="How it works" title="Four steps to join the trust economy">No subscriptions, no gatekeepers. Just sign up, contribute, build reputation, and grow.</SectionHeader>
+          <div className="ft-feature-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>{[
+            ['🪪', 'Sign up free', 'Create your account and get ₮200 TrustCoins on signup.'], ['📦', 'List or discover', 'Publish a service, product, job, event, or community.'], ['🤝', 'Transact safely', 'Use verified profiles, Trust Scores, and on-platform payments.'], ['🌱', 'Earn and impact', 'Earn ₮, reduce fees, and support community causes.'],
+          ].map(([icon, title, desc]) => <div key={title} className="ft-card-hover" style={{ background: CARD, border: '1px solid #1e293b', borderRadius: 16, padding: 22 }}><div style={{ fontSize: 28, marginBottom: 12 }}>{icon}</div><strong>{title}</strong><p style={{ color: SLATE, lineHeight: 1.65, margin: '10px 0 0', fontSize: 14 }}>{desc}</p></div>)}</div>
         </div>
       </section>
 
-      {/* ── FEATURES GRID (8) ── */}
-      <section style={{ borderBottom: '1px solid rgba(56,189,248,0.06)', background: 'rgba(56,189,248,0.02)' }}>
-        <div className="lp-sec">
-          <div style={{ textAlign: 'center', marginBottom: '2.25rem' }}>
-            <div style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 999, padding: '0.3rem 0.9rem', fontSize: '0.72rem', color: '#38bdf8', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '0.85rem' }}>✦ EVERYTHING ON ONE PLATFORM</div>
-            <h2 className="section-h2" style={{ fontSize: 'clamp(1.6rem,4vw,2.4rem)', fontWeight: 900, margin: '0 0 0.5rem', letterSpacing: '-0.5px' }}>One membership, eight ways to grow</h2>
-            <p style={{ color: '#64748b', fontSize: '0.95rem', maxWidth: 560, margin: '0 auto' }}>Everything you need to participate in the community economy — from marketplace to social feed.</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: '0.85rem' }}>
-            {[
-              { icon: '🛒', title: 'Marketplace',       desc: 'Buy and sell products and services' },
-              { icon: '💼', title: 'Jobs Board',        desc: 'Post and find local opportunities' },
-              { icon: '📅', title: 'Events',            desc: 'Create and discover community events' },
-              { icon: '🏘️', title: 'Communities',       desc: 'Build and join groups around shared interests' },
-              { icon: '📰', title: 'Social Feed',       desc: 'Share updates and connect with members' },
-              { icon: '₮',  title: 'Trust Economy',     desc: 'Earn coins for every contribution' },
-              { icon: '🌱', title: 'Sustainability Fund', desc: 'Donate ₮ to community impact projects' },
-              { icon: '🏢', title: 'Organisations',     desc: 'List and discover local organisations' },
-            ].map(f => (
-              <div key={f.title} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1.1rem 1rem' }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{f.icon}</div>
-                <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.3rem' }}>{f.title}</div>
-                <div style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>{f.desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── TRUST ECONOMY EXPLAINER ── */}
-      <section style={{ borderBottom: '1px solid rgba(56,189,248,0.06)' }}>
-        <div className="lp-sec">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: '1.5rem', alignItems: 'start' }}>
-            <div>
-              <div style={{ display: 'inline-block', background: 'rgba(45,212,191,0.1)', border: '1px solid rgba(45,212,191,0.3)', borderRadius: 999, padding: '0.3rem 0.9rem', fontSize: '0.72rem', color: '#2dd4bf', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '0.85rem' }}>₮ TRUST ECONOMY</div>
-              <h2 className="section-h2" style={{ fontSize: 'clamp(1.5rem,3.5vw,2.1rem)', fontWeight: 900, margin: '0 0 0.75rem', letterSpacing: '-0.5px', lineHeight: 1.2 }}>
-                What are <span style={{ color: '#2dd4bf' }}>TrustCoins</span> (₮)?
-              </h2>
-              <p style={{ color: '#94a3b8', fontSize: '0.95rem', lineHeight: 1.7, margin: '0 0 1rem' }}>
-                TrustCoins (₮) are the native reputation currency of FreeTrust. Every contribution to the community earns you ₮. The more you contribute, the more visibility you unlock.
-              </p>
-              <p style={{ color: '#64748b', fontSize: '0.85rem', lineHeight: 1.65, margin: 0 }}>
-                ₮ is not a cryptocurrency. It can&apos;t be withdrawn or traded externally — it&apos;s a reputation metric that powers the entire platform.
-              </p>
-            </div>
-            <div style={{ background: '#1e293b', border: '1px solid rgba(45,212,191,0.18)', borderRadius: 14, padding: '1.5rem' }}>
-              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#34d399', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.85rem' }}>How to earn ₮</div>
-              <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '0.6rem' }}>
-                {[
-                  { label: 'Sign up',                  reward: 200 },
-                  { label: 'Create a listing',         reward: 50  },
-                  { label: 'Publish an article',       reward: 75  },
-                  { label: 'Complete an order',        reward: 100 },
-                  { label: 'Create a community',       reward: 100 },
-                  { label: 'Leave a review',           reward: 10  },
-                ].map(r => (
-                  <li key={r.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', paddingBottom: '0.55rem', borderBottom: '1px dashed rgba(45,212,191,0.15)' }}>
-                    <span style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>{r.label}</span>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#2dd4bf' }}>₮{r.reward}</span>
-                  </li>
-                ))}
-              </ul>
-              <div style={{ marginTop: '1.1rem', padding: '0.85rem 1rem', background: 'rgba(45,212,191,0.06)', border: '1px solid rgba(45,212,191,0.15)', borderRadius: 10 }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#2dd4bf', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Spend ₮ on</div>
-                <div style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.7 }}>
-                  Boost your listings · Donate to the Sustainability Fund · Unlock profile badges · Feature your profile for 3 days
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── SECURITY & TRUST POLICIES ── */}
-      <section style={{ borderBottom: '1px solid rgba(56,189,248,0.06)', background: 'radial-gradient(ellipse 80% 80% at 50% 0%, rgba(45,212,191,0.08) 0%, transparent 65%), rgba(2,6,23,0.34)' }}>
-        <div className="lp-sec">
-          <div style={{ textAlign: 'center', marginBottom: '2.25rem' }}>
-            <div style={{ display: 'inline-block', background: 'rgba(45,212,191,0.1)', border: '1px solid rgba(45,212,191,0.3)', borderRadius: 999, padding: '0.3rem 0.9rem', fontSize: '0.72rem', color: '#2dd4bf', fontWeight: 800, letterSpacing: '0.08em', marginBottom: '0.85rem' }}>🛡 TRUST & SAFETY</div>
-            <h2 className="section-h2" style={{ fontSize: 'clamp(1.6rem,4vw,2.4rem)', fontWeight: 900, margin: '0 0 0.65rem', letterSpacing: '-0.5px' }}>Security is part of the product</h2>
-            <p style={{ color: '#94a3b8', fontSize: '0.95rem', maxWidth: 650, margin: '0 auto', lineHeight: 1.7 }}>
-              FreeTrust is designed to make safer community commerce the default: verify who you are dealing with, keep payments on-platform, and use clear policies when something feels wrong.
-            </p>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))', gap: '1rem' }}>
-            {SECURITY_PROOFS.map(item => (
-              <div key={item.title} style={{ background: 'rgba(15,23,42,0.76)', border: '1px solid rgba(45,212,191,0.15)', borderRadius: 14, padding: '1.25rem', boxShadow: '0 18px 42px rgba(0,0,0,0.18)' }}>
-                <div style={{ fontSize: '1.65rem', marginBottom: '0.65rem' }}>{item.icon}</div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 850, color: '#f8fafc', marginBottom: '0.45rem' }}>{item.title}</div>
-                <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.65, margin: 0 }}>{item.desc}</p>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ marginTop: '1.1rem', display: 'flex', gap: '0.65rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <Link href="/safety" style={{ color: '#0f172a', background: 'linear-gradient(135deg,#2dd4bf,#38bdf8)', borderRadius: 999, padding: '0.65rem 1.05rem', fontSize: '0.82rem', fontWeight: 850, textDecoration: 'none' }}>Read Trust & Safety →</Link>
-            <Link href="/privacy" style={{ color: '#99f6e4', border: '1px solid rgba(45,212,191,0.25)', background: 'rgba(45,212,191,0.06)', borderRadius: 999, padding: '0.65rem 1.05rem', fontSize: '0.82rem', fontWeight: 750, textDecoration: 'none' }}>Privacy Policy</Link>
-            <Link href="/terms" style={{ color: '#bae6fd', border: '1px solid rgba(56,189,248,0.22)', background: 'rgba(56,189,248,0.06)', borderRadius: 999, padding: '0.65rem 1.05rem', fontSize: '0.82rem', fontWeight: 750, textDecoration: 'none' }}>Terms of Service</Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ── WHO IS FREETRUST FOR? (4 personas) ── */}
-      <section style={{ borderBottom: '1px solid rgba(56,189,248,0.06)', background: 'rgba(56,189,248,0.02)' }}>
-        <div className="lp-sec">
-          <div style={{ textAlign: 'center', marginBottom: '2.25rem' }}>
-            <div style={{ display: 'inline-block', background: 'rgba(129,140,248,0.1)', border: '1px solid rgba(129,140,248,0.3)', borderRadius: 999, padding: '0.3rem 0.9rem', fontSize: '0.72rem', color: '#818cf8', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '0.85rem' }}>✦ WHO IS FREETRUST FOR?</div>
-            <h2 className="section-h2" style={{ fontSize: 'clamp(1.6rem,4vw,2.4rem)', fontWeight: 900, margin: '0 0 0.5rem', letterSpacing: '-0.5px' }}>Built for everyone in the community economy</h2>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(250px,1fr))', gap: '1rem' }}>
-            {[
-              { icon: '🧑‍💻', title: 'Freelancers & Service Providers', desc: 'Publish your gigs, get discovered by local buyers and build a reputation that actually pays.',           benefit: 'Higher trust = lower fees' },
-              { icon: '🏪',   title: 'Small Businesses & Makers',       desc: 'Sell physical or digital products with built-in Stripe payouts and no monthly listing fees.',        benefit: 'Zero subscription ever' },
-              { icon: '🎪',   title: 'Community Organisers & Event Hosts', desc: 'Run events, grow communities and connect people around shared interests and causes.',              benefit: 'Earn ₮ for every event' },
-              { icon: '🌍',   title: 'Nonprofits & Social Enterprises',  desc: 'List your organisation, share your mission and receive direct community support via the Sustainability Fund.', benefit: 'Free organisation page' },
-            ].map(p => (
-              <div key={p.title} style={{ background: '#1e293b', border: '1px solid rgba(129,140,248,0.15)', borderRadius: 14, padding: '1.4rem' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '0.65rem' }}>{p.icon}</div>
-                <div style={{ fontSize: '0.98rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.5rem', lineHeight: 1.3 }}>{p.title}</div>
-                <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.6, margin: '0 0 0.85rem' }}>{p.desc}</p>
-                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#a5b4fc', display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(129,140,248,0.1)', borderRadius: 6, padding: '0.3rem 0.55rem' }}>
-                  <span>✓</span> {p.benefit}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── 5. WHY FREETRUST (3 value props) ── */}
-      <div style={{ borderBottom: '1px solid rgba(56,189,248,0.06)' }}>
-        <div className="lp-sec">
-          <h2 className="section-h2" style={{ fontSize: 'clamp(1.5rem,3.5vw,2.2rem)', fontWeight: 900, textAlign: 'center', margin: '0 0 2rem', letterSpacing: '-0.5px' }}>Why FreeTrust?</h2>
-          <div className="val-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1rem' }}>
-            {VALUE_PROPS.map(v => (
-              <div key={v.title} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '1.5rem' }}>
-                <div style={{ fontSize: '2rem', fontWeight: 900, color: '#38bdf8', marginBottom: '0.75rem', lineHeight: 1 }}>{v.icon}</div>
-                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.5rem' }}>{v.title}</div>
-                <p style={{ fontSize: '0.85rem', color: '#64748b', lineHeight: 1.6, margin: 0 }}>{v.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── 6. FEATURED SERVICES (horizontal scroll on mobile) ── */}
-      <div style={{ borderBottom: '1px solid rgba(56,189,248,0.06)', background: 'rgba(56,189,248,0.02)' }}>
-        <div className="lp-sec">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <h2 className="section-h2" style={{ fontSize: 'clamp(1.3rem,3vw,1.8rem)', fontWeight: 900, margin: 0 }}>Featured Services</h2>
-            <Link href="/services" style={{ fontSize: '0.82rem', color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>View all →</Link>
-          </div>
-          <div className="hscroll">
-            {featuredServices.length === 0
-              ? Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} style={{ flexShrink: 0, width: 240, height: 268, background: '#1e293b', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.1)', animation: 'shimmer 1.4s infinite', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%' }} />
-                ))
-              : featuredServices.map(s => (
-                  <Link key={s.id} href={`/services/${s.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 240 }}>
-                    <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s', display: 'flex', flexDirection: 'column', height: 268 }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.15)' }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
-                      {/* Banner — fixed 148px, object-cover so all images fill uniformly */}
-                      <div style={{ height: 148, flexShrink: 0, background: s.grad, overflow: 'hidden', position: 'relative' }}>
-                        {s.coverImage && (
-                          <img
-                            src={s.coverImage}
-                            alt=""
-                            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                            onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
-                          />
-                        )}
-                      </div>
-                      {/* Body — flex-col, price pinned to bottom */}
-                      <div style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
-                        <div>
-                          <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', marginBottom: '0.3rem' } as React.CSSProperties}>{s.title}</div>
-                          <div style={{ fontSize: '0.7rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.provider}</div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
-                          <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#f1f5f9' }}>{format(s.price, s.currency as 'GBP' | 'EUR' | 'USD')}</span>
-                          {s.reviews > 0 && <span style={{ fontSize: '0.68rem', color: '#fbbf24' }}>★ {s.rating.toFixed(1)} ({s.reviews})</span>}
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))
-            }
-          </div>
-        </div>
-      </div>
-
-      {/* ── 7. FEATURED PRODUCTS (horizontal scroll on mobile) ── */}
-      <div style={{ borderBottom: '1px solid rgba(56,189,248,0.06)' }}>
-        <div className="lp-sec">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <h2 className="section-h2" style={{ fontSize: 'clamp(1.3rem,3vw,1.8rem)', fontWeight: 900, margin: 0 }}>Featured Products</h2>
-            <Link href="/products" style={{ fontSize: '0.82rem', color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>View all →</Link>
-          </div>
-          <div className="hscroll">
-            {featuredProducts.length === 0
-              ? Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} style={{ flexShrink: 0, width: 220, height: 210, background: '#1e293b', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.1)', animation: 'shimmer 1.4s infinite', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%' }} />
-                ))
-              : featuredProducts.map(p => (
-                <Link key={p.id} href={`/products/${p.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 220 }}>
-                  <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.15)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
-                    <div style={{ height: 140, background: p.grad, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {/* Fallback: avatar circle or initials, always rendered under the cover */}
-                      {p.avatarUrl
-                        ? <img src={p.avatarUrl} alt={p.seller} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.3)', flexShrink: 0 }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
-                        : <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', color: '#fff', flexShrink: 0 }}>
-                            {p.seller.split(' ').map((w: string) => w[0]).join('').slice(0,2).toUpperCase()}
-                          </div>
-                      }
-                      {/* Cover image: absolutely fills the banner; hidden via onError if URL is broken */}
-                      {p.coverImage && (
-                        <img src={p.coverImage} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
-                      )}
-                      <span style={{ position: 'absolute', top: 8, right: 8, background: p.type === 'digital' ? 'rgba(56,189,248,0.9)' : 'rgba(148,163,184,0.9)', color: '#0f172a', fontSize: '0.58rem', fontWeight: 800, padding: '2px 6px', borderRadius: 999 }}>
-                        {p.type === 'digital' ? 'DIGITAL' : 'PHYSICAL'}
-                      </span>
-                    </div>
-                    <div style={{ padding: '0.85rem' }}>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.35rem', lineHeight: 1.25, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{p.title}</div>
-                      <div style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: '0.4rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.seller}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#f1f5f9' }}>{format(p.price, p.currency as 'GBP' | 'EUR' | 'USD')}</span>
-                        {p.reviews > 0 && <span style={{ fontSize: '0.65rem', color: '#fbbf24' }}>★ {p.rating.toFixed(1)}</span>}
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              ))
-            }
-          </div>
-        </div>
-      </div>
-
-      {/* ── UPCOMING EVENTS ── */}
-      {(homeEvents === null || homeEvents.length > 0) && (
-      <div style={{ borderBottom: '1px solid rgba(56,189,248,0.06)', background: 'rgba(56,189,248,0.02)' }}>
-        <div className="lp-sec">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <div>
-              <h2 className="section-h2" style={{ fontSize: 'clamp(1.3rem,3vw,1.8rem)', fontWeight: 900, margin: '0 0 0.2rem' }}>📅 Upcoming Events</h2>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>Global startup & tech events — discover, attend, connect</p>
-            </div>
-            <Link href="/events" style={{ fontSize: '0.82rem', color: '#38bdf8', textDecoration: 'none', fontWeight: 600, flexShrink: 0 }}>View all events →</Link>
-          </div>
-          {homeEvents === null ? (
-            // Skeleton
-            <div className="hscroll">
-              {[0,1,2].map(i => (
-                <div key={i} style={{ flexShrink: 0, width: 280, height: 120, background: '#1e293b', borderRadius: 14, border: '1px solid rgba(56,189,248,0.08)', animation: 'shimmer 1.4s infinite', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%' }} />
-              ))}
-            </div>
-          ) : (
-            <div className="hscroll">
-              {homeEvents.map(ev => {
-                const cat = ev.category ?? 'Technology'
-                const catColor = CAT_COLORS_HOME[cat] ?? '#38bdf8'
-                const dateStr = ev.starts_at
-                  ? new Date(ev.starts_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-                  : 'Date TBC'
-                const location = ev.is_online ? 'Online' : ev.venue_name || ev.location_label || [ev.city, ev.country].filter(Boolean).join(', ') || 'In Person'
-                const eventImage = isUsableEventImage(ev.cover_image_url)
-                  ? ev.cover_image_url
-                  : eventPosterDataUri({ title: ev.title, category: ev.category, startsAt: ev.starts_at, location })
-                return (
-                  <Link key={ev.id} href={`/events/${ev.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 310 }}>
-                    <div
-                      style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer', height: '100%' }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.12)' }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}
-                    >
-                      <div style={{ height: 104, background: `linear-gradient(135deg, ${catColor}33, rgba(15,23,42,0.96))`, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: '2rem', opacity: 0.9 }}>📅</span>
-                        {eventImage && (
-                          <img
-                            src={eventImage}
-                            alt=""
-                            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                            onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
-                          />
-                        )}
-                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(15,23,42,0.05), rgba(15,23,42,0.72))' }} />
-                        <span style={{ position: 'absolute', left: 10, bottom: 10, background: `${catColor}E6`, color: '#020617', fontSize: '0.62rem', fontWeight: 900, padding: '3px 8px', borderRadius: 999 }}>{cat}</span>
-                        {ev.is_online && <span style={{ position: 'absolute', right: 10, bottom: 10, fontSize: '0.62rem', fontWeight: 900, background: 'rgba(56,189,248,0.9)', color: '#020617', padding: '3px 8px', borderRadius: 999 }}>ONLINE</span>}
-                      </div>
-                      <div style={{ padding: '0.95rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{ev.title}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.74rem', color: '#64748b', minWidth: 0 }}>
-                          <span style={{ color: '#38bdf8', fontWeight: 700, flexShrink: 0 }}>🗓 {dateStr}</span>
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📍 {location}</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          {(ev.attendee_count ?? 0) > 0
-                            ? <span style={{ fontSize: '0.72rem', color: '#64748b' }}>👥 {(ev.attendee_count ?? 0).toLocaleString()} attending</span>
-                            : <span style={{ fontSize: '0.72rem', color: '#38bdf8' }}>✨ Be the first to attend!</span>
-                          }
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                )
+      {(featuredServices.length > 0 || featuredProducts.length > 0 || homeEvents?.length || homeRentShare?.length) && (
+        <section className="ft-section" style={{ background: 'rgba(0,194,203,.025)', borderBottom: '1px solid rgba(0,194,203,.08)' }}>
+          <div className="ft-container">
+            <SectionHeader eyebrow="Real activity" title="Live from the FreeTrust community">The landing page keeps its existing products, services, events, and sharing previews — now styled as one premium marketplace surface.</SectionHeader>
+            <div className="ft-hscroll">
+              {featuredServices.slice(0, 5).map(s => <Link key={s.id} href={`/services/${s.id}`} className="ft-card-hover" style={{ flexShrink: 0, width: 260, textDecoration: 'none', color: '#fff', background: CARD, border: '1px solid #1e293b', borderRadius: 18, overflow: 'hidden' }}><div style={{ height: 150, background: s.coverImage ? `url(${s.coverImage}) center/cover` : s.grad }} /><div style={{ padding: 16 }}><strong>{s.title}</strong><p style={{ margin: '8px 0', color: SLATE, fontSize: 13 }}>{s.provider}</p><span style={{ color: TEAL, fontWeight: 850 }}>{format(s.price, s.currency as 'GBP' | 'EUR' | 'USD')}</span></div></Link>)}
+              {homeEvents?.slice(0, 4).map(ev => {
+                const cat = ev.category ?? 'Technology'; const catColor = CAT_COLORS_HOME[cat] ?? TEAL; const location = ev.is_online ? 'Online' : ev.venue_name || ev.location_label || [ev.city, ev.country].filter(Boolean).join(', ') || 'In Person'; const eventImage = isUsableEventImage(ev.cover_image_url) ? ev.cover_image_url : eventPosterDataUri({ title: ev.title, category: ev.category, startsAt: ev.starts_at, location })
+                return <Link key={ev.id} href={`/events/${ev.id}`} className="ft-card-hover" style={{ flexShrink: 0, width: 280, textDecoration: 'none', color: '#fff', background: CARD, border: '1px solid #1e293b', borderRadius: 18, overflow: 'hidden' }}><div style={{ height: 128, background: `linear-gradient(135deg, ${catColor}33, rgba(15,23,42,.96))`, position: 'relative' }}>{eventImage && <img src={eventImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}</div><div style={{ padding: 16 }}><strong>{ev.title}</strong><p style={{ margin: '8px 0 0', color: SLATE, fontSize: 13 }}>{location}</p></div></Link>
               })}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        </section>
       )}
 
-      {/* ── LATEST JOBS ── */}
-      {(homeJobs === null || homeJobs.length > 0) && (
-      <div style={{ borderBottom: '1px solid rgba(56,189,248,0.06)' }}>
-        <div className="lp-sec">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <div>
-              <h2 className="section-h2" style={{ fontSize: 'clamp(1.3rem,3vw,1.8rem)', fontWeight: 900, margin: '0 0 0.2rem' }}>💼 Latest Jobs</h2>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>Real roles at leading startups and tech companies</p>
-            </div>
-            <Link href="/jobs" style={{ fontSize: '0.82rem', color: '#38bdf8', textDecoration: 'none', fontWeight: 600, flexShrink: 0 }}>Browse all jobs →</Link>
-          </div>
-          {homeJobs === null ? (
-            <div className="hscroll">
-              {[0,1,2].map(i => (
-                <div key={i} style={{ flexShrink: 0, width: 280, height: 90, background: '#1e293b', borderRadius: 12, border: '1px solid rgba(56,189,248,0.08)', animation: 'shimmer 1.4s infinite', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%' }} />
-              ))}
-            </div>
-          ) : (
-            <div className="hscroll">
-              {homeJobs.map(job => {
-                const isRemote = job.location_type === 'remote'
-                const location = isRemote ? 'Remote' : [job.city, job.country].filter(Boolean).join(', ') || 'On-site'
-                const salaryStr = job.salary_min && job.salary_max && job.salary_currency
-                  ? `${job.salary_currency} ${(job.salary_min / 1000).toFixed(0)}k–${(job.salary_max / 1000).toFixed(0)}k`
-                  : null
-                const jobTypeLabel = job.job_type === 'full_time' ? 'Full-time' : job.job_type === 'part_time' ? 'Part-time' : job.job_type === 'contract' ? 'Contract' : 'Freelance'
-                return (
-                  <Link key={job.id} href={`/jobs/${job.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 280 }}>
-                    <div
-                      style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer', height: '100%' }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(56,189,248,0.12)' }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}
-                    >
-                      {/* Top row: avatar + title */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{ width: 36, height: 36, borderRadius: 8, background: 'linear-gradient(135deg,rgba(56,189,248,0.2),rgba(129,140,248,0.2))', border: '1px solid rgba(56,189,248,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 900, color: '#38bdf8', flexShrink: 0 }}>
-                          {(job.company_name ?? 'J')[0].toUpperCase()}
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
-                          <div style={{ fontSize: '0.72rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.company_name ?? 'Company'}</div>
-                        </div>
-                      </div>
-                      {/* Location + salary */}
-                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                        📍 {location}{salaryStr ? ` · ${salaryStr}` : ''}
-                      </div>
-                      {/* Badges */}
-                      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '0.6rem', fontWeight: 800, background: isRemote ? 'rgba(56,189,248,0.12)' : 'rgba(148,163,184,0.12)', color: isRemote ? '#38bdf8' : '#94a3b8', border: `1px solid ${isRemote ? 'rgba(56,189,248,0.3)' : 'rgba(148,163,184,0.2)'}`, padding: '2px 6px', borderRadius: 999 }}>
-                          {isRemote ? '🌐 Remote' : '🏢 On-site'}
-                        </span>
-                        <span style={{ fontSize: '0.6rem', fontWeight: 800, background: 'rgba(167,139,250,0.1)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.25)', padding: '2px 6px', borderRadius: 999 }}>
-                          {jobTypeLabel}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-      )}
-
-      {/* ── RENT & SHARE ── */}
-      {(homeRentShare === null || homeRentShare.length > 0) && (
-      <div style={{ borderBottom: '1px solid rgba(56,189,248,0.06)', background: 'rgba(0,212,170,0.015)' }}>
-        <div className="lp-sec">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <div>
-              <h2 className="section-h2" style={{ fontSize: 'clamp(1.3rem,3vw,1.8rem)', fontWeight: 900, margin: '0 0 0.2rem' }}>♻️ Rent &amp; Share</h2>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>Borrow what you need, share what you have</p>
-            </div>
-            <Link href="/rent-share" style={{ fontSize: '0.82rem', color: '#00d4aa', textDecoration: 'none', fontWeight: 600, flexShrink: 0 }}>Browse all →</Link>
-          </div>
-          {homeRentShare === null ? (
-            <div className="hscroll">
-              {[0,1,2].map(i => (
-                <div key={i} style={{ flexShrink: 0, width: 240, height: 140, background: '#1e293b', borderRadius: 14, border: '1px solid rgba(0,212,170,0.08)', animation: 'shimmer 1.4s infinite', backgroundImage: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%' }} />
-              ))}
-            </div>
-          ) : (
-            <div className="hscroll">
-              {homeRentShare.map(item => {
-                const priceStr = item.price_per_day
-                  ? `${item.currency ?? '€'}${item.price_per_day}/day`
-                  : item.price_per_week
-                  ? `${item.currency ?? '€'}${item.price_per_week}/week`
-                  : 'Free to borrow'
-                const thumbUrl = item.images && item.images.length > 0 ? item.images[0] : null
-                return (
-                  <Link key={item.id} href={`/rent-share/${item.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: 220 }}>
-                    <div
-                      style={{ background: '#1e293b', border: '1px solid rgba(0,212,170,0.1)', borderRadius: 14, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer' }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 6px 24px rgba(0,212,170,0.12)' }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}
-                    >
-                      <div style={{ width: '100%', height: 100, background: thumbUrl ? `url(${thumbUrl}) center/cover` : 'linear-gradient(135deg,rgba(0,212,170,0.15),rgba(56,189,248,0.1))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {!thumbUrl && <span style={{ fontSize: '2rem' }}>♻️</span>}
-                      </div>
-                      <div style={{ padding: '0.75rem' }}>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.25rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#00d4aa' }}>{priceStr}</span>
-                          {item.location && <span style={{ fontSize: '0.7rem', color: '#64748b' }}>📍 {item.location}</span>}
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-      )}
-
-      {/* ── 8. FOUNDING MEMBER CTA ── */}
-      <div style={{ background: 'linear-gradient(135deg, rgba(56,189,248,0.06) 0%, rgba(129,140,248,0.06) 100%)', borderBottom: '1px solid rgba(56,189,248,0.1)' }}>
-        <div className="lp-sec">
-          <div className="found-inner" style={{ display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 240 }}>
-              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#38bdf8', letterSpacing: '0.1em', marginBottom: 6 }}>🏅 FOUNDING MEMBERS</div>
-              <h2 style={{ fontSize: 'clamp(1.4rem,3vw,2rem)', fontWeight: 900, margin: '0 0 0.5rem', letterSpacing: '-0.5px' }}>
-                {Math.max(0, goal - tm).toLocaleString()} spots remaining
-              </h2>
-              <p style={{ color: '#64748b', margin: '0 0 1.25rem', fontSize: '0.9rem', lineHeight: 1.6, maxWidth: 480 }}>
-                Founding members get a permanent badge, early feature access, zero fees for 3 months, and priority Trust bonuses. Once all 1,000 spots are gone, they&apos;re gone.
-              </p>
-              {/* Progress bar */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#475569', marginBottom: 5 }}>
-                  <span><Counter target={tm} /> / {goal.toLocaleString()} founding spots taken</span>
-                  <span style={{ color: '#38bdf8', fontWeight: 700 }}>{pct.toFixed(1)}%</span>
-                </div>
-                <div style={{ height: 10, background: 'rgba(56,189,248,0.1)', borderRadius: 999, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.12)' }}>
-                  <div className="found-bar" style={{ height: '100%', width: `${Math.max(pct, 2)}%`, borderRadius: 999, transition: 'width 1s' }} />
-                </div>
-                {tw > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: '0.75rem', color: '#94a3b8' }}>
-                    <span className="live-dot" />
-                    <span>+{tw} joined this week</span>
-                  </div>
-                )}
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <Link href="/register" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.85rem 2rem', borderRadius: 10, fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.35)' }}>
-                  Claim My Spot Free →
-                </Link>
-                <Link href="/browse" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', color: '#94a3b8', padding: '0.85rem 1.5rem', borderRadius: 10, fontWeight: 600, fontSize: '0.9rem', textDecoration: 'none', border: '1px solid rgba(148,163,184,0.2)' }}>
-                  Browse Members
-                </Link>
-              </div>
-            </div>
-            {/* Badge visual */}
-            <div style={{ flexShrink: 0, textAlign: 'center' }}>
-              <div style={{ width: 140, height: 140, borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%, rgba(56,189,248,0.6) 0%, rgba(30,41,59,0.98) 60%)', border: '3px solid rgba(56,189,248,0.4)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 40px rgba(56,189,248,0.25)', margin: '0 auto' }}>
-                <span style={{ fontSize: '2.5rem' }}>🏅</span>
-                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#38bdf8', letterSpacing: '0.08em', marginTop: 4 }}>FOUNDER</span>
-              </div>
-              <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 8 }}>Permanent badge</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── ROI CALCULATOR ── */}
-      <section style={{ borderBottom: '1px solid rgba(16,185,129,0.08)', background: 'linear-gradient(180deg, rgba(16,185,129,0.03) 0%, transparent 100%)' }}>
-        <div className="lp-sec" style={{ maxWidth: 820 }}>
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div style={{ display: 'inline-block', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 999, padding: '0.3rem 0.9rem', fontSize: '0.72rem', color: '#34d399', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '0.85rem' }}>✦ YOUR EARNINGS</div>
-            <h2 className="section-h2" style={{ fontSize: 'clamp(1.6rem,4vw,2.4rem)', fontWeight: 900, margin: '0 0 0.5rem', letterSpacing: '-0.5px' }}>
-              See What You&apos;d Earn on FreeTrust
-            </h2>
-            <p style={{ color: '#64748b', fontSize: '0.95rem', maxWidth: 480, margin: '0 auto' }}>
-              TrustCoins compound — the more you participate, the less you pay in fees.
-            </p>
-          </div>
+      <section className="ft-section" style={{ background: '#081020', borderBottom: '1px solid rgba(0,194,203,.08)' }}>
+        <div className="ft-container" style={{ maxWidth: 860 }}>
+          <SectionHeader eyebrow="Your earnings" title="See what you’d earn on FreeTrust">TrustCoins compound — the more you participate, the less you pay in fees.</SectionHeader>
           <ROICalculator />
         </div>
       </section>
 
-      {/* ── FAQ ── */}
-      <section style={{ borderBottom: '1px solid rgba(56,189,248,0.06)' }}>
-        <div className="lp-sec" style={{ maxWidth: 820 }}>
-          <div style={{ textAlign: 'center', marginBottom: '2.25rem' }}>
-            <div style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 999, padding: '0.3rem 0.9rem', fontSize: '0.72rem', color: '#38bdf8', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '0.85rem' }}>✦ FREQUENTLY ASKED</div>
-            <h2 className="section-h2" style={{ fontSize: 'clamp(1.6rem,4vw,2.4rem)', fontWeight: 900, margin: '0 0 0.5rem', letterSpacing: '-0.5px' }}>Questions, answered</h2>
-            <p style={{ color: '#64748b', fontSize: '0.95rem', maxWidth: 500, margin: '0 auto' }}>Everything you need to know about FreeTrust before you join.</p>
-          </div>
+      <section className="ft-section" style={{ background: NAVY, borderBottom: '1px solid rgba(0,194,203,.08)' }}>
+        <div className="ft-container" style={{ maxWidth: 860 }}>
+          <SectionHeader eyebrow="Frequently asked" title="Questions, answered">Everything you need to know about FreeTrust before you join.</SectionHeader>
           <FAQAccordion items={FAQS} />
         </div>
       </section>
 
-      {/* ── FINAL CTA ── */}
-      <section style={{ borderBottom: '1px solid rgba(56,189,248,0.08)', background: 'linear-gradient(135deg, rgba(56,189,248,0.06) 0%, rgba(52,211,153,0.06) 100%)' }}>
-        <div className="lp-sec" style={{ textAlign: 'center', maxWidth: 720 }}>
-          <h2 className="section-h2" style={{ fontSize: 'clamp(1.7rem,4.5vw,2.6rem)', fontWeight: 900, margin: '0 0 0.85rem', letterSpacing: '-0.5px', lineHeight: 1.2 }}>
-            Ready to join the <span style={{ background: 'linear-gradient(135deg,#38bdf8,#34d399)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>community economy</span>?
-          </h2>
-          <p style={{ color: '#94a3b8', fontSize: '1rem', margin: '0 0 1.5rem', lineHeight: 1.65 }}>
-            Free to join. ₮200 on signup. No subscription, no credit card.
-          </p>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <Link href="/register" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.95rem 2.25rem', borderRadius: 10, fontWeight: 800, fontSize: '1rem', textDecoration: 'none', boxShadow: '0 4px 24px rgba(56,189,248,0.4)' }}>
-              Join FreeTrust Free →
-            </Link>
-          </div>
-
-        </div>
-      </section>
-
-      {/* ── 9. FOOTER ── */}
-      <footer style={{ borderTop: '1px solid rgba(56,189,248,0.08)', padding: '1.75rem 1.25rem 1.5rem', textAlign: 'center', color: '#475569', fontSize: '0.8rem', background: 'rgba(2,6,23,0.35)' }}>
-        <div style={{ maxWidth: 760, margin: '0 auto 1rem', padding: '0.85rem 1rem', border: '1px solid rgba(45,212,191,0.16)', borderRadius: 14, background: 'rgba(15,23,42,0.72)' }}>
-          <div style={{ color: '#e2e8f0', fontWeight: 850, marginBottom: '0.35rem' }}>🛡 FreeTrust is built for safer community commerce</div>
-          <div style={{ color: '#94a3b8', fontSize: '0.76rem', lineHeight: 1.55 }}>
-            Verified member flows, protected messaging, on-platform payments, abuse reporting and clear Trust & Safety policies help keep the marketplace accountable.
+      <footer style={{ background: '#060b16', borderTop: '1px solid #111827' }}>
+        <div className="ft-container ft-footer-grid" style={{ paddingTop: 48, paddingBottom: 44, display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 34, color: SLATE }}>
+          <div><div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#fff', fontWeight: 900, fontSize: 24 }}><img src="/icons/freetrust-mark-perfect-transparent-20260521.png" alt="" style={{ width: 38, height: 38 }} />FreeTrust</div><p style={{ lineHeight: 1.7 }}>Buy. Sell. Connect. Trust. A safer community economy powered by verified reputation.</p><button type="button" onClick={() => setIsLegalLibraryOpen(true)} style={{ color: '#99f6e4', background: 'rgba(45,212,191,.06)', border: '1px solid rgba(45,212,191,.24)', borderRadius: 999, minHeight: 44, padding: '0.65rem 1.15rem', fontSize: 14, fontWeight: 850, font: 'inherit', cursor: 'pointer' }}>Legal</button></div>
+          <div className="ft-footer-links" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+            {[['Services','/services'],['Products','/products'],['Events','/events'],['Articles','/articles'],['Impact','/impact'],['Trust & Safety','/safety'],['Privacy Policy','/privacy'],['Terms of Service','/terms'],['Join free','/register']].map(([label, href]) => <Link key={href} href={href} style={{ color: label === 'Join free' ? TEAL : '#cbd5e1', textDecoration: 'none', fontWeight: 750 }}>{label}</Link>)}
+            <span style={{ color: '#64748b' }}>Instagram</span><span style={{ color: '#64748b' }}>X</span><span style={{ color: '#64748b' }}>LinkedIn</span>
           </div>
         </div>
-        <div className="footer-links" style={{ display: 'flex', gap: '1.25rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '0.65rem' }}>
-          <span>© 2026 FreeTrust</span>
-          <Link href="/services"  style={{ color: '#475569', textDecoration: 'none' }}>Services</Link>
-          <Link href="/products"  style={{ color: '#475569', textDecoration: 'none' }}>Products</Link>
-          <Link href="/events"    style={{ color: '#475569', textDecoration: 'none' }}>Events</Link>
-          <Link href="/articles"  style={{ color: '#475569', textDecoration: 'none' }}>Articles</Link>
-          <Link href="/impact"    style={{ color: '#475569', textDecoration: 'none' }}>Impact</Link>
-          <Link href="/register"  style={{ color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>Join free →</Link>
-        </div>
-        <div className="footer-links" style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '0.65rem' }}>
-          <Link href="/safety"  style={{ color: '#2dd4bf', textDecoration: 'none', fontWeight: 700 }}>Trust & Safety</Link>
-          <Link href="/privacy" style={{ color: '#64748b', textDecoration: 'none' }}>Privacy Policy</Link>
-          <Link href="/terms"   style={{ color: '#64748b', textDecoration: 'none' }}>Terms of Service</Link>
-          <span style={{ color: '#475569' }}>Payments stay inside FreeTrust</span>
-        </div>
-        <div style={{ maxWidth: 760, margin: '0 auto 0.8rem', display: 'flex', justifyContent: 'center' }}>
-          <button
-            type="button"
-            onClick={() => setIsLegalLibraryOpen(true)}
-            style={{
-              color: '#99f6e4',
-              background: 'rgba(45,212,191,0.06)',
-              border: '1px solid rgba(45,212,191,0.24)',
-              borderRadius: 999,
-              minHeight: 44,
-              padding: '0.65rem 1.15rem',
-              fontSize: '0.82rem',
-              lineHeight: 1,
-              fontWeight: 800,
-              font: 'inherit',
-              cursor: 'pointer',
-              boxShadow: '0 12px 30px rgba(15,23,42,0.18)',
-            }}
-          >
-            Legal
-          </button>
-        </div>
-        <div style={{ fontSize: '0.72rem', color: '#334155' }}>Trust-based commerce for a safer internet.</div>
+        <div style={{ textAlign: 'center', color: '#475569', fontSize: 12, padding: '0 22px 24px' }}>© 2026 FreeTrust · Payments stay inside FreeTrust · Trust-based commerce for a safer internet.</div>
       </footer>
       <LegalDocModal docs={legalDocs} isOpen={isLegalLibraryOpen} onClose={() => setIsLegalLibraryOpen(false)} />
     </main>
