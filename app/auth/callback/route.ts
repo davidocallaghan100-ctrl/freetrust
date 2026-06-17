@@ -13,7 +13,8 @@ import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/dashboard'
+  const requestedNext = searchParams.get('next') ?? '/feed'
+  const next = requestedNext.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : '/feed'
 
   if (code) {
     const cookieStore = await cookies()
@@ -49,6 +50,63 @@ export async function GET(request: NextRequest) {
           // migration hasn't been applied yet.
           const admin = createAdminClient()
 
+          const meta = user.user_metadata ?? {}
+          const fullName = typeof (meta.full_name ?? meta.name) === 'string'
+            ? String(meta.full_name ?? meta.name).trim()
+            : ''
+          const avatarUrl = typeof (meta.avatar_url ?? meta.picture) === 'string'
+            ? String(meta.avatar_url ?? meta.picture).trim()
+            : ''
+          const nameParts = fullName.split(/\s+/).filter(Boolean)
+          const firstName = typeof meta.first_name === 'string' && meta.first_name.trim()
+            ? meta.first_name.trim()
+            : nameParts[0] ?? ''
+          const lastName = typeof meta.last_name === 'string' && meta.last_name.trim()
+            ? meta.last_name.trim()
+            : nameParts.slice(1).join(' ')
+
+          const { data: existingProfile, error: profileReadError } = await admin
+            .from('profiles')
+            .select('id,email,full_name,first_name,last_name,avatar_url,onboarding_complete')
+            .eq('id', user.id)
+            .maybeSingle()
+
+          if (profileReadError) {
+            console.error('[auth/callback] Profile read error:', profileReadError)
+          }
+
+          // OAuth users must have a profile row before they reach protected UI.
+          // The DB trigger normally creates it, but this repair keeps Google/Apple
+          // signups from bouncing back to login or landing on a sparse profile.
+          try {
+            if (!existingProfile) {
+              await admin.from('profiles').upsert({
+                id: user.id,
+                email: user.email ?? null,
+                first_name: firstName || null,
+                last_name: lastName || null,
+                full_name: fullName || user.email?.split('@')[0] || null,
+                avatar_url: avatarUrl || null,
+                onboarding_complete: false,
+                updated_at: new Date().toISOString(),
+              }, { onConflict: 'id' })
+            } else {
+              const profileUpdates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+              if (!existingProfile.email && user.email) profileUpdates.email = user.email
+              if (!existingProfile.full_name && fullName) profileUpdates.full_name = fullName
+              if (!existingProfile.first_name && firstName) profileUpdates.first_name = firstName
+              if (!existingProfile.last_name && lastName) profileUpdates.last_name = lastName
+              if (!existingProfile.avatar_url && avatarUrl) profileUpdates.avatar_url = avatarUrl
+              if (Object.keys(profileUpdates).length > 1) {
+                await admin.from('profiles').update(profileUpdates).eq('id', user.id)
+              }
+            }
+          } catch (err) {
+            console.error('[auth/callback] Profile upsert/sync error:', err)
+          }
+
+          const profileIncomplete = !existingProfile || existingProfile.onboarding_complete !== true
+
           // Determine "new user" by whether a signup bonus has already been issued.
           // Time-based checks (e.g. 60s) fail for email signups — users typically
           // take 1–5+ minutes to confirm their email, blowing past any short window.
@@ -60,21 +118,6 @@ export async function GET(request: NextRequest) {
           const isNewUser = !existingBalance
 
           if (isNewUser) {
-            // Sync Google OAuth metadata (name, avatar) into profiles
-            try {
-              const meta = user.user_metadata ?? {}
-              const fullName = meta.full_name ?? meta.name ?? null
-              const avatarUrl = meta.avatar_url ?? meta.picture ?? null
-              if (fullName || avatarUrl) {
-                await admin.from('profiles').update({
-                  ...(fullName ? { full_name: fullName } : {}),
-                  ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
-                }).eq('id', user.id)
-              }
-            } catch (err) {
-              console.error('[auth/callback] Profile metadata sync error:', err)
-            }
-
             // Award the founding member signup bonus (idempotent — only
             // reached when no trust_balances row exists yet, confirmed by
             // the isNewUser check above). Amount is read from
@@ -206,8 +249,16 @@ export async function GET(request: NextRequest) {
               console.error('[auth/callback] Failed to send welcome email:', err)
             }
 
-            // Send new members straight to the feed after signup/login.
-            return NextResponse.redirect(`${origin}/feed`)
+            // New members should always see the same profile/hobbies setup flow,
+            // regardless of whether they joined by email, Google, or Apple.
+            return NextResponse.redirect(`${origin}/onboarding?welcome=1`)
+          }
+
+          // Existing users who never completed onboarding (e.g. OAuth users who
+          // previously landed on /feed) should get the same profile/hobbies flow
+          // instead of being treated as signed out or left with a blank profile.
+          if (profileIncomplete) {
+            return NextResponse.redirect(`${origin}/onboarding?welcome=1`)
           }
         }
       } catch (err) {
@@ -219,6 +270,10 @@ export async function GET(request: NextRequest) {
     console.error('[auth/callback] exchangeCodeForSession error:', error)
   }
 
-  // Return to error page or login
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
+  // Some Supabase email/OAuth providers can land here with the auth tokens in
+  // the URL fragment (`#access_token=...`) instead of a `?code=` query param.
+  // The fragment is never sent to the server, but browsers preserve it across a
+  // redirect when the Location has no fragment, so send the user to a client
+  // handoff page that can store the session before routing onward.
+  return NextResponse.redirect(`${origin}/auth/session?next=${encodeURIComponent(next)}`)
 }

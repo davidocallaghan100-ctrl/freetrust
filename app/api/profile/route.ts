@@ -26,7 +26,22 @@ export async function GET() {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    const res = NextResponse.json({ profile, user })
+    let hydratedProfile = profile as Record<string, unknown>
+    const { data: badge, error: badgeError } = await supabase
+      .from('profile_verification_badges')
+      .select('status, verified_at')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (!badgeError && badge) {
+      hydratedProfile = {
+        ...hydratedProfile,
+        profile_verification_status: (badge as { status?: string | null }).status ?? null,
+        profile_identity_verified_at: (badge as { verified_at?: string | null }).verified_at ?? null,
+      }
+    }
+
+    const res = NextResponse.json({ profile: hydratedProfile, user })
     res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
     return res
   } catch (err) {

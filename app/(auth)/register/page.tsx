@@ -90,12 +90,12 @@ export default function RegisterPage() {
   const [trustToast, setTrustToast] = useState(false)
   const [inAppInfo, setInAppInfo] = useState<InAppBrowserInfo | null>(null)
 
-  // Auto-redirect to the feed after success — ONLY when we have a session.
+  // Auto-redirect to onboarding after success — ONLY when we have a session.
   // With email confirmation enabled, signUp returns session=null and we show
   // the confirmation UI instead.
   useEffect(() => {
     if (!success || needsConfirmation) return
-    const t = setTimeout(() => router.push('/feed'), 1500)
+    const t = setTimeout(() => router.push('/onboarding?welcome=1'), 1500)
     return () => clearTimeout(t)
   }, [success, needsConfirmation, router])
 
@@ -185,7 +185,7 @@ export default function RegisterPage() {
         options: {
           // handle_new_user() reads all three from raw_user_meta_data
           data: { first_name: firstName, last_name: lastName, full_name: fullName },
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/feed`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding%3Fwelcome%3D1`,
         },
       })
       if (error) {
@@ -232,7 +232,7 @@ export default function RegisterPage() {
 
       // Branch on whether signUp returned a live session:
       //   - session present  → email confirmation disabled; auto-sign-in.
-      //     Award the ₮200 bonus now and redirect to /feed (handled by
+      //     Award the ₮200 bonus now and redirect to onboarding (handled by
       //     the useEffect via setSuccess(true)).
       //   - session missing  → email confirmation required. Show the
       //     "check your email" UI and DON'T call the bonus route (it would
@@ -273,7 +273,7 @@ export default function RegisterPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/feed`,
+          redirectTo: `${window.location.origin}/auth/callback?next=/onboarding%3Fwelcome%3D1`,
           ...(queryParams ? { queryParams } : {}),
           // Explicit default — Supabase performs the window.location.href
           // navigation internally. We could set this to true to get the

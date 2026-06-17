@@ -460,21 +460,46 @@ export default function ProfilePage() {
     setTimeout(() => setToast(''), 3500)
   }
 
+  const applyLoadedProfile = useCallback((loadedProfile: Profile) => {
+    setProfile(loadedProfile)
+    setCoverSettings(getCoverSettingsFromProfile(loadedProfile))
+    setForm({
+      full_name: loadedProfile.full_name ?? '',
+      bio: loadedProfile.bio ?? '',
+      location: loadedProfile.location ?? '',
+      website: loadedProfile.website ?? '',
+      linkedin_url:  loadedProfile.linkedin_url  ?? '',
+      instagram_url: loadedProfile.instagram_url ?? '',
+      twitter_url:   loadedProfile.twitter_url   ?? '',
+      github_url:    loadedProfile.github_url    ?? '',
+      tiktok_url:    loadedProfile.tiktok_url    ?? '',
+      youtube_url:   loadedProfile.youtube_url   ?? '',
+      website_url:   loadedProfile.website_url   ?? '',
+      professional_headline: loadedProfile.professional_headline ?? '',
+      professional_experience_text: experienceToText(loadedProfile.professional_experience),
+      verification_details_text: loadedProfile.verification_details?.note ?? '',
+    })
+    setVatRegistered(!!loadedProfile.vat_registered)
+    setVatNumber(String(loadedProfile.vat_number ?? ''))
+  }, [])
+
   const loadProfile = useCallback(async (userId: string) => {
     try {
-      const { data: prof } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .is('deleted_at', null)
-        .single()
-      if (prof) {
-        let loadedProfile = prof as Profile
-        const { data: badge, error: badgeError } = await supabase
+      const [{ data: prof }, { data: badge, error: badgeError }] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .is('deleted_at', null)
+          .single(),
+        supabase
           .from('profile_verification_badges')
           .select('status, verified_at')
           .eq('user_id', userId)
-          .maybeSingle()
+          .maybeSingle(),
+      ])
+      if (prof) {
+        let loadedProfile = prof as Profile
         if (!badgeError && badge) {
           loadedProfile = {
             ...loadedProfile,
@@ -482,31 +507,12 @@ export default function ProfilePage() {
             profile_identity_verified_at: (badge as { verified_at?: string | null }).verified_at ?? null,
           }
         }
-        setProfile(loadedProfile)
-        setCoverSettings(getCoverSettingsFromProfile(loadedProfile))
-        setForm({
-          full_name: loadedProfile.full_name ?? '',
-          bio: loadedProfile.bio ?? '',
-          location: loadedProfile.location ?? '',
-          website: loadedProfile.website ?? '',
-          linkedin_url:  loadedProfile.linkedin_url  ?? '',
-          instagram_url: loadedProfile.instagram_url ?? '',
-          twitter_url:   loadedProfile.twitter_url   ?? '',
-          github_url:    loadedProfile.github_url    ?? '',
-          tiktok_url:    loadedProfile.tiktok_url    ?? '',
-          youtube_url:   loadedProfile.youtube_url   ?? '',
-          website_url:   loadedProfile.website_url   ?? '',
-          professional_headline: loadedProfile.professional_headline ?? '',
-          professional_experience_text: experienceToText(loadedProfile.professional_experience),
-          verification_details_text: loadedProfile.verification_details?.note ?? '',
-        })
-        setVatRegistered(!!(prof as Profile & { vat_registered?: boolean }).vat_registered)
-        setVatNumber(String((prof as Profile & { vat_number?: string }).vat_number ?? ''))
+        applyLoadedProfile(loadedProfile)
       }
     } catch (err) {
       console.error('loadProfile error:', err)
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [applyLoadedProfile]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadTrust = useCallback(async (userId?: string) => {
     try {
@@ -848,6 +854,49 @@ export default function ProfilePage() {
 
     const init = async () => {
       try {
+        const loadOwnProfileFromApi = async () => {
+          try {
+            const res = await fetch('/api/profile', { cache: 'no-store' })
+            if (!res.ok) return null
+            const data = await res.json() as { user?: User | null; profile?: Profile | null }
+            if (data.profile) applyLoadedProfile(data.profile)
+            return data.user ?? null
+          } catch {
+            return null
+          }
+        }
+
+        const loadOwnProfileExtras = async (userId: string) => {
+          try {
+            const [countRes, buyRes, sellRes] = await Promise.all([
+              supabase
+                .from('user_follows')
+                .select('*', { count: 'exact', head: true })
+                .eq('following_id', userId),
+              supabase.from('orders').select('*', { count: 'exact', head: true }).eq('buyer_id', userId),
+              supabase.from('orders').select('*', { count: 'exact', head: true }).eq('seller_id', userId),
+            ])
+            setFollowerCount(countRes.count ?? 0)
+            setBuyingCount(buyRes.count ?? 0)
+            setSellingCount(sellRes.count ?? 0)
+            await loadTrust()
+          } catch (err) {
+            console.error('loadOwnProfileExtras error:', err)
+          }
+        }
+
+        if (!viewingId) {
+          const serverUser = await loadOwnProfileFromApi()
+          if (serverUser) {
+            setUser(serverUser)
+            setIsOwnProfile(true)
+            setSessionRestoreSuspected(false)
+            setLoading(false)
+            void loadOwnProfileExtras(serverUser.id)
+            return
+          }
+        }
+
         const getUserWithRetry = async () => {
           for (let attempt = 0; attempt < 3; attempt++) {
             const { data: { user: currentUser }, error } = await supabase.auth.getUser()
@@ -872,26 +921,7 @@ export default function ProfilePage() {
             if (res.ok) {
               const data = await res.json() as { user?: User | null; profile?: Profile | null }
               if (data.profile) {
-                setProfile(data.profile)
-                setCoverSettings(getCoverSettingsFromProfile(data.profile))
-                setForm({
-                  full_name: data.profile.full_name ?? '',
-                  bio: data.profile.bio ?? '',
-                  location: data.profile.location ?? '',
-                  website: data.profile.website ?? '',
-                  linkedin_url:  data.profile.linkedin_url  ?? '',
-                  instagram_url: data.profile.instagram_url ?? '',
-                  twitter_url:   data.profile.twitter_url   ?? '',
-                  github_url:    data.profile.github_url    ?? '',
-                  tiktok_url:    data.profile.tiktok_url    ?? '',
-                  youtube_url:   data.profile.youtube_url   ?? '',
-                  website_url:   data.profile.website_url   ?? '',
-                  professional_headline: data.profile.professional_headline ?? '',
-                  professional_experience_text: experienceToText(data.profile.professional_experience),
-                  verification_details_text: data.profile.verification_details?.note ?? '',
-                })
-                setVatRegistered(!!data.profile.vat_registered)
-                setVatNumber(String(data.profile.vat_number ?? ''))
+                applyLoadedProfile(data.profile)
               }
               if (data.user) return data.user
             }
@@ -933,21 +963,10 @@ export default function ProfilePage() {
           // Own profile
           setIsOwnProfile(true)
           await Promise.all([loadProfile(u.id), loadTrust()])
-
-          // Real follower count from user_follows
-          const { count } = await supabase
-            .from('user_follows')
-            .select('*', { count: 'exact', head: true })
-            .eq('following_id', u.id)
-          setFollowerCount(count ?? 0)
-
-          // Dual-role order counts
-          const [buyRes, sellRes] = await Promise.all([
-            supabase.from('orders').select('*', { count: 'exact', head: true }).eq('buyer_id', u.id),
-            supabase.from('orders').select('*', { count: 'exact', head: true }).eq('seller_id', u.id),
-          ])
-          setBuyingCount(buyRes.count ?? 0)
-          setSellingCount(sellRes.count ?? 0)
+          setLoading(false)
+          // Counts are secondary badges; load them after the profile shell is
+          // visible so slow aggregate queries don't make /profile feel stuck.
+          void loadOwnProfileExtras(u.id)
         } else if (!viewingId && !u && hasSupabaseCookie()) {
           // Own profile requested, auth cookie present, but user not restored.
           // Keep the UX in a recovery state instead of showing the anonymous
