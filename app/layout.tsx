@@ -8,6 +8,7 @@ import "./globals.css";
 // initialises and the canvas ends up 0×0 inside a visible wrapper.
 import "maplibre-gl/dist/maplibre-gl.css";
 import { CurrencyProvider } from "@/context/CurrencyContext";
+import { BasketProvider } from "@/context/BasketContext";
 import AppShell from "@/components/AppShell";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
 import { OrganizationSchema } from "@/components/seo/OrganizationSchema";
@@ -137,10 +138,12 @@ export default function RootLayout({
         <OrganizationSchema />
 
         <CurrencyProvider>
-          <AppShell>
-            {children}
-          </AppShell>
-          <PWAInstallBanner />
+          <BasketProvider>
+            <AppShell>
+              {children}
+            </AppShell>
+            <PWAInstallBanner />
+          </BasketProvider>
         </CurrencyProvider>
 
         {/* Google Analytics 4 — loaded after page is interactive */}

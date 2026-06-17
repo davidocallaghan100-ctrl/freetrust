@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { insertNotification } from '@/lib/notifications/insert'
 import { sendEmail } from '@/lib/email/send'
+import { recordAnalyticsEvent } from '@/lib/analytics-server'
 import {
   ALLOWED_MESSAGE_ATTACHMENT_TYPES,
   MAX_MESSAGE_ATTACHMENTS,
@@ -316,6 +317,17 @@ export async function POST(
       console.error('[POST /api/messages/:id] insert failed:', msgErr)
       return NextResponse.json({ error: msgErr.message }, { status: 500 })
     }
+
+    void Promise.all(
+      otherParticipantIds.map(recipientId => recordAnalyticsEvent({
+        userId: recipientId,
+        actorId: user.id,
+        eventType: 'message_received',
+        entityType: 'message',
+        entityId: message.id,
+        metadata: { conversation_id: conversationId },
+      })),
+    )
 
     // Update conversation timestamp + sender last_read_at. Both
     // via admin client. Done in parallel since they're independent.

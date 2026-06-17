@@ -59,6 +59,12 @@ const DRAWER_SECTIONS = [
       { href: '/invest/deck', label: 'Investor Deck',       icon: '📊' },
     ],
   },
+  {
+    label: 'CREATE',
+    links: [
+      { href: '/agents', label: 'Agents', icon: '😎' },
+    ],
+  },
 ]
 
 type AdminPage = {
@@ -312,6 +318,8 @@ export default function Nav() {
   const activeProfileIdentity = feedIdentity?.type === 'org'
     ? { name: feedIdentity.name, image: feedIdentity.logo_url, subtitle: feedIdentity.userRole === 'admin' ? 'Admin page' : 'Owner page' }
     : { name: user?.name ?? 'Your Profile', image: user?.avatar ?? null, subtitle: user?.email ?? '' }
+
+  if (pathname === '/agents') return null
 
   return (
     <>

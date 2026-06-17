@@ -19,7 +19,7 @@ Advise on how to present the price on the listing. Examples: anchoring, decoy pr
 **5. Pricing Test to Try**
 Suggest one A/B pricing experiment they can run in the next 30 days, with a hypothesis and success metric.
 
-Be direct and specific. Avoid hedging. The user wants a real recommendation, not a list of considerations. Use UK/Irish English spelling.`;
+Be direct and specific. Avoid hedging. The user wants a real recommendation, not a list of considerations. If the user gives too little context, state assumptions clearly and still produce one actionable price test. Use UK/Irish English spelling.`;
 
 export const pricingAdviserConfig: AgentConfig = {
   name: 'pricingAdviser',
@@ -27,7 +27,8 @@ export const pricingAdviserConfig: AgentConfig = {
   icon: '💡',
   creditCost: 4,
   oneLineDescription: "Analyses your listing and tells you if you're priced to win — or leaving money on the table.",
+  useCase: 'Use before publishing or changing a listing price, packaging tiers, bundles, or A/B price tests.',
   systemPrompt: PRICING_ADVISER_PROMPT,
-  model: 'claude-sonnet-4-6',
+  model: 'claude-sonnet-4-5-20250929',
   maxTokens: 1200,
 };

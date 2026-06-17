@@ -22,7 +22,7 @@ Your job is to:
 
 Be specific and practical. Avoid generic advice. Tailor every recommendation to the live data provided. Use UK/Irish English spelling.
 
-Format your output with clear headings and numbered steps. Use encouraging but honest language.`;
+Format your output with clear headings and numbered steps. Use encouraging but honest language. Never return placeholder sections; if a signal is missing or zero, say what that means and give the member the best next FreeTrust screen to open.`;
 
 export const trustScoreOptimiserConfig: AgentConfig = {
   name: 'trustScoreOptimiser',
@@ -30,7 +30,8 @@ export const trustScoreOptimiserConfig: AgentConfig = {
   icon: '🏆',
   creditCost: 3,
   oneLineDescription: 'Analyses your real activity data and gives you a ranked action plan to grow your TrustScore fast.',
+  useCase: 'Use when you want live, account-aware TrustScore analysis and the next actions that will improve it fastest.',
   systemPrompt: TRUST_SCORE_OPTIMISER_PROMPT,
-  model: 'claude-sonnet-4-6',
+  model: 'claude-sonnet-4-5-20250929',
   maxTokens: 1500,
 };

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Avatar from '@/components/Avatar'
 import { createClient } from '@/lib/supabase/client'
 import { compressImage } from '@/lib/image-compression'
+import { trackEvent, trackEventOnce } from '@/lib/analytics'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1241,6 +1242,7 @@ export default function PostCard({
   const [reactionTotal, setReactionTotal] = useState(() => normaliseReactionCounts(post.reactions ?? EMPTY_REACTION_COUNTS).total)
   const reactionPickerRef = useRef<HTMLDivElement | null>(null)
   const reactBtnWrapRef = useRef<HTMLDivElement | null>(null)
+  const cardRef = useRef<HTMLElement | null>(null)
   const [pickerPos, setPickerPos] = useState<{ top: number; left: number } | null>(null)
   const commentTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const identityPickerRef = useRef<HTMLDivElement | null>(null)
@@ -1376,6 +1378,15 @@ export default function PostCard({
         const freshCounts = data.counts ? normaliseReactionCounts({ ...data.counts, total: data.total }) : { ...optimisticCounts, total: data.total }
         setReactionCounts(freshCounts)
         setReactionTotal(freshCounts.total)
+        if (nextReaction) {
+          void trackEvent({
+            userId: authorId,
+            eventType: 'post_like',
+            entityType: 'post',
+            entityId: post.id,
+            metadata: { title: postTitle ?? stripInternalMarkers(postContent)?.slice(0, 80) ?? null, reaction: nextReaction },
+          })
+        }
       } else {
         // Roll back
         setUserReaction(wasReacted)
@@ -1661,6 +1672,35 @@ export default function PostCard({
   const isPhotoSpotifyAttachment = post.type === 'photo' && Boolean(attachedUrl && getSpotifyEmbedUrl(attachedUrl))
 
   useEffect(() => {
+    if (!authorId || currentUserId === authorId) return
+    const title = postTitle ?? stripInternalMarkers(postContent)?.slice(0, 80) ?? null
+    const payload = {
+      userId: authorId,
+      eventType: 'post_view' as const,
+      entityType: 'post' as const,
+      entityId: post.id,
+      metadata: { title, type: post.type },
+    }
+    if (expanded) {
+      trackEventOnce(`post_view:${post.id}`, payload)
+      return
+    }
+    const node = cardRef.current
+    if (!node || typeof IntersectionObserver === 'undefined') {
+      trackEventOnce(`post_view:${post.id}`, payload)
+      return
+    }
+    const observer = new IntersectionObserver(entries => {
+      const entry = entries[0]
+      if (!entry?.isIntersecting || entry.intersectionRatio < 0.35) return
+      trackEventOnce(`post_view:${post.id}`, payload)
+      observer.disconnect()
+    }, { threshold: [0.35, 0.55, 0.75] })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [authorId, currentUserId, expanded, post.id, post.type, postContent, postTitle])
+
+  useEffect(() => {
     if (!attachedUrl || (spotifyMarkerEncoded && spotifyFromMarker?.previewUrl)) {
       setFetchedSpotify(null)
       return
@@ -1737,7 +1777,16 @@ export default function PostCard({
           posted_as_organisation_id: feedIdentity?.type === 'org' ? feedIdentity.id : null,
         }),
       })
-      if (res.ok) { setNewComment(''); setCommentCount(c => c + 1); await loadComments() }
+      if (res.ok) {
+        void trackEvent({
+          userId: authorId,
+          eventType: 'post_comment',
+          entityType: 'post',
+          entityId: post.id,
+          metadata: { title: postTitle ?? stripInternalMarkers(postContent)?.slice(0, 80) ?? null },
+        })
+        setNewComment(''); setCommentCount(c => c + 1); await loadComments()
+      }
     } catch { /* silent */ }
     finally { setSubmitting(false) }
   }
@@ -1769,11 +1818,28 @@ export default function PostCard({
   const shareText = post.title ?? post.content ?? ''
   const hasReactionCounts = reactionCounts.total > 0
 
+  const toggleShare = () => {
+    setShowShare(prev => {
+      const opening = !prev
+      if (opening) {
+        setShareCount(c => c + 1)
+        void trackEvent({
+          userId: authorId,
+          eventType: 'post_share',
+          entityType: 'post',
+          entityId: post.id,
+          metadata: { title: postTitle ?? stripInternalMarkers(postContent)?.slice(0, 80) ?? null },
+        })
+      }
+      return opening
+    })
+  }
+
   // If deleted, vanish from feed instantly
   if (deleted) return null
 
   return (
-    <article className={`ft-post-card${expanded ? ' ft-post-card--expanded' : ''}`} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', marginBottom: '12px', overflow: 'hidden', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+    <article ref={cardRef} className={`ft-post-card${expanded ? ' ft-post-card--expanded' : ''}`} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', marginBottom: '12px', overflow: 'hidden', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
 
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '14px 12px 10px 16px', minWidth: 0, overflow: 'visible', position: 'relative', zIndex: showMenu ? 200 : 2 }}>
@@ -2299,7 +2365,7 @@ export default function PostCard({
           icon="📤"
           label={shareCount > 0 ? shareCount.toString() : 'Share'}
           active={showShare}
-          onClick={() => { setShowShare(v => !v); if (!showShare) setShareCount(c => c + 1) }}
+          onClick={toggleShare}
         />
         <ActionBtn
           icon={saved ? '🔖' : '🏷️'}

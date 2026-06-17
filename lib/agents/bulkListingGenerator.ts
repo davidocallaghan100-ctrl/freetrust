@@ -22,6 +22,7 @@ Rules:
 - Separate each listing with a clear divider line (---)
 - No emojis in titles or descriptions
 - If any item is unsafe, illegal, or sexual, skip it with a note
+- Do not output placeholder fields. Every generated listing must be ready to paste into FreeTrust.
 
 Produce all listings in sequence. No preamble or closing commentary.`;
 
@@ -31,8 +32,9 @@ export const bulkListingGeneratorConfig: AgentConfig = {
   icon: '📦',
   creditCost: 15,
   oneLineDescription: 'Paste a list of products or services and get polished, SEO-ready listings for all of them at once.',
+  useCase: 'Use when you have multiple products or services and want editable FreeTrust listing drafts in one batch.',
   systemPrompt: BULK_LISTING_GENERATOR_PROMPT,
-  model: 'claude-sonnet-4-6',
+  model: 'claude-sonnet-4-5-20250929',
   maxTokens: 4000,
   // Large output — stream to avoid Vercel's 60-second response timeout
   streaming: true,

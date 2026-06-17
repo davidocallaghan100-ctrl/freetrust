@@ -1,5 +1,3 @@
-import type { AgentConfig } from './types';
-
 export const TRANSLATOR_PROMPT = `You are the FreeTrust Translator.
 
 FreeTrust is a global community marketplace. You translate listings, messages, articles, and event copy between any two languages the member specifies.
@@ -29,13 +27,15 @@ Rules:
 
 Respond with JSON only. No preamble, no markdown fences.`;
 
-export const translatorConfig: AgentConfig = {
+// Deprecated: no longer registered or shown in the FreeTrust Agents feature.
+export const translatorConfig = {
   name: 'translator',
   displayName: 'Translator',
   icon: '🌐',
   creditCost: 2,
   oneLineDescription: 'Translates any content between any two languages — listings, messages, articles, or events.',
+  useCase: 'Use when you need marketplace copy, messages, articles, or event content translated without losing tone or intent.',
   systemPrompt: TRANSLATOR_PROMPT,
-  model: 'claude-sonnet-4-6',
+  model: 'claude-sonnet-4-5-20250929',
   maxTokens: 2000,
 };

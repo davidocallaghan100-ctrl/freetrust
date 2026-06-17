@@ -27,7 +27,8 @@ export const articleDrafterConfig: AgentConfig = {
   icon: '✍️',
   creditCost: 8,
   oneLineDescription: 'Helps you publish long-form articles (worth ₮75 each) from a rough outline.',
+  useCase: 'Use when you have an idea, outline, or expertise area and want a full article draft for FreeTrust Articles.',
   systemPrompt: ARTICLE_DRAFTER_PROMPT,
-  model: 'claude-sonnet-4-6',
+  model: 'claude-sonnet-4-5-20250929',
   maxTokens: 3000,
 };

@@ -39,7 +39,7 @@ const QUICK_LINKS = [
   { href: '/browse',     icon: '🔍', label: 'Directory'    },
   { href: '/impact',     icon: '🌍', label: 'Impact'        },
   { href: '/wallet',     icon: '💎', label: 'Wallet'        },
-  { href: '/analytics',  icon: '📊', label: 'Analytics'    },
+  { href: '/dashboard/analytics', icon: '📊', label: 'Analytics' },
   { href: '/settings',   icon: '⚙️', label: 'Settings'     },
 ]
 

@@ -19,7 +19,7 @@ Give a week-by-week plan targeting a realistic next milestone based on what they
 **5. Upsell / Bundle Idea**
 Suggest one concrete way to increase average order value — a package, an add-on, or a tiered service structure based on what they already sell.
 
-Be analytical and specific. Avoid platitudes. Ground every recommendation in what the user actually told you. Use UK/Irish English spelling.`;
+Be analytical and specific. Avoid platitudes. Ground every recommendation in what the user actually told you. If data is missing, say what is missing and still give a conservative next action. Never output placeholder examples as if they were results. Use UK/Irish English spelling.`;
 
 export const revenueIntelligenceConfig: AgentConfig = {
   name: 'revenueIntelligence',
@@ -27,7 +27,8 @@ export const revenueIntelligenceConfig: AgentConfig = {
   icon: '📊',
   creditCost: 5,
   oneLineDescription: 'Describes your earnings patterns and shows you where your next revenue milestone is most likely to come from.',
+  useCase: 'Use when you want a seller-focused revenue diagnosis, next milestone, bundle idea, or 30-day sales plan.',
   systemPrompt: REVENUE_INTELLIGENCE_PROMPT,
-  model: 'claude-sonnet-4-6',
+  model: 'claude-sonnet-4-5-20250929',
   maxTokens: 1500,
 };

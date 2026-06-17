@@ -9,6 +9,7 @@ import { createClient as createAnonClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import ListingQualityBadge from '@/components/marketplace/ListingQualityBadge'
 import ReviewsSection from '@/components/ReviewsSection'
+import { trackEvent, trackEventOnce } from '@/lib/analytics'
 
 const AppleGooglePayButton = dynamic(() => import('@/components/payments/AppleGooglePayButton'), { ssr: false })
 const DeliveryZoneMap = dynamic(() => import('@/components/DeliveryZoneMap'), { ssr: false })
@@ -140,6 +141,7 @@ export default function ProductDetailPage() {
   const [cartCount, setCartCount] = useState(0)
   const [payError, setPayError] = useState<string | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [authChecked, setAuthChecked] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -158,6 +160,13 @@ export default function ProductDetailPage() {
       })
       if (res.ok) {
         const data = await res.json()
+        void trackEvent({
+          userId: sellerId,
+          eventType: 'product_enquiry',
+          entityType: 'product',
+          entityId: listing?.id ?? null,
+          metadata: { title: listingTitle },
+        })
         router.push(data.conversation_id ? `/messages/${data.conversation_id}` : '/messages')
       }
     } catch {
@@ -179,11 +188,15 @@ export default function ProductDetailPage() {
   useEffect(() => {
     const sb = createClient();
     (async () => {
-      const { data: { user } } = await sb.auth.getUser()
-      if (!user) return
-      setCurrentUserId(user.id)
-      const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).single()
-      if (profile?.role === 'admin') setIsAdmin(true)
+      try {
+        const { data: { user } } = await sb.auth.getUser()
+        if (!user) return
+        setCurrentUserId(user.id)
+        const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).single()
+        if (profile?.role === 'admin') setIsAdmin(true)
+      } finally {
+        setAuthChecked(true)
+      }
     })()
   }, [])
 
@@ -251,6 +264,19 @@ export default function ProductDetailPage() {
 
   // Reset image index when listing changes
   useEffect(() => { setImgIdx(0) }, [listing?.id])
+
+  useEffect(() => {
+    if (!authChecked) return
+    if (!listing?.id || !listing.seller_id) return
+    if (currentUserId === listing.seller_id || isAdmin) return
+    trackEventOnce(`product_view:${listing.id}`, {
+      userId: listing.seller_id,
+      eventType: 'product_view',
+      entityType: 'product',
+      entityId: listing.id,
+      metadata: { title: listing.title },
+    })
+  }, [authChecked, currentUserId, isAdmin, listing?.id, listing?.seller_id, listing?.title])
 
   // ─── Theme ─────────────────────────────────────────────────────────────────
   const bg = '#030712'

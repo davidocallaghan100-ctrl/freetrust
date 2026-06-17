@@ -8,6 +8,7 @@ import { ALL_CATEGORIES } from '@/lib/service-categories'
 import ListingQualityBadge from '@/components/marketplace/ListingQualityBadge'
 import { useCurrency, type CurrencyCode } from '@/context/CurrencyContext'
 import ReviewsSection from '@/components/ReviewsSection'
+import { trackEvent, trackEventOnce } from '@/lib/analytics'
 
 // ─── Message Seller Hook ──────────────────────────────────────────────────────
 
@@ -15,7 +16,7 @@ function useMessageSeller() {
   const router = useRouter()
   const [msgLoading, setMsgLoading] = useState(false)
 
-  const messageSeller = async (sellerId: string, listingTitle: string) => {
+  const messageSeller = async (sellerId: string, listingTitle: string, listingId: string) => {
     setMsgLoading(true)
     try {
       const sb = createClient()
@@ -28,6 +29,13 @@ function useMessageSeller() {
       })
       if (res.ok) {
         const data = await res.json()
+        void trackEvent({
+          userId: sellerId,
+          eventType: 'service_enquiry',
+          entityType: 'service',
+          entityId: listingId,
+          metadata: { title: listingTitle },
+        })
         router.push(data.conversation_id ? `/messages/${data.conversation_id}` : '/messages')
       }
     } catch {
@@ -201,6 +209,7 @@ export default function ServiceDetailPage() {
   const [notFound, setNotFound] = useState(false)
   // reviews/reviewsAvg/reviewsLoading removed — ReviewsSection component handles display
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [authChecked, setAuthChecked] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -208,11 +217,15 @@ export default function ServiceDetailPage() {
   useEffect(() => {
     const sb = createClient();
     (async () => {
-      const { data: { user } } = await sb.auth.getUser()
-      if (!user) return
-      setCurrentUserId(user.id)
-      const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).single()
-      if (profile?.role === 'admin') setIsAdmin(true)
+      try {
+        const { data: { user } } = await sb.auth.getUser()
+        if (!user) return
+        setCurrentUserId(user.id)
+        const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).single()
+        if (profile?.role === 'admin') setIsAdmin(true)
+      } finally {
+        setAuthChecked(true)
+      }
     })()
   }, [])
 
@@ -288,6 +301,19 @@ export default function ServiceDetailPage() {
 
     load()
   }, [id])
+
+  useEffect(() => {
+    if (!authChecked) return
+    if (!svc?.id || !svc.seller?.id) return
+    if (currentUserId === svc.seller.id || isAdmin) return
+    trackEventOnce(`service_view:${svc.id}`, {
+      userId: svc.seller.id,
+      eventType: 'service_view',
+      entityType: 'service',
+      entityId: svc.id,
+      metadata: { title: svc.title },
+    })
+  }, [authChecked, currentUserId, isAdmin, svc?.id, svc?.seller?.id, svc?.title])
 
   if (loading) return <LoadingSkeleton />
   if (notFound || !svc) return <NotFound />
@@ -479,7 +505,7 @@ export default function ServiceDetailPage() {
                 </Link>
                 {currentUserId !== svc.seller.id && (
                   <button
-                    onClick={() => messageSeller(svc.seller.id, svc.title)}
+                    onClick={() => messageSeller(svc.seller.id, svc.title, svc.id)}
                     disabled={msgLoading}
                     style={{ flex: 1, padding: '9px', textAlign: 'center', border: '1px solid rgba(56,189,248,0.3)', borderRadius: '10px', fontSize: '12px', fontWeight: 700, color: '#38bdf8', background: 'rgba(56,189,248,0.07)', cursor: 'pointer', fontFamily: 'inherit', opacity: msgLoading ? 0.6 : 1 }}
                   >

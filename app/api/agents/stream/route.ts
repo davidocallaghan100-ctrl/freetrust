@@ -7,6 +7,85 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getAgent } from '@/lib/agents'
 
+type AgentAttachment = {
+  name?: unknown
+  type?: unknown
+  size?: unknown
+  kind?: unknown
+  content?: unknown
+  dataUrl?: unknown
+}
+
+const MAX_ATTACHMENTS = 5
+const MAX_TEXT_ATTACHMENT_CHARS = 20_000
+const SUPPORTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+const CHAT_FORMATTING_RULE = `
+
+FreeTrust chat formatting rule: for any user-facing prose, do not use Markdown formatting. Do not include asterisk characters or hyphen/dash bullet markers. Write in clean plain text paragraphs with numbered labels only when structure is needed.`
+
+function normaliseAttachments(raw: unknown) {
+  if (!Array.isArray(raw)) return []
+  return raw.slice(0, MAX_ATTACHMENTS).map((item): AgentAttachment => item && typeof item === 'object' ? item as AgentAttachment : {})
+}
+
+function attachmentLabel(att: AgentAttachment, index: number) {
+  const name = typeof att.name === 'string' && att.name.trim() ? att.name.trim().slice(0, 120) : `attachment-${index + 1}`
+  const type = typeof att.type === 'string' ? att.type : 'unknown'
+  const size = typeof att.size === 'number' && Number.isFinite(att.size) ? `, ${Math.round(att.size / 1024)} KB` : ''
+  return `${name} (${type}${size})`
+}
+
+function parseImageDataUrl(att: AgentAttachment) {
+  const type = typeof att.type === 'string' ? att.type : ''
+  const dataUrl = typeof att.dataUrl === 'string' ? att.dataUrl : ''
+  if (!SUPPORTED_IMAGE_TYPES.has(type)) return null
+  const match = dataUrl.match(/^data:(image\/(?:jpeg|png|gif|webp));base64,([A-Za-z0-9+/=]+)$/)
+  if (!match) return null
+  return { media_type: match[1], data: match[2] }
+}
+
+function buildUserContent(userInput: string, attachments: AgentAttachment[]): string | unknown[] {
+  if (attachments.length === 0) return userInput
+
+  const content: Array<Record<string, unknown>> = [
+    {
+      type: 'text',
+      text: `${userInput || 'Use the attached files and photos as context for this FreeTrust agent run.'}\n\nAttached context:`,
+    },
+  ]
+
+  attachments.forEach((att, index) => {
+    const kind = typeof att.kind === 'string' ? att.kind : ''
+    const label = attachmentLabel(att, index)
+    if (kind === 'text' && typeof att.content === 'string' && att.content.trim()) {
+      content.push({
+        type: 'text',
+        text: `\n\n--- Attached file: ${label} ---\n${att.content.slice(0, MAX_TEXT_ATTACHMENT_CHARS)}`,
+      })
+      return
+    }
+
+    if (kind === 'image') {
+      const image = parseImageDataUrl(att)
+      if (image) {
+        content.push({ type: 'text', text: `\n\n--- Attached photo: ${label} ---` })
+        content.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: image.media_type,
+            data: image.data,
+          },
+        })
+        return
+      }
+      content.push({ type: 'text', text: `\n\n--- Attached photo skipped: ${label} (unsupported image type for AI vision) ---` })
+    }
+  })
+
+  return content
+}
+
 // POST /api/agents/stream
 //
 // Same auth + credit flow as /api/agents/run, but streams the model
@@ -54,10 +133,12 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null) as {
     agent?: unknown
     input?: unknown
+    attachments?: unknown
   } | null
 
   const agentName = typeof body?.agent === 'string' ? body.agent : ''
   const userInput = typeof body?.input === 'string' ? body.input.trim() : ''
+  const attachments = normaliseAttachments(body?.attachments)
 
   const config = getAgent(agentName)
   if (!config) {
@@ -72,8 +153,8 @@ export async function POST(req: NextRequest) {
       headers: { 'Content-Type': 'text/event-stream' },
     })
   }
-  if (!userInput || userInput.length < 3) {
-    return new Response(sse({ type: 'error', error: 'Input must be at least 3 characters' }), {
+  if ((!userInput || userInput.length < 3) && attachments.length === 0) {
+    return new Response(sse({ type: 'error', error: 'Input must be at least 3 characters, or attach a supported file/photo.' }), {
       status: 400,
       headers: { 'Content-Type': 'text/event-stream' },
     })
@@ -138,12 +219,24 @@ export async function POST(req: NextRequest) {
       }
 
       try {
-        const anthropicStream = await anthropic.messages.stream({
+        const request: any = {
           model:      config.model,
           max_tokens: config.maxTokens,
-          system:     config.systemPrompt,
-          messages: [{ role: 'user', content: userInput }],
-        })
+          system:     `${config.systemPrompt}${CHAT_FORMATTING_RULE}`,
+          messages: [{ role: 'user', content: buildUserContent(userInput, attachments) as any }],
+        }
+
+        if (config.webSearch) {
+          request.tools = [
+            {
+              type: 'web_search_20250305',
+              name: 'web_search',
+              max_uses: 5,
+            },
+          ]
+        }
+
+        const anthropicStream = await anthropic.messages.stream(request)
 
         for await (const event of anthropicStream) {
           if (

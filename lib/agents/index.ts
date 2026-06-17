@@ -1,4 +1,5 @@
 import type { AgentConfig, AgentName } from './types';
+import { generalResearchConfig } from './generalResearch';
 import { listingCreatorConfig } from './listingCreator';
 import { matchFinderConfig } from './matchFinder';
 import { messageDrafterConfig } from './messageDrafter';
@@ -7,15 +8,16 @@ import { articleDrafterConfig } from './articleDrafter';
 import { eventPromoterConfig } from './eventPromoter';
 import { applicationWriterConfig } from './applicationWriter';
 import { salesDevelopmentConfig } from './salesDevelopment';
-import { translatorConfig } from './translator';
 import { trustScoreOptimiserConfig } from './trustScoreOptimiser';
 import { bulkListingGeneratorConfig } from './bulkListingGenerator';
+import { imageGeneratorConfig } from './imageGenerator';
 import { revenueIntelligenceConfig } from './revenueIntelligence';
 import { pricingAdviserConfig } from './pricingAdviser';
 import { collabMatchmakerConfig } from './collabMatchmaker';
 import { contentRepurposerConfig } from './contentRepurposer';
 
 export const AGENT_REGISTRY: Record<AgentName, AgentConfig> = {
+  generalResearch: generalResearchConfig,
   listingCreator: listingCreatorConfig,
   matchFinder: matchFinderConfig,
   messageDrafter: messageDrafterConfig,
@@ -24,9 +26,9 @@ export const AGENT_REGISTRY: Record<AgentName, AgentConfig> = {
   eventPromoter: eventPromoterConfig,
   applicationWriter: applicationWriterConfig,
   salesDevelopment: salesDevelopmentConfig,
-  translator: translatorConfig,
   trustScoreOptimiser: trustScoreOptimiserConfig,
   bulkListingGenerator: bulkListingGeneratorConfig,
+  imageGenerator: imageGeneratorConfig,
   revenueIntelligence: revenueIntelligenceConfig,
   pricingAdviser: pricingAdviserConfig,
   collabMatchmaker: collabMatchmakerConfig,

@@ -24,7 +24,7 @@ Suggest a concrete arrangement: referral fee %, co-listing offer, package bundle
 **5. Follow-Up Message**
 A short (3–4 sentence) follow-up to send if they don't reply after 5–7 days. Friendly, not pushy.
 
-Do not be generic. Every recommendation should feel tailored to what this specific person described. Use UK/Irish English spelling.`;
+Do not be generic. Every recommendation should feel tailored to what this specific person described. If no real member names are provided, recommend target profiles and search queries instead of inventing people. Use UK/Irish English spelling.`;
 
 export const collabMatchmakerConfig: AgentConfig = {
   name: 'collabMatchmaker',
@@ -32,7 +32,8 @@ export const collabMatchmakerConfig: AgentConfig = {
   icon: '🤝',
   creditCost: 6,
   oneLineDescription: 'Finds your ideal collaborators on FreeTrust and writes your opening message.',
+  useCase: 'Use when you want referral partners, bundle collaborators, co-hosts, or a warm collaboration message.',
   systemPrompt: COLLAB_MATCHMAKER_PROMPT,
-  model: 'claude-sonnet-4-6',
+  model: 'claude-sonnet-4-5-20250929',
   maxTokens: 1500,
 };

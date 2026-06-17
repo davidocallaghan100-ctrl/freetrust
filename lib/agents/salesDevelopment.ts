@@ -73,7 +73,8 @@ export const salesDevelopmentConfig: AgentConfig = {
   icon: '🚀',
   creditCost: 5,
   oneLineDescription: 'Helps you win business off-platform — ICP, cold email, LinkedIn, discovery questions, and objection handling.',
+  useCase: 'Use when you are doing outbound sales outside FreeTrust and need ICP, email, LinkedIn, call, or objection help.',
   systemPrompt: SALES_DEVELOPMENT_PROMPT,
-  model: 'claude-sonnet-4-6',
+  model: 'claude-sonnet-4-5-20250929',
   maxTokens: 1800,
 };

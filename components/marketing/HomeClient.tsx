@@ -7,6 +7,8 @@ import { FAQS } from '@/lib/faq'
 import { eventPosterDataUri, isUsableEventImage } from '@/lib/events/display'
 import ROICalculator from './ROICalculator'
 import HeroGlobe from './HeroGlobe'
+import LegalDocModal from '@/components/legal/LegalDocModal'
+import { legalDocs } from '@/lib/legalDocs'
 
 // HeroGlobe is imported from ./HeroGlobe — Mapbox GL realistic globe with auto-rotation
 
@@ -325,6 +327,7 @@ const CAT_COLORS_HOME: Record<string, string> = {
 // ── Main component ────────────────────────────────────────────────────────────
 export default function HomeClient({ initialCounts }: HomeClientProps) {
   const { format } = useCurrency()
+  const [isLegalLibraryOpen, setIsLegalLibraryOpen] = useState(false)
   const [stats, setStats] = useState<StatsData | null>(null)
   const [featuredServices, setFeaturedServices] = useState<FeaturedService[]>([])
   const [featuredProducts, setFeaturedProducts] = useState<FeaturedProduct[]>([])
@@ -403,7 +406,6 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
   const pl = stats?.listings.products ?? 0
   const goal = stats?.foundingGoal ?? 1000
   const pct = Math.min((tm / goal) * 100, 100)
-
   return (
     <main style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', overflowX: 'hidden' }}>
 
@@ -1189,8 +1191,31 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           <Link href="/terms"   style={{ color: '#64748b', textDecoration: 'none' }}>Terms of Service</Link>
           <span style={{ color: '#475569' }}>Payments stay inside FreeTrust</span>
         </div>
+        <div style={{ maxWidth: 760, margin: '0 auto 0.8rem', display: 'flex', justifyContent: 'center' }}>
+          <button
+            type="button"
+            onClick={() => setIsLegalLibraryOpen(true)}
+            style={{
+              color: '#99f6e4',
+              background: 'rgba(45,212,191,0.06)',
+              border: '1px solid rgba(45,212,191,0.24)',
+              borderRadius: 999,
+              minHeight: 44,
+              padding: '0.65rem 1.15rem',
+              fontSize: '0.82rem',
+              lineHeight: 1,
+              fontWeight: 800,
+              font: 'inherit',
+              cursor: 'pointer',
+              boxShadow: '0 12px 30px rgba(15,23,42,0.18)',
+            }}
+          >
+            Legal
+          </button>
+        </div>
         <div style={{ fontSize: '0.72rem', color: '#334155' }}>Trust-based commerce for a safer internet.</div>
       </footer>
+      <LegalDocModal docs={legalDocs} isOpen={isLegalLibraryOpen} onClose={() => setIsLegalLibraryOpen(false)} />
     </main>
   )
 }

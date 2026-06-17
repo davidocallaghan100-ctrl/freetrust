@@ -120,6 +120,7 @@ function PushPromptBanner({ onDismiss }: { onDismiss: () => void }) {
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isAuth = AUTH_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
+  const isImmersive = pathname === '/agents'
   const [showPushBanner, setShowPushBanner] = useState(false)
 
   // Globalisation: on first authenticated page load, fire the geo-init
@@ -129,7 +130,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // so we don't re-check within the same tab.
   // v2: session key bumped so existing members without location re-trigger.
   useEffect(() => {
-    if (isAuth) return
+    if (isAuth || isImmersive) return
     if (typeof window === 'undefined') return
     try {
       if (sessionStorage.getItem(GEO_INIT_SESSION_KEY)) return
@@ -137,7 +138,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     } catch { /* session storage disabled — still fire once per mount */ }
     // Fire-and-forget — never block the UI on this
     fetch('/api/me/geo-init', { method: 'POST', cache: 'no-store' }).catch(() => {})
-  }, [isAuth])
+  }, [isAuth, isImmersive])
 
   // Register the push notification service worker (sw-push.js) once per session.
   // This is separate from the Workbox sw.js so it won't be overwritten by builds.
@@ -154,7 +155,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // - Device supports push (or is iOS-not-installed — show "add to home screen" tip)
   // - User hasn't been prompted yet
   useEffect(() => {
-    if (isAuth) return
+    if (isAuth || isImmersive) return
     if (typeof window === 'undefined') return
     if (localStorage.getItem(PUSH_PROMPTED_KEY)) return
 
@@ -178,9 +179,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }, 5000)
 
     return () => clearTimeout(timer)
-  }, [isAuth])
+  }, [isAuth, isImmersive])
 
-  if (isAuth) {
+  if (isAuth || isImmersive) {
     return (
       <div style={{ minHeight: '100vh', background: '#0f172a' }}>
         {children}

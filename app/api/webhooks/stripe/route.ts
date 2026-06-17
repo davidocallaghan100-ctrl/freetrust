@@ -325,6 +325,148 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 
   const supabase = createAdminClient()
 
+  // ── Phase 1C product basket: automatic multi-seller Connect transfers ─────
+  if (type === 'product_basket') {
+    if (!stripe) {
+      console.error('[PaymentIntent] product_basket cannot transfer: Stripe is not configured')
+      return
+    }
+    const orderId = meta.order_id
+    if (!orderId) {
+      console.error('[PaymentIntent] product_basket missing order_id')
+      return
+    }
+
+    const latestCharge = typeof paymentIntent.latest_charge === 'string'
+      ? paymentIntent.latest_charge
+      : paymentIntent.latest_charge?.id
+
+    try {
+      await supabase
+        .from('orders')
+        .update({
+          status: 'paid',
+          stripe_payment_intent: piId,
+          stripe_payment_intent_id: piId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', orderId)
+
+      const { data: orderItems, error: itemErr } = await supabase
+        .from('order_items')
+        .select('id, seller_id, title, seller_payout_cents, stripe_transfer_id, transfer_status')
+        .eq('order_id', orderId)
+
+      if (itemErr) {
+        console.error('[PaymentIntent] product_basket order_items read error:', itemErr)
+        return
+      }
+
+      const items = (orderItems ?? []) as Array<{
+        id: string
+        seller_id: string | null
+        title: string
+        seller_payout_cents: number
+        stripe_transfer_id: string | null
+        transfer_status: string
+      }>
+
+      const sellerIds = Array.from(new Set(items.map(item => item.seller_id).filter(Boolean))) as string[]
+      const { data: sellers } = sellerIds.length
+        ? await supabase
+            .from('profiles')
+            .select('id, stripe_account_id')
+            .in('id', sellerIds)
+        : { data: [] as Array<{ id: string; stripe_account_id: string | null }> }
+
+      const sellerMap = new Map(((sellers ?? []) as Array<{ id: string; stripe_account_id: string | null }>).map(seller => [seller.id, seller.stripe_account_id]))
+      const transferIds: string[] = []
+
+      for (const item of items) {
+        if (item.transfer_status === 'created' && item.stripe_transfer_id) {
+          transferIds.push(item.stripe_transfer_id)
+          continue
+        }
+
+        const destination = item.seller_id ? sellerMap.get(item.seller_id) : null
+        if (!destination) {
+          await supabase
+            .from('order_items')
+            .update({ transfer_status: 'failed', transfer_error: 'Seller Stripe account missing', updated_at: new Date().toISOString() })
+            .eq('id', item.id)
+          continue
+        }
+
+        try {
+          const transfer = await stripe.transfers.create({
+            amount: item.seller_payout_cents,
+            currency: paymentIntent.currency ?? 'eur',
+            destination,
+            source_transaction: latestCharge,
+            metadata: {
+              order_id: orderId,
+              order_item_id: item.id,
+              buyer_id: userId,
+              type: 'product_basket_item',
+            },
+          })
+
+          transferIds.push(transfer.id)
+          await supabase
+            .from('order_items')
+            .update({
+              stripe_transfer_id: transfer.id,
+              transfer_status: 'created',
+              transfer_error: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', item.id)
+        } catch (transferErr) {
+          const message = transferErr instanceof Error ? transferErr.message : 'Stripe transfer failed'
+          console.error('[PaymentIntent] product_basket transfer error:', item.id, message)
+          await supabase
+            .from('order_items')
+            .update({ transfer_status: 'failed', transfer_error: message, updated_at: new Date().toISOString() })
+            .eq('id', item.id)
+        }
+      }
+
+      if (transferIds.length > 0) {
+        await supabase
+          .from('orders')
+          .update({ stripe_transfer_id: transferIds.join(','), updated_at: new Date().toISOString() })
+          .eq('id', orderId)
+      }
+
+      await supabase
+        .from('basket_items')
+        .delete()
+        .eq('user_id', userId)
+        .eq('product_type', 'community')
+
+      await supabase.from('notifications').insert({
+        user_id: userId,
+        type: 'order',
+        title: 'Basket order confirmed!',
+        body: `Your FreeTrust product basket order (${items.length} item${items.length === 1 ? '' : 's'}) is confirmed. Retailer-saved items remain in your basket.`,
+        link: `/orders/${orderId}`,
+      })
+
+      await supabase.rpc('issue_trust', {
+        p_user_id: userId,
+        p_amount: 5,
+        p_type: 'purchase_reward',
+        p_ref: orderId,
+        p_desc: '₮5 trust reward for FreeTrust product basket purchase',
+      })
+
+      console.log(`[PaymentIntent] product_basket complete: user=${userId} order=${orderId} transfers=${transferIds.length}`)
+    } catch (err) {
+      console.error('[PaymentIntent] product_basket handler error:', err)
+    }
+    return
+  }
+
   // ── Wallet top-up (Apple/Google Pay path) ────────────────────────────────
   if (type === 'wallet_topup') {
     try {
@@ -852,4 +994,3 @@ async function handleFounderInvestment(session: Stripe.Checkout.Session) {
     link: '/wallet',
   }).catch(e => console.error('[Founder] notification failed:', e));
 }
-

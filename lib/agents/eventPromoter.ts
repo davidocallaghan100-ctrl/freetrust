@@ -26,8 +26,9 @@ export const eventPromoterConfig: AgentConfig = {
   displayName: 'Event Promoter',
   icon: '📅',
   creditCost: 5,
-  oneLineDescription: 'Writes event descriptions, promotion copy, and reminder messages.',
+  oneLineDescription: 'Creates event descriptions, promotion drafts, and reminder messages.',
+  useCase: 'Use when you are hosting an event and need an editable event page draft, social posts, reminders, and follow-up messages.',
   systemPrompt: EVENT_PROMOTER_PROMPT,
-  model: 'claude-sonnet-4-6',
+  model: 'claude-sonnet-4-5-20250929',
   maxTokens: 1500,
 };

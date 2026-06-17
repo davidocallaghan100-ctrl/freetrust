@@ -16,6 +16,7 @@ import {
 import type { User } from '@supabase/supabase-js'
 import ActivityFeed, { type ActivityItem as CreatedItem } from '@/components/profile/ActivityFeed'
 import PostCard, { type FeedPost } from '@/components/PostCard'
+import { trackEventOnce } from '@/lib/analytics'
 
 interface Profile {
   id: string
@@ -965,6 +966,18 @@ export default function ProfilePage() {
   }, [viewingId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const displayedProfileId = viewingId && (!user || viewingId !== user.id) ? viewingId : (user?.id ?? profile?.id ?? null)
+
+  useEffect(() => {
+    if (!displayedProfileId) return
+    if (user?.id === displayedProfileId) return
+    trackEventOnce(`profile-view-${displayedProfileId}`, {
+      userId: displayedProfileId,
+      eventType: 'profile_view',
+      entityType: 'profile',
+      entityId: displayedProfileId,
+      metadata: { source: 'profile_page' },
+    })
+  }, [displayedProfileId, user?.id])
 
   useEffect(() => {
     if (!displayedProfileId) return

@@ -26,7 +26,8 @@ export const applicationWriterConfig: AgentConfig = {
   icon: '💼',
   creditCost: 4,
   oneLineDescription: 'Tailors your profile into a winning application for any job on the board.',
+  useCase: 'Use when applying for a FreeTrust job and you want a specific, credible, non-generic proposal.',
   systemPrompt: APPLICATION_WRITER_PROMPT,
-  model: 'claude-sonnet-4-6',
+  model: 'claude-sonnet-4-5-20250929',
   maxTokens: 1200,
 };

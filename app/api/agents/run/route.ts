@@ -1,12 +1,357 @@
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 120
 
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { randomUUID } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getAgent } from '@/lib/agents'
-import type { AgentRunResult } from '@/lib/agents'
+import type { AgentConfig, AgentRunResult } from '@/lib/agents'
+
+type AgentAttachment = {
+  name?: unknown
+  type?: unknown
+  size?: unknown
+  kind?: unknown
+  content?: unknown
+  dataUrl?: unknown
+}
+
+const MAX_ATTACHMENTS = 5
+const MAX_TEXT_ATTACHMENT_CHARS = 20_000
+const SUPPORTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+const IMAGE_AGENT_COST = 50
+const IMAGE_GENERATION_BUCKET = 'feed-media'
+const IMAGE_GENERATION_TIMEOUT_MS = 45_000
+const CHAT_FORMATTING_RULE = `
+
+FreeTrust chat formatting rule: for any user-facing prose, do not use Markdown formatting. Do not include asterisk characters or hyphen/dash bullet markers. Write in clean plain text paragraphs with numbered labels only when structure is needed.`
+
+function normaliseAttachments(raw: unknown) {
+  if (!Array.isArray(raw)) return []
+  return raw.slice(0, MAX_ATTACHMENTS).map((item): AgentAttachment => item && typeof item === 'object' ? item as AgentAttachment : {})
+}
+
+function attachmentLabel(att: AgentAttachment, index: number) {
+  const name = typeof att.name === 'string' && att.name.trim() ? att.name.trim().slice(0, 120) : `attachment-${index + 1}`
+  const type = typeof att.type === 'string' ? att.type : 'unknown'
+  const size = typeof att.size === 'number' && Number.isFinite(att.size) ? `, ${Math.round(att.size / 1024)} KB` : ''
+  return `${name} (${type}${size})`
+}
+
+function parseImageDataUrl(att: AgentAttachment) {
+  const type = typeof att.type === 'string' ? att.type : ''
+  const dataUrl = typeof att.dataUrl === 'string' ? att.dataUrl : ''
+  if (!SUPPORTED_IMAGE_TYPES.has(type)) return null
+  const match = dataUrl.match(/^data:(image\/(?:jpeg|png|gif|webp));base64,([A-Za-z0-9+/=]+)$/)
+  if (!match) return null
+  return { media_type: match[1], data: match[2] }
+}
+
+function buildUserContent(userInput: string, attachments: AgentAttachment[]): string | unknown[] {
+  if (attachments.length === 0) return userInput
+
+  const content: Array<Record<string, unknown>> = [
+    {
+      type: 'text',
+      text: `${userInput || 'Use the attached files and photos as context for this FreeTrust agent run.'}\n\nAttached context:`,
+    },
+  ]
+
+  attachments.forEach((att, index) => {
+    const kind = typeof att.kind === 'string' ? att.kind : ''
+    const label = attachmentLabel(att, index)
+    if (kind === 'text' && typeof att.content === 'string' && att.content.trim()) {
+      content.push({
+        type: 'text',
+        text: `\n\n--- Attached file: ${label} ---\n${att.content.slice(0, MAX_TEXT_ATTACHMENT_CHARS)}`,
+      })
+      return
+    }
+
+    if (kind === 'image') {
+      const image = parseImageDataUrl(att)
+      if (image) {
+        content.push({ type: 'text', text: `\n\n--- Attached photo: ${label} ---` })
+        content.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: image.media_type,
+            data: image.data,
+          },
+        })
+        return
+      }
+      content.push({ type: 'text', text: `\n\n--- Attached photo skipped: ${label} (unsupported image type for AI vision) ---` })
+    }
+  })
+
+  return content
+}
+
+function extractAssistantText(response: Anthropic.Messages.Message): string {
+  return response.content
+    .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+    .map((block) => block.text)
+    .join('\n\n')
+    .trim()
+}
+
+function stripJsonFence(text: string): string {
+  const trimmed = text.trim()
+  const match = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i)
+  return match ? match[1].trim() : trimmed
+}
+
+function parseJsonObject(text: string): Record<string, unknown> | null {
+  try {
+    const parsed = JSON.parse(stripJsonFence(text))
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null
+  } catch {
+    const match = text.match(/\{[\s\S]*\}/)
+    if (!match) return null
+    try {
+      const parsed = JSON.parse(match[0])
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null
+    } catch {
+      return null
+    }
+  }
+}
+
+type ImageSafetyResult = {
+  allowed: boolean
+  reason: string
+  rewrittenPrompt: string
+}
+
+function readSafetyResult(text: string, fallbackPrompt: string): ImageSafetyResult {
+  const parsed = parseJsonObject(text)
+  const allowed = parsed?.allowed === true
+  const reason = typeof parsed?.reason === 'string' && parsed.reason.trim() ? parsed.reason.trim().slice(0, 500) : 'Safety review did not clearly approve this request.'
+  const rewrittenPrompt = typeof parsed?.rewrittenPrompt === 'string' && parsed.rewrittenPrompt.trim()
+    ? parsed.rewrittenPrompt.trim().slice(0, 1600)
+    : fallbackPrompt.slice(0, 1600)
+  return { allowed, reason, rewrittenPrompt }
+}
+
+async function reviewImagePromptSafety(anthropic: Anthropic, prompt: string): Promise<ImageSafetyResult> {
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-5-20250929',
+    max_tokens: 700,
+    temperature: 0,
+    system: `You are FreeTrust's strict image-generation safety gate. Return JSON only.
+
+Approve only benign, lawful, non-exploitative, non-sexual, non-violent, non-fraudulent, non-hateful, non-invasive image requests.
+
+Block if the prompt requests, implies, enables, or tries to evade safeguards around: unlawful acts, sexual content or nudity, minors in unsafe contexts, non-consensual or intimate imagery, harassment or threats, hate or extremist symbols/propaganda, realistic gore or graphic violence, weapons instructions, illegal drugs, fraud/scams, fake documents/IDs/payment cards, doxxing/private data, real private-person likenesses, public-figure deepfakes, impersonation, copyrighted characters/logos/trademarks, or any upload/generation that could reasonably be illegal.
+
+If approved, rewrite the prompt into a safe original visual prompt. Remove unsafe details, real-person likenesses, copyrighted/trademarked references, gore, weapons, drugs, and privacy-invasive material. Add "original, lawful, safe-for-work, no logos, no real person likeness" when helpful.
+
+JSON shape: {"allowed": boolean, "reason": string, "rewrittenPrompt": string}`,
+    messages: [{ role: 'user', content: `Image request to review:\n\n${prompt}` }],
+  })
+  return readSafetyResult(extractAssistantText(response), prompt)
+}
+
+async function reviewGeneratedImageSafety(anthropic: Anthropic, image: { mediaType: 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif', base64: string }, originalPrompt: string): Promise<ImageSafetyResult> {
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-5-20250929',
+    max_tokens: 500,
+    temperature: 0,
+    system: `You are FreeTrust's strict post-generation image safety reviewer. Return JSON only.
+
+Approve only if the image is clearly lawful, safe-for-work, non-exploitative, non-sexual, non-hateful, non-fraudulent, non-invasive, and does not contain realistic gore, abuse, extremist propaganda, illegal-drug promotion, weapons-focused wrongdoing, fake documents, payment cards, private data, or real-person/public-figure impersonation. If uncertain, block.
+
+JSON shape: {"allowed": boolean, "reason": string, "rewrittenPrompt": string}`,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: `Review this generated image before FreeTrust uploads or shows it. Original approved prompt: ${originalPrompt}` },
+          { type: 'image', source: { type: 'base64', media_type: image.mediaType, data: image.base64 } },
+        ] as any,
+      },
+    ],
+  })
+  return readSafetyResult(extractAssistantText(response), originalPrompt)
+}
+
+function isGeneratedImageContentType(value: string | null): value is 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif' {
+  return value === 'image/png' || value === 'image/jpeg' || value === 'image/webp' || value === 'image/gif'
+}
+
+async function fetchGeneratedImage(prompt: string): Promise<{ bytes: Buffer, mediaType: 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif' }> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), IMAGE_GENERATION_TIMEOUT_MS)
+  try {
+    const safePrompt = `${prompt}\n\nOriginal lawful safe-for-work commercial image. No logos. No text that looks like official documents. No real person likeness. No nudity. No gore. No weapons. No illegal drugs.`
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(safePrompt)}?width=1024&height=1024&nologo=true&safe=true&seed=${Date.now()}`
+    const res = await fetch(url, { signal: controller.signal, headers: { Accept: 'image/png,image/jpeg,image/webp' } })
+    if (!res.ok) throw new Error(`image provider returned ${res.status}`)
+    const contentType = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
+    if (!isGeneratedImageContentType(contentType)) throw new Error(`image provider returned ${contentType || 'unknown content type'}`)
+    const arrayBuffer = await res.arrayBuffer()
+    const bytes = Buffer.from(arrayBuffer)
+    if (bytes.byteLength < 1024) throw new Error('image provider returned an empty image')
+    if (bytes.byteLength > 8 * 1024 * 1024) throw new Error('image provider returned an image larger than 8 MB')
+    return { bytes, mediaType: contentType }
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+function extensionForMediaType(mediaType: string) {
+  if (mediaType === 'image/jpeg') return 'jpg'
+  if (mediaType === 'image/webp') return 'webp'
+  if (mediaType === 'image/gif') return 'gif'
+  return 'png'
+}
+
+async function uploadGeneratedImage(admin: ReturnType<typeof createAdminClient>, userId: string, image: { bytes: Buffer, mediaType: 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif' }) {
+  const ext = extensionForMediaType(image.mediaType)
+  const storagePath = `ai-generated/${userId}/${randomUUID()}.${ext}`
+  const { error: uploadError } = await admin.storage.from(IMAGE_GENERATION_BUCKET).upload(storagePath, image.bytes, {
+    contentType: image.mediaType,
+    upsert: false,
+  })
+  if (uploadError) throw new Error(uploadError.message || 'image upload failed')
+  const { data } = admin.storage.from(IMAGE_GENERATION_BUCKET).getPublicUrl(storagePath)
+  if (!data.publicUrl) throw new Error('image upload completed but public URL was unavailable')
+  return data.publicUrl
+}
+
+async function runImageGenerationAgent(params: {
+  userId: string
+  userInput: string
+  config: AgentConfig
+}) {
+  const { userId, userInput, config } = params
+  let anthropic: Anthropic
+  try {
+    anthropic = getAnthropicClient()
+  } catch {
+    return NextResponse.json(
+      { error: 'AI image safety checks are not configured on this server (missing ANTHROPIC_API_KEY)' },
+      { status: 503 },
+    )
+  }
+
+  let promptSafety: ImageSafetyResult
+  try {
+    promptSafety = await reviewImagePromptSafety(anthropic, userInput)
+  } catch (err) {
+    console.error('[agents/run] image prompt safety failed:', err)
+    return NextResponse.json(
+      { error: 'Image safety review failed. No TrustCoins were charged.' },
+      { status: 503 },
+    )
+  }
+
+  if (!promptSafety.allowed) {
+    return NextResponse.json(
+      {
+        error: `I can’t generate that image because it may be unsafe or unlawful. ${promptSafety.reason}`,
+        code: 'safety_blocked',
+        safetyReason: promptSafety.reason,
+        creditsCharged: 0,
+      },
+      { status: 400 },
+    )
+  }
+
+  const admin = createAdminClient()
+  const { data: newBalance, error: spendErr } = await admin.rpc('spend_trust', {
+    p_user_id: userId,
+    p_amount:  IMAGE_AGENT_COST,
+    p_type:    `agent_${config.name}`,
+    p_desc:    `${config.displayName} agent (₮${IMAGE_AGENT_COST})`,
+  })
+
+  if (spendErr) {
+    const msg = spendErr.message ?? ''
+    if (msg.includes('insufficient_funds')) {
+      return NextResponse.json(
+        {
+          error: `Not enough ₮ — this agent costs ₮${IMAGE_AGENT_COST}`,
+          code: 'insufficient_funds',
+          required: IMAGE_AGENT_COST,
+        },
+        { status: 402 },
+      )
+    }
+    console.error('[agents/run] spend_trust image generation failed:', spendErr)
+    return NextResponse.json(
+      { error: spendErr.message || 'Could not debit TrustCoins' },
+      { status: 500 },
+    )
+  }
+
+  const refundCredits = async (reason: string) => {
+    const { error: refundErr } = await admin.rpc('issue_trust', {
+      p_user_id: userId,
+      p_amount:  IMAGE_AGENT_COST,
+      p_type:    `agent_refund_${config.name}`,
+      p_desc:    `Refund: ${config.displayName} agent failed (${reason})`,
+    })
+    if (refundErr) console.error('[agents/run] image refund failed:', refundErr)
+  }
+
+  try {
+    const generated = await fetchGeneratedImage(promptSafety.rewrittenPrompt)
+    const postSafety = await reviewGeneratedImageSafety(anthropic, {
+      mediaType: generated.mediaType,
+      base64: generated.bytes.toString('base64'),
+    }, promptSafety.rewrittenPrompt)
+
+    if (!postSafety.allowed) {
+      await refundCredits('generated image failed safety review')
+      return NextResponse.json(
+        {
+          error: `The generated image failed FreeTrust’s safety review and was not uploaded. Your ₮${IMAGE_AGENT_COST} have been refunded.`,
+          code: 'generated_image_safety_blocked',
+          safetyReason: postSafety.reason,
+        },
+        { status: 422 },
+      )
+    }
+
+    const imageUrl = await uploadGeneratedImage(admin, userId, generated)
+    const data = {
+      type: 'generated_image',
+      image_url: imageUrl,
+      media_url: imageUrl,
+      prompt: userInput,
+      revised_prompt: promptSafety.rewrittenPrompt,
+      safety_note: 'FreeTrust checked the prompt before generation and checked the generated image before upload.',
+      caption: 'Generated image ready. Review it before posting or using publicly.',
+    }
+
+    const result: AgentRunResult<typeof data> = {
+      success: true,
+      data,
+      creditsCharged: IMAGE_AGENT_COST,
+      agentName: config.name,
+    }
+
+    return NextResponse.json({
+      ...result,
+      newBalance: typeof newBalance === 'number' ? newBalance : null,
+      model: 'pollinations-safe-image + claude-safety-review',
+      tokens: { input: null, output: null },
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[agents/run] image generation failed:', msg)
+    await refundCredits('image generation error')
+    return NextResponse.json(
+      { error: 'Image generation failed — your TrustCoins have been refunded.' },
+      { status: 500 },
+    )
+  }
+}
 
 // ── Trust Score Live Signals ─────────────────────────────────────────────────
 // Fetches real DB data for the authenticated user and builds a structured
@@ -168,10 +513,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => null) as {
       agent?: unknown
       input?: unknown
+      attachments?: unknown
     } | null
 
     const agentName = typeof body?.agent === 'string' ? body.agent : ''
     const userInput = typeof body?.input === 'string' ? body.input.trim() : ''
+    const attachments = normaliseAttachments(body?.attachments)
 
     const config = getAgent(agentName)
     if (!config) {
@@ -180,9 +527,9 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       )
     }
-    if (!userInput || userInput.length < 3) {
+    if ((!userInput || userInput.length < 3) && attachments.length === 0) {
       return NextResponse.json(
-        { error: 'Input must be at least 3 characters' },
+        { error: 'Input must be at least 3 characters, or attach a supported file/photo.' },
         { status: 400 },
       )
     }
@@ -191,6 +538,10 @@ export async function POST(req: NextRequest) {
         { error: 'Input too long (max 10,000 characters)' },
         { status: 400 },
       )
+    }
+
+    if (config.name === 'imageGenerator') {
+      return runImageGenerationAgent({ userId: user.id, userInput, config })
     }
 
     // ── 3. Credits ──────────────────────────────────────────────────
@@ -262,16 +613,28 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let response: Awaited<ReturnType<typeof anthropic.messages.create>>
+    let response: any
     try {
-      response = await anthropic.messages.create({
+      const request: any = {
         model:      config.model,
         max_tokens: config.maxTokens,
-        system:     config.systemPrompt,
+        system:     `${config.systemPrompt}${CHAT_FORMATTING_RULE}`,
         messages: [
-          { role: 'user', content: effectiveInput },
+          { role: 'user', content: buildUserContent(effectiveInput, attachments) as any },
         ],
-      })
+      }
+
+      if (config.webSearch) {
+        request.tools = [
+          {
+            type: 'web_search_20250305',
+            name: 'web_search',
+            max_uses: 5,
+          },
+        ]
+      }
+
+      response = await anthropic.messages.create(request)
     } catch (modelErr) {
       // Refund credits — model call failed, not the user's fault
       console.error('[agents/run] Claude API error:', modelErr)
@@ -285,16 +648,17 @@ export async function POST(req: NextRequest) {
     // ── 5. Parse response ───────────────────────────────────────────
     // The system prompt instructs the model to respond with JSON
     // only. Extract the text content and attempt to parse it.
-    const textBlock = response.content.find(b => b.type === 'text')
-    const rawText   = textBlock && 'text' in textBlock ? textBlock.text : ''
+    const rawText = extractAssistantText(response)
 
     let parsedData: unknown = rawText
-    try {
-      parsedData = JSON.parse(rawText)
-    } catch {
-      // Model returned non-JSON (rare, but possible on refusals or
-      // edge cases). Return the raw text so the caller can still
-      // show it to the user.
+    if (config.responseFormat !== 'text') {
+      try {
+        parsedData = JSON.parse(stripJsonFence(rawText))
+      } catch {
+        // Model returned non-JSON (rare, but possible on refusals or
+        // edge cases). Return the raw text so the caller can still
+        // show it to the user.
+      }
     }
 
     // ── 6. Return ───────────────────────────────────────────────────

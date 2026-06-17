@@ -1,4 +1,5 @@
 export type AgentName =
+  | 'generalResearch'
   | 'listingCreator'
   | 'matchFinder'
   | 'messageDrafter'
@@ -7,9 +8,9 @@ export type AgentName =
   | 'eventPromoter'
   | 'applicationWriter'
   | 'salesDevelopment'
-  | 'translator'
   | 'trustScoreOptimiser'
   | 'bulkListingGenerator'
+  | 'imageGenerator'
   | 'revenueIntelligence'
   | 'pricingAdviser'
   | 'collabMatchmaker'
@@ -21,9 +22,12 @@ export interface AgentConfig {
   icon: string;
   creditCost: number;
   oneLineDescription: string;
+  useCase: string;
   systemPrompt: string;
   model: string;
   maxTokens: number;
+  responseFormat?: 'json' | 'text';
+  webSearch?: boolean;
   /** When true, the UI hits /api/agents/stream and renders output as it arrives.
    *  Use for agents with large outputs (e.g. Bulk Listing Generator) that risk
    *  hitting Vercel's 60-second response timeout. */

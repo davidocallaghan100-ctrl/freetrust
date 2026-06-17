@@ -27,7 +27,8 @@ export const listingCreatorConfig: AgentConfig = {
   icon: '🪪',
   creditCost: 5,
   oneLineDescription: 'Turns a one-line idea into a polished service or product listing with title, description, tags, and suggested price.',
+  useCase: 'Use when you have a rough service or product idea and want an editable FreeTrust listing draft plus pricing guidance.',
   systemPrompt: LISTING_CREATOR_PROMPT,
-  model: 'claude-sonnet-4-6',
+  model: 'claude-sonnet-4-5-20250929',
   maxTokens: 1500,
 };
