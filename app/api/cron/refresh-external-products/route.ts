@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { ARCHIVE_AFTER_DAYS, PRODUCT_CATEGORIES, PRODUCTS_PER_CATEGORY } from '@/lib/externalProductCategories'
+import { stripFreetrustReferralParams } from '@/lib/skimlinks'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -24,19 +25,6 @@ const supabase = supabaseUrl && serviceRoleKey
   ? createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } })
   : null
 
-function withReferralParams(link: string, categoryId: string) {
-  try {
-    const url = new URL(link)
-    url.searchParams.set('utm_source', 'freetrust')
-    url.searchParams.set('utm_medium', 'referral')
-    url.searchParams.set('utm_campaign', 'external_catalogue')
-    url.searchParams.set('utm_content', categoryId)
-    return url.toString()
-  } catch {
-    return link
-  }
-}
-
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -56,13 +44,14 @@ export async function GET(req: NextRequest) {
 
   for (const category of PRODUCT_CATEGORIES) {
     try {
+      const allProducts: SerpShoppingResult[] = []
       const url = new URL('https://serpapi.com/search.json')
       url.searchParams.set('engine', 'google_shopping')
       url.searchParams.set('q', category.serpQuery)
       url.searchParams.set('gl', 'ie')
       url.searchParams.set('hl', 'en')
       url.searchParams.set('currency', 'EUR')
-      url.searchParams.set('num', String(PRODUCTS_PER_CATEGORY))
+      url.searchParams.set('num', String(Math.min(PRODUCTS_PER_CATEGORY, 100)))
       url.searchParams.set('api_key', process.env.SERPAPI_KEY)
 
       const res = await fetch(url.toString(), { cache: 'no-store' })
@@ -73,21 +62,25 @@ export async function GET(req: NextRequest) {
         continue
       }
 
-      const products = ((data.shopping_results || []) as SerpShoppingResult[]).slice(0, PRODUCTS_PER_CATEGORY)
+      allProducts.push(...((data.shopping_results || []) as SerpShoppingResult[]))
+
+      const products = allProducts.slice(0, PRODUCTS_PER_CATEGORY)
       if (products.length === 0) {
         errors.push(`No results for category: ${category.id}`)
         continue
       }
 
       const rows = products.map((item) => {
-        const rawLink = item.link || item.product_link || ''
+        const rawLink = stripFreetrustReferralParams(item.link || item.product_link || '')
         return {
           title: item.title || 'Untitled Product',
           price: item.price || null,
           price_eur: typeof item.extracted_price === 'number' ? item.extracted_price : null,
           currency: 'EUR',
           retailer_name: item.source || 'Online Retailer',
-          retailer_url: rawLink ? withReferralParams(rawLink, category.id) : '',
+          // Store the raw retailer URL. Skimlinks wrapping happens only at
+          // outbound click time so analytics never persist affiliate URLs.
+          retailer_url: rawLink,
           thumbnail: item.thumbnail || null,
           rating: typeof item.rating === 'number' ? item.rating : null,
           review_count: typeof item.reviews === 'number' ? item.reviews : null,

@@ -3,6 +3,7 @@
 import React, { FormEvent, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { isAffiliateTrackingEnabled, toAffiliateUrl } from '@/lib/skimlinks'
 
 type SearchIntent = {
   keywords: string
@@ -52,7 +53,7 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 12,
   color: '#ffffff',
   padding: '0.85rem 1rem',
-  fontSize: '0.95rem',
+  fontSize: 16,
   outline: 'none',
 }
 
@@ -255,10 +256,12 @@ export default function FindOnlineTab() {
         product_title: selected.title,
         retailer_name: selected.source,
         product_url: selected.link,
+        affiliate_link_generated: isAffiliateTrackingEnabled(),
+        click_source: 'find_online',
       })
     } finally {
       setLoggingClick(false)
-      window.open(selected.link, '_blank', 'noopener,noreferrer')
+      window.open(toAffiliateUrl(selected.link), '_blank', 'noopener,noreferrer')
       setSelected(null)
     }
   }

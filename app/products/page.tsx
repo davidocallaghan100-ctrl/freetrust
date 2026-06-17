@@ -12,9 +12,10 @@ import { EMPTY_LOCATION, haversineKm, type StructuredLocation, type RadiusValue 
 import { buildCountryOptions } from '@/lib/countries'
 import ListingQualityBadge from '@/components/marketplace/ListingQualityBadge'
 import FindOnlineTab from '@/components/marketplace/FindOnlineTab'
-import { PRODUCT_CATEGORIES, categoryMeta, normaliseExternalCategory } from '@/lib/externalProductCategories'
+import { PRODUCT_CATEGORIES, PRODUCTS_INITIAL_DISPLAY, PRODUCTS_LOAD_MORE_BATCH, categoryMeta, normaliseExternalCategory } from '@/lib/externalProductCategories'
 import { useBasket, type BasketItem } from '@/context/BasketContext'
 import { FREETRUST_PRODUCT_FEE_LABEL, formatEuroFromCents } from '@/lib/checkoutConfig'
+import { isAffiliateTrackingEnabled, stripFreetrustReferralParams, toAffiliateUrl } from '@/lib/skimlinks'
 
 let stripePromise: Promise<Stripe | null> | null = null
 
@@ -106,20 +107,33 @@ const SORT_OPTIONS = ['Newest', 'Top Rated', 'Popular', 'Price: Low', 'Price: Hi
 
 // ─── Category gradients ───────────────────────────────────────────────────────
 const CAT_GRAD: Record<string, string> = {
-  tech:          'linear-gradient(135deg,#06b6d4,#0284c7)',
-  art:           'linear-gradient(135deg,#f472b6,#db2777)',
+  electronics:   'linear-gradient(135deg,#06b6d4,#0284c7)',
+  'computer-accessories': 'linear-gradient(135deg,#0ea5e9,#2563eb)',
+  laptops:       'linear-gradient(135deg,#38bdf8,#1d4ed8)',
+  tablets:       'linear-gradient(135deg,#22d3ee,#4338ca)',
+  headphones:    'linear-gradient(135deg,#14b8a6,#0f766e)',
+  speakers:      'linear-gradient(135deg,#0ea5e9,#7c3aed)',
+  'smart-home':   'linear-gradient(135deg,#0f766e,#164e63)',
+  'art-printed-products': 'linear-gradient(135deg,#f472b6,#db2777)',
   music:         'linear-gradient(135deg,#a78bfa,#7c3aed)',
   fashion:       'linear-gradient(135deg,#f472b6,#7c3aed)',
-  home:          'linear-gradient(135deg,#0f766e,#164e63)',
-  sports:        'linear-gradient(135deg,#22c55e,#15803d)',
+  clothing:      'linear-gradient(135deg,#fb7185,#be185d)',
+  'home-living': 'linear-gradient(135deg,#0f766e,#164e63)',
+  furniture:     'linear-gradient(135deg,#92400e,#78350f)',
+  'sports-outdoor': 'linear-gradient(135deg,#22c55e,#15803d)',
+  outdoor:       'linear-gradient(135deg,#65a30d,#166534)',
+  'fitness-equipment': 'linear-gradient(135deg,#ef4444,#7f1d1d)',
   books:         'linear-gradient(135deg,#fbbf24,#d97706)',
   beauty:        'linear-gradient(135deg,#f9a8d4,#ec4899)',
-  toys:          'linear-gradient(135deg,#fde047,#f97316)',
-  food:          'linear-gradient(135deg,#86efac,#16a34a)',
-  garden:        'linear-gradient(135deg,#84cc16,#15803d)',
+  'toys-kids':   'linear-gradient(135deg,#fde047,#f97316)',
+  'food-grocery': 'linear-gradient(135deg,#86efac,#16a34a)',
+  gardening:     'linear-gradient(135deg,#84cc16,#15803d)',
   pets:          'linear-gradient(135deg,#fb923c,#92400e)',
-  digital:       'linear-gradient(135deg,#818cf8,#4338ca)',
-  physical:      'linear-gradient(135deg,#94a3b8,#475569)',
+  'digital-products': 'linear-gradient(135deg,#818cf8,#4338ca)',
+  business:      'linear-gradient(135deg,#64748b,#334155)',
+  'hardware-tools': 'linear-gradient(135deg,#f97316,#92400e)',
+  'construction-supplies': 'linear-gradient(135deg,#f59e0b,#854d0e)',
+  'travel-luggage': 'linear-gradient(135deg,#38bdf8,#0f766e)',
 }
 
 
@@ -434,6 +448,8 @@ function RetailerModal({ product, onCancel, onContinue, opening }: {
           padding: '12px', marginBottom: '20px', fontSize: '13px', color: '#64748b',
         }}>
           ⚠ Trust Coin rewards and FreeTrust buyer protection do not apply to retailer purchases.
+          FreeTrust may earn a small referral commission on purchases made through this link,
+          at no extra cost to you.
         </div>
         <button
           onClick={onContinue}
@@ -763,6 +779,13 @@ function ProductsInner() {
   const [openingRetailer, setOpeningRetailer] = useState(false)
   const [basketOpen, setBasketOpen] = useState(false)
   const [basketBusyId, setBasketBusyId] = useState<string | null>(null)
+  const [displayLimit, setDisplayLimit] = useState(PRODUCTS_INITIAL_DISPLAY)
+  const [loadingMore, setLoadingMore] = useState(false)
+
+  useEffect(() => {
+    setDisplayLimit(PRODUCTS_INITIAL_DISPLAY)
+    setLoadingMore(false)
+  }, [activeTab, catFilter, typeFilter, sortBy, maxPrice, minRating, countryFilter, radiusKm, filterLoc.latitude, filterLoc.longitude])
 
   useEffect(() => {
     const supabase = createClient();
@@ -805,13 +828,23 @@ function ProductsInner() {
             .neq('product_type', 'service')
             .order('created_at', { ascending: false })
             .limit(200),
-          supabase
-            .from('external_product_listings')
-            .select('id, title, price, price_eur, currency, retailer_name, retailer_url, thumbnail, rating, review_count, category, subcategory, is_trending, click_count')
-            .order('is_trending', { ascending: false })
-            .order('click_count', { ascending: false })
-            .order('last_refreshed_at', { ascending: false })
-            .limit(240),
+          (async () => {
+            const rows: Record<string, unknown>[] = []
+            const pageSize = 1000
+            for (let from = 0; from < 3000; from += pageSize) {
+              const { data, error } = await supabase
+                .from('external_product_listings')
+                .select('id, title, price, price_eur, currency, retailer_name, retailer_url, thumbnail, rating, review_count, category, subcategory, is_trending, click_count')
+                .order('is_trending', { ascending: false })
+                .order('click_count', { ascending: false })
+                .order('last_refreshed_at', { ascending: false })
+                .range(from, from + pageSize - 1)
+              if (error) throw error
+              rows.push(...(data ?? []))
+              if (!data || data.length < pageSize) break
+            }
+            return rows
+          })(),
         ])
         const data = communityRes.data
         if (data && data.length > 0) {
@@ -822,17 +855,17 @@ function ProductsInner() {
             const coverImage = (d.cover_image as string | null) ?? null
             // Derive category from tags — look for known category keywords
             const CAT_KEYWORDS: Record<string, string> = {
-              'charger': 'tech', 'headphones': 'tech', 'mouse': 'tech',
-              'keyboard': 'tech', 'ssd': 'tech', 'router': 'tech',
-              'led': 'tech', 'gimbal': 'tech', 'tracker': 'tech',
-              'stream deck': 'tech', 'power bank': 'tech', 'wifi': 'tech',
-              'phone': 'tech', 'laptop': 'tech', 'speaker': 'tech',
-              'course': 'digital', 'template': 'digital', 'software': 'digital',
-              'music': 'music', 'photo': 'art', 'art': 'art', 'book': 'books',
-              'merch': 'fashion', 'hoodie': 'fashion', 'handmade': 'art', 'food': 'food',
-              'compost': 'garden', 'topsoil': 'garden', 'bark': 'garden', 'mulch': 'garden',
+              'charger': 'electronics', 'mouse': 'computer-accessories',
+              'keyboard': 'computer-accessories', 'ssd': 'computer-accessories', 'router': 'computer-accessories',
+              'led': 'electronics', 'gimbal': 'electronics', 'tracker': 'electronics',
+              'stream deck': 'computer-accessories', 'power bank': 'electronics', 'wifi': 'computer-accessories',
+              'phone': 'electronics', 'laptop': 'laptops', 'speaker': 'speakers', 'headphones': 'headphones',
+              'course': 'digital-products', 'template': 'digital-products', 'software': 'digital-products',
+              'music': 'music', 'photo': 'art-printed-products', 'art': 'art-printed-products', 'book': 'books',
+              'merch': 'fashion', 'hoodie': 'clothing', 'handmade': 'art-printed-products', 'food': 'food-grocery',
+              'compost': 'gardening', 'topsoil': 'gardening', 'bark': 'gardening', 'mulch': 'gardening',
             }
-            let category = 'tech'
+            let category = 'electronics'
             const titleLower = String(d.title ?? '').toLowerCase()
             const tagsStr = tags.join(' ').toLowerCase()
             for (const [kw, cat] of Object.entries(CAT_KEYWORDS)) {
@@ -866,19 +899,19 @@ function ProductsInner() {
             }
           }))
         }
-        if (externalRes.data) {
-          setExternalProducts(externalRes.data.map((row: Record<string, unknown>) => ({
+        if (externalRes) {
+          setExternalProducts(externalRes.map((row: Record<string, unknown>) => ({
             id: String(row.id),
             title: String(row.title ?? ''),
             price: row.price ? String(row.price) : null,
             price_eur: row.price_eur != null && Number.isFinite(Number(row.price_eur)) ? Number(row.price_eur) : null,
             currency: row.currency ? String(row.currency) : 'EUR',
             retailer_name: String(row.retailer_name ?? 'Online Retailer'),
-            retailer_url: String(row.retailer_url ?? ''),
+            retailer_url: stripFreetrustReferralParams(String(row.retailer_url ?? '')),
             thumbnail: row.thumbnail ? String(row.thumbnail) : null,
             rating: row.rating != null && Number.isFinite(Number(row.rating)) ? Number(row.rating) : null,
             review_count: typeof row.review_count === 'number' ? row.review_count : null,
-            category: normaliseExternalCategory(String(row.category ?? 'tech')),
+            category: normaliseExternalCategory(String(row.category ?? 'electronics')),
             subcategory: row.subcategory ? String(row.subcategory) : null,
             is_trending: Boolean(row.is_trending),
             click_count: Number(row.click_count ?? 0),
@@ -933,7 +966,7 @@ function ProductsInner() {
   })
 
   let filteredExternal = externalProducts.filter(p => {
-    const externalType = p.category === 'digital' ? 'digital' : 'physical'
+    const externalType = p.category === 'digital-products' ? 'digital' : 'physical'
     if (typeFilter !== 'all' && externalType !== typeFilter) return false
     if (catFilter !== 'all' && p.category !== catFilter) return false
     if (p.price_eur != null && p.price_eur > maxPrice) return false
@@ -968,6 +1001,9 @@ function ProductsInner() {
     ...filteredExternal.map(item => ({ _type: 'external' as const, item })),
   ]
 
+  const visibleProducts = mergedProducts.slice(0, displayLimit)
+  const hasMore = displayLimit < mergedProducts.length
+
   const communityBasketIds = useMemo(() => new Set(basket.communityItems.map(item => item.listing_id).filter(Boolean) as string[]), [basket.communityItems])
   const externalBasketIds = useMemo(() => new Set(basket.externalItems.map(item => item.external_product_id).filter(Boolean) as string[]), [basket.externalItems])
 
@@ -975,8 +1011,7 @@ function ProductsInner() {
     setWishlist(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
   }
 
-  async function handleExternalProductClick(product: ExternalProduct) {
-    setClickedProduct(product)
+  async function logExternalProductClick(product: ExternalProduct, clickSource: 'grid' | 'modal' | 'basket' | 'find_online' = 'modal') {
     try {
       await fetch('/api/external-products/click', {
         method: 'POST',
@@ -988,12 +1023,18 @@ function ProductsInner() {
           title: product.title,
           retailerName: product.retailer_name,
           retailerUrl: product.retailer_url,
+          affiliateLinkGenerated: isAffiliateTrackingEnabled(),
+          clickSource,
         }),
       })
       setExternalProducts(prev => prev.map(item => item.id === product.id ? { ...item, click_count: item.click_count + 1 } : item))
     } catch {
       // Non-blocking: the user can still continue to the retailer.
     }
+  }
+
+  async function handleExternalProductClick(product: ExternalProduct) {
+    setClickedProduct(product)
   }
 
   async function handleAddCommunityToBasket(id: string) {
@@ -1018,20 +1059,37 @@ function ProductsInner() {
     }
   }
 
-  function openRetailerFromBasket(item: BasketItem) {
+  async function openRetailerFromBasket(item: BasketItem) {
     if (!item.retailer_url) return
     const product = externalProducts.find(row => row.id === item.external_product_id)
+    const cleanRetailerUrl = stripFreetrustReferralParams(item.retailer_url)
+    window.open(toAffiliateUrl(cleanRetailerUrl), '_blank', 'noopener,noreferrer')
     if (product) {
-      void handleExternalProductClick(product)
+      await logExternalProductClick(product, 'basket')
       return
     }
-    window.open(item.retailer_url, '_blank', 'noopener,noreferrer')
+    try {
+      const supabase = createClient()
+      await supabase.from('external_product_clicks').insert({
+        user_id: userId,
+        search_query: 'basket_click',
+        product_title: item.title || '',
+        retailer_name: item.retailer_name || 'Retailer',
+        product_url: cleanRetailerUrl,
+        affiliate_link_generated: isAffiliateTrackingEnabled(),
+        click_source: 'basket',
+      })
+    } catch {
+      // Non-blocking: the retailer has already opened.
+    }
   }
 
-  function continueToRetailer() {
+  async function continueToRetailer() {
     if (!clickedProduct) return
     setOpeningRetailer(true)
-    window.open(clickedProduct.retailer_url, '_blank', 'noopener,noreferrer')
+    const outboundProduct = clickedProduct
+    window.open(toAffiliateUrl(outboundProduct.retailer_url), '_blank', 'noopener,noreferrer')
+    await logExternalProductClick(outboundProduct, 'modal')
     setClickedProduct(null)
     setOpeningRetailer(false)
   }
@@ -1042,6 +1100,12 @@ function ProductsInner() {
     background: active ? `${color}18` : 'transparent', color: active ? color : '#94a3b8',
     whiteSpace: 'nowrap' as const, minHeight: 36, flexShrink: 0 as const,
   })
+
+  const productGridStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+    gap: '1.1rem',
+  }
 
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
@@ -1072,15 +1136,6 @@ function ProductsInner() {
           <span>{basket.itemCount}</span>
         </button>
       )}
-      <style>{`
-        .prod-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1.1rem; }
-        .prod-filter-row { display: flex; gap: 0.5rem; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
-        .prod-filter-row::-webkit-scrollbar { display: none; }
-        @media (max-width: 1280px) { .prod-grid { grid-template-columns: repeat(3,1fr) !important; } }
-        @media (max-width: 900px)  { .prod-grid { grid-template-columns: repeat(2,1fr) !important; } }
-        @media (max-width: 480px)  { .prod-grid { grid-template-columns: repeat(2,1fr) !important; } }
-      `}</style>
-
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 1.25rem 2rem' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.5rem' }}>
@@ -1147,7 +1202,7 @@ function ProductsInner() {
           </div>
 
           {/* Type filters */}
-          <div className="prod-filter-row" style={{ marginBottom: '0.75rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2, marginBottom: '0.75rem' }}>
             {(['all','digital','physical'] as const).map(t => (
               <button key={t} onClick={() => setTypeFilter(t)} style={pillStyle(typeFilter === t)}>
                 {t === 'all' ? 'All Types' : t === 'digital' ? '💾 Digital' : '📦 Physical'}
@@ -1156,9 +1211,33 @@ function ProductsInner() {
           </div>
 
           {/* Category pills */}
-          <div className="prod-filter-row" style={{ marginBottom: '1rem' }}>
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            overflowX: 'auto',
+            paddingBottom: '8px',
+            marginBottom: '1rem',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          }}>
             {ALL_CATEGORIES.map(c => (
-              <button key={c.id} onClick={() => setCatFilter(c.id)} style={pillStyle(catFilter === c.id)}>
+              <button
+                key={c.id}
+                onClick={() => setCatFilter(c.id)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '20px',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  border: catFilter === c.id ? '2px solid #00c2cb' : '2px solid #334155',
+                  background: catFilter === c.id ? '#00c2cb22' : 'transparent',
+                  color: catFilter === c.id ? '#00c2cb' : '#94a3b8',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  fontFamily: 'inherit',
+                }}
+              >
                 {c.icon} {c.label}
               </button>
             ))}
@@ -1185,7 +1264,7 @@ function ProductsInner() {
 
           {/* Grid or empty state */}
           {loading ? (
-            <div className="prod-grid">
+            <div style={productGridStyle}>
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} style={{ background: '#1e293b', borderRadius: 14, height: 320, opacity: 0.5 }}>
                   <div style={{ height: 160, background: '#334155', borderRadius: '14px 14px 0 0' }} />
@@ -1204,32 +1283,77 @@ function ProductsInner() {
               </Link>
             </div>
           ) : (
-            <div className="prod-grid">
-              {mergedProducts.map(entry => (
-                entry._type === 'community' ? (
-                  <ProductCard
-                    key={`community-${entry.item.id}`}
-                    p={entry.item}
-                    wishlist={wishlist}
-                    onWishlist={toggleWishlist}
-                    isOwner={isAdmin || (!!userId && entry.item.seller_id === userId)}
-                    onDelete={handleDelete}
-                    inBasket={communityBasketIds.has(entry.item.id)}
-                    addingToBasket={basketBusyId === `community-${entry.item.id}`}
-                    onAddToBasket={handleAddCommunityToBasket}
-                  />
-                ) : (
-                  <ExternalProductCard
-                    key={`external-${entry.item.id}`}
-                    product={entry.item}
-                    onClick={handleExternalProductClick}
-                    inBasket={externalBasketIds.has(entry.item.id)}
-                    addingToBasket={basketBusyId === `external-${entry.item.id}`}
-                    onSaveToBasket={handleSaveExternalToBasket}
-                  />
-                )
-              ))}
-            </div>
+            <>
+              <div style={productGridStyle}>
+                {visibleProducts.map(entry => (
+                  entry._type === 'community' ? (
+                    <ProductCard
+                      key={`community-${entry.item.id}`}
+                      p={entry.item}
+                      wishlist={wishlist}
+                      onWishlist={toggleWishlist}
+                      isOwner={isAdmin || (!!userId && entry.item.seller_id === userId)}
+                      onDelete={handleDelete}
+                      inBasket={communityBasketIds.has(entry.item.id)}
+                      addingToBasket={basketBusyId === `community-${entry.item.id}`}
+                      onAddToBasket={handleAddCommunityToBasket}
+                    />
+                  ) : (
+                    <ExternalProductCard
+                      key={`external-${entry.item.id}`}
+                      product={entry.item}
+                      onClick={handleExternalProductClick}
+                      inBasket={externalBasketIds.has(entry.item.id)}
+                      addingToBasket={basketBusyId === `external-${entry.item.id}`}
+                      onSaveToBasket={handleSaveExternalToBasket}
+                    />
+                  )
+                ))}
+              </div>
+
+              {hasMore && (
+                <button
+                  onClick={() => {
+                    setLoadingMore(true)
+                    setTimeout(() => {
+                      setDisplayLimit(prev => prev + PRODUCTS_LOAD_MORE_BATCH)
+                      setLoadingMore(false)
+                    }, 300)
+                  }}
+                  disabled={loadingMore}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    margin: '24px 0',
+                    padding: '14px',
+                    background: 'transparent',
+                    border: '1px solid #334155',
+                    borderRadius: '12px',
+                    color: loadingMore ? '#475569' : '#94a3b8',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: loadingMore ? 'default' : 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  {loadingMore
+                    ? 'Loading...'
+                    : `Load More (${mergedProducts.length - displayLimit} remaining)`}
+                </button>
+              )}
+
+              {!hasMore && mergedProducts.length > PRODUCTS_INITIAL_DISPLAY && (
+                <p style={{
+                  textAlign: 'center',
+                  color: '#475569',
+                  fontSize: '13px',
+                  padding: '24px 0',
+                  margin: 0,
+                }}>
+                  All {mergedProducts.length} products loaded
+                </p>
+              )}
+            </>
           )}
         </>}
 

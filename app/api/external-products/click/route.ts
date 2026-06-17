@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { stripFreetrustReferralParams } from '@/lib/skimlinks'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -23,6 +24,9 @@ export async function POST(req: NextRequest) {
     title?: string
     retailerName?: string
     retailerUrl?: string
+    affiliateLinkGenerated?: boolean
+    clickSource?: 'grid' | 'modal' | 'basket' | 'find_online'
+    searchQuery?: string
   } | null
 
   if (!body?.productId || !body.title || !body.retailerName || !body.retailerUrl) {
@@ -48,14 +52,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: updateError.message }, { status: 500 })
   }
 
+  const cleanRetailerUrl = stripFreetrustReferralParams(body.retailerUrl)
+
   const { error: insertError } = await supabase
     .from('external_product_clicks')
     .insert({
       user_id: body.userId || null,
-      search_query: `category:${body.category || 'external'}`,
+      search_query: body.searchQuery || `category:${body.category || 'external'}`,
       product_title: body.title,
       retailer_name: body.retailerName,
-      product_url: body.retailerUrl,
+      product_url: cleanRetailerUrl,
+      affiliate_link_generated: Boolean(body.affiliateLinkGenerated),
+      click_source: body.clickSource || 'grid',
     })
 
   if (insertError) {
