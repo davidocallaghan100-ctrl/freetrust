@@ -781,6 +781,7 @@ function ProductsInner() {
   const [basketBusyId, setBasketBusyId] = useState<string | null>(null)
   const [displayLimit, setDisplayLimit] = useState(PRODUCTS_INITIAL_DISPLAY)
   const [loadingMore, setLoadingMore] = useState(false)
+  const infiniteScrollRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     setDisplayLimit(PRODUCTS_INITIAL_DISPLAY)
@@ -1003,6 +1004,24 @@ function ProductsInner() {
 
   const visibleProducts = mergedProducts.slice(0, displayLimit)
   const hasMore = displayLimit < mergedProducts.length
+
+  useEffect(() => {
+    if (activeTab !== 'listings' || loading || loadingMore || !hasMore) return
+    const node = infiniteScrollRef.current
+    if (!node) return
+
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some(entry => entry.isIntersecting)) return
+      setLoadingMore(true)
+      window.setTimeout(() => {
+        setDisplayLimit(prev => Math.min(prev + PRODUCTS_LOAD_MORE_BATCH, mergedProducts.length))
+        setLoadingMore(false)
+      }, 120)
+    }, { rootMargin: '700px 0px', threshold: 0.01 })
+
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [activeTab, hasMore, loading, loadingMore, mergedProducts.length])
 
   const communityBasketIds = useMemo(() => new Set(basket.communityItems.map(item => item.listing_id).filter(Boolean) as string[]), [basket.communityItems])
   const externalBasketIds = useMemo(() => new Set(basket.externalItems.map(item => item.external_product_id).filter(Boolean) as string[]), [basket.externalItems])
@@ -1312,34 +1331,26 @@ function ProductsInner() {
               </div>
 
               {hasMore && (
-                <button
-                  onClick={() => {
-                    setLoadingMore(true)
-                    setTimeout(() => {
-                      setDisplayLimit(prev => prev + PRODUCTS_LOAD_MORE_BATCH)
-                      setLoadingMore(false)
-                    }, 300)
-                  }}
-                  disabled={loadingMore}
+                <div
+                  ref={infiniteScrollRef}
+                  aria-live="polite"
                   style={{
-                    display: 'block',
                     width: '100%',
                     margin: '24px 0',
                     padding: '14px',
-                    background: 'transparent',
-                    border: '1px solid #334155',
+                    border: '1px solid rgba(51,65,85,0.8)',
                     borderRadius: '12px',
-                    color: loadingMore ? '#475569' : '#94a3b8',
+                    color: loadingMore ? '#38bdf8' : '#94a3b8',
                     fontSize: '14px',
                     fontWeight: 600,
-                    cursor: loadingMore ? 'default' : 'pointer',
-                    fontFamily: 'inherit',
+                    textAlign: 'center',
+                    background: loadingMore ? 'rgba(56,189,248,0.08)' : 'transparent',
                   }}
                 >
                   {loadingMore
-                    ? 'Loading...'
-                    : `Load More (${mergedProducts.length - displayLimit} remaining)`}
-                </button>
+                    ? 'Loading more products…'
+                    : `${mergedProducts.length - displayLimit} more products — scroll to keep browsing`}
+                </div>
               )}
 
               {!hasMore && mergedProducts.length > PRODUCTS_INITIAL_DISPLAY && (
