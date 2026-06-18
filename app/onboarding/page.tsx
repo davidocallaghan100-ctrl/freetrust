@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useRef } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { compressImage } from '@/lib/image-compression'
@@ -56,6 +56,8 @@ export default function OnboardingPage() {
   const supabase = createClient()
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
+  const [loadingProfile, setLoadingProfile] = useState(true)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
 
@@ -87,6 +89,60 @@ export default function OnboardingPage() {
   const [selectedHobbies, setSelectedHobbies] = useState<string[]>([])
   const [customHobby, setCustomHobby] = useState('')
   const [trustAwarded, setTrustAwarded] = useState(0)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadExistingProfile() {
+      try {
+        const res = await fetch('/api/profile', { cache: 'no-store' })
+        if (res.status === 401) {
+          router.replace('/login?redirect=/onboarding%3Fwelcome%3D1')
+          return
+        }
+        if (!res.ok) return
+        const data = await res.json() as { profile?: Record<string, unknown> | null }
+        const profile = data.profile
+        if (!profile || cancelled) return
+
+        if (profile.onboarding_complete === true) {
+          router.replace('/feed')
+          return
+        }
+
+        if (profile.account_type === 'business' || profile.account_type === 'individual') {
+          setAccountType(profile.account_type)
+        }
+
+        const fullName = typeof profile.full_name === 'string' ? profile.full_name.trim() : ''
+        const first = typeof profile.first_name === 'string' ? profile.first_name.trim() : ''
+        const last = typeof profile.last_name === 'string' ? profile.last_name.trim() : ''
+        if (first) setFirstName(first)
+        if (last) setLastName(last)
+        if ((!first || !last) && fullName) {
+          const parts = fullName.split(/\s+/).filter(Boolean)
+          if (!first && parts[0]) setFirstName(parts[0])
+          if (!last && parts.length > 1) setLastName(parts.slice(1).join(' '))
+        }
+
+        if (typeof profile.bio === 'string') setBio(profile.bio)
+        if (typeof profile.location === 'string') setLocation(profile.location)
+        if (typeof profile.avatar_url === 'string') setAvatarUrl(profile.avatar_url)
+        if (typeof profile.cover_url === 'string') setCoverUrl(profile.cover_url)
+        if (Array.isArray(profile.skills)) setSelectedSkills(profile.skills.filter((item): item is string => typeof item === 'string'))
+        if (Array.isArray(profile.interests)) setSelectedInterests(profile.interests.filter((item): item is string => typeof item === 'string'))
+        if (Array.isArray(profile.purpose)) setSelectedPurposes(profile.purpose.filter((item): item is string => typeof item === 'string'))
+        if (Array.isArray(profile.hobbies)) setSelectedHobbies(profile.hobbies.filter((item): item is string => typeof item === 'string'))
+      } catch (err) {
+        console.warn('[onboarding] existing profile preload failed:', err)
+      } finally {
+        if (!cancelled) setLoadingProfile(false)
+      }
+    }
+
+    void loadExistingProfile()
+    return () => { cancelled = true }
+  }, [router])
 
   const toggleArr = (arr: string[], set: React.Dispatch<React.SetStateAction<string[]>>, val: string) => {
     set(prev => prev.includes(val) ? prev.filter(x => x !== val) : [...prev, val])
@@ -183,6 +239,7 @@ export default function OnboardingPage() {
   // call-site compatibility.
   const complete = async (_firstActionHref: string) => {
     setSaving(true)
+    setSaveError(null)
     try {
       // Backup referral link path: if auth/callback didn't see the ft_ref
       // cookie (because the user confirmed their email in a different tab),
@@ -226,14 +283,29 @@ export default function OnboardingPage() {
           cover_url: coverUrl,
         }),
       })
-      const json = await res.json()
+      const json = await res.json().catch(() => ({} as { trust_awarded?: number; error?: string }))
+      if (!res.ok) {
+        throw new Error(json.error ?? 'Could not save your setup. Please try again.')
+      }
       setTrustAwarded(json.trust_awarded ?? 0)
       setStep(TOTAL_STEPS)
-    } catch {
-      setStep(TOTAL_STEPS)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Could not save your setup. Please try again.'
+      console.error('[onboarding] save failed:', err)
+      setSaveError(message)
     } finally {
       setSaving(false)
     }
+  }
+
+  if (loadingProfile) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem', fontFamily: 'system-ui' }}>
+        <div style={{ width: '100%', maxWidth: 420, background: '#1e293b', border: '1px solid rgba(56,189,248,0.12)', borderRadius: 20, padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
+          Loading your FreeTrust profile…
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -642,6 +714,11 @@ export default function OnboardingPage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.75rem' }}>
+              {saveError && (
+                <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.22)', borderRadius: 10, padding: '0.7rem 0.85rem', color: '#fca5a5', fontSize: '0.82rem', lineHeight: 1.45 }}>
+                  ⚠️ {saveError}
+                </div>
+              )}
               {FIRST_ACTIONS.map(a => (
                 <button key={a.id} className="ob-action-btn" onClick={() => complete(a.href)} disabled={saving}>
                   <span style={{ fontSize: '1.5rem' }}>{a.icon}</span>

@@ -105,11 +105,12 @@ export async function POST(request: NextRequest) {
       .update(extendedUpdates)
       .eq('id', user.id)
     if (extendedError) {
-      // Don't fail the whole request — the core update above (with
-      // first/last name, bio, location, avatar) already committed.
-      // Log the error so we can see which extended column is missing
-      // and run the appropriate migration.
-      console.warn('[POST /api/onboarding] extended update warning:', extendedError.message)
+      // The extended update contains account_type and onboarding_complete.
+      // If it fails, the user would be sent through signup/onboarding again on
+      // the next auth callback, so fail loudly instead of pretending setup was
+      // saved.
+      console.error('[POST /api/onboarding] extended update error:', extendedError)
+      return NextResponse.json({ error: extendedError.message }, { status: 500 })
     }
 
     // Read trust balance to confirm ₮200 was already issued at signup

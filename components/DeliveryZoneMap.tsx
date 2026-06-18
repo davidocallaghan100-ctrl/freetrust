@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
+import type { StyleSpecification } from 'maplibre-gl'
 // NOTE: the maplibre stylesheet is also imported globally in app/layout.tsx
 // so the canvas always has sizing rules at mount time (mobile Safari needs
 // the stylesheet to be present before the map initialises or the canvas
@@ -53,17 +54,43 @@ interface DeliveryZoneMapProps {
   height?: number
 }
 
-// ─── Mapbox token (reuse existing project token) ─────────────────────────────
+// ─── Map/geocoding config ────────────────────────────────────────────────────
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 
-// Use the Mapbox Styles REST API URL directly — maplibre-gl fetches this over
-// plain HTTPS with no special transformRequest needed (unlike mapbox:// URIs).
-function getMapStyle(): string {
-  if (MAPBOX_TOKEN) {
-    return `https://api.mapbox.com/styles/v1/mapbox/streets-v12?access_token=${MAPBOX_TOKEN}`
-  }
-  // Fallback: OpenFreeMap — free, no key, good-looking streets tiles
-  return 'https://tiles.openfreemap.org/styles/liberty'
+// Product delivery-zone picking must not depend on a project Mapbox style or a
+// third-party JSON style endpoint. A single invalid token/style fetch previously
+// caused MapLibre to render only the watermark plus the "Map couldn't load"
+// overlay on mobile. Use a tiny inline raster style with public Carto tiles so
+// the picker has a stable, no-key basemap; keep Mapbox only for optional reverse
+// geocoding below.
+const CARTO_DARK_RASTER_STYLE: StyleSpecification = {
+  version: 8,
+  sources: {
+    'carto-dark': {
+      type: 'raster',
+      tiles: [
+        'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+        'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+        'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+        'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+      ],
+      tileSize: 256,
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    },
+  },
+  layers: [
+    {
+      id: 'carto-dark',
+      type: 'raster',
+      source: 'carto-dark',
+      minzoom: 0,
+      maxzoom: 20,
+    },
+  ],
+}
+
+function getMapStyle(): StyleSpecification {
+  return CARTO_DARK_RASTER_STYLE
 }
 
 // ─── Reverse geocode via Mapbox Geocoding API ─────────────────────────────────
@@ -99,6 +126,7 @@ export default function DeliveryZoneMap({
   // the user staring at an empty black rectangle.
   const [mapReady, setMapReady] = useState(false)
   const [mapError, setMapError] = useState<string | null>(null)
+  const loadedRef = useRef(false)
 
   // Keep a ref so map event handlers always see the current value without
   // recreating the map on every render.
@@ -188,14 +216,23 @@ export default function DeliveryZoneMap({
 
     mapRef.current = map
 
-    // Surface errors so we render a visible fallback instead of a
-    // blank black rectangle if the style or tiles fail to load.
+    loadedRef.current = false
+
+    // Log non-fatal tile errors for diagnostics, but don't hide the map for a
+    // single failed tile/glyph request. The fatal fallback below only appears
+    // if the map never reaches its load event.
     map.on('error', (e) => {
-      console.error('[DeliveryZoneMap] map error:', e.error?.message ?? e)
-      setMapError(e.error?.message ?? 'Map failed to load')
+      console.warn('[DeliveryZoneMap] map warning:', e.error?.message ?? e)
     })
 
+    const loadTimeout = window.setTimeout(() => {
+      if (!loadedRef.current) setMapError('Map timed out before loading')
+    }, 10000)
+
     map.on('load', () => {
+      loadedRef.current = true
+      window.clearTimeout(loadTimeout)
+      setMapError(null)
       setMapReady(true)
       // Mobile Safari frequently mounts the canvas at 0×0 when the map is
       // inside a just-revealed conditional (e.g. "Local" radio click). Force
@@ -233,10 +270,12 @@ export default function DeliveryZoneMap({
     ro.observe(mapContainer.current)
 
     return () => {
+      window.clearTimeout(loadTimeout)
       ro.disconnect()
       map.remove()
       mapRef.current = null
       markerRef.current = null
+      loadedRef.current = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -342,7 +381,7 @@ export default function DeliveryZoneMap({
           >
             <span>⚠️ Map couldn&apos;t load</span>
             <span style={{ color: '#94a3b8', fontSize: 12 }}>
-              Check your connection, or type coordinates manually below.
+              Check your connection, or use your current location below.
             </span>
           </div>
         )}

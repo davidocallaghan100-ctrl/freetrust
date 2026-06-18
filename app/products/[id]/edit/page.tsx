@@ -499,7 +499,7 @@ export default function EditListingPage() {
               <h3 style={{ fontWeight: 700, fontSize: '0.95rem', margin: 0, color: text }}>🚚 Delivery Zone</h3>
               <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: 600 }}>required</span>
             </div>
-            <p style={{ margin: 0, color: muted, fontSize: '13px' }}>Let buyers know where you can deliver to.</p>
+            <p style={{ margin: 0, color: muted, fontSize: '13px' }}>Showcase this product in the marketplace and choose where buyers can receive it.</p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {(['local', 'national', 'international', 'worldwide'] as const).map((scope) => (

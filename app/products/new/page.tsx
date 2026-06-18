@@ -675,7 +675,7 @@ function NewProductPageContent() {
                 <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f1f5f9' }}>🚚 Delivery Zone</span>
                 <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: 600 }}>required</span>
               </div>
-              <p style={{ margin: 0, color: '#9ca3af', fontSize: '13px' }}>Let buyers know where you can deliver to.</p>
+              <p style={{ margin: 0, color: '#9ca3af', fontSize: '13px' }}>Showcase this product in the marketplace and choose where buyers can receive it.</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {(['local', 'national', 'international', 'worldwide'] as const).map((scope) => (

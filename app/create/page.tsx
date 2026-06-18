@@ -1637,7 +1637,7 @@ export default function CreatePage() {
                   🚚 Delivery Zone <span style={{ color: '#ef4444', fontSize: '12px' }}>required</span>
                 </h3>
                 <p style={{ color: '#9ca3af', fontSize: '13px', marginBottom: '16px', marginTop: 0 }}>
-                  Let buyers know where you can deliver to.
+                  Showcase this product in the marketplace and choose where buyers can receive it.
                 </p>
 
                 {/* Scope radio buttons */}

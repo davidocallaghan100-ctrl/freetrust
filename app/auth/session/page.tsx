@@ -56,16 +56,19 @@ function AuthSessionInner() {
         // Idempotent: awards/corrects the welcome Trust grant when needed and
         // no-ops for existing users. This covers implicit-fragment callbacks
         // that bypass the server /auth/callback code path.
-        await fetch('/api/auth/signup-bonus', { method: 'POST', cache: 'no-store' }).catch(() => {})
+        const bonus = await fetch('/api/auth/signup-bonus', { method: 'POST', cache: 'no-store' })
+          .then(res => res.ok ? res.json() : null)
+          .catch(() => null) as { issued?: boolean; topup?: number } | null
+        const firstSignupBonusIssued = bonus?.issued === true && typeof bonus.topup !== 'number'
 
         let destination = next
         try {
           const res = await fetch('/api/profile', { cache: 'no-store' })
           if (res.ok) {
             const data = await res.json() as { profile?: Record<string, unknown> | null }
-            if (isProfileIncomplete(data.profile)) destination = '/onboarding?welcome=1'
+            if (firstSignupBonusIssued && isProfileIncomplete(data.profile)) destination = '/onboarding?welcome=1'
           } else if (res.status === 404) {
-            destination = '/onboarding?welcome=1'
+            if (firstSignupBonusIssued) destination = '/onboarding?welcome=1'
           }
         } catch {
           // Non-fatal — if the profile check fails, continue to the intended route.

@@ -105,8 +105,6 @@ export async function GET(request: NextRequest) {
             console.error('[auth/callback] Profile upsert/sync error:', err)
           }
 
-          const profileIncomplete = !existingProfile || existingProfile.onboarding_complete !== true
-
           // Determine "new user" by whether a signup bonus has already been issued.
           // Time-based checks (e.g. 60s) fail for email signups — users typically
           // take 1–5+ minutes to confirm their email, blowing past any short window.
@@ -254,12 +252,9 @@ export async function GET(request: NextRequest) {
             return NextResponse.redirect(`${origin}/onboarding?welcome=1`)
           }
 
-          // Existing users who never completed onboarding (e.g. OAuth users who
-          // previously landed on /feed) should get the same profile/hobbies flow
-          // instead of being treated as signed out or left with a blank profile.
-          if (profileIncomplete) {
-            return NextResponse.redirect(`${origin}/onboarding?welcome=1`)
-          }
+          // Do not force existing users back through onboarding during login.
+          // If their profile still needs details, AppShell shows a lightweight
+          // profile-completion nudge after login instead of replaying signup.
         }
       } catch (err) {
         console.error('[auth/callback] Post-auth processing error:', err)

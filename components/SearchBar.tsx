@@ -114,7 +114,7 @@ export default function SearchBar() {
               value={query}
               onChange={handleChange}
               onFocus={() => { if (results.length > 0) setOpen(true) }}
-              placeholder="Search members, services, events…"
+              placeholder="Search marketplace: products, services, events…"
               autoComplete="off"
               style={{
                 width: '100%', background: '#1e293b', border: '1px solid #334155',

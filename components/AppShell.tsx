@@ -172,7 +172,7 @@ function ProfileSetupPrompt({ onDismiss }: { onDismiss: () => void }) {
       <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
         <button
           type="button"
-          onClick={() => { window.location.href = '/onboarding?welcome=1' }}
+          onClick={() => { window.location.href = '/profile' }}
           style={{ flex: 1, border: 'none', borderRadius: 11, background: 'linear-gradient(135deg,#00c2cb,#38bdf8)', color: '#0a0f1e', fontWeight: 850, fontSize: 14, padding: '11px 14px', cursor: 'pointer', fontFamily: 'inherit' }}
         >Complete profile</button>
         <button
