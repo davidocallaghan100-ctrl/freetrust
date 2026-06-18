@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'Trust & Safety Policy | FreeTrust',
-  description: 'How FreeTrust protects members with verified accounts, on-platform payments, protected messaging, reporting and marketplace safety rules.',
+  description: 'How FreeTrust protects members with verified accounts, on-platform payments, protected messaging, AI image generation safeguards, reporting and marketplace safety rules.',
 }
 
 const safetySections = [
@@ -24,6 +24,10 @@ const safetySections = [
     body: 'Listings must be accurate, lawful and offered by the person or organisation responsible for fulfilling them. FreeTrust may remove listings, restrict checkout, suspend seller activity or investigate orders where listing, seller, price, fulfilment or identity data appears incomplete or unsafe.',
   },
   {
+    title: 'AI image generation safeguards',
+    body: 'FreeTrust image generation is limited to creative, professional and brand-safe uses such as marketplace visuals, service concepts, event posters, profile banners and community graphics. Prompts are reviewed before generation and generated images are reviewed before upload. We block unsafe, unlawful, sexual, hateful, violent, impersonation, fake-document, privacy-invasive, copyrighted/trademark-imitating, unsolicited outreach, spam, phishing, pressure-sales, fake endorsement, deceptive or manipulative promotional content. Image generation never silently posts to the feed; members must review and confirm any use publicly.',
+  },
+  {
     title: 'Reports, blocks and moderation',
     body: 'Members can report suspicious behaviour, harassment, misleading listings, unsafe payment requests or prohibited content. FreeTrust may use reports, trust signals, transaction history and platform logs to review abuse and take appropriate action.',
   },
@@ -38,6 +42,7 @@ const prohibited = [
   'Requests to move protected transactions off FreeTrust',
   'Spam, harassment, threats or abusive messaging',
   'Misleading listings, fake reviews or TrustCoin manipulation',
+  'Unsafe, unlawful or unsolicited AI-generated images, including spam, pressure-sales, phishing, impersonation, fake endorsements or manipulative promotional content',
   'Illegal goods, counterfeit goods or services that violate applicable law',
   'Attempts to bypass security, rate limits, payment checks or moderation systems',
 ]

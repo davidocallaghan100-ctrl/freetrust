@@ -127,6 +127,53 @@ type ImageSafetyResult = {
   rewrittenPrompt: string
 }
 
+type ImagePolicyBlock = {
+  reason: string
+  code: 'non_professional_image_request' | 'unsolicited_or_manipulative_content'
+}
+
+const UNSOLICITED_IMAGE_INTENT_PATTERNS = [
+  /\bunsolicited\b/i,
+  /\bspam(?:my)?\b/i,
+  /\bmass\s+(?:dm|message|text|email|outreach|blast)\b/i,
+  /\b(?:dm|message|text|email)\s+blast\b/i,
+  /\bcold\s+(?:dm|message|text|email|outreach)\b/i,
+  /\bphish(?:ing)?\b/i,
+  /\bscam\b/i,
+  /\bclickbait\b/i,
+  /\boutrage\s*bait\b/i,
+  /\bpressure\s*(?:sale|sales|selling)\b/i,
+  /\bfake\s+(?:endorsement|review|testimonial|screenshot|notification|alert|invoice|receipt)\b/i,
+]
+
+const CREATIVE_OR_PROFESSIONAL_CONTEXT_PATTERNS = [
+  /\b(marketplace|listing|product|service|event|poster|banner|profile|cover|thumbnail|graphic|illustration|visual|artwork|concept|brand|branding|social|community|educational|professional|creative|portfolio|presentation|flyer|logo-free|abstract|design)\b/i,
+  /\b(image|picture|photo|visual|poster|graphic|banner|thumbnail|artwork|illustration)\b/i,
+]
+
+function localImagePolicyBlock(prompt: string): ImagePolicyBlock | null {
+  const compactPrompt = prompt.trim()
+  if (!compactPrompt) {
+    return { code: 'non_professional_image_request', reason: 'Image generation needs a clear creative or professional visual brief.' }
+  }
+
+  if (!CREATIVE_OR_PROFESSIONAL_CONTEXT_PATTERNS.some((pattern) => pattern.test(compactPrompt))) {
+    return {
+      code: 'non_professional_image_request',
+      reason: 'FreeTrust image generation is limited to creative, professional, brand-safe visual assets such as marketplace images, posters, banners, product concepts, profile covers, and community graphics.',
+    }
+  }
+
+  if (UNSOLICITED_IMAGE_INTENT_PATTERNS.some((pattern) => pattern.test(compactPrompt))) {
+    return {
+      code: 'unsolicited_or_manipulative_content',
+      reason: 'FreeTrust does not generate unsolicited outreach, spam, phishing, clickbait, fake endorsement, pressure-sales, or manipulative promotional images.',
+    }
+  }
+
+  return null
+}
+
 function readSafetyResult(text: string, fallbackPrompt: string): ImageSafetyResult {
   const parsed = parseJsonObject(text)
   const allowed = parsed?.allowed === true
@@ -144,11 +191,13 @@ async function reviewImagePromptSafety(anthropic: Anthropic, prompt: string): Pr
     temperature: 0,
     system: `You are FreeTrust's strict image-generation safety gate. Return JSON only.
 
-Approve only benign, lawful, non-exploitative, non-sexual, non-violent, non-fraudulent, non-hateful, non-invasive image requests.
+Approve only benign, lawful, safe-for-work image requests that are clearly creative or professional: marketplace visuals, product/service concept art, event posters, social graphics, profile banners, educational/community visuals, or brand-safe creative assets.
 
 Block if the prompt requests, implies, enables, or tries to evade safeguards around: unlawful acts, sexual content or nudity, minors in unsafe contexts, non-consensual or intimate imagery, harassment or threats, hate or extremist symbols/propaganda, realistic gore or graphic violence, weapons instructions, illegal drugs, fraud/scams, fake documents/IDs/payment cards, doxxing/private data, real private-person likenesses, public-figure deepfakes, impersonation, copyrighted characters/logos/trademarks, or any upload/generation that could reasonably be illegal.
 
-If approved, rewrite the prompt into a safe original visual prompt. Remove unsafe details, real-person likenesses, copyrighted/trademarked references, gore, weapons, drugs, and privacy-invasive material. Add "original, lawful, safe-for-work, no logos, no real person likeness" when helpful.
+Also block unsolicited or manipulative content: spam, cold DMs, mass outreach graphics, phishing or scam visuals, pressure-sales ads, fake endorsements/reviews/testimonials, fake screenshots/alerts, political persuasion targeted at people, harassment campaigns, outrage bait, clickbait, deceptive urgency, or content designed to pressure strangers who did not opt in. Marketing visuals may be approved only when they are truthful, general-audience, brand-safe, non-targeted, non-deceptive, and professional.
+
+If approved, rewrite the prompt into a safe original visual prompt. Remove unsafe details, real-person likenesses, copyrighted/trademarked references, gore, weapons, drugs, privacy-invasive material, manipulative calls-to-action, and unsolicited-targeting language. Add "original, lawful, safe-for-work, professional, brand-safe, no logos, no real person likeness, no unsolicited outreach" when helpful.
 
 JSON shape: {"allowed": boolean, "reason": string, "rewrittenPrompt": string}`,
     messages: [{ role: 'user', content: `Image request to review:\n\n${prompt}` }],
@@ -163,7 +212,7 @@ async function reviewGeneratedImageSafety(anthropic: Anthropic, image: { mediaTy
     temperature: 0,
     system: `You are FreeTrust's strict post-generation image safety reviewer. Return JSON only.
 
-Approve only if the image is clearly lawful, safe-for-work, non-exploitative, non-sexual, non-hateful, non-fraudulent, non-invasive, and does not contain realistic gore, abuse, extremist propaganda, illegal-drug promotion, weapons-focused wrongdoing, fake documents, payment cards, private data, or real-person/public-figure impersonation. If uncertain, block.
+Approve only if the image is clearly lawful, safe-for-work, creative or professional, brand-safe, non-exploitative, non-sexual, non-hateful, non-fraudulent, non-invasive, and not built for unsolicited outreach or manipulation. It must not contain realistic gore, abuse, extremist propaganda, illegal-drug promotion, weapons-focused wrongdoing, fake documents, payment cards, private data, real-person/public-figure impersonation, fake endorsements, deceptive urgency, spam/cold-outreach language, or pressure-sales/clickbait framing. If uncertain, block.
 
 JSON shape: {"allowed": boolean, "reason": string, "rewrittenPrompt": string}`,
     messages: [
@@ -187,7 +236,7 @@ async function fetchGeneratedImage(prompt: string): Promise<{ bytes: Buffer, med
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), IMAGE_GENERATION_TIMEOUT_MS)
   try {
-    const safePrompt = `${prompt}\n\nOriginal lawful safe-for-work commercial image. No logos. No text that looks like official documents. No real person likeness. No nudity. No gore. No weapons. No illegal drugs.`
+    const safePrompt = `${prompt}\n\nOriginal lawful safe-for-work creative professional commercial image. Brand-safe. No logos. No text that looks like official documents. No real person likeness. No nudity. No gore. No weapons. No illegal drugs. No unsolicited outreach, pressure-sales, fake endorsement, clickbait, phishing, spam, or manipulative promotional content.`
     const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(safePrompt)}?width=1024&height=1024&nologo=true&safe=true&seed=${Date.now()}`
     const res = await fetch(url, { signal: controller.signal, headers: { Accept: 'image/png,image/jpeg,image/webp' } })
     if (!res.ok) throw new Error(`image provider returned ${res.status}`)
@@ -241,6 +290,19 @@ async function runImageGenerationAgent(params: {
 
   let promptSafety: ImageSafetyResult
   try {
+    const localPolicyBlock = localImagePolicyBlock(userInput)
+    if (localPolicyBlock) {
+      return NextResponse.json(
+        {
+          error: `I can’t generate that image. ${localPolicyBlock.reason}`,
+          code: localPolicyBlock.code,
+          safetyReason: localPolicyBlock.reason,
+          creditsCharged: 0,
+        },
+        { status: 400 },
+      )
+    }
+
     promptSafety = await reviewImagePromptSafety(anthropic, userInput)
   } catch (err) {
     console.error('[agents/run] image prompt safety failed:', err)
@@ -253,7 +315,7 @@ async function runImageGenerationAgent(params: {
   if (!promptSafety.allowed) {
     return NextResponse.json(
       {
-        error: `I can’t generate that image because it may be unsafe or unlawful. ${promptSafety.reason}`,
+        error: `I can’t generate that image because it may be unsafe, unsolicited, unprofessional, or unlawful. ${promptSafety.reason}`,
         code: 'safety_blocked',
         safetyReason: promptSafety.reason,
         creditsCharged: 0,
@@ -325,7 +387,7 @@ async function runImageGenerationAgent(params: {
       media_url: imageUrl,
       prompt: userInput,
       revised_prompt: promptSafety.rewrittenPrompt,
-      safety_note: 'FreeTrust checked the prompt before generation and checked the generated image before upload.',
+      safety_note: 'FreeTrust checked that the prompt was creative/professional, not unsolicited or manipulative, and reviewed the generated image before upload.',
       caption: 'Generated image ready. Review it before posting or using publicly.',
     }
 
