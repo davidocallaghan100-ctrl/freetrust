@@ -183,9 +183,9 @@ function TrustWorldMap() {
 }
 
 function LegacyTopDesign({
+  initialCounts,
+  stats,
   members,
-  listings,
-  communities,
   membersThisWeek,
   services,
   products,
@@ -193,9 +193,9 @@ function LegacyTopDesign({
   trustCirculation,
   trustHolders,
 }: {
+  initialCounts: HomeClientProps['initialCounts']
+  stats: StatsData | null
   members: number
-  listings: number
-  communities: number
   membersThisWeek: number
   services: number
   products: number
@@ -204,54 +204,120 @@ function LegacyTopDesign({
   trustHolders: number
 }) {
   return (
-    <section style={{ background: '#0f172a', borderBottom: '1px solid rgba(56,189,248,0.08)', overflow: 'hidden' }}>
-      <div className="ft-container" style={{ paddingTop: 18, paddingBottom: 36 }}>
-        <div style={{ color: '#34d399', fontSize: 16, display: 'flex', alignItems: 'center', gap: 10, margin: '0 0 28px' }}>
-          <span>✓</span>
-          <span style={{ color: '#64748b' }}>Payments stay inside FreeTrust</span>
-        </div>
+    <>
+      {/* ── 2. HERO ── */}
+      <div style={{ background: 'radial-gradient(ellipse 100% 80% at 50% -5%, rgba(56,189,248,0.13) 0%, transparent 65%), radial-gradient(ellipse 60% 50% at 85% 40%, rgba(129,140,248,0.08) 0%, transparent 60%)', borderBottom: '1px solid rgba(56,189,248,0.08)', paddingTop: '3rem', paddingBottom: '2.5rem' }}>
+        <div className="lp" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '3rem', flexWrap: 'wrap', justifyContent: 'center' }} >
+          <div className="hero-inner" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '3rem', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
 
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 24, flexWrap: 'wrap', color: '#94a3b8', fontSize: 17, marginBottom: 42 }}>
-          <span><strong style={{ color: '#38bdf8' }}>{members.toLocaleString()}</strong> members</span>
-          <span style={{ color: '#334155' }}>·</span>
-          <span><strong style={{ color: '#38bdf8' }}>{listings.toLocaleString()}</strong> listings</span>
-          <span style={{ color: '#334155' }}>·</span>
-          <span><strong style={{ color: '#38bdf8' }}>{communities.toLocaleString()}</strong> communities</span>
-        </div>
+            {/* Left: rotating globe */}
+            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }} className="bubble-col hero-globe-stack">
+              <style>{`
+                @media (max-width: 640px) { .bubble-col > div { transform: scale(0.78); transform-origin: center top; } }
+              `}</style>
+              <HeroGlobe size={220} />
+              <img
+                className="hero-frameless-logo"
+                src="/icons/freetrust-mark-perfect-transparent-20260521.png"
+                alt="FreeTrust trust knot logo"
+                style={{
+                  width: 140,
+                  height: 'auto',
+                  marginTop: '-0.45rem',
+                  filter: 'drop-shadow(0 0 22px rgba(56,189,248,0.52)) drop-shadow(0 0 16px rgba(52,211,153,0.28))',
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                }}
+              />
+            </div>
 
-        <div style={{ borderTop: '1px solid rgba(56,189,248,0.08)', marginLeft: -34, marginRight: -34, paddingTop: 38 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 24, fontSize: 14, color: '#64748b' }}>
-            <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#34d399', boxShadow: '0 0 16px rgba(52,211,153,.65)' }} />
-            Live stats — refreshes every 60s
+            {/* Right: headline + CTAs */}
+            <div className="hero-text" style={{ flex: 1, minWidth: 280, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '1.25rem', maxWidth: 560 }}>
+              <div style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 999, padding: '0.3rem 1rem', fontSize: '0.75rem', color: '#38bdf8', letterSpacing: '0.06em', fontWeight: 700 }}>
+                🌍 COMMUNITY ECONOMY PLATFORM
+              </div>
+
+              <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.8rem)', fontWeight: 900, lineHeight: 1.1, margin: 0, letterSpacing: '-1.5px' }}>
+                The marketplace where{' '}
+                <span style={{ background: 'linear-gradient(135deg, #38bdf8 0%, #818cf8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>trust is currency</span>
+              </h1>
+
+              <p style={{ fontSize: '1.05rem', color: '#94a3b8', margin: 0, lineHeight: 1.65, maxWidth: 480 }}>
+                FreeTrust is the secure community economy platform — verified members, protected messaging, on-platform payments and TrustCoins (₮) for every contribution.
+              </p>
+
+              <div className="hero-cta" style={{ display: 'flex', flexDirection: 'row', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <Link href="/register" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.9rem 2rem', borderRadius: 10, fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.35)' }}>
+                  Join FreeTrust Free →
+                </Link>
+                <a href="#how-it-works" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', color: '#cbd5e1', padding: '0.9rem 1.75rem', borderRadius: 10, fontWeight: 600, fontSize: '0.95rem', textDecoration: 'none', border: '1px solid rgba(148,163,184,0.2)', scrollBehavior: 'smooth' }}>
+                  See how it works
+                </a>
+              </div>
+
+              {/* Trust points */}
+              <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.8rem', color: '#64748b' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> Free to join — ₮200 on signup</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> Real people only — no bots</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> Payments stay inside FreeTrust</span>
+              </div>
+
+              {/* Server-rendered live stats strip — matches the summary
+                  crawled by AI search engines in the JSON-LD. Re-hydrates
+                  with the server-fetched counts on first paint. */}
+              <div style={{ marginTop: '0.35rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.82rem', color: '#94a3b8' }}>
+                <span><strong style={{ color: '#38bdf8' }}>{initialCounts.members.toLocaleString()}</strong> members</span>
+                <span aria-hidden="true" style={{ color: '#334155' }}>·</span>
+                <span><strong style={{ color: '#38bdf8' }}>{initialCounts.listings.toLocaleString()}</strong> listings</span>
+                <span aria-hidden="true" style={{ color: '#334155' }}>·</span>
+                <span><strong style={{ color: '#38bdf8' }}>{initialCounts.communities.toLocaleString()}</strong> communities</span>
+              </div>
+            </div>
           </div>
+        </div>
+      </div>
 
-          <div className="ft-legacy-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 18, maxWidth: 940, margin: '0 auto' }}>
+      {/* ── 4. STATS BAR ── */}
+      <div style={{ background: 'rgba(56,189,248,0.03)', borderBottom: '1px solid rgba(56,189,248,0.08)' }}>
+        <div className="lp" style={{ padding: '1.75rem 1.25rem 1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', marginBottom: '1rem', fontSize: '0.72rem', color: '#475569' }}>
+            <span className="live-dot" /> Live stats — refreshes every 60s
+          </div>
+          <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.85rem', textAlign: 'center' }}>
             {[
-              { value: members, label: 'Members & growing', sub: membersThisWeek > 0 ? `+${membersThisWeek} this week` : 'Join free' },
-              { value: services, label: 'Services available', sub: services ? 'Browse now' : 'Be the first!' },
-              { value: products, label: 'Products listed', sub: products ? 'Shop now' : 'List yours' },
-              { value: trustIssued, prefix: '₮', label: 'Total ₮ issued', sub: 'Since launch' },
-            ].map(item => (
-              <div key={item.label} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 18, padding: '28px 16px', textAlign: 'center', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,.02)' }}>
-                <div style={{ color: '#38bdf8', fontSize: 30, fontWeight: 900, letterSpacing: '-0.04em' }}><Counter target={item.value} prefix={item.prefix ?? ''} /></div>
-                <div style={{ color: '#94a3b8', marginTop: 10, fontWeight: 700 }}>{item.label}</div>
-                <div style={{ color: '#38bdf8', marginTop: 10, fontWeight: 800, fontSize: 14 }}>{item.sub}</div>
+              { val: members, prefix: '', suffix: '', label: 'Members & growing', sub: membersThisWeek > 0 ? `+${membersThisWeek} this week` : 'Join free', color: '#38bdf8' },
+              { val: services, prefix: '', suffix: '', label: 'Services available', sub: services === 0 ? 'Be the first!' : 'Browse now', color: '#38bdf8' },
+              { val: products, prefix: '', suffix: '', label: 'Products listed', sub: products === 0 ? 'List yours' : 'Shop now', color: '#38bdf8' },
+              { val: trustIssued, prefix: '₮', suffix: '', label: 'Total ₮ issued', sub: 'Since launch', color: '#38bdf8' },
+            ].map(s => (
+              <div key={s.label} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1rem 0.5rem' }}>
+                <div className="stat-val" style={{ fontSize: '1.8rem', fontWeight: 900, color: s.color, letterSpacing: '-1px' }}>
+                  <Counter target={s.val} prefix={s.prefix} suffix={s.suffix} />
+                </div>
+                <div className="stat-label" style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
+                <div className="stat-sub" style={{ fontSize: '0.65rem', color: s.color, marginTop: 3, fontWeight: 600 }}>{s.sub}</div>
               </div>
             ))}
           </div>
 
-          <div style={{ maxWidth: 940, margin: '22px auto 0', background: 'linear-gradient(135deg,rgba(45,212,191,0.09),rgba(56,189,248,0.04))', border: '1px solid rgba(45,212,191,0.18)', borderRadius: 18, padding: '22px 26px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#2dd4bf', fontWeight: 900, letterSpacing: '0.14em', fontSize: 13, marginBottom: 18 }}>₮ TRUST ECONOMY <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#2dd4bf' }} /></div>
-            <div className="ft-trust-econ-top-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 18 }}>
+          {/* Trust Economy strip */}
+          <div className="trust-econ-strip" style={{ marginTop: '0.85rem', background: 'linear-gradient(135deg,rgba(45,212,191,0.07),rgba(56,189,248,0.04))', border: '1px solid rgba(45,212,191,0.15)', borderRadius: 12, padding: '1rem 1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#2dd4bf', letterSpacing: '0.1em', textTransform: 'uppercase' }}>₮ Trust Economy</span>
+              <span className="live-dot" style={{ width: 5, height: 5 } as React.CSSProperties} />
+            </div>
+            <div className="trust-econ-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem', textAlign: 'center' }}>
               {[
-                { value: trustCirculation, color: '#2dd4bf', label: '₮ in circulation', sub: 'Current balances held' },
-                { value: trustIssued, color: '#34d399', label: '₮ issued since launch', sub: 'Total ever earned' },
-                { value: trustHolders, color: '#38bdf8', label: 'Members holding ₮', sub: 'Active trust holders' },
-              ].map(item => (
-                <div key={item.label} style={{ background: 'rgba(15,23,42,0.62)', borderRadius: 16, border: '1px solid rgba(45,212,191,0.1)', padding: '24px 14px', textAlign: 'center' }}>
-                  <div style={{ color: item.color, fontSize: 28, fontWeight: 900, letterSpacing: '-0.04em' }}><Counter target={item.value} prefix={item.label.includes('₮') ? '₮' : ''} /></div>
-                  <div style={{ color: '#94a3b8', marginTop: 10 }}>{item.label}</div>
-                  <div style={{ color: item.color, marginTop: 8, fontSize: 13, fontWeight: 800 }}>{item.sub}</div>
+                { val: trustCirculation, prefix: '₮', label: '₮ in circulation', sub: 'Current balances held', color: '#2dd4bf' },
+                { val: trustIssued, prefix: '₮', label: '₮ issued since launch', sub: 'Total ever earned', color: '#34d399' },
+                { val: trustHolders, prefix: '', label: 'Members holding ₮', sub: 'Active trust holders', color: '#38bdf8' },
+              ].map(s => (
+                <div key={s.label} style={{ background: 'rgba(15,23,42,0.5)', borderRadius: 10, padding: '0.75rem 0.5rem', border: '1px solid rgba(45,212,191,0.1)' }}>
+                  <div className="trust-val" style={{ fontSize: '1.6rem', fontWeight: 900, color: s.color, letterSpacing: '-0.5px' }}>
+                    <Counter target={s.val} prefix={s.prefix} />
+                  </div>
+                  <div className="trust-econ-label" style={{ fontSize: '0.68rem', color: '#64748b', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
+                  <div className="trust-econ-sub" style={{ fontSize: '0.62rem', color: s.color, marginTop: 2, fontWeight: 600, opacity: 0.8 }}>{s.sub}</div>
                 </div>
               ))}
             </div>
@@ -259,22 +325,38 @@ function LegacyTopDesign({
         </div>
       </div>
 
-      <div style={{ borderTop: '1px solid rgba(56,189,248,0.08)', background: 'radial-gradient(ellipse 80% 70% at 50% 18%, rgba(56,189,248,0.16) 0%, transparent 62%), #0f172a' }}>
-        <div className="ft-container" style={{ paddingTop: 56, paddingBottom: 76, textAlign: 'center' }}>
-          <div style={{ maxWidth: 700, margin: '0 auto', display: 'grid', justifyItems: 'center' }}>
-            <HeroGlobe size={300} />
-            <img
-              src="/icons/freetrust-mark-perfect-transparent-20260521.png"
-              alt="FreeTrust trust knot logo"
-              style={{ width: 150, marginTop: -10, marginBottom: 28, filter: 'drop-shadow(0 0 24px rgba(56,189,248,.58)) drop-shadow(0 0 18px rgba(52,211,153,.32))' }}
-            />
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9, padding: '10px 22px', borderRadius: 999, border: '1px solid rgba(56,189,248,.36)', background: 'rgba(56,189,248,.08)', color: '#38bdf8', fontSize: 13, fontWeight: 900, letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 26 }}>🌍 Community Economy Platform</div>
-            <h1 style={{ fontSize: 'clamp(2.3rem,7vw,4.6rem)', lineHeight: 1.02, letterSpacing: '-0.07em', margin: '0 0 22px', fontWeight: 900 }}>The marketplace where<br /><span style={{ background: 'linear-gradient(135deg,#38bdf8,#818cf8)', WebkitBackgroundClip: 'text', color: 'transparent' }}>trust is currency</span></h1>
-            <p style={{ color: '#94a3b8', fontSize: 18, lineHeight: 1.7, maxWidth: 620, margin: 0 }}>FreeTrust is the secure community economy platform — verified members, protected messaging, on-platform payments and TrustCoins (₮) for every contribution.</p>
+      {/* ── 4b. LIVE TICKER ── */}
+      {stats?.ticker && stats.ticker.length > 0 && (
+        <div style={{ background: 'rgba(56,189,248,0.04)', borderBottom: '1px solid rgba(56,189,248,0.06)', overflow: 'hidden', position: 'relative' }}>
+          <style>{`
+            @keyframes ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+            .ticker-track { display: flex; animation: ticker-scroll 40s linear infinite; white-space: nowrap; width: max-content; }
+            .ticker-track:hover { animation-play-state: paused; }
+          `}</style>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 0, padding: '0.55rem 0' }}>
+            {/* Live label */}
+            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0 1rem', borderRight: '1px solid rgba(56,189,248,0.12)', background: 'rgba(56,189,248,0.06)', height: '100%', zIndex: 1 }}>
+              <span className="live-dot" />
+              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#38bdf8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Live</span>
+            </div>
+            {/* Scrolling track — doubled for seamless loop */}
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+              <div className="ticker-track">
+                {[...stats.ticker, ...stats.ticker].map((item, i) => {
+                  const icon = item.type === 'join' ? '👋' : item.type === 'trust' ? '₮' : item.type === 'article' ? '📝' : '✨'
+                  return (
+                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0 1.25rem', fontSize: '0.75rem', color: '#94a3b8', borderRight: '1px solid rgba(56,189,248,0.06)', flexShrink: 0 }}>
+                      <span style={{ fontSize: '0.8rem' }}>{icon}</span>
+                      {item.text}
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      )}
+    </>
   )
 }
 
@@ -333,12 +415,16 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
   }, [featuredProducts, format])
 
   return (
-    <main style={{ minHeight: 'calc(100vh - 58px)', background: NAVY, color: '#fff', fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden' }}>
+      <main style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#fff', fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
         @keyframes ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        @keyframes pulse-dot { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.5); } }
         @keyframes soft-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+        .live-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #34d399; animation: pulse-dot 1.8s ease-in-out infinite; flex-shrink: 0; }
+        .lp { max-width: 1100px; margin: 0 auto; padding: 0 1.25rem; }
+        .lp-sec { padding: 3.5rem 1.25rem; max-width: 1100px; margin: 0 auto; }
         .ft-container { max-width: 1180px; margin: 0 auto; padding-left: 34px; padding-right: 34px; }
         .ft-section { padding: 92px 0; position: relative; overflow: hidden; }
         .ft-phone { position: relative; width: 246px; height: 508px; border-radius: 42px; padding: 12px; background: linear-gradient(145deg,#243044,#050814); box-shadow: 0 34px 80px rgba(0,0,0,.56), inset 0 0 0 1px rgba(255,255,255,.08); overflow: hidden; }
@@ -360,6 +446,18 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           .ft-slide-card { min-width: 72% !important; }
         }
         @media (max-width: 768px) {
+          .hero-inner { flex-direction: column !important; text-align: center; }
+          .hero-globe-stack { margin-bottom: -1.4rem !important; }
+          .hero-frameless-logo { width: 118px !important; margin-top: -1.1rem !important; }
+          .hero-text { align-items: center !important; }
+          .hero-cta { flex-direction: column !important; width: 100% !important; }
+          .hero-cta a, .hero-cta button { width: 100% !important; text-align: center; justify-content: center; }
+          .stats-grid { grid-template-columns: repeat(2,1fr) !important; gap: 0.6rem !important; }
+          .trust-econ-grid { grid-template-columns: repeat(3,1fr) !important; }
+          .stat-val { font-size: 1.4rem !important; }
+          .trust-val { font-size: 1.3rem !important; }
+          .lp-sec { padding: 2.5rem 1rem; }
+          .lp { padding: 0 1rem; }
           .ft-container { padding-left: 22px; padding-right: 22px; }
           .ft-section { padding: 68px 0; }
           .ft-h1 { font-size: 32px !important; }
@@ -374,12 +472,23 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           .ft-footer-links { grid-template-columns:1fr 1fr !important; }
           .ft-legacy-stat-grid, .ft-trust-econ-top-grid { grid-template-columns: 1fr !important; }
         }
+        @media (max-width: 480px) {
+          .stats-grid { grid-template-columns: repeat(2,1fr) !important; gap: 0.5rem !important; }
+          .stat-val { font-size: 1.15rem !important; letter-spacing: -0.5px !important; }
+          .trust-econ-grid { grid-template-columns: repeat(3,1fr) !important; gap: 0.5rem !important; }
+          .trust-val { font-size: 1rem !important; letter-spacing: -0.5px !important; }
+          .trust-econ-label { font-size: 0.58rem !important; }
+          .trust-econ-sub { font-size: 0.54rem !important; }
+          .stat-label { font-size: 0.65rem !important; }
+          .stat-sub { font-size: 0.58rem !important; }
+          .trust-econ-strip { padding: 0.75rem 0.6rem !important; }
+        }
       `}</style>
 
       <LegacyTopDesign
+        initialCounts={initialCounts}
+        stats={stats}
         members={tm}
-        listings={initialCounts.listings}
-        communities={initialCounts.communities}
         membersThisWeek={tw}
         services={sl}
         products={pl}
