@@ -363,6 +363,7 @@ function LegacyTopDesign({
 export default function HomeClient({ initialCounts }: HomeClientProps) {
   const { format } = useCurrency()
   const [isLegalLibraryOpen, setIsLegalLibraryOpen] = useState(false)
+  const [marketplaceTab, setMarketplaceTab] = useState<'products' | 'jobs' | 'events'>('products')
   const [stats, setStats] = useState<StatsData | null>(null)
   const [featuredServices, setFeaturedServices] = useState<FeaturedService[]>([])
   const [featuredProducts, setFeaturedProducts] = useState<FeaturedProduct[]>([])
@@ -404,15 +405,32 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
   const liveListings = (featuredProducts.length + featuredServices.length + (homeEvents?.length ?? 0) + (homeJobs?.length ?? 0))
 
   const productSlides = useMemo(() => {
-    const productCards = featuredProducts.slice(0, 4).map(p => ({ type: 'product', title: p.title, subtitle: p.seller, price: format(p.price, p.currency as 'GBP' | 'EUR' | 'USD'), image: p.coverImage, href: `/products/${p.id}`, badge: p.reviews > 0 ? `${p.rating.toFixed(1)}★ Trust Score` : 'Verified listing' }))
+    const productCards = featuredProducts.slice(0, 4).map(p => ({ type: 'product', title: p.title, subtitle: p.seller, price: format(p.price, p.currency as 'GBP' | 'EUR' | 'USD'), image: p.coverImage || screenshots.products, href: `/products/${p.id}`, badge: p.reviews > 0 ? `${p.rating.toFixed(1)}★ Trust Score` : 'Verified listing' }))
     if (productCards.length >= 4) return productCards
     return [...productCards, ...[
-      { type: 'product', title: 'Creator Studio Kit', subtitle: 'Verified seller', price: '€84.00', image: null, href: '/products', badge: '4.9★ Trust Score' },
-      { type: 'service', title: 'Sustainable Business Plan', subtitle: 'Service marketplace', price: '€395.00', image: null, href: '/services', badge: 'Trust 90%' },
-      { type: 'event', title: 'Community Meetup', subtitle: 'Events', price: 'Free RSVP', image: null, href: '/events', badge: 'Verified event' },
-      { type: 'job', title: 'Local Design Project', subtitle: 'Jobs', price: 'Apply free', image: null, href: '/jobs', badge: 'Trusted company' },
+      { type: 'product', title: 'Creator Studio Kit', subtitle: 'Verified seller', price: '€84.00', image: screenshots.products, href: '/products', badge: '4.9★ Trust Score' },
+      { type: 'product', title: 'Sustainable Home Bundle', subtitle: 'Marketplace find', price: '€42.00', image: screenshots.products, href: '/products', badge: 'Verified listing' },
+      { type: 'product', title: 'Remote Work Essentials', subtitle: 'Trusted seller', price: '€119.00', image: screenshots.products, href: '/products', badge: 'Trust protected' },
+      { type: 'product', title: 'Creative Launch Pack', subtitle: 'Member listing', price: '€67.00', image: screenshots.products, href: '/products', badge: '₮ eligible' },
     ]].slice(0, 4)
   }, [featuredProducts, format])
+
+  const jobPreviewCards = useMemo(() => (homeJobs ?? []).slice(0, 6).map(job => {
+    const location = job.location_type === 'remote' ? 'Remote' : [job.city, job.country].filter(Boolean).join(', ') || 'On-site'
+    const currency = (job.salary_currency || 'EUR').toUpperCase()
+    const salary = job.salary_min || job.salary_max
+      ? `${job.salary_min ? format(job.salary_min, currency as 'GBP' | 'EUR' | 'USD') : ''}${job.salary_min && job.salary_max ? '–' : ''}${job.salary_max ? format(job.salary_max, currency as 'GBP' | 'EUR' | 'USD') : ''}`
+      : 'Apply free'
+    return { ...job, location, salary }
+  }), [homeJobs, format])
+
+  const eventPreviewCards = useMemo(() => (homeEvents ?? []).slice(0, 6).map(ev => {
+    const cat = ev.category ?? 'Technology'
+    const catColor = CAT_COLORS_HOME[cat] ?? TEAL
+    const location = ev.is_online ? 'Online' : ev.venue_name || ev.location_label || [ev.city, ev.country].filter(Boolean).join(', ') || 'In person'
+    const image = isUsableEventImage(ev.cover_image_url) ? ev.cover_image_url : eventPosterDataUri({ title: ev.title, category: ev.category, startsAt: ev.starts_at, location })
+    return { ...ev, location, image, catColor }
+  }), [homeEvents])
 
   return (
       <main style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#fff', fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden' }}>
@@ -465,6 +483,16 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           .ft-hero-ctas { flex-direction: column !important; }
           .ft-hero-ctas a { width: 100%; justify-content:center; }
           .ft-phone-stage { transform: scale(.78); margin-left:-10px; }
+          .ft-premium-hero { min-height: auto !important; }
+          .ft-premium-hero .ft-container { padding-top: 56px !important; padding-bottom: 28px !important; }
+          .ft-premium-hero .ft-phone-stage { height: 420px !important; min-height: 420px !important; transform: scale(.72); transform-origin: top center; margin-left: 0 !important; margin-bottom: -18px; }
+          .ft-market-tabs { justify-content: flex-start !important; overflow-x: auto; flex-wrap: nowrap !important; padding: 0 4px 4px; scrollbar-width: none; }
+          .ft-market-tabs::-webkit-scrollbar { display: none; }
+          .ft-market-tab { flex: 0 0 auto; font-size: 18px !important; padding: 12px 14px !important; min-height: 48px; }
+          .ft-market-grid { display: flex !important; overflow-x: auto; gap: 16px !important; padding: 0 0 12px !important; scroll-snap-type: x proximity; scrollbar-width: none; }
+          .ft-market-grid::-webkit-scrollbar { display: none; }
+          .ft-market-product-card { flex: 0 0 78% !important; min-width: 250px !important; scroll-snap-align: start; }
+          .ft-market-list { grid-template-columns: 1fr !important; gap: 14px !important; }
           .ft-float-score { right: 6px !important; }
           .ft-float-verified { left: 10px !important; }
           .ft-score-row { grid-template-columns:1fr !important; text-align:center; }
@@ -482,6 +510,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           .stat-label { font-size: 0.65rem !important; }
           .stat-sub { font-size: 0.58rem !important; }
           .trust-econ-strip { padding: 0.75rem 0.6rem !important; }
+          .ft-market-product-card { flex-basis: 82% !important; min-width: 238px !important; }
         }
       `}</style>
 
@@ -497,7 +526,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
         trustHolders={th}
       />
 
-      <section style={{ minHeight: '92vh', position: 'relative', overflow: 'hidden', background: 'radial-gradient(circle at 72% 42%, rgba(0,194,203,.27), transparent 28%), linear-gradient(135deg,#0a0f1e 0%,#0b1327 48%,#0f1f2e 100%)', borderBottom: '1px solid rgba(0,194,203,.12)' }}>
+      <section className="ft-premium-hero" style={{ minHeight: '92vh', position: 'relative', overflow: 'hidden', background: 'radial-gradient(circle at 72% 42%, rgba(0,194,203,.27), transparent 28%), linear-gradient(135deg,#0a0f1e 0%,#0b1327 48%,#0f1f2e 100%)', borderBottom: '1px solid rgba(0,194,203,.12)' }}>
         <div style={{ position: 'absolute', inset: '-20%', background: 'radial-gradient(circle at 8% 8%,rgba(255,255,255,.08),transparent 22%),radial-gradient(circle at 88% 92%,rgba(0,119,182,.24),transparent 28%)', pointerEvents: 'none' }} />
         <div className="ft-container" style={{ position: 'relative', zIndex: 1, paddingTop: 72, paddingBottom: 86 }}>
           <div className="ft-hero-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 560px', gap: 42, alignItems: 'center' }}>
@@ -584,21 +613,76 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
       <section className="ft-section" style={{ background: 'linear-gradient(180deg,#0a0f1e,#081020)', borderBottom: '1px solid rgba(0,194,203,.08)' }}>
         <div className="ft-container">
           <SectionHeader eyebrow="Live marketplace" title="Fresh products, jobs, and events — all in motion.">Real FreeTrust data stays in the landing page, upgraded with premium dark cards, teal trust indicators, and mobile-friendly horizontal discovery.</SectionHeader>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 32, marginBottom: 24, fontWeight: 850, color: '#cbd5e1', flexWrap: 'wrap' }}>
-            <span style={{ color: '#fff', borderBottom: `3px solid ${TEAL}`, paddingBottom: 10 }}>🛒 Products</span><span>💼 Jobs</span><span>📅 Events</span>
+          <div className="ft-market-tabs" style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 28, fontWeight: 850, color: '#cbd5e1', flexWrap: 'wrap' }}>
+            {[
+              ['products', '🛒 Products'],
+              ['jobs', '💼 Jobs'],
+              ['events', '📅 Events'],
+            ].map(([key, label]) => {
+              const active = marketplaceTab === key
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  className="ft-market-tab"
+                  onClick={() => setMarketplaceTab(key as 'products' | 'jobs' | 'events')}
+                  style={{
+                    color: active ? '#041018' : '#cbd5e1',
+                    background: active ? TEAL : 'rgba(15,23,42,.74)',
+                    border: active ? `1px solid ${TEAL}` : '1px solid rgba(148,163,184,.18)',
+                    boxShadow: active ? '0 14px 34px rgba(0,194,203,.2)' : 'none',
+                    borderRadius: 999,
+                    padding: '11px 18px',
+                    cursor: 'pointer',
+                    font: 'inherit',
+                    fontWeight: 900,
+                  }}
+                >{label}</button>
+              )
+            })}
           </div>
-          <div className="ft-hscroll" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)' }}>
-            {productSlides.map(card => (
-              <Link className="ft-slide-card ft-card-hover" key={`${card.type}-${card.title}`} href={card.href} style={{ minWidth: 0, textDecoration: 'none', background: CARD, border: '1px solid #1e293b', borderRadius: 20, overflow: 'hidden', color: '#fff' }}>
-                <div style={{ height: 150, background: card.image ? `linear-gradient(180deg,rgba(10,15,30,.05),rgba(10,15,30,.54)), url(${card.image}) center/cover` : 'linear-gradient(135deg,#0e7490,#1e293b 55%,#111827)' }} />
-                <div style={{ padding: 18 }}><h4 style={{ margin: '0 0 8px', lineHeight: 1.25 }}>{card.title}</h4><p style={{ color: SLATE, fontSize: 13, minHeight: 36, margin: 0 }}>{card.subtitle} · {card.price}</p><span style={{ display: 'inline-flex', marginTop: 12, padding: '7px 10px', borderRadius: 999, background: 'rgba(0,194,203,.13)', color: '#aafaff', fontSize: 12, fontWeight: 850 }}>{card.badge}</span></div>
-              </Link>
-            ))}
-          </div>
-          <div style={{ marginTop: 30, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 14 }}>
-            {homeJobs?.slice(0, 3).map(job => <Link key={job.id} href={`/jobs/${job.id}`} className="ft-card-hover" style={{ textDecoration: 'none', color: '#fff', background: CARD, border: '1px solid #1e293b', borderRadius: 16, padding: 18 }}><strong>{job.title}</strong><div style={{ color: SLATE, fontSize: 13, marginTop: 8 }}>{job.company_name ?? 'Company'} · {job.location_type === 'remote' ? 'Remote' : [job.city, job.country].filter(Boolean).join(', ') || 'On-site'}</div></Link>)}
-            {homeEvents?.slice(0, 3).map(ev => <Link key={ev.id} href={`/events/${ev.id}`} className="ft-card-hover" style={{ textDecoration: 'none', color: '#fff', background: CARD, border: '1px solid #1e293b', borderRadius: 16, padding: 18 }}><strong>{ev.title}</strong><div style={{ color: SLATE, fontSize: 13, marginTop: 8 }}>{ev.is_online ? 'Online' : ev.venue_name || ev.location_label || [ev.city, ev.country].filter(Boolean).join(', ') || 'In person'}</div></Link>)}
-          </div>
+
+          {marketplaceTab === 'products' && (
+            <div className="ft-market-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 18 }}>
+              {productSlides.map(card => (
+                <Link className="ft-market-product-card ft-card-hover" key={`${card.type}-${card.title}`} href={card.href} style={{ minWidth: 0, textDecoration: 'none', background: 'linear-gradient(180deg,rgba(17,24,39,.96),rgba(8,16,32,.96))', border: '1px solid #1e293b', borderRadius: 24, overflow: 'hidden', color: '#fff', boxShadow: '0 22px 70px rgba(0,0,0,.22)' }}>
+                  <div style={{ height: 210, position: 'relative', background: 'linear-gradient(135deg,#0e7490,#1e293b 55%,#111827)', overflow: 'hidden' }}>
+                    {card.image && <img src={card.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transform: 'scale(1.02)' }} />}
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(5,10,20,.02),rgba(5,10,20,.72))' }} />
+                    <span style={{ position: 'absolute', left: 14, top: 14, display: 'inline-flex', padding: '7px 10px', borderRadius: 999, background: 'rgba(4,16,24,.72)', color: '#aafaff', fontSize: 12, fontWeight: 900, border: '1px solid rgba(127,247,255,.22)', backdropFilter: 'blur(10px)' }}>{card.badge}</span>
+                    <strong style={{ position: 'absolute', left: 14, right: 14, bottom: 14, fontSize: 20, lineHeight: 1.12, letterSpacing: '-0.03em' }}>{card.title}</strong>
+                  </div>
+                  <div style={{ padding: 18 }}>
+                    <p style={{ color: SLATE, fontSize: 13, minHeight: 36, margin: 0, lineHeight: 1.45 }}>{card.subtitle}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 16 }}>
+                      <span style={{ color: '#fff', fontWeight: 950, fontSize: 18 }}>{card.price}</span>
+                      <span style={{ color: TEAL, fontWeight: 900, fontSize: 13 }}>View →</span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {marketplaceTab === 'jobs' && (
+            <div className="ft-market-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
+              {(jobPreviewCards.length ? jobPreviewCards : [
+                { id: 'jobs', title: 'Local Design Project', company_name: 'Trusted company', location: 'Remote friendly', salary: 'Apply free', job_type: 'Project' },
+                { id: 'jobs-2', title: 'Community Growth Lead', company_name: 'FreeTrust member', location: 'Hybrid', salary: 'Trusted role', job_type: 'Part-time' },
+                { id: 'jobs-3', title: 'Marketplace Operations', company_name: 'Verified business', location: 'On-site', salary: '₮ eligible', job_type: 'Contract' },
+              ]).slice(0, 6).map(job => <Link key={job.id} href={job.id.startsWith('jobs') ? '/jobs' : `/jobs/${job.id}`} className="ft-card-hover" style={{ textDecoration: 'none', color: '#fff', background: 'linear-gradient(180deg,rgba(17,24,39,.96),rgba(8,16,32,.96))', border: '1px solid #1e293b', borderRadius: 20, padding: 20, minHeight: 178, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}><div><span style={{ display: 'inline-flex', padding: '7px 10px', borderRadius: 999, background: 'rgba(0,194,203,.13)', color: '#aafaff', fontSize: 12, fontWeight: 900 }}>{job.job_type ?? 'Open role'}</span><h4 style={{ margin: '16px 0 8px', fontSize: 20, lineHeight: 1.2, letterSpacing: '-0.03em' }}>{job.title}</h4><div style={{ color: SLATE, fontSize: 13, lineHeight: 1.5 }}>{job.company_name ?? 'Company'} · {job.location}</div></div><div style={{ marginTop: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}><strong style={{ color: '#fff', fontSize: 14 }}>{job.salary}</strong><span style={{ color: TEAL, fontWeight: 900, fontSize: 13 }}>Open →</span></div></Link>)}
+            </div>
+          )}
+
+          {marketplaceTab === 'events' && (
+            <div className="ft-market-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
+              {(eventPreviewCards.length ? eventPreviewCards : [
+                { id: 'events', title: 'Community Meetup', starts_at: null, category: 'Technology', location: 'Online', image: eventPosterDataUri({ title: 'Community Meetup', category: 'Technology', startsAt: null, location: 'Online' }), catColor: TEAL },
+                { id: 'events-2', title: 'Founder Trust Circle', starts_at: null, category: 'Startup', location: 'In person', image: eventPosterDataUri({ title: 'Founder Trust Circle', category: 'Startup', startsAt: null, location: 'In person' }), catColor: '#38bdf8' },
+                { id: 'events-3', title: 'Marketplace Workshop', starts_at: null, category: 'Business', location: 'Online', image: eventPosterDataUri({ title: 'Marketplace Workshop', category: 'Business', startsAt: null, location: 'Online' }), catColor: '#a78bfa' },
+              ]).slice(0, 6).map(ev => <Link key={ev.id} href={ev.id.startsWith('events') ? '/events' : `/events/${ev.id}`} className="ft-card-hover" style={{ textDecoration: 'none', color: '#fff', background: 'linear-gradient(180deg,rgba(17,24,39,.96),rgba(8,16,32,.96))', border: '1px solid #1e293b', borderRadius: 20, overflow: 'hidden' }}><div style={{ height: 154, background: `linear-gradient(135deg, ${ev.catColor}33, rgba(15,23,42,.96))`, position: 'relative' }}><img src={ev.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /><span style={{ position: 'absolute', left: 13, top: 13, display: 'inline-flex', padding: '7px 10px', borderRadius: 999, background: 'rgba(4,16,24,.72)', color: '#fff', fontSize: 12, fontWeight: 900, border: '1px solid rgba(255,255,255,.18)', backdropFilter: 'blur(10px)' }}>{ev.category ?? 'Event'}</span></div><div style={{ padding: 18 }}><h4 style={{ margin: '0 0 8px', fontSize: 20, lineHeight: 1.2, letterSpacing: '-0.03em' }}>{ev.title}</h4><div style={{ color: SLATE, fontSize: 13, lineHeight: 1.5 }}>{ev.location}</div><div style={{ marginTop: 16, color: TEAL, fontWeight: 900, fontSize: 13 }}>View event →</div></div></Link>)}
+            </div>
+          )}
           <p style={{ margin: '20px 0 0', color: '#64748b', textAlign: 'center', fontSize: 13 }}>Showing live marketplace previews where available{liveListings ? ` · ${liveListings} live cards loaded` : ''}.</p>
         </div>
       </section>
