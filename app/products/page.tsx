@@ -166,7 +166,7 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
   const gradient = p.image ? undefined : (CAT_GRAD[p.category] ?? 'linear-gradient(135deg,#334155,#1e293b)')
 
   return (
-    <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.15s, box-shadow 0.15s' }}
+    <div className="ft-product-card" style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.15s, box-shadow 0.15s' }}
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 8px 32px rgba(56,189,248,0.18)' }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
 
@@ -248,7 +248,7 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
         </div>
 
         {/* Price + CTA */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
+        <div className="ft-product-card-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
           <PriceDisplay
             amountEur={(p.price_eur && p.price_eur > 0) ? p.price_eur : p.price}
             sourceCode={(p.currency || 'EUR') as CurrencyCode}
@@ -256,9 +256,10 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
             size="md"
             layout="stacked"
           />
-           <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.35rem' }}>
+           <div className="ft-product-card-cta-row" style={{ marginLeft: 'auto', display: 'flex', gap: '0.35rem' }}>
             {onAddToBasket && (
               <button
+                className="ft-product-card-basket-btn"
                 onClick={e => { e.preventDefault(); e.stopPropagation(); onAddToBasket(p.id) }}
                 disabled={addingToBasket || inBasket}
                 style={{ background: inBasket ? 'rgba(52,211,153,0.12)' : 'rgba(0,194,203,0.12)', border: `1px solid ${inBasket ? 'rgba(52,211,153,0.35)' : 'rgba(0,194,203,0.35)'}`, borderRadius: 8, padding: '0.45rem 0.7rem', fontSize: '0.75rem', color: inBasket ? '#34d399' : '#00c2cb', cursor: addingToBasket || inBasket ? 'default' : 'pointer', minHeight: 36, fontWeight: 800 }}>
@@ -266,11 +267,13 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
               </button>
             )}
             <Link
+              className="ft-product-card-view-link"
               href={`/products/${p.id}`}
               style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 8, padding: '0.45rem 0.9rem', fontSize: '0.75rem', fontWeight: 700, color: '#fff', cursor: 'pointer', minHeight: 36, display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
               View Listing
             </Link>
             <button
+              className="ft-product-card-share-btn"
               onClick={e => { e.stopPropagation(); if (navigator.share) { navigator.share({ title: p.title, url: `${window.location.origin}/products/${p.id}` }) } else { navigator.clipboard.writeText(`${window.location.origin}/products/${p.id}`) } }}
               style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.45rem 0.5rem', fontSize: '0.75rem', color: '#38bdf8', cursor: 'pointer', minHeight: 36 }}
               title="Share">↗</button>
@@ -751,6 +754,36 @@ function BasketDrawer({ open, onClose, onRetailer }: {
   )
 }
 
+function ProductBasketButton({ itemCount, onClick }: { itemCount: number; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="ft-product-basket-button"
+      aria-label="Open product basket"
+      style={{
+        minWidth: 58,
+        height: 48,
+        borderRadius: 999,
+        border: '1px solid rgba(0,194,203,0.4)',
+        background: 'linear-gradient(135deg,#00c2cb,#0891b2)',
+        color: '#001014',
+        boxShadow: '0 14px 34px rgba(0,194,203,0.24)',
+        cursor: 'pointer',
+        fontWeight: 950,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        padding: '0 15px',
+        flexShrink: 0,
+      }}
+    >
+      <span style={{ fontSize: 20 }}>🧺</span>
+      <span>{itemCount}</span>
+    </button>
+  )
+}
+
 // ─── Inner page (needs useSearchParams) ──────────────────────────────────────
 function ProductsInner() {
   const { format } = useCurrency()
@@ -1130,7 +1163,7 @@ function ProductsInner() {
 
   const productGridStyle: React.CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
     gap: '1.1rem',
   }
 
@@ -1153,22 +1186,64 @@ function ProductsInner() {
         />
       )}
       <BasketDrawer open={basketOpen} onClose={() => setBasketOpen(false)} onRetailer={openRetailerFromBasket} />
-      {activeTab === 'listings' && (
-        <button
-          onClick={() => setBasketOpen(true)}
-          style={{ position: 'fixed', right: 18, bottom: 'calc(18px + env(safe-area-inset-bottom))', zIndex: 8500, minWidth: 58, height: 58, borderRadius: 999, border: '1px solid rgba(0,194,203,0.4)', background: 'linear-gradient(135deg,#00c2cb,#0891b2)', color: '#001014', boxShadow: '0 16px 40px rgba(0,194,203,0.28)', cursor: 'pointer', fontWeight: 950, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0 16px' }}
-          aria-label="Open product basket"
-        >
-          <span style={{ fontSize: 20 }}>🧺</span>
-          <span>{basket.itemCount}</span>
-        </button>
-      )}
+      <style jsx global>{`
+        .ft-products-title-block {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          flex: 1 1 auto;
+          min-width: 260px;
+        }
+        @media (max-width: 640px) {
+          .ft-products-title-block {
+            flex-basis: 100%;
+            min-width: 0;
+          }
+          .ft-product-basket-button {
+            height: 52px !important;
+            min-width: 74px !important;
+            padding: 0 16px !important;
+          }
+        }
+        @media (max-width: 520px) {
+          .ft-product-grid {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+          }
+          .ft-product-card-actions {
+            align-items: stretch !important;
+            flex-wrap: wrap !important;
+            gap: 10px !important;
+          }
+          .ft-product-card-cta-row {
+            width: 100% !important;
+            margin-left: 0 !important;
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px !important;
+            gap: 8px !important;
+          }
+          .ft-product-card-basket-btn,
+          .ft-product-card-view-link,
+          .ft-product-card-share-btn {
+            width: 100% !important;
+            min-height: 44px !important;
+            justify-content: center !important;
+            text-align: center !important;
+            padding-left: 8px !important;
+            padding-right: 8px !important;
+          }
+        }
+      `}</style>
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 1.25rem 2rem' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.5rem' }}>
-          <div>
-            <h1 style={{ fontSize: 'clamp(1.6rem,4vw,2.2rem)', fontWeight: 900, margin: '0 0 0.25rem', letterSpacing: '-0.5px' }}>Products</h1>
-            <p style={{ color: '#64748b', margin: 0, fontSize: '0.9rem' }}>{activeTab === 'listings' ? mergedProducts.length : filtered.length} product{(activeTab === 'listings' ? mergedProducts.length : filtered.length) !== 1 ? 's' : ''} found</p>
+          <div className="ft-products-title-block">
+            <div style={{ minWidth: 0 }}>
+              <h1 style={{ fontSize: 'clamp(1.6rem,4vw,2.2rem)', fontWeight: 900, margin: '0 0 0.25rem', letterSpacing: '-0.5px' }}>Products</h1>
+              <p style={{ color: '#64748b', margin: 0, fontSize: '0.9rem' }}>{activeTab === 'listings' ? mergedProducts.length : filtered.length} product{(activeTab === 'listings' ? mergedProducts.length : filtered.length) !== 1 ? 's' : ''} found</p>
+            </div>
+            {activeTab === 'listings' && <ProductBasketButton itemCount={basket.itemCount} onClick={() => setBasketOpen(true)} />}
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             <select
@@ -1291,7 +1366,7 @@ function ProductsInner() {
 
           {/* Grid or empty state */}
           {loading ? (
-            <div style={productGridStyle}>
+            <div className="ft-product-grid" style={productGridStyle}>
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} style={{ background: '#1e293b', borderRadius: 14, height: 320, opacity: 0.5 }}>
                   <div style={{ height: 160, background: '#334155', borderRadius: '14px 14px 0 0' }} />
@@ -1311,7 +1386,7 @@ function ProductsInner() {
             </div>
           ) : (
             <>
-              <div style={productGridStyle}>
+              <div className="ft-product-grid" style={productGridStyle}>
                 {visibleProducts.map(entry => (
                   entry._type === 'community' ? (
                     <ProductCard
