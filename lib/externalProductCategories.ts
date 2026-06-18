@@ -57,6 +57,13 @@ export const PRODUCT_CATEGORIES: ProductCategory[] = [
     icon: '⚡',
   },
   {
+    id: 'energy',
+    label: 'Energy',
+    serpQuery: 'trending home energy products solar panels batteries EV chargers energy saving devices',
+    subcategories: ['solar panels', 'battery storage', 'EV chargers', 'smart thermostats', 'energy monitors', 'portable power'],
+    icon: '🔋',
+  },
+  {
     id: 'fitness-equipment',
     label: 'Fitness Equipment',
     serpQuery: 'trending fitness gym equipment home workout',
@@ -183,10 +190,17 @@ export const PRODUCT_CATEGORIES: ProductCategory[] = [
     icon: '🕯️',
   },
   {
-    id: 'fashion',
-    label: 'Fashion',
-    serpQuery: 'trending fashion accessories footwear bags',
-    subcategories: ['footwear', 'bags', 'jewellery', 'watches', 'sunglasses', 'hats'],
+    id: 'fashion-him',
+    label: 'Fashion for Him',
+    serpQuery: 'trending mens fashion accessories shoes watches bags',
+    subcategories: ['mens footwear', 'mens bags', 'watches', 'sunglasses', 'hats', 'mens accessories'],
+    icon: '👔',
+  },
+  {
+    id: 'fashion-her',
+    label: 'Fashion for Her',
+    serpQuery: 'trending womens fashion accessories shoes jewellery handbags',
+    subcategories: ['womens footwear', 'handbags', 'jewellery', 'watches', 'sunglasses', 'womens accessories'],
     icon: '👠',
   },
   {
@@ -222,6 +236,18 @@ const LEGACY_CATEGORY_MAP: Record<string, string> = {
   garden: 'gardening',
   digital: 'digital-products',
   physical: 'home-living',
+  courses: 'digital-products',
+  templates: 'digital-products',
+  software: 'digital-products',
+  photography: 'art-printed-products',
+  handmade: 'art-printed-products',
+  merch: 'fashion-him',
+  fashion: 'fashion-her',
+  mens: 'fashion-him',
+  men: 'fashion-him',
+  womens: 'fashion-her',
+  women: 'fashion-her',
+  energy: 'energy',
 }
 
 export function normaliseExternalCategory(category: string | null | undefined) {

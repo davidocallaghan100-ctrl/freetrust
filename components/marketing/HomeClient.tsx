@@ -157,8 +157,7 @@ function Counter({ target, prefix = '', suffix = '' }: { target: number; prefix?
 function PhoneMockup({ src, label, tilt = 'left' }: { src: string; label: string; tilt?: 'left' | 'right' | 'none' }) {
   return (
     <div className={`ft-phone ft-phone-${tilt}`} aria-label={label}>
-      <div className="ft-phone-notch" />
-      <img src={src} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', borderRadius: 31 }} />
+      <img src={src} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center bottom', display: 'block', borderRadius: 31 }} />
     </div>
   )
 }
@@ -448,7 +447,6 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
         .ft-phone { position: relative; width: 246px; height: 508px; border-radius: 42px; padding: 12px; background: linear-gradient(145deg,#243044,#050814); box-shadow: 0 34px 80px rgba(0,0,0,.56), inset 0 0 0 1px rgba(255,255,255,.08); overflow: hidden; }
         .ft-phone-left { transform: perspective(1000px) rotateY(-13deg) rotateZ(3deg); }
         .ft-phone-right { transform: perspective(1000px) rotateY(13deg) rotateZ(-3deg); }
-        .ft-phone-notch { position: absolute; z-index: 2; top: 22px; left: 50%; transform: translateX(-50%); width: 78px; height: 24px; border-radius: 999px; background: #050814; box-shadow: 0 0 0 1px rgba(255,255,255,.05); }
         .ft-card-hover { transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease; }
         .ft-card-hover:hover { border-color: rgba(0,194,203,.38) !important; box-shadow: 0 22px 70px rgba(0,194,203,.13) !important; transform: translateY(-3px); }
         .ft-hscroll { display:flex; gap:18px; overflow-x:auto; scrollbar-width:none; padding-bottom:8px; -webkit-overflow-scrolling:touch; }
@@ -486,13 +484,18 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           .ft-premium-hero { min-height: auto !important; }
           .ft-premium-hero .ft-container { padding-top: 56px !important; padding-bottom: 28px !important; }
           .ft-premium-hero .ft-phone-stage { height: 420px !important; min-height: 420px !important; transform: scale(.72); transform-origin: top center; margin-left: 0 !important; margin-bottom: -18px; }
-          .ft-market-tabs { justify-content: flex-start !important; overflow-x: auto; flex-wrap: nowrap !important; padding: 0 4px 4px; scrollbar-width: none; }
+          .ft-feature-grid { grid-template-columns: 1fr !important; max-width: 430px; margin-left: auto; margin-right: auto; }
+          .ft-feature-grid > .ft-card-hover { text-align: center; }
+          .ft-feature-grid > .ft-card-hover > div:first-child { margin-left: auto !important; margin-right: auto !important; }
+          .ft-market-tabs { justify-content: center !important; overflow-x: auto; flex-wrap: nowrap !important; padding: 0 4px 4px; scrollbar-width: none; gap: 8px !important; }
           .ft-market-tabs::-webkit-scrollbar { display: none; }
-          .ft-market-tab { flex: 0 0 auto; font-size: 18px !important; padding: 12px 14px !important; min-height: 48px; }
+          .ft-market-tab { flex: 0 0 auto; font-size: 16px !important; padding: 10px 12px !important; min-height: 46px; scroll-snap-align: center; }
           .ft-market-grid { display: flex !important; overflow-x: auto; gap: 16px !important; padding: 0 0 12px !important; scroll-snap-type: x proximity; scrollbar-width: none; }
           .ft-market-grid::-webkit-scrollbar { display: none; }
           .ft-market-product-card { flex: 0 0 78% !important; min-width: 250px !important; scroll-snap-align: start; }
-          .ft-market-list { grid-template-columns: 1fr !important; gap: 14px !important; }
+          .ft-market-list { display: flex !important; overflow-x: auto; gap: 16px !important; padding: 0 0 12px !important; scroll-snap-type: x proximity; scrollbar-width: none; }
+          .ft-market-list::-webkit-scrollbar { display: none; }
+          .ft-market-list > a { flex: 0 0 82% !important; min-width: 260px !important; scroll-snap-align: start; }
           .ft-float-score { right: 6px !important; }
           .ft-float-verified { left: 10px !important; }
           .ft-score-row { grid-template-columns:1fr !important; text-align:center; }
@@ -511,6 +514,8 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           .stat-sub { font-size: 0.58rem !important; }
           .trust-econ-strip { padding: 0.75rem 0.6rem !important; }
           .ft-market-product-card { flex-basis: 82% !important; min-width: 238px !important; }
+          .ft-market-list > a { flex-basis: 86% !important; min-width: 238px !important; }
+          .ft-market-tab { font-size: 15px !important; padding-left: 10px !important; padding-right: 10px !important; }
         }
       `}</style>
 
@@ -722,16 +727,12 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
         </div>
       </section>
 
-      {(featuredServices.length > 0 || featuredProducts.length > 0 || homeEvents?.length || homeRentShare?.length) && (
+      {featuredServices.length > 0 && (
         <section className="ft-section" style={{ background: 'rgba(0,194,203,.025)', borderBottom: '1px solid rgba(0,194,203,.08)' }}>
           <div className="ft-container">
-            <SectionHeader eyebrow="Real activity" title="Live from the FreeTrust community">The landing page keeps its existing products, services, events, and sharing previews — now styled as one premium marketplace surface.</SectionHeader>
+            <SectionHeader eyebrow="Service marketplace" title="Hire trusted FreeTrust providers">Explore real services from verified members — web builds, marketing, strategy, design, research, and practical support, all backed by reputation signals.</SectionHeader>
             <div className="ft-hscroll">
               {featuredServices.slice(0, 5).map(s => <Link key={s.id} href={`/services/${s.id}`} className="ft-card-hover" style={{ flexShrink: 0, width: 260, textDecoration: 'none', color: '#fff', background: CARD, border: '1px solid #1e293b', borderRadius: 18, overflow: 'hidden' }}><div style={{ height: 150, background: s.coverImage ? `url(${s.coverImage}) center/cover` : s.grad }} /><div style={{ padding: 16 }}><strong>{s.title}</strong><p style={{ margin: '8px 0', color: SLATE, fontSize: 13 }}>{s.provider}</p><span style={{ color: TEAL, fontWeight: 850 }}>{format(s.price, s.currency as 'GBP' | 'EUR' | 'USD')}</span></div></Link>)}
-              {homeEvents?.slice(0, 4).map(ev => {
-                const cat = ev.category ?? 'Technology'; const catColor = CAT_COLORS_HOME[cat] ?? TEAL; const location = ev.is_online ? 'Online' : ev.venue_name || ev.location_label || [ev.city, ev.country].filter(Boolean).join(', ') || 'In Person'; const eventImage = isUsableEventImage(ev.cover_image_url) ? ev.cover_image_url : eventPosterDataUri({ title: ev.title, category: ev.category, startsAt: ev.starts_at, location })
-                return <Link key={ev.id} href={`/events/${ev.id}`} className="ft-card-hover" style={{ flexShrink: 0, width: 280, textDecoration: 'none', color: '#fff', background: CARD, border: '1px solid #1e293b', borderRadius: 18, overflow: 'hidden' }}><div style={{ height: 128, background: `linear-gradient(135deg, ${catColor}33, rgba(15,23,42,.96))`, position: 'relative' }}>{eventImage && <img src={eventImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}</div><div style={{ padding: 16 }}><strong>{ev.title}</strong><p style={{ margin: '8px 0 0', color: SLATE, fontSize: 13 }}>{location}</p></div></Link>
-              })}
             </div>
           </div>
         </section>

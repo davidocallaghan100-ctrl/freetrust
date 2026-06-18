@@ -114,9 +114,11 @@ const CAT_GRAD: Record<string, string> = {
   headphones:    'linear-gradient(135deg,#14b8a6,#0f766e)',
   speakers:      'linear-gradient(135deg,#0ea5e9,#7c3aed)',
   'smart-home':   'linear-gradient(135deg,#0f766e,#164e63)',
+  energy:        'linear-gradient(135deg,#22c55e,#0f766e)',
   'art-printed-products': 'linear-gradient(135deg,#f472b6,#db2777)',
   music:         'linear-gradient(135deg,#a78bfa,#7c3aed)',
-  fashion:       'linear-gradient(135deg,#f472b6,#7c3aed)',
+  'fashion-him': 'linear-gradient(135deg,#38bdf8,#4338ca)',
+  'fashion-her': 'linear-gradient(135deg,#f472b6,#7c3aed)',
   clothing:      'linear-gradient(135deg,#fb7185,#be185d)',
   'home-living': 'linear-gradient(135deg,#0f766e,#164e63)',
   furniture:     'linear-gradient(135deg,#92400e,#78350f)',
@@ -824,7 +826,7 @@ function ProductsInner() {
         const [communityRes, externalRes] = await Promise.all([
           supabase
             .from('listings')
-            .select('id, title, description, price, currency, product_type, tags, images, cover_image, avg_rating, review_count, quality_score, seller_id, country, city, region, latitude, longitude, location_label, currency_code, price_eur, profiles!seller_id(id, full_name, avatar_url)')
+            .select('id, title, description, category, price, currency, product_type, tags, images, cover_image, avg_rating, review_count, quality_score, seller_id, country, city, region, latitude, longitude, location_label, currency_code, price_eur, profiles!seller_id(id, full_name, avatar_url)')
             .eq('status', 'active')
             .neq('product_type', 'service')
             .order('created_at', { ascending: false })
@@ -863,14 +865,20 @@ function ProductsInner() {
               'phone': 'electronics', 'laptop': 'laptops', 'speaker': 'speakers', 'headphones': 'headphones',
               'course': 'digital-products', 'template': 'digital-products', 'software': 'digital-products',
               'music': 'music', 'photo': 'art-printed-products', 'art': 'art-printed-products', 'book': 'books',
-              'merch': 'fashion', 'hoodie': 'clothing', 'handmade': 'art-printed-products', 'food': 'food-grocery',
+              'solar': 'energy', 'battery': 'energy', 'ev charger': 'energy',
+              'thermostat': 'energy', 'energy monitor': 'energy', 'portable power': 'energy',
+              'mens': 'fashion-him', 'men': 'fashion-him', 'womens': 'fashion-her', 'women': 'fashion-her',
+              'handbag': 'fashion-her', 'jewellery': 'fashion-her', 'watch': 'fashion-him',
+              'merch': 'fashion-him', 'hoodie': 'clothing', 'handmade': 'art-printed-products', 'food': 'food-grocery',
               'compost': 'gardening', 'topsoil': 'gardening', 'bark': 'gardening', 'mulch': 'gardening',
             }
-            let category = 'electronics'
+            let category = normaliseExternalCategory(typeof d.category === 'string' ? d.category : null)
             const titleLower = String(d.title ?? '').toLowerCase()
             const tagsStr = tags.join(' ').toLowerCase()
-            for (const [kw, cat] of Object.entries(CAT_KEYWORDS)) {
-              if (titleLower.includes(kw) || tagsStr.includes(kw)) { category = cat; break }
+            if (!d.category) {
+              for (const [kw, cat] of Object.entries(CAT_KEYWORDS)) {
+                if (titleLower.includes(kw) || tagsStr.includes(kw)) { category = cat; break }
+              }
             }
             return {
               id: String(d.id),

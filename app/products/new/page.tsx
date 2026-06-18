@@ -9,7 +9,10 @@ import type { DeliveryZoneValue } from '@/components/DeliveryZoneMap'
 const DeliveryZonePicker = dynamic(() => import('@/components/DeliveryZonePicker'), { ssr: false })
 
 const CATEGORIES = [
-  { id: 'technology',     label: 'Technology',  icon: '💻' },
+  { id: 'electronics',    label: 'Electronics', icon: '⚡' },
+  { id: 'energy',         label: 'Energy',      icon: '🔋' },
+  { id: 'fashion-him',    label: 'Fashion for Him', icon: '👔' },
+  { id: 'fashion-her',    label: 'Fashion for Her', icon: '👠' },
   { id: 'art',            label: 'Art',          icon: '🎨' },
   { id: 'music',          label: 'Music',        icon: '🎵' },
   { id: 'courses',        label: 'Courses',      icon: '🎓' },
@@ -91,7 +94,7 @@ function NewProductPageContent() {
   // Form fields
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [category, setCategory] = useState('technology')
+  const [category, setCategory] = useState('electronics')
   const [productType, setProductType] = useState<'physical' | 'digital'>('physical')
   const [price, setPrice] = useState('')
   const [currency, setCurrency] = useState('EUR')
