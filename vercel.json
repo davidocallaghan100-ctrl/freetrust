@@ -40,6 +40,10 @@
     {
       "path": "/api/cron/refresh-external-products",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-external-services",
+      "schedule": "0 2 * * *"
     }
   ]
 }

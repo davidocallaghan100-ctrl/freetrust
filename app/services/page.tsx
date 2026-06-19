@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ONLINE_CATEGORIES, OFFLINE_CATEGORIES, findServiceCategoryByLabel } from '@/lib/service-categories'
+import { ONLINE_CATEGORIES, OFFLINE_CATEGORIES, ALL_CATEGORIES as ALL_SERVICE_CATEGORIES, findServiceCategoryByLabel } from '@/lib/service-categories'
 import LocationFilter from '@/components/location/LocationFilter'
 import LocationBadge from '@/components/location/LocationBadge'
 import PriceDisplay from '@/components/currency/PriceDisplay'
@@ -14,6 +14,11 @@ import { servicesToGrassrootsLink } from '@/lib/marketplace/category-overlap'
 import { EMPTY_LOCATION, haversineKm, type StructuredLocation, type RadiusValue } from '@/lib/geo'
 import { buildCountryOptions } from '@/lib/countries'
 import type { CurrencyCode } from '@/context/CurrencyContext'
+import {
+  SERVICE_CATEGORIES as EXTERNAL_REFRESH_CATEGORIES,
+  SERVICES_INITIAL_DISPLAY,
+  SERVICES_LOAD_MORE_BATCH,
+} from '@/lib/externalServiceCategories'
 
 // ─── Delete confirmation modal ────────────────────────────────────────────────
 function DeleteModal({ title, onConfirm, onCancel, deleting }: {
@@ -87,6 +92,37 @@ interface Service {
   }
 }
 
+interface ExternalService {
+  id: string
+  title: string
+  provider_name: string
+  provider_url: string
+  description: string | null
+  category: string
+  source_category: string | null
+  service_type: 'local' | 'remote' | 'both'
+  price_display: string | null
+  rating: number | null
+  review_count: number | null
+  location: string | null
+  thumbnail: string | null
+  country?: string | null
+  city?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  location_label?: string | null
+  source: 'serpapi' | 'awin'
+  awin_merchant_id: string | null
+  awin_deeplink: string | null
+  is_awin: boolean
+  click_count: number
+  lead_count: number
+}
+
+type ServiceListEntry =
+  | { _type: 'community'; item: Service }
+  | { _type: 'external'; item: ExternalService }
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const SORT_OPTIONS = [
@@ -108,6 +144,27 @@ function getGrad(str: string): string {
     'linear-gradient(135deg,#fbbf24,#d97706)',
   ]
   return grads[(str.charCodeAt(0) + str.charCodeAt(1 > str.length - 1 ? 0 : 1)) % grads.length]
+}
+
+function modeFromExternalServiceType(type: ExternalService['service_type']): Service['mode'] {
+  if (type === 'remote') return 'online'
+  if (type === 'local') return 'offline'
+  return 'both'
+}
+
+function categoryMetaForExternalService(categoryId: string) {
+  return ALL_SERVICE_CATEGORIES.find(c => c.id === categoryId)
+    ?? EXTERNAL_REFRESH_CATEGORIES.find(c => c.id === categoryId)
+}
+
+function faviconForProviderUrl(url: string): string | null {
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, '')
+    if (!hostname) return null
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=128`
+  } catch {
+    return null
+  }
 }
 
 // ─── Service Card ─────────────────────────────────────────────────────────────
@@ -235,6 +292,149 @@ function ServiceCard({ svc, isOwner, onDelete }: { svc: Service; isOwner?: boole
   )
 }
 
+function ExternalServiceCard({
+  item,
+  onVisit,
+  onEnquire,
+}: {
+  item: ExternalService
+  onVisit: (item: ExternalService) => void
+  onEnquire: (item: ExternalService) => void
+}) {
+  const category = categoryMetaForExternalService(item.category)
+  const categoryLabel = category?.label ?? item.category.replace(/-/g, ' ')
+  const serviceTypeLabel = item.service_type === 'remote'
+    ? '💻 Remote'
+      : item.service_type === 'local'
+        ? '🏠 Local'
+        : '💻 Remote & Local'
+  const imageUrl = item.thumbnail || faviconForProviderUrl(item.provider_url)
+
+  return (
+    <div style={{
+      background: '#111827',
+      borderRadius: '12px',
+      overflow: 'hidden',
+      border: '1px solid #1e293b',
+      position: 'relative',
+      minHeight: 330,
+      display: 'flex',
+      flexDirection: 'column',
+      boxSizing: 'border-box',
+    }}>
+      <div style={{ width: '100%', height: 132, background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
+        {imageUrl ? (
+          <img src={imageUrl} alt={item.title} style={{ width: '100%', height: '100%', objectFit: item.is_awin || !item.thumbnail ? 'contain' : 'cover', background: '#ffffff', display: 'block', padding: item.is_awin || !item.thumbnail ? 22 : 0, boxSizing: 'border-box' }} />
+        ) : (
+          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg,#0f172a,#1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00c2cb', fontSize: '2rem', fontWeight: 900 }}>
+            {category?.icon ?? '🛠️'}
+          </div>
+        )}
+      </div>
+
+      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+      <div style={{
+        position: 'absolute', top: '12px', left: '12px',
+        background: item.is_awin ? 'rgba(30,58,95,0.92)' : 'rgba(30,41,59,0.92)',
+        color: item.is_awin ? '#60a5fa' : '#9ca3af',
+        fontSize: '10px', fontWeight: 700,
+        padding: '3px 8px', borderRadius: '6px',
+        letterSpacing: '0.06em', textTransform: 'uppercase',
+      }}>
+        {item.is_awin ? '⭐ Awin Partner' : '🌐 External Provider'}
+      </div>
+
+      <div style={{
+        position: 'absolute', top: '12px', right: '12px',
+        background: 'rgba(17,24,39,0.92)', color: '#cbd5e1',
+        fontSize: '10px', padding: '3px 8px', borderRadius: '6px',
+        border: '1px solid #1e293b', textTransform: 'capitalize',
+        maxWidth: '42%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+      }} title={categoryLabel}>
+        {category?.icon} {categoryLabel}
+      </div>
+
+      <p style={{
+        color: '#00c2cb', fontSize: '12px',
+        fontWeight: 600, margin: '0 0 6px 0',
+        textTransform: 'uppercase', letterSpacing: '0.05em',
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+      }} title={item.provider_name}>
+        {item.provider_name}
+      </p>
+
+      <p style={{
+        color: '#ffffff', fontSize: '15px',
+        fontWeight: 700, margin: '0 0 8px 0', lineHeight: '1.4',
+        display: '-webkit-box', WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical', overflow: 'hidden',
+      } as React.CSSProperties}>
+        {item.title}
+      </p>
+
+      {item.description && (
+        <p style={{
+          color: '#94a3b8', fontSize: '13px',
+          margin: '0 0 10px 0', lineHeight: '1.5',
+          display: '-webkit-box', WebkitLineClamp: 3,
+          WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        } as React.CSSProperties}>
+          {item.description}
+        </p>
+      )}
+
+      <p style={{ color: '#475569', fontSize: '12px', margin: '0 0 6px 0' }}>
+        📍 {item.location || 'Worldwide'} · {serviceTypeLabel}
+      </p>
+
+      {item.price_display && (
+        <p style={{ color: '#cbd5e1', fontSize: '12px', margin: '0 0 6px 0', fontWeight: 700 }}>
+          {item.price_display}
+        </p>
+      )}
+
+      {item.rating && (
+        <p style={{ color: '#fbbf24', fontSize: '12px', margin: '0 0 12px 0' }}>
+          {'★'.repeat(Math.max(1, Math.min(5, Math.round(item.rating))))} {item.rating}
+          {item.review_count ? ` (${item.review_count.toLocaleString()})` : ''}
+        </p>
+      )}
+
+      <p style={{ color: '#374151', fontSize: '11px', margin: 'auto 0 12px 0' }}>
+        ⚠ Not Trust Coin eligible
+      </p>
+
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <button
+          onClick={() => onVisit(item)}
+          style={{
+            flex: 1, padding: '10px', minHeight: 40,
+            background: item.is_awin ? '#1e3a5f' : 'transparent',
+            border: `1px solid ${item.is_awin ? '#3b82f6' : '#00c2cb'}`,
+            color: item.is_awin ? '#60a5fa' : '#00c2cb',
+            borderRadius: '8px', fontWeight: 600,
+            fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >
+          {item.is_awin ? 'Visit Partner →' : 'View Provider →'}
+        </button>
+        <button
+          onClick={() => onEnquire(item)}
+          style={{
+            flex: 1, padding: '10px', minHeight: 40,
+            background: '#00c2cb', color: '#000',
+            border: 'none', borderRadius: '8px',
+            fontWeight: 700, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >
+          Enquire
+        </button>
+      </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function ServicesPage() {
@@ -256,10 +456,30 @@ export default function ServicesPage() {
   const [deleting, setDeleting]   = useState(false)
   const [loadingServices, setLoadingServices] = useState(true)
   const [servicesError, setServicesError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'freetrust' | 'external'>('freetrust')
+  const [externalServices, setExternalServices] = useState<ExternalService[]>([])
+  const [loadingExternalServices, setLoadingExternalServices] = useState(true)
+  const [externalServicesError, setExternalServicesError] = useState<string | null>(null)
+  const [externalCategory, setExternalCategory] = useState('all')
+  const [externalSearch, setExternalSearch] = useState('')
+  const [externalDisplayLimit, setExternalDisplayLimit] = useState(SERVICES_INITIAL_DISPLAY)
+  const [serviceDisplayLimit, setServiceDisplayLimit] = useState(SERVICES_INITIAL_DISPLAY)
+  const [selectedService, setSelectedService] = useState<ExternalService | null>(null)
+  const [showEnquiryModal, setShowEnquiryModal] = useState(false)
+  const [enquiryMessage, setEnquiryMessage] = useState('')
+  const [enquiryLoading, setEnquiryLoading] = useState(false)
 
   // Collapsible sidebar sections — persisted to localStorage
   const [onlineOpen, setOnlineOpen] = useState(true)
   const [offlineOpen, setOfflineOpen] = useState(true)
+
+  useEffect(() => {
+    setExternalDisplayLimit(SERVICES_INITIAL_DISPLAY)
+  }, [activeTab, externalCategory, externalSearch])
+
+  useEffect(() => {
+    setServiceDisplayLimit(SERVICES_INITIAL_DISPLAY)
+  }, [modeFilter, activeCatId, search, priceMin, priceMax, sort, countryFilter, filterRemote, searchRadiusKm, filterLoc.latitude, filterLoc.longitude])
 
   // ── Success toast ──────────────────────────────────────────────────
   // Fires when the user arrives from /seller/gigs/create?published=true.
@@ -433,6 +653,61 @@ export default function ServicesPage() {
     return () => { cancelled = true }
   }, [])
 
+  useEffect(() => {
+    let cancelled = false
+    const supabase = createClient()
+    ;(async () => {
+      try {
+        setLoadingExternalServices(true)
+        setExternalServicesError(null)
+        const { data, error } = await supabase
+          .from('external_service_listings')
+          .select('id, title, provider_name, provider_url, description, category, freetrust_category_id, service_type, price_display, rating, review_count, location, country, city, latitude, longitude, location_label, thumbnail, source, awin_merchant_id, awin_deeplink, is_awin, click_count, lead_count')
+          .order('is_awin', { ascending: false })
+          .order('click_count', { ascending: false })
+          .order('last_refreshed_at', { ascending: false })
+          .limit(1000)
+
+        if (error) throw error
+
+        if (!cancelled) {
+          setExternalServices((data ?? []).map((row: Record<string, unknown>) => ({
+            id: String(row.id),
+            title: String(row.title ?? ''),
+            provider_name: String(row.provider_name ?? 'External Provider'),
+            provider_url: String(row.provider_url ?? ''),
+            description: row.description ? String(row.description) : null,
+            category: String(row.freetrust_category_id ?? row.category ?? 'business-consulting'),
+            source_category: row.category ? String(row.category) : null,
+            service_type: (['local', 'remote', 'both'].includes(String(row.service_type)) ? String(row.service_type) : 'both') as 'local' | 'remote' | 'both',
+            price_display: row.price_display ? String(row.price_display) : null,
+            rating: row.rating != null && Number.isFinite(Number(row.rating)) ? Number(row.rating) : null,
+            review_count: row.review_count != null && Number.isFinite(Number(row.review_count)) ? Number(row.review_count) : null,
+            location: row.location ? String(row.location) : null,
+            thumbnail: row.thumbnail ? String(row.thumbnail) : null,
+            country: row.country ? String(row.country) : null,
+            city: row.city ? String(row.city) : null,
+            latitude: row.latitude != null && Number.isFinite(Number(row.latitude)) ? Number(row.latitude) : null,
+            longitude: row.longitude != null && Number.isFinite(Number(row.longitude)) ? Number(row.longitude) : null,
+            location_label: row.location_label ? String(row.location_label) : null,
+            source: (row.source === 'awin' ? 'awin' : 'serpapi') as 'awin' | 'serpapi',
+            awin_merchant_id: row.awin_merchant_id ? String(row.awin_merchant_id) : null,
+            awin_deeplink: row.awin_deeplink ? String(row.awin_deeplink) : null,
+            is_awin: Boolean(row.is_awin),
+            click_count: Number(row.click_count ?? 0),
+            lead_count: Number(row.lead_count ?? 0),
+          })).filter(item => item.title && item.provider_url))
+        }
+      } catch (err) {
+        console.error('[external services page]', err)
+        if (!cancelled) setExternalServicesError(err instanceof Error ? err.message : 'Could not load external services')
+      } finally {
+        if (!cancelled) setLoadingExternalServices(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
   // Filter & sort
   const allOnlineCats = ONLINE_CATEGORIES
   const allOfflineCats = OFFLINE_CATEGORIES
@@ -446,8 +721,12 @@ export default function ServicesPage() {
       if (!s.country) continue
       counts.set(s.country, (counts.get(s.country) ?? 0) + 1)
     }
+    for (const s of externalServices) {
+      if (!s.country) continue
+      counts.set(s.country, (counts.get(s.country) ?? 0) + 1)
+    }
     return buildCountryOptions(counts)
-  }, [services])
+  }, [services, externalServices])
 
   const filtered = services
     .map(s => {
@@ -494,6 +773,121 @@ export default function ServicesPage() {
       }
       return 0
     })
+
+  const filteredExternalForListings = externalServices.filter(item => {
+    const externalMode = modeFromExternalServiceType(item.service_type)
+    if (modeFilter !== 'all' && externalMode !== modeFilter && externalMode !== 'both') return false
+    if (activeCatId && item.category !== activeCatId) return false
+    if (search.trim()) {
+      const haystack = `${item.title} ${item.provider_name} ${item.description ?? ''} ${item.category}`.toLowerCase()
+      if (!haystack.includes(search.trim().toLowerCase())) return false
+    }
+    // External provider rows usually do not publish comparable fixed prices.
+    // If a user sets price bounds, keep FreeTrust-priced services precise and
+    // do not invent provider pricing from snippets.
+    if (priceMin || priceMax) return false
+    if (filterRemote && item.service_type !== 'remote' && item.service_type !== 'both') return false
+    if (countryFilter && item.country !== countryFilter && item.service_type === 'local') return false
+    if (searchRadiusKm > 0 || filterLoc.latitude != null) {
+      if (item.service_type === 'local') {
+        if (filterLoc.latitude != null && filterLoc.longitude != null && item.latitude != null && item.longitude != null) {
+          if (searchRadiusKm > 0) {
+            const distance = haversineKm(
+              { latitude: filterLoc.latitude, longitude: filterLoc.longitude },
+              { latitude: item.latitude, longitude: item.longitude }
+            )
+            if (distance > searchRadiusKm) return false
+          }
+        } else {
+          const sameCountry = !!filterLoc.country && !!item.country && item.country === filterLoc.country
+          const sameCity = !!filterLoc.city && !!item.city && item.city.toLowerCase() === filterLoc.city.toLowerCase()
+          const labelMatchesCity = !!filterLoc.city && !!item.location_label && item.location_label.toLowerCase().includes(filterLoc.city.toLowerCase())
+          if (!sameCountry && !sameCity && !labelMatchesCity) return false
+        }
+      }
+    }
+    return true
+  }).sort((a, b) => {
+    if (sort === 'rating') return (b.rating ?? 0) - (a.rating ?? 0)
+    return (b.lead_count + b.click_count) - (a.lead_count + a.click_count)
+  })
+
+  const mixedServices: ServiceListEntry[] = [
+    ...filtered.map(item => ({ _type: 'community' as const, item })),
+    ...filteredExternalForListings.map(item => ({ _type: 'external' as const, item })),
+  ]
+
+  const visibleMixedServices = mixedServices.slice(0, serviceDisplayLimit)
+  const servicesHasMore = serviceDisplayLimit < mixedServices.length
+
+  function categoryCount(categoryId: string) {
+    return services.filter(s => s.categoryId === categoryId).length
+      + externalServices.filter(item => item.category === categoryId).length
+  }
+
+  const filteredExternalServices = externalServices.filter(item => {
+    if (externalCategory !== 'all' && item.source_category !== externalCategory) return false
+    if (externalSearch.trim()) {
+      const haystack = `${item.title} ${item.provider_name} ${item.description ?? ''} ${item.category} ${item.source_category ?? ''}`.toLowerCase()
+      if (!haystack.includes(externalSearch.trim().toLowerCase())) return false
+    }
+    return true
+  })
+
+  const visibleExternalServices = filteredExternalServices.slice(0, externalDisplayLimit)
+  const externalHasMore = externalDisplayLimit < filteredExternalServices.length
+
+  async function handleExternalServiceClick(item: ExternalService) {
+    const outboundUrl = item.is_awin && item.awin_deeplink ? item.awin_deeplink : item.provider_url
+    window.open(outboundUrl, '_blank', 'noopener,noreferrer')
+
+    try {
+      await fetch('/api/external-services/click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serviceId: item.id }),
+      })
+      setExternalServices(prev => prev.map(row => row.id === item.id ? { ...row, click_count: row.click_count + 1 } : row))
+    } catch {
+      // Non-blocking: outbound provider has already opened.
+    }
+  }
+
+  function handleExternalEnquiry(item: ExternalService) {
+    setSelectedService(item)
+    setShowEnquiryModal(true)
+  }
+
+  async function submitEnquiry() {
+    if (!selectedService || !enquiryMessage.trim()) return
+    setEnquiryLoading(true)
+    try {
+      const res = await fetch('/api/external-services/enquiry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serviceListingId: selectedService.id,
+          providerName: selectedService.provider_name,
+          providerUrl: selectedService.provider_url,
+          category: selectedService.category,
+          enquiryMessage,
+          source: selectedService.is_awin ? 'awin' : 'external',
+        }),
+      })
+      const payload = await res.json().catch(() => null) as { error?: string } | null
+      if (!res.ok) throw new Error(payload?.error ?? 'Could not submit enquiry')
+
+      setExternalServices(prev => prev.map(row => row.id === selectedService.id ? { ...row, lead_count: row.lead_count + 1 } : row))
+      setShowEnquiryModal(false)
+      setSelectedService(null)
+      setEnquiryMessage('')
+      alert('Enquiry submitted! The provider will be in touch.')
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not submit enquiry')
+    } finally {
+      setEnquiryLoading(false)
+    }
+  }
 
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif' }}>
@@ -544,6 +938,68 @@ export default function ServicesPage() {
           deleting={deleting}
         />
       )}
+
+      {showEnquiryModal && selectedService && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: '20px',
+        }}>
+          <div style={{
+            background: '#111827', borderRadius: '16px',
+            padding: '28px', maxWidth: '400px', width: '100%',
+            border: '1px solid #1e293b', boxSizing: 'border-box',
+          }}>
+            <h3 style={{ color: '#fff', margin: '0 0 6px 0' }}>
+              Enquire about this service
+            </h3>
+            <p style={{ color: '#94a3b8', fontSize: '14px', margin: '0 0 20px 0', lineHeight: 1.45 }}>
+              {selectedService.title} — {selectedService.provider_name}
+            </p>
+
+            <textarea
+              placeholder="Describe what you need..."
+              value={enquiryMessage}
+              onChange={e => setEnquiryMessage(e.target.value)}
+              rows={4}
+              style={{
+                width: '100%', padding: '12px',
+                background: '#1e293b', border: '1px solid #334155',
+                borderRadius: '8px', color: '#fff',
+                fontSize: '16px', resize: 'vertical',
+                boxSizing: 'border-box', marginBottom: '16px', fontFamily: 'inherit',
+              }}
+            />
+
+            <button
+              onClick={submitEnquiry}
+              disabled={!enquiryMessage.trim() || enquiryLoading}
+              style={{
+                width: '100%', padding: '12px', minHeight: 44,
+                background: enquiryLoading ? '#334155' : '#00c2cb',
+                color: enquiryLoading ? '#64748b' : '#000',
+                border: 'none', borderRadius: '10px',
+                fontWeight: 700, fontSize: '15px',
+                cursor: enquiryLoading ? 'default' : 'pointer',
+                marginBottom: '10px', fontFamily: 'inherit',
+              }}
+            >
+              {enquiryLoading ? 'Submitting...' : 'Submit Enquiry'}
+            </button>
+
+            <button
+              onClick={() => { setShowEnquiryModal(false); setSelectedService(null) }}
+              style={{
+                width: '100%', padding: '10px', minHeight: 44,
+                background: 'transparent', border: 'none',
+                color: '#64748b', fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
       <style>{`
         .svc-layout { max-width: 1200px; margin: 0 auto; padding: 20px 16px 80px; display: grid; grid-template-columns: 240px 1fr; gap: 24px; align-items: start; }
         .svc-sidebar { position: sticky; top: 110px; }
@@ -580,24 +1036,55 @@ export default function ServicesPage() {
               to the Grassroots marketplace. */}
           <CrossPromoBanner target="grassroots" />
 
-          {/* Globalisation — location filter */}
-          <div style={{ marginBottom: '12px' }}>
-            <LocationFilter
-              location={filterLoc}
-              onLocationChange={setFilterLoc}
-              radiusKm={searchRadiusKm}
-              onRadiusChange={setSearchRadiusKm}
-              country={countryFilter}
-              onCountryChange={setCountryFilter}
-              countryOptions={countryOptions}
-              remote={filterRemote}
-              onRemoteChange={setFilterRemote}
-              showRemote
-            />
+          <div style={{ display: 'flex', gap: 12, margin: '16px 0', flexWrap: 'wrap', alignItems: 'center' }}>
+            <button
+              onClick={() => setActiveTab('freetrust')}
+              style={{
+                padding: '10px 20px', minHeight: 44,
+                borderRadius: 8,
+                border: activeTab === 'freetrust' ? '2px solid #00c2cb' : '2px solid #334155',
+                background: activeTab === 'freetrust' ? '#00c2cb22' : 'transparent',
+                color: activeTab === 'freetrust' ? '#00c2cb' : '#94a3b8',
+                cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit',
+              }}
+            >
+              All Services
+            </button>
+            <button
+              onClick={() => setActiveTab('external')}
+              style={{
+                padding: '10px 20px', minHeight: 44,
+                borderRadius: 8,
+                border: activeTab === 'external' ? '2px solid #00c2cb' : '2px solid #334155',
+                background: activeTab === 'external' ? '#00c2cb22' : 'transparent',
+                color: activeTab === 'external' ? '#00c2cb' : '#94a3b8',
+                cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit',
+              }}
+            >
+              🔍 Find a Provider
+            </button>
           </div>
 
-          {/* Search + controls row */}
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {activeTab === 'freetrust' && (
+            <>
+              {/* Globalisation — location filter */}
+              <div style={{ marginBottom: '12px' }}>
+                <LocationFilter
+                  location={filterLoc}
+                  onLocationChange={setFilterLoc}
+                  radiusKm={searchRadiusKm}
+                  onRadiusChange={setSearchRadiusKm}
+                  country={countryFilter}
+                  onCountryChange={setCountryFilter}
+                  countryOptions={countryOptions}
+                  remote={filterRemote}
+                  onRemoteChange={setFilterRemote}
+                  showRemote
+                />
+              </div>
+
+              {/* Search + controls row */}
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
             {/* Search */}
             <div style={{ flex: '1 1 280px', minWidth: '220px', position: 'relative' }}>
               <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '14px', pointerEvents: 'none' }}>🔍</span>
@@ -635,10 +1122,13 @@ export default function ServicesPage() {
               style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '9px 12px', fontSize: '12px', color: '#94a3b8', outline: 'none', cursor: 'pointer' }}>
               {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-          </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
+      {activeTab === 'freetrust' ? (
       <div className="svc-layout">
         {/* Sidebar */}
         <aside className="svc-sidebar">
@@ -646,7 +1136,7 @@ export default function ServicesPage() {
             <button className="cat-btn" onClick={() => setActiveCatId(null)}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px', background: activeCatId === null ? 'rgba(56,189,248,0.1)' : 'transparent', border: 'none', borderLeft: activeCatId === null ? '3px solid #38bdf8' : '3px solid transparent', color: activeCatId === null ? '#38bdf8' : '#94a3b8', fontSize: '13px', fontWeight: activeCatId === null ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}>
               <span>✦ All Services</span>
-              <span style={{ fontSize: '11px', color: '#475569' }}>{filtered.length}</span>
+              <span style={{ fontSize: '11px', color: '#475569' }}>{mixedServices.length}</span>
             </button>
 
             {/* Online section */}
@@ -660,7 +1150,7 @@ export default function ServicesPage() {
                   <span style={{ fontSize: '13px', color: '#475569', transition: 'transform 0.2s', display: 'inline-block', transform: onlineOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▾</span>
                 </button>
                 {onlineOpen && ONLINE_CATEGORIES.map(cat => {
-                  const count = services.filter(s => s.categoryId === cat.id).length
+                  const count = categoryCount(cat.id)
                   const crossLink = servicesToGrassrootsLink(cat.id)
                   return (
                     <button key={cat.id} className="cat-btn" onClick={() => setActiveCatId(activeCatId === cat.id ? null : cat.id)}
@@ -688,7 +1178,7 @@ export default function ServicesPage() {
                   <span style={{ fontSize: '13px', color: '#475569', transition: 'transform 0.2s', display: 'inline-block', transform: offlineOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▾</span>
                 </button>
                 {offlineOpen && OFFLINE_CATEGORIES.map(cat => {
-                  const count = services.filter(s => s.categoryId === cat.id).length
+                  const count = categoryCount(cat.id)
                   const crossLink = servicesToGrassrootsLink(cat.id)
                   return (
                     <button key={cat.id} className="cat-btn" onClick={() => setActiveCatId(activeCatId === cat.id ? null : cat.id)}
@@ -717,7 +1207,8 @@ export default function ServicesPage() {
           {/* Active filter summary */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
             <div style={{ fontSize: '13px', color: '#64748b' }}>
-              {filtered.length} service{filtered.length !== 1 ? 's' : ''}
+              {mixedServices.length} service{mixedServices.length !== 1 ? 's' : ''}
+              {filteredExternalForListings.length > 0 && ` · ${filteredExternalForListings.length} external provider${filteredExternalForListings.length !== 1 ? 's' : ''}`}
               {activeCatId && ` in ${visibleCats.find(c => c.id === activeCatId)?.label}`}
               {filterLoc.location_label && ` · near ${filterLoc.location_label}`}
               {countryFilter && ` · ${countryFilter}`}
@@ -742,51 +1233,194 @@ export default function ServicesPage() {
             )}
           </div>
 
-          {loadingServices ? (
+          {loadingServices || loadingExternalServices ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
               <div style={{ fontSize: '34px', marginBottom: '12px' }}>🛠️</div>
-              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8' }}>Loading services…</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8' }}>Loading services and providers…</div>
             </div>
-          ) : servicesError ? (
+          ) : servicesError || externalServicesError ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
               <div style={{ fontSize: '34px', marginBottom: '12px' }}>⚠️</div>
               <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8', marginBottom: 6 }}>Services could not load</div>
-              <div style={{ fontSize: '13px', marginBottom: 20 }}>Pull to refresh or try again in a moment.</div>
+              <div style={{ fontSize: '13px', marginBottom: 20 }}>{servicesError ?? externalServicesError ?? 'Pull to refresh or try again in a moment.'}</div>
               <button onClick={() => window.location.reload()} style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '10px 24px', borderRadius: 10, fontWeight: 700, border: 'none', fontSize: '14px' }}>
                 Reload services
               </button>
             </div>
-          ) : filtered.length === 0 ? (
+          ) : mixedServices.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
               <div style={{ fontSize: '40px', marginBottom: '12px' }}>🛠️</div>
               <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8', marginBottom: '6px' }}>
-                {services.length === 0 ? 'No services listed yet' : 'No services match your filters'}
+                {services.length === 0 && externalServices.length === 0 ? 'No services loaded yet' : 'No services match your filters'}
               </div>
               <div style={{ fontSize: '13px', marginBottom: '20px' }}>
-                {services.length === 0
+                {services.length === 0 && externalServices.length === 0
                   ? 'Be the first founding member to list your service!'
                   : 'Try adjusting your filters or search term'}
               </div>
-              {services.length === 0 && (
+              {services.length === 0 && externalServices.length === 0 && (
                 <a href="/seller/gigs/create" style={{ display: 'inline-block', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '10px 24px', borderRadius: 10, fontWeight: 700, textDecoration: 'none', fontSize: '14px' }}>
                   + List Your Service
                 </a>
               )}
             </div>
           ) : (
-            <div className="svc-grid">
-              {filtered.map(svc => (
-                <ServiceCard
-                  key={svc.id}
-                  svc={svc}
-                  isOwner={isAdmin || (!!userId && svc.providerId === userId)}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
+            <>
+              <div className="svc-grid">
+                {visibleMixedServices.map(entry => (
+                  entry._type === 'community' ? (
+                    <ServiceCard
+                      key={`community-${entry.item.id}`}
+                      svc={entry.item}
+                      isOwner={isAdmin || (!!userId && entry.item.providerId === userId)}
+                      onDelete={handleDelete}
+                    />
+                  ) : (
+                    <ExternalServiceCard
+                      key={`external-${entry.item.id}`}
+                      item={entry.item}
+                      onVisit={handleExternalServiceClick}
+                      onEnquire={handleExternalEnquiry}
+                    />
+                  )
+                ))}
+              </div>
+
+              {servicesHasMore && (
+                <div style={{ textAlign: 'center', marginTop: '24px' }}>
+                  <button
+                    onClick={() => setServiceDisplayLimit(prev => Math.min(prev + SERVICES_LOAD_MORE_BATCH, mixedServices.length))}
+                    style={{
+                      padding: '12px 20px', borderRadius: '12px', border: '1px solid #00c2cb',
+                      background: 'rgba(0,194,203,0.12)', color: '#00c2cb',
+                      fontWeight: 800, fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit',
+                    }}
+                  >
+                    Load More ({mixedServices.length - serviceDisplayLimit} remaining)
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
+      ) : (
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px 16px 80px' }}>
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '12px' }}>
+              <div style={{ flex: '1 1 280px', minWidth: '220px', position: 'relative' }}>
+                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '14px', pointerEvents: 'none' }}>🔍</span>
+                <input
+                  value={externalSearch}
+                  onChange={e => setExternalSearch(e.target.value)}
+                  placeholder="Search external providers…"
+                  style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '10px 14px 10px 36px', fontSize: '16px', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                />
+              </div>
+              <div style={{ color: '#64748b', fontSize: '13px', lineHeight: 1.45 }}>
+                {filteredExternalServices.length} provider{filteredExternalServices.length !== 1 ? 's' : ''}
+                {externalCategory !== 'all' && ` in ${EXTERNAL_REFRESH_CATEGORIES.find(c => c.id === externalCategory)?.label ?? externalCategory}`}
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex', gap: '8px',
+              overflowX: 'auto', paddingBottom: '8px',
+              scrollbarWidth: 'none',
+            }}>
+              <button
+                onClick={() => setExternalCategory('all')}
+                style={{
+                  padding: '8px 16px', borderRadius: '20px', whiteSpace: 'nowrap', flexShrink: 0,
+                  border: externalCategory === 'all' ? '2px solid #00c2cb' : '2px solid #334155',
+                  background: externalCategory === 'all' ? '#00c2cb22' : 'transparent',
+                  color: externalCategory === 'all' ? '#00c2cb' : '#94a3b8',
+                  cursor: 'pointer', fontWeight: 600, fontSize: '13px', fontFamily: 'inherit',
+                }}
+              >
+                🌐 All Services
+              </button>
+              {EXTERNAL_REFRESH_CATEGORIES.filter(cat => externalServices.some(item => item.source_category === cat.id)).map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setExternalCategory(cat.id)}
+                  style={{
+                    padding: '8px 16px', borderRadius: '20px', whiteSpace: 'nowrap', flexShrink: 0,
+                    border: externalCategory === cat.id ? '2px solid #00c2cb' : '2px solid #334155',
+                    background: externalCategory === cat.id ? '#00c2cb22' : 'transparent',
+                    color: externalCategory === cat.id ? '#00c2cb' : '#94a3b8',
+                    cursor: 'pointer', fontWeight: 600, fontSize: '13px', fontFamily: 'inherit',
+                  }}
+                >
+                  {cat.icon} {cat.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {loadingExternalServices ? (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+              <div style={{ fontSize: '34px', marginBottom: '12px' }}>🔎</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8' }}>Loading external providers…</div>
+            </div>
+          ) : externalServicesError ? (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+              <div style={{ fontSize: '34px', marginBottom: '12px' }}>⚠️</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8', marginBottom: 6 }}>External providers could not load</div>
+              <div style={{ fontSize: '13px', marginBottom: 20 }}>{externalServicesError}</div>
+              <button onClick={() => window.location.reload()} style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '10px 24px', borderRadius: 10, fontWeight: 700, border: 'none', fontSize: '14px', fontFamily: 'inherit' }}>
+                Reload providers
+              </button>
+            </div>
+          ) : filteredExternalServices.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+              <div style={{ fontSize: '40px', marginBottom: '12px' }}>🌐</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8', marginBottom: '6px' }}>
+                {externalServices.length === 0 ? 'No external providers loaded yet' : 'No providers match your filters'}
+              </div>
+              <div style={{ fontSize: '13px', marginBottom: '20px' }}>
+                {externalServices.length === 0
+                  ? 'The nightly provider refresh will populate this tab from real SerpApi and Awin data.'
+                  : 'Try another category or search term.'}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
+                {visibleExternalServices.map(item => (
+                  <ExternalServiceCard
+                    key={item.id}
+                    item={item}
+                    onVisit={handleExternalServiceClick}
+                    onEnquire={handleExternalEnquiry}
+                  />
+                ))}
+              </div>
+
+              {externalHasMore && (
+                <div style={{ textAlign: 'center', marginTop: '24px' }}>
+                  <button
+                    onClick={() => setExternalDisplayLimit(prev => Math.min(prev + SERVICES_LOAD_MORE_BATCH, filteredExternalServices.length))}
+                    style={{
+                      padding: '12px 20px', borderRadius: '12px', border: '1px solid #00c2cb',
+                      background: 'rgba(0,194,203,0.12)', color: '#00c2cb',
+                      fontWeight: 800, fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit',
+                    }}
+                  >
+                    Load More ({filteredExternalServices.length - externalDisplayLimit} remaining)
+                  </button>
+                </div>
+              )}
+
+              {!externalHasMore && filteredExternalServices.length > SERVICES_INITIAL_DISPLAY && (
+                <p style={{ textAlign: 'center', color: '#475569', fontSize: '13px', padding: '24px 0', margin: 0 }}>
+                  All {filteredExternalServices.length} providers loaded
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }
