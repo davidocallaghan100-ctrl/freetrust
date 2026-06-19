@@ -266,7 +266,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    await new Promise(resolve => setTimeout(resolve, 600))
+    await new Promise(resolve => setTimeout(resolve, 250))
   }
 
   const archiveDate = new Date()

@@ -169,10 +169,26 @@ function faviconForProviderUrl(url: string): string | null {
 
 // ─── Service Card ─────────────────────────────────────────────────────────────
 
-function ServiceCard({ svc, isOwner, onDelete }: { svc: Service; isOwner?: boolean; onDelete?: (id: string | number, title: string) => void }) {
+function ServiceCard({
+  svc,
+  isOwner,
+  onDelete,
+  onOpen,
+  onOpenProfile,
+}: {
+  svc: Service
+  isOwner?: boolean
+  onDelete?: (id: string | number, title: string) => void
+  onOpen: (id: string | number) => void
+  onOpenProfile: (providerId: string) => void
+}) {
   return (
     <div style={{ position: 'relative' }}>
-    <Link href={`/services/${svc.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+    <Link
+      href={`/services/${svc.id}`}
+      onClick={e => { e.preventDefault(); onOpen(svc.id) }}
+      style={{ textDecoration: 'none', display: 'block' }}
+    >
       <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0', transition: 'border-color 0.15s', height: '100%', boxSizing: 'border-box' }}
         onMouseEnter={e => (e.currentTarget.style.borderColor = '#38bdf8')}
         onMouseLeave={e => (e.currentTarget.style.borderColor = '#334155')}
@@ -187,7 +203,7 @@ function ServiceCard({ svc, isOwner, onDelete }: { svc: Service; isOwner?: boole
         {/* Provider row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
           {svc.providerId
-            ? <Link href={`/profile?id=${svc.providerId}`} onClick={e => e.stopPropagation()} style={{ flexShrink: 0, display: 'block' }}>
+            ? <Link href={`/profile?id=${svc.providerId}`} onClick={e => { e.preventDefault(); e.stopPropagation(); if (svc.providerId) onOpenProfile(svc.providerId) }} style={{ flexShrink: 0, display: 'block' }}>
                 {svc.avatarImg
                   ? <img src={svc.avatarImg} alt={svc.provider} width={32} height={32} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', display: 'block' }} />
                   : <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '11px', color: '#0f172a', background: getGrad(svc.avatar) }}>{svc.avatar}</div>
@@ -199,7 +215,7 @@ function ServiceCard({ svc, isOwner, onDelete }: { svc: Service; isOwner?: boole
           }
           <div style={{ flex: 1, minWidth: 0 }}>
             {svc.providerId
-              ? <Link href={`/profile?id=${svc.providerId}`} onClick={e => e.stopPropagation()} style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none' }}>{svc.provider}</Link>
+              ? <Link href={`/profile?id=${svc.providerId}`} onClick={e => { e.preventDefault(); e.stopPropagation(); if (svc.providerId) onOpenProfile(svc.providerId) }} style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none' }}>{svc.provider}</Link>
               : <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svc.provider}</div>
             }
             {(svc.is_remote || svc.location_label || svc.location) && (
@@ -666,7 +682,7 @@ export default function ServicesPage() {
           .order('is_awin', { ascending: false })
           .order('click_count', { ascending: false })
           .order('last_refreshed_at', { ascending: false })
-          .limit(1000)
+          .limit(2500)
 
         if (error) throw error
 
@@ -837,7 +853,71 @@ export default function ServicesPage() {
   const visibleExternalServices = filteredExternalServices.slice(0, externalDisplayLimit)
   const externalHasMore = externalDisplayLimit < filteredExternalServices.length
 
+  const onlineServiceCount = ONLINE_CATEGORIES.reduce((sum, cat) => sum + categoryCount(cat.id), 0)
+  const localServiceCount = OFFLINE_CATEGORIES.reduce((sum, cat) => sum + categoryCount(cat.id), 0)
+
+  async function requireAuth(redirectPath: string) {
+    if (userId) return true
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      setUserId(user.id)
+      return true
+    }
+    router.push(`/login?redirect=${encodeURIComponent(redirectPath)}`)
+    return false
+  }
+
+  async function openServiceDetail(id: string | number) {
+    const path = `/services/${id}`
+    if (!(await requireAuth(path))) return
+    router.push(path)
+  }
+
+  async function openProviderProfile(providerId: string) {
+    const path = `/profile?id=${providerId}`
+    if (!(await requireAuth(path))) return
+    router.push(path)
+  }
+
+  async function openCreateService() {
+    const path = '/seller/gigs/create'
+    if (!(await requireAuth(path))) return
+    router.push(path)
+  }
+
+  async function openFindProviderTab() {
+    if (!(await requireAuth('/services'))) return
+    setActiveTab('external')
+  }
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    let ticking = false
+    const onScroll = () => {
+      if (ticking) return
+      ticking = true
+      window.requestAnimationFrame(() => {
+        ticking = false
+        const remaining = document.documentElement.scrollHeight - (window.scrollY + window.innerHeight)
+        if (remaining > 900) return
+
+        if (activeTab === 'freetrust') {
+          setServiceDisplayLimit(prev => Math.min(prev + SERVICES_LOAD_MORE_BATCH, mixedServices.length))
+        } else {
+          setExternalDisplayLimit(prev => Math.min(prev + SERVICES_LOAD_MORE_BATCH, filteredExternalServices.length))
+        }
+      })
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [activeTab, mixedServices.length, filteredExternalServices.length])
+
   async function handleExternalServiceClick(item: ExternalService) {
+    if (!(await requireAuth('/services'))) return
     const outboundUrl = item.is_awin && item.awin_deeplink ? item.awin_deeplink : item.provider_url
     window.open(outboundUrl, '_blank', 'noopener,noreferrer')
 
@@ -853,7 +933,8 @@ export default function ServicesPage() {
     }
   }
 
-  function handleExternalEnquiry(item: ExternalService) {
+  async function handleExternalEnquiry(item: ExternalService) {
+    if (!(await requireAuth('/services'))) return
     setSelectedService(item)
     setShowEnquiryModal(true)
   }
@@ -1051,7 +1132,7 @@ export default function ServicesPage() {
               All Services
             </button>
             <button
-              onClick={() => setActiveTab('external')}
+              onClick={openFindProviderTab}
               style={{
                 padding: '10px 20px', minHeight: 44,
                 borderRadius: 8,
@@ -1138,6 +1219,18 @@ export default function ServicesPage() {
               <span>✦ All Services</span>
               <span style={{ fontSize: '11px', color: '#475569' }}>{mixedServices.length}</span>
             </button>
+            {activeCatId === null && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', padding: '10px 14px 12px', borderTop: '1px solid rgba(51,65,85,0.6)', background: 'rgba(15,23,42,0.45)' }}>
+                <div style={{ border: '1px solid rgba(56,189,248,0.18)', background: 'rgba(56,189,248,0.07)', borderRadius: 10, padding: '8px', minWidth: 0 }}>
+                  <div style={{ fontSize: 10, color: '#38bdf8', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>💻 Online</div>
+                  <div style={{ marginTop: 3, fontSize: 18, color: '#e0f2fe', fontWeight: 900 }}>{onlineServiceCount.toLocaleString()}</div>
+                </div>
+                <div style={{ border: '1px solid rgba(52,211,153,0.18)', background: 'rgba(52,211,153,0.07)', borderRadius: 10, padding: '8px', minWidth: 0 }}>
+                  <div style={{ fontSize: 10, color: '#34d399', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>📍 Local</div>
+                  <div style={{ marginTop: 3, fontSize: 18, color: '#dcfce7', fontWeight: 900 }}>{localServiceCount.toLocaleString()}</div>
+                </div>
+              </div>
+            )}
 
             {/* Online section */}
             {(modeFilter === 'all' || modeFilter === 'online') && (
@@ -1197,7 +1290,7 @@ export default function ServicesPage() {
           </div>
 
           {/* Post a service CTA */}
-          <Link href="/seller/gigs/create" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '12px', padding: '12px', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', borderRadius: '12px', color: '#fff', fontWeight: 700, fontSize: '13px', textDecoration: 'none' }}>
+          <Link href="/seller/gigs/create" onClick={e => { e.preventDefault(); void openCreateService() }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '12px', padding: '12px', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', borderRadius: '12px', color: '#fff', fontWeight: 700, fontSize: '13px', textDecoration: 'none' }}>
             ➕ List Your Service
           </Link>
         </aside>
@@ -1274,6 +1367,8 @@ export default function ServicesPage() {
                       svc={entry.item}
                       isOwner={isAdmin || (!!userId && entry.item.providerId === userId)}
                       onDelete={handleDelete}
+                      onOpen={openServiceDetail}
+                      onOpenProfile={openProviderProfile}
                     />
                   ) : (
                     <ExternalServiceCard
@@ -1287,17 +1382,8 @@ export default function ServicesPage() {
               </div>
 
               {servicesHasMore && (
-                <div style={{ textAlign: 'center', marginTop: '24px' }}>
-                  <button
-                    onClick={() => setServiceDisplayLimit(prev => Math.min(prev + SERVICES_LOAD_MORE_BATCH, mixedServices.length))}
-                    style={{
-                      padding: '12px 20px', borderRadius: '12px', border: '1px solid #00c2cb',
-                      background: 'rgba(0,194,203,0.12)', color: '#00c2cb',
-                      fontWeight: 800, fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit',
-                    }}
-                  >
-                    Load More ({mixedServices.length - serviceDisplayLimit} remaining)
-                  </button>
+                <div style={{ textAlign: 'center', marginTop: '24px', color: '#64748b', fontSize: '13px', padding: '12px 0' }}>
+                  Loading more services…
                 </div>
               )}
             </>
@@ -1398,17 +1484,8 @@ export default function ServicesPage() {
               </div>
 
               {externalHasMore && (
-                <div style={{ textAlign: 'center', marginTop: '24px' }}>
-                  <button
-                    onClick={() => setExternalDisplayLimit(prev => Math.min(prev + SERVICES_LOAD_MORE_BATCH, filteredExternalServices.length))}
-                    style={{
-                      padding: '12px 20px', borderRadius: '12px', border: '1px solid #00c2cb',
-                      background: 'rgba(0,194,203,0.12)', color: '#00c2cb',
-                      fontWeight: 800, fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit',
-                    }}
-                  >
-                    Load More ({filteredExternalServices.length - externalDisplayLimit} remaining)
-                  </button>
+                <div style={{ textAlign: 'center', marginTop: '24px', color: '#64748b', fontSize: '13px', padding: '12px 0' }}>
+                  Loading more providers…
                 </div>
               )}
 

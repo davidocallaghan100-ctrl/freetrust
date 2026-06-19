@@ -1,7 +1,7 @@
 'use client'
 import React, { useState, useEffect, Suspense, useMemo, useRef } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { loadStripe, type Stripe, type StripeElements, type StripePaymentElement } from '@stripe/stripe-js'
 import { createClient } from '@/lib/supabase/client'
 import { useCurrency, type CurrencyCode } from '@/context/CurrencyContext'
@@ -162,7 +162,7 @@ function Stars({ rating }: { rating: number }) {
 }
 
 // ─── Product card ─────────────────────────────────────────────────────────────
-function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, addingToBasket, onAddToBasket }: {
+function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, addingToBasket, onAddToBasket, onOpen, onOpenSeller }: {
   p: Product
   wishlist: Set<string>
   onWishlist: (id: string) => void
@@ -171,6 +171,8 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
   inBasket?: boolean
   addingToBasket?: boolean
   onAddToBasket?: (id: string) => void
+  onOpen: (id: string) => void
+  onOpenSeller: (sellerId: string) => void
 }) {
   const { format } = useCurrency()
   const gradient = p.image ? undefined : (CAT_GRAD[p.category] ?? 'linear-gradient(135deg,#334155,#1e293b)')
@@ -181,7 +183,7 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
 
       {/* Clickable image + title area */}
-      <Link href={`/products/${p.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+      <Link href={`/products/${p.id}`} onClick={e => { e.preventDefault(); onOpen(p.id) }} style={{ textDecoration: 'none', display: 'block' }}>
         {/* Image / gradient */}
         <div className="ft-product-image-frame" style={{ position: 'relative', height: 160, background: p.image ? undefined : gradient, flexShrink: 0 }}>
           {p.image && <img className="ft-product-image" src={p.image} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#0f172a' }} />}
@@ -234,7 +236,7 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
         {/* Seller row */}
         <div className="ft-product-card-seller-row" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', paddingTop: '0.25rem', borderTop: '1px solid rgba(56,189,248,0.06)' }}>
           {p.seller_id
-            ? <Link href={`/profile?id=${p.seller_id}`} onClick={e => e.stopPropagation()} style={{ flexShrink: 0, display: 'block' }}>
+            ? <Link href={`/profile?id=${p.seller_id}`} onClick={e => { e.preventDefault(); e.stopPropagation(); if (p.seller_id) onOpenSeller(p.seller_id) }} style={{ flexShrink: 0, display: 'block' }}>
                 {p.seller_avatar
                   ? <img className="ft-product-seller-avatar" src={p.seller_avatar} alt={p.seller_name} style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', display: 'block' }} />
                   : <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#334155', display: 'block' }} />
@@ -245,7 +247,7 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
               : <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#334155', flexShrink: 0 }} />
           }
           {p.seller_id
-            ? <Link href={`/profile?id=${p.seller_id}`} onClick={e => e.stopPropagation()} style={{ fontSize: '0.72rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, textDecoration: 'none' }}>{p.seller_name}</Link>
+            ? <Link href={`/profile?id=${p.seller_id}`} onClick={e => { e.preventDefault(); e.stopPropagation(); if (p.seller_id) onOpenSeller(p.seller_id) }} style={{ fontSize: '0.72rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, textDecoration: 'none' }}>{p.seller_name}</Link>
             : <span style={{ fontSize: '0.72rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{p.seller_name}</span>
           }
           {p.seller_verified && <span style={{ fontSize: '0.62rem', color: '#38bdf8', flexShrink: 0 }}>✓</span>}
@@ -273,6 +275,7 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
             <Link
               className="ft-product-card-view-link"
               href={`/products/${p.id}`}
+              onClick={e => { e.preventDefault(); e.stopPropagation(); onOpen(p.id) }}
               style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 8, padding: '0.45rem 0.9rem', fontSize: '0.75rem', fontWeight: 700, color: '#fff', cursor: 'pointer', minHeight: 36, display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
               View
             </Link>
@@ -799,6 +802,7 @@ function ProductsInner() {
   const [mobileColumns, setMobileColumns] = useState<1 | 2>(2)
   const [desktopColumns, setDesktopColumns] = useState<1 | 2 | 3 | 4 | 5>(4)
   const infiniteScrollRef = useRef<HTMLDivElement | null>(null)
+  const router = useRouter()
 
   useEffect(() => {
     setDisplayLimit(PRODUCTS_INITIAL_DISPLAY)
@@ -1097,6 +1101,51 @@ function ProductsInner() {
     setWishlist(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
   }
 
+  async function requireAuth(redirectPath: string) {
+    if (userId) return true
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      setUserId(user.id)
+      return true
+    }
+    router.push(`/login?redirect=${encodeURIComponent(redirectPath)}`)
+    return false
+  }
+
+  async function openProductDetail(id: string) {
+    const path = `/products/${id}`
+    if (!(await requireAuth(path))) return
+    router.push(path)
+  }
+
+  async function openSellerProfile(sellerId: string) {
+    const path = `/profile?id=${sellerId}`
+    if (!(await requireAuth(path))) return
+    router.push(path)
+  }
+
+  async function openCreateProduct() {
+    const path = '/products/new'
+    if (!(await requireAuth(path))) return
+    router.push(path)
+  }
+
+  async function openFindOnlineTab() {
+    if (!(await requireAuth('/products'))) return
+    setActiveTab('find-online')
+  }
+
+  async function handleWishlistToggle(id: string) {
+    if (!(await requireAuth(`/products/${id}`))) return
+    toggleWishlist(id)
+  }
+
+  async function openBasket() {
+    if (!(await requireAuth('/products'))) return
+    setBasketOpen(true)
+  }
+
   async function logExternalProductClick(product: ExternalProduct, clickSource: 'grid' | 'modal' | 'basket' | 'find_online' = 'modal') {
     try {
       await fetch('/api/external-products/click', {
@@ -1120,10 +1169,12 @@ function ProductsInner() {
   }
 
   async function handleExternalProductClick(product: ExternalProduct) {
+    if (!(await requireAuth('/products'))) return
     setClickedProduct(product)
   }
 
   async function handleAddCommunityToBasket(id: string) {
+    if (!(await requireAuth(`/products/${id}`))) return
     setBasketBusyId(`community-${id}`)
     try {
       const result = await basket.addCommunityItem(id)
@@ -1135,6 +1186,7 @@ function ProductsInner() {
   }
 
   async function handleSaveExternalToBasket(product: ExternalProduct) {
+    if (!(await requireAuth('/products'))) return
     setBasketBusyId(`external-${product.id}`)
     try {
       const result = await basket.addExternalItem(product.id)
@@ -1146,6 +1198,7 @@ function ProductsInner() {
   }
 
   async function openRetailerFromBasket(item: BasketItem) {
+    if (!(await requireAuth('/products'))) return
     if (!item.retailer_url) return
     const product = externalProducts.find(row => row.id === item.external_product_id)
     const cleanRetailerUrl = stripFreetrustReferralParams(item.retailer_url)
@@ -1172,6 +1225,7 @@ function ProductsInner() {
 
   async function continueToRetailer() {
     if (!clickedProduct) return
+    if (!(await requireAuth('/products'))) return
     setOpeningRetailer(true)
     const outboundProduct = clickedProduct
     window.open(toAffiliateUrl(outboundProduct.retailer_url), '_blank', 'noopener,noreferrer')
@@ -1415,7 +1469,7 @@ function ProductsInner() {
               <h1 style={{ fontSize: 'clamp(1.6rem,4vw,2.2rem)', fontWeight: 900, margin: '0 0 0.25rem', letterSpacing: '-0.5px' }}>Products</h1>
               <p style={{ color: '#64748b', margin: 0, fontSize: '0.9rem' }}>{activeTab === 'listings' ? mergedProducts.length : filtered.length} product{(activeTab === 'listings' ? mergedProducts.length : filtered.length) !== 1 ? 's' : ''} found</p>
             </div>
-            {activeTab === 'listings' && <ProductBasketButton itemCount={basket.itemCount} onClick={() => setBasketOpen(true)} />}
+            {activeTab === 'listings' && <ProductBasketButton itemCount={basket.itemCount} onClick={openBasket} />}
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             <select
@@ -1424,7 +1478,7 @@ function ProductsInner() {
               style={{ background: '#1e293b', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: '#94a3b8', cursor: 'pointer', minHeight: 36 }}>
               {SORT_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
-            <Link href="/products/new" style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.5rem 1.1rem', borderRadius: 9, fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none', minHeight: 36, display: 'flex', alignItems: 'center' }}>
+            <Link href="/products/new" onClick={e => { e.preventDefault(); void openCreateProduct() }} style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.5rem 1.1rem', borderRadius: 9, fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none', minHeight: 36, display: 'flex', alignItems: 'center' }}>
               + List Product
             </Link>
           </div>
@@ -1446,7 +1500,7 @@ function ProductsInner() {
             FreeTrust Listings
           </button>
           <button
-            onClick={() => setActiveTab('find-online')}
+              onClick={openFindOnlineTab}
             style={{
               padding: '10px 20px',
               borderRadius: 8,
@@ -1580,7 +1634,7 @@ function ProductsInner() {
               <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>
                 {catFilter !== 'all' ? `No products yet in this category — be the first to list one.` : 'No products match your filters.'}
               </p>
-              <Link href="/products/new" style={{ display: 'inline-block', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.75rem 1.75rem', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>
+              <Link href="/products/new" onClick={e => { e.preventDefault(); void openCreateProduct() }} style={{ display: 'inline-block', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.75rem 1.75rem', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>
                 + List a Product
               </Link>
             </div>
@@ -1593,12 +1647,14 @@ function ProductsInner() {
                       key={`community-${entry.item.id}`}
                       p={entry.item}
                       wishlist={wishlist}
-                      onWishlist={toggleWishlist}
+                      onWishlist={handleWishlistToggle}
                       isOwner={isAdmin || (!!userId && entry.item.seller_id === userId)}
                       onDelete={handleDelete}
                       inBasket={communityBasketIds.has(entry.item.id)}
                       addingToBasket={basketBusyId === `community-${entry.item.id}`}
                       onAddToBasket={handleAddCommunityToBasket}
+                      onOpen={openProductDetail}
+                      onOpenSeller={openSellerProfile}
                     />
                   ) : (
                     <ExternalProductCard

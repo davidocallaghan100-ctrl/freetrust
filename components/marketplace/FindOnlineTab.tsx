@@ -2,6 +2,7 @@
 
 import React, { FormEvent, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { isAffiliateTrackingEnabled, toAffiliateUrl } from '@/lib/skimlinks'
 
@@ -103,9 +104,9 @@ function SkeletonCard() {
   )
 }
 
-function FreeTrustCard({ item }: { item: InternalResult }) {
+function FreeTrustCard({ item, onOpen }: { item: InternalResult; onOpen: (id: string) => void }) {
   return (
-    <Link href={`/products/${item.id}`} style={{ textDecoration: 'none' }}>
+    <Link href={`/products/${item.id}`} onClick={e => { e.preventDefault(); onOpen(item.id) }} style={{ textDecoration: 'none' }}>
       <div style={{ background: '#111827', border: '1px solid rgba(0,194,203,0.16)', borderRadius: 12, overflow: 'hidden', minHeight: 260 }}>
         <div style={{ height: 134, background: item.image ? '#0f172a' : 'linear-gradient(135deg,#00c2cb,#164e63)', position: 'relative' }}>
           {item.image ? <img src={item.image} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
@@ -151,6 +152,7 @@ function ExternalCard({ item, onBuy }: { item: ExternalResult; onBuy: () => void
 
 export default function FindOnlineTab() {
   const supabase = useMemo(() => createClient(), [])
+  const router = useRouter()
   const [query, setQuery] = useState('')
   const [intent, setIntent] = useState<SearchIntent | null>(null)
   const [internalResults, setInternalResults] = useState<InternalResult[]>([])
@@ -159,6 +161,30 @@ export default function FindOnlineTab() {
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<SelectedExternal | null>(null)
   const [loggingClick, setLoggingClick] = useState(false)
+
+  async function requireAuth(redirectPath: string) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) return true
+    router.push(`/login?redirect=${encodeURIComponent(redirectPath)}`)
+    return false
+  }
+
+  async function openProductDetail(id: string) {
+    const path = `/products/${id}`
+    if (!(await requireAuth(path))) return
+    router.push(path)
+  }
+
+  async function openCreateProduct() {
+    const path = '/products/new'
+    if (!(await requireAuth(path))) return
+    router.push(path)
+  }
+
+  async function selectExternalResult(item: ExternalResult) {
+    if (!(await requireAuth('/products'))) return
+    setSelected({ ...item, searchQuery: intent?.keywords ?? query })
+  }
 
   async function searchInternal(searchIntent: SearchIntent) {
     const terms = keywordTerms(searchIntent.keywords)
@@ -247,6 +273,7 @@ export default function FindOnlineTab() {
 
   async function continueToRetailer() {
     if (!selected) return
+    if (!(await requireAuth('/products'))) return
     setLoggingClick(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -305,10 +332,10 @@ export default function FindOnlineTab() {
           ) : internalResults.length === 0 && intent ? (
             <div style={{ background: '#111827', border: '1px solid rgba(148,163,184,0.16)', borderRadius: 12, padding: 18, textAlign: 'center' }}>
               <p style={{ color: '#94a3b8', margin: '0 0 14px' }}>No FreeTrust sellers found for this product yet — be the first to list it!</p>
-              <Link href="/products/new" style={{ display: 'inline-block', background: '#00c2cb', color: '#ffffff', borderRadius: 8, padding: '0.7rem 1rem', fontWeight: 800, textDecoration: 'none' }}>+ List Product</Link>
+              <Link href="/products/new" onClick={e => { e.preventDefault(); void openCreateProduct() }} style={{ display: 'inline-block', background: '#00c2cb', color: '#ffffff', borderRadius: 8, padding: '0.7rem 1rem', fontWeight: 800, textDecoration: 'none' }}>+ List Product</Link>
             </div>
           ) : (
-            <div style={{ display: 'grid', gap: 12 }}>{internalResults.map(item => <FreeTrustCard key={item.id} item={item} />)}</div>
+            <div style={{ display: 'grid', gap: 12 }}>{internalResults.map(item => <FreeTrustCard key={item.id} item={item} onOpen={openProductDetail} />)}</div>
           )}
         </section>
 
@@ -325,7 +352,7 @@ export default function FindOnlineTab() {
               No external results found. Try different keywords.
             </div>
           ) : (
-            <div style={{ display: 'grid', gap: 12 }}>{externalResults.map((item, index) => <ExternalCard key={`${item.link}-${index}`} item={item} onBuy={() => setSelected({ ...item, searchQuery: intent?.keywords ?? query })} />)}</div>
+            <div style={{ display: 'grid', gap: 12 }}>{externalResults.map((item, index) => <ExternalCard key={`${item.link}-${index}`} item={item} onBuy={() => { void selectExternalResult(item) }} />)}</div>
           )}
         </section>
       </div>
