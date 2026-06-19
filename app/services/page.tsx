@@ -8,9 +8,6 @@ import LocationFilter from '@/components/location/LocationFilter'
 import LocationBadge from '@/components/location/LocationBadge'
 import PriceDisplay from '@/components/currency/PriceDisplay'
 import SocialLinks from '@/components/social/SocialLinks'
-import CrossPromoBanner from '@/components/marketplace/CrossPromoBanner'
-import CategoryOverlapBadge from '@/components/marketplace/CategoryOverlapBadge'
-import { servicesToGrassrootsLink } from '@/lib/marketplace/category-overlap'
 import { EMPTY_LOCATION, haversineKm, type StructuredLocation, type RadiusValue } from '@/lib/geo'
 import { buildCountryOptions } from '@/lib/countries'
 import type { CurrencyCode } from '@/context/CurrencyContext'
@@ -517,10 +514,9 @@ export default function ServicesPage() {
     return () => clearTimeout(timer)
   }, [router])
 
-  // Deep-link support: if the user arrives via a CategoryOverlapBadge
-  // from /grassroots with ?category=<id>, seed activeCatId from the URL
-  // on first mount. Read via window.location to avoid needing a new
-  // Suspense boundary for useSearchParams().
+  // Generic deep-link support for direct /services?category=<id> URLs.
+  // Read via window.location to avoid needing a new Suspense boundary for
+  // useSearchParams().
   useEffect(() => {
     if (typeof window === 'undefined') return
     const q = new URLSearchParams(window.location.search)
@@ -1126,9 +1122,18 @@ export default function ServicesPage() {
           <h1 style={{ fontSize: '26px', fontWeight: 800, margin: '0 0 4px' }}>🎯 Services Marketplace</h1>
           <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 16px' }}>Skilled & professional work — online or in-person</p>
 
-          {/* Cross-promo: send users looking for casual / local help
-              to the Grassroots marketplace. */}
-          <CrossPromoBanner target="grassroots" />
+          <div style={{
+            background: 'rgba(56,189,248,0.06)',
+            border: '1px solid rgba(56,189,248,0.18)',
+            borderRadius: 12,
+            padding: '12px 14px',
+            marginBottom: 16,
+            color: '#94a3b8',
+            fontSize: 13,
+            lineHeight: 1.55,
+          }}>
+            <strong style={{ color: '#e0f2fe' }}>Services Marketplace</strong> is for packaged professional work, freelancers, agencies, and external providers. Grassroots is now a separate menu section for local hands-on work.
+          </div>
 
           <div style={{ display: 'flex', gap: 12, margin: '16px 0', flexWrap: 'wrap', alignItems: 'center' }}>
             <button
@@ -1247,14 +1252,12 @@ export default function ServicesPage() {
                 </button>
                 {onlineOpen && sortedOnlineCats.map(cat => {
                   const count = categoryCount(cat.id)
-                  const crossLink = servicesToGrassrootsLink(cat.id)
                   return (
                     <button key={cat.id} className="cat-btn" onClick={() => setActiveCatId(activeCatId === cat.id ? null : cat.id)}
                       style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 14px 8px 18px', background: activeCatId === cat.id ? 'rgba(56,189,248,0.1)' : 'transparent', border: 'none', borderLeft: activeCatId === cat.id ? '3px solid #38bdf8' : '3px solid transparent', color: activeCatId === cat.id ? '#38bdf8' : '#94a3b8', fontSize: '12px', fontWeight: activeCatId === cat.id ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
                         <span>{cat.icon}</span>
                         <span>{cat.label}</span>
-                        {crossLink && <CategoryOverlapBadge link={crossLink} flavor="grassroots" />}
                       </span>
                       {count > 0 && <span style={{ fontSize: '10px', color: '#475569', flexShrink: 0 }}>{count}</span>}
                     </button>
@@ -1278,14 +1281,12 @@ export default function ServicesPage() {
                 </button>
                 {offlineOpen && sortedOfflineCats.map(cat => {
                   const count = categoryCount(cat.id)
-                  const crossLink = servicesToGrassrootsLink(cat.id)
                   return (
                     <button key={cat.id} className="cat-btn" onClick={() => setActiveCatId(activeCatId === cat.id ? null : cat.id)}
                       style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 14px 8px 18px', background: activeCatId === cat.id ? 'rgba(52,211,153,0.1)' : 'transparent', border: 'none', borderLeft: activeCatId === cat.id ? '3px solid #34d399' : '3px solid transparent', color: activeCatId === cat.id ? '#34d399' : '#94a3b8', fontSize: '12px', fontWeight: activeCatId === cat.id ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
                         <span>{cat.icon}</span>
                         <span>{cat.label}</span>
-                        {crossLink && <CategoryOverlapBadge link={crossLink} flavor="grassroots" />}
                       </span>
                       {count > 0 && <span style={{ fontSize: '10px', color: '#475569', flexShrink: 0 }}>{count}</span>}
                     </button>
@@ -1322,7 +1323,6 @@ export default function ServicesPage() {
               const accent = isOnline ? '#38bdf8' : '#34d399'
               const tint = isOnline ? 'rgba(56,189,248,0.12)' : 'rgba(52,211,153,0.12)'
               const count = categoryCount(cat.id)
-              const crossLink = servicesToGrassrootsLink(cat.id)
               return (
                 <button
                   key={`${cat.serviceKind}-${cat.id}`}
@@ -1348,7 +1348,6 @@ export default function ServicesPage() {
                     {isOnline ? 'Online' : 'Local'}
                   </span>
                   {count > 0 && <span style={{ color: '#64748b', fontSize: 11 }}>{count}</span>}
-                  {crossLink && <span style={{ color: '#22c55e', fontSize: 12 }}>🌱</span>}
                 </button>
               )
             })}

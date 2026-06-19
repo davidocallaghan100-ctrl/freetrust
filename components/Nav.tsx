@@ -23,6 +23,7 @@ const DRAWER_SECTIONS = [
       { href: '/feed',      label: 'Newsfeed',               icon: '📰' },
       { href: '/products',  label: 'Product Marketplace',    icon: '📦' },
       { href: '/services',  label: 'Services Marketplace',   icon: '🛠' },
+      { href: '/grassroots', label: 'Grassroots',             icon: '🌱' },
       { href: '/members', label: 'Member Directory',     icon: '🔍' },
     ],
   },

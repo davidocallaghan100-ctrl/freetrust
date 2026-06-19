@@ -19,9 +19,9 @@ const NAV_SECTIONS = [
     label: 'SOCIAL',
     links: [
       { href: '/browse', label: 'Browse', icon: '🛍️' },
-      { href: '/services', label: 'Services', icon: '🎯' },
-      { href: '/products', label: 'Products', icon: '📦' },
+      { href: '/services', label: 'Services Marketplace', icon: '🛠' },
       { href: '/grassroots', label: 'Grassroots', icon: '🌱' },
+      { href: '/products', label: 'Products', icon: '📦' },
       { href: '/organisations', label: 'Organisations', icon: '🏢' },
       { href: '/rent-share', label: 'Rent & Share', icon: '♻️' },
     ],

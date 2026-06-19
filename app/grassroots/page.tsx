@@ -5,9 +5,6 @@ import LocationFilter from '@/components/location/LocationFilter'
 import LocationBadge from '@/components/location/LocationBadge'
 import PriceDisplay from '@/components/currency/PriceDisplay'
 import SocialLinks, { type SocialUrls } from '@/components/social/SocialLinks'
-import CrossPromoBanner from '@/components/marketplace/CrossPromoBanner'
-import CategoryOverlapBadge from '@/components/marketplace/CategoryOverlapBadge'
-import { grassrootsToServicesLink } from '@/lib/marketplace/category-overlap'
 import { EMPTY_LOCATION, type StructuredLocation, type RadiusValue } from '@/lib/geo'
 import { buildCountryOptions } from '@/lib/countries'
 import type { CurrencyCode } from '@/context/CurrencyContext'
@@ -79,10 +76,9 @@ export default function GrassrootsBrowsePage() {
   const [search, setSearch]                 = useState('')
   const [displayLimit, setDisplayLimit]     = useState(GRASSROOTS_INITIAL_DISPLAY)
 
-  // Deep-link support: if the user arrives via a CategoryOverlapBadge
-  // from /services with ?category=<slug>, seed the activeCategory state
-  // from the URL on first mount. We read from window.location rather
-  // than useSearchParams() so we don't have to wrap this page in a
+  // Generic deep-link support for direct /grassroots?category=<slug> and
+  // /grassroots?listing_type=<offering|seeking> URLs. We read from
+  // window.location rather than useSearchParams() so we don't need a
   // Suspense boundary just for one-shot query-param init.
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -238,10 +234,10 @@ export default function GrassrootsBrowsePage() {
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
             <div>
               <h1 style={{ fontSize: 'clamp(1.8rem, 5vw, 2.6rem)', fontWeight: 900, margin: '0 0 0.3rem', letterSpacing: '-0.5px' }}>
-                🌱 Local Work. Real People.
+                🌱 Grassroots
               </h1>
               <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.95rem' }}>
-                Local hands-on help — post a job or find work near you
+                Local hands-on work, casual help, and everyday community services
               </p>
             </div>
             <Link href="/grassroots/new" style={{
@@ -259,9 +255,18 @@ export default function GrassrootsBrowsePage() {
             </Link>
           </div>
 
-          {/* Cross-promo: send users looking for packaged / online work
-              to the Services marketplace. */}
-          <CrossPromoBanner target="services" />
+          <div style={{
+            background: GRASSROOTS_GREEN.tint,
+            border: `1px solid ${GRASSROOTS_GREEN.borderSoft}`,
+            borderRadius: 12,
+            padding: '12px 14px',
+            marginBottom: 16,
+            color: '#94a3b8',
+            fontSize: 13,
+            lineHeight: 1.55,
+          }}>
+            <strong style={{ color: '#dcfce7' }}>Grassroots</strong> is separate from Services Marketplace. Use it for hands-on local work like farming, delivery, cleaning, care, trades, moving, events help, and community support.
+          </div>
 
           {/* Offering / Seeking toggle */}
           <div style={{
@@ -348,7 +353,6 @@ export default function GrassrootsBrowsePage() {
             {sortedVisibleCategories.map(cat => {
               const active = activeCategory === cat.slug
               const count = categoryCounts.get(cat.slug) ?? 0
-              const crossLink = grassrootsToServicesLink(cat.slug)
               return (
                 <button
                   key={cat.slug}
@@ -365,7 +369,6 @@ export default function GrassrootsBrowsePage() {
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
                     <span>{cat.emoji}</span>
                     <span>{cat.label}</span>
-                    {crossLink && <CategoryOverlapBadge link={crossLink} flavor="services" />}
                   </span>
                   {count > 0 && <span style={{ fontSize: 10, color: '#475569', flexShrink: 0 }}>{count}</span>}
                 </button>
@@ -479,27 +482,49 @@ export default function GrassrootsBrowsePage() {
           ) : sorted.length === 0 ? (
             <div style={{
               textAlign: 'center', padding: '3rem 1.5rem',
-              background: 'linear-gradient(180deg, rgba(34,197,94,0.06) 0%, rgba(34,197,94,0.02) 100%)',
-              border: `1px dashed ${GRASSROOTS_GREEN.border}`, borderRadius: 16, maxWidth: 560, margin: '0 auto',
+              background: 'linear-gradient(180deg, rgba(34,197,94,0.08) 0%, rgba(34,197,94,0.025) 100%)',
+              border: `1px dashed ${GRASSROOTS_GREEN.border}`, borderRadius: 18, maxWidth: 620, margin: '0 auto',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
             }}>
-              <div style={{ fontSize: '3.5rem', marginBottom: '0.75rem' }}>🌱</div>
-              <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#f1f5f9', marginBottom: '0.5rem' }}>
-                Be the first to post in your area
-              </h2>
-              <p style={{ color: '#94a3b8', marginBottom: '1.5rem', fontSize: '0.92rem', lineHeight: 1.55, maxWidth: 420, margin: '0 auto 1.5rem' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 74, height: 74, borderRadius: '50%', background: GRASSROOTS_GREEN.tint, border: `1px solid ${GRASSROOTS_GREEN.border}`, fontSize: '2.6rem', marginBottom: '0.9rem' }}>🌱</div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, background: '#0f172a', border: '1px solid #334155', color: '#64748b', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
+                0 live Grassroots listings
+              </div>
+              <h2 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#f1f5f9', margin: '0 0 0.55rem' }}>
                 {activeCategory || countryFilter || filterLoc.latitude != null || search
-                  ? 'No listings match your filters yet. Clear a filter or create the first one for this category — it only takes a minute.'
-                  : `Grassroots is brand-new and local to you. Post a ${listingType === 'offering' ? 'listing offering your skills' : 'listing to find local help'} — the community grows one listing at a time.`}
+                  ? 'No Grassroots listings match these filters yet'
+                  : 'No Grassroots listings are live yet'}
+              </h2>
+              <p style={{ color: '#94a3b8', marginBottom: '1.4rem', fontSize: '0.93rem', lineHeight: 1.6, maxWidth: 470, margin: '0 auto 1.4rem' }}>
+                {activeCategory || countryFilter || filterLoc.latitude != null || search
+                  ? 'Clear a filter or post the first Grassroots listing for this category. This section is separate from Services Marketplace and only shows real Grassroots posts.'
+                  : 'Grassroots is for local hands-on help — not packaged professional services. Once community members post real work here, cards will appear in this section.'}
               </p>
-              <Link href="/grassroots/new" style={{
-                display: 'inline-block', background: `linear-gradient(135deg, ${GRASSROOTS_GREEN.primary}, ${GRASSROOTS_GREEN.primaryDim})`,
-                color: '#0f172a', padding: '0.85rem 2rem', borderRadius: 10, fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none',
-                boxShadow: '0 4px 14px rgba(34,197,94,0.35)',
-              }}>
-                + Post a Grassroots listing
-              </Link>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <Link href="/grassroots/new" style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, background: `linear-gradient(135deg, ${GRASSROOTS_GREEN.primary}, ${GRASSROOTS_GREEN.primaryDim})`,
+                  color: '#0f172a', padding: '0.8rem 1.35rem', borderRadius: 10, fontWeight: 900, fontSize: '0.95rem', textDecoration: 'none',
+                  boxShadow: '0 4px 14px rgba(34,197,94,0.35)',
+                }}>
+                  + Post Grassroots work
+                </Link>
+                {(activeCategory || countryFilter || filterLoc.latitude != null || search) && (
+                  <button
+                    onClick={() => {
+                      setActiveCategory(null)
+                      setCountryFilter(null)
+                      setFilterLoc(EMPTY_LOCATION)
+                      setRadiusKm(25)
+                      setSearch('')
+                    }}
+                    style={{ minHeight: 44, padding: '0.8rem 1.2rem', borderRadius: 10, border: '1px solid #334155', background: '#0f172a', color: '#94a3b8', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </div>
               <div style={{ marginTop: 14, fontSize: 11, color: '#475569' }}>
-                It&apos;s free. Takes under a minute. Local-first.
+                Real-data-only: no sample or fake Grassroots cards are shown.
               </div>
             </div>
           ) : (
