@@ -727,7 +727,16 @@ export default function ServicesPage() {
   // Filter & sort
   const allOnlineCats = ONLINE_CATEGORIES
   const allOfflineCats = OFFLINE_CATEGORIES
-  const visibleCats = modeFilter === 'online' ? allOnlineCats : modeFilter === 'offline' ? allOfflineCats : [...allOnlineCats, ...allOfflineCats]
+  const sortedOnlineCats = useMemo(() => [...allOnlineCats].sort((a, b) => a.label.localeCompare(b.label)), [allOnlineCats])
+  const sortedOfflineCats = useMemo(() => [...allOfflineCats].sort((a, b) => a.label.localeCompare(b.label)), [allOfflineCats])
+  const mobileCategoryCats = useMemo(() => {
+    const online = sortedOnlineCats.map(cat => ({ ...cat, serviceKind: 'online' as const }))
+    const local = sortedOfflineCats.map(cat => ({ ...cat, serviceKind: 'local' as const }))
+    if (modeFilter === 'online') return online
+    if (modeFilter === 'offline') return local
+    return [...online, ...local].sort((a, b) => a.label.localeCompare(b.label))
+  }, [modeFilter, sortedOfflineCats, sortedOnlineCats])
+  const visibleCats = modeFilter === 'online' ? sortedOnlineCats : modeFilter === 'offline' ? sortedOfflineCats : [...sortedOnlineCats, ...sortedOfflineCats]
 
   // Country options merged with the global ISO 3166-1 list — most-used
   // first, then the rest of the world. Same pattern as products page.
@@ -1084,12 +1093,16 @@ export default function ServicesPage() {
       <style>{`
         .svc-layout { max-width: 1200px; margin: 0 auto; padding: 20px 16px 80px; display: grid; grid-template-columns: 240px 1fr; gap: 24px; align-items: start; }
         .svc-sidebar { position: sticky; top: 110px; }
+        .svc-mobile-categories { display: none; }
+        .svc-results { min-width: 0; }
         .svc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
         .svc-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
         .svc-controls-row2 { display: none; }
         @media (max-width: 768px) {
           .svc-layout { grid-template-columns: 1fr; padding: 12px 10px 80px; gap: 12px; }
-          .svc-sidebar { position: static; }
+          .svc-sidebar { display: none; }
+          .svc-mobile-categories { display: flex; gap: 8px; width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding: 2px 0 10px; margin: 2px 0 12px; border-bottom: 1px solid rgba(51,65,85,0.7); box-sizing: border-box; }
+          .svc-mobile-categories::-webkit-scrollbar { display: none; }
           .svc-grid { grid-template-columns: 1fr; gap: 10px; }
           .svc-controls { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
           .svc-controls::-webkit-scrollbar { display: none; }
@@ -1219,19 +1232,6 @@ export default function ServicesPage() {
               <span>✦ All Services</span>
               <span style={{ fontSize: '11px', color: '#475569' }}>{mixedServices.length}</span>
             </button>
-            {activeCatId === null && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', padding: '10px 14px 12px', borderTop: '1px solid rgba(51,65,85,0.6)', background: 'rgba(15,23,42,0.45)' }}>
-                <div style={{ border: '1px solid rgba(56,189,248,0.18)', background: 'rgba(56,189,248,0.07)', borderRadius: 10, padding: '8px', minWidth: 0 }}>
-                  <div style={{ fontSize: 10, color: '#38bdf8', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>💻 Online</div>
-                  <div style={{ marginTop: 3, fontSize: 18, color: '#e0f2fe', fontWeight: 900 }}>{onlineServiceCount.toLocaleString()}</div>
-                </div>
-                <div style={{ border: '1px solid rgba(52,211,153,0.18)', background: 'rgba(52,211,153,0.07)', borderRadius: 10, padding: '8px', minWidth: 0 }}>
-                  <div style={{ fontSize: 10, color: '#34d399', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>📍 Local</div>
-                  <div style={{ marginTop: 3, fontSize: 18, color: '#dcfce7', fontWeight: 900 }}>{localServiceCount.toLocaleString()}</div>
-                </div>
-              </div>
-            )}
-
             {/* Online section */}
             {(modeFilter === 'all' || modeFilter === 'online') && (
               <>
@@ -1240,9 +1240,12 @@ export default function ServicesPage() {
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '9px 14px', background: '#0f172a', border: 'none', borderTop: '1px solid #334155', cursor: 'pointer', fontFamily: 'inherit' }}
                 >
                   <span style={{ fontSize: '10px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>💻 Online Services</span>
-                  <span style={{ fontSize: '13px', color: '#475569', transition: 'transform 0.2s', display: 'inline-block', transform: onlineOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▾</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: '10px', color: '#475569', fontWeight: 800 }}>{onlineServiceCount.toLocaleString()}</span>
+                    <span style={{ fontSize: '13px', color: '#475569', transition: 'transform 0.2s', display: 'inline-block', transform: onlineOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▾</span>
+                  </span>
                 </button>
-                {onlineOpen && ONLINE_CATEGORIES.map(cat => {
+                {onlineOpen && sortedOnlineCats.map(cat => {
                   const count = categoryCount(cat.id)
                   const crossLink = servicesToGrassrootsLink(cat.id)
                   return (
@@ -1268,9 +1271,12 @@ export default function ServicesPage() {
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '9px 14px', background: '#0f172a', border: 'none', borderTop: '1px solid #334155', cursor: 'pointer', fontFamily: 'inherit' }}
                 >
                   <span style={{ fontSize: '10px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>📍 Local Services</span>
-                  <span style={{ fontSize: '13px', color: '#475569', transition: 'transform 0.2s', display: 'inline-block', transform: offlineOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▾</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: '10px', color: '#475569', fontWeight: 800 }}>{localServiceCount.toLocaleString()}</span>
+                    <span style={{ fontSize: '13px', color: '#475569', transition: 'transform 0.2s', display: 'inline-block', transform: offlineOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▾</span>
+                  </span>
                 </button>
-                {offlineOpen && OFFLINE_CATEGORIES.map(cat => {
+                {offlineOpen && sortedOfflineCats.map(cat => {
                   const count = categoryCount(cat.id)
                   const crossLink = servicesToGrassrootsLink(cat.id)
                   return (
@@ -1296,7 +1302,58 @@ export default function ServicesPage() {
         </aside>
 
         {/* Results */}
-        <div>
+        <div className="svc-results">
+          <div className="svc-mobile-categories" aria-label="Service categories A to Z">
+            <button
+              onClick={() => setActiveCatId(null)}
+              style={{
+                padding: '9px 16px', borderRadius: 999, whiteSpace: 'nowrap', flexShrink: 0,
+                border: activeCatId === null ? '2px solid #00c2cb' : '2px solid #334155',
+                background: activeCatId === null ? '#00c2cb22' : '#111827',
+                color: activeCatId === null ? '#00c2cb' : '#94a3b8',
+                cursor: 'pointer', fontWeight: 800, fontSize: 13, fontFamily: 'inherit', minHeight: 44,
+              }}
+            >
+              ✦ All Services <span style={{ color: '#64748b', marginLeft: 4 }}>{mixedServices.length}</span>
+            </button>
+            {mobileCategoryCats.map(cat => {
+              const active = activeCatId === cat.id
+              const isOnline = cat.serviceKind === 'online'
+              const accent = isOnline ? '#38bdf8' : '#34d399'
+              const tint = isOnline ? 'rgba(56,189,248,0.12)' : 'rgba(52,211,153,0.12)'
+              const count = categoryCount(cat.id)
+              const crossLink = servicesToGrassrootsLink(cat.id)
+              return (
+                <button
+                  key={`${cat.serviceKind}-${cat.id}`}
+                  onClick={() => setActiveCatId(active ? null : cat.id)}
+                  style={{
+                    padding: '8px 14px', borderRadius: 999, whiteSpace: 'nowrap', flexShrink: 0,
+                    border: active ? `2px solid ${accent}` : '2px solid #334155',
+                    background: active ? tint : '#111827',
+                    color: active ? accent : '#94a3b8',
+                    cursor: 'pointer', fontWeight: active ? 800 : 700, fontSize: 13, fontFamily: 'inherit', minHeight: 44,
+                    display: 'inline-flex', alignItems: 'center', gap: 7,
+                  }}
+                  title={`${cat.label} · ${isOnline ? 'Online service' : 'Local service'}`}
+                >
+                  <span>{cat.icon}</span>
+                  <span>{cat.label}</span>
+                  <span style={{
+                    fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em',
+                    color: accent, border: `1px solid ${isOnline ? 'rgba(56,189,248,0.28)' : 'rgba(52,211,153,0.28)'}`,
+                    background: isOnline ? 'rgba(56,189,248,0.08)' : 'rgba(52,211,153,0.08)',
+                    borderRadius: 999, padding: '2px 6px',
+                  }}>
+                    {isOnline ? 'Online' : 'Local'}
+                  </span>
+                  {count > 0 && <span style={{ color: '#64748b', fontSize: 11 }}>{count}</span>}
+                  {crossLink && <span style={{ color: '#22c55e', fontSize: 12 }}>🌱</span>}
+                </button>
+              )
+            })}
+          </div>
+
           {/* Active filter summary */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
             <div style={{ fontSize: '13px', color: '#64748b' }}>

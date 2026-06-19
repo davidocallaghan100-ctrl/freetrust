@@ -252,21 +252,33 @@ export default function LocationFilter({
         <span style={{ fontSize: 11, color: '#f87171', whiteSpace: 'nowrap' }}>{geoError}</span>
       )}
 
-      <select
-        value={radiusKm}
-        onChange={e => onRadiusChange(Number(e.target.value) as RadiusValue)}
-        disabled={!location.latitude}
-        style={{
-          padding: '9px 12px', background: '#0f172a',
-          border: '1.5px solid #334155', borderRadius: 10, color: '#f1f5f9',
-          fontSize: 12, fontFamily: 'inherit', cursor: location.latitude ? 'pointer' : 'not-allowed',
-          opacity: location.latitude ? 1 : 0.5,
-        }}
-      >
-        {RADIUS_OPTIONS.map(opt => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
-        ))}
-      </select>
+      {location.latitude ? (
+        <select
+          value={radiusKm}
+          onChange={e => onRadiusChange(Number(e.target.value) as RadiusValue)}
+          style={{
+            padding: '9px 12px', background: '#0f172a',
+            border: '1.5px solid #334155', borderRadius: 10, color: '#f1f5f9',
+            fontSize: 12, fontFamily: 'inherit', cursor: 'pointer',
+          }}
+        >
+          {RADIUS_OPTIONS.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      ) : (
+        <span
+          aria-label="Worldwide — enter a location or tap Near Me to choose a distance radius"
+          title="Worldwide — enter a location or tap Near Me to choose a distance radius"
+          style={{
+            padding: '9px 12px', background: '#0f172a',
+            border: '1.5px solid #334155', borderRadius: 10, color: '#64748b',
+            fontSize: 12, fontFamily: 'inherit', whiteSpace: 'nowrap',
+          }}
+        >
+          Worldwide
+        </span>
+      )}
 
       {countryOptions.length > 0 && (
         <select

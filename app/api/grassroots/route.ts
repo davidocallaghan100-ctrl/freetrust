@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
       .eq('is_active', true)
       .eq('status', status)
       .order('created_at', { ascending: false })
-      .limit(200)
+      .limit(1000)
 
     if (category)     query = query.eq('category', category)
     if (country)      query = query.eq('country', country.toUpperCase())

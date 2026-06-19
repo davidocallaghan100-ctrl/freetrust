@@ -63,6 +63,9 @@ interface Listing {
 type ListingTypeFilter = 'offering' | 'seeking'
 type SortKey = 'nearest' | 'recent' | 'rate_low'
 
+const GRASSROOTS_INITIAL_DISPLAY = 12
+const GRASSROOTS_LOAD_MORE_BATCH = 12
+
 // ────────────────────────────────────────────────────────────────────────────
 // Page
 // ────────────────────────────────────────────────────────────────────────────
@@ -73,6 +76,8 @@ export default function GrassrootsBrowsePage() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [listingType, setListingType]       = useState<ListingTypeFilter>('offering')
   const [sort, setSort]                     = useState<SortKey>('nearest')
+  const [search, setSearch]                 = useState('')
+  const [displayLimit, setDisplayLimit]     = useState(GRASSROOTS_INITIAL_DISPLAY)
 
   // Deep-link support: if the user arrives via a CategoryOverlapBadge
   // from /services with ?category=<slug>, seed the activeCategory state
@@ -97,7 +102,6 @@ export default function GrassrootsBrowsePage() {
     try {
       const params = new URLSearchParams()
       params.set('listing_type', listingType)
-      if (activeCategory) params.set('category', activeCategory)
       if (countryFilter)  params.set('country', countryFilter)
       if (filterLoc.latitude != null && filterLoc.longitude != null) {
         params.set('lat', String(filterLoc.latitude))
@@ -116,7 +120,7 @@ export default function GrassrootsBrowsePage() {
     } finally {
       setLoading(false)
     }
-  }, [activeCategory, countryFilter, filterLoc, listingType, radiusKm])
+  }, [countryFilter, filterLoc, listingType, radiusKm])
 
   useEffect(() => { void fetchListings() }, [fetchListings])
 
@@ -130,9 +134,50 @@ export default function GrassrootsBrowsePage() {
     return buildCountryOptions(counts)
   }, [listings])
 
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const l of listings) {
+      if (!l.category) continue
+      counts.set(l.category, (counts.get(l.category) ?? 0) + 1)
+    }
+    return counts
+  }, [listings])
+
+  const visibleCategories = useMemo(() => {
+    // Once listings exist, keep the sidebar focused on categories that
+    // actually have Grassroots rows for the current listing type/location
+    // filters. On an empty marketplace, show the full catalogue so users
+    // still understand what they can post.
+    if (listings.length === 0) return GRASSROOTS_CATEGORIES
+    return GRASSROOTS_CATEGORIES.filter(cat => (categoryCounts.get(cat.slug) ?? 0) > 0)
+  }, [categoryCounts, listings.length])
+
+  const sortedVisibleCategories = useMemo(
+    () => [...visibleCategories].sort((a, b) => a.label.localeCompare(b.label)),
+    [visibleCategories]
+  )
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return listings.filter(l => {
+      if (activeCategory && l.category !== activeCategory) return false
+      if (!q) return true
+      const cat = GRASSROOTS_CATEGORIES_BY_SLUG[l.category]
+      return [
+        l.title,
+        l.description,
+        l.city,
+        l.country,
+        l.location_label,
+        cat?.label,
+        l.poster?.full_name,
+      ].some(v => (v ?? '').toLowerCase().includes(q))
+    })
+  }, [activeCategory, listings, search])
+
   // Client-side sort (server already sorted by distance when geo is set)
   const sorted = useMemo(() => {
-    const copy = [...listings]
+    const copy = [...filtered]
     if (sort === 'recent') {
       return copy.sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
     }
@@ -145,10 +190,44 @@ export default function GrassrootsBrowsePage() {
     }
     // 'nearest' is the server default
     return copy
-  }, [listings, sort])
+  }, [filtered, sort])
+
+  useEffect(() => {
+    setDisplayLimit(GRASSROOTS_INITIAL_DISPLAY)
+  }, [activeCategory, countryFilter, filterLoc.latitude, filterLoc.longitude, listingType, radiusKm, search, sort])
+
+  useEffect(() => {
+    const onScroll = () => {
+      const remaining = document.documentElement.scrollHeight - window.innerHeight - window.scrollY
+      if (remaining <= 900) {
+        setDisplayLimit(prev => Math.min(sorted.length, prev + GRASSROOTS_LOAD_MORE_BATCH))
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [sorted.length])
+
+  const visibleListings = useMemo(() => sorted.slice(0, displayLimit), [displayLimit, sorted])
+  const hasMoreListings = displayLimit < sorted.length
 
   return (
     <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', paddingTop: 64, paddingBottom: 80 }}>
+      <style>{`
+        .grassroots-layout { max-width: 1200px; margin: 0 auto; padding: 20px 16px 80px; display: grid; grid-template-columns: 240px 1fr; gap: 24px; align-items: start; }
+        .grassroots-sidebar { position: sticky; top: 110px; }
+        .grassroots-category-scroll { max-height: calc(100vh - 180px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(34,197,94,0.45) rgba(15,23,42,0.35); }
+        .grassroots-mobile-categories { display: none; }
+        .grassroots-results { min-width: 0; }
+        .grassroots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+        .grassroots-cat-btn:hover { background: rgba(34,197,94,0.06) !important; }
+        @media (max-width: 768px) {
+          .grassroots-layout { grid-template-columns: 1fr; padding: 12px 10px 80px; gap: 12px; }
+          .grassroots-sidebar { display: none; }
+          .grassroots-mobile-categories { display: flex; gap: 8px; width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding: 2px 0 10px; margin: 2px 0 8px; border-bottom: 1px solid rgba(51,65,85,0.7); box-sizing: border-box; }
+          .grassroots-mobile-categories::-webkit-scrollbar { display: none; }
+          .grassroots-grid { grid-template-columns: 1fr; gap: 10px; }
+        }
+      `}</style>
       {/* ── Hero ───────────────────────────────────────────────────────── */}
       <div style={{
         background: 'linear-gradient(180deg, rgba(34,197,94,0.12) 0%, rgba(34,197,94,0.02) 100%)',
@@ -234,175 +313,208 @@ export default function GrassrootsBrowsePage() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '1.5rem 1.25rem 3rem' }}>
-        {/* ── Category grid ─────────────────────────────────────────────── */}
-        <div style={{ marginBottom: '1.75rem' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', marginBottom: 10 }}>
-            BROWSE BY CATEGORY
+      <div className="grassroots-layout">
+        {/* Sidebar — mirrors /services category navigation so Grassroots can
+            scale beyond a flat card grid. The list itself scrolls, and once
+            real listings exist it only shows categories available under the
+            current type/location filters. */}
+        <aside className="grassroots-sidebar">
+          <div className="grassroots-category-scroll" style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 14, overflowX: 'hidden' }}>
+            <button
+              className="grassroots-cat-btn"
+              onClick={() => setActiveCategory(null)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
+                padding: '10px 14px', background: activeCategory === null ? GRASSROOTS_GREEN.tint : 'transparent',
+                border: 'none', borderLeft: activeCategory === null ? `3px solid ${GRASSROOTS_GREEN.primary}` : '3px solid transparent',
+                color: activeCategory === null ? GRASSROOTS_GREEN.primary : '#94a3b8', fontSize: 13,
+                fontWeight: activeCategory === null ? 800 : 500, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+              }}
+            >
+              <span>✦ All Grassroots</span>
+              <span style={{ fontSize: 11, color: '#475569' }}>{listings.length}</span>
+            </button>
+            <button
+              type="button"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
+                padding: '9px 14px', background: '#0f172a', border: 'none', borderTop: '1px solid #334155',
+                fontFamily: 'inherit', cursor: 'default',
+              }}
+            >
+              <span style={{ fontSize: 10, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>🌱 Available Categories A–Z</span>
+              <span style={{ fontSize: 10, color: '#475569', fontWeight: 800 }}>{sortedVisibleCategories.length}</span>
+            </button>
+            {sortedVisibleCategories.map(cat => {
+              const active = activeCategory === cat.slug
+              const count = categoryCounts.get(cat.slug) ?? 0
+              const crossLink = grassrootsToServicesLink(cat.slug)
+              return (
+                <button
+                  key={cat.slug}
+                  className="grassroots-cat-btn"
+                  onClick={() => setActiveCategory(active ? null : cat.slug)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
+                    padding: '8px 14px 8px 18px', background: active ? GRASSROOTS_GREEN.tint : 'transparent',
+                    border: 'none', borderLeft: active ? `3px solid ${GRASSROOTS_GREEN.primary}` : '3px solid transparent',
+                    color: active ? GRASSROOTS_GREEN.primary : '#94a3b8', fontSize: 12,
+                    fontWeight: active ? 800 : 500, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s',
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
+                    <span>{cat.emoji}</span>
+                    <span>{cat.label}</span>
+                    {crossLink && <CategoryOverlapBadge link={crossLink} flavor="services" />}
+                  </span>
+                  {count > 0 && <span style={{ fontSize: 10, color: '#475569', flexShrink: 0 }}>{count}</span>}
+                </button>
+              )
+            })}
           </div>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-            gap: 10,
-          }}>
-            {/* "All" pseudo-category */}
+
+          <Link href="/grassroots/new" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, padding: 12, background: `linear-gradient(135deg, ${GRASSROOTS_GREEN.primary}, ${GRASSROOTS_GREEN.primaryDim})`, borderRadius: 12, color: '#0f172a', fontWeight: 800, fontSize: 13, textDecoration: 'none' }}>
+            ➕ Post Grassroots Work
+          </Link>
+        </aside>
+
+        {/* Results */}
+        <div className="grassroots-results">
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ flex: '1 1 280px', minWidth: 220, position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: 14, pointerEvents: 'none' }}>🔍</span>
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search Grassroots listings…"
+                style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', borderRadius: 10, padding: '10px 14px 10px 36px', fontSize: 16, color: '#f1f5f9', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+              />
+            </div>
+            <select
+              value={sort}
+              onChange={e => setSort(e.target.value as SortKey)}
+              style={{
+                background: '#1e293b', border: '1px solid #334155', borderRadius: 10,
+                padding: '9px 12px', fontSize: 16, color: '#94a3b8', fontFamily: 'inherit', cursor: 'pointer',
+              }}
+            >
+              <option value="nearest">Nearest first</option>
+              <option value="recent">Most recent</option>
+              <option value="rate_low">Rate: low to high</option>
+            </select>
+          </div>
+
+          <div className="grassroots-mobile-categories" aria-label="Grassroots categories A to Z">
             <button
               onClick={() => setActiveCategory(null)}
               style={{
-                padding: '14px 10px',
-                borderRadius: 12,
-                border: `1.5px solid ${activeCategory === null ? GRASSROOTS_GREEN.border : 'rgba(148,163,184,0.15)'}`,
-                background: activeCategory === null ? GRASSROOTS_GREEN.tint : '#1e293b',
+                padding: '9px 16px', borderRadius: 999, whiteSpace: 'nowrap', flexShrink: 0,
+                border: activeCategory === null ? `2px solid ${GRASSROOTS_GREEN.primary}` : '2px solid #334155',
+                background: activeCategory === null ? GRASSROOTS_GREEN.tint : '#111827',
                 color: activeCategory === null ? GRASSROOTS_GREEN.primary : '#94a3b8',
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                fontWeight: activeCategory === null ? 700 : 500,
-                fontSize: 12,
-                textAlign: 'center',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                transition: 'all 0.15s',
+                cursor: 'pointer', fontWeight: 800, fontSize: 13, fontFamily: 'inherit', minHeight: 44,
               }}
             >
-              <span style={{ fontSize: 22 }}>✨</span>
-              <span>All</span>
+              ✦ All Grassroots <span style={{ color: '#64748b', marginLeft: 4 }}>{listings.length}</span>
             </button>
-            {GRASSROOTS_CATEGORIES.map(cat => {
+            {sortedVisibleCategories.map(cat => {
               const active = activeCategory === cat.slug
-              // Cross-link shown on categories that also exist on /services
-              // (e.g. Delivery, Childcare, Elder Care, Events, Trades…).
-              // Rendered as a tiny clickable pill inside the category card;
-              // clicks stopPropagation so they don't also toggle this
-              // category filter.
-              const crossLink = grassrootsToServicesLink(cat.slug)
+              const count = categoryCounts.get(cat.slug) ?? 0
               return (
                 <button
                   key={cat.slug}
                   onClick={() => setActiveCategory(active ? null : cat.slug)}
                   style={{
-                    padding: '14px 10px',
-                    borderRadius: 12,
-                    border: `1.5px solid ${active ? GRASSROOTS_GREEN.border : 'rgba(148,163,184,0.15)'}`,
-                    background: active ? GRASSROOTS_GREEN.tint : '#1e293b',
+                    padding: '9px 16px', borderRadius: 999, whiteSpace: 'nowrap', flexShrink: 0,
+                    border: active ? `2px solid ${GRASSROOTS_GREEN.primary}` : '2px solid #334155',
+                    background: active ? GRASSROOTS_GREEN.tint : '#111827',
                     color: active ? GRASSROOTS_GREEN.primary : '#94a3b8',
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                    fontWeight: active ? 700 : 500,
-                    fontSize: 12,
-                    textAlign: 'center',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                    transition: 'all 0.15s',
-                    minHeight: crossLink ? 106 : 88,
+                    cursor: 'pointer', fontWeight: active ? 800 : 700, fontSize: 13, fontFamily: 'inherit', minHeight: 44,
+                    display: 'inline-flex', alignItems: 'center', gap: 7,
                   }}
                 >
-                  <span style={{ fontSize: 22 }}>{cat.emoji}</span>
-                  <span style={{ lineHeight: 1.2 }}>{cat.label.split(' & ')[0]}</span>
-                  {crossLink && (
-                    <CategoryOverlapBadge link={crossLink} flavor="services" />
-                  )}
+                  <span>{cat.emoji}</span>
+                  <span>{cat.label}</span>
+                  {count > 0 && <span style={{ color: '#64748b', fontSize: 11 }}>{count}</span>}
                 </button>
               )
             })}
           </div>
-        </div>
 
-        {/* ── Results header with sort ──────────────────────────────────── */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          flexWrap: 'wrap', gap: 8, marginBottom: '1rem',
-        }}>
-          <div style={{ fontSize: 13, color: '#64748b' }}>
-            {loading
-              ? 'Loading…'
-              : sorted.length === 0
-                ? 'Nothing posted here yet'
-                : `${sorted.length} ${sorted.length === 1 ? 'listing' : 'listings'}`}
-            {!loading && sorted.length > 0 && activeCategory && ` in ${GRASSROOTS_CATEGORIES_BY_SLUG[activeCategory]?.label}`}
-          </div>
-          <select
-            value={sort}
-            onChange={e => setSort(e.target.value as SortKey)}
-            style={{
-              background: '#1e293b',
-              border: '1px solid #334155',
-              borderRadius: 10,
-              padding: '8px 12px',
-              fontSize: 12,
-              color: '#94a3b8',
-              fontFamily: 'inherit',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="nearest">Nearest first</option>
-            <option value="recent">Most recent</option>
-            <option value="rate_low">Rate: low to high</option>
-          </select>
-        </div>
-
-        {/* ── Listings grid ─────────────────────────────────────────────── */}
-        {loading ? (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 290px), 1fr))',
-            gap: 14,
-          }}>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} style={{
-                background: '#1e293b',
-                border: '1px solid #334155',
-                borderRadius: 14,
-                height: 260,
-                opacity: 0.5,
-              }} />
-            ))}
-          </div>
-        ) : sorted.length === 0 ? (
-          // Seed-state empty card. Renders instead of a bare "0 listings"
-          // line so the first visitor to a category / region sees a
-          // prominent, welcoming CTA rather than an empty page.
-          <div style={{
-            textAlign: 'center',
-            padding: '3rem 1.5rem',
-            background: 'linear-gradient(180deg, rgba(34,197,94,0.06) 0%, rgba(34,197,94,0.02) 100%)',
-            border: `1px dashed ${GRASSROOTS_GREEN.border}`,
-            borderRadius: 16,
-            maxWidth: 560,
-            margin: '0 auto',
-          }}>
-            <div style={{ fontSize: '3.5rem', marginBottom: '0.75rem' }}>🌱</div>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#f1f5f9', marginBottom: '0.5rem' }}>
-              Be the first to post in your area
-            </h2>
-            <p style={{ color: '#94a3b8', marginBottom: '1.5rem', fontSize: '0.92rem', lineHeight: 1.55, maxWidth: 420, margin: '0 auto 1.5rem' }}>
-              {activeCategory || countryFilter || filterLoc.latitude != null
-                ? 'No listings match your filters yet. Clear a filter or create the first one for this category — it only takes a minute.'
-                : `Grassroots is brand-new and local to you. Post a ${listingType === 'offering' ? 'listing offering your skills' : 'listing to find local help'} — the community grows one listing at a time.`}
-            </p>
-            <Link href="/grassroots/new" style={{
-              display: 'inline-block',
-              background: `linear-gradient(135deg, ${GRASSROOTS_GREEN.primary}, ${GRASSROOTS_GREEN.primaryDim})`,
-              color: '#0f172a',
-              padding: '0.85rem 2rem',
-              borderRadius: 10,
-              fontWeight: 800,
-              fontSize: '0.95rem',
-              textDecoration: 'none',
-              boxShadow: '0 4px 14px rgba(34,197,94,0.35)',
-            }}>
-              + Post a Grassroots listing
-            </Link>
-            <div style={{ marginTop: 14, fontSize: 11, color: '#475569' }}>
-              It&apos;s free. Takes under a minute. Local-first.
+          {/* ── Results header with active filters ─────────────────────── */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: '1rem' }}>
+            <div style={{ fontSize: 13, color: '#64748b' }}>
+              {loading
+                ? 'Loading…'
+                : sorted.length === 0
+                  ? 'Nothing posted here yet'
+                  : `${sorted.length} ${sorted.length === 1 ? 'listing' : 'listings'}`}
+              {!loading && sorted.length > 0 && activeCategory && ` in ${GRASSROOTS_CATEGORIES_BY_SLUG[activeCategory]?.label}`}
+              {!loading && sorted.length > 0 && filterLoc.location_label && ` · near ${filterLoc.location_label}`}
+              {!loading && sorted.length > 0 && countryFilter && ` · ${countryFilter}`}
             </div>
+            {(activeCategory || countryFilter || filterLoc.latitude != null || search) && (
+              <button
+                onClick={() => {
+                  setActiveCategory(null)
+                  setCountryFilter(null)
+                  setFilterLoc(EMPTY_LOCATION)
+                  setRadiusKm(25)
+                  setSearch('')
+                }}
+                style={{ background: 'none', border: '1px solid #334155', borderRadius: 8, padding: '4px 10px', fontSize: 11, color: '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                ✕ Clear filters
+              </button>
+            )}
           </div>
-        ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 290px), 1fr))',
-            gap: 14,
-          }}>
-            {sorted.map(l => <ListingCard key={l.id} listing={l} />)}
-          </div>
-        )}
+
+          {/* ── Listings grid ───────────────────────────────────────────── */}
+          {loading ? (
+            <div className="grassroots-grid">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 14, height: 260, opacity: 0.5 }} />
+              ))}
+            </div>
+          ) : sorted.length === 0 ? (
+            <div style={{
+              textAlign: 'center', padding: '3rem 1.5rem',
+              background: 'linear-gradient(180deg, rgba(34,197,94,0.06) 0%, rgba(34,197,94,0.02) 100%)',
+              border: `1px dashed ${GRASSROOTS_GREEN.border}`, borderRadius: 16, maxWidth: 560, margin: '0 auto',
+            }}>
+              <div style={{ fontSize: '3.5rem', marginBottom: '0.75rem' }}>🌱</div>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#f1f5f9', marginBottom: '0.5rem' }}>
+                Be the first to post in your area
+              </h2>
+              <p style={{ color: '#94a3b8', marginBottom: '1.5rem', fontSize: '0.92rem', lineHeight: 1.55, maxWidth: 420, margin: '0 auto 1.5rem' }}>
+                {activeCategory || countryFilter || filterLoc.latitude != null || search
+                  ? 'No listings match your filters yet. Clear a filter or create the first one for this category — it only takes a minute.'
+                  : `Grassroots is brand-new and local to you. Post a ${listingType === 'offering' ? 'listing offering your skills' : 'listing to find local help'} — the community grows one listing at a time.`}
+              </p>
+              <Link href="/grassroots/new" style={{
+                display: 'inline-block', background: `linear-gradient(135deg, ${GRASSROOTS_GREEN.primary}, ${GRASSROOTS_GREEN.primaryDim})`,
+                color: '#0f172a', padding: '0.85rem 2rem', borderRadius: 10, fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none',
+                boxShadow: '0 4px 14px rgba(34,197,94,0.35)',
+              }}>
+                + Post a Grassroots listing
+              </Link>
+              <div style={{ marginTop: 14, fontSize: 11, color: '#475569' }}>
+                It&apos;s free. Takes under a minute. Local-first.
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="grassroots-grid">
+                {visibleListings.map(l => <ListingCard key={l.id} listing={l} />)}
+              </div>
+              {hasMoreListings && (
+                <div style={{ textAlign: 'center', marginTop: 24, color: '#64748b', fontSize: 13, padding: '12px 0' }}>
+                  Loading more Grassroots listings…
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   )
