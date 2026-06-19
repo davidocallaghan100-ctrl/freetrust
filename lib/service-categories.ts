@@ -114,7 +114,7 @@ export const ONLINE_CATEGORIES: ServiceCategory[] = [
   },
   {
     id: 'sales-online',
-    label: 'Sales',
+    label: 'Online Sales',
     icon: '💼',
     mode: 'online',
     subcategories: ['B2B Sales', 'B2C Sales', 'Cold Outreach & Prospecting', 'Sales Funnel Strategy', 'CRM Setup & Management', 'Lead Generation', 'Sales Copywriting', 'Sales Training & Coaching'],
@@ -287,6 +287,111 @@ export const OFFLINE_CATEGORIES: ServiceCategory[] = [
     ],
   },
   {
+    id: 'plumbing',
+    label: 'Plumbing',
+    icon: '🚰',
+    mode: 'offline',
+    subcategories: ['Emergency Plumbing', 'Leak Repairs', 'Bathroom Plumbing', 'Kitchen Plumbing', 'Pipework', 'Drain Unblocking', 'Boiler Plumbing', 'Water Tanks'],
+  },
+  {
+    id: 'electrical',
+    label: 'Electrical',
+    icon: '💡',
+    mode: 'offline',
+    subcategories: ['Electrical Repairs', 'Rewiring', 'Lighting Installation', 'Sockets & Switches', 'Fuse Boards', 'Safety Certificates', 'Outdoor Power', 'Smart Home Electrics'],
+  },
+  {
+    id: 'heating-hvac',
+    label: 'Heating & HVAC',
+    icon: '♨️',
+    mode: 'offline',
+    subcategories: ['Boiler Servicing', 'Boiler Repair', 'Heating Installation', 'Radiators', 'Heat Pumps', 'Air Conditioning', 'Ventilation', 'Thermostats & Controls'],
+  },
+  {
+    id: 'roofing',
+    label: 'Roofing',
+    icon: '🏠',
+    mode: 'offline',
+    subcategories: ['Roof Repairs', 'New Roofs', 'Flat Roofing', 'Slate & Tile Roofing', 'Gutters & Fascias', 'Chimney Repairs', 'Roof Inspections', 'Emergency Leaks'],
+  },
+  {
+    id: 'builders-construction',
+    label: 'Builders & Construction',
+    icon: '🧱',
+    mode: 'offline',
+    subcategories: ['General Building', 'Extensions', 'Renovations', 'Bricklaying', 'Plastering', 'Structural Repairs', 'Groundworks', 'Project Management'],
+  },
+  {
+    id: 'carpentry-joinery',
+    label: 'Carpentry & Joinery',
+    icon: '🪚',
+    mode: 'offline',
+    subcategories: ['Custom Carpentry', 'Doors & Frames', 'Built-in Wardrobes', 'Kitchen Fitting', 'Stairs & Banisters', 'Decking', 'Shelving', 'Repairs'],
+  },
+  {
+    id: 'painting-decorating',
+    label: 'Painting & Decorating',
+    icon: '🎨',
+    mode: 'offline',
+    subcategories: ['Interior Painting', 'Exterior Painting', 'Wallpapering', 'Feature Walls', 'Spray Painting', 'Surface Preparation', 'Commercial Decorating', 'Touch-ups'],
+  },
+  {
+    id: 'cleaning',
+    label: 'Cleaning',
+    icon: '🧽',
+    mode: 'offline',
+    subcategories: ['Home Cleaning', 'Deep Cleaning', 'End of Tenancy', 'Office Cleaning', 'Carpet Cleaning', 'Window Cleaning', 'Oven Cleaning', 'After-builders Cleaning'],
+  },
+  {
+    id: 'landscaping-gardening',
+    label: 'Landscaping & Gardening',
+    icon: '🌿',
+    mode: 'offline',
+    subcategories: ['Garden Maintenance', 'Lawn Care', 'Hedge Trimming', 'Landscaping Design', 'Patios & Paving', 'Fencing', 'Tree & Shrub Care', 'Seasonal Clear-outs'],
+  },
+  {
+    id: 'flooring-tiling',
+    label: 'Flooring & Tiling',
+    icon: '◼️',
+    mode: 'offline',
+    subcategories: ['Floor Installation', 'Laminate Flooring', 'Hardwood Flooring', 'Vinyl Flooring', 'Wall Tiling', 'Floor Tiling', 'Bathroom Tiling', 'Repairs & Regrouting'],
+  },
+  {
+    id: 'handyman',
+    label: 'Handyman',
+    icon: '🧰',
+    mode: 'offline',
+    subcategories: ['Small Repairs', 'Furniture Assembly', 'Odd Jobs', 'Shelving & Fixtures', 'Door Repairs', 'Home Maintenance', 'Appliance Installation', 'General DIY Help'],
+  },
+  {
+    id: 'pest-control',
+    label: 'Pest Control',
+    icon: '🐜',
+    mode: 'offline',
+    subcategories: ['Rodent Control', 'Wasp Nest Removal', 'Insect Treatment', 'Bed Bug Treatment', 'Bird Control', 'Pest Proofing', 'Commercial Pest Control', 'Inspection & Prevention'],
+  },
+  {
+    id: 'renewable-energy',
+    label: 'Renewable Energy',
+    icon: '☀️',
+    mode: 'offline',
+    subcategories: ['Solar Panels', 'Battery Storage', 'EV Chargers', 'Heat Pumps', 'Home Energy Upgrades', 'Insulation', 'Energy Audits', 'Grant Advice'],
+  },
+  {
+    id: 'moving-services',
+    label: 'Moving Services',
+    icon: '📦',
+    mode: 'offline',
+    subcategories: ['House Removals', 'Apartment Moves', 'Man with a Van', 'Packing Help', 'Furniture Moving', 'Office Moves', 'Storage Runs', 'Waste & Clear-outs'],
+  },
+  {
+    id: 'professional-property-services',
+    label: 'Professional Property Services',
+    icon: '🏘️',
+    mode: 'offline',
+    subcategories: ['Property Management', 'Letting Support', 'BER Assessments', 'Surveying', 'Snag Lists', 'Valuations', 'Planning Advice', 'Tenant Turnover Services'],
+  },
+  {
     id: 'music-arts-tuition',
     label: 'Music & Arts Tuition',
     icon: '🎵',
@@ -327,7 +432,7 @@ export const OFFLINE_CATEGORIES: ServiceCategory[] = [
   },
   {
     id: 'sales-local',
-    label: 'Sales',
+    label: 'Field Sales',
     icon: '💼',
     mode: 'offline',
     subcategories: ['Door-to-Door Sales', 'Field Sales', 'In-Store Sales', 'Event & Exhibition Sales', 'Retail Sales', 'Promotional Sales', 'Territory Sales Rep', 'Product Demonstrations'],
@@ -386,10 +491,15 @@ function normaliseCategoryLabel(value: string) {
   return value.trim().toLowerCase().replace(/&/g, 'and').replace(/\s+/g, ' ')
 }
 
+const LEGACY_CATEGORY_LABEL_ALIASES: Record<string, string> = {
+  sales: 'online sales',
+}
+
 export function findServiceCategoryByLabel(label: string | null | undefined): ServiceCategory | null {
   if (!label) return null
   const normalised = normaliseCategoryLabel(label)
-  return ALL_CATEGORIES.find(cat => normaliseCategoryLabel(cat.label) === normalised) ?? null
+  const canonical = LEGACY_CATEGORY_LABEL_ALIASES[normalised] ?? normalised
+  return ALL_CATEGORIES.find(cat => normaliseCategoryLabel(cat.label) === canonical) ?? null
 }
 
 // Delivery options for products

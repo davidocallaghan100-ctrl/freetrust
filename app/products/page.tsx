@@ -119,6 +119,7 @@ const CAT_GRAD: Record<string, string> = {
   music:         'linear-gradient(135deg,#a78bfa,#7c3aed)',
   'fashion-him': 'linear-gradient(135deg,#38bdf8,#4338ca)',
   'fashion-her': 'linear-gradient(135deg,#f472b6,#7c3aed)',
+  shoes:         'linear-gradient(135deg,#34d399,#0891b2)',
   clothing:      'linear-gradient(135deg,#fb7185,#be185d)',
   'home-living': 'linear-gradient(135deg,#0f766e,#164e63)',
   furniture:     'linear-gradient(135deg,#92400e,#78350f)',
@@ -173,8 +174,8 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
       {/* Clickable image + title area */}
       <Link href={`/products/${p.id}`} style={{ textDecoration: 'none', display: 'block' }}>
         {/* Image / gradient */}
-        <div style={{ position: 'relative', height: 160, background: p.image ? undefined : gradient, flexShrink: 0 }}>
-          {p.image && <img src={p.image} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+        <div className="ft-product-image-frame" style={{ position: 'relative', height: 160, background: p.image ? undefined : gradient, flexShrink: 0 }}>
+          {p.image && <img className="ft-product-image" src={p.image} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
 
           {/* Category badge — top left */}
           <div style={{ position: 'absolute', top: 8, left: 8 }}>
@@ -198,7 +199,7 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
         {/* Title + description */}
         <div style={{ padding: '0.85rem 0.85rem 0', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
           <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.25 }}>{p.title}</div>
-          <p style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.5, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.description}</p>
+          <p className="ft-product-card-description" style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.5, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.description}</p>
           {(p.location_label || p.distance_km != null) && (
             <div>
               <LocationBadge label={p.location_label ?? null} distanceKm={p.distance_km ?? null} compact />
@@ -210,7 +211,7 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
       {/* Body (non-link) */}
       <div style={{ padding: '0.4rem 0.85rem 0.85rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
         {/* Rating + quality badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap' }}>
+        <div className="ft-product-card-rating" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap' }}>
           <>
             <Stars rating={p.rating} />
             <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{p.rating.toFixed(1)} ({p.review_count})</span>
@@ -221,16 +222,16 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
         </div>
 
         {/* Seller row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', paddingTop: '0.25rem', borderTop: '1px solid rgba(56,189,248,0.06)' }}>
+        <div className="ft-product-card-seller-row" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', paddingTop: '0.25rem', borderTop: '1px solid rgba(56,189,248,0.06)' }}>
           {p.seller_id
             ? <Link href={`/profile?id=${p.seller_id}`} onClick={e => e.stopPropagation()} style={{ flexShrink: 0, display: 'block' }}>
                 {p.seller_avatar
-                  ? <img src={p.seller_avatar} alt={p.seller_name} style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', display: 'block' }} />
+                  ? <img className="ft-product-seller-avatar" src={p.seller_avatar} alt={p.seller_name} style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', display: 'block' }} />
                   : <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#334155', display: 'block' }} />
                 }
               </Link>
             : p.seller_avatar
-              ? <img src={p.seller_avatar} alt={p.seller_name} style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+              ? <img className="ft-product-seller-avatar" src={p.seller_avatar} alt={p.seller_name} style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
               : <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#334155', flexShrink: 0 }} />
           }
           {p.seller_id
@@ -241,7 +242,7 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
         </div>
 
         {/* Delivery info */}
-        <div style={{ fontSize: '0.7rem', color: p.type === 'digital' ? '#34d399' : '#64748b', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+        <div className="ft-product-card-delivery" style={{ fontSize: '0.7rem', color: p.type === 'digital' ? '#34d399' : '#64748b', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
           <span>{p.type === 'digital' ? '⚡' : '📦'}</span>
           <span>{p.delivery ?? (p.type === 'digital' ? 'Instant Download' : 'Standard delivery')}</span>
           {p.free_shipping && <span style={{ marginLeft: 2, color: '#34d399', fontWeight: 700 }}>· Free shipping</span>}
@@ -263,14 +264,14 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
                 onClick={e => { e.preventDefault(); e.stopPropagation(); onAddToBasket(p.id) }}
                 disabled={addingToBasket || inBasket}
                 style={{ background: inBasket ? 'rgba(52,211,153,0.12)' : 'rgba(0,194,203,0.12)', border: `1px solid ${inBasket ? 'rgba(52,211,153,0.35)' : 'rgba(0,194,203,0.35)'}`, borderRadius: 8, padding: '0.45rem 0.7rem', fontSize: '0.75rem', color: inBasket ? '#34d399' : '#00c2cb', cursor: addingToBasket || inBasket ? 'default' : 'pointer', minHeight: 36, fontWeight: 800 }}>
-                {addingToBasket ? 'Adding…' : inBasket ? '✓ In Basket' : '+ Basket'}
+                {addingToBasket ? '…' : inBasket ? '✓' : '+'}
               </button>
             )}
             <Link
               className="ft-product-card-view-link"
               href={`/products/${p.id}`}
               style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 8, padding: '0.45rem 0.9rem', fontSize: '0.75rem', fontWeight: 700, color: '#fff', cursor: 'pointer', minHeight: 36, display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-              View Listing
+              View
             </Link>
             <button
               className="ft-product-card-share-btn"
@@ -343,9 +344,9 @@ function ExternalProductCard({ product, onClick, inBasket, addingToBasket, onSav
         {category.icon} {category.label}
       </div>
 
-      <div style={{ width: '100%', height: '160px', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="ft-product-image-frame" style={{ width: '100%', height: '160px', background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {product.thumbnail ? (
-          <img src={product.thumbnail} alt={product.title} style={{ width: '100%', height: '160px', objectFit: 'cover', background: '#ffffff' }} />
+          <img className="ft-product-image" src={product.thumbnail} alt={product.title} style={{ width: '100%', height: '160px', objectFit: 'contain', background: '#ffffff' }} />
         ) : (
           <span style={{ fontSize: '2rem' }}>{category.icon}</span>
         )}
@@ -397,7 +398,7 @@ function ExternalProductCard({ product, onClick, inBasket, addingToBasket, onSav
                 fontWeight: 800, fontSize: '13px', cursor: addingToBasket || inBasket ? 'default' : 'pointer',
               }}
             >
-              {addingToBasket ? 'Saving…' : inBasket ? '✓ Saved' : '🔖 Save to Basket'}
+              {addingToBasket ? 'Saving…' : inBasket ? '✓ Saved' : 'Save'}
             </button>
           )}
           <button
@@ -414,7 +415,7 @@ function ExternalProductCard({ product, onClick, inBasket, addingToBasket, onSav
               cursor: 'pointer',
             }}
           >
-            View on {product.retailer_name} →
+            View
           </button>
         </div>
       </div>
@@ -901,6 +902,7 @@ function ProductsInner() {
               'solar': 'energy', 'battery': 'energy', 'ev charger': 'energy',
               'thermostat': 'energy', 'energy monitor': 'energy', 'portable power': 'energy',
               'mens': 'fashion-him', 'men': 'fashion-him', 'womens': 'fashion-her', 'women': 'fashion-her',
+              'shoe': 'shoes', 'shoes': 'shoes', 'sneaker': 'shoes', 'sneakers': 'shoes', 'trainer': 'shoes', 'trainers': 'shoes', 'boot': 'shoes', 'boots': 'shoes', 'footwear': 'shoes',
               'handbag': 'fashion-her', 'jewellery': 'fashion-her', 'watch': 'fashion-him',
               'merch': 'fashion-him', 'hoodie': 'clothing', 'handmade': 'art-printed-products', 'food': 'food-grocery',
               'compost': 'gardening', 'topsoil': 'gardening', 'bark': 'gardening', 'mulch': 'gardening',
@@ -1163,7 +1165,7 @@ function ProductsInner() {
 
   const productGridStyle: React.CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: '1.1rem',
   }
 
@@ -1206,32 +1208,87 @@ function ProductsInner() {
             padding: 0 16px !important;
           }
         }
+        @media (max-width: 1100px) {
+          .ft-product-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+          }
+        }
+        @media (max-width: 820px) {
+          .ft-product-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+        }
         @media (max-width: 520px) {
           .ft-product-grid {
-            grid-template-columns: 1fr !important;
-            gap: 16px !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 10px !important;
+          }
+          .ft-product-grid > * {
+            min-width: 0 !important;
+          }
+          .ft-product-card {
+            border-radius: 12px !important;
+            min-height: 0 !important;
+          }
+          .ft-product-image-frame {
+            height: 104px !important;
+          }
+          .ft-product-image {
+            height: 104px !important;
+            width: 100% !important;
+          }
+          .ft-product-seller-avatar {
+            width: 24px !important;
+            height: 24px !important;
+            min-width: 24px !important;
+            border-radius: 50% !important;
+            aspect-ratio: 1 / 1 !important;
+            object-fit: cover !important;
+          }
+          .ft-product-card-description {
+            display: none !important;
+          }
+          .ft-product-card-rating {
+            gap: 3px !important;
+          }
+          .ft-product-card-rating span {
+            font-size: 0.64rem !important;
+          }
+          .ft-product-card-seller-row {
+            gap: 6px !important;
+            padding-top: 6px !important;
+          }
+          .ft-product-card-delivery {
+            display: none !important;
           }
           .ft-product-card-actions {
             align-items: stretch !important;
             flex-wrap: wrap !important;
-            gap: 10px !important;
+            gap: 8px !important;
+            padding-top: 4px !important;
           }
           .ft-product-card-cta-row {
             width: 100% !important;
             margin-left: 0 !important;
             display: grid !important;
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px !important;
-            gap: 8px !important;
+            grid-template-columns: 44px minmax(0, 1fr) 38px !important;
+            gap: 6px !important;
           }
           .ft-product-card-basket-btn,
           .ft-product-card-view-link,
           .ft-product-card-share-btn {
             width: 100% !important;
-            min-height: 44px !important;
+            min-height: 38px !important;
             justify-content: center !important;
             text-align: center !important;
-            padding-left: 8px !important;
-            padding-right: 8px !important;
+            padding: 6px !important;
+          }
+          .ft-product-card-basket-btn,
+          .ft-product-card-share-btn {
+            font-size: 1rem !important;
+          }
+          .ft-product-card-view-link {
+            font-size: 0.72rem !important;
           }
         }
       `}</style>
