@@ -169,7 +169,6 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
   onAddToBasket?: (id: string) => void
 }) {
   const { format } = useCurrency()
-  const catLabel = ALL_CATEGORIES.find(c => c.id === p.category)?.label ?? p.category
   const gradient = p.image ? undefined : (CAT_GRAD[p.category] ?? 'linear-gradient(135deg,#334155,#1e293b)')
 
   return (
@@ -183,17 +182,8 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
         <div className="ft-product-image-frame" style={{ position: 'relative', height: 160, background: p.image ? undefined : gradient, flexShrink: 0 }}>
           {p.image && <img className="ft-product-image" src={p.image} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
 
-          {/* Category badge — top left */}
-          <div style={{ position: 'absolute', top: 8, left: 8 }}>
-            <span style={{ background: 'rgba(15,23,42,0.85)', color: '#94a3b8', fontSize: '0.62rem', fontWeight: 700, padding: '2px 7px', borderRadius: 999 }}>{catLabel}</span>
-          </div>
-
-          {/* Digital/Physical badge + wishlist — top right */}
+          {/* Wishlist — top right. Keep product photos free of category/type overlay tags. */}
           <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
-            {p.type === 'digital'
-              ? <span style={{ background: 'rgba(56,189,248,0.9)', color: '#0f172a', fontSize: '0.6rem', fontWeight: 800, padding: '2px 7px', borderRadius: 999 }}>DIGITAL</span>
-              : <span style={{ background: 'rgba(148,163,184,0.9)', color: '#0f172a', fontSize: '0.6rem', fontWeight: 800, padding: '2px 7px', borderRadius: 999 }}>PHYSICAL</span>
-            }
             <button
               onClick={e => { e.preventDefault(); e.stopPropagation(); onWishlist(p.id) }}
               style={{ background: 'rgba(15,23,42,0.8)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.85rem', flexShrink: 0 }}>
