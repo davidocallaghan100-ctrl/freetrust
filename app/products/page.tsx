@@ -81,6 +81,10 @@ interface Product {
   location_label?: string | null
   price_eur?: number | null
   distance_km?: number | null
+  delivery_scope?: string | null
+  delivery_origin_lat?: number | null
+  delivery_origin_lng?: number | null
+  delivery_radius_km?: number | null
 }
 
 interface ExternalProduct {
@@ -120,6 +124,8 @@ const CAT_GRAD: Record<string, string> = {
   'fashion-him': 'linear-gradient(135deg,#38bdf8,#4338ca)',
   'fashion-her': 'linear-gradient(135deg,#f472b6,#7c3aed)',
   shoes:         'linear-gradient(135deg,#34d399,#0891b2)',
+  plants:        'linear-gradient(135deg,#86efac,#15803d)',
+  'online-courses': 'linear-gradient(135deg,#60a5fa,#7c3aed)',
   clothing:      'linear-gradient(135deg,#fb7185,#be185d)',
   'home-living': 'linear-gradient(135deg,#0f766e,#164e63)',
   furniture:     'linear-gradient(135deg,#92400e,#78350f)',
@@ -313,37 +319,6 @@ function ExternalProductCard({ product, onClick, inBasket, addingToBasket, onSav
       flexDirection: 'column',
       minHeight: 320,
     }}>
-      <div style={{
-        position: 'absolute',
-        top: '10px',
-        left: '10px',
-        background: '#374151',
-        color: '#9ca3af',
-        fontSize: '11px',
-        fontWeight: 700,
-        padding: '3px 8px',
-        borderRadius: '6px',
-        letterSpacing: '0.05em',
-        textTransform: 'uppercase',
-        zIndex: 2,
-      }}>
-        🏪 Retailer
-      </div>
-
-      <div style={{
-        position: 'absolute',
-        top: '10px',
-        right: '10px',
-        background: '#1e293b',
-        color: '#94a3b8',
-        fontSize: '11px',
-        padding: '3px 8px',
-        borderRadius: '6px',
-        zIndex: 2,
-      }}>
-        {category.icon} {category.label}
-      </div>
-
       <div className="ft-product-image-frame" style={{ width: '100%', height: '160px', background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {product.thumbnail ? (
           <img className="ft-product-image" src={product.thumbnail} alt={product.title} style={{ width: '100%', height: '160px', objectFit: 'contain', background: '#ffffff' }} />
@@ -817,6 +792,8 @@ function ProductsInner() {
   const [basketBusyId, setBasketBusyId] = useState<string | null>(null)
   const [displayLimit, setDisplayLimit] = useState(PRODUCTS_INITIAL_DISPLAY)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [mobileColumns, setMobileColumns] = useState<1 | 2>(2)
+  const [desktopColumns, setDesktopColumns] = useState<1 | 2 | 3 | 4 | 5>(4)
   const infiniteScrollRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -860,7 +837,7 @@ function ProductsInner() {
         const [communityRes, externalRes] = await Promise.all([
           supabase
             .from('listings')
-            .select('id, title, description, category, price, currency, product_type, tags, images, cover_image, avg_rating, review_count, quality_score, seller_id, country, city, region, latitude, longitude, location_label, currency_code, price_eur, profiles!seller_id(id, full_name, avatar_url)')
+            .select('id, title, description, category, price, currency, product_type, tags, images, cover_image, avg_rating, review_count, quality_score, seller_id, country, city, region, latitude, longitude, location_label, currency_code, price_eur, delivery_scope, delivery_origin_lat, delivery_origin_lng, delivery_radius_km, delivery_notes, profiles!seller_id(id, full_name, avatar_url)')
             .eq('status', 'active')
             .neq('product_type', 'service')
             .order('created_at', { ascending: false })
@@ -897,7 +874,7 @@ function ProductsInner() {
               'led': 'electronics', 'gimbal': 'electronics', 'tracker': 'electronics',
               'stream deck': 'computer-accessories', 'power bank': 'electronics', 'wifi': 'computer-accessories',
               'phone': 'electronics', 'laptop': 'laptops', 'speaker': 'speakers', 'headphones': 'headphones',
-              'course': 'digital-products', 'template': 'digital-products', 'software': 'digital-products',
+              'course': 'online-courses', 'courses': 'online-courses', 'online course': 'online-courses', 'class': 'online-courses', 'training': 'online-courses', 'template': 'digital-products', 'software': 'digital-products',
               'music': 'music', 'photo': 'art-printed-products', 'art': 'art-printed-products', 'book': 'books',
               'solar': 'energy', 'battery': 'energy', 'ev charger': 'energy',
               'thermostat': 'energy', 'energy monitor': 'energy', 'portable power': 'energy',
@@ -906,15 +883,22 @@ function ProductsInner() {
               'handbag': 'fashion-her', 'jewellery': 'fashion-her', 'watch': 'fashion-him',
               'merch': 'fashion-him', 'hoodie': 'clothing', 'handmade': 'art-printed-products', 'food': 'food-grocery',
               'compost': 'gardening', 'topsoil': 'gardening', 'bark': 'gardening', 'mulch': 'gardening',
+              'plant': 'plants', 'plants': 'plants', 'houseplant': 'plants', 'seedling': 'plants', 'sapling': 'plants', 'flowers': 'plants',
             }
             let category = normaliseExternalCategory(typeof d.category === 'string' ? d.category : null)
             const titleLower = String(d.title ?? '').toLowerCase()
             const tagsStr = tags.join(' ').toLowerCase()
-            if (!d.category) {
+            if (!d.category || d.category === 'other') {
               for (const [kw, cat] of Object.entries(CAT_KEYWORDS)) {
                 if (titleLower.includes(kw) || tagsStr.includes(kw)) { category = cat; break }
               }
             }
+            const listingLatitude = typeof d.latitude === 'number' ? (d.latitude as number) : null
+            const listingLongitude = typeof d.longitude === 'number' ? (d.longitude as number) : null
+            const deliveryOriginLat = typeof d.delivery_origin_lat === 'number' ? (d.delivery_origin_lat as number) : null
+            const deliveryOriginLng = typeof d.delivery_origin_lng === 'number' ? (d.delivery_origin_lng as number) : null
+            const deliveryRadiusKm = typeof d.delivery_radius_km === 'number' ? (d.delivery_radius_km as number) : null
+            const deliveryNotes = (d.delivery_notes as string | null | undefined) ?? null
             return {
               id: String(d.id),
               title: String(d.title ?? ''),
@@ -936,10 +920,14 @@ function ProductsInner() {
               // Globalisation fields
               country:        (d.country as string | null | undefined) ?? null,
               city:           (d.city as string | null | undefined) ?? null,
-              latitude:       typeof d.latitude  === 'number' ? (d.latitude as number)  : null,
-              longitude:      typeof d.longitude === 'number' ? (d.longitude as number) : null,
-              location_label: (d.location_label as string | null | undefined) ?? null,
+              latitude:       listingLatitude ?? deliveryOriginLat,
+              longitude:      listingLongitude ?? deliveryOriginLng,
+              location_label: (d.location_label as string | null | undefined) ?? deliveryNotes,
               price_eur:      typeof d.price_eur === 'number' ? (d.price_eur as number) : null,
+              delivery_scope: (d.delivery_scope as string | null | undefined) ?? null,
+              delivery_origin_lat: deliveryOriginLat,
+              delivery_origin_lng: deliveryOriginLng,
+              delivery_radius_km: deliveryRadiusKm,
             }
           }))
         }
@@ -967,7 +955,14 @@ function ProductsInner() {
     load()
   }, [])
 
-  const products = dbProducts ?? ([] as Product[])
+  const products = useMemo(() => dbProducts ?? ([] as Product[]), [dbProducts])
+
+  function handleLocationFilterChange(loc: StructuredLocation) {
+    setFilterLoc(loc)
+    if (!loc.latitude && !loc.longitude && !loc.country) {
+      setCountryFilter(null)
+    }
+  }
 
   // Country options merged with the global ISO 3166-1 reference list:
   // countries present in the data appear first (with counts), then every
@@ -1004,7 +999,15 @@ function ProductsInner() {
     if (p.rating > 0 && p.rating < minRating) return false
     if (countryFilter && p.country !== countryFilter) return false
     if (radiusKm > 0 && filterLoc.latitude != null) {
-      if (p.distance_km == null || p.distance_km > radiusKm) return false
+      if (p.distance_km != null) {
+        const userRadiusMatch = p.distance_km <= radiusKm
+        const deliveryRadiusMatch = p.delivery_scope === 'local' && typeof p.delivery_radius_km === 'number' && p.distance_km <= p.delivery_radius_km
+        return userRadiusMatch || deliveryRadiusMatch
+      }
+      const sameCountry = !!filterLoc.country && !!p.country && p.country === filterLoc.country
+      const sameCity = !!filterLoc.city && !!p.city && p.city.toLowerCase() === filterLoc.city.toLowerCase()
+      const labelMatchesCity = !!filterLoc.city && !!p.location_label && p.location_label.toLowerCase().includes(filterLoc.city.toLowerCase())
+      if (!sameCountry && !sameCity && !labelMatchesCity) return false
     }
     return true
   })
@@ -1163,11 +1166,25 @@ function ProductsInner() {
     whiteSpace: 'nowrap' as const, minHeight: 36, flexShrink: 0 as const,
   })
 
-  const productGridStyle: React.CSSProperties = {
+  const productGridStyle: React.CSSProperties & { ['--ft-mobile-cols']?: number } = {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gridTemplateColumns: `repeat(${desktopColumns}, minmax(0, 1fr))`,
     gap: '1.1rem',
+    '--ft-mobile-cols': mobileColumns,
   }
+
+  const gridOptionButtonStyle = (active: boolean): React.CSSProperties => ({
+    minWidth: 34,
+    minHeight: 34,
+    borderRadius: 999,
+    border: `1px solid ${active ? '#00c2cb' : 'rgba(148,163,184,0.24)'}`,
+    background: active ? 'rgba(0,194,203,0.16)' : 'transparent',
+    color: active ? '#00c2cb' : '#94a3b8',
+    fontSize: 12,
+    fontWeight: 900,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+  })
 
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
@@ -1208,20 +1225,23 @@ function ProductsInner() {
             padding: 0 16px !important;
           }
         }
-        @media (max-width: 1100px) {
-          .ft-product-grid {
-            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-          }
-        }
+        .ft-grid-mobile-controls { display: none; }
         @media (max-width: 820px) {
           .ft-product-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            grid-template-columns: repeat(var(--ft-mobile-cols, 2), minmax(0, 1fr)) !important;
           }
+          .ft-grid-desktop-controls { display: none !important; }
+          .ft-grid-mobile-controls { display: flex !important; }
         }
         @media (max-width: 520px) {
+          .ft-products-shell {
+            max-width: none !important;
+            padding-left: 6px !important;
+            padding-right: 6px !important;
+          }
           .ft-product-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            gap: 10px !important;
+            grid-template-columns: repeat(var(--ft-mobile-cols, 2), minmax(0, 1fr)) !important;
+            gap: 8px !important;
           }
           .ft-product-grid > * {
             min-width: 0 !important;
@@ -1292,7 +1312,7 @@ function ProductsInner() {
           }
         }
       `}</style>
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 1.25rem 2rem' }}>
+      <div className="ft-products-shell" style={{ maxWidth: 1480, margin: '0 auto', padding: '0 1.25rem 2rem' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.5rem' }}>
           <div className="ft-products-title-block">
@@ -1349,11 +1369,11 @@ function ProductsInner() {
         {activeTab === 'listings' && <>
           {/* Globalisation — location filter */}
           <div style={{ marginBottom: '0.75rem' }}>
-            <LocationFilter
-              location={filterLoc}
-              onLocationChange={setFilterLoc}
-              radiusKm={radiusKm}
-              onRadiusChange={setRadiusKm}
+              <LocationFilter
+                location={filterLoc}
+                onLocationChange={handleLocationFilterChange}
+                radiusKm={radiusKm}
+                onRadiusChange={setRadiusKm}
               country={countryFilter}
               onCountryChange={setCountryFilter}
               countryOptions={countryOptions}
@@ -1418,6 +1438,30 @@ function ProductsInner() {
                   {r === 0 ? 'Any' : `${r}★+`}
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: '1rem' }}>
+            <div style={{ color: '#64748b', fontSize: 12, lineHeight: 1.4 }}>
+              Choose how dense the marketplace grid feels on your screen.
+            </div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div className="ft-grid-mobile-controls" style={{ alignItems: 'center', gap: 6 }}>
+                <span style={{ color: '#94a3b8', fontSize: 12, fontWeight: 800 }}>Mobile</span>
+                {([1, 2] as const).map(cols => (
+                  <button key={cols} type="button" onClick={() => setMobileColumns(cols)} style={gridOptionButtonStyle(mobileColumns === cols)} aria-label={`${cols} product${cols === 1 ? '' : 's'} per row on mobile`}>
+                    {cols}
+                  </button>
+                ))}
+              </div>
+              <div className="ft-grid-desktop-controls" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ color: '#94a3b8', fontSize: 12, fontWeight: 800 }}>Desktop</span>
+                {([1, 2, 3, 4, 5] as const).map(cols => (
+                  <button key={cols} type="button" onClick={() => setDesktopColumns(cols)} style={gridOptionButtonStyle(desktopColumns === cols)} aria-label={`${cols} product${cols === 1 ? '' : 's'} per row on desktop`}>
+                    {cols}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
