@@ -12,7 +12,7 @@ import { EMPTY_LOCATION, haversineKm, type StructuredLocation, type RadiusValue 
 import { buildCountryOptions } from '@/lib/countries'
 import ListingQualityBadge from '@/components/marketplace/ListingQualityBadge'
 import FindOnlineTab from '@/components/marketplace/FindOnlineTab'
-import { PRODUCT_CATEGORIES, PRODUCTS_INITIAL_DISPLAY, PRODUCTS_LOAD_MORE_BATCH, categoryMeta, normaliseExternalCategory } from '@/lib/externalProductCategories'
+import { PRODUCT_CATEGORIES, PRODUCTS_INITIAL_DISPLAY, PRODUCTS_LOAD_MORE_BATCH, categoryMeta, isExternalDigitalCategory, normaliseExternalCategory } from '@/lib/externalProductCategories'
 import { useBasket, type BasketItem } from '@/context/BasketContext'
 import { FREETRUST_PRODUCT_FEE_LABEL, formatEuroFromCents } from '@/lib/checkoutConfig'
 import { isAffiliateTrackingEnabled, stripFreetrustReferralParams, toAffiliateUrl } from '@/lib/skimlinks'
@@ -102,6 +102,10 @@ interface ExternalProduct {
   subcategory: string | null
   is_trending: boolean
   click_count: number
+  source?: string | null
+  availability_country?: string | null
+  availability_label?: string | null
+  location_precision?: 'country' | 'none'
 }
 
 // ─── Category data ────────────────────────────────────────────────────────────
@@ -343,6 +347,12 @@ function ExternalProductCard({ product, onClick, inBasket, addingToBasket, onSav
         <p style={{ color: '#64748b', fontSize: '12px', margin: '0 0 10px 0' }}>
           via {product.retailer_name}
         </p>
+
+        {product.availability_label && (
+          <p style={{ color: '#38bdf8', fontSize: '11px', margin: '0 0 10px 0', fontWeight: 700 }}>
+            📍 {product.availability_label}
+          </p>
+        )}
 
         {product.rating ? (
           <p style={{ color: '#fbbf24', fontSize: '12px', margin: '0 0 10px 0' }}>
@@ -842,7 +852,7 @@ function ProductsInner() {
             for (let from = 0; from < 3000; from += pageSize) {
               const { data, error } = await supabase
                 .from('external_product_listings')
-                .select('id, title, price, price_eur, currency, retailer_name, retailer_url, thumbnail, rating, review_count, category, subcategory, is_trending, click_count')
+                .select('id, title, price, price_eur, currency, retailer_name, retailer_url, thumbnail, rating, review_count, category, subcategory, is_trending, click_count, source')
                 .order('is_trending', { ascending: false })
                 .order('click_count', { ascending: false })
                 .order('last_refreshed_at', { ascending: false })
@@ -941,6 +951,13 @@ function ProductsInner() {
             subcategory: row.subcategory ? String(row.subcategory) : null,
             is_trending: Boolean(row.is_trending),
             click_count: Number(row.click_count ?? 0),
+            source: row.source ? String(row.source) : null,
+            // SerpApi catalogue refreshes are explicitly requested with gl=ie,
+            // so this is a real country availability signal, not inferred shop
+            // geocoding. We deliberately do not assign precise coordinates.
+            availability_country: row.source === 'serpapi' || row.source == null ? 'IE' : null,
+            availability_label: row.source === 'serpapi' || row.source == null ? 'Available in Ireland' : null,
+            location_precision: (row.source === 'serpapi' || row.source == null ? 'country' : 'none') as 'country' | 'none',
           })).filter(row => row.title && row.retailer_url))
         }
       } catch { /* leave as empty */ }
@@ -967,8 +984,12 @@ function ProductsInner() {
       if (!p.country) continue
       counts.set(p.country, (counts.get(p.country) ?? 0) + 1)
     }
+    for (const p of externalProducts) {
+      if (!p.availability_country) continue
+      counts.set(p.availability_country, (counts.get(p.availability_country) ?? 0) + 1)
+    }
     return buildCountryOptions(counts)
-  }, [products])
+  }, [products, externalProducts])
 
   // Compute distance_km per product when the filter has geocoords, then
   // filter by radius and sort so local results show first.
@@ -1007,12 +1028,18 @@ function ProductsInner() {
   })
 
   let filteredExternal = externalProducts.filter(p => {
-    const externalType = p.category === 'digital-products' ? 'digital' : 'physical'
+    const externalType = isExternalDigitalCategory(p.category) ? 'digital' : 'physical'
     if (typeFilter !== 'all' && externalType !== typeFilter) return false
     if (catFilter !== 'all' && p.category !== catFilter) return false
     if (p.price_eur != null && p.price_eur > maxPrice) return false
     if (p.rating != null && p.rating > 0 && p.rating < minRating) return false
-    if (countryFilter || radiusKm > 0 || filterLoc.latitude != null) return false
+    if (countryFilter && p.availability_country !== countryFilter) return false
+    if (radiusKm > 0 || filterLoc.latitude != null) {
+      // Retailer/referral rows do not carry precise coordinates. Include only
+      // rows whose real shopping-result country matches the user's resolved
+      // country; never fake a distance or retailer location.
+      if (!filterLoc.country || p.availability_country !== filterLoc.country) return false
+    }
     return true
   })
 

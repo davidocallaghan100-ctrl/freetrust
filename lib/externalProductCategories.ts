@@ -2,6 +2,7 @@ export interface ProductCategory {
   id : string
   label: string
   serpQuery: string
+  serpQueries?: string[]
   subcategories?: string[]
   icon: string
 }
@@ -94,7 +95,11 @@ export const PRODUCT_CATEGORIES: ProductCategory[] = [
   {
     id: 'plants',
     label: 'Plants',
-    serpQuery: 'trending indoor outdoor plants houseplants garden plants Ireland',
+    serpQuery: 'buy houseplants garden plants Ireland',
+    serpQueries: [
+      'buy houseplants garden plants Ireland',
+      'garden plants shrubs trees Ireland buy online',
+    ],
     subcategories: ['houseplants', 'garden plants', 'flowers', 'shrubs', 'trees', 'seedlings', 'plant pots'],
     icon: '🪴',
   },
@@ -199,7 +204,11 @@ export const PRODUCT_CATEGORIES: ProductCategory[] = [
   {
     id: 'online-courses',
     label: 'Online Courses',
-    serpQuery: 'trending online courses digital learning classes Ireland',
+    serpQuery: 'online courses Ireland certification',
+    serpQueries: [
+      'online courses Ireland certification',
+      'Irish online training courses certification',
+    ],
     subcategories: ['business courses', 'creative courses', 'coding courses', 'fitness courses', 'language courses', 'career training'],
     icon: '🎓',
   },
@@ -296,4 +305,9 @@ export function normaliseExternalCategory(category: string | null | undefined) {
 export function categoryMeta(category: string | null | undefined) {
   const normalized = normaliseExternalCategory(category)
   return PRODUCT_CATEGORIES.find(item => item.id === normalized) ?? PRODUCT_CATEGORIES[0]
+}
+
+export function isExternalDigitalCategory(category: string | null | undefined) {
+  const normalized = normaliseExternalCategory(category)
+  return normalized === 'digital-products' || normalized === 'online-courses'
 }

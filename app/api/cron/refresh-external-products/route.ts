@@ -45,24 +45,42 @@ export async function GET(req: NextRequest) {
   for (const category of PRODUCT_CATEGORIES) {
     try {
       const allProducts: SerpShoppingResult[] = []
-      const url = new URL('https://serpapi.com/search.json')
-      url.searchParams.set('engine', 'google_shopping')
-      url.searchParams.set('q', category.serpQuery)
-      url.searchParams.set('gl', 'ie')
-      url.searchParams.set('hl', 'en')
-      url.searchParams.set('currency', 'EUR')
-      url.searchParams.set('num', String(Math.min(PRODUCTS_PER_CATEGORY, 100)))
-      url.searchParams.set('api_key', process.env.SERPAPI_KEY)
+      const seenLinks = new Set<string>()
+      const queries = category.serpQueries?.length ? category.serpQueries : [category.serpQuery]
 
-      const res = await fetch(url.toString(), { cache: 'no-store' })
-      const data = await res.json()
+      for (const query of queries) {
+        if (allProducts.length >= PRODUCTS_PER_CATEGORY) break
 
-      if (!res.ok) {
-        errors.push(`SerpApi error for ${category.id}: ${data?.error ?? res.statusText}`)
-        continue
+        const url = new URL('https://serpapi.com/search.json')
+        url.searchParams.set('engine', 'google_shopping')
+        url.searchParams.set('q', query)
+        // This cron uses real Google Shopping results for the Ireland market.
+        // That country-level market is used for Near Me matching; no fake
+        // retailer coordinates are created for referral products.
+        url.searchParams.set('gl', 'ie')
+        url.searchParams.set('hl', 'en')
+        url.searchParams.set('currency', 'EUR')
+        url.searchParams.set('num', String(Math.min(PRODUCTS_PER_CATEGORY, 100)))
+        url.searchParams.set('api_key', process.env.SERPAPI_KEY)
+
+        const res = await fetch(url.toString(), { cache: 'no-store' })
+        const data = await res.json()
+
+        if (!res.ok) {
+          errors.push(`SerpApi error for ${category.id} (${query}): ${data?.error ?? res.statusText}`)
+          continue
+        }
+
+        for (const item of ((data.shopping_results || []) as SerpShoppingResult[])) {
+          const rawLink = stripFreetrustReferralParams(item.link || item.product_link || '')
+          if (!rawLink || seenLinks.has(rawLink)) continue
+          seenLinks.add(rawLink)
+          allProducts.push(item)
+          if (allProducts.length >= PRODUCTS_PER_CATEGORY) break
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 350))
       }
-
-      allProducts.push(...((data.shopping_results || []) as SerpShoppingResult[]))
 
       const products = allProducts.slice(0, PRODUCTS_PER_CATEGORY)
       if (products.length === 0) {
