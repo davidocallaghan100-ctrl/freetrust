@@ -180,10 +180,20 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
       <Link href={`/products/${p.id}`} style={{ textDecoration: 'none', display: 'block' }}>
         {/* Image / gradient */}
         <div className="ft-product-image-frame" style={{ position: 'relative', height: 160, background: p.image ? undefined : gradient, flexShrink: 0 }}>
-          {p.image && <img className="ft-product-image" src={p.image} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+          {p.image && <img className="ft-product-image" src={p.image} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#0f172a' }} />}
 
-          {/* Wishlist — top right. Keep product photos free of category/type overlay tags. */}
-          <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div className="ft-product-price-badge" aria-label="Product price">
+            <PriceDisplay
+              amountEur={(p.price_eur && p.price_eur > 0) ? p.price_eur : p.price}
+              sourceCode={(p.currency || 'EUR') as CurrencyCode}
+              sourceAmount={p.price}
+              size="sm"
+              layout="stacked"
+            />
+          </div>
+
+          {/* Wishlist — top left. Keep product photos free of category/type overlay tags. */}
+          <div className="ft-product-wishlist-control" style={{ position: 'absolute', top: 8, left: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
             <button
               onClick={e => { e.preventDefault(); e.stopPropagation(); onWishlist(p.id) }}
               style={{ background: 'rgba(15,23,42,0.8)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.85rem', flexShrink: 0 }}>
@@ -244,15 +254,8 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
           {p.free_shipping && <span style={{ marginLeft: 2, color: '#34d399', fontWeight: 700 }}>· Free shipping</span>}
         </div>
 
-        {/* Price + CTA */}
+        {/* CTA */}
         <div className="ft-product-card-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
-          <PriceDisplay
-            amountEur={(p.price_eur && p.price_eur > 0) ? p.price_eur : p.price}
-            sourceCode={(p.currency || 'EUR') as CurrencyCode}
-            sourceAmount={p.price}
-            size="md"
-            layout="stacked"
-          />
            <div className="ft-product-card-cta-row" style={{ marginLeft: 'auto', display: 'flex', gap: '0.35rem' }}>
             {onAddToBasket && (
               <button
@@ -298,7 +301,7 @@ function ExternalProductCard({ product, onClick, inBasket, addingToBasket, onSav
   const rating = typeof product.rating === 'number' ? Math.max(0, Math.min(5, Math.round(product.rating))) : 0
 
   return (
-    <div style={{
+    <div className="ft-product-card ft-external-product-card" style={{
       background: '#111827',
       borderRadius: '12px',
       overflow: 'hidden',
@@ -309,12 +312,17 @@ function ExternalProductCard({ product, onClick, inBasket, addingToBasket, onSav
       flexDirection: 'column',
       minHeight: 320,
     }}>
-      <div className="ft-product-image-frame" style={{ width: '100%', height: '160px', background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="ft-product-image-frame" style={{ width: '100%', height: '160px', background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
         {product.thumbnail ? (
           <img className="ft-product-image" src={product.thumbnail} alt={product.title} style={{ width: '100%', height: '160px', objectFit: 'contain', background: '#ffffff' }} />
         ) : (
           <span style={{ fontSize: '2rem' }}>{category.icon}</span>
         )}
+        <div className="ft-product-price-badge" aria-label="Retailer product price">
+          <span style={{ color: '#ffffff', fontWeight: 900, fontSize: 13, lineHeight: 1.1, whiteSpace: 'nowrap' }}>
+            {product.price || (product.price_eur ? `€${product.price_eur.toFixed(2)}` : 'See price')}
+          </span>
+        </div>
       </div>
 
       <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', flex: 1 }}>
@@ -330,10 +338,6 @@ function ExternalProductCard({ product, onClick, inBasket, addingToBasket, onSav
           overflow: 'hidden',
         }}>
           {product.title}
-        </p>
-
-        <p style={{ color: '#00c2cb', fontWeight: 700, fontSize: '16px', margin: '0 0 4px 0' }}>
-          {product.price || (product.price_eur ? `€${product.price_eur.toFixed(2)}` : 'See price')}
         </p>
 
         <p style={{ color: '#64748b', fontSize: '12px', margin: '0 0 10px 0' }}>
@@ -1176,6 +1180,21 @@ function ProductsInner() {
     fontFamily: 'inherit',
   })
 
+  const mobileLayoutButtonStyle: React.CSSProperties = {
+    minHeight: 42,
+    borderRadius: 10,
+    border: '2px solid rgba(0,194,203,0.62)',
+    background: mobileColumns === 1 ? 'rgba(0,194,203,0.18)' : 'rgba(15,23,42,0.72)',
+    color: '#00c2cb',
+    padding: '0 14px',
+    fontSize: 13,
+    fontWeight: 900,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    boxShadow: mobileColumns === 1 ? '0 10px 24px rgba(0,194,203,0.16)' : 'none',
+    whiteSpace: 'nowrap',
+  }
+
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
       {deleteTarget && (
@@ -1215,13 +1234,43 @@ function ProductsInner() {
             padding: 0 16px !important;
           }
         }
-        .ft-grid-mobile-controls { display: none; }
+        .ft-mobile-layout-button { display: none; }
+        .ft-product-image {
+          filter: brightness(1.14) saturate(1.06) contrast(1.02);
+        }
+        .ft-product-price-badge {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          z-index: 2;
+          max-width: calc(100% - 56px);
+          padding: 6px 8px;
+          border-radius: 999px;
+          background: rgba(15, 23, 42, 0.84);
+          border: 1px solid rgba(0, 194, 203, 0.38);
+          box-shadow: 0 10px 26px rgba(0, 0, 0, 0.26);
+          backdrop-filter: blur(10px);
+          pointer-events: none;
+        }
+        .ft-product-price-badge * {
+          line-height: 1.08 !important;
+        }
         @media (max-width: 820px) {
           .ft-product-grid {
             grid-template-columns: repeat(var(--ft-mobile-cols, 2), minmax(0, 1fr)) !important;
           }
           .ft-grid-desktop-controls { display: none !important; }
-          .ft-grid-mobile-controls { display: flex !important; }
+          .ft-grid-density-row { display: none !important; }
+          .ft-mobile-layout-button { display: inline-flex !important; align-items: center; justify-content: center; }
+          .ft-products-tab-row {
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+            gap: 8px !important;
+          }
+          .ft-products-tab-row > button {
+            min-width: 0;
+            justify-content: center;
+          }
         }
         @media (max-width: 520px) {
           .ft-products-shell {
@@ -1240,12 +1289,41 @@ function ProductsInner() {
             border-radius: 12px !important;
             min-height: 0 !important;
           }
+          .ft-mobile-one-col .ft-product-card {
+            border-radius: 16px !important;
+            min-height: 430px !important;
+          }
           .ft-product-image-frame {
             height: 104px !important;
           }
           .ft-product-image {
             height: 104px !important;
             width: 100% !important;
+          }
+          .ft-mobile-one-col .ft-product-image-frame {
+            height: 260px !important;
+          }
+          .ft-mobile-one-col .ft-product-image {
+            height: 260px !important;
+          }
+          .ft-mobile-one-col .ft-product-card-description {
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+          }
+          .ft-product-price-badge {
+            top: 7px;
+            right: 7px;
+            padding: 5px 7px;
+            max-width: calc(100% - 52px);
+          }
+          .ft-mobile-one-col .ft-product-price-badge {
+            top: 12px;
+            right: 12px;
+            padding: 7px 10px;
+          }
+          .ft-mobile-one-col .ft-product-wishlist-control {
+            top: 12px !important;
+            left: 12px !important;
           }
           .ft-product-seller-avatar {
             width: 24px !important;
@@ -1325,7 +1403,7 @@ function ProductsInner() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
+        <div className="ft-products-tab-row" style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center' }}>
           <button
             onClick={() => setActiveTab('listings')}
             style={{
@@ -1354,6 +1432,18 @@ function ProductsInner() {
           >
             🔍 Find Online
           </button>
+          {activeTab === 'listings' && (
+            <button
+              type="button"
+              className="ft-mobile-layout-button"
+              onClick={() => setMobileColumns(cols => cols === 1 ? 2 : 1)}
+              style={mobileLayoutButtonStyle}
+              aria-label={mobileColumns === 1 ? 'Switch to two products per row' : 'Switch to one product per row'}
+              title={mobileColumns === 1 ? 'Currently 1 product per row' : 'Currently 2 products per row'}
+            >
+              Layout
+            </button>
+          )}
         </div>
 
         {activeTab === 'listings' && <>
@@ -1431,19 +1521,11 @@ function ProductsInner() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: '1rem' }}>
+          <div className="ft-grid-density-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: '1rem' }}>
             <div style={{ color: '#64748b', fontSize: 12, lineHeight: 1.4 }}>
               Choose how dense the marketplace grid feels on your screen.
             </div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-              <div className="ft-grid-mobile-controls" style={{ alignItems: 'center', gap: 6 }}>
-                <span style={{ color: '#94a3b8', fontSize: 12, fontWeight: 800 }}>Mobile</span>
-                {([1, 2] as const).map(cols => (
-                  <button key={cols} type="button" onClick={() => setMobileColumns(cols)} style={gridOptionButtonStyle(mobileColumns === cols)} aria-label={`${cols} product${cols === 1 ? '' : 's'} per row on mobile`}>
-                    {cols}
-                  </button>
-                ))}
-              </div>
               <div className="ft-grid-desktop-controls" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ color: '#94a3b8', fontSize: 12, fontWeight: 800 }}>Desktop</span>
                 {([1, 2, 3, 4, 5] as const).map(cols => (
@@ -1457,7 +1539,7 @@ function ProductsInner() {
 
           {/* Grid or empty state */}
           {loading ? (
-            <div className="ft-product-grid" style={productGridStyle}>
+            <div className={`ft-product-grid ${mobileColumns === 1 ? 'ft-mobile-one-col' : ''}`} style={productGridStyle}>
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} style={{ background: '#1e293b', borderRadius: 14, height: 320, opacity: 0.5 }}>
                   <div style={{ height: 160, background: '#334155', borderRadius: '14px 14px 0 0' }} />
@@ -1477,7 +1559,7 @@ function ProductsInner() {
             </div>
           ) : (
             <>
-              <div className="ft-product-grid" style={productGridStyle}>
+              <div className={`ft-product-grid ${mobileColumns === 1 ? 'ft-mobile-one-col' : ''}`} style={productGridStyle}>
                 {visibleProducts.map(entry => (
                   entry._type === 'community' ? (
                     <ProductCard
