@@ -646,18 +646,25 @@ export default function ServicesPage() {
       try {
         setLoadingExternalServices(true)
         setExternalServicesError(null)
-        const { data, error } = await supabase
-          .from('external_service_listings')
-          .select('id, title, provider_name, provider_url, description, category, freetrust_category_id, service_type, price_display, rating, review_count, location, country, city, latitude, longitude, location_label, thumbnail, source, awin_merchant_id, awin_deeplink, is_awin, click_count, lead_count')
-          .order('is_awin', { ascending: false })
-          .order('click_count', { ascending: false })
-          .order('last_refreshed_at', { ascending: false })
-          .limit(2500)
+        const externalRows: Record<string, unknown>[] = []
+        const pageSize = 1000
 
-        if (error) throw error
+        for (let from = 0; ; from += pageSize) {
+          const { data, error } = await supabase
+            .from('external_service_listings')
+            .select('id, title, provider_name, provider_url, description, category, freetrust_category_id, service_type, price_display, rating, review_count, location, country, city, latitude, longitude, location_label, thumbnail, source, awin_merchant_id, awin_deeplink, is_awin, click_count, lead_count')
+            .order('is_awin', { ascending: false })
+            .order('click_count', { ascending: false })
+            .order('last_refreshed_at', { ascending: false })
+            .range(from, from + pageSize - 1)
+
+          if (error) throw error
+          externalRows.push(...((data ?? []) as Record<string, unknown>[]))
+          if (!data || data.length < pageSize) break
+        }
 
         if (!cancelled) {
-          setExternalServices((data ?? []).map((row: Record<string, unknown>) => ({
+          setExternalServices(externalRows.map((row: Record<string, unknown>) => ({
             id: String(row.id),
             title: String(row.title ?? ''),
             provider_name: String(row.provider_name ?? 'External Provider'),
@@ -717,8 +724,7 @@ export default function ServicesPage() {
     return buildCountryOptions(counts)
   }, [services, externalServices])
 
-  const filtered = services
-    .map(s => {
+  const servicesWithDistance = services.map(s => {
       // Compute distance_km when both the user filter and the listing
       // have coordinates. Used for radius filtering + proximity sorting.
       if (
@@ -735,9 +741,11 @@ export default function ServicesPage() {
       }
       return s
     })
-    .filter(s => {
+
+  function serviceMatchesActiveFilters(s: Service, options: { includeCategory?: boolean } = {}) {
+      const includeCategory = options.includeCategory ?? true
       if (modeFilter !== 'all' && s.mode !== modeFilter && s.mode !== 'both') return false
-      if (activeCatId && s.categoryId !== activeCatId) return false
+      if (includeCategory && activeCatId && s.categoryId !== activeCatId) return false
       if (search && !s.title.toLowerCase().includes(search.toLowerCase()) && !s.desc.toLowerCase().includes(search.toLowerCase()) && !s.category.toLowerCase().includes(search.toLowerCase())) return false
       if (priceMin && s.price < Number(priceMin)) return false
       if (priceMax && s.price > Number(priceMax)) return false
@@ -749,24 +757,13 @@ export default function ServicesPage() {
         if (!s.is_remote && (s.distance_km == null || s.distance_km > searchRadiusKm)) return false
       }
       return true
-    })
-    .sort((a, b) => {
-      if (sort === 'price_asc') return a.price - b.price
-      if (sort === 'price_desc') return b.price - a.price
-      if (sort === 'rating') return b.rating - a.rating
-      // Default: when a location filter is active, sort local-first by distance.
-      if (filterLoc.latitude != null) {
-        const da = typeof a.distance_km === 'number' ? a.distance_km : Number.MAX_VALUE
-        const db = typeof b.distance_km === 'number' ? b.distance_km : Number.MAX_VALUE
-        return da - db
-      }
-      return 0
-    })
+  }
 
-  const filteredExternalForListings = externalServices.filter(item => {
+  function externalMatchesActiveFilters(item: ExternalService, options: { includeCategory?: boolean } = {}) {
+    const includeCategory = options.includeCategory ?? true
     const externalMode = modeFromExternalServiceType(item.service_type)
     if (modeFilter !== 'all' && externalMode !== modeFilter && externalMode !== 'both') return false
-    if (activeCatId && item.category !== activeCatId) return false
+    if (includeCategory && activeCatId && item.category !== activeCatId) return false
     if (search.trim()) {
       const haystack = `${item.title} ${item.provider_name} ${item.description ?? ''} ${item.category}`.toLowerCase()
       if (!haystack.includes(search.trim().toLowerCase())) return false
@@ -796,7 +793,24 @@ export default function ServicesPage() {
       }
     }
     return true
-  }).sort((a, b) => {
+  }
+
+  const filtered = servicesWithDistance
+    .filter(s => serviceMatchesActiveFilters(s))
+    .sort((a, b) => {
+      if (sort === 'price_asc') return a.price - b.price
+      if (sort === 'price_desc') return b.price - a.price
+      if (sort === 'rating') return b.rating - a.rating
+      // Default: when a location filter is active, sort local-first by distance.
+      if (filterLoc.latitude != null) {
+        const da = typeof a.distance_km === 'number' ? a.distance_km : Number.MAX_VALUE
+        const db = typeof b.distance_km === 'number' ? b.distance_km : Number.MAX_VALUE
+        return da - db
+      }
+      return 0
+    })
+
+  const filteredExternalForListings = externalServices.filter(item => externalMatchesActiveFilters(item)).sort((a, b) => {
     if (sort === 'rating') return (b.rating ?? 0) - (a.rating ?? 0)
     return (b.lead_count + b.click_count) - (a.lead_count + a.click_count)
   })
@@ -810,9 +824,19 @@ export default function ServicesPage() {
   const servicesHasMore = serviceDisplayLimit < mixedServices.length
 
   function categoryCount(categoryId: string) {
+    return servicesWithDistance.filter(s => s.categoryId === categoryId && serviceMatchesActiveFilters(s, { includeCategory: false })).length
+      + externalServices.filter(item => item.category === categoryId && externalMatchesActiveFilters(item, { includeCategory: false })).length
+  }
+
+  function rawCategoryCount(categoryId: string) {
     return services.filter(s => s.categoryId === categoryId).length
       + externalServices.filter(item => item.category === categoryId).length
   }
+
+  const activeCategory = activeCatId ? visibleCats.find(c => c.id === activeCatId) : null
+  const activeCategoryRawCount = activeCatId ? rawCategoryCount(activeCatId) : 0
+  const activeModeLabel = modeFilter === 'offline' ? 'local' : modeFilter === 'online' ? 'online' : null
+  const hasActiveModeMismatch = Boolean(activeCategory && activeModeLabel && activeCategoryRawCount > 0 && mixedServices.length === 0)
 
   const filteredExternalServices = externalServices.filter(item => {
     if (externalCategory !== 'all' && item.source_category !== externalCategory) return false
@@ -1326,11 +1350,17 @@ export default function ServicesPage() {
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
               <div style={{ fontSize: '40px', marginBottom: '12px' }}>🛠️</div>
               <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8', marginBottom: '6px' }}>
-                {services.length === 0 && externalServices.length === 0 ? 'No services loaded yet' : 'No services match your filters'}
+                {services.length === 0 && externalServices.length === 0
+                  ? 'No services loaded yet'
+                  : hasActiveModeMismatch && activeCategory && activeModeLabel
+                    ? `No ${activeModeLabel} services yet in ${activeCategory.label}`
+                    : 'No services match your filters'}
               </div>
               <div style={{ fontSize: '13px', marginBottom: '20px' }}>
                 {services.length === 0 && externalServices.length === 0
                   ? 'Be the first founding member to list your service!'
+                  : hasActiveModeMismatch && activeCategory && activeModeLabel
+                    ? `${activeCategoryRawCount} provider${activeCategoryRawCount !== 1 ? 's are' : ' is'} available in this category, but not under the current ${activeModeLabel} filter. Switch to All or clear filters.`
                   : 'Try adjusting your filters or search term'}
               </div>
               {services.length === 0 && externalServices.length === 0 && (
