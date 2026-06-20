@@ -3,6 +3,7 @@ export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { normalizeEventCategory } from '@/lib/events/categories'
 
 // GET /api/cron/sync-eventbrite
 // Runs daily at 03:00 UTC (see vercel.json).
@@ -13,7 +14,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 // Auth: Vercel Cron secret header.
 
 interface MappedRow {
-  creator_id: string; title: string; description: string | null; category: string | null
+  creator_id: string; title: string; description: string | null; category: string
   cover_image_url: string | null; tags: string[]; status: 'published'
   starts_at: string | null; ends_at: string | null; timezone: string; is_online: boolean
   venue_name: string | null; venue_address: string | null; meeting_url: null
@@ -143,7 +144,7 @@ export async function GET(req: NextRequest) {
       creator_id:      creatorId,
       title,
       description:     e.description?.text?.trim() || null,
-      category:        e.category?.short_name ?? e.category?.name ?? null,
+      category:        normalizeEventCategory(e.category?.short_name ?? e.category?.name ?? null, `${title} ${e.description?.text ?? ''}`),
       cover_image_url: e.logo?.url ?? e.logo?.original?.url ?? null,
       tags:            [] as string[],
       status:          'published' as const,

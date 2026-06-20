@@ -25,7 +25,7 @@ export async function GET() {
       .in('product_type', ['digital', 'physical'])
       .eq('status', 'active')
       .order('review_count', { ascending: false })
-      .limit(6)
+      .limit(8)
 
     if (error || !data) {
       return NextResponse.json([], { status: 200 })

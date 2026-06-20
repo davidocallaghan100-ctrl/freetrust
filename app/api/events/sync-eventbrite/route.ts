@@ -3,6 +3,7 @@ export const maxDuration = 60  // Eventbrite API + DB writes can take a while
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { normalizeEventCategory } from '@/lib/events/categories'
 
 // ────────────────────────────────────────────────────────────────────────────
 // POST /api/events/sync-eventbrite
@@ -210,7 +211,7 @@ function mapEvent(e: EventbriteEvent, creatorId: string): MappedEventRow | null 
     creator_id:       creatorId,
     title,
     description:      e.description?.text?.trim() || null,
-    category:         e.category?.short_name ?? e.category?.name ?? null,
+    category:         normalizeEventCategory(e.category?.short_name ?? e.category?.name ?? null, `${title} ${e.description?.text ?? ''}`),
     cover_image_url:  e.logo?.url ?? e.logo?.original?.url ?? null,
     tags:             [],
     status:           'published',

@@ -11,6 +11,7 @@ import { useCurrency, type CurrencyCode } from '@/context/CurrencyContext'
 import { EMPTY_LOCATION, haversineKm, type StructuredLocation, type RadiusValue } from '@/lib/geo'
 import { buildCountryOptions } from '@/lib/countries'
 import { eventPosterDataUri, isUsableEventImage, stripEventSourceAttribution } from '@/lib/events/display'
+import { EVENT_CATEGORIES, EVENT_CATEGORY_COLORS, EVENT_CATEGORY_GRADIENTS, normalizeEventCategory } from '@/lib/events/categories'
 
 type EventMode = 'online' | 'in-person'
 type TimeFilter = 'all' | 'this-week' | 'this-month'
@@ -47,32 +48,9 @@ interface EventItem {
   currency_code?: string | null
 }
 
-const CAT_COLORS: Record<string, string> = {
-  Community:    '#38bdf8', Business:    '#a78bfa', Technology:  '#34d399',
-  Design:       '#f472b6', Finance:     '#fbbf24', Sustainability: '#4ade80',
-  FreeTrust:    '#38bdf8', Health:      '#fb923c', Education:   '#a78bfa',
-  AI:           '#e879f9', Startup:     '#38bdf8', Marketing:   '#fb923c',
-  Web3:         '#818cf8', 'E-commerce':'#f59e0b',
-}
-
-const CAT_GRADIENTS: Record<string, string> = {
-  Community:    'linear-gradient(135deg,#0ea5e9,#0369a1)',
-  Business:     'linear-gradient(135deg,#7c3aed,#4c1d95)',
-  Technology:   'linear-gradient(135deg,#059669,#047857)',
-  Design:       'linear-gradient(135deg,#db2777,#9d174d)',
-  Finance:      'linear-gradient(135deg,#d97706,#92400e)',
-  Sustainability:'linear-gradient(135deg,#059669,#065f46)',
-  FreeTrust:    'linear-gradient(135deg,#0284c7,#1e40af)',
-  Health:       'linear-gradient(135deg,#ea580c,#c2410c)',
-  Education:    'linear-gradient(135deg,#7c3aed,#4338ca)',
-  AI:           'linear-gradient(135deg,#a855f7,#6d28d9)',
-  Startup:      'linear-gradient(135deg,#0284c7,#1e40af)',
-  Marketing:    'linear-gradient(135deg,#ea580c,#c2410c)',
-  Web3:         'linear-gradient(135deg,#4f46e5,#3730a3)',
-  'E-commerce': 'linear-gradient(135deg,#d97706,#b45309)',
-}
-
-const CATEGORIES = ['All', 'Startup', 'Technology', 'AI', 'Business', 'Design', 'Marketing', 'Web3', 'E-commerce', 'Sustainability', 'Community', 'Finance', 'Education', 'Health']
+const CAT_COLORS = EVENT_CATEGORY_COLORS
+const CAT_GRADIENTS = EVENT_CATEGORY_GRADIENTS
+const CATEGORIES = EVENT_CATEGORIES
 
 
 
@@ -319,7 +297,7 @@ export default function EventsPage() {
             price: typeof e.ticket_price === 'number' ? (e.ticket_price as number) : null,
             rsvpCount: Number(e.attendee_count ?? 0),
             description: stripEventSourceAttribution(String(e.description ?? '')),
-            category: (e.category as string | null | undefined) ?? 'Community',
+            category: normalizeEventCategory(e.category as string | null | undefined, `${e.title ?? ''} ${e.description ?? ''} ${e.organiser_name ?? ''}`),
             // Globalisation fields
             country:        (e.country as string | null | undefined) ?? null,
             city:           (e.city as string | null | undefined) ?? null,

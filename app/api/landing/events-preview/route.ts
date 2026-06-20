@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { REAL_EVENT_SOURCE_FILTER } from '@/lib/dataIntegrity'
 import { eventPosterDataUri, isUsableEventImage } from '@/lib/events/display'
+import { normalizeEventCategory } from '@/lib/events/categories'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,6 +31,7 @@ export async function GET(request: NextRequest) {
 
     const normalized = (data ?? []).map((event) => ({
       ...event,
+      category: normalizeEventCategory(event.category, event.title),
       cover_image_url: isUsableEventImage(event.cover_image_url)
         ? event.cover_image_url
         : eventPosterDataUri({

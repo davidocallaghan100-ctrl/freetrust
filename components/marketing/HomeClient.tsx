@@ -6,6 +6,7 @@ import { useCurrency } from '@/context/CurrencyContext'
 import FAQAccordion from '@/components/marketing/FAQAccordion'
 import { FAQS } from '@/lib/faq'
 import { eventPosterDataUri, isUsableEventImage } from '@/lib/events/display'
+import { EVENT_CATEGORY_COLORS, normalizeEventCategory } from '@/lib/events/categories'
 import ROICalculator from './ROICalculator'
 import HeroGlobe from './HeroGlobe'
 import LegalDocModal from '@/components/legal/LegalDocModal'
@@ -362,7 +363,7 @@ function LegacyTopDesign({
 export default function HomeClient({ initialCounts }: HomeClientProps) {
   const { format } = useCurrency()
   const [isLegalLibraryOpen, setIsLegalLibraryOpen] = useState(false)
-  const [marketplaceTab, setMarketplaceTab] = useState<'products' | 'jobs' | 'events'>('products')
+  const [marketplaceTab, setMarketplaceTab] = useState<'services' | 'products' | 'jobs' | 'events'>('services')
   const [stats, setStats] = useState<StatsData | null>(null)
   const [featuredServices, setFeaturedServices] = useState<FeaturedService[]>([])
   const [featuredProducts, setFeaturedProducts] = useState<FeaturedProduct[]>([])
@@ -403,15 +404,32 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
   const displaySpots = spotsRemaining > 0 && spotsRemaining < 100 ? spotsRemaining.toLocaleString() : 'Under 100'
   const liveListings = (featuredProducts.length + featuredServices.length + (homeEvents?.length ?? 0) + (homeJobs?.length ?? 0))
 
+  const serviceSlides = useMemo(() => {
+    const serviceCards = featuredServices.slice(0, 6).map(s => ({ type: 'service', title: s.title, subtitle: s.provider, price: format(s.price, s.currency as 'GBP' | 'EUR' | 'USD'), image: s.coverImage || screenshots.services, href: `/services/${s.id}`, badge: s.reviews > 0 ? `${s.rating.toFixed(1)}★ Trust Score` : 'Verified service' }))
+    if (serviceCards.length >= 6) return serviceCards
+    return [...serviceCards, ...[
+      { type: 'service', title: 'Local home repairs', subtitle: 'Verified providers', price: 'Book free', image: screenshots.services, href: '/services', badge: 'Local services' },
+      { type: 'service', title: 'Design & creative help', subtitle: 'Trusted freelancers', price: 'From €25', image: screenshots.services, href: '/services', badge: 'Remote-ready' },
+      { type: 'service', title: 'Business support', subtitle: 'Member providers', price: 'Get quotes', image: screenshots.services, href: '/services', badge: 'Trust protected' },
+      { type: 'service', title: 'Coaching & mentoring', subtitle: 'Community experts', price: 'Browse', image: screenshots.services, href: '/services', badge: '₮ eligible' },
+      { type: 'service', title: 'Events & hospitality', subtitle: 'Real local providers', price: 'Find help', image: screenshots.services, href: '/services', badge: 'Verified listings' },
+      { type: 'service', title: 'Tech support', subtitle: 'Online and local', price: 'Hire now', image: screenshots.services, href: '/services', badge: 'Trusted providers' },
+    ]].slice(0, 6)
+  }, [featuredServices, format])
+
   const productSlides = useMemo(() => {
-    const productCards = featuredProducts.slice(0, 4).map(p => ({ type: 'product', title: p.title, subtitle: p.seller, price: format(p.price, p.currency as 'GBP' | 'EUR' | 'USD'), image: p.coverImage || screenshots.products, href: `/products/${p.id}`, badge: p.reviews > 0 ? `${p.rating.toFixed(1)}★ Trust Score` : 'Verified listing' }))
-    if (productCards.length >= 4) return productCards
+    const productCards = featuredProducts.slice(0, 8).map(p => ({ type: 'product', title: p.title, subtitle: p.seller, price: format(p.price, p.currency as 'GBP' | 'EUR' | 'USD'), image: p.coverImage || screenshots.products, href: `/products/${p.id}`, badge: p.reviews > 0 ? `${p.rating.toFixed(1)}★ Trust Score` : 'Verified listing' }))
+    if (productCards.length >= 8) return productCards
     return [...productCards, ...[
       { type: 'product', title: 'Creator Studio Kit', subtitle: 'Verified seller', price: '€84.00', image: screenshots.products, href: '/products', badge: '4.9★ Trust Score' },
       { type: 'product', title: 'Sustainable Home Bundle', subtitle: 'Marketplace find', price: '€42.00', image: screenshots.products, href: '/products', badge: 'Verified listing' },
       { type: 'product', title: 'Remote Work Essentials', subtitle: 'Trusted seller', price: '€119.00', image: screenshots.products, href: '/products', badge: 'Trust protected' },
       { type: 'product', title: 'Creative Launch Pack', subtitle: 'Member listing', price: '€67.00', image: screenshots.products, href: '/products', badge: '₮ eligible' },
-    ]].slice(0, 4)
+      { type: 'product', title: 'Circular fashion finds', subtitle: 'Community marketplace', price: '€35.00', image: screenshots.products, href: '/products', badge: 'Verified seller' },
+      { type: 'product', title: 'Event gear bundle', subtitle: 'Trusted listing', price: '€96.00', image: screenshots.products, href: '/products', badge: 'Trust protected' },
+      { type: 'product', title: 'Eco office setup', subtitle: 'Marketplace find', price: '€58.00', image: screenshots.products, href: '/products', badge: '₮ eligible' },
+      { type: 'product', title: 'Local maker goods', subtitle: 'Member listing', price: '€24.00', image: screenshots.products, href: '/products', badge: 'Verified listing' },
+    ]].slice(0, 8)
   }, [featuredProducts, format])
 
   const jobPreviewCards = useMemo(() => (homeJobs ?? []).slice(0, 6).map(job => {
@@ -424,11 +442,11 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
   }), [homeJobs, format])
 
   const eventPreviewCards = useMemo(() => (homeEvents ?? []).slice(0, 6).map(ev => {
-    const cat = ev.category ?? 'Technology'
-    const catColor = CAT_COLORS_HOME[cat] ?? TEAL
+    const cat = normalizeEventCategory(ev.category, ev.title)
+    const catColor = EVENT_CATEGORY_COLORS[cat] ?? CAT_COLORS_HOME[cat] ?? TEAL
     const location = ev.is_online ? 'Online' : ev.venue_name || ev.location_label || [ev.city, ev.country].filter(Boolean).join(', ') || 'In person'
     const image = isUsableEventImage(ev.cover_image_url) ? ev.cover_image_url : eventPosterDataUri({ title: ev.title, category: ev.category, startsAt: ev.starts_at, location })
-    return { ...ev, location, image, catColor }
+    return { ...ev, category: cat, location, image, catColor }
   }), [homeEvents])
 
   return (
@@ -617,9 +635,10 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
 
       <section className="ft-section" style={{ background: 'linear-gradient(180deg,#0a0f1e,#081020)', borderBottom: '1px solid rgba(0,194,203,.08)' }}>
         <div className="ft-container">
-          <SectionHeader eyebrow="Live marketplace" title="Fresh products, jobs, and events — all in motion.">Real FreeTrust data stays in the landing page, upgraded with premium dark cards, teal trust indicators, and mobile-friendly horizontal discovery.</SectionHeader>
+          <SectionHeader eyebrow="Live marketplace" title="Fresh services, products, jobs, and events — all in motion.">Real FreeTrust data stays in the landing page, upgraded with premium dark cards, teal trust indicators, and mobile-friendly horizontal discovery.</SectionHeader>
           <div className="ft-market-tabs" style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 28, fontWeight: 850, color: '#cbd5e1', flexWrap: 'wrap' }}>
             {[
+              ['services', '🛠 Services'],
               ['products', '🛒 Products'],
               ['jobs', '💼 Jobs'],
               ['events', '📅 Events'],
@@ -630,7 +649,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
                   key={key}
                   type="button"
                   className="ft-market-tab"
-                  onClick={() => setMarketplaceTab(key as 'products' | 'jobs' | 'events')}
+                  onClick={() => setMarketplaceTab(key as 'services' | 'products' | 'jobs' | 'events')}
                   style={{
                     color: active ? '#041018' : '#cbd5e1',
                     background: active ? TEAL : 'rgba(15,23,42,.74)',
@@ -646,6 +665,28 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
               )
             })}
           </div>
+
+          {marketplaceTab === 'services' && (
+            <div className="ft-market-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 18 }}>
+              {serviceSlides.map(card => (
+                <Link className="ft-market-product-card ft-card-hover" key={`${card.type}-${card.title}`} href={card.href} style={{ minWidth: 0, textDecoration: 'none', background: 'linear-gradient(180deg,rgba(17,24,39,.96),rgba(8,16,32,.96))', border: '1px solid #1e293b', borderRadius: 24, overflow: 'hidden', color: '#fff', boxShadow: '0 22px 70px rgba(0,0,0,.22)' }}>
+                  <div style={{ height: 190, position: 'relative', background: 'linear-gradient(135deg,#0e7490,#1e293b 55%,#111827)', overflow: 'hidden' }}>
+                    {card.image && <img src={card.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transform: 'scale(1.02)' }} />}
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(5,10,20,.02),rgba(5,10,20,.72))' }} />
+                    <span style={{ position: 'absolute', left: 14, top: 14, display: 'inline-flex', padding: '7px 10px', borderRadius: 999, background: 'rgba(4,16,24,.72)', color: '#aafaff', fontSize: 12, fontWeight: 900, border: '1px solid rgba(127,247,255,.22)', backdropFilter: 'blur(10px)' }}>{card.badge}</span>
+                    <strong style={{ position: 'absolute', left: 14, right: 14, bottom: 14, fontSize: 20, lineHeight: 1.12, letterSpacing: '-0.03em' }}>{card.title}</strong>
+                  </div>
+                  <div style={{ padding: 18 }}>
+                    <p style={{ color: SLATE, fontSize: 13, minHeight: 36, margin: 0, lineHeight: 1.45 }}>{card.subtitle}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 16 }}>
+                      <span style={{ color: '#fff', fontWeight: 950, fontSize: 18 }}>{card.price}</span>
+                      <span style={{ color: TEAL, fontWeight: 900, fontSize: 13 }}>Open →</span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
 
           {marketplaceTab === 'products' && (
             <div className="ft-market-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 18 }}>
