@@ -159,14 +159,6 @@ export default function RootLayout({
           </>
         )}
 
-        {/* Skimlinks — required for publisher approval and affiliate attribution. */}
-        {process.env.NEXT_PUBLIC_SKIMLINKS_PUBLISHER_ID && (
-          <Script
-            id="skimlinks-publisher-script"
-            src={`https://s.skimresources.com/js/${process.env.NEXT_PUBLIC_SKIMLINKS_PUBLISHER_ID}.skimlinks.js`}
-            strategy="afterInteractive"
-          />
-        )}
       </body>
     </html>
   );

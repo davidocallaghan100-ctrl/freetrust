@@ -1,5 +1,3 @@
-const SKIMLINKS_PUBLISHER_ID = process.env.NEXT_PUBLIC_SKIMLINKS_PUBLISHER_ID
-
 /**
  * Removes legacy FreeTrust referral UTM parameters that earlier catalogue
  * refreshes stored in retailer URLs. This preserves the raw retailer URL while
@@ -28,22 +26,19 @@ export function stripFreetrustReferralParams(rawUrl: string): string {
 }
 
 /**
- * Converts any retailer URL into a Skimlinks affiliate tracking URL.
- * FreeTrust earns commission automatically when users purchase via this link.
- * Format: https://go.skimresources.com?id={PUBLISHER_ID}&url={encoded_url}
+ * Returns the compliant outbound retailer URL for external product clicks.
+ *
+ * Skimlinks rejected FreeTrust's publisher application, so product referral
+ * clicks must not be routed through Skimlinks. Keep this helper in place so the
+ * product flow and click-logging call sites stay stable while returning clean
+ * raw retailer URLs.
  */
 export function toAffiliateUrl(rawUrl: string): string {
-  const cleanUrl = stripFreetrustReferralParams(rawUrl)
-  if (!SKIMLINKS_PUBLISHER_ID || !cleanUrl) return cleanUrl
-  if (cleanUrl.includes('skimresources.com') || cleanUrl.includes('skimlinks.com')) return cleanUrl
-  if (cleanUrl.includes('freetrust.co')) return cleanUrl
-
-  const encodedUrl = encodeURIComponent(cleanUrl)
-  return `https://go.skimresources.com?id=${SKIMLINKS_PUBLISHER_ID}&url=${encodedUrl}`
+  return stripFreetrustReferralParams(rawUrl)
 }
 
 export function isAffiliateTrackingEnabled(): boolean {
-  return Boolean(SKIMLINKS_PUBLISHER_ID)
+  return false
 }
 
 export function getDomainFromUrl(url: string): string {
@@ -53,11 +48,4 @@ export function getDomainFromUrl(url: string): string {
   } catch {
     return url
   }
-}
-
-if (typeof window === 'undefined' && !SKIMLINKS_PUBLISHER_ID) {
-  console.warn(
-    '[FreeTrust] NEXT_PUBLIC_SKIMLINKS_PUBLISHER_ID is not set. ' +
-    'Affiliate links will fall back to raw retailer URLs.'
-  )
 }
