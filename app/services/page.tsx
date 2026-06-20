@@ -482,10 +482,6 @@ export default function ServicesPage() {
   const [enquiryMessage, setEnquiryMessage] = useState('')
   const [enquiryLoading, setEnquiryLoading] = useState(false)
 
-  // Collapsible sidebar sections — persisted to localStorage
-  const [onlineOpen, setOnlineOpen] = useState(true)
-  const [offlineOpen, setOfflineOpen] = useState(true)
-
   useEffect(() => {
     setExternalDisplayLimit(SERVICES_INITIAL_DISPLAY)
   }, [activeTab, externalCategory, externalSearch])
@@ -525,28 +521,6 @@ export default function ServicesPage() {
     const found = [...ONLINE_CATEGORIES, ...OFFLINE_CATEGORIES].some(cat => cat.id === c)
     if (found) setActiveCatId(c)
   }, [])
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('ft_sidebar_state')
-      if (saved) {
-        const { onlineOpen: o, offlineOpen: f } = JSON.parse(saved)
-        if (typeof o === 'boolean') setOnlineOpen(o)
-        if (typeof f === 'boolean') setOfflineOpen(f)
-      }
-    } catch { /* ignore */ }
-  }, [])
-
-  function toggleOnline() {
-    const next = !onlineOpen
-    setOnlineOpen(next)
-    try { localStorage.setItem('ft_sidebar_state', JSON.stringify({ onlineOpen: next, offlineOpen })) } catch { /* ignore */ }
-  }
-  function toggleOffline() {
-    const next = !offlineOpen
-    setOfflineOpen(next)
-    try { localStorage.setItem('ft_sidebar_state', JSON.stringify({ onlineOpen, offlineOpen: next })) } catch { /* ignore */ }
-  }
 
   // Load current user
   useEffect(() => {
@@ -721,18 +695,12 @@ export default function ServicesPage() {
   }, [])
 
   // Filter & sort
-  const allOnlineCats = ONLINE_CATEGORIES
-  const allOfflineCats = OFFLINE_CATEGORIES
-  const sortedOnlineCats = useMemo(() => [...allOnlineCats].sort((a, b) => a.label.localeCompare(b.label)), [allOnlineCats])
-  const sortedOfflineCats = useMemo(() => [...allOfflineCats].sort((a, b) => a.label.localeCompare(b.label)), [allOfflineCats])
-  const mobileCategoryCats = useMemo(() => {
-    const online = sortedOnlineCats.map(cat => ({ ...cat, serviceKind: 'online' as const }))
-    const local = sortedOfflineCats.map(cat => ({ ...cat, serviceKind: 'local' as const }))
-    if (modeFilter === 'online') return online
-    if (modeFilter === 'offline') return local
-    return [...online, ...local].sort((a, b) => a.label.localeCompare(b.label))
-  }, [modeFilter, sortedOfflineCats, sortedOnlineCats])
-  const visibleCats = modeFilter === 'online' ? sortedOnlineCats : modeFilter === 'offline' ? sortedOfflineCats : [...sortedOnlineCats, ...sortedOfflineCats]
+  const sortedServiceCats = useMemo(
+    () => [...ALL_SERVICE_CATEGORIES].sort((a, b) => a.label.localeCompare(b.label)),
+    []
+  )
+  const mobileCategoryCats = sortedServiceCats
+  const visibleCats = sortedServiceCats
 
   // Country options merged with the global ISO 3166-1 list — most-used
   // first, then the rest of the world. Same pattern as products page.
@@ -857,9 +825,6 @@ export default function ServicesPage() {
 
   const visibleExternalServices = filteredExternalServices.slice(0, externalDisplayLimit)
   const externalHasMore = externalDisplayLimit < filteredExternalServices.length
-
-  const onlineServiceCount = ONLINE_CATEGORIES.reduce((sum, cat) => sum + categoryCount(cat.id), 0)
-  const localServiceCount = OFFLINE_CATEGORIES.reduce((sum, cat) => sum + categoryCount(cat.id), 0)
 
   async function requireAuth(redirectPath: string) {
     if (userId) return true
@@ -1187,7 +1152,7 @@ export default function ServicesPage() {
             {/* Mode toggle */}
             <div style={{ display: 'flex', gap: '4px', background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '3px' }}>
               {([['all','🌐 All'], ['online','💻 Online'], ['offline','📍 Local']] as [string, string][]).map(([val, lbl]) => (
-                <button key={val} onClick={() => { setModeFilter(val as 'all'|'online'|'offline'); setActiveCatId(null) }}
+                <button key={val} onClick={() => setModeFilter(val as 'all'|'online'|'offline')}
                   style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: modeFilter === val ? 700 : 400, fontFamily: 'inherit', background: modeFilter === val ? '#38bdf8' : 'transparent', color: modeFilter === val ? '#0f172a' : '#64748b', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
                   {lbl}
                 </button>
@@ -1208,11 +1173,10 @@ export default function ServicesPage() {
             >
               <option value="">✦ All Services ({mixedServices.length})</option>
               {mobileCategoryCats.map(cat => {
-                const isOnline = cat.serviceKind === 'online'
                 const count = categoryCount(cat.id)
                 return (
-                  <option key={`${cat.serviceKind}-${cat.id}`} value={cat.id}>
-                    {cat.icon} {cat.label} · {isOnline ? 'Online' : 'Local'}{count > 0 ? ` (${count})` : ''}
+                  <option key={cat.id} value={cat.id}>
+                    {cat.icon} {cat.label}{count > 0 ? ` (${count})` : ''}
                   </option>
                 )
               })}
@@ -1248,63 +1212,23 @@ export default function ServicesPage() {
               <span>✦ All Services</span>
               <span style={{ fontSize: '11px', color: '#475569' }}>{mixedServices.length}</span>
             </button>
-            {/* Online section */}
-            {(modeFilter === 'all' || modeFilter === 'online') && (
-              <>
-                <button
-                  onClick={toggleOnline}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '9px 14px', background: '#0f172a', border: 'none', borderTop: '1px solid #334155', cursor: 'pointer', fontFamily: 'inherit' }}
-                >
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>💻 Online Services</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: '10px', color: '#475569', fontWeight: 800 }}>{onlineServiceCount.toLocaleString()}</span>
-                    <span style={{ fontSize: '13px', color: '#475569', transition: 'transform 0.2s', display: 'inline-block', transform: onlineOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▾</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '9px 14px', background: '#0f172a', borderTop: '1px solid #334155' }}>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Categories A–Z</span>
+              <span style={{ fontSize: '10px', color: '#475569', fontWeight: 800 }}>{sortedServiceCats.length}</span>
+            </div>
+            {sortedServiceCats.map(cat => {
+              const count = categoryCount(cat.id)
+              return (
+                <button key={cat.id} className="cat-btn" onClick={() => setActiveCatId(activeCatId === cat.id ? null : cat.id)}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 14px 8px 18px', background: activeCatId === cat.id ? 'rgba(56,189,248,0.1)' : 'transparent', border: 'none', borderLeft: activeCatId === cat.id ? '3px solid #38bdf8' : '3px solid transparent', color: activeCatId === cat.id ? '#38bdf8' : '#94a3b8', fontSize: '12px', fontWeight: activeCatId === cat.id ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
+                    <span>{cat.icon}</span>
+                    <span>{cat.label}</span>
                   </span>
+                  {count > 0 && <span style={{ fontSize: '10px', color: '#475569', flexShrink: 0 }}>{count}</span>}
                 </button>
-                {onlineOpen && sortedOnlineCats.map(cat => {
-                  const count = categoryCount(cat.id)
-                  return (
-                    <button key={cat.id} className="cat-btn" onClick={() => setActiveCatId(activeCatId === cat.id ? null : cat.id)}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 14px 8px 18px', background: activeCatId === cat.id ? 'rgba(56,189,248,0.1)' : 'transparent', border: 'none', borderLeft: activeCatId === cat.id ? '3px solid #38bdf8' : '3px solid transparent', color: activeCatId === cat.id ? '#38bdf8' : '#94a3b8', fontSize: '12px', fontWeight: activeCatId === cat.id ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
-                        <span>{cat.icon}</span>
-                        <span>{cat.label}</span>
-                      </span>
-                      {count > 0 && <span style={{ fontSize: '10px', color: '#475569', flexShrink: 0 }}>{count}</span>}
-                    </button>
-                  )
-                })}
-              </>
-            )}
-
-            {/* Offline section */}
-            {(modeFilter === 'all' || modeFilter === 'offline') && (
-              <>
-                <button
-                  onClick={toggleOffline}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '9px 14px', background: '#0f172a', border: 'none', borderTop: '1px solid #334155', cursor: 'pointer', fontFamily: 'inherit' }}
-                >
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>📍 Local Services</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: '10px', color: '#475569', fontWeight: 800 }}>{localServiceCount.toLocaleString()}</span>
-                    <span style={{ fontSize: '13px', color: '#475569', transition: 'transform 0.2s', display: 'inline-block', transform: offlineOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▾</span>
-                  </span>
-                </button>
-                {offlineOpen && sortedOfflineCats.map(cat => {
-                  const count = categoryCount(cat.id)
-                  return (
-                    <button key={cat.id} className="cat-btn" onClick={() => setActiveCatId(activeCatId === cat.id ? null : cat.id)}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 14px 8px 18px', background: activeCatId === cat.id ? 'rgba(52,211,153,0.1)' : 'transparent', border: 'none', borderLeft: activeCatId === cat.id ? '3px solid #34d399' : '3px solid transparent', color: activeCatId === cat.id ? '#34d399' : '#94a3b8', fontSize: '12px', fontWeight: activeCatId === cat.id ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
-                        <span>{cat.icon}</span>
-                        <span>{cat.label}</span>
-                      </span>
-                      {count > 0 && <span style={{ fontSize: '10px', color: '#475569', flexShrink: 0 }}>{count}</span>}
-                    </button>
-                  )
-                })}
-              </>
-            )}
+              )
+            })}
           </div>
 
           {/* Post a service CTA */}
@@ -1330,13 +1254,12 @@ export default function ServicesPage() {
             </button>
             {mobileCategoryCats.map(cat => {
               const active = activeCatId === cat.id
-              const isOnline = cat.serviceKind === 'online'
-              const accent = isOnline ? '#38bdf8' : '#34d399'
-              const tint = isOnline ? 'rgba(56,189,248,0.12)' : 'rgba(52,211,153,0.12)'
+              const accent = '#38bdf8'
+              const tint = 'rgba(56,189,248,0.12)'
               const count = categoryCount(cat.id)
               return (
                 <button
-                  key={`${cat.serviceKind}-${cat.id}`}
+                  key={cat.id}
                   onClick={() => setActiveCatId(active ? null : cat.id)}
                   style={{
                     padding: '8px 14px', borderRadius: 999, whiteSpace: 'nowrap', flexShrink: 0,
@@ -1346,18 +1269,10 @@ export default function ServicesPage() {
                     cursor: 'pointer', fontWeight: active ? 800 : 700, fontSize: 13, fontFamily: 'inherit', minHeight: 44,
                     display: 'inline-flex', alignItems: 'center', gap: 7,
                   }}
-                  title={`${cat.label} · ${isOnline ? 'Online service' : 'Local service'}`}
+                  title={cat.label}
                 >
                   <span>{cat.icon}</span>
                   <span>{cat.label}</span>
-                  <span style={{
-                    fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em',
-                    color: accent, border: `1px solid ${isOnline ? 'rgba(56,189,248,0.28)' : 'rgba(52,211,153,0.28)'}`,
-                    background: isOnline ? 'rgba(56,189,248,0.08)' : 'rgba(52,211,153,0.08)',
-                    borderRadius: 999, padding: '2px 6px',
-                  }}>
-                    {isOnline ? 'Online' : 'Local'}
-                  </span>
                   {count > 0 && <span style={{ color: '#64748b', fontSize: 11 }}>{count}</span>}
                 </button>
               )
