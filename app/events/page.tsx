@@ -37,6 +37,8 @@ interface EventItem {
   is_platform_curated?: boolean
   external_url?: string | null
   meeting_url?: string | null
+  external_source?: string | null
+  hasPhysicalVenue?: boolean
   cover_image_url?: string | null
   imageGradient?: string
   // Globalisation fields
@@ -53,6 +55,34 @@ interface EventItem {
 const CAT_COLORS = EVENT_CATEGORY_COLORS
 const CAT_GRADIENTS = EVENT_CATEGORY_GRADIENTS
 const CATEGORIES = EVENT_CATEGORIES
+
+function canonicalEventKey(ev: EventItem) {
+  const normalise = (value: string | null | undefined) => (value ?? '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+  const normaliseTitle = (value: string | null | undefined) => normalise(value)
+    .replace(/\b(premium priced seats?|premium seats?|official platinum|vip|early entry|accessible|ticket package|package|presale)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const dateKey = ev.date.toISOString().slice(0, 10)
+  const placeKey = normalise(ev.location_label ?? ev.location ?? ev.city ?? ev.country ?? '')
+  return `${normaliseTitle(ev.title)}|${placeKey}|${dateKey}`
+}
+
+function dedupeEventCards(events: EventItem[]) {
+  const seen = new Set<string>()
+  const out: EventItem[] = []
+  for (const ev of events) {
+    const key = canonicalEventKey(ev)
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(ev)
+  }
+  return out
+}
 
 
 
@@ -92,7 +122,7 @@ function EventCard({ ev, onAttend }: { ev: EventItem; onAttend: (ev: EventItem) 
     : (ev.price ? `Buy · ${currencyFormat(ev.price_eur ?? ev.price, (ev.currency_code ?? 'EUR') as CurrencyCode)}` : 'RSVP Free')
 
   return (
-    <Link href={`/events/${ev.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', minWidth: 0, maxWidth: '100%' }}>
+    <div onClick={() => { window.location.href = `/events/${ev.id}` }} role="link" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') window.location.href = `/events/${ev.id}` }} style={{ textDecoration: 'none', color: 'inherit', display: 'block', minWidth: 0, maxWidth: '100%' }}>
     <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer', height: '100%', minWidth: 0, maxWidth: '100%' }}
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 8px 32px rgba(56,189,248,0.15)' }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
@@ -215,7 +245,7 @@ function EventCard({ ev, onAttend }: { ev: EventItem; onAttend: (ev: EventItem) 
         </div>
       </div>
     </div>
-    </Link>
+    </div>
   )
 }
 
@@ -259,12 +289,12 @@ export default function EventsPage() {
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
         const { data, error } = await supabase
           .from('events')
-          .select('id, title, description, starts_at, ends_at, is_online, meeting_url, attendee_count, is_paid, ticket_price, ticket_price_eur, currency_code, country, region, city, latitude, longitude, location_label, venue_name, category, organiser_name, is_platform_curated, external_url, cover_image_url')
+          .select('id, title, description, starts_at, ends_at, is_online, meeting_url, attendee_count, is_paid, ticket_price, ticket_price_eur, currency_code, country, region, city, latitude, longitude, location_label, venue_name, venue_address, category, organiser_name, is_platform_curated, external_source, external_url, cover_image_url')
           .eq('status', 'published')
           .or(REAL_EVENT_SOURCE_FILTER)
           .or(`starts_at.is.null,starts_at.gte.${oneDayAgo}`)
           .order('starts_at', { ascending: true, nullsFirst: false })
-          .limit(200)
+          .limit(500)
         if (error) {
           // Surface the real Supabase error so schema mismatches, RLS
           // denials, and missing columns are debuggable in the browser
@@ -275,7 +305,15 @@ export default function EventsPage() {
           return
         }
         if (data) {
-          setDbEvents(data.map((e: Record<string, unknown>) => ({
+          setDbEvents(data.map((e: Record<string, unknown>) => {
+            const hasPhysicalVenue = Boolean(
+              e.is_online ||
+              e.location_label ||
+              e.venue_name ||
+              e.venue_address ||
+              (typeof e.latitude === 'number' && typeof e.longitude === 'number')
+            )
+            return ({
             id: String(e.id),
             title: String(e.title ?? ''),
             date: new Date(String(e.starts_at ?? Date.now())),
@@ -287,7 +325,7 @@ export default function EventsPage() {
             description: stripEventSourceAttribution(String(e.description ?? '')),
             category: normalizeEventCategory(e.category as string | null | undefined, `${e.title ?? ''} ${e.description ?? ''} ${e.organiser_name ?? ''}`),
             // Globalisation fields
-            country:        (e.country as string | null | undefined) ?? null,
+            country:        ((e.country as string | null | undefined) ?? null)?.toUpperCase() ?? null,
             city:           (e.city as string | null | undefined) ?? null,
             latitude:       typeof e.latitude  === 'number' ? (e.latitude as number)  : null,
             longitude:      typeof e.longitude === 'number' ? (e.longitude as number) : null,
@@ -296,10 +334,12 @@ export default function EventsPage() {
             currency_code:       (e.currency_code as string | null | undefined) ?? null,
             organiser:           (e.is_platform_curated ? null : (e.organiser_name as string | null | undefined)) ?? undefined,
             is_platform_curated: (e.is_platform_curated as boolean | undefined) ?? false,
+            external_source:     (e.external_source as string | null | undefined) ?? null,
             external_url:        (e.external_url as string | null | undefined) ?? null,
             meeting_url:         (e.meeting_url as string | null | undefined) ?? null,
+            hasPhysicalVenue,
             cover_image_url:     (e.cover_image_url as string | null | undefined) ?? null,
-          })))
+          })}))
         } else {
           setDbEvents([])
         }
@@ -316,7 +356,11 @@ export default function EventsPage() {
     load()
   }, [])
 
-  const events = dbEvents ?? []
+  const events = useMemo(() => dedupeEventCards((dbEvents ?? []).filter(ev => {
+    if (ev.mode !== 'online' && ev.hasPhysicalVenue === false) return false
+    if (ev.external_source === 'ticketmaster' && /\btest\b/i.test(`${ev.title} ${ev.location_label ?? ev.location ?? ''}`)) return false
+    return true
+  })), [dbEvents])
 
   // Country options merged with the global ISO 3166-1 reference list so
   // users can browse events worldwide, not just countries already in the
@@ -367,7 +411,14 @@ export default function EventsPage() {
         const db = typeof b.distance_km === 'number' ? b.distance_km : Number.MAX_VALUE
         return da - db
       })
-    : filtered
+    : [...filtered].sort((a, b) => {
+        if (!countryFilter && modeFilter === 'all') {
+          const aIrelandInPerson = a.mode === 'in-person' && a.country === 'IE'
+          const bIrelandInPerson = b.mode === 'in-person' && b.country === 'IE'
+          if (aIrelandInPerson !== bIrelandInPerson) return aIrelandInPerson ? -1 : 1
+        }
+        return a.date.getTime() - b.date.getTime()
+      })
 
   // Events shaped for the Leaflet map component
   const mapEvents: MapEvent[] = sorted.map(ev => ({
@@ -393,7 +444,7 @@ export default function EventsPage() {
     const detailPath = `/events/${ev.id}`
     if (!(await requireAuth(detailPath))) return
     if (outboundUrl) {
-      window.open(outboundUrl, '_blank', 'noopener,noreferrer')
+      window.location.assign(outboundUrl)
       return
     }
 

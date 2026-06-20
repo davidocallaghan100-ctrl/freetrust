@@ -170,7 +170,7 @@ export default function EventDetailPage() {
   const openExternalEventUrl = useCallback(async (url: string) => {
     const detailPath = `/events/${id}`
     if (!(await requireAuth(detailPath))) return
-    window.open(url, '_blank', 'noopener,noreferrer')
+    window.location.assign(url)
   }, [id, requireAuth])
 
   const handleRsvp = useCallback(async () => {

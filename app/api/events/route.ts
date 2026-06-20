@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { awardTrust } from '@/lib/trust/award'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 import { REAL_EVENT_SOURCE_FILTER } from '@/lib/dataIntegrity'
+import { dedupeEventsForDisplay } from '@/lib/events/dedupe'
 
 // ── API key auth for external event ingestion ────────────────────────────────
 //
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ events })
+    return NextResponse.json({ events: dedupeEventsForDisplay(events as Array<Record<string, unknown>>) })
   } catch (err) {
     console.error('[GET /api/events]', err)
     return NextResponse.json({ events: [] })

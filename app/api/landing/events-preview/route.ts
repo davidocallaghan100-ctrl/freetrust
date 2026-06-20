@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { REAL_EVENT_SOURCE_FILTER } from '@/lib/dataIntegrity'
 import { eventPosterDataUri, isUsableEventImage } from '@/lib/events/display'
+import { dedupeEventsForDisplay } from '@/lib/events/dedupe'
 import { normalizeEventCategory } from '@/lib/events/categories'
 
 export const dynamic = 'force-dynamic'
@@ -22,14 +23,14 @@ export async function GET(request: NextRequest) {
       .or(REAL_EVENT_SOURCE_FILTER)
       .gte('starts_at', after)
       .order('starts_at', { ascending: true })
-      .limit(limit)
+      .limit(limit * 4)
 
     if (error) {
       console.error('[landing/events-preview]', error)
       return NextResponse.json([], { status: 200 })
     }
 
-    const normalized = (data ?? []).map((event) => ({
+    const normalized = dedupeEventsForDisplay((data ?? []).map((event) => ({
       ...event,
       category: normalizeEventCategory(event.category, event.title),
       cover_image_url: isUsableEventImage(event.cover_image_url)
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
             startsAt: event.starts_at,
             location: event.venue_name ?? event.location_label ?? [event.city, event.country].filter(Boolean).join(', '),
           }),
-    }))
+    }))).slice(0, limit)
 
     return NextResponse.json(normalized, {
       headers: { 'Cache-Control': 'no-store, max-age=0' },
