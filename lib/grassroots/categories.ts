@@ -31,6 +31,9 @@ export const GRASSROOTS_CATEGORIES: readonly GrassrootsCategory[] = [
   { slug: 'labour',       label: 'General Labour',         emoji: '🏗️', blurb: 'Sites, demolition, prep work' },
   { slug: 'childcare',    label: 'Childcare & Babysitting',emoji: '👶', blurb: 'Occasional or regular care' },
   { slug: 'elder_care',   label: 'Elder Care & Companionship', emoji: '🧓', blurb: 'Home visits, companionship' },
+  { slug: 'charity_services', label: 'Charity Services', emoji: '🤝', blurb: 'Non-profits, volunteer support, community help' },
+  { slug: 'mental_health', label: 'Mental Health', emoji: '🧠', blurb: 'Counselling, therapy, wellbeing support' },
+  { slug: 'personal_training', label: 'Personal Training', emoji: '🏋️', blurb: 'PT, gyms, fitness coaching, strength work' },
   { slug: 'fishing',      label: 'Fishing & Aquaculture',  emoji: '🎣', blurb: 'Boats, nets, hatcheries' },
   { slug: 'tutoring',     label: 'Local Tutoring & Teaching', emoji: '📚', blurb: 'In-person lessons, homework' },
   { slug: 'home_repairs', label: 'Home Repairs & Maintenance', emoji: '🔨', blurb: 'Fixes, odd jobs, touch-ups' },
@@ -69,6 +72,7 @@ export const GRASSROOTS_CATEGORIES: readonly GrassrootsCategory[] = [
 // controls such as Gardening & Landscaping / Landscaping & Gardening.
 export const GRASSROOTS_CATEGORY_ALIASES: Readonly<Record<string, string>> = Object.freeze({
   gardening: 'landscaping-gardening',
+  moving: 'moving-services',
 })
 
 export function normalizeGrassrootsCategorySlug(slug: string | null | undefined): string | null {
@@ -101,17 +105,20 @@ export const GRASSROOTS_SERVICE_CATEGORY_IDS = [
 export type GrassrootsServiceCategoryId = typeof GRASSROOTS_SERVICE_CATEGORY_IDS[number]
 
 export const GRASSROOTS_SERVICE_CATEGORY_SOURCE_IDS: Readonly<Record<string, readonly string[]>> = Object.freeze({
-  farming: ['community-services', 'home-garden', 'landscaping-gardening'],
-  delivery: ['transport-delivery', 'moving-services', 'taxi-drivers'],
+  farming: [],
+  delivery: ['transport-delivery', 'taxi-drivers'],
   trades: ['trades-construction', 'builders-construction', 'plumbing', 'electrical', 'handyman'],
-  gardening: ['landscaping-gardening', 'home-garden'],
+  gardening: ['landscaping-gardening'],
   cleaning: ['cleaning', 'home-garden'],
   hospitality: ['food-catering', 'events-entertainment'],
   animal_care: ['pet-services'],
-  labour: ['trades-construction', 'builders-construction', 'handyman', 'community-services'],
+  labour: ['trades-construction', 'builders-construction', 'handyman'],
   childcare: ['childcare-education'],
   elder_care: ['elder-care', 'disability-care'],
-  fishing: ['community-services', 'transport-delivery'],
+  charity_services: ['community-services'],
+  mental_health: ['health-wellness'],
+  personal_training: ['sports-fitness-coaching', 'health-wellness'],
+  fishing: [],
   tutoring: ['education-tutoring', 'coaching-mentoring', 'childcare-education'],
   home_repairs: ['home-garden', 'handyman', 'trades-construction'],
   plumbing: ['plumbing'],
@@ -121,38 +128,104 @@ export const GRASSROOTS_SERVICE_CATEGORY_SOURCE_IDS: Readonly<Record<string, rea
   'builders-construction': ['builders-construction', 'trades-construction'],
   'carpentry-joinery': ['carpentry-joinery', 'trades-construction'],
   'painting-decorating': ['painting-decorating'],
-  'landscaping-gardening': ['landscaping-gardening', 'home-garden'],
+  'landscaping-gardening': ['landscaping-gardening'],
   'flooring-tiling': ['flooring-tiling', 'trades-construction'],
   handyman: ['handyman', 'home-garden'],
   'pest-control': ['pest-control'],
   'renewable-energy': ['renewable-energy', 'energy-services'],
-  'moving-services': ['moving-services', 'transport-delivery'],
+  'moving-services': ['moving-services'],
   'professional-property-services': ['professional-property-services'],
-  moving: ['moving-services', 'transport-delivery'],
-  events_help: ['events-entertainment', 'community-services'],
+  moving: ['moving-services'],
+  events_help: ['events-entertainment'],
   driving_instruction: ['driving-instructors', 'taxi-drivers'],
-  sports_coaching: ['sports-fitness-coaching', 'health-wellness'],
+  sports_coaching: ['sports-fitness-coaching'],
   music_lessons: ['music-arts-tuition', 'music-audio'],
   car_valeting: ['vehicle-services'],
   mechanic_services: ['vehicle-services'],
   security_installation: ['home-security'],
   disability_support: ['disability-care', 'elder-care'],
   photography_local: ['photography-editing', 'events-entertainment'],
-  language_support: ['translation-interpretation', 'education-tutoring'],
-  beauty_mobile: ['beauty-personal-care', 'health-wellness'],
+  language_support: ['translation-interpretation'],
+  beauty_mobile: ['beauty-personal-care'],
   it_support_local: ['development-tech'],
-  boat_water: ['transport-delivery', 'taxi-drivers'],
+  boat_water: [],
 })
+
+const GRASSROOTS_CATEGORY_TEXT_MATCHERS: Readonly<Record<string, readonly RegExp[]>> = Object.freeze({
+  charity_services: [
+    /\bcharit(?:y|ies)\b/i,
+    /\bnon[-\s]?profit\b/i,
+    /\bngo\b/i,
+    /\bfoundation\b/i,
+    /\bvolunteer(?:ing)?\b/i,
+    /\bcommunity support\b/i,
+    /\bsocial enterprise\b/i,
+    /\bmigrant(?:s)?\b/i,
+    /\brefugee(?:s)?\b/i,
+  ],
+  mental_health: [
+    /\bmental health\b/i,
+    /\bcounsell?ing\b/i,
+    /\bcounsell?or\b/i,
+    /\bpsychotherap(?:y|ist)\b/i,
+    /\bpsycholog(?:y|ist)\b/i,
+    /\btherap(?:y|ist)\b/i,
+    /\bwellbeing\b/i,
+    /\bmindfulness\b/i,
+    /\banxiety\b/i,
+    /\bdepression\b/i,
+    /\baddiction\b/i,
+  ],
+  personal_training: [
+    /\bpersonal train(?:er|ing)\b/i,
+    /\bfitness coach(?:ing)?\b/i,
+    /\bstrength (?:coach|training)\b/i,
+    /\bweight loss\b/i,
+    /\bgym\b/i,
+    /\bpilates\b/i,
+    /\byoga\b/i,
+    /\bbootcamp\b/i,
+  ],
+  sports_coaching: [
+    /\bsports? coach(?:ing)?\b/i,
+    /\bgaa\b/i,
+    /\bfootball\b/i,
+    /\bsoccer\b/i,
+    /\brugby\b/i,
+    /\bswimm(?:ing|er)\b/i,
+    /\bathletics?\b/i,
+    /\bmartial arts?\b/i,
+    /\bboxing\b/i,
+    /\btennis\b/i,
+    /\bbasketball\b/i,
+    /\byouth sport\b/i,
+  ],
+  language_support: [
+    /\btranslat(?:e|ion|or)\b/i,
+    /\binterpret(?:er|ing|ation)\b/i,
+    /\blanguage support\b/i,
+    /\blanguage services?\b/i,
+    /\blocali[sz]ation\b/i,
+    /\bcertified translation\b/i,
+  ],
+})
+
+function grassrootsCategoryMatchesText(categorySlug: string, haystack: string): boolean {
+  const matchers = GRASSROOTS_CATEGORY_TEXT_MATCHERS[categorySlug]
+  if (!matchers || matchers.length === 0) return true
+  return matchers.some(re => re.test(haystack))
+}
 
 export const GRASSROOTS_SERVICE_SOURCE_CATEGORY_IDS = Array.from(
   new Set(Object.values(GRASSROOTS_SERVICE_CATEGORY_SOURCE_IDS).flat())
 ) as readonly string[]
 
-export function grassrootsCategoriesForServiceSource(sourceCategoryId: string | null | undefined): string[] {
+export function grassrootsCategoriesForServiceSource(sourceCategoryId: string | null | undefined, haystack = ''): string[] {
   if (!sourceCategoryId) return []
   return Array.from(new Set(Object.entries(GRASSROOTS_SERVICE_CATEGORY_SOURCE_IDS)
     .filter(([, sourceIds]) => sourceIds.includes(sourceCategoryId))
-    .map(([grassrootsCategoryId]) => normalizeGrassrootsCategorySlug(grassrootsCategoryId) ?? grassrootsCategoryId)))
+    .map(([grassrootsCategoryId]) => normalizeGrassrootsCategorySlug(grassrootsCategoryId) ?? grassrootsCategoryId)
+    .filter(grassrootsCategoryId => grassrootsCategoryMatchesText(grassrootsCategoryId, haystack))))
 }
 
 /** O(1) lookup by slug. Built once at module load. */

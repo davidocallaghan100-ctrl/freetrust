@@ -89,7 +89,13 @@ function toNumberOrNull(value: unknown): number | null {
 function mapServiceRowToGrassroots(row: Record<string, unknown>): Listing[] {
   const sourceCategory = normaliseServiceSourceCategoryId(row.category_id)
   if (!sourceCategory) return []
-  const categories = grassrootsCategoriesForServiceSource(sourceCategory)
+  const categories = grassrootsCategoriesForServiceSource(sourceCategory, [
+    row.title,
+    row.description,
+    row.category,
+    row.category_id,
+    (row.seller as Poster | null | undefined)?.full_name,
+  ].filter(Boolean).join(' '))
   if (categories.length === 0) return []
   const seller = row.seller as Poster | null | undefined
   const id = String(row.id ?? '')
@@ -129,7 +135,13 @@ function mapServiceRowToGrassroots(row: Record<string, unknown>): Listing[] {
 function mapExternalServiceRowToGrassroots(row: Record<string, unknown>): Listing[] {
   const sourceCategory = normaliseServiceSourceCategoryId(row.freetrust_category_id ?? row.category)
   if (!sourceCategory) return []
-  const categories = grassrootsCategoriesForServiceSource(sourceCategory)
+  const categories = grassrootsCategoriesForServiceSource(sourceCategory, [
+    row.title,
+    row.provider_name,
+    row.description,
+    row.category,
+    row.freetrust_category_id,
+  ].filter(Boolean).join(' '))
   if (categories.length === 0) return []
   const id = String(row.id ?? '')
   const title = String(row.title ?? '').trim()
@@ -266,18 +278,25 @@ export default function GrassrootsBrowsePage() {
           return (payload?.services ?? []).flatMap(mapServiceRowToGrassroots)
         })
 
-      const externalPromise = supabase
-        .from('external_service_listings')
-        .select('id, title, provider_name, provider_url, description, category, freetrust_category_id, service_type, price_display, rating, review_count, location, country, city, latitude, longitude, location_label, thumbnail, source, awin_merchant_id, awin_deeplink, is_awin, click_count, lead_count')
-        .in('freetrust_category_id', [...GRASSROOTS_SERVICE_SOURCE_CATEGORY_IDS])
-        .order('is_awin', { ascending: false })
-        .order('click_count', { ascending: false })
-        .order('last_refreshed_at', { ascending: false })
-        .limit(1200)
-        .then(({ data, error }) => {
+      const externalPromise = (async () => {
+        const rows: Record<string, unknown>[] = []
+        const pageSize = 1000
+        for (let from = 0; ; from += pageSize) {
+          const { data, error } = await supabase
+            .from('external_service_listings')
+            .select('id, title, provider_name, provider_url, description, category, freetrust_category_id, service_type, price_display, rating, review_count, location, country, city, latitude, longitude, location_label, thumbnail, source, awin_merchant_id, awin_deeplink, is_awin, click_count, lead_count')
+            .in('freetrust_category_id', [...GRASSROOTS_SERVICE_SOURCE_CATEGORY_IDS])
+            .order('is_awin', { ascending: false })
+            .order('click_count', { ascending: false })
+            .order('last_refreshed_at', { ascending: false })
+            .range(from, from + pageSize - 1)
+
           if (error) throw error
-          return ((data ?? []) as Record<string, unknown>[]).flatMap(mapExternalServiceRowToGrassroots)
-        })
+          rows.push(...((data ?? []) as Record<string, unknown>[]))
+          if (!data || data.length < pageSize) break
+        }
+        return rows.flatMap(mapExternalServiceRowToGrassroots)
+      })()
 
       const [realGrassroots, communityServices, externalServices] = await Promise.all([
         realGrassrootsPromise,
