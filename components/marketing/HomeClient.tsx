@@ -109,6 +109,46 @@ const FEATURE_CARDS = [
   { icon: '₮', title: 'Trust Coin', desc: 'Earn Trust Coin (₮) for every verified transaction, review, and contribution. Spend it to reduce fees, boost listings, and unlock platform benefits.' },
 ]
 
+const FOOTER_VISION_COPY = {
+  problem: [
+    'The internet has a trust crisis and it is costing people everything.',
+    'Global online scam losses exceeded $1.026 trillion in 2023, according to the Global Anti Scam Alliance. One in four people worldwide was targeted by an online fraud attempt. In Ireland alone, reported fraud losses climbed past €85 million in 2024. Behind every statistic is a person, often a small business owner, a freelancer, a first time buyer, who extended trust, and was burned.',
+    'The digital economy promised access. What it delivered, for too many, was exposure.',
+    'Platforms that were built to connect people became vectors for exploitation. Fake reviews, phantom sellers, impersonation scams, ghost contractors, the information asymmetry Nobel economist George Akerlof described in his landmark “Market for Lemons” theory has metastasised into every corner of online commerce. When buyers cannot distinguish the trustworthy from the fraudulent, they pay a premium for fear, and honest sellers are driven out.',
+    'FreeTrust was born from this wound. Our founder was defrauded by a developer who disappeared with the source code of an entire platform. That loss became a question: what would commerce look like if trust was not a risk you had to absorb alone?',
+  ],
+  vision: [
+    'A world where every exchange of skills, goods, time, and value is grounded in verified trust, and where the economy rewards those who contribute to it.',
+    'We believe trust is not a luxury feature. It is the foundation on which every market must be built. We envision a future where the independent worker, the local maker, the social enterprise, and the conscious consumer are the central players in a circular economy, not the margin case that larger platforms tolerate.',
+    'FreeTrust is building that future: a verified community marketplace where reputation is earned, identity is confirmed, and value flows back to the people who create it.',
+  ],
+}
+
+const FOOTER_MISSION_COMMITMENTS = [
+  {
+    title: 'Trust by Default',
+    body: 'Every FreeTrust member is identity verified. Every transaction is backed by a reputation system built on real history, not anonymous ratings. We do not just reduce fraud, we make trust the baseline expectation, not the exception.',
+  },
+  {
+    title: 'A Community Economy Built for People',
+    body: 'FreeTrust is not a platform that extracts value from its members. It is a community that generates it together. Through our Trust Coin (₮) internal currency, members earn, spend, and circulate value within the ecosystem. Founding Members, capped at 1,000, hold lifetime preferential terms, because the people who build something deserve to benefit from it.',
+  },
+  {
+    title: 'Impact as a First Class Category',
+    body: 'Commerce does not have to be neutral. Every transaction on FreeTrust carries the potential to do more than exchange value, it can fund impact. Our Impact Fund channels contributions toward causes that address inequality at its roots. When you buy, sell, or earn on FreeTrust, you participate in an economy that knows what it stands for.',
+  },
+  {
+    title: 'A Circular Economy, Not an Extractive One',
+    body: 'The dominant platforms of the last two decades were built on a simple model: aggregate supply, capture demand, extract fees, repeat. FreeTrust is built on a different model. Value generated within the community stays within the community. Trust earned is trust rewarded. The economy we are building is not a funnel, it is a cycle.',
+  },
+]
+
+const FOOTER_MISSION_COPY = {
+  mission: 'FreeTrust’s mission is to rebuild online commerce around verified identity, community accountability, and a circular economy that puts impact, not just profit, at its core.',
+  audience: 'FreeTrust is for the independent worker who was ghosted on payment. The buyer who received nothing after paying. The small business that built five star service but could not prove it to the next customer. The social enterprise that could not find a marketplace that shared its values. We are for the people the internet was supposed to liberate and too often failed.',
+  world: 'When trust becomes infrastructure, commerce changes. Verified sellers win on merit. Buyers make decisions with confidence. Local and independent businesses compete on a level field. Impact is measured, not just mentioned. And the circular flow of value, skills, goods, time, currency, reputation, strengthens the community it moves through, rather than draining it.',
+}
+
 const CAT_COLORS_HOME: Record<string, string> = {
   Technology: '#34d399', Startup: '#38bdf8', AI: '#e879f9', Business: '#a78bfa', Design: '#f472b6', Marketing: '#fb923c', Web3: '#818cf8', 'E-commerce': '#f59e0b', Sustainability: '#4ade80',
 }
@@ -363,6 +403,7 @@ function LegacyTopDesign({
 export default function HomeClient({ initialCounts }: HomeClientProps) {
   const { format } = useCurrency()
   const [isLegalLibraryOpen, setIsLegalLibraryOpen] = useState(false)
+  const [footerStory, setFooterStory] = useState<'vision' | 'mission' | null>(null)
   const [marketplaceTab, setMarketplaceTab] = useState<'services' | 'products' | 'jobs' | 'events'>('services')
   const [stats, setStats] = useState<StatsData | null>(null)
   const [featuredServices, setFeaturedServices] = useState<FeaturedService[]>([])
@@ -471,6 +512,14 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
         .ft-hscroll::-webkit-scrollbar { display:none; }
         .ticker-track { display:flex; animation:ticker-scroll 42s linear infinite; white-space:nowrap; width:max-content; }
         .ticker-track:hover { animation-play-state:paused; }
+        .ft-footer-link-button { color: #cbd5e1; text-decoration: none; font-weight: 750; border: 0; background: transparent; padding: 0; text-align: left; font: inherit; cursor: pointer; }
+        .ft-footer-link-button:hover, .ft-footer-link-button.is-active { color: #00c2cb; }
+        .ft-footer-story-body { margin-top: 24px; border: 1px solid rgba(45,212,191,.14); border-radius: 18px; background: linear-gradient(145deg, rgba(17,24,39,.94), rgba(8,16,32,.82)); padding: 22px; color: #cbd5e1; font-size: 14px; line-height: 1.72; }
+        .ft-footer-story-body h4 { margin: 22px 0 10px; color: #7ff7ff; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+        .ft-footer-story-body h4:first-child { margin-top: 0; }
+        .ft-footer-story-body p { margin: 0 0 14px; }
+        .ft-footer-story-body ol { margin: 0; padding-left: 1.15rem; display: grid; gap: 12px; }
+        .ft-footer-story-body li strong { color: #fff; display: block; margin-bottom: 4px; }
         @media (max-width: 900px) {
           .ft-hero-grid, .ft-showcase-row, .ft-showcase-row-alt, .ft-banner-inner, .ft-footer-grid { grid-template-columns: 1fr !important; }
           .ft-hero-copy { text-align:left !important; }
@@ -519,6 +568,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           .ft-score-row { grid-template-columns:1fr !important; text-align:center; }
           .ft-factor-grid { grid-template-columns:1fr !important; }
           .ft-footer-links { grid-template-columns:1fr 1fr !important; }
+          .ft-footer-story-body { padding: 20px; }
           .ft-legacy-stat-grid, .ft-trust-econ-top-grid { grid-template-columns: 1fr !important; }
         }
         @media (max-width: 480px) {
@@ -796,9 +846,45 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
       <footer style={{ background: '#060b16', borderTop: '1px solid #111827' }}>
         <div className="ft-container ft-footer-grid" style={{ paddingTop: 48, paddingBottom: 44, display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 34, color: SLATE }}>
           <div><div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#fff', fontWeight: 900, fontSize: 24 }}><img src="/icons/freetrust-mark-perfect-transparent-20260521.png" alt="" style={{ width: 38, height: 38 }} />FreeTrust</div><p style={{ lineHeight: 1.7 }}>Buy. Sell. Connect. Trust. A safer community economy powered by verified reputation.</p><button type="button" onClick={() => setIsLegalLibraryOpen(true)} style={{ color: '#99f6e4', background: 'rgba(45,212,191,.06)', border: '1px solid rgba(45,212,191,.24)', borderRadius: 999, minHeight: 44, padding: '0.65rem 1.15rem', fontSize: 14, fontWeight: 850, font: 'inherit', cursor: 'pointer' }}>Legal</button></div>
-          <div className="ft-footer-links" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
-            {[['Services','/services'],['Products','/products'],['Events','/events'],['Articles','/articles'],['Impact','/impact'],['Trust & Safety','/safety'],['Privacy Policy','/privacy'],['Terms of Service','/terms'],['Join free','/register']].map(([label, href]) => <Link key={href} href={href} style={{ color: label === 'Join free' ? TEAL : '#cbd5e1', textDecoration: 'none', fontWeight: 750 }}>{label}</Link>)}
+          <div>
+          <div className="ft-footer-links" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12 }}>
+            {[['Services','/services'],['Products','/products'],['Events','/events'],['Articles','/articles'],['Impact','/impact'],['Trust & Safety','/safety'],['Privacy Policy','/privacy'],['Terms of Service','/terms']].map(([label, href]) => <Link key={href} href={href} style={{ color: '#cbd5e1', textDecoration: 'none', fontWeight: 750 }}>{label}</Link>)}
+            <button type="button" className={`ft-footer-link-button${footerStory === 'vision' ? ' is-active' : ''}`} onClick={() => setFooterStory(footerStory === 'vision' ? null : 'vision')} aria-expanded={footerStory === 'vision'}>Vision</button>
+            <button type="button" className={`ft-footer-link-button${footerStory === 'mission' ? ' is-active' : ''}`} onClick={() => setFooterStory(footerStory === 'mission' ? null : 'mission')} aria-expanded={footerStory === 'mission'}>Mission</button>
+            <Link href="/register" style={{ color: TEAL, textDecoration: 'none', fontWeight: 750 }}>Join free</Link>
             <span style={{ color: '#64748b' }}>Instagram</span><span style={{ color: '#64748b' }}>X</span><span style={{ color: '#64748b' }}>LinkedIn</span>
+          </div>
+            {footerStory === 'vision' && (
+              <div className="ft-footer-story-body">
+                <h4>Vision</h4>
+                <h4>The problem we exist to solve</h4>
+                {FOOTER_VISION_COPY.problem.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
+                <h4>Our vision</h4>
+                {FOOTER_VISION_COPY.vision.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
+              </div>
+            )}
+            {footerStory === 'mission' && (
+              <div className="ft-footer-story-body">
+                <h4>Mission</h4>
+                <h4>Our mission</h4>
+                <p>{FOOTER_MISSION_COPY.mission}</p>
+                <p>We do this through four commitments:</p>
+                <ol>
+                  {FOOTER_MISSION_COMMITMENTS.map(commitment => (
+                    <li key={commitment.title}>
+                      <strong>{commitment.title}</strong>
+                      <span>{commitment.body}</span>
+                    </li>
+                  ))}
+                </ol>
+                <h4>Who we are for</h4>
+                <p>{FOOTER_MISSION_COPY.audience}</p>
+                <h4>The world we are building</h4>
+                <p>{FOOTER_MISSION_COPY.world}</p>
+                <p><strong style={{ color: '#fff' }}>This is not idealism. This is the architecture of a better market.</strong></p>
+                <p style={{ color: '#7ff7ff', fontWeight: 900 }}>FreeTrust. Built on trust. Built for people.</p>
+              </div>
+            )}
           </div>
         </div>
         <div style={{ textAlign: 'center', color: '#475569', fontSize: 12, padding: '0 22px 24px' }}>© 2026 FreeTrust · Payments stay inside FreeTrust · Trust-based commerce for a safer internet.</div>
