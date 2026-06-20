@@ -1,19 +1,23 @@
 'use client'
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import LocationFilter from '@/components/location/LocationFilter'
 import LocationBadge from '@/components/location/LocationBadge'
 import PriceDisplay from '@/components/currency/PriceDisplay'
 import SocialLinks, { type SocialUrls } from '@/components/social/SocialLinks'
-import { EMPTY_LOCATION, type StructuredLocation, type RadiusValue } from '@/lib/geo'
+import { EMPTY_LOCATION, haversineKm, type StructuredLocation, type RadiusValue } from '@/lib/geo'
 import { buildCountryOptions } from '@/lib/countries'
 import type { CurrencyCode } from '@/context/CurrencyContext'
 import {
   GRASSROOTS_CATEGORIES,
   GRASSROOTS_CATEGORIES_BY_SLUG,
+  GRASSROOTS_SERVICE_SOURCE_CATEGORY_IDS,
   AVAILABILITY_BY_VALUE,
   RATE_TYPE_OPTIONS,
   GRASSROOTS_GREEN,
+  grassrootsCategoriesForServiceSource,
 } from '@/lib/grassroots/categories'
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -55,6 +59,12 @@ interface Listing {
   status: string
   distance_km?: number | null
   poster?: Poster | null
+  source?: 'grassroots' | 'service' | 'external_service'
+  href?: string
+  external_service_id?: string | null
+  price_display?: string | null
+  rating?: number | null
+  review_count?: number | null
 }
 
 type ListingTypeFilter = 'offering' | 'seeking'
@@ -62,6 +72,132 @@ type SortKey = 'nearest' | 'recent' | 'rate_low'
 
 const GRASSROOTS_INITIAL_DISPLAY = 12
 const GRASSROOTS_LOAD_MORE_BATCH = 12
+const GRASSROOTS_SERVICE_SOURCE_CATEGORY_SET = new Set<string>(GRASSROOTS_SERVICE_SOURCE_CATEGORY_IDS)
+
+function normaliseServiceSourceCategoryId(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  return GRASSROOTS_SERVICE_SOURCE_CATEGORY_SET.has(value) ? value : null
+}
+
+function toNumberOrNull(value: unknown): number | null {
+  if (value == null) return null
+  const n = Number(value)
+  return Number.isFinite(n) ? n : null
+}
+
+function mapServiceRowToGrassroots(row: Record<string, unknown>): Listing[] {
+  const sourceCategory = normaliseServiceSourceCategoryId(row.category_id)
+  if (!sourceCategory) return []
+  const categories = grassrootsCategoriesForServiceSource(sourceCategory)
+  if (categories.length === 0) return []
+  const seller = row.seller as Poster | null | undefined
+  const id = String(row.id ?? '')
+  const title = String(row.title ?? '').trim()
+  if (!id || !title) return []
+  const cover = typeof row.cover_image === 'string' && row.cover_image ? row.cover_image : null
+  const price = toNumberOrNull(row.price)
+  const currency = String(row.currency_code ?? row.currency ?? 'EUR').toUpperCase()
+  return categories.map(category => ({
+    id: `service-${category}-${id}`,
+    created_at: typeof row.created_at === 'string' ? row.created_at : new Date(0).toISOString(),
+    title,
+    description: typeof row.description === 'string' ? row.description : null,
+    category,
+    listing_type: 'offering',
+    rate: price,
+    rate_type: price != null ? 'fixed' : 'negotiable',
+    currency_code: currency,
+    rate_eur: toNumberOrNull(row.price_eur) ?? (currency === 'EUR' ? price : null),
+    availability: 'flexible',
+    photos: cover ? [cover] : [],
+    country: typeof row.country === 'string' ? row.country.toUpperCase() : null,
+    city: typeof row.city === 'string' ? row.city : null,
+    latitude: toNumberOrNull(row.latitude),
+    longitude: toNumberOrNull(row.longitude),
+    location_label: typeof row.location_label === 'string' ? row.location_label : (typeof row.location === 'string' ? row.location : null),
+    trust_tokens_accepted: false,
+    status: 'active',
+    poster: seller ?? null,
+    source: 'service',
+    href: `/services/${encodeURIComponent(id)}`,
+    rating: toNumberOrNull(row.avg_rating),
+    review_count: toNumberOrNull(row.review_count),
+  }))
+}
+
+function mapExternalServiceRowToGrassroots(row: Record<string, unknown>): Listing[] {
+  const sourceCategory = normaliseServiceSourceCategoryId(row.freetrust_category_id ?? row.category)
+  if (!sourceCategory) return []
+  const categories = grassrootsCategoriesForServiceSource(sourceCategory)
+  if (categories.length === 0) return []
+  const id = String(row.id ?? '')
+  const title = String(row.title ?? '').trim()
+  const providerName = String(row.provider_name ?? 'External Provider').trim()
+  const providerUrl = String(row.provider_url ?? '').trim()
+  const awinDeeplink = typeof row.awin_deeplink === 'string' && row.awin_deeplink ? row.awin_deeplink : null
+  if (!id || !title || !providerUrl) return []
+  const thumbnail = typeof row.thumbnail === 'string' && row.thumbnail ? row.thumbnail : null
+  return categories.map(category => ({
+    id: `external-service-${category}-${id}`,
+    created_at: new Date(0).toISOString(),
+    title,
+    description: typeof row.description === 'string' ? row.description : null,
+    category,
+    listing_type: 'offering',
+    rate: null,
+    rate_type: 'negotiable',
+    currency_code: 'EUR',
+    rate_eur: null,
+    availability: 'flexible',
+    photos: thumbnail ? [thumbnail] : [],
+    country: typeof row.country === 'string' ? row.country.toUpperCase() : null,
+    city: typeof row.city === 'string' ? row.city : null,
+    latitude: toNumberOrNull(row.latitude),
+    longitude: toNumberOrNull(row.longitude),
+    location_label: typeof row.location_label === 'string' ? row.location_label : (typeof row.location === 'string' ? row.location : null),
+    trust_tokens_accepted: false,
+    status: 'active',
+    poster: { full_name: providerName, website_url: providerUrl },
+    source: 'external_service',
+    href: awinDeeplink ?? providerUrl,
+    external_service_id: id,
+    price_display: typeof row.price_display === 'string' ? row.price_display : null,
+    rating: toNumberOrNull(row.rating),
+    review_count: toNumberOrNull(row.review_count),
+  }))
+}
+
+function applyGrassrootsBrowseFilters(
+  rows: Listing[],
+  countryFilter: string | null,
+  filterLoc: StructuredLocation,
+  radiusKm: RadiusValue
+): Listing[] {
+  const country = countryFilter?.toUpperCase() ?? null
+  return rows
+    .map(row => {
+      if (
+        filterLoc.latitude != null && filterLoc.longitude != null &&
+        row.latitude != null && row.longitude != null
+      ) {
+        return {
+          ...row,
+          distance_km: haversineKm(
+            { latitude: filterLoc.latitude, longitude: filterLoc.longitude },
+            { latitude: row.latitude, longitude: row.longitude }
+          ),
+        }
+      }
+      return row
+    })
+    .filter(row => {
+      if (country && row.country !== country) return false
+      if (radiusKm > 0 && filterLoc.latitude != null && filterLoc.longitude != null) {
+        if (row.distance_km == null || row.distance_km > radiusKm) return false
+      }
+      return true
+    })
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 // Page
@@ -104,13 +240,52 @@ export default function GrassrootsBrowsePage() {
         params.set('lng', String(filterLoc.longitude))
         if (radiusKm > 0) params.set('radius_km', String(radiusKm))
       }
-      const res = await fetch(`/api/grassroots?${params.toString()}`, { cache: 'no-store' })
-      if (res.ok) {
-        const { listings: data } = await res.json() as { listings: Listing[] }
-        setListings(data ?? [])
-      } else {
-        setListings([])
+      const realGrassrootsPromise = fetch(`/api/grassroots?${params.toString()}`, { cache: 'no-store' })
+        .then(async res => {
+          if (!res.ok) return [] as Listing[]
+          const { listings: data } = await res.json() as { listings: Listing[] }
+          return (data ?? []).map(row => ({ ...row, source: 'grassroots' as const, href: `/grassroots/${row.id}` }))
+        })
+
+      if (listingType === 'seeking') {
+        setListings(await realGrassrootsPromise)
+        return
       }
+
+      const supabase = createClient()
+      const servicesPromise = fetch('/api/services/marketplace', { cache: 'no-store' })
+        .then(async res => {
+          if (!res.ok) return [] as Listing[]
+          const payload = await res.json().catch(() => null) as { services?: Record<string, unknown>[] } | null
+          return (payload?.services ?? []).flatMap(mapServiceRowToGrassroots)
+        })
+
+      const externalPromise = supabase
+        .from('external_service_listings')
+        .select('id, title, provider_name, provider_url, description, category, freetrust_category_id, service_type, price_display, rating, review_count, location, country, city, latitude, longitude, location_label, thumbnail, source, awin_merchant_id, awin_deeplink, is_awin, click_count, lead_count')
+        .in('freetrust_category_id', [...GRASSROOTS_SERVICE_SOURCE_CATEGORY_IDS])
+        .order('is_awin', { ascending: false })
+        .order('click_count', { ascending: false })
+        .order('last_refreshed_at', { ascending: false })
+        .limit(1200)
+        .then(({ data, error }) => {
+          if (error) throw error
+          return ((data ?? []) as Record<string, unknown>[]).flatMap(mapExternalServiceRowToGrassroots)
+        })
+
+      const [realGrassroots, communityServices, externalServices] = await Promise.all([
+        realGrassrootsPromise,
+        servicesPromise,
+        externalPromise,
+      ])
+
+      const serviceRows = applyGrassrootsBrowseFilters(
+        [...communityServices, ...externalServices],
+        countryFilter,
+        filterLoc,
+        radiusKm
+      )
+      setListings([...realGrassroots, ...serviceRows])
     } catch {
       setListings([])
     } finally {
@@ -140,13 +315,11 @@ export default function GrassrootsBrowsePage() {
   }, [listings])
 
   const visibleCategories = useMemo(() => {
-    // Once listings exist, keep the sidebar focused on categories that
-    // actually have Grassroots rows for the current listing type/location
-    // filters. On an empty marketplace, show the full catalogue so users
-    // still understand what they can post.
-    if (listings.length === 0) return GRASSROOTS_CATEGORIES
-    return GRASSROOTS_CATEGORIES.filter(cat => (categoryCounts.get(cat.slug) ?? 0) > 0)
-  }, [categoryCounts, listings.length])
+    // Always keep the full Grassroots catalogue visible so users can browse
+    // or post into the trade/property categories even when a category has no
+    // currently matching rows under the active filters.
+    return GRASSROOTS_CATEGORIES
+  }, [])
 
   const sortedVisibleCategories = useMemo(
     () => [...visibleCategories].sort((a, b) => a.label.localeCompare(b.label)),
@@ -253,19 +426,6 @@ export default function GrassrootsBrowsePage() {
             }}>
               + Post Work
             </Link>
-          </div>
-
-          <div style={{
-            background: GRASSROOTS_GREEN.tint,
-            border: `1px solid ${GRASSROOTS_GREEN.borderSoft}`,
-            borderRadius: 12,
-            padding: '12px 14px',
-            marginBottom: 16,
-            color: '#94a3b8',
-            fontSize: 13,
-            lineHeight: 1.55,
-          }}>
-            <strong style={{ color: '#dcfce7' }}>Grassroots</strong> is separate from Services Marketplace. Use it for hands-on local work like farming, delivery, cleaning, care, trades, moving, events help, and community support.
           </div>
 
           {/* Offering / Seeking toggle */}
@@ -394,6 +554,26 @@ export default function GrassrootsBrowsePage() {
               />
             </div>
             <select
+              aria-label="All Grassroots categories"
+              value={activeCategory ?? ''}
+              onChange={e => setActiveCategory(e.target.value || null)}
+              style={{
+                flex: '1 1 220px', minWidth: 210, background: '#1e293b', border: '1px solid #334155', borderRadius: 10,
+                padding: '9px 12px', fontSize: 16, color: activeCategory ? GRASSROOTS_GREEN.primary : '#94a3b8',
+                fontFamily: 'inherit', cursor: 'pointer', fontWeight: 700,
+              }}
+            >
+              <option value="">🌱 All Grassroots categories</option>
+              {sortedVisibleCategories.map(cat => {
+                const count = categoryCounts.get(cat.slug) ?? 0
+                return (
+                  <option key={cat.slug} value={cat.slug}>
+                    {cat.emoji} {cat.label}{count > 0 ? ` (${count})` : ''}
+                  </option>
+                )
+              })}
+            </select>
+            <select
               value={sort}
               onChange={e => setSort(e.target.value as SortKey)}
               style={{
@@ -488,17 +668,19 @@ export default function GrassrootsBrowsePage() {
             }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 74, height: 74, borderRadius: '50%', background: GRASSROOTS_GREEN.tint, border: `1px solid ${GRASSROOTS_GREEN.border}`, fontSize: '2.6rem', marginBottom: '0.9rem' }}>🌱</div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, background: '#0f172a', border: '1px solid #334155', color: '#64748b', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
-                0 live Grassroots listings
+                No matches yet
               </div>
               <h2 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#f1f5f9', margin: '0 0 0.55rem' }}>
                 {activeCategory || countryFilter || filterLoc.latitude != null || search
                   ? 'No Grassroots listings match these filters yet'
-                  : 'No Grassroots listings are live yet'}
+                  : listingType === 'seeking' ? 'No requests posted yet' : 'No matches loaded yet'}
               </h2>
               <p style={{ color: '#94a3b8', marginBottom: '1.4rem', fontSize: '0.93rem', lineHeight: 1.6, maxWidth: 470, margin: '0 auto 1.4rem' }}>
                 {activeCategory || countryFilter || filterLoc.latitude != null || search
-                  ? 'Clear a filter or post the first Grassroots listing for this category. This section is separate from Services Marketplace and only shows real Grassroots posts.'
-                  : 'Grassroots is for local hands-on help — not packaged professional services. Once community members post real work here, cards will appear in this section.'}
+                  ? 'Clear a filter or post the first Grassroots listing for this category.'
+                  : listingType === 'seeking'
+                    ? 'Switch to Offering work to browse available local services, or post the first request for help.'
+                    : 'Try refreshing or changing the filters to load available local services.'}
               </p>
               <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <Link href="/grassroots/new" style={{
@@ -524,7 +706,7 @@ export default function GrassrootsBrowsePage() {
                 )}
               </div>
               <div style={{ marginTop: 14, fontSize: 11, color: '#475569' }}>
-                Real-data-only: no sample or fake Grassroots cards are shown.
+                Showing real FreeTrust listings and providers only.
               </div>
             </div>
           ) : (
@@ -550,6 +732,7 @@ export default function GrassrootsBrowsePage() {
 // ────────────────────────────────────────────────────────────────────────────
 
 function ListingCard({ listing: l }: { listing: Listing }) {
+  const router = useRouter()
   const cat = GRASSROOTS_CATEGORIES_BY_SLUG[l.category]
   const avail = AVAILABILITY_BY_VALUE[l.availability]
   const rateLabel = RATE_TYPE_OPTIONS.find(r => r.value === l.rate_type)?.suffix ?? ''
@@ -565,10 +748,47 @@ function ListingCard({ listing: l }: { listing: Listing }) {
   } : undefined
   const name = l.poster?.full_name ?? 'FreeTrust member'
   const initials = name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+  const href = l.href ?? `/grassroots/${l.id}`
+  const isExternalHref = href.startsWith('http://') || href.startsWith('https://')
+  const sourceLabel = l.source === 'service' ? 'FreeTrust Service' : l.source === 'external_service' ? 'Provider' : null
+
+  async function handleCardClick(event: React.MouseEvent<HTMLAnchorElement>) {
+    if (l.source === 'grassroots' || !l.source) return
+    event.preventDefault()
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const redirectPath = l.source === 'external_service' ? '/services' : href
+    if (!user) {
+      router.push(`/login?redirect=${encodeURIComponent(redirectPath)}`)
+      return
+    }
+    if (l.source === 'external_service') {
+      window.open(href, '_blank', 'noopener,noreferrer')
+      void recordExternalClick()
+      return
+    }
+    router.push(href)
+  }
+
+  async function recordExternalClick() {
+    if (!l.external_service_id) return
+    try {
+      await fetch('/api/external-services/click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serviceId: l.external_service_id }),
+      })
+    } catch {
+      // Non-blocking: the provider link should still open.
+    }
+  }
 
   return (
     <Link
-      href={`/grassroots/${l.id}`}
+      href={href}
+      target={isExternalHref ? '_blank' : undefined}
+      rel={isExternalHref ? 'noopener noreferrer' : undefined}
+      onClick={handleCardClick}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -602,6 +822,22 @@ function ListingCard({ listing: l }: { listing: Listing }) {
             alt={l.title}
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
+        )}
+        {sourceLabel && (
+          <span style={{
+            position: 'absolute', bottom: 10, right: 10,
+            background: 'rgba(15,23,42,0.88)',
+            border: '1px solid rgba(148,163,184,0.24)',
+            color: '#cbd5e1',
+            borderRadius: 999,
+            padding: '3px 10px',
+            fontSize: 10,
+            fontWeight: 800,
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+          }}>
+            {sourceLabel}
+          </span>
         )}
         {/* Category badge top-left */}
         {cat && (
@@ -720,7 +956,11 @@ function ListingCard({ listing: l }: { listing: Listing }) {
           marginTop: 'auto', paddingTop: 8,
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-            {l.rate != null && l.rate_type !== 'negotiable' ? (
+            {l.price_display ? (
+              <span style={{ fontSize: 13, fontWeight: 800, color: GRASSROOTS_GREEN.primary }}>
+                {l.price_display}
+              </span>
+            ) : l.rate != null && l.rate_type !== 'negotiable' ? (
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
                 <PriceDisplay
                   amountEur={l.rate_eur ?? l.rate}
@@ -762,7 +1002,7 @@ function ListingCard({ listing: l }: { listing: Listing }) {
             fontWeight: 700,
             color: GRASSROOTS_GREEN.primary,
           }}>
-            View →
+            {l.source === 'external_service' ? 'Visit →' : 'View →'}
           </span>
         </div>
       </div>

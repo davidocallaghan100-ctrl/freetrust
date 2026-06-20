@@ -25,7 +25,7 @@ import {
 //
 // Six-step linear wizard:
 //   1. Listing type     — offering vs seeking work
-//   2. Category         — pick one of the 15 grassroots categories
+//   2. Category         — pick one of the Grassroots categories
 //   3. Details          — title, description, photo upload (media bucket)
 //   4. Rate             — amount, type, currency, ₮ accepted toggle
 //   5. Location         — LocationPicker + availability selector

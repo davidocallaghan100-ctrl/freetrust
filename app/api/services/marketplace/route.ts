@@ -9,7 +9,7 @@ export async function GET() {
     const admin = createAdminClient()
     const { data, error, count } = await admin
       .from('listings')
-      .select('id, title, description, price, currency, service_mode, tags, location, cover_image, avg_rating, review_count, country, city, region, latitude, longitude, location_label, is_remote, currency_code, price_eur, category, category_id, seller:profiles!seller_id(id, full_name, avatar_url, linkedin_url, instagram_url, twitter_url, github_url, tiktok_url, youtube_url, website_url)', { count: 'exact' })
+      .select('id, created_at, title, description, price, currency, service_mode, tags, location, cover_image, avg_rating, review_count, country, city, region, latitude, longitude, location_label, is_remote, currency_code, price_eur, category, category_id, seller:profiles!seller_id(id, full_name, avatar_url, linkedin_url, instagram_url, twitter_url, github_url, tiktok_url, youtube_url, website_url)', { count: 'exact' })
       .eq('product_type', 'service')
       .eq('status', 'active')
       .order('created_at', { ascending: false })

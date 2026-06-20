@@ -1,6 +1,6 @@
 // Grassroots category reference list
 // ============================================================================
-// Single source of truth for the 15 Grassroots categories used by:
+// Single source of truth for Grassroots categories used by:
 //   * the browse page category grid + filter pills
 //   * the create page step 2 category selector
 //   * the card badge on every listing
@@ -25,7 +25,7 @@ export const GRASSROOTS_CATEGORIES: readonly GrassrootsCategory[] = [
   { slug: 'delivery',     label: 'Delivery & Transport',   emoji: '🚚', blurb: 'Couriers, drivers, hauling' },
   { slug: 'trades',       label: 'Trades & Labour',        emoji: '🔧', blurb: 'Skilled hands-on work' },
   { slug: 'gardening',    label: 'Gardening & Landscaping',emoji: '🌿', blurb: 'Gardens, lawns, hedges' },
-  { slug: 'cleaning',     label: 'Cleaning & Home Services', emoji: '🧹', blurb: 'Homes, offices, end-of-tenancy' },
+  { slug: 'cleaning',     label: 'Cleaning', emoji: '🧽', blurb: 'Homes, offices, end-of-tenancy' },
   { slug: 'hospitality',  label: 'Hospitality & Catering', emoji: '🍺', blurb: 'Kitchen, bar, floor, events' },
   { slug: 'animal_care',  label: 'Animal Care',            emoji: '🐄', blurb: 'Livestock, pets, stables' },
   { slug: 'labour',       label: 'General Labour',         emoji: '🏗️', blurb: 'Sites, demolition, prep work' },
@@ -34,6 +34,20 @@ export const GRASSROOTS_CATEGORIES: readonly GrassrootsCategory[] = [
   { slug: 'fishing',      label: 'Fishing & Aquaculture',  emoji: '🎣', blurb: 'Boats, nets, hatcheries' },
   { slug: 'tutoring',     label: 'Local Tutoring & Teaching', emoji: '📚', blurb: 'In-person lessons, homework' },
   { slug: 'home_repairs', label: 'Home Repairs & Maintenance', emoji: '🔨', blurb: 'Fixes, odd jobs, touch-ups' },
+  { slug: 'plumbing', label: 'Plumbing', emoji: '🚰', blurb: 'Leaks, drains, bathrooms, boilers' },
+  { slug: 'electrical', label: 'Electrical', emoji: '💡', blurb: 'Repairs, rewiring, lighting' },
+  { slug: 'heating-hvac', label: 'Heating & HVAC', emoji: '♨️', blurb: 'Boilers, heat pumps, ventilation' },
+  { slug: 'roofing', label: 'Roofing', emoji: '🏠', blurb: 'Repairs, gutters, flat roofs' },
+  { slug: 'builders-construction', label: 'Builders & Construction', emoji: '🧱', blurb: 'Extensions, renovations, plastering' },
+  { slug: 'carpentry-joinery', label: 'Carpentry & Joinery', emoji: '🪚', blurb: 'Doors, kitchens, decking, repairs' },
+  { slug: 'painting-decorating', label: 'Painting & Decorating', emoji: '🎨', blurb: 'Interior, exterior, wallpapering' },
+  { slug: 'landscaping-gardening', label: 'Landscaping & Gardening', emoji: '🌿', blurb: 'Lawns, hedges, patios, fencing' },
+  { slug: 'flooring-tiling', label: 'Flooring & Tiling', emoji: '◼️', blurb: 'Floors, wall tiles, bathroom tiling' },
+  { slug: 'handyman', label: 'Handyman', emoji: '🧰', blurb: 'Odd jobs, assembly, small repairs' },
+  { slug: 'pest-control', label: 'Pest Control', emoji: '🐜', blurb: 'Rodents, wasps, insects, prevention' },
+  { slug: 'renewable-energy', label: 'Renewable Energy', emoji: '☀️', blurb: 'Solar, EV chargers, heat pumps' },
+  { slug: 'moving-services', label: 'Moving Services', emoji: '📦', blurb: 'House moves, packing, van help' },
+  { slug: 'professional-property-services', label: 'Professional Property Services', emoji: '🏘️', blurb: 'Management, surveys, BER, lettings' },
   { slug: 'moving',       label: 'Moving & Heavy Lifting', emoji: '📦', blurb: 'House moves, furniture shifts' },
   { slug: 'events_help',       label: 'Events & Festival Help',   emoji: '🎪', blurb: 'Setup, stewards, teardown' },
   { slug: 'driving_instruction',  label: 'Driving Instruction',        emoji: '🚗', blurb: 'Lessons, test prep, refreshers' },
@@ -49,6 +63,81 @@ export const GRASSROOTS_CATEGORIES: readonly GrassrootsCategory[] = [
   { slug: 'it_support_local',     label: 'IT Help & Tech Support',      emoji: '🖥️', blurb: 'PC fixes, Wi-Fi, phone setup' },
   { slug: 'boat_water',           label: 'Boating & Water Services',    emoji: '⛵', blurb: 'Fishing trips, boat maintenance' },
 ] as const
+
+export const GRASSROOTS_SERVICE_CATEGORY_IDS = [
+  'plumbing',
+  'electrical',
+  'heating-hvac',
+  'roofing',
+  'builders-construction',
+  'carpentry-joinery',
+  'painting-decorating',
+  'cleaning',
+  'landscaping-gardening',
+  'flooring-tiling',
+  'handyman',
+  'pest-control',
+  'renewable-energy',
+  'moving-services',
+  'professional-property-services',
+] as const
+
+export type GrassrootsServiceCategoryId = typeof GRASSROOTS_SERVICE_CATEGORY_IDS[number]
+
+export const GRASSROOTS_SERVICE_CATEGORY_SOURCE_IDS: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  farming: ['community-services', 'home-garden', 'landscaping-gardening'],
+  delivery: ['transport-delivery', 'moving-services', 'taxi-drivers'],
+  trades: ['trades-construction', 'builders-construction', 'plumbing', 'electrical', 'handyman'],
+  gardening: ['landscaping-gardening', 'home-garden'],
+  cleaning: ['cleaning', 'home-garden'],
+  hospitality: ['food-catering', 'events-entertainment'],
+  animal_care: ['pet-services'],
+  labour: ['trades-construction', 'builders-construction', 'handyman', 'community-services'],
+  childcare: ['childcare-education'],
+  elder_care: ['elder-care', 'disability-care'],
+  fishing: ['community-services', 'transport-delivery'],
+  tutoring: ['education-tutoring', 'coaching-mentoring', 'childcare-education'],
+  home_repairs: ['home-garden', 'handyman', 'trades-construction'],
+  plumbing: ['plumbing'],
+  electrical: ['electrical'],
+  'heating-hvac': ['heating-hvac', 'energy-services'],
+  roofing: ['roofing'],
+  'builders-construction': ['builders-construction', 'trades-construction'],
+  'carpentry-joinery': ['carpentry-joinery', 'trades-construction'],
+  'painting-decorating': ['painting-decorating'],
+  'landscaping-gardening': ['landscaping-gardening', 'home-garden'],
+  'flooring-tiling': ['flooring-tiling', 'trades-construction'],
+  handyman: ['handyman', 'home-garden'],
+  'pest-control': ['pest-control'],
+  'renewable-energy': ['renewable-energy', 'energy-services'],
+  'moving-services': ['moving-services', 'transport-delivery'],
+  'professional-property-services': ['professional-property-services'],
+  moving: ['moving-services', 'transport-delivery'],
+  events_help: ['events-entertainment', 'community-services'],
+  driving_instruction: ['driving-instructors', 'taxi-drivers'],
+  sports_coaching: ['sports-fitness-coaching', 'health-wellness'],
+  music_lessons: ['music-arts-tuition', 'music-audio'],
+  car_valeting: ['vehicle-services'],
+  mechanic_services: ['vehicle-services'],
+  security_installation: ['home-security'],
+  disability_support: ['disability-care', 'elder-care'],
+  photography_local: ['photography-editing', 'events-entertainment'],
+  language_support: ['translation-interpretation', 'education-tutoring'],
+  beauty_mobile: ['beauty-personal-care', 'health-wellness'],
+  it_support_local: ['development-tech'],
+  boat_water: ['transport-delivery', 'taxi-drivers'],
+})
+
+export const GRASSROOTS_SERVICE_SOURCE_CATEGORY_IDS = Array.from(
+  new Set(Object.values(GRASSROOTS_SERVICE_CATEGORY_SOURCE_IDS).flat())
+) as readonly string[]
+
+export function grassrootsCategoriesForServiceSource(sourceCategoryId: string | null | undefined): string[] {
+  if (!sourceCategoryId) return []
+  return Object.entries(GRASSROOTS_SERVICE_CATEGORY_SOURCE_IDS)
+    .filter(([, sourceIds]) => sourceIds.includes(sourceCategoryId))
+    .map(([grassrootsCategoryId]) => grassrootsCategoryId)
+}
 
 /** O(1) lookup by slug. Built once at module load. */
 export const GRASSROOTS_CATEGORIES_BY_SLUG: Readonly<Record<string, GrassrootsCategory>> =
