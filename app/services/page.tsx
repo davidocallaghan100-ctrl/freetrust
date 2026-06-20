@@ -1122,19 +1122,6 @@ export default function ServicesPage() {
           <h1 style={{ fontSize: '26px', fontWeight: 800, margin: '0 0 4px' }}>🎯 Services Marketplace</h1>
           <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 16px' }}>Skilled & professional work — online or in-person</p>
 
-          <div style={{
-            background: 'rgba(56,189,248,0.06)',
-            border: '1px solid rgba(56,189,248,0.18)',
-            borderRadius: 12,
-            padding: '12px 14px',
-            marginBottom: 16,
-            color: '#94a3b8',
-            fontSize: 13,
-            lineHeight: 1.55,
-          }}>
-            <strong style={{ color: '#e0f2fe' }}>Services Marketplace</strong> is for packaged professional work, freelancers, agencies, and external providers. Grassroots is now a separate menu section for local hands-on work.
-          </div>
-
           <div style={{ display: 'flex', gap: 12, margin: '16px 0', flexWrap: 'wrap', alignItems: 'center' }}>
             <button
               onClick={() => setActiveTab('freetrust')}
@@ -1206,6 +1193,30 @@ export default function ServicesPage() {
                 </button>
               ))}
             </div>
+
+            {/* Category dropdown — compact companion to the mobile chip rail */}
+            <select
+              aria-label="All Services categories"
+              value={activeCatId ?? ''}
+              onChange={e => setActiveCatId(e.target.value || null)}
+              style={{
+                flex: '1 1 220px', minWidth: 210, maxWidth: 360,
+                background: '#1e293b', border: '1px solid #334155', borderRadius: '10px',
+                padding: '9px 12px', fontSize: '14px', color: activeCatId ? '#38bdf8' : '#94a3b8',
+                outline: 'none', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700,
+              }}
+            >
+              <option value="">✦ All Services ({mixedServices.length})</option>
+              {mobileCategoryCats.map(cat => {
+                const isOnline = cat.serviceKind === 'online'
+                const count = categoryCount(cat.id)
+                return (
+                  <option key={`${cat.serviceKind}-${cat.id}`} value={cat.id}>
+                    {cat.icon} {cat.label} · {isOnline ? 'Online' : 'Local'}{count > 0 ? ` (${count})` : ''}
+                  </option>
+                )
+              })}
+            </select>
 
             {/* Price filter */}
             <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>

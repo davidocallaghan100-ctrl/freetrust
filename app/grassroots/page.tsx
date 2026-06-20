@@ -11,13 +11,14 @@ import { EMPTY_LOCATION, haversineKm, type StructuredLocation, type RadiusValue 
 import { buildCountryOptions } from '@/lib/countries'
 import type { CurrencyCode } from '@/context/CurrencyContext'
 import {
-  GRASSROOTS_CATEGORIES,
+  GRASSROOTS_VISIBLE_CATEGORIES,
   GRASSROOTS_CATEGORIES_BY_SLUG,
   GRASSROOTS_SERVICE_SOURCE_CATEGORY_IDS,
   AVAILABILITY_BY_VALUE,
   RATE_TYPE_OPTIONS,
   GRASSROOTS_GREEN,
   grassrootsCategoriesForServiceSource,
+  normalizeGrassrootsCategorySlug,
 } from '@/lib/grassroots/categories'
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -220,7 +221,7 @@ export default function GrassrootsBrowsePage() {
     if (typeof window === 'undefined') return
     const q = new URLSearchParams(window.location.search)
     const c = q.get('category')
-    if (c && GRASSROOTS_CATEGORIES_BY_SLUG[c]) setActiveCategory(c)
+    if (c && GRASSROOTS_CATEGORIES_BY_SLUG[c]) setActiveCategory(normalizeGrassrootsCategorySlug(c))
     const lt = q.get('listing_type')
     if (lt === 'offering' || lt === 'seeking') setListingType(lt)
   }, [])
@@ -244,7 +245,12 @@ export default function GrassrootsBrowsePage() {
         .then(async res => {
           if (!res.ok) return [] as Listing[]
           const { listings: data } = await res.json() as { listings: Listing[] }
-          return (data ?? []).map(row => ({ ...row, source: 'grassroots' as const, href: `/grassroots/${row.id}` }))
+          return (data ?? []).map(row => ({
+            ...row,
+            category: normalizeGrassrootsCategorySlug(row.category) ?? row.category,
+            source: 'grassroots' as const,
+            href: `/grassroots/${row.id}`,
+          }))
         })
 
       if (listingType === 'seeking') {
@@ -318,7 +324,7 @@ export default function GrassrootsBrowsePage() {
     // Always keep the full Grassroots catalogue visible so users can browse
     // or post into the trade/property categories even when a category has no
     // currently matching rows under the active filters.
-    return GRASSROOTS_CATEGORIES
+    return GRASSROOTS_VISIBLE_CATEGORIES
   }, [])
 
   const sortedVisibleCategories = useMemo(

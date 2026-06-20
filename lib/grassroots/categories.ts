@@ -64,6 +64,22 @@ export const GRASSROOTS_CATEGORIES: readonly GrassrootsCategory[] = [
   { slug: 'boat_water',           label: 'Boating & Water Services',    emoji: '⛵', blurb: 'Fishing trips, boat maintenance' },
 ] as const
 
+// Some early Grassroots slugs are kept for backwards compatibility, but are
+// shown under a newer canonical category so users do not see near-duplicate
+// controls such as Gardening & Landscaping / Landscaping & Gardening.
+export const GRASSROOTS_CATEGORY_ALIASES: Readonly<Record<string, string>> = Object.freeze({
+  gardening: 'landscaping-gardening',
+})
+
+export function normalizeGrassrootsCategorySlug(slug: string | null | undefined): string | null {
+  if (!slug) return null
+  return GRASSROOTS_CATEGORY_ALIASES[slug] ?? slug
+}
+
+export const GRASSROOTS_VISIBLE_CATEGORIES: readonly GrassrootsCategory[] = GRASSROOTS_CATEGORIES.filter(
+  cat => normalizeGrassrootsCategorySlug(cat.slug) === cat.slug
+)
+
 export const GRASSROOTS_SERVICE_CATEGORY_IDS = [
   'plumbing',
   'electrical',
@@ -134,9 +150,9 @@ export const GRASSROOTS_SERVICE_SOURCE_CATEGORY_IDS = Array.from(
 
 export function grassrootsCategoriesForServiceSource(sourceCategoryId: string | null | undefined): string[] {
   if (!sourceCategoryId) return []
-  return Object.entries(GRASSROOTS_SERVICE_CATEGORY_SOURCE_IDS)
+  return Array.from(new Set(Object.entries(GRASSROOTS_SERVICE_CATEGORY_SOURCE_IDS)
     .filter(([, sourceIds]) => sourceIds.includes(sourceCategoryId))
-    .map(([grassrootsCategoryId]) => grassrootsCategoryId)
+    .map(([grassrootsCategoryId]) => normalizeGrassrootsCategorySlug(grassrootsCategoryId) ?? grassrootsCategoryId)))
 }
 
 /** O(1) lookup by slug. Built once at module load. */

@@ -8,7 +8,7 @@ import LocationPicker from '@/components/location/LocationPicker'
 import { EMPTY_LOCATION, type StructuredLocation } from '@/lib/geo'
 import { CURRENCIES, useCurrency, type CurrencyCode } from '@/context/CurrencyContext'
 import {
-  GRASSROOTS_CATEGORIES,
+  GRASSROOTS_VISIBLE_CATEGORIES,
   GRASSROOTS_CATEGORIES_BY_SLUG,
   AVAILABILITY_OPTIONS,
   RATE_TYPE_OPTIONS,
@@ -467,7 +467,7 @@ function Step2({ form, setForm }: StepProps) {
         gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
         gap: 10,
       }}>
-        {GRASSROOTS_CATEGORIES.map(cat => {
+        {GRASSROOTS_VISIBLE_CATEGORIES.map(cat => {
           const active = form.category === cat.slug
           return (
             <button
