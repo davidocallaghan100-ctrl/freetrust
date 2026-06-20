@@ -56,6 +56,21 @@ const CAT_COLORS = EVENT_CATEGORY_COLORS
 const CAT_GRADIENTS = EVENT_CATEGORY_GRADIENTS
 const CATEGORIES = EVENT_CATEGORIES
 
+function eventSourceLabel(source?: string | null) {
+  const value = (source ?? '').toLowerCase()
+  if (value === 'meetup') return 'Meetup'
+  if (value === 'ticketmaster') return 'Ticketmaster'
+  if (value === 'eventbrite') return 'Eventbrite'
+  if (value === 'predicthq') return 'PredictHQ'
+  return 'the provider'
+}
+
+function attendanceLine(ev: EventItem) {
+  if (ev.rsvpCount > 0) return { icon: '👥', text: `${ev.rsvpCount.toLocaleString()} attending`, muted: true }
+  if (ev.external_source) return { icon: '🎟', text: `Attendance tracked on ${eventSourceLabel(ev.external_source)}`, muted: true }
+  return { icon: '✨', text: 'Be the first to attend!', muted: false }
+}
+
 function canonicalEventKey(ev: EventItem) {
   const normalise = (value: string | null | undefined) => (value ?? '')
     .toLowerCase()
@@ -117,6 +132,7 @@ function EventCard({ ev, onAttend }: { ev: EventItem; onAttend: (ev: EventItem) 
     ? ev.cover_image_url
     : eventPosterDataUri({ title: ev.title, category: ev.category, startsAt: ev.date.toISOString(), location: ev.location_label ?? ev.location })
   const outboundUrl = ev.external_url ?? ev.meeting_url ?? null
+  const attendance = attendanceLine(ev)
   const ctaLabel = outboundUrl
     ? (ev.price && ev.price > 0 ? 'Get Tickets' : 'Attend Event')
     : (ev.price ? `Buy · ${currencyFormat(ev.price_eur ?? ev.price, (ev.currency_code ?? 'EUR') as CurrencyCode)}` : 'RSVP Free')
@@ -206,17 +222,10 @@ function EventCard({ ev, onAttend }: { ev: EventItem; onAttend: (ev: EventItem) 
 
         {/* Footer: attendees + buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem', minWidth: 0, flexWrap: 'wrap' }}>
-          {ev.rsvpCount > 0 ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: '#64748b' }}>
-              <span>👥</span>
-              <span>{ev.rsvpCount.toLocaleString()} attending</span>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.72rem', color: '#38bdf8' }}>
-              <span>✨</span>
-              <span>Be the first to attend!</span>
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: attendance.muted ? '0.75rem' : '0.72rem', color: attendance.muted ? '#64748b' : '#38bdf8' }}>
+            <span>{attendance.icon}</span>
+            <span>{attendance.text}</span>
+          </div>
           {/* Price line — only shown for non-curated paid events */}
           {!ev.is_platform_curated && ev.price != null && ev.price > 0 && (
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>

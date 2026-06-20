@@ -43,6 +43,7 @@ interface DBEvent {
   longitude: number | null
   location_label: string | null
   external_url: string | null
+  external_source: string | null
   cover_image_url: string | null
   status: string
   is_platform_curated: boolean
@@ -98,6 +99,15 @@ function hashGradient(str: string) {
   return gradients[idx]
 }
 
+function eventSourceLabel(source?: string | null) {
+  const value = (source ?? '').toLowerCase()
+  if (value === 'meetup') return 'Meetup'
+  if (value === 'ticketmaster') return 'Ticketmaster'
+  if (value === 'eventbrite') return 'Eventbrite'
+  if (value === 'predicthq') return 'PredictHQ'
+  return 'the provider'
+}
+
 function Spinner() {
   return (
     <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 64 }}>
@@ -138,7 +148,7 @@ export default function EventDetailPage() {
             max_attendees, attendee_count,
             organiser_name, organiser_bio,
             country, city, latitude, longitude, location_label,
-            external_url, cover_image_url, status, is_platform_curated
+            external_url, external_source, cover_image_url, status, is_platform_curated
           `)
           .eq('id', id)
           .or(REAL_EVENT_SOURCE_FILTER)
@@ -230,6 +240,11 @@ export default function EventDetailPage() {
     : eventPosterDataUri({ title: event.title, category: event.category, startsAt: event.starts_at, location: event.location_label ?? event.venue_name ?? event.country })
   const cleanDescription = stripEventSourceAttribution(event.description)
   const outboundUrl = event.external_url ?? event.meeting_url ?? null
+  const attendanceCopy = event.attendee_count > 0
+    ? { color: '#94a3b8', text: `👥 ${event.attendee_count.toLocaleString()} attending` }
+    : event.external_source
+      ? { color: '#94a3b8', text: `🎟 Attendance tracked on ${eventSourceLabel(event.external_source)}` }
+      : { color: '#38bdf8', text: '✨ Be the first to attend!' }
 
   const attendeePct = (event.max_attendees && event.max_attendees > 0)
     ? Math.min(100, Math.round((event.attendee_count / event.max_attendees) * 100))
@@ -465,11 +480,7 @@ export default function EventDetailPage() {
               {/* Attendee count + progress bar */}
               <div style={{ borderTop: '1px solid rgba(56,189,248,0.08)', paddingTop: '0.875rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  {event.attendee_count > 0 ? (
-                    <span style={{ fontSize: 13, color: '#94a3b8' }}>👥 {event.attendee_count.toLocaleString()} attending</span>
-                  ) : (
-                    <span style={{ fontSize: 13, color: '#38bdf8' }}>✨ Be the first to attend!</span>
-                  )}
+                  <span style={{ fontSize: 13, color: attendanceCopy.color }}>{attendanceCopy.text}</span>
                   {event.max_attendees && event.attendee_count > 0 && (
                     <span style={{ fontSize: 12, color: '#64748b' }}>of {event.max_attendees.toLocaleString()}</span>
                   )}

@@ -137,6 +137,23 @@ interface EventbriteListResponse {
   error_description?: string
 }
 
+interface EventbriteAttendeesResponse {
+  pagination?: { object_count?: number }
+  attendees?: unknown[]
+}
+
+async function fetchEventbriteAttendeeCount(token: string, eventId: string): Promise<number | null> {
+  const params = new URLSearchParams({ page_size: '1' })
+  const res = await fetch(
+    `https://www.eventbriteapi.com/v3/events/${encodeURIComponent(eventId)}/attendees/?${params}`,
+    { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' },
+  )
+  if (!res.ok) return null
+  const data = await res.json() as EventbriteAttendeesResponse
+  if (typeof data.pagination?.object_count === 'number') return data.pagination.object_count
+  return Array.isArray(data.attendees) ? data.attendees.length : null
+}
+
 // Row shape we insert into public.events. Kept explicit so TypeScript
 // catches drift between the field mapping and the table schema.
 interface MappedEventRow {
@@ -173,7 +190,7 @@ interface MappedEventRow {
   external_url:       string | null
 }
 
-function mapEvent(e: EventbriteEvent, creatorId: string): MappedEventRow | null {
+function mapEvent(e: EventbriteEvent, creatorId: string, attendeeCount: number | null): MappedEventRow | null {
   // Eventbrite can return events with no title or no start time if the
   // organiser abandoned a draft. Skip them — we require a title for
   // UI sanity.
@@ -227,7 +244,7 @@ function mapEvent(e: EventbriteEvent, creatorId: string): MappedEventRow | null 
     ticket_price_eur: currency === 'EUR' ? ticketPrice : 0, // no FX here — set to 0 for non-EUR, best-effort
     currency_code:    currency,
     max_attendees:    null,
-    attendee_count:   0,
+    attendee_count:   attendeeCount ?? 0,
     organiser_name:   null,
     organiser_bio:    null,
     country,
@@ -344,10 +361,15 @@ export async function POST() {
     console.log(`[sync-eventbrite] fetched ${rawEvents.length} events from Eventbrite org ${orgId}`)
 
     // ── 4. Map to our row shape ─────────────────────────────────────────
+    const attendeeCounts = new Map<string, number | null>()
+    await Promise.all(rawEvents.map(async raw => {
+      attendeeCounts.set(raw.id, await fetchEventbriteAttendeeCount(token, raw.id).catch(() => null))
+    }))
+
     const mapped: MappedEventRow[] = []
     let skippedNoTitle = 0
     for (const raw of rawEvents) {
-      const row = mapEvent(raw, user.id)
+      const row = mapEvent(raw, user.id, attendeeCounts.get(raw.id) ?? null)
       if (row) mapped.push(row)
       else skippedNoTitle += 1
     }

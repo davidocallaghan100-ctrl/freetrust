@@ -55,6 +55,11 @@ interface EventbriteEvent {
   } | null
 }
 
+interface EventbriteAttendeesResponse {
+  pagination?: { object_count?: number }
+  attendees?: unknown[]
+}
+
 async function fetchEvents(token: string, orgId: string): Promise<EventbriteEvent[]> {
   const all: EventbriteEvent[] = []
   let continuation: string | null = null
@@ -81,6 +86,18 @@ async function fetchEvents(token: string, orgId: string): Promise<EventbriteEven
     if (!continuation) break
   }
   return all
+}
+
+async function fetchAttendeeCount(token: string, eventId: string): Promise<number | null> {
+  const params = new URLSearchParams({ page_size: '1' })
+  const res = await fetch(
+    `https://www.eventbriteapi.com/v3/events/${encodeURIComponent(eventId)}/attendees/?${params}`,
+    { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' },
+  )
+  if (!res.ok) return null
+  const data = await res.json() as EventbriteAttendeesResponse
+  if (typeof data.pagination?.object_count === 'number') return data.pagination.object_count
+  return Array.isArray(data.attendees) ? data.attendees.length : null
 }
 
 export async function GET(req: NextRequest) {
@@ -124,6 +141,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ inserted: 0, updated: 0, total: 0, duration_ms: Date.now() - startedAt })
   }
 
+  const attendeeCounts = new Map<string, number | null>()
+  await Promise.all(rawEvents.map(async e => {
+    attendeeCounts.set(e.id, await fetchAttendeeCount(token, e.id).catch(() => null))
+  }))
+
   // Map to DB rows
   const mapped: MappedRow[] = rawEvents.map(e => {
     const title = e.name?.text?.trim()
@@ -160,7 +182,7 @@ export async function GET(req: NextRequest) {
       ticket_price_eur: currency === 'EUR' ? ticketPrice : 0,
       currency_code:   currency,
       max_attendees:   null as null,
-      attendee_count:  0,
+      attendee_count:  attendeeCounts.get(e.id) ?? 0,
       organiser_name:  null as null,
       organiser_bio:   null as null,
       country,

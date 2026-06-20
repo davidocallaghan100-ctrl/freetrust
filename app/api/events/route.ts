@@ -158,6 +158,7 @@ export async function POST(request: NextRequest) {
       ticket_price_eur,
       currency_code,
       max_attendees,
+      attendee_count,
       organiser_name,
       organiser_bio,
       country,
@@ -211,6 +212,9 @@ export async function POST(request: NextRequest) {
     const resolvedVenueAddr   = venue_address
       ?? (resolvedIsInPerson ? [address, city, country].filter(Boolean).join(', ') || null : null)
     const resolvedMaxAttendees = max_attendees ?? (maxAttendees ? parseInt(maxAttendees) : null)
+    const resolvedAttendeeCount = typeof attendee_count === 'number' && Number.isFinite(attendee_count)
+      ? Math.max(0, Math.round(attendee_count))
+      : 0
     const resolvedCoverImage  = cover_image_url ?? coverImage ?? null
     const resolvedOrgName     = organiser_name ?? organiserName ?? null
     const resolvedOrgBio      = organiser_bio ?? organiserBio ?? null
@@ -236,7 +240,7 @@ export async function POST(request: NextRequest) {
       ticket_price_eur: ticket_price_eur ?? (currency_code === 'EUR' ? resolvedTicketPrice : 0),
       currency_code:    currency_code ?? 'EUR',
       max_attendees:    resolvedMaxAttendees,
-      attendee_count:   0,
+      attendee_count:   resolvedAttendeeCount,
       organiser_name:   resolvedOrgName,
       organiser_bio:    resolvedOrgBio,
       country:          country ?? null,
@@ -268,8 +272,11 @@ export async function POST(request: NextRequest) {
 
     if (existingId) {
       // Update existing — don't overwrite creator_id
-      const { creator_id: _skip, attendee_count: _skip2, ...updatePayload } = eventData
+      const { creator_id: _skip, attendee_count: _skip2, ...updatePayloadBase } = eventData
       void _skip; void _skip2
+      const updatePayload = typeof attendee_count === 'number'
+        ? { ...updatePayloadBase, attendee_count: resolvedAttendeeCount }
+        : updatePayloadBase
       const { data: updated, error: updateErr } = await admin
         .from('events')
         .update(updatePayload)
