@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase/client'
@@ -112,6 +112,7 @@ function Spinner() {
 
 export default function EventDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const id = params?.id as string
 
   const [event, setEvent] = useState<DBEvent | null>(null)
@@ -120,6 +121,7 @@ export default function EventDetailPage() {
   const [rsvped, setRsvped] = useState(false)
   const [copied, setCopied] = useState(false)
   const [payError, setPayError] = useState<string | null>(null)
+  const [rsvpBusy, setRsvpBusy] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -157,6 +159,50 @@ export default function EventDetailPage() {
     } catch { /* silent */ }
   }, [id])
 
+  const requireAuth = useCallback(async (redirectPath: string) => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) return true
+    router.push(`/login?redirect=${encodeURIComponent(redirectPath)}`)
+    return false
+  }, [router])
+
+  const openExternalEventUrl = useCallback(async (url: string) => {
+    const detailPath = `/events/${id}`
+    if (!(await requireAuth(detailPath))) return
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }, [id, requireAuth])
+
+  const handleRsvp = useCallback(async () => {
+    if (!event) return
+    const detailPath = `/events/${id}`
+    if (!(await requireAuth(detailPath))) return
+    setRsvpBusy(true)
+    setPayError(null)
+    try {
+      const method = rsvped ? 'DELETE' : 'POST'
+      const res = await fetch(`/api/events/${id}/rsvp`, { method })
+      const json = await res.json().catch(() => ({})) as { checkoutUrl?: string; error?: string }
+      if (res.status === 401) {
+        router.push(`/login?redirect=${encodeURIComponent(detailPath)}`)
+        return
+      }
+      if (json.checkoutUrl) {
+        window.location.href = json.checkoutUrl
+        return
+      }
+      if (!res.ok && res.status !== 409) {
+        setPayError(json.error ?? 'Could not update your RSVP. Please try again.')
+        return
+      }
+      setRsvped(method === 'POST')
+    } catch (err) {
+      setPayError(err instanceof Error ? err.message : 'Could not update your RSVP. Please try again.')
+    } finally {
+      setRsvpBusy(false)
+    }
+  }, [event, id, requireAuth, router, rsvped])
+
   if (loading) return <Spinner />
 
   if (notFound || !event) {
@@ -183,6 +229,7 @@ export default function EventDetailPage() {
     ? event.cover_image_url
     : eventPosterDataUri({ title: event.title, category: event.category, startsAt: event.starts_at, location: event.location_label ?? event.venue_name ?? event.country })
   const cleanDescription = stripEventSourceAttribution(event.description)
+  const outboundUrl = event.external_url ?? event.meeting_url ?? null
 
   const attendeePct = (event.max_attendees && event.max_attendees > 0)
     ? Math.min(100, Math.round((event.attendee_count / event.max_attendees) * 100))
@@ -330,10 +377,10 @@ export default function EventDetailPage() {
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#38bdf8', marginBottom: 4 }}>🔗 Online Join Link</div>
                   <div style={{ fontSize: 12, color: '#64748b', wordBreak: 'break-all' }}>{event.meeting_url}</div>
                 </div>
-                <a href={event.meeting_url} target="_blank" rel="noopener noreferrer"
+                <button type="button" onClick={() => { void openExternalEventUrl(event.meeting_url as string) }}
                   style={{ background: '#38bdf8', color: '#0f172a', fontWeight: 700, fontSize: 13, padding: '0.5rem 1.25rem', borderRadius: 9, textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   Join Event →
-                </a>
+                </button>
               </div>
             )}
 
@@ -367,14 +414,13 @@ export default function EventDetailPage() {
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#a78bfa', marginBottom: 6 }}>📌 Curated by FreeTrust</div>
                     {event.external_url && (
-                      <a
-                        href={event.external_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ fontSize: 13, color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}
+                      <button
+                        type="button"
+                        onClick={() => { void openExternalEventUrl(event.external_url as string) }}
+                        style={{ fontSize: 13, color: '#38bdf8', textDecoration: 'none', fontWeight: 600, background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit' }}
                       >
                         🎟 Official tickets &amp; info ↗
-                      </a>
+                      </button>
                     )}
                   </div>
                 ) : event.is_paid && event.ticket_price && event.ticket_price > 0 ? (
@@ -452,7 +498,7 @@ export default function EventDetailPage() {
               {!isPast && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {/* Apple Pay / Google Pay express checkout — only for non-curated paid events */}
-                  {!event.is_platform_curated && event.is_paid && event.ticket_price && event.ticket_price > 0 && !event.external_url && (
+                  {!event.is_platform_curated && event.is_paid && event.ticket_price && event.ticket_price > 0 && !outboundUrl && (
                     <>
                       <AppleGooglePayButton
                         amountCents={Math.round((event.ticket_price_eur ?? event.ticket_price) * 100)}
@@ -475,39 +521,43 @@ export default function EventDetailPage() {
                   {event.is_platform_curated ? (
                     /* Curated events: "Learn More" → official site, plus "Save Event" for interest tracking */
                     <>
-                      {event.external_url && (
-                        <a
-                          href={event.external_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ display: 'block', textAlign: 'center', background: 'linear-gradient(135deg,#a78bfa,#7c3aed)', color: '#fff', fontWeight: 800, fontSize: 15, padding: '0.875rem', borderRadius: 12, textDecoration: 'none', letterSpacing: '0.01em' }}
+                      {outboundUrl && (
+                        <button
+                          type="button"
+                          onClick={() => { void openExternalEventUrl(outboundUrl) }}
+                          style={{ display: 'block', width: '100%', textAlign: 'center', background: 'linear-gradient(135deg,#a78bfa,#7c3aed)', color: '#fff', fontWeight: 800, fontSize: 15, padding: '0.875rem', borderRadius: 12, textDecoration: 'none', letterSpacing: '0.01em', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
                         >
                           🔗 Learn More &amp; Get Tickets →
-                        </a>
+                        </button>
                       )}
                       <button
-                        onClick={() => setRsvped(v => !v)}
+                        onClick={handleRsvp}
+                        disabled={rsvpBusy}
                         style={{ background: rsvped ? 'rgba(52,211,153,0.15)' : 'rgba(167,139,250,0.1)', border: `1px solid ${rsvped ? '#34d399' : 'rgba(167,139,250,0.3)'}`, borderRadius: 12, padding: '0.75rem', fontSize: 14, fontWeight: 700, color: rsvped ? '#34d399' : '#a78bfa', cursor: 'pointer', transition: 'all 0.2s', letterSpacing: '0.01em' }}
                       >
-                        {rsvped ? "✓ Saved to my events!" : "🔖 I'm interested"}
+                        {rsvpBusy ? 'Saving…' : rsvped ? "✓ Saved to my events!" : "🔖 I'm interested"}
                       </button>
                     </>
-                  ) : event.external_url ? (
-                    <a
-                      href={event.external_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ display: 'block', textAlign: 'center', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', fontWeight: 800, fontSize: 15, padding: '0.875rem', borderRadius: 12, textDecoration: 'none', letterSpacing: '0.01em' }}
+                  ) : outboundUrl ? (
+                    <button
+                      type="button"
+                      onClick={() => { void openExternalEventUrl(outboundUrl) }}
+                      style={{ display: 'block', width: '100%', textAlign: 'center', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', fontWeight: 800, fontSize: 15, padding: '0.875rem', borderRadius: 12, textDecoration: 'none', letterSpacing: '0.01em', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
                     >
                       {event.is_paid ? '🎟 Get Tickets →' : '✅ Register Free →'}
-                    </a>
+                    </button>
                   ) : (
                     <button
-                      onClick={() => setRsvped(v => !v)}
-                      style={{ background: rsvped ? '#34d399' : 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 12, padding: '0.875rem', fontSize: 15, fontWeight: 800, color: rsvped ? '#0f172a' : '#fff', cursor: 'pointer', transition: 'all 0.2s', letterSpacing: '0.01em' }}
+                      onClick={handleRsvp}
+                      disabled={rsvpBusy}
+                      style={{ background: rsvped ? '#34d399' : 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 12, padding: '0.875rem', fontSize: 15, fontWeight: 800, color: rsvped ? '#0f172a' : '#fff', cursor: rsvpBusy ? 'wait' : 'pointer', transition: 'all 0.2s', letterSpacing: '0.01em' }}
                     >
-                      {rsvped ? "✓ You're going!" : event.is_paid ? '🎟 Buy Ticket' : '✅ RSVP Free'}
+                      {rsvpBusy ? 'Saving…' : rsvped ? "✓ You're going!" : event.is_paid ? '🎟 Buy Ticket' : '✅ RSVP Free'}
                     </button>
+                  )}
+
+                  {payError && (
+                    <div style={{ color: '#f87171', fontSize: 12, marginTop: 2 }}>{payError}</div>
                   )}
 
                   <button

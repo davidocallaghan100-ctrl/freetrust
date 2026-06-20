@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { REAL_EVENT_SOURCE_FILTER } from '@/lib/dataIntegrity'
 import LocationFilter from '@/components/location/LocationFilter'
@@ -35,6 +36,7 @@ interface EventItem {
   organiserAvatar?: string
   is_platform_curated?: boolean
   external_url?: string | null
+  meeting_url?: string | null
   cover_image_url?: string | null
   imageGradient?: string
   // Globalisation fields
@@ -76,7 +78,7 @@ function isThisMonth(date: Date) {
   return date >= now && date <= end
 }
 
-function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void }) {
+function EventCard({ ev, onAttend }: { ev: EventItem; onAttend: (ev: EventItem) => void }) {
   const { day, num, month, year } = formatEventDate(ev.date)
   const catColor = CAT_COLORS[ev.category] ?? '#38bdf8'
   const gradient = CAT_GRADIENTS[ev.category] ?? ev.imageGradient ?? 'linear-gradient(135deg,#0284c7,#1e40af)'
@@ -84,6 +86,10 @@ function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void
   const imageUrl = isUsableEventImage(ev.cover_image_url)
     ? ev.cover_image_url
     : eventPosterDataUri({ title: ev.title, category: ev.category, startsAt: ev.date.toISOString(), location: ev.location_label ?? ev.location })
+  const outboundUrl = ev.external_url ?? ev.meeting_url ?? null
+  const ctaLabel = outboundUrl
+    ? (ev.price && ev.price > 0 ? 'Get Tickets' : 'Attend Event')
+    : (ev.price ? `Buy · ${currencyFormat(ev.price_eur ?? ev.price, (ev.currency_code ?? 'EUR') as CurrencyCode)}` : 'RSVP Free')
 
   return (
     <Link href={`/events/${ev.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', minWidth: 0, maxWidth: '100%' }}>
@@ -193,31 +199,12 @@ function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void
               />
             </div>
           )}
-          {/* Official tickets link for curated events */}
-          {ev.is_platform_curated && ev.external_url && (
-            <div style={{ marginLeft: 'auto', fontSize: '0.68rem', color: '#64748b' }}>
-              🎟 <a href={ev.external_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: '#38bdf8', textDecoration: 'none' }}>
-                Official site ↗
-              </a>
-            </div>
-          )}
-          <div style={{ marginLeft: (ev.is_platform_curated || !(ev.price && ev.price > 0)) ? 'auto' : 0, display: 'flex', gap: '0.4rem' }}>
-            {ev.is_platform_curated ? (
-              <a
-                href={ev.external_url ?? `/events/${ev.id}`}
-                target={ev.external_url ? '_blank' : undefined}
-                rel={ev.external_url ? 'noopener noreferrer' : undefined}
-                onClick={e => e.stopPropagation()}
-                style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.78rem', fontWeight: 700, color: '#38bdf8', cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 36, textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-                Learn More →
-              </a>
-            ) : (
-              <button
-                onClick={e => { e.preventDefault(); e.stopPropagation(); onRsvp(ev.id) }}
-                style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.78rem', fontWeight: 700, color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 36 }}>
-                {ev.price ? `Buy · ${currencyFormat(ev.price_eur ?? ev.price, (ev.currency_code ?? 'EUR') as CurrencyCode)}` : 'RSVP Free'}
-              </button>
-            )}
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.4rem' }}>
+            <button
+              onClick={e => { e.preventDefault(); e.stopPropagation(); onAttend(ev) }}
+              style={{ background: outboundUrl ? 'linear-gradient(135deg,#a78bfa,#7c3aed)' : 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.78rem', fontWeight: 700, color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 36 }}>
+              {outboundUrl ? `🎟 ${ctaLabel} ↗` : ctaLabel}
+            </button>
             <button
               onClick={e => { e.preventDefault(); e.stopPropagation(); if (navigator.share) { navigator.share({ title: ev.title, url: `${window.location.origin}/events/${ev.id}` }) } else { navigator.clipboard.writeText(`${window.location.origin}/events/${ev.id}`) } }}
               style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.45rem 0.6rem', fontSize: '0.78rem', color: '#38bdf8', cursor: 'pointer', minHeight: 36 }}
@@ -233,6 +220,7 @@ function EventCard({ ev, onRsvp }: { ev: EventItem; onRsvp: (id: string) => void
 }
 
 export default function EventsPage() {
+  const router = useRouter()
   const [modeFilter, setModeFilter] = useState<ModeFilter>('all')
   const [priceFilter, setPriceFilter] = useState<PriceFilter>('all')
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('all')
@@ -309,6 +297,7 @@ export default function EventsPage() {
             organiser:           (e.is_platform_curated ? null : (e.organiser_name as string | null | undefined)) ?? undefined,
             is_platform_curated: (e.is_platform_curated as boolean | undefined) ?? false,
             external_url:        (e.external_url as string | null | undefined) ?? null,
+            meeting_url:         (e.meeting_url as string | null | undefined) ?? null,
             cover_image_url:     (e.cover_image_url as string | null | undefined) ?? null,
           })))
         } else {
@@ -391,8 +380,42 @@ export default function EventsPage() {
     location_label: ev.location_label ?? null,
   }))
 
-  function handleRsvp(id: string) {
-    setRsvped(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
+  async function requireAuth(redirectPath: string) {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) return true
+    router.push(`/login?redirect=${encodeURIComponent(redirectPath)}`)
+    return false
+  }
+
+  async function handleAttend(ev: EventItem) {
+    const outboundUrl = ev.external_url ?? ev.meeting_url ?? null
+    const detailPath = `/events/${ev.id}`
+    if (!(await requireAuth(detailPath))) return
+    if (outboundUrl) {
+      window.open(outboundUrl, '_blank', 'noopener,noreferrer')
+      return
+    }
+
+    try {
+      const method = rsvped.has(ev.id) ? 'DELETE' : 'POST'
+      const res = await fetch(`/api/events/${ev.id}/rsvp`, { method })
+      if (res.status === 401) {
+        router.push(`/login?redirect=${encodeURIComponent(detailPath)}`)
+        return
+      }
+      if (res.ok || res.status === 409) {
+        setRsvped(prev => {
+          const next = new Set(prev)
+          if (method === 'DELETE') next.delete(ev.id)
+          else next.add(ev.id)
+          return next
+        })
+      }
+    } catch {
+      // Keep the card usable even if RSVP persistence is temporarily unavailable.
+      setRsvped(prev => { const s = new Set(prev); s.has(ev.id) ? s.delete(ev.id) : s.add(ev.id); return s })
+    }
   }
 
   const pillStyle = (active: boolean, color = '#38bdf8') => ({
@@ -567,7 +590,7 @@ export default function EventsPage() {
         ) : (
           <div className="ev-grid">
             {sorted.map(ev => (
-              <EventCard key={ev.id} ev={ev} onRsvp={handleRsvp} />
+              <EventCard key={ev.id} ev={ev} onAttend={handleAttend} />
             ))}
           </div>
         )}
