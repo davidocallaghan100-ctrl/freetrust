@@ -72,14 +72,15 @@ export function getProfileCompletionIssues(profile: ProfileCompletionRecord | nu
   const issues: string[] = []
   if (!profile) return ['profile_missing']
   if (profile.deleted_at) issues.push('deleted')
+  if (!isStrictProfileCompletionRequired(profile)) {
+    return issues
+  }
   if (!hasRealName(profile)) issues.push('real_name_missing')
   if (!hasProfilePhoto(profile)) issues.push('profile_photo_missing')
   if (!hasMeaningfulText(profile.bio, 10)) issues.push('bio_missing')
   if (!hasMeaningfulText(profile.location, 2)) issues.push('location_missing')
-  if (isStrictProfileCompletionRequired(profile)) {
-    if (profile.onboarding_complete !== true) issues.push('onboarding_incomplete')
-    if (!hasHobbies(profile)) issues.push('hobbies_missing')
-  }
+  if (profile.onboarding_complete !== true) issues.push('onboarding_incomplete')
+  if (!hasHobbies(profile)) issues.push('hobbies_missing')
   return issues
 }
 
