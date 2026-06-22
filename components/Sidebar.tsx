@@ -22,6 +22,7 @@ const NAV_SECTIONS = [
       { href: '/services', label: 'Services Marketplace', icon: '🛠' },
       { href: '/grassroots', label: 'Grassroots', icon: '🌱' },
       { href: '/products', label: 'Products', icon: '📦' },
+      { href: '/travel', label: 'Experience Travel', icon: '✈️' },
       { href: '/organisations', label: 'Organisations', icon: '🏢' },
       { href: '/rent-share', label: 'Rent & Share', icon: '♻️' },
     ],

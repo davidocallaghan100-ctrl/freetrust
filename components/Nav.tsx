@@ -24,6 +24,7 @@ const DRAWER_SECTIONS = [
       { href: '/products',  label: 'Product Marketplace',    icon: '📦' },
       { href: '/services',  label: 'Services Marketplace',   icon: '🛠' },
       { href: '/grassroots', label: 'Grassroots',             icon: '🌱' },
+      { href: '/travel',    label: 'Experience Travel',       icon: '✈️' },
       { href: '/members', label: 'Member Directory',     icon: '🔍' },
     ],
   },
