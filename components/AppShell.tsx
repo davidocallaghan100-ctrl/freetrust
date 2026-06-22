@@ -9,7 +9,7 @@ import TrustAssistant from './TrustAssistant'
 import { canReceivePush, getPushCapabilities } from '@/lib/push/capabilities'
 import { usePushSubscription } from '@/lib/push/usePushSubscription'
 import { createClient } from '@/lib/supabase/client'
-import { isCommunityVisibleProfile } from '@/lib/profile/completion'
+import { needsSignupProfileSetup } from '@/lib/profile/completion'
 
 const AUTH_PATHS = ['/login', '/register', '/auth/reset-password', '/auth/callback', '/auth/session', '/login', '/register', '/onboarding']
 
@@ -21,7 +21,7 @@ const PUSH_PROMPTED_KEY = 'push_prompted'
 
 function profileNeedsSetup(profile: Record<string, unknown> | null | undefined) {
   if (!profile) return false
-  return !isCommunityVisibleProfile(profile)
+  return needsSignupProfileSetup(profile)
 }
 
 // ── Push Prompt Banner ────────────────────────────────────────────────────────
@@ -187,8 +187,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [isAuth, isImmersive])
 
   // New Google/Apple/email members should all receive the same nudge to fill
-  // out profile basics and hobbies. This also catches older users who skipped
-  // onboarding and landed directly in the feed.
+  // out profile basics and hobbies. Do not replay onboarding for legacy members
+  // who joined before the strict signup requirements were introduced.
   useEffect(() => {
     if (isAuth || isImmersive) return
     if (typeof window === 'undefined') return

@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       last_name,
       full_name,
       bio, location,
-      skills, interests, purpose, hobbies,
+      hobbies,
       avatar_url, cover_url,
     } = body
 
@@ -101,6 +101,9 @@ export async function POST(request: NextRequest) {
     // If it hasn't been applied yet the update will fail — that's acceptable
     // because the important fields (bio, location) were already saved above.
     //
+    // Some older production schemas do not have skills/interests/purpose.
+    // Do not write those optional UI-only arrays here; keep onboarding focused
+    // on the columns the current production profile schema actually supports.
     // cover_url is optional — the onboarding UI doesn't gate Continue on it.
     // Only include it in the update when the client actually sent a value so
     // we don't overwrite a cover the user set via the settings page with null.
@@ -113,9 +116,6 @@ export async function POST(request: NextRequest) {
     // re-runs onboarding and hits Skip on the hobbies step.
     const extendedUpdates: Record<string, unknown> = {
       account_type: account_type ?? 'individual',
-      skills: skills ?? [],
-      interests: interests ?? [],
-      purpose: purpose ?? [],
       onboarding_complete: true,
     }
     if (cover_url) extendedUpdates.cover_url = cover_url

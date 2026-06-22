@@ -132,7 +132,7 @@ export async function GET(req: NextRequest) {
     if (include('member') || include('post')) {
       const { data } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, full_name, location, avatar_url, bio, hobbies, onboarding_complete, deleted_at')
+        .select('id, first_name, last_name, full_name, location, avatar_url, bio, hobbies, onboarding_complete, created_at, deleted_at')
         .is('deleted_at', null)
         .or(searchOr(['full_name', 'location', 'bio'], q))
         .limit(filter === 'all' ? perType : limit)

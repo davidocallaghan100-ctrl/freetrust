@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { compressImage } from '@/lib/image-compression'
+import { isCommunityVisibleProfile } from '@/lib/profile/completion'
 
 const SKILLS = ['Design','Development','Marketing','Writing','Sales','Finance','Operations','Photography','Video','Music','Coaching','Legal','Consulting','Education','Data','AI / Automation','Sustainability','Community','Healthcare','Trades']
 const CATEGORIES = ['Tech & Software','Design & Creative','Marketing & Growth','Finance & Business','Legal & Compliance','Education & Learning','Health & Wellness','Trades & Services','Food & Catering','Arts & Culture','Community & Charity','Events & Entertainment']
@@ -85,7 +86,8 @@ export default function OnboardingPage() {
   const [selectedInterests, setSelectedInterests] = useState<string[]>([])
   const [selectedPurposes, setSelectedPurposes] = useState<string[]>([])
   // Hobbies step — preset chips + free-text custom entries.
-  // Optional; the "Skip" button on the step bypasses it.
+  // Required for new signups after 2026-06-22; legacy users are not forced
+  // through this flow again just because older rows lack hobbies.
   const [selectedHobbies, setSelectedHobbies] = useState<string[]>([])
   const [customHobby, setCustomHobby] = useState('')
   const [trustAwarded, setTrustAwarded] = useState(0)
@@ -105,7 +107,7 @@ export default function OnboardingPage() {
         const profile = data.profile
         if (!profile || cancelled) return
 
-        if (profile.onboarding_complete === true) {
+        if (profile.onboarding_complete === true || isCommunityVisibleProfile(profile)) {
           router.replace('/feed')
           return
         }

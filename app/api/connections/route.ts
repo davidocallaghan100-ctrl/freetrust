@@ -27,12 +27,12 @@ export async function GET(req: NextRequest) {
     const [followingRows, followersRows] = await Promise.all([
       admin
         .from('user_follows')
-        .select('following_id, profiles!following_id(id, first_name, last_name, full_name, avatar_url, bio, location, hobbies, onboarding_complete, deleted_at)')
+        .select('following_id, profiles!following_id(id, first_name, last_name, full_name, avatar_url, bio, location, hobbies, onboarding_complete, created_at, deleted_at)')
         .eq('follower_id', targetUserId)
         .then((res) => res.data ?? []),
       admin
         .from('user_follows')
-        .select('follower_id, profiles!follower_id(id, first_name, last_name, full_name, avatar_url, bio, location, hobbies, onboarding_complete, deleted_at)')
+        .select('follower_id, profiles!follower_id(id, first_name, last_name, full_name, avatar_url, bio, location, hobbies, onboarding_complete, created_at, deleted_at)')
         .eq('following_id', targetUserId)
         .then((res) => res.data ?? []),
     ])

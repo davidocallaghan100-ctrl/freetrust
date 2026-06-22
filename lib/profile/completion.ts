@@ -7,8 +7,11 @@ export type ProfileCompletionRecord = {
   location?: string | null
   hobbies?: unknown
   onboarding_complete?: boolean | null
+  created_at?: string | null
   deleted_at?: string | null
 }
+
+export const STRICT_PROFILE_REQUIREMENTS_STARTED_AT = '2026-06-22T20:22:00.000Z'
 
 const GENERIC_NAME_PARTS = new Set([
   'anonymous',
@@ -69,13 +72,26 @@ export function getProfileCompletionIssues(profile: ProfileCompletionRecord | nu
   const issues: string[] = []
   if (!profile) return ['profile_missing']
   if (profile.deleted_at) issues.push('deleted')
-  if (profile.onboarding_complete !== true) issues.push('onboarding_incomplete')
   if (!hasRealName(profile)) issues.push('real_name_missing')
   if (!hasProfilePhoto(profile)) issues.push('profile_photo_missing')
   if (!hasMeaningfulText(profile.bio, 10)) issues.push('bio_missing')
   if (!hasMeaningfulText(profile.location, 2)) issues.push('location_missing')
-  if (!hasHobbies(profile)) issues.push('hobbies_missing')
+  if (isStrictProfileCompletionRequired(profile)) {
+    if (profile.onboarding_complete !== true) issues.push('onboarding_incomplete')
+    if (!hasHobbies(profile)) issues.push('hobbies_missing')
+  }
   return issues
+}
+
+export function isStrictProfileCompletionRequired(profile: ProfileCompletionRecord | null | undefined) {
+  if (!profile?.created_at) return false
+  const createdAt = Date.parse(profile.created_at)
+  const cutoff = Date.parse(STRICT_PROFILE_REQUIREMENTS_STARTED_AT)
+  return Number.isFinite(createdAt) && createdAt >= cutoff
+}
+
+export function needsSignupProfileSetup(profile: ProfileCompletionRecord | null | undefined) {
+  return isStrictProfileCompletionRequired(profile) && getProfileCompletionIssues(profile).length > 0
 }
 
 export function isCommunityVisibleProfile(profile: ProfileCompletionRecord | null | undefined) {

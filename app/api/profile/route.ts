@@ -153,7 +153,7 @@ export async function PATCH(request: NextRequest) {
 
     const { data: currentProfile } = await supabase
       .from('profiles')
-      .select('first_name,last_name,full_name,avatar_url,bio,location,hobbies,onboarding_complete,deleted_at')
+      .select('first_name,last_name,full_name,avatar_url,bio,location,hobbies,onboarding_complete,created_at,deleted_at')
       .eq('id', user.id)
       .is('deleted_at', null)
       .maybeSingle()

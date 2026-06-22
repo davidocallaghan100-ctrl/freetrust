@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, first_name, last_name, full_name, username, email, avatar_url, bio, location, hobbies, onboarding_complete, deleted_at')
+      .select('id, first_name, last_name, full_name, username, email, avatar_url, bio, location, hobbies, onboarding_complete, created_at, deleted_at')
       .neq('id', user.id) // exclude self
       .is('deleted_at', null)
       .or(`full_name.ilike.${searchTerm},username.ilike.${searchTerm},email.ilike.${searchTerm}`)
