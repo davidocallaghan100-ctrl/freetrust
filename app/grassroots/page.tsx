@@ -17,8 +17,10 @@ import {
   AVAILABILITY_BY_VALUE,
   RATE_TYPE_OPTIONS,
   GRASSROOTS_GREEN,
+  buildContactHref,
   grassrootsCategoriesForServiceSource,
   normalizeGrassrootsCategorySlug,
+  type ContactPreference,
 } from '@/lib/grassroots/categories'
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -67,6 +69,8 @@ interface Listing {
   price_display?: string | null
   rating?: number | null
   review_count?: number | null
+  contact_preference?: ContactPreference | null
+  contact_value?: string | null
 }
 
 type ListingTypeFilter = 'offering' | 'seeking'
@@ -85,6 +89,12 @@ function toNumberOrNull(value: unknown): number | null {
   if (value == null) return null
   const n = Number(value)
   return Number.isFinite(n) ? n : null
+}
+
+function extractPhoneFromText(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const match = value.match(/(?:\+?\d[\d\s().-]{6,}\d)/)
+  return match?.[0]?.trim() ?? null
 }
 
 function mapServiceRowToGrassroots(row: Record<string, unknown>): Listing[] {
@@ -149,6 +159,7 @@ function mapExternalServiceRowToGrassroots(row: Record<string, unknown>): Listin
   const providerName = String(row.provider_name ?? 'External Provider').trim()
   const providerUrl = String(row.provider_url ?? '').trim()
   const awinDeeplink = typeof row.awin_deeplink === 'string' && row.awin_deeplink ? row.awin_deeplink : null
+  const contactPhone = extractPhoneFromText(row.description)
   if (!id || !title || !providerUrl) return []
   const thumbnail = typeof row.thumbnail === 'string' && row.thumbnail ? row.thumbnail : null
   return categories.map(category => ({
@@ -179,6 +190,8 @@ function mapExternalServiceRowToGrassroots(row: Record<string, unknown>): Listin
     price_display: typeof row.price_display === 'string' ? row.price_display : null,
     rating: toNumberOrNull(row.rating),
     review_count: toNumberOrNull(row.review_count),
+    contact_preference: contactPhone ? 'phone' : null,
+    contact_value: contactPhone,
   }))
 }
 
@@ -244,10 +257,6 @@ export default function GrassrootsBrowsePage() {
   const [filterLoc, setFilterLoc]           = useState<StructuredLocation>(EMPTY_LOCATION)
   const [radiusKm, setRadiusKm]             = useState<RadiusValue>(25)
   const [countryFilter, setCountryFilter]   = useState<string | null>(null)
-  const [selectedExternalListing, setSelectedExternalListing] = useState<Listing | null>(null)
-  const [enquiryMessage, setEnquiryMessage] = useState('')
-  const [enquiryLoading, setEnquiryLoading] = useState(false)
-
   const fetchListings = useCallback(async () => {
     setLoading(true)
     try {
@@ -446,97 +455,41 @@ export default function GrassrootsBrowsePage() {
     router.push(href)
   }
 
-  async function openExternalEnquiry(listing: Listing) {
-    if (listing.source !== 'external_service') return
-    if (!(await requireAuth('/grassroots'))) return
-    setSelectedExternalListing(listing)
-    setEnquiryMessage('')
-  }
+  async function openListingContact(listing: Listing) {
+    const redirectPath = listing.source === 'external_service' ? '/grassroots' : (listing.href ?? `/grassroots/${listing.id}`)
+    if (!(await requireAuth(redirectPath))) return
 
-  async function submitExternalEnquiry() {
-    if (!selectedExternalListing || !selectedExternalListing.external_service_id || !enquiryMessage.trim()) return
-    setEnquiryLoading(true)
-    try {
-      const providerName = selectedExternalListing.poster?.full_name ?? 'External Provider'
-      const providerUrl = selectedExternalListing.poster?.website_url ?? selectedExternalListing.href ?? null
-      const res = await fetch('/api/external-services/enquiry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          serviceListingId: selectedExternalListing.external_service_id,
-          providerName,
-          providerUrl,
-          category: selectedExternalListing.category,
-          enquiryMessage,
-          source: selectedExternalListing.external_service_source ?? 'external',
-        }),
-      })
-      const payload = await res.json().catch(() => null) as { error?: string } | null
-      if (!res.ok) throw new Error(payload?.error ?? 'Could not submit enquiry')
-
-      setSelectedExternalListing(null)
-      setEnquiryMessage('')
-      alert('Enquiry submitted! The provider will be in touch.')
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Could not submit enquiry')
-    } finally {
-      setEnquiryLoading(false)
+    if (listing.source === 'external_service') {
+      const href = buildContactHref(listing.contact_preference, listing.contact_value)
+      if (href) {
+        window.open(href, '_self', 'noopener,noreferrer')
+        void recordExternalClick(listing)
+        return
+      }
+      await openListing(listing)
+      return
     }
+
+    if (listing.contact_preference === 'platform') {
+      const posterId = listing.poster?.id
+      if (posterId) {
+        router.push(`/messages?to=${encodeURIComponent(posterId)}`)
+        return
+      }
+    }
+
+    const href = buildContactHref(listing.contact_preference, listing.contact_value)
+    if (href) {
+      const target = listing.contact_preference === 'whatsapp' ? '_blank' : '_self'
+      window.open(href, target, 'noopener,noreferrer')
+      return
+    }
+
+    router.push(listing.href ?? `/grassroots/${listing.id}`)
   }
 
   return (
     <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', paddingTop: 64, paddingBottom: 80 }}>
-      {selectedExternalListing && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1000, padding: '20px',
-        }}>
-          <div style={{
-            background: '#111827', borderRadius: '16px', padding: '26px',
-            maxWidth: 420, width: '100%', border: '1px solid #1e293b', boxSizing: 'border-box',
-          }}>
-            <h3 style={{ color: '#fff', margin: '0 0 6px 0', fontSize: '1.1rem' }}>
-              Enquire about this service
-            </h3>
-            <p style={{ color: '#94a3b8', fontSize: '14px', margin: '0 0 18px 0', lineHeight: 1.45 }}>
-              {selectedExternalListing.title} — {selectedExternalListing.poster?.full_name ?? 'External Provider'}
-            </p>
-            <textarea
-              placeholder="Describe what you need..."
-              value={enquiryMessage}
-              onChange={e => setEnquiryMessage(e.target.value)}
-              rows={4}
-              style={{
-                width: '100%', padding: '12px', background: '#1e293b', border: '1px solid #334155',
-                borderRadius: 8, color: '#fff', fontSize: 16, resize: 'vertical', boxSizing: 'border-box',
-                marginBottom: 14, fontFamily: 'inherit',
-              }}
-            />
-            <button
-              onClick={submitExternalEnquiry}
-              disabled={!enquiryMessage.trim() || enquiryLoading}
-              style={{
-                width: '100%', minHeight: 44, padding: '12px', background: enquiryLoading ? '#334155' : GRASSROOTS_GREEN.primary,
-                color: enquiryLoading ? '#64748b' : '#0f172a', border: 'none', borderRadius: 10,
-                fontWeight: 800, fontSize: 15, cursor: enquiryLoading ? 'default' : 'pointer', marginBottom: 10,
-                fontFamily: 'inherit',
-              }}
-            >
-              {enquiryLoading ? 'Submitting…' : 'Submit Enquiry'}
-            </button>
-            <button
-              onClick={() => { setSelectedExternalListing(null); setEnquiryMessage('') }}
-              style={{
-                width: '100%', minHeight: 44, padding: '10px', background: 'transparent', border: 'none',
-                color: '#64748b', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
       <style>{`
         .grassroots-layout { max-width: 1200px; margin: 0 auto; padding: 20px 16px 80px; display: grid; grid-template-columns: 240px 1fr; gap: 24px; align-items: start; }
         .grassroots-sidebar { position: sticky; top: 110px; }
@@ -868,7 +821,7 @@ export default function GrassrootsBrowsePage() {
           ) : (
             <>
               <div className="grassroots-grid">
-                {visibleListings.map(l => <ListingCard key={l.id} listing={l} onOpen={openListing} onExternalEnquiry={openExternalEnquiry} />)}
+                {visibleListings.map(l => <ListingCard key={l.id} listing={l} onOpen={openListing} onContact={openListingContact} />)}
               </div>
               {hasMoreListings && (
                 <div style={{ textAlign: 'center', marginTop: 24, color: '#64748b', fontSize: 13, padding: '12px 0' }}>
@@ -890,11 +843,11 @@ export default function GrassrootsBrowsePage() {
 function ListingCard({
   listing: l,
   onOpen,
-  onExternalEnquiry,
+  onContact,
 }: {
   listing: Listing
   onOpen: (listing: Listing) => void | Promise<void>
-  onExternalEnquiry: (listing: Listing) => void | Promise<void>
+  onContact: (listing: Listing) => void | Promise<void>
 }) {
   const cat = GRASSROOTS_CATEGORIES_BY_SLUG[l.category]
   const avail = AVAILABILITY_BY_VALUE[l.availability]
@@ -913,6 +866,15 @@ function ListingCard({
   const initials = name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
   const sourceLabel = l.source === 'service' ? 'FreeTrust Service' : l.source === 'external_service' ? 'Provider' : null
   const isExternalProvider = l.source === 'external_service'
+  const isTrueGrassrootsListing = l.source === 'grassroots' || !l.source
+  const hasDirectExternalContact = isExternalProvider && Boolean(buildContactHref(l.contact_preference, l.contact_value))
+  const memberContactLabel = l.contact_preference === 'whatsapp'
+    ? 'WhatsApp →'
+    : l.contact_preference === 'phone'
+      ? 'Call →'
+      : l.contact_preference === 'email'
+        ? 'Email →'
+        : 'Message →'
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLElement>) {
     if (event.key !== 'Enter' && event.key !== ' ') return
@@ -1143,17 +1105,45 @@ function ListingCard({
               >
                 {l.external_service_source === 'awin' ? 'Visit Partner →' : 'View Provider →'}
               </button>
+              {hasDirectExternalContact && (
+                <button
+                  type="button"
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); void onContact(l) }}
+                  style={{
+                    background: GRASSROOTS_GREEN.primary, border: 'none', borderRadius: 7,
+                    padding: '7px 10px', fontSize: 12, fontWeight: 900, color: '#0f172a',
+                    cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                  }}
+                >
+                  Call →
+                </button>
+              )}
+            </div>
+          ) : isTrueGrassrootsListing ? (
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
               <button
                 type="button"
-                onClick={e => { e.preventDefault(); e.stopPropagation(); void onExternalEnquiry(l) }}
+                onClick={e => { e.preventDefault(); e.stopPropagation(); void onContact(l) }}
                 style={{
                   background: GRASSROOTS_GREEN.primary, border: 'none', borderRadius: 7,
                   padding: '7px 10px', fontSize: 12, fontWeight: 900, color: '#0f172a',
                   cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
                 }}
               >
-                Enquire
+                {memberContactLabel}
               </button>
+              <span style={{
+                background: 'transparent',
+                border: `1px solid ${GRASSROOTS_GREEN.border}`,
+                borderRadius: 7,
+                padding: '6px 10px',
+                fontSize: 12,
+                fontWeight: 700,
+                color: GRASSROOTS_GREEN.primary,
+                whiteSpace: 'nowrap',
+              }}>
+                View →
+              </span>
             </div>
           ) : (
             <span style={{

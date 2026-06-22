@@ -122,6 +122,15 @@ type ServiceListEntry =
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+const EXTERNAL_CATEGORY_SOURCE_ALIASES: Record<string, string[]> = {
+  engineering: ['engineering', 'builders-construction', 'construction-trades', 'renewable-energy', 'energy-services'],
+  hospitality: ['hospitality', 'food-catering', 'events-entertainment'],
+  legal: ['legal', 'legal-services', 'legal-compliance'],
+  planning: ['planning', 'business-consulting', 'grant-consulting', 'property-real-estate'],
+  'project-management': ['project-management', 'business-consulting', 'virtual-assistant'],
+  'real-estate': ['real-estate', 'property-real-estate', 'professional-property-services'],
+}
+
 const SORT_OPTIONS = [
   { value: 'best',     label: 'Best Match' },
   { value: 'newest',   label: 'Newest' },
@@ -147,6 +156,31 @@ function modeFromExternalServiceType(type: ExternalService['service_type']): Ser
   if (type === 'remote') return 'online'
   if (type === 'local') return 'offline'
   return 'both'
+}
+
+function localFirstRank(mode: Service['mode']): number {
+  if (mode === 'offline') return 0
+  if (mode === 'both') return 1
+  return 2
+}
+
+function externalLocalFirstRank(type: ExternalService['service_type']): number {
+  if (type === 'local') return 0
+  if (type === 'both') return 1
+  return 2
+}
+
+function serviceListEntryLocalFirstRank(entry: ServiceListEntry): number {
+  return entry._type === 'community'
+    ? localFirstRank(entry.item.mode)
+    : externalLocalFirstRank(entry.item.service_type)
+}
+
+function externalServiceMatchesCategory(item: ExternalService, categoryId: string): boolean {
+  if (item.category === categoryId || item.source_category === categoryId) return true
+  const sourceAliases = EXTERNAL_CATEGORY_SOURCE_ALIASES[categoryId] ?? []
+  if (sourceAliases.length === 0) return false
+  return sourceAliases.includes(item.category) || (!!item.source_category && sourceAliases.includes(item.source_category))
 }
 
 function categoryMetaForExternalService(categoryId: string) {
@@ -348,13 +382,13 @@ function ExternalServiceCard({
       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
       <div style={{
         position: 'absolute', top: '12px', left: '12px',
-        background: item.is_awin ? 'rgba(30,58,95,0.92)' : 'rgba(30,41,59,0.92)',
-        color: item.is_awin ? '#60a5fa' : '#9ca3af',
+        background: 'rgba(30,41,59,0.92)',
+        color: '#9ca3af',
         fontSize: '10px', fontWeight: 700,
         padding: '3px 8px', borderRadius: '6px',
         letterSpacing: '0.06em', textTransform: 'uppercase',
       }}>
-        {item.is_awin ? '⭐ Awin Partner' : '🌐 External Provider'}
+        🌐 External Provider
       </div>
 
       <div style={{
@@ -763,7 +797,7 @@ export default function ServicesPage() {
     const includeCategory = options.includeCategory ?? true
     const externalMode = modeFromExternalServiceType(item.service_type)
     if (modeFilter !== 'all' && externalMode !== modeFilter && externalMode !== 'both') return false
-    if (includeCategory && activeCatId && item.category !== activeCatId) return false
+    if (includeCategory && activeCatId && !externalServiceMatchesCategory(item, activeCatId)) return false
     if (search.trim()) {
       const haystack = `${item.title} ${item.provider_name} ${item.description ?? ''} ${item.category}`.toLowerCase()
       if (!haystack.includes(search.trim().toLowerCase())) return false
@@ -801,7 +835,11 @@ export default function ServicesPage() {
       if (sort === 'price_asc') return a.price - b.price
       if (sort === 'price_desc') return b.price - a.price
       if (sort === 'rating') return b.rating - a.rating
-      // Default: when a location filter is active, sort local-first by distance.
+      // Local service types should always surface first before secondary sorts.
+      const localRank = localFirstRank(a.mode) - localFirstRank(b.mode)
+      if (localRank !== 0) return localRank
+
+      // Default: when a location filter is active, sort by distance inside local-first buckets.
       if (filterLoc.latitude != null) {
         const da = typeof a.distance_km === 'number' ? a.distance_km : Number.MAX_VALUE
         const db = typeof b.distance_km === 'number' ? b.distance_km : Number.MAX_VALUE
@@ -811,6 +849,8 @@ export default function ServicesPage() {
     })
 
   const filteredExternalForListings = externalServices.filter(item => externalMatchesActiveFilters(item)).sort((a, b) => {
+    const localRank = externalLocalFirstRank(a.service_type) - externalLocalFirstRank(b.service_type)
+    if (localRank !== 0) return localRank
     if (sort === 'rating') return (b.rating ?? 0) - (a.rating ?? 0)
     return (b.lead_count + b.click_count) - (a.lead_count + a.click_count)
   })
@@ -818,19 +858,24 @@ export default function ServicesPage() {
   const mixedServices: ServiceListEntry[] = [
     ...filtered.map(item => ({ _type: 'community' as const, item })),
     ...filteredExternalForListings.map(item => ({ _type: 'external' as const, item })),
-  ]
+  ].sort((a, b) => {
+    const localRank = serviceListEntryLocalFirstRank(a) - serviceListEntryLocalFirstRank(b)
+    if (localRank !== 0) return localRank
+    if (a._type !== b._type) return a._type === 'community' ? -1 : 1
+    return 0
+  })
 
   const visibleMixedServices = mixedServices.slice(0, serviceDisplayLimit)
   const servicesHasMore = serviceDisplayLimit < mixedServices.length
 
   function categoryCount(categoryId: string) {
     return servicesWithDistance.filter(s => s.categoryId === categoryId && serviceMatchesActiveFilters(s, { includeCategory: false })).length
-      + externalServices.filter(item => item.category === categoryId && externalMatchesActiveFilters(item, { includeCategory: false })).length
+      + externalServices.filter(item => externalServiceMatchesCategory(item, categoryId) && externalMatchesActiveFilters(item, { includeCategory: false })).length
   }
 
   function rawCategoryCount(categoryId: string) {
     return services.filter(s => s.categoryId === categoryId).length
-      + externalServices.filter(item => item.category === categoryId).length
+      + externalServices.filter(item => externalServiceMatchesCategory(item, categoryId)).length
   }
 
   const activeCategory = activeCatId ? visibleCats.find(c => c.id === activeCatId) : null
@@ -845,6 +890,10 @@ export default function ServicesPage() {
       if (!haystack.includes(externalSearch.trim().toLowerCase())) return false
     }
     return true
+  }).sort((a, b) => {
+    const localRank = externalLocalFirstRank(a.service_type) - externalLocalFirstRank(b.service_type)
+    if (localRank !== 0) return localRank
+    return (b.lead_count + b.click_count) - (a.lead_count + a.click_count)
   })
 
   const visibleExternalServices = filteredExternalServices.slice(0, externalDisplayLimit)

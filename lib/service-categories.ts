@@ -27,6 +27,13 @@ export const ONLINE_CATEGORIES: ServiceCategory[] = [
     subcategories: ['Business Strategy', 'Market Research', 'Business Plans', 'Project Management', 'Operations', 'HR Consulting'],
   },
   {
+    id: 'engineering',
+    label: 'Engineering',
+    icon: '🛠️',
+    mode: 'both',
+    subcategories: ['Civil Engineering', 'Structural Engineering', 'Mechanical Engineering', 'Electrical Engineering', 'CAD & Drafting', 'Engineering Consultancy', 'Technical Design', 'Site Inspections'],
+  },
+  {
     id: 'coaching-mentoring',
     label: 'Coaching & Mentoring',
     icon: '🎯',
@@ -85,11 +92,11 @@ export const ONLINE_CATEGORIES: ServiceCategory[] = [
     ],
   },
   {
-    id: 'legal-compliance',
-    label: 'Legal & Compliance',
+    id: 'legal',
+    label: 'Legal',
     icon: '⚖️',
-    mode: 'online',
-    subcategories: ['Contract Review', 'GDPR Compliance', 'Trademark & IP', 'Terms & Privacy Policies', 'Legal Advice', 'Company Formation'],
+    mode: 'both',
+    subcategories: ['Solicitors', 'Legal Advice', 'Contracts', 'Employment Law', 'Family Law', 'Property Law', 'Notary Services', 'Legal Documents'],
   },
   {
     id: 'marketing-growth',
@@ -111,6 +118,20 @@ export const ONLINE_CATEGORIES: ServiceCategory[] = [
     icon: '📷',
     mode: 'online',
     subcategories: ['Photo Editing', 'Product Photography', 'Photo Retouching', 'Real Estate Photos', 'Background Removal'],
+  },
+  {
+    id: 'planning',
+    label: 'Planning',
+    icon: '🗺️',
+    mode: 'both',
+    subcategories: ['Planning Applications', 'Urban Planning', 'Event Planning', 'Business Planning', 'Project Planning', 'Construction Planning', 'Planning Consultancy', 'Feasibility Studies'],
+  },
+  {
+    id: 'project-management',
+    label: 'Project Management',
+    icon: '📋',
+    mode: 'both',
+    subcategories: ['Agile Project Management', 'Construction Project Management', 'Operations Planning', 'Project Coordination', 'Programme Management', 'PMO Support', 'Risk Management', 'Delivery Management'],
   },
   {
     id: 'sales-online',
@@ -264,6 +285,13 @@ export const OFFLINE_CATEGORIES: ServiceCategory[] = [
     subcategories: ['Personal Training', 'Physiotherapy', 'Massage Therapy', 'Mobile Massage Therapy', 'Nutrition & Dietetics', 'Mental Health Therapy', 'Yoga', 'Yoga & Pilates (In-Person)'],
   },
   {
+    id: 'hospitality',
+    label: 'Hospitality',
+    icon: '🍽️',
+    mode: 'offline',
+    subcategories: ['Catering Staff', 'Bar Staff', 'Hotel Services', 'Restaurant Support', 'Event Hospitality', 'Kitchen Porters', 'Front of House', 'Hospitality Consulting'],
+  },
+  {
     id: 'home-garden',
     label: 'Home & Garden',
     icon: '🏡',
@@ -392,6 +420,13 @@ export const OFFLINE_CATEGORIES: ServiceCategory[] = [
     subcategories: ['Property Management', 'Letting Support', 'BER Assessments', 'Surveying', 'Snag Lists', 'Valuations', 'Planning Advice', 'Tenant Turnover Services'],
   },
   {
+    id: 'real-estate',
+    label: 'Real Estate',
+    icon: '🏡',
+    mode: 'offline',
+    subcategories: ['Estate Agents', 'Letting Agents', 'Property Management', 'Valuations', 'Property Photography', 'Buyer Agents', 'Commercial Property', 'Tenant Finding'],
+  },
+  {
     id: 'music-arts-tuition',
     label: 'Music & Arts Tuition',
     icon: '🎵',
@@ -493,6 +528,7 @@ function normaliseCategoryLabel(value: string) {
 
 const LEGACY_CATEGORY_LABEL_ALIASES: Record<string, string> = {
   sales: 'online sales',
+  'legal and compliance': 'legal',
 }
 
 export function findServiceCategoryByLabel(label: string | null | undefined): ServiceCategory | null {

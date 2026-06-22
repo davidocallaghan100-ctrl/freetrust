@@ -57,7 +57,7 @@ const ONLINE_CATEGORIES = [
   'Music & Audio',
   'Business & Consulting',
   'Finance & Accounting',
-  'Legal & Compliance',
+  'Legal',
   'Coaching & Mentoring',
   'Education & Tutoring',
   'AI & Automation',
