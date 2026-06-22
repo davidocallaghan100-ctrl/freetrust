@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { REAL_EVENT_SOURCE_FILTER, REAL_JOB_SOURCE_FILTER } from '@/lib/dataIntegrity'
 import { resolveCoords, type ResolvedCoords } from '@/lib/geo/city-lookup'
+import { isCommunityVisibleProfile } from '@/lib/profile/completion'
 
 type ProfileLocation = {
   latitude?: number | null
@@ -17,6 +18,13 @@ type ProfileLocation = {
   username?: string | null
   show_on_map?: boolean | null
   deleted_at?: string | null
+  first_name?: string | null
+  last_name?: string | null
+  full_name?: string | null
+  avatar_url?: string | null
+  bio?: string | null
+  hobbies?: unknown
+  onboarding_complete?: boolean | null
 }
 
 function withCoords<T extends Record<string, unknown>>(row: T, coords: ResolvedCoords) {
@@ -44,7 +52,7 @@ export async function GET() {
     const [membersResult, eventsResult, listingsResult, jobsResult] = await Promise.allSettled([
       admin
         .from('profiles')
-        .select('id, username, full_name, avatar_url, bio, location, location_label, city, country, latitude, longitude, account_type, show_on_map')
+        .select('id, username, first_name, last_name, full_name, avatar_url, bio, hobbies, onboarding_complete, location, location_label, city, country, latitude, longitude, account_type, show_on_map, deleted_at')
         .is('deleted_at', null)
         .or('show_on_map.is.null,show_on_map.eq.true')
         .limit(1000),
@@ -59,7 +67,7 @@ export async function GET() {
 
       admin
         .from('listings')
-        .select('id, title, price_eur, currency_code, cover_image, category, seller_id, product_type, service_mode, location, location_label, latitude, longitude, city, country, profiles!listings_seller_id_fkey(id, latitude, longitude, city, country, location, location_label, username, show_on_map, deleted_at)')
+        .select('id, title, price_eur, currency_code, cover_image, category, seller_id, product_type, service_mode, location, location_label, latitude, longitude, city, country, profiles!listings_seller_id_fkey(id, first_name, last_name, full_name, avatar_url, bio, hobbies, onboarding_complete, latitude, longitude, city, country, location, location_label, username, show_on_map, deleted_at)')
         .eq('status', 'active')
         .limit(1000),
 
@@ -82,6 +90,10 @@ export async function GET() {
 
     if (membersResult.status === 'fulfilled' && !membersResult.value.error) {
       for (const member of membersResult.value.data ?? []) {
+        if (!isCommunityVisibleProfile(member)) {
+          diagnostics.members.skipped += 1
+          continue
+        }
         const coords = resolveCoords(member)
         if (!coords) {
           diagnostics.members.skipped += 1
@@ -117,7 +129,7 @@ export async function GET() {
     if (listingsResult.status === 'fulfilled' && !listingsResult.value.error) {
       for (const listing of listingsResult.value.data ?? []) {
         const profile = (listing.profiles ?? null) as ProfileLocation | null
-        const coords = resolveCoords(listing) ?? (profile?.show_on_map === false || profile?.deleted_at ? null : resolveCoords(profile ?? {}))
+        const coords = resolveCoords(listing) ?? (profile?.show_on_map === false || !isCommunityVisibleProfile(profile) ? null : resolveCoords(profile ?? {}))
         const productType = String(listing.product_type ?? '').toLowerCase()
         const serviceMode = listing.service_mode == null ? null : String(listing.service_mode)
         const pinType = productType === 'physical'

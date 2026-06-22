@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { REAL_EVENT_SOURCE_FILTER, REAL_JOB_SOURCE_FILTER } from '@/lib/dataIntegrity'
+import { isCommunityVisibleProfile } from '@/lib/profile/completion'
 
 type HitType = 'member' | 'post' | 'service' | 'product' | 'job' | 'event' | 'article' | 'org' | 'grassroots'
 type ThumbnailKind = 'image' | 'video'
@@ -131,11 +132,11 @@ export async function GET(req: NextRequest) {
     if (include('member') || include('post')) {
       const { data } = await supabase
         .from('profiles')
-        .select('id, full_name, location, avatar_url')
+        .select('id, first_name, last_name, full_name, location, avatar_url, bio, hobbies, onboarding_complete, deleted_at')
         .is('deleted_at', null)
         .or(searchOr(['full_name', 'location', 'bio'], q))
         .limit(filter === 'all' ? perType : limit)
-      for (const row of (data ?? []) as Record<string, unknown>[]) {
+      for (const row of ((data ?? []) as Record<string, unknown>[]).filter(isCommunityVisibleProfile)) {
         const id = String(row.id)
         profileIds.add(id)
         profileById.set(id, row as any)

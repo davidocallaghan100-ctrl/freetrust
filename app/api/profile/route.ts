@@ -3,6 +3,7 @@ export const revalidate = 0
 export const fetchCache = 'force-no-store'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getProfileCompletionIssues } from '@/lib/profile/completion'
 
 // GET /api/profile — get current user's profile
 export async function GET() {
@@ -148,6 +149,20 @@ export async function PATCH(request: NextRequest) {
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+    }
+
+    const { data: currentProfile } = await supabase
+      .from('profiles')
+      .select('first_name,last_name,full_name,avatar_url,bio,location,hobbies,onboarding_complete,deleted_at')
+      .eq('id', user.id)
+      .is('deleted_at', null)
+      .maybeSingle()
+
+    const mergedProfile = { ...(currentProfile ?? {}), ...updates }
+    const completionIssues = getProfileCompletionIssues(mergedProfile)
+      .filter(issue => issue !== 'onboarding_incomplete')
+    if ((currentProfile as { onboarding_complete?: boolean | null } | null)?.onboarding_complete === true && completionIssues.length > 0) {
+      return NextResponse.json({ error: 'Your profile must keep a real name, face photo, bio, location, and hobbies to remain visible on FreeTrust.' }, { status: 400 })
     }
 
     const { data: profile, error } = await supabase

@@ -367,7 +367,7 @@ export default function OnboardingPage() {
           <div>
             <div style={{ marginBottom: '1.75rem' }}>
               <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f1f5f9', margin: '0 0 0.3rem' }}>Set up your profile</h2>
-              <p style={{ color: '#64748b', fontSize: '0.88rem', margin: 0 }}>This is how others will find and know you</p>
+              <p style={{ color: '#64748b', fontSize: '0.88rem', margin: 0 }}>Required before your account is visible to members</p>
             </div>
 
             {/* Photo upload */}
@@ -513,12 +513,12 @@ export default function OnboardingPage() {
                 </div>
               )}
               <div>
-                <label className="ob-label">Bio</label>
+                <label className="ob-label">Bio *</label>
                 <textarea className="ob-input" value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell the community a bit about yourself…" rows={3} style={{ resize: 'vertical' }} maxLength={300} />
                 <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '0.25rem', textAlign: 'right' }}>{bio.length}/300</div>
               </div>
               <div>
-                <label className="ob-label">Location</label>
+                <label className="ob-label">Location *</label>
                 <input className="ob-input" value={location} onChange={e => setLocation(e.target.value)} placeholder="City, Country" />
               </div>
               <div>
@@ -548,10 +548,12 @@ export default function OnboardingPage() {
                   if (!firstName.trim()) return setNameError('Please enter your first name.')
                   if (!lastName.trim())  return setNameError('Please enter your last name.')
                   if (!avatarUrl)        return setNameError('A real face photo is required to join FreeTrust.')
+                  if (bio.trim().length < 10) return setNameError('Please add a short bio so members know who they are dealing with.')
+                  if (location.trim().length < 2) return setNameError('Please add your city or location.')
                   setNameError(null)
                   next()
                 }}
-                disabled={!firstName.trim() || !lastName.trim() || !avatarUrl || photoUploading}
+                disabled={!firstName.trim() || !lastName.trim() || !avatarUrl || bio.trim().length < 10 || location.trim().length < 2 || photoUploading}
               >
                 {photoUploading ? 'Uploading…' : 'Continue →'}
               </button>
@@ -604,7 +606,7 @@ export default function OnboardingPage() {
           <div>
             <div style={{ marginBottom: '1.75rem' }}>
               <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f1f5f9', margin: '0 0 0.3rem' }}>What are your hobbies?</h2>
-              <p style={{ color: '#64748b', fontSize: '0.88rem', margin: 0 }}>Pick a few — they&apos;ll show on your profile so people with shared interests can find you. Optional.</p>
+              <p style={{ color: '#64748b', fontSize: '0.88rem', margin: 0 }}>Pick at least one — this helps real members connect around shared interests.</p>
             </div>
 
             {/* Preset hobby chips — tap to toggle */}
@@ -691,14 +693,7 @@ export default function OnboardingPage() {
 
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button className="ob-btn-secondary" onClick={back}>Back</button>
-              <button
-                className="ob-btn-secondary"
-                onClick={() => { setSelectedHobbies([]); setCustomHobby(''); next() }}
-                style={{ flex: 1 }}
-              >
-                Skip
-              </button>
-              <button className="ob-btn-primary" onClick={next} style={{ flex: 1 }}>
+              <button className="ob-btn-primary" onClick={next} disabled={selectedHobbies.length === 0} style={{ flex: 1 }}>
                 Continue →
               </button>
             </div>

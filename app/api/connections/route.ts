@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { insertNotification } from '@/lib/notifications/insert'
 import { sendEmail } from '@/lib/email/send'
+import { isCommunityVisibleProfile } from '@/lib/profile/completion'
 
 // GET — returns { following: [...], followers: [...], followingIds: string[] }
 // Optional ?userId=<profile id> lets public profile pages show the same
@@ -26,19 +27,19 @@ export async function GET(req: NextRequest) {
     const [followingRows, followersRows] = await Promise.all([
       admin
         .from('user_follows')
-        .select('following_id, profiles!following_id(id, full_name, avatar_url, bio, location, deleted_at)')
+        .select('following_id, profiles!following_id(id, first_name, last_name, full_name, avatar_url, bio, location, hobbies, onboarding_complete, deleted_at)')
         .eq('follower_id', targetUserId)
         .then((res) => res.data ?? []),
       admin
         .from('user_follows')
-        .select('follower_id, profiles!follower_id(id, full_name, avatar_url, bio, location, deleted_at)')
+        .select('follower_id, profiles!follower_id(id, first_name, last_name, full_name, avatar_url, bio, location, hobbies, onboarding_complete, deleted_at)')
         .eq('following_id', targetUserId)
         .then((res) => res.data ?? []),
     ])
 
     const stripDeletedAt = (profile: Record<string, unknown> | null | undefined) => {
       if (!profile) return null
-      if (profile.deleted_at) return null
+      if (!isCommunityVisibleProfile(profile)) return null
       const { deleted_at: _omit, ...rest } = profile as Record<string, unknown> & { deleted_at?: unknown }
       return rest
     }

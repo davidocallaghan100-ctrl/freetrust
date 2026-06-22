@@ -3,6 +3,7 @@ export const revalidate = 0
 export const fetchCache = 'force-no-store'
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isCommunityVisibleProfile } from '@/lib/profile/completion'
 
 // ────────────────────────────────────────────────────────────────────────────
 // GET /api/directory/members
@@ -99,7 +100,7 @@ export async function GET() {
   // TS2345 errors. Keep it on one line.
   const { data: profilesData, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, full_name, avatar_url, bio, location, role, created_at, is_verified, verified_at, verification_status, professional_headline, linkedin_url, instagram_url, twitter_url, github_url, tiktok_url, youtube_url, website_url')
+    .select('id, first_name, last_name, full_name, avatar_url, bio, location, role, created_at, is_verified, verified_at, verification_status, professional_headline, linkedin_url, instagram_url, twitter_url, github_url, tiktok_url, youtube_url, website_url, onboarding_complete, hobbies, deleted_at')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(1000)
@@ -114,7 +115,7 @@ export async function GET() {
     )
   }
 
-  const profiles = profilesData ?? []
+  const profiles = (profilesData ?? []).filter((profile) => isCommunityVisibleProfile(profile))
   diag.profiles_total = profiles.length
   diag.profile_ids_sample = profiles.slice(0, 50).map((p: { id: string }) => p.id)
 

@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { toPgTagArray } from '@/lib/supabase/text-array'
+import { hasProfilePhoto, hasRealName } from '@/lib/profile/completion'
 
 // POST /api/onboarding — save onboarding profile data
 // NOTE: ₮200 trust is awarded exclusively in /auth/callback on signup.
@@ -37,6 +38,28 @@ export async function POST(request: NextRequest) {
     const derivedFullName = [firstNameClean, lastNameClean].filter(Boolean).join(' ')
     const fullNameClean = derivedFullName || (typeof full_name === 'string' ? full_name.trim() : '')
 
+    const bioClean = typeof bio === 'string' ? bio.trim() : ''
+    const locationClean = typeof location === 'string' ? location.trim() : ''
+    const hobbiesClean = Array.isArray(hobbies)
+      ? hobbies.map((item) => typeof item === 'string' ? item.trim() : '').filter(Boolean)
+      : []
+
+    if (!hasRealName({ first_name: firstNameClean, last_name: lastNameClean, full_name: fullNameClean })) {
+      return NextResponse.json({ error: 'Please enter your real first and last name.' }, { status: 400 })
+    }
+    if (!hasProfilePhoto({ avatar_url })) {
+      return NextResponse.json({ error: 'A real profile photo is required before your account can be completed.' }, { status: 400 })
+    }
+    if (bioClean.length < 10) {
+      return NextResponse.json({ error: 'Please add a short bio so members know who they are dealing with.' }, { status: 400 })
+    }
+    if (locationClean.length < 2) {
+      return NextResponse.json({ error: 'Please add your city or location.' }, { status: 400 })
+    }
+    if (hobbiesClean.length === 0) {
+      return NextResponse.json({ error: 'Please add at least one hobby or interest.' }, { status: 400 })
+    }
+
     // Read only base-schema columns that are guaranteed to exist.
     // Avoid selecting extended columns (onboarding_complete, account_type, etc.)
     // which are added by a migration that may not yet be applied to the live DB.
@@ -59,8 +82,8 @@ export async function POST(request: NextRequest) {
         first_name: firstNameClean || null,
         last_name:  lastNameClean  || null,
         full_name:  fullNameClean || profile?.full_name || null,
-        bio: bio || null,
-        location: location || null,
+        bio: bioClean || null,
+        location: locationClean || null,
         // Prefer the freshly uploaded avatar_url from the request body, then
         // fall back to whatever is already stored — never overwrite with null.
         avatar_url: avatar_url ?? profile?.avatar_url ?? null,
@@ -96,9 +119,7 @@ export async function POST(request: NextRequest) {
       onboarding_complete: true,
     }
     if (cover_url) extendedUpdates.cover_url = cover_url
-    if (Array.isArray(hobbies) && hobbies.length > 0) {
-      extendedUpdates.hobbies = toPgTagArray(hobbies)
-    }
+    extendedUpdates.hobbies = toPgTagArray(hobbiesClean)
 
     const { error: extendedError } = await supabase
       .from('profiles')

@@ -9,6 +9,7 @@ import TrustAssistant from './TrustAssistant'
 import { canReceivePush, getPushCapabilities } from '@/lib/push/capabilities'
 import { usePushSubscription } from '@/lib/push/usePushSubscription'
 import { createClient } from '@/lib/supabase/client'
+import { isCommunityVisibleProfile } from '@/lib/profile/completion'
 
 const AUTH_PATHS = ['/login', '/register', '/auth/reset-password', '/auth/callback', '/auth/session', '/login', '/register', '/onboarding']
 
@@ -17,20 +18,10 @@ const AUTH_PATHS = ['/login', '/register', '/auth/reset-password', '/auth/callba
 // v2: bumped version so existing members without location re-trigger on next load.
 const GEO_INIT_SESSION_KEY = 'freetrust_geo_init_v2'
 const PUSH_PROMPTED_KEY = 'push_prompted'
-const PROFILE_PROMPT_DISMISSED_KEY = 'ft_profile_prompt_dismissed_v1'
 
 function profileNeedsSetup(profile: Record<string, unknown> | null | undefined) {
   if (!profile) return false
-  const hobbies = profile.hobbies
-  return (
-    profile.onboarding_complete !== true ||
-    !profile.full_name ||
-    !profile.bio ||
-    !profile.location ||
-    !profile.avatar_url ||
-    !Array.isArray(hobbies) ||
-    hobbies.length === 0
-  )
+  return !isCommunityVisibleProfile(profile)
 }
 
 // ── Push Prompt Banner ────────────────────────────────────────────────────────
@@ -130,56 +121,40 @@ function PushPromptBanner({ onDismiss }: { onDismiss: () => void }) {
   )
 }
 
-function ProfileSetupPrompt({ onDismiss }: { onDismiss: () => void }) {
-  const dismiss = () => {
-    localStorage.setItem(PROFILE_PROMPT_DISMISSED_KEY, '1')
-    onDismiss()
-  }
-
+function ProfileSetupPrompt() {
   return (
     <div style={{
       position: 'fixed',
-      inset: 'auto 16px 86px auto',
-      width: 'min(420px, calc(100vw - 32px))',
-      zIndex: 650,
-      background: 'linear-gradient(160deg, rgba(10,15,30,0.98), rgba(15,23,42,0.98))',
-      border: '1px solid rgba(0,194,203,0.32)',
-      borderRadius: 18,
+      inset: 0,
+      zIndex: 1200,
+      background: 'rgba(2,6,23,0.84)',
+      backdropFilter: 'blur(12px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
       padding: 18,
-      boxShadow: '0 24px 70px rgba(0,0,0,0.48), 0 0 28px rgba(0,194,203,0.12)',
       color: '#fff',
     }}>
-      <button
-        type="button"
-        onClick={dismiss}
-        aria-label="Dismiss profile setup reminder"
-        style={{
-          position: 'absolute', top: 12, right: 12, width: 30, height: 30,
-          borderRadius: 999, border: '1px solid rgba(148,163,184,0.18)',
-          background: 'rgba(148,163,184,0.08)', color: '#94a3b8', cursor: 'pointer',
-          fontSize: 18, lineHeight: 1, fontFamily: 'inherit',
-        }}
-      >×</button>
-      <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', paddingRight: 26 }}>
-        <div style={{ width: 42, height: 42, borderRadius: 14, background: 'rgba(0,194,203,0.12)', border: '1px solid rgba(0,194,203,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 21 }}>👋</div>
-        <div>
-          <h2 style={{ margin: '0 0 5px', color: '#fff', fontSize: 17, fontWeight: 850 }}>Finish your FreeTrust profile</h2>
-          <p style={{ margin: 0, color: '#94a3b8', fontSize: 14, lineHeight: 1.5 }}>
-            Add your face photo, bio, location and hobbies so members know who they are dealing with.
-          </p>
+      <div style={{ width: 'min(440px, 100%)', background: 'linear-gradient(160deg, rgba(10,15,30,0.98), rgba(15,23,42,0.98))', border: '1px solid rgba(0,194,203,0.32)', borderRadius: 22, padding: 22, boxShadow: '0 24px 70px rgba(0,0,0,0.56), 0 0 28px rgba(0,194,203,0.12)' }}>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+          <div style={{ width: 46, height: 46, borderRadius: 15, background: 'rgba(0,194,203,0.12)', border: '1px solid rgba(0,194,203,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 23 }}>🛡️</div>
+          <div>
+            <h2 style={{ margin: '0 0 6px', color: '#fff', fontSize: 19, fontWeight: 880 }}>Complete your account setup</h2>
+            <p style={{ margin: 0, color: '#94a3b8', fontSize: 14, lineHeight: 1.5 }}>
+              FreeTrust requires a real first and last name, face photo, bio, location, and at least one hobby before an account appears in the member community or profile pages.
+            </p>
+          </div>
         </div>
-      </div>
-      <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+        <div style={{ display: 'grid', gap: 8, marginTop: 16, color: '#cbd5e1', fontSize: 13 }}>
+          <div>✓ Real first and last name</div>
+          <div>✓ Real profile picture</div>
+          <div>✓ Bio, location, and hobbies</div>
+        </div>
         <button
           type="button"
-          onClick={() => { window.location.href = '/profile' }}
-          style={{ flex: 1, border: 'none', borderRadius: 11, background: 'linear-gradient(135deg,#00c2cb,#38bdf8)', color: '#0a0f1e', fontWeight: 850, fontSize: 14, padding: '11px 14px', cursor: 'pointer', fontFamily: 'inherit' }}
-        >Complete profile</button>
-        <button
-          type="button"
-          onClick={dismiss}
-          style={{ border: '1px solid rgba(148,163,184,0.22)', borderRadius: 11, background: 'rgba(148,163,184,0.08)', color: '#94a3b8', fontWeight: 700, fontSize: 14, padding: '11px 14px', cursor: 'pointer', fontFamily: 'inherit' }}
-        >Later</button>
+          onClick={() => { window.location.href = '/onboarding?welcome=1' }}
+          style={{ width: '100%', marginTop: 18, border: 'none', borderRadius: 12, background: 'linear-gradient(135deg,#00c2cb,#38bdf8)', color: '#0a0f1e', fontWeight: 880, fontSize: 15, padding: '13px 14px', cursor: 'pointer', fontFamily: 'inherit' }}
+        >Finish setup now</button>
       </div>
     </div>
   )
@@ -217,8 +192,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isAuth || isImmersive) return
     if (typeof window === 'undefined') return
-    if (localStorage.getItem(PROFILE_PROMPT_DISMISSED_KEY)) return
-
     const timer = setTimeout(async () => {
       try {
         const res = await fetch('/api/profile', { cache: 'no-store' })
@@ -303,7 +276,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <BottomNav />
       <TrustAssistant />
       {showProfilePrompt && (
-        <ProfileSetupPrompt onDismiss={() => setShowProfilePrompt(false)} />
+        <ProfileSetupPrompt />
       )}
       {showPushBanner && (
         <PushPromptBanner onDismiss={() => setShowPushBanner(false)} />

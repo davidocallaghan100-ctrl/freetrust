@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { isCommunityVisibleProfile } from '@/lib/profile/completion'
 
 // GET /api/users/search?q=... — search users by name, username, or email
 export async function GET(request: NextRequest) {
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, username, email, avatar_url')
+      .select('id, first_name, last_name, full_name, username, email, avatar_url, bio, location, hobbies, onboarding_complete, deleted_at')
       .neq('id', user.id) // exclude self
       .is('deleted_at', null)
       .or(`full_name.ilike.${searchTerm},username.ilike.${searchTerm},email.ilike.${searchTerm}`)
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Only return safe fields
-    const users = (data ?? []).map(p => ({
+    const users = (data ?? []).filter((p) => isCommunityVisibleProfile(p)).map(p => ({
       id: p.id,
       full_name: p.full_name,
       username: p.username,

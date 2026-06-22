@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { isCommunityVisibleProfile } from '@/lib/profile/completion'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -89,7 +90,7 @@ export default function ConnectionsPage() {
       // 400 and prevent the suggestions tab from ever loading.
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, full_name, bio, avatar_url, location, created_at')
+        .select('id, first_name, last_name, full_name, bio, avatar_url, location, hobbies, onboarding_complete, created_at, deleted_at')
         .neq('id', user.id)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
@@ -102,7 +103,7 @@ export default function ConnectionsPage() {
         return
       }
 
-      const members: MemberProfile[] = (profilesData ?? []).map((p: Record<string, unknown>) => ({
+      const members: MemberProfile[] = (profilesData ?? []).filter(isCommunityVisibleProfile).map((p: Record<string, unknown>) => ({
         id: p.id as string,
         full_name: p.full_name as string | null,
         bio: p.bio as string | null,

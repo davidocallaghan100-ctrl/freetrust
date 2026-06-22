@@ -17,9 +17,12 @@ import type { User } from '@supabase/supabase-js'
 import ActivityFeed, { type ActivityItem as CreatedItem } from '@/components/profile/ActivityFeed'
 import PostCard, { type FeedPost } from '@/components/PostCard'
 import { trackEventOnce } from '@/lib/analytics'
+import { isCommunityVisibleProfile } from '@/lib/profile/completion'
 
 interface Profile {
   id: string
+  first_name?: string | null
+  last_name?: string | null
   full_name?: string | null
   username?: string | null
   bio?: string | null
@@ -35,6 +38,8 @@ interface Profile {
   follower_count?: number | null
   following_count?: number | null
   created_at?: string | null
+  onboarding_complete?: boolean | null
+  deleted_at?: string | null
   // Hobbies text[] — added by 20260414000000_profiles_hobbies.sql.
   // Shown on the public profile as pill chips (only when non-empty).
   hobbies?: string[] | null
@@ -428,6 +433,7 @@ export default function ProfilePage() {
   const [toast, setToast] = useState('')
   const [isOwnProfile, setIsOwnProfile] = useState(true)
   const [sessionRestoreSuspected, setSessionRestoreSuspected] = useState(false)
+  const [profileHiddenUntilComplete, setProfileHiddenUntilComplete] = useState(false)
   const [isFollowing, setIsFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
   const [followerCount, setFollowerCount] = useState(0)
@@ -500,6 +506,12 @@ export default function ProfilePage() {
       ])
       if (prof) {
         let loadedProfile = prof as Profile
+        if (viewingId && !isCommunityVisibleProfile(loadedProfile)) {
+          setProfile(null)
+          setProfileHiddenUntilComplete(true)
+          return
+        }
+        setProfileHiddenUntilComplete(false)
         if (!badgeError && badge) {
           loadedProfile = {
             ...loadedProfile,
@@ -512,7 +524,7 @@ export default function ProfilePage() {
     } catch (err) {
       console.error('loadProfile error:', err)
     }
-  }, [applyLoadedProfile]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [applyLoadedProfile, viewingId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadTrust = useCallback(async (userId?: string) => {
     try {
@@ -1371,9 +1383,14 @@ export default function ProfilePage() {
 
   if (!isOwnProfile && !profile && !loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', background: '#0f172a', color: '#f1f5f9', gap: '1rem' }}>
-        <div style={{ fontSize: '3rem' }}>👤</div>
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Profile not found</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', background: '#0f172a', color: '#f1f5f9', gap: '1rem', padding: '1.5rem', textAlign: 'center' }}>
+        <div style={{ fontSize: '3rem' }}>{profileHiddenUntilComplete ? '🛡️' : '👤'}</div>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>{profileHiddenUntilComplete ? 'Profile hidden until setup is complete' : 'Profile not found'}</h3>
+        {profileHiddenUntilComplete && (
+          <p style={{ color: '#94a3b8', maxWidth: 420, margin: 0, lineHeight: 1.5 }}>
+            FreeTrust only displays member accounts after they have a real name, face photo, bio, location, hobbies, and completed onboarding.
+          </p>
+        )}
         <Link href="/members" style={{ color: '#38bdf8', textDecoration: 'none', fontSize: '0.9rem' }}>← Back to Members</Link>
       </div>
     )
