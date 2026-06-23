@@ -629,11 +629,11 @@
       "freeShipping": "Free shipping",
       "instantDownload": "Instant download",
       "standardDelivery": "Standard delivery",
-      "businessDays": "{min}-{max} business days",
+      "businessDays": "3-5 business days",
       "productPrice": "Product price"
     },
     "external": {
-      "via": "via {provider}",
+      "via": "via {retailer}",
       "price": "Price",
       "reviews": "{count, plural, one {# review} other {# reviews}}",
       "seePrice": "See price",

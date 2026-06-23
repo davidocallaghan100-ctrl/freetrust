@@ -366,11 +366,11 @@
       "freeShipping": "Livraison gratuite",
       "instantDownload": "Téléchargement instantané",
       "standardDelivery": "Livraison standard",
-      "businessDays": "{min}-{max} jours ouvrés",
+      "businessDays": "3-5 jours ouvrés",
       "productPrice": "Prix du produit"
     },
     "external": {
-      "via": "via {provider}",
+      "via": "via {retailer}",
       "price": "Prix",
       "reviews": "{count, plural, one {# avis} other {# avis}}",
       "seePrice": "Voir le prix",
