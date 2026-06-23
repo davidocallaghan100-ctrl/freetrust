@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireTravelMember } from '@/lib/travel/memberAuth'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -16,6 +17,9 @@ function failure(message: string, status = 500) {
 
 export async function GET(req: NextRequest) {
   try {
+    const member = await requireTravelMember()
+    if (member.response) return member.response
+
     const { searchParams } = req.nextUrl
     const destId = searchParams.get('dest_id')?.trim()
     if (!destId) return failure('dest_id is required', 400)

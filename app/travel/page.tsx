@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import type { KeyboardEvent } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { buildCountryOptions } from '@/lib/countries'
 
@@ -194,8 +194,11 @@ function SectionTitle({ eyebrow, title, children }: { eyebrow: string; title: st
   )
 }
 
+function goToTravelLogin() {
+  window.location.assign('/login?redirect=/travel')
+}
+
 export default function TravelPage() {
-  const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const countries = useMemo(() => buildCountryOptions(new Map()), [])
   const [userId, setUserId] = useState<string | null>(null)
@@ -252,9 +255,13 @@ export default function TravelPage() {
   }, [toast])
 
   async function requireAuth() {
+    if (!userId) {
+      goToTravelLogin()
+      return null
+    }
     const { data } = await supabase.auth.getUser()
     if (!data.user) {
-      router.push('/login?redirect=/travel')
+      goToTravelLogin()
       return null
     }
     setUserId(data.user.id)
@@ -273,14 +280,16 @@ export default function TravelPage() {
       : pickString(first, ['dest_id', 'id', 'city_ufi', 'ufi'], city)
   }
 
-  async function saveSearch(uid: string) {
+  async function saveSearch(uid: string, overrides: { searchType?: SearchType; destinationCity?: string } = {}) {
+    const searchTypeValue = overrides.searchType ?? searchType
+    const destinationCityValue = overrides.destinationCity ?? destinationCity
     const { data, error: insertError } = await supabase
       .from('travel_searches')
       .insert({
         user_id: uid,
-        search_type: searchType,
+        search_type: searchTypeValue,
         destination_country: selectedCountryLabel.replace(/^\S+\s/, ''),
-        destination_city: destinationCity || null,
+        destination_city: destinationCityValue || null,
         departure_city: departureCity || null,
         check_in: checkIn || null,
         check_out: checkOut || null,
@@ -298,19 +307,27 @@ export default function TravelPage() {
     return data.id as string
   }
 
-  async function runSearch() {
+  async function runSearch(overrides: { searchType?: SearchType; destinationCity?: string } = {}) {
+    if (!userId) {
+      goToTravelLogin()
+      return
+    }
     const user = await requireAuth()
     if (!user) return
+    const searchTypeValue = overrides.searchType ?? searchType
+    const destinationCityValue = overrides.destinationCity ?? destinationCity
+    const needsFlightsValue = searchTypeValue === 'flights' || searchTypeValue === 'both'
+    const needsAccommodationValue = searchTypeValue === 'accommodation' || searchTypeValue === 'both'
     setLoading(true)
     setError(null)
     setHotels([])
     setFlights([])
     try {
-      const searchId = await saveSearch(user.id)
-      const destinationId = needsAccommodation ? await findDestinationId(destinationCity, 'hotel') : await findDestinationId(destinationCity, 'flight')
+      const searchId = await saveSearch(user.id, overrides)
+      const destinationId = needsAccommodationValue ? await findDestinationId(destinationCityValue, 'hotel') : await findDestinationId(destinationCityValue, 'flight')
       const requests: Promise<void>[] = []
 
-      if (needsAccommodation) {
+      if (needsAccommodationValue) {
         const params = new URLSearchParams({
           dest_id: destinationId,
           search_type: 'CITY',
@@ -323,16 +340,16 @@ export default function TravelPage() {
         requests.push(fetch(`/api/travel/search-hotels?${params.toString()}`, { cache: 'no-store' }).then(async res => {
           const payload = await res.json().catch(() => null) as { hotels?: unknown[]; error?: string } | null
           if (!res.ok) throw new Error(payload?.error || `Hotel search failed (${res.status})`)
-          setHotels((payload?.hotels ?? []).slice(0, 12).map(item => mapHotel(item, destinationCity)))
+          setHotels((payload?.hotels ?? []).slice(0, 12).map(item => mapHotel(item, destinationCityValue)))
         }))
       }
 
-      if (needsFlights) {
+      if (needsFlightsValue) {
         let fromId = departureCity
         let toId = destinationId
         try { fromId = await findDestinationId(departureCity, 'flight') } catch { /* keep typed city as fallback */ }
-        if (needsAccommodation) {
-          try { toId = await findDestinationId(destinationCity, 'flight') } catch { /* keep hotel destination id as fallback */ }
+        if (needsAccommodationValue) {
+          try { toId = await findDestinationId(destinationCityValue, 'flight') } catch { /* keep hotel destination id as fallback */ }
         }
         const params = new URLSearchParams({
           fromId,
@@ -345,12 +362,12 @@ export default function TravelPage() {
         requests.push(fetch(`/api/travel/search-flights?${params.toString()}`, { cache: 'no-store' }).then(async res => {
           const payload = await res.json().catch(() => null) as { flights?: unknown[]; error?: string } | null
           if (!res.ok) throw new Error(payload?.error || `Flight search failed (${res.status})`)
-          setFlights((payload?.flights ?? []).slice(0, 12).map(item => mapFlight(item, departureCity, destinationCity)))
+          setFlights((payload?.flights ?? []).slice(0, 12).map(item => mapFlight(item, departureCity, destinationCityValue)))
         }))
       }
 
       await Promise.all(requests)
-      setActiveTab(needsAccommodation ? 'accommodation' : 'flights')
+      setActiveTab(needsAccommodationValue ? 'accommodation' : 'flights')
       setLastSearchId(searchId)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Travel search failed')
@@ -362,10 +379,11 @@ export default function TravelPage() {
   async function handleCategory(cat: typeof travelCategories[number]) {
     setSearchType(cat.type)
     setDestinationCity(cat.city)
-    setTimeout(() => {
-      const button = document.getElementById('travel-search-button') as HTMLButtonElement | null
-      button?.click()
-    }, 0)
+    if (!userId) {
+      goToTravelLogin()
+      return
+    }
+    await runSearch({ searchType: cat.type, destinationCity: cat.city })
   }
 
   async function saveBooking(kind: 'flight' | 'accommodation' | 'bundle', item: HotelCard | FlightCard) {
@@ -401,13 +419,27 @@ export default function TravelPage() {
       const payload = await res.json().catch(() => null) as { trustAwarded?: number; error?: string } | null
       if (!res.ok) throw new Error(payload?.error || `Could not save booking (${res.status})`)
       if (payload?.trustAwarded) setToast(`₮${payload.trustAwarded} Trust Coins added to your wallet!`)
-      window.open(item.affiliateUrl, '_blank', 'noopener,noreferrer')
       await loadBookings(user.id)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save travel booking')
     } finally {
       setBookingLoadingId(null)
     }
+  }
+
+  function startBooking(kind: 'flight' | 'accommodation' | 'bundle', item: HotelCard | FlightCard) {
+    if (!userId) {
+      goToTravelLogin()
+      return
+    }
+    window.open(item.affiliateUrl, '_blank', 'noopener,noreferrer')
+    void saveBooking(kind, item)
+  }
+
+  function handleBookingKey(event: KeyboardEvent<HTMLElement>, kind: 'flight' | 'accommodation' | 'bundle', item: HotelCard | FlightCard) {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    event.preventDefault()
+    startBooking(kind, item)
   }
 
   const showResults = hotels.length > 0 || flights.length > 0 || loading || error
@@ -429,6 +461,13 @@ export default function TravelPage() {
             </div>
             <div style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.22)', borderRadius: 999, padding: '8px 12px', color: ACCENT, fontSize: 12, fontWeight: 900 }}>Powered by Booking.com via RapidAPI</div>
           </div>
+
+          {!userId && (
+            <div style={{ marginTop: 16, border: '1px solid rgba(56,189,248,0.28)', background: 'linear-gradient(135deg,rgba(56,189,248,0.12),rgba(0,194,203,0.07))', borderRadius: 16, padding: 14, color: '#dff7ff', display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+              <div><strong style={{ color: TEXT }}>Members-only travel search</strong><div style={{ color: MUTED, fontSize: 13, marginTop: 3 }}>Sign in as a FreeTrust member to search real Booking.com flights and stays.</div></div>
+              <a href="/login?redirect=/travel" style={{ minHeight: 44, border: 'none', borderRadius: 999, background: ACCENT, color: BG, padding: '9px 14px', fontWeight: 950, fontFamily: 'inherit', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Sign in to search</a>
+            </div>
+          )}
 
           <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 12 }}>
             <div style={{ gridColumn: '1 / -1' }}>
@@ -479,16 +518,23 @@ export default function TravelPage() {
             <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 12, fontWeight: 800 }}>Children</span><input type="number" min="0" value={children} onChange={e => setChildren(Math.max(0, Number(e.target.value) || 0))} style={inputStyle} /></label>
           </div>
 
-          <button id="travel-search-button" onClick={runSearch} disabled={loading} style={{ marginTop: 14, width: '100%', minHeight: 50, border: 'none', borderRadius: 14, background: loading ? '#334155' : 'linear-gradient(135deg,#00c2cb,#38bdf8)', color: '#0f172a', fontSize: 16, fontWeight: 950, cursor: loading ? 'wait' : 'pointer', fontFamily: 'inherit', boxShadow: '0 14px 34px rgba(56,189,248,0.18)' }}>
-            {loading ? 'Searching travel options…' : 'Find Travel Options'}
-          </button>
+          {userId ? (
+            <button id="travel-search-button" onClick={() => void runSearch()} disabled={loading} style={{ marginTop: 14, width: '100%', minHeight: 50, border: 'none', borderRadius: 14, background: loading ? '#334155' : 'linear-gradient(135deg,#00c2cb,#38bdf8)', color: '#0f172a', fontSize: 16, fontWeight: 950, cursor: loading ? 'wait' : 'pointer', fontFamily: 'inherit', boxShadow: '0 14px 34px rgba(56,189,248,0.18)' }}>
+              {loading ? 'Searching travel options…' : 'Find Travel Options'}
+            </button>
+          ) : (
+            <a id="travel-search-button" href="/login?redirect=/travel" style={{ marginTop: 14, width: '100%', minHeight: 50, border: 'none', borderRadius: 14, background: 'linear-gradient(135deg,#00c2cb,#38bdf8)', color: '#0f172a', fontSize: 16, fontWeight: 950, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 14px 34px rgba(56,189,248,0.18)', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              Sign in to Search Travel
+            </a>
+          )}
         </section>
 
         <section style={{ marginTop: 18 }}>
           <SectionTitle eyebrow="Explore by mood" title="Travel categories">Pick a shortcut to pre-fill a travel search with FreeTrust’s marketplace-style discovery tiles.</SectionTitle>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 10 }}>
+          <div style={{ color: DIM, fontSize: 12, margin: '-4px 0 10px' }}>Swipe right-to-left to browse categories.</div>
+          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', overflowY: 'hidden', padding: '2px 2px 12px', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}>
             {travelCategories.map(cat => (
-              <button key={cat.label} onClick={() => void handleCategory(cat)} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'rgba(56,189,248,0.38)' }} onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.borderColor = BORDER }} style={{ minHeight: 110, textAlign: 'left', border: `1px solid ${BORDER}`, borderRadius: 16, background: CARD, color: TEXT, padding: 14, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
+              <button key={cat.label} onClick={() => void handleCategory(cat)} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'rgba(56,189,248,0.38)' }} onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.borderColor = BORDER }} style={{ flex: '0 0 168px', minHeight: 118, textAlign: 'left', border: `1px solid ${BORDER}`, borderRadius: 18, background: 'linear-gradient(180deg,rgba(30,41,59,0.96),rgba(17,24,39,0.96))', color: TEXT, padding: 14, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', scrollSnapAlign: 'start' }}>
                 <div style={{ fontSize: 26, marginBottom: 10 }}>{cat.icon}</div>
                 <div style={{ fontSize: 14, fontWeight: 900 }}>{cat.label}</div>
                 <div style={{ marginTop: 5, color: DIM, fontSize: 12 }}>{cat.city} · {cat.type === 'both' ? 'Flights + stays' : cat.type}</div>
@@ -514,7 +560,7 @@ export default function TravelPage() {
             <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.28)', color: '#fecaca', borderRadius: 16, padding: 16, marginBottom: 14 }}>
               <div style={{ fontWeight: 900, marginBottom: 6 }}>Travel options could not load</div>
               <div style={{ color: '#fca5a5', fontSize: 13, lineHeight: 1.5 }}>{error}</div>
-              <button onClick={runSearch} style={{ marginTop: 12, minHeight: 44, border: `1px solid ${BORDER}`, borderRadius: 10, background: CARD, color: TEXT, padding: '9px 14px', fontWeight: 800, fontFamily: 'inherit' }}>Retry search</button>
+              <button onClick={() => void runSearch()} style={{ marginTop: 12, minHeight: 44, border: `1px solid ${BORDER}`, borderRadius: 10, background: CARD, color: TEXT, padding: '9px 14px', fontWeight: 800, fontFamily: 'inherit' }}>Retry search</button>
             </div>
           )}
           {loading && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 12 }}>{[1,2,3].map(i => <div key={i} style={{ height: 260, borderRadius: 16, background: 'linear-gradient(90deg,#111827,#1e293b,#111827)', border: `1px solid ${BORDER}` }} />)}</div>}
@@ -523,7 +569,7 @@ export default function TravelPage() {
           {!loading && ((searchType !== 'flights' && activeTab === 'accommodation') || searchType === 'accommodation') && hotels.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 12 }}>
               {hotels.map(hotel => (
-                <article key={hotel.id} style={{ background: CARD, border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, overflow: 'hidden' }}>
+                <article key={hotel.id} role="button" tabIndex={0} onClick={() => startBooking('accommodation', hotel)} onKeyDown={event => handleBookingKey(event, 'accommodation', hotel)} style={{ background: CARD, border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, overflow: 'hidden', cursor: 'pointer', boxShadow: '0 14px 34px rgba(0,0,0,0.16)' }}>
                   <div style={{ height: 150, background: hotel.thumbnail ? `url(${hotel.thumbnail}) center/cover` : 'linear-gradient(135deg,#0f766e,#164e63)' }} />
                   <div style={{ padding: 14 }}>
                     <div style={{ color: '#fbbf24', fontSize: 12 }}>{'★'.repeat(Math.max(1, Math.min(5, Math.round(hotel.stars))))}</div>
@@ -534,7 +580,7 @@ export default function TravelPage() {
                       <div style={{ color: '#a7f3d0', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 999, padding: '5px 8px', fontSize: 12, fontWeight: 900 }}>{hotel.reviewScore ? `${hotel.reviewScore} / 10` : 'Reviewed'}</div>
                     </div>
                     <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-                      <button onClick={() => void saveBooking('accommodation', hotel)} disabled={bookingLoadingId === hotel.id} style={{ flex: 1, minHeight: 44, border: 'none', borderRadius: 12, background: ACCENT, color: BG, fontWeight: 950, cursor: 'pointer', fontFamily: 'inherit' }}>{bookingLoadingId === hotel.id ? 'Saving…' : 'View Deal'}</button>
+                      <button onClick={event => { event.stopPropagation(); startBooking('accommodation', hotel) }} disabled={bookingLoadingId === hotel.id} style={{ flex: 1, minHeight: 44, border: 'none', borderRadius: 12, background: ACCENT, color: BG, fontWeight: 950, cursor: 'pointer', fontFamily: 'inherit' }}>{bookingLoadingId === hotel.id ? 'Saving…' : 'View Deal'}</button>
                       <span style={{ alignSelf: 'center', color: '#a7f3d0', fontSize: 12, fontWeight: 900, whiteSpace: 'nowrap' }}>Earn ₮25</span>
                     </div>
                   </div>
@@ -546,14 +592,14 @@ export default function TravelPage() {
           {!loading && ((searchType !== 'accommodation' && activeTab === 'flights') || searchType === 'flights') && flights.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 12 }}>
               {flights.map(flight => (
-                <article key={flight.id} style={{ background: CARD, border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, padding: 14 }}>
+                <article key={flight.id} role="button" tabIndex={0} onClick={() => startBooking('flight', flight)} onKeyDown={event => handleBookingKey(event, 'flight', flight)} style={{ background: CARD, border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, padding: 14, cursor: 'pointer', boxShadow: '0 14px 34px rgba(0,0,0,0.16)' }}>
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12 }}>
                     <div style={{ width: 44, height: 44, borderRadius: 12, background: flight.logo ? `${CARD_2} url(${flight.logo}) center/contain no-repeat` : CARD_2, border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>{flight.logo ? null : '✈️'}</div>
                     <div><div style={{ color: TEXT, fontWeight: 900 }}>{flight.airline}</div><div style={{ color: DIM, fontSize: 12 }}>{flight.stops === 0 ? 'Direct' : flight.stops == null ? 'Stops vary' : `${flight.stops} stop${flight.stops === 1 ? '' : 's'}`}</div></div>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, color: TEXT, fontWeight: 950, fontSize: 15 }}><span>{flight.from}</span><span style={{ color: ACCENT }}>→</span><span>{flight.to}</span></div>
                   <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, color: MUTED, fontSize: 12 }}><div>Depart<br /><strong style={{ color: TEXT }}>{flight.departTime}</strong></div><div>Arrive<br /><strong style={{ color: TEXT }}>{flight.arriveTime}</strong></div><div>Duration<br /><strong style={{ color: TEXT }}>{flight.duration}</strong></div><div>Price<br /><strong style={{ color: ACCENT, fontSize: 18 }}>{flight.priceEur ? `€${flight.priceEur.toFixed(0)}` : 'View price'}</strong></div></div>
-                  <div style={{ display: 'flex', gap: 8, marginTop: 14 }}><button onClick={() => void saveBooking('flight', flight)} disabled={bookingLoadingId === flight.id} style={{ flex: 1, minHeight: 44, border: 'none', borderRadius: 12, background: ACCENT, color: BG, fontWeight: 950, cursor: 'pointer', fontFamily: 'inherit' }}>{bookingLoadingId === flight.id ? 'Saving…' : 'Book Flight'}</button><span style={{ alignSelf: 'center', color: '#a7f3d0', fontSize: 12, fontWeight: 900, whiteSpace: 'nowrap' }}>Earn ₮20</span></div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 14 }}><button onClick={event => { event.stopPropagation(); startBooking('flight', flight) }} disabled={bookingLoadingId === flight.id} style={{ flex: 1, minHeight: 44, border: 'none', borderRadius: 12, background: ACCENT, color: BG, fontWeight: 950, cursor: 'pointer', fontFamily: 'inherit' }}>{bookingLoadingId === flight.id ? 'Saving…' : 'Book Flight'}</button><span style={{ alignSelf: 'center', color: '#a7f3d0', fontSize: 12, fontWeight: 900, whiteSpace: 'nowrap' }}>Earn ₮20</span></div>
                 </article>
               ))}
             </div>
