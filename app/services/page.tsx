@@ -676,7 +676,7 @@ export default function ServicesPage() {
       }
     })()
     return () => { cancelled = true }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     let cancelled = false
@@ -738,7 +738,7 @@ export default function ServicesPage() {
       }
     })()
     return () => { cancelled = true }
-  }, [])
+  }, [t])
 
   // Filter & sort
   const sortedServiceCats = useMemo(
@@ -1328,7 +1328,7 @@ export default function ServicesPage() {
                 cursor: 'pointer', fontWeight: 800, fontSize: 13, fontFamily: 'inherit', minHeight: 44,
               }}
             >
-              ✦ All Services <span style={{ color: '#64748b', marginLeft: 4 }}>{mixedServices.length}</span>
+              ✦ {t('tabs.allServices')} <span style={{ color: '#64748b', marginLeft: 4 }}>{mixedServices.length}</span>
             </button>
             {mobileCategoryCats.map(cat => {
               const active = activeCatId === cat.id

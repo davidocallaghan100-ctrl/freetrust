@@ -557,7 +557,7 @@ function BasketPaymentElement({ clientSecret, totalCents, onPaid }: {
       paymentElementRef.current = null
       elementsRef.current = null
     }
-  }, [clientSecret])
+  }, [clientSecret, t])
 
   async function confirmPayment() {
     if (!stripe || !elementsRef.current || submitting) return
@@ -974,7 +974,7 @@ function ProductsInner() {
       finally { setLoading(false) }
     }
     load()
-  }, [])
+  }, [t])
 
   const products = useMemo(() => dbProducts ?? ([] as Product[]), [dbProducts])
 
@@ -1728,8 +1728,9 @@ function ProductsInner() {
 }
 
 export default function ProductsPage() {
+  const tCommon = useTranslations('common')
   return (
-    <Suspense fallback={<div style={{ paddingTop: 64, textAlign: 'center', color: '#64748b' }}>Loading…</div>}>
+    <Suspense fallback={<div style={{ paddingTop: 64, textAlign: 'center', color: '#64748b' }}>{tCommon('loading')}</div>}>
       <ProductsInner />
     </Suspense>
   )
