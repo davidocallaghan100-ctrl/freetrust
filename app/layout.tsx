@@ -16,6 +16,21 @@ import PWAInstallBanner from "@/components/PWAInstallBanner";
 import { OrganizationSchema } from "@/components/seo/OrganizationSchema";
 import { defaultLocale, directionForLocale, isAppLocale } from "@/i18n/routing";
 
+type Messages = Record<string, unknown>
+
+function mergeMessages(fallback: Messages, override: Messages): Messages {
+  const merged: Messages = { ...fallback }
+
+  for (const [key, value] of Object.entries(override)) {
+    const baseValue = fallback[key]
+    merged[key] = baseValue && value && typeof baseValue === 'object' && typeof value === 'object' && !Array.isArray(baseValue) && !Array.isArray(value)
+      ? mergeMessages(baseValue as Messages, value as Messages)
+      : value
+  }
+
+  return merged
+}
+
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
@@ -121,7 +136,10 @@ export default async function RootLayout({
   const localeCookie = cookies().get('NEXT_LOCALE')?.value
   const locale = isAppLocale(localeCookie) ? localeCookie : defaultLocale
   const dir = directionForLocale(locale)
-  const messages = (await import(`../messages/${locale}.json`)).default
+  const defaultMessages = (await import(`../messages/${defaultLocale}.json`)).default as Messages
+  const messages = locale === defaultLocale
+    ? defaultMessages
+    : mergeMessages(defaultMessages, (await import(`../messages/${locale}.json`)).default as Messages)
 
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
