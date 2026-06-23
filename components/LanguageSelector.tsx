@@ -102,8 +102,6 @@ export default function LanguageSelector({variant = 'header'}: LanguageSelectorP
   if (!floating && isMobile) return null
 
   const triggerLabel = `${current.flag} ${current.nativeName}`
-  const mobileTriggerText = 'Translate'
-
   return (
     <div
       ref={containerRef}
@@ -123,7 +121,8 @@ export default function LanguageSelector({variant = 'header'}: LanguageSelectorP
         aria-label={t('selectorLabel')}
         aria-expanded={open}
         style={{
-          minWidth: floating ? 116 : 118,
+          minWidth: floating ? 48 : 118,
+          width: floating ? 48 : undefined,
           height: floating ? 42 : 34,
           borderRadius: floating ? '12px 0 0 12px' : 999,
           border: '1px solid rgba(56,189,248,0.28)',
@@ -132,19 +131,17 @@ export default function LanguageSelector({variant = 'header'}: LanguageSelectorP
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: floating ? 8 : 7,
-          padding: floating ? '0 12px' : '0 10px',
+          gap: floating ? 0 : 7,
+          padding: floating ? 0 : '0 10px',
           cursor: 'pointer',
           fontFamily: 'inherit',
           fontWeight: 800,
-          fontSize: floating ? 13 : 12,
+          fontSize: floating ? 20 : 12,
           boxShadow: floating ? '0 12px 30px rgba(2,6,23,0.48), 0 0 18px rgba(56,189,248,0.16)' : 'none',
           backdropFilter: 'blur(12px)',
         }}
       >
-        <span aria-hidden="true" style={{fontSize: floating ? 17 : undefined}}>{floating ? '🌐' : current.flag}</span>
-        {floating && <span>{mobileTriggerText}</span>}
-        {floating && <span aria-hidden="true" style={{fontSize: 15}}>{current.flag}</span>}
+        <span aria-hidden="true" style={{fontSize: floating ? 21 : undefined}}>{floating ? '🌐' : current.flag}</span>
         {!floating && <span>{current.nativeName}</span>}
         {!floating && <span style={{color: '#64748b', fontSize: 10}}>▾</span>}
       </button>
