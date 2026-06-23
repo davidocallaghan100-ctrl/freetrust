@@ -22,6 +22,7 @@ type TravelBooking = {
   departure_date: string | null
   return_date: string | null
   status: 'pending' | 'confirmed' | 'cancelled'
+  affiliate_url: string | null
   trust_coins_earned: number | null
   created_at: string
 }
@@ -74,6 +75,15 @@ const travelCategories = [
   { icon: '✈️', label: 'Long-Haul Flights', city: 'New York', type: 'flights' as SearchType },
   { icon: '🚢', label: 'Cruise Packages', city: 'Barcelona', type: 'both' as SearchType },
   { icon: '🧘', label: 'Wellness Retreats', city: 'Bali', type: 'accommodation' as SearchType },
+]
+
+const globalTravelIdeas = [
+  { icon: '🌍', title: 'European city breaks', city: 'Paris', country: 'France', copy: 'Flights and stays for quick cultural weekends.', type: 'both' as SearchType },
+  { icon: '🏖️', title: 'Sun escapes', city: 'Malaga', country: 'Spain', copy: 'Beach stays, resort areas, and family-friendly trips.', type: 'both' as SearchType },
+  { icon: '🏛️', title: 'Historic capitals', city: 'Rome', country: 'Italy', copy: 'Walkable stays close to landmarks and local food.', type: 'both' as SearchType },
+  { icon: '🏔️', title: 'Nature retreats', city: 'Interlaken', country: 'Switzerland', copy: 'Mountain bases for hiking, scenery, and adventure.', type: 'accommodation' as SearchType },
+  { icon: '✈️', title: 'Long-haul ideas', city: 'New York', country: 'United States', copy: 'Flight-led inspiration for bigger international trips.', type: 'flights' as SearchType },
+  { icon: '🧘', title: 'Wellness breaks', city: 'Bali', country: 'Indonesia', copy: 'Retreat-style stays for slower restorative travel.', type: 'accommodation' as SearchType },
 ]
 
 const inputStyle = {
@@ -130,7 +140,7 @@ function mapHotel(item: unknown, destinationCity: string): HotelCard {
   const photo = asRecord(property.photoUrls || row.photoUrls)
   const photoUrls = Array.isArray(property.photoUrls) ? property.photoUrls : Array.isArray(row.photoUrls) ? row.photoUrls : []
   const hotelId = pickString(property, ['id', 'hotel_id'], pickString(row, ['id', 'hotel_id'], `hotel-${Math.random()}`))
-  const name = pickString(property, ['name', 'title'], pickString(row, ['hotel_name', 'name', 'title'], 'Booking.com hotel'))
+  const name = pickString(property, ['name', 'title'], pickString(row, ['hotel_name', 'name', 'title'], 'Travel partner stay'))
   const city = pickString(property, ['wishlistName', 'city'], pickString(row, ['city', 'city_name'], destinationCity))
   const directUrl = pickString(property, ['url', 'deeplink'], pickString(row, ['url', 'deeplink', 'affiliate_url']))
   const price = pickNumber(grossPrice, ['value', 'amount']) ?? pickNumber(property, ['price', 'price_eur']) ?? pickNumber(row, ['price', 'price_eur'])
@@ -220,6 +230,7 @@ export default function TravelPage() {
   const [activeTab, setActiveTab] = useState<ResultTab>('accommodation')
   const [loading, setLoading] = useState(false)
   const [bookingLoadingId, setBookingLoadingId] = useState<string | null>(null)
+  const [cancellingBookingId, setCancellingBookingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [lastSearchId, setLastSearchId] = useState<string | null>(null)
@@ -274,7 +285,7 @@ export default function TravelPage() {
     const payload = await res.json().catch(() => null) as { destinations?: Record<string, unknown>[]; error?: string } | null
     if (!res.ok) throw new Error(payload?.error || `Destination search failed (${res.status})`)
     const first = payload?.destinations?.[0]
-    if (!first) throw new Error(`No Booking.com destination found for ${city}`)
+    if (!first) throw new Error(`No travel partner destination found for ${city}`)
     return kind === 'flight'
       ? pickString(first, ['id', 'code', 'dest_id', 'city_ufi', 'ufi'], city)
       : pickString(first, ['dest_id', 'id', 'city_ufi', 'ufi'], city)
@@ -308,10 +319,6 @@ export default function TravelPage() {
   }
 
   async function runSearch(overrides: { searchType?: SearchType; destinationCity?: string } = {}) {
-    if (!userId) {
-      goToTravelLogin()
-      return
-    }
     const user = await requireAuth()
     if (!user) return
     const searchTypeValue = overrides.searchType ?? searchType
@@ -379,10 +386,6 @@ export default function TravelPage() {
   async function handleCategory(cat: typeof travelCategories[number]) {
     setSearchType(cat.type)
     setDestinationCity(cat.city)
-    if (!userId) {
-      goToTravelLogin()
-      return
-    }
     await runSearch({ searchType: cat.type, destinationCity: cat.city })
   }
 
@@ -432,8 +435,31 @@ export default function TravelPage() {
       goToTravelLogin()
       return
     }
-    window.open(item.affiliateUrl, '_blank', 'noopener,noreferrer')
+    const opened = window.open(item.affiliateUrl, '_blank', 'noopener,noreferrer')
+    if (!opened) setToast('Opening your travel partner link. If no tab opened, use the deal button again.')
     void saveBooking(kind, item)
+  }
+
+  async function cancelBooking(bookingId: string) {
+    const user = await requireAuth()
+    if (!user) return
+    setCancellingBookingId(bookingId)
+    setError(null)
+    try {
+      const res = await fetch('/api/travel/book/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId }),
+      })
+      const payload = await res.json().catch(() => null) as { error?: string } | null
+      if (!res.ok) throw new Error(payload?.error || `Could not cancel travel activity (${res.status})`)
+      setToast('Travel activity cancelled.')
+      await loadBookings(user.id)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not cancel travel activity')
+    } finally {
+      setCancellingBookingId(null)
+    }
   }
 
   function handleBookingKey(event: KeyboardEvent<HTMLElement>, kind: 'flight' | 'accommodation' | 'bundle', item: HotelCard | FlightCard) {
@@ -457,14 +483,14 @@ export default function TravelPage() {
             <div>
               <div style={{ color: TEAL, fontSize: 11, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Experience</div>
               <h1 style={{ margin: '4px 0 6px', fontSize: 28, lineHeight: 1.05, letterSpacing: '-0.04em' }}>✈️ Travel</h1>
-              <p style={{ margin: 0, color: MUTED, fontSize: 14, lineHeight: 1.5, maxWidth: 620 }}>Search flights, stays, and travel bundles while earning Trust Coins for booking activity.</p>
+              <p style={{ margin: 0, color: MUTED, fontSize: 14, lineHeight: 1.5, maxWidth: 620 }}>Browse global trip ideas, search live travel partner options, and earn Trust Coins when you continue to a provider.</p>
             </div>
-            <div style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.22)', borderRadius: 999, padding: '8px 12px', color: ACCENT, fontSize: 12, fontWeight: 900 }}>Powered by Booking.com via RapidAPI</div>
+            <div style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.22)', borderRadius: 999, padding: '8px 12px', color: ACCENT, fontSize: 12, fontWeight: 900 }}>Member travel rewards</div>
           </div>
 
           {!userId && (
             <div style={{ marginTop: 16, border: '1px solid rgba(56,189,248,0.28)', background: 'linear-gradient(135deg,rgba(56,189,248,0.12),rgba(0,194,203,0.07))', borderRadius: 16, padding: 14, color: '#dff7ff', display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-              <div><strong style={{ color: TEXT }}>Members-only travel search</strong><div style={{ color: MUTED, fontSize: 13, marginTop: 3 }}>Sign in as a FreeTrust member to search real Booking.com flights and stays.</div></div>
+              <div><strong style={{ color: TEXT }}>Members-only travel search</strong><div style={{ color: MUTED, fontSize: 13, marginTop: 3 }}>Sign in as a FreeTrust member to search live flights and stays.</div></div>
               <a href="/login?redirect=/travel" style={{ minHeight: 44, border: 'none', borderRadius: 999, background: ACCENT, color: BG, padding: '9px 14px', fontWeight: 950, fontFamily: 'inherit', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Sign in to search</a>
             </div>
           )}
@@ -530,6 +556,20 @@ export default function TravelPage() {
         </section>
 
         <section style={{ marginTop: 18 }}>
+          <SectionTitle eyebrow="Browse globally" title="Travel ideas before you search">Start from a destination style, then adjust the city, dates, guests, and trip type when you are ready.</SectionTitle>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(250px,1fr))', gap: 12 }}>
+            {globalTravelIdeas.map(idea => (
+              <button key={idea.title} onClick={() => void handleCategory({ icon: idea.icon, label: idea.title, city: idea.city, type: idea.type })} style={{ textAlign: 'left', border: `1px solid ${BORDER}`, borderRadius: 18, background: 'linear-gradient(145deg,rgba(30,41,59,0.98),rgba(17,24,39,0.98))', color: TEXT, padding: 16, minHeight: 156, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 14px 34px rgba(0,0,0,0.14)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}><span style={{ fontSize: 28 }}>{idea.icon}</span><span style={{ color: ACCENT, fontSize: 11, fontWeight: 950, textTransform: 'uppercase' }}>{idea.type === 'both' ? 'Flights + stays' : idea.type}</span></div>
+                <div style={{ marginTop: 12, color: TEXT, fontSize: 16, fontWeight: 950 }}>{idea.title}</div>
+                <div style={{ marginTop: 4, color: MUTED, fontSize: 13 }}>{idea.city}, {idea.country}</div>
+                <p style={{ margin: '10px 0 0', color: DIM, fontSize: 12, lineHeight: 1.5 }}>{idea.copy}</p>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section style={{ marginTop: 18 }}>
           <SectionTitle eyebrow="Explore by mood" title="Travel categories">Pick a shortcut to pre-fill a travel search with FreeTrust’s marketplace-style discovery tiles.</SectionTitle>
           <div style={{ color: DIM, fontSize: 12, margin: '-4px 0 10px' }}>Swipe right-to-left to browse categories.</div>
           <div style={{ display: 'flex', gap: 10, overflowX: 'auto', overflowY: 'hidden', padding: '2px 2px 12px', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}>
@@ -544,7 +584,7 @@ export default function TravelPage() {
         </section>
 
         <section style={{ marginTop: 22 }}>
-          <SectionTitle eyebrow="Results" title="Travel options">Real Booking.com results appear here after a search. No fake travel inventory is shown.</SectionTitle>
+          <SectionTitle eyebrow="Results" title="Travel options">Live travel partner results appear here after a member search. No fake travel inventory is shown.</SectionTitle>
           {searchType === 'both' && (
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
               {([
@@ -564,7 +604,7 @@ export default function TravelPage() {
             </div>
           )}
           {loading && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 12 }}>{[1,2,3].map(i => <div key={i} style={{ height: 260, borderRadius: 16, background: 'linear-gradient(90deg,#111827,#1e293b,#111827)', border: `1px solid ${BORDER}` }} />)}</div>}
-          {!showResults && <div style={{ border: `1px dashed ${BORDER}`, borderRadius: 18, padding: 22, background: CARD_2, color: MUTED, textAlign: 'center' }}>Choose a category or run a search to see real flights and stays.</div>}
+          {!showResults && <div style={{ border: `1px dashed ${BORDER}`, borderRadius: 18, padding: 22, background: CARD_2, color: MUTED, textAlign: 'center' }}>Browse the global ideas above, choose a category, or run a member search to see live flights and stays.</div>}
 
           {!loading && ((searchType !== 'flights' && activeTab === 'accommodation') || searchType === 'accommodation') && hotels.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 12 }}>
@@ -576,7 +616,7 @@ export default function TravelPage() {
                     <h3 style={{ margin: '5px 0', fontSize: 16, color: TEXT }}>{hotel.name}</h3>
                     <div style={{ color: DIM, fontSize: 13 }}>{hotel.city || destinationCity}</div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginTop: 12 }}>
-                      <div><div style={{ color: ACCENT, fontSize: 18, fontWeight: 950 }}>{hotel.priceEur ? `€${hotel.priceEur.toFixed(0)}` : 'View price'}</div><div style={{ color: DIM, fontSize: 11 }}>per night / from API</div></div>
+                      <div><div style={{ color: ACCENT, fontSize: 18, fontWeight: 950 }}>{hotel.priceEur ? `€${hotel.priceEur.toFixed(0)}` : 'View price'}</div><div style={{ color: DIM, fontSize: 11 }}>per night estimate</div></div>
                       <div style={{ color: '#a7f3d0', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 999, padding: '5px 8px', fontSize: 12, fontWeight: 900 }}>{hotel.reviewScore ? `${hotel.reviewScore} / 10` : 'Reviewed'}</div>
                     </div>
                     <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
@@ -607,17 +647,21 @@ export default function TravelPage() {
         </section>
 
         <section style={{ marginTop: 26 }}>
-          <SectionTitle eyebrow="My bookings" title="Travel booking activity">Pending outbound booking clicks and Trust Coin awards for your account.</SectionTitle>
+          <SectionTitle eyebrow="Travel activity" title="Saved provider visits">These are provider links you opened from FreeTrust. Cancel removes them from your active travel activity; confirmed bookings are completed with the travel provider.</SectionTitle>
           {!userId && <div style={{ border: `1px dashed ${BORDER}`, borderRadius: 16, padding: 18, color: MUTED, background: CARD_2 }}>Sign in to save travel booking activity.</div>}
-          {userId && bookings.length === 0 && <div style={{ border: `1px dashed ${BORDER}`, borderRadius: 16, padding: 18, color: MUTED, background: CARD_2 }}>No travel bookings yet.</div>}
+          {userId && bookings.length === 0 && <div style={{ border: `1px dashed ${BORDER}`, borderRadius: 16, padding: 18, color: MUTED, background: CARD_2 }}>No saved travel activity yet.</div>}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 10 }}>
             {bookings.map(booking => (
               <article key={booking.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}><span style={{ color: ACCENT, fontWeight: 950, fontSize: 12, textTransform: 'uppercase' }}>{booking.booking_type}</span><span style={{ borderRadius: 999, background: booking.status === 'confirmed' ? 'rgba(16,185,129,0.12)' : booking.status === 'cancelled' ? 'rgba(239,68,68,0.12)' : 'rgba(251,191,36,0.12)', color: booking.status === 'confirmed' ? '#86efac' : booking.status === 'cancelled' ? '#fca5a5' : '#fde68a', padding: '3px 8px', fontSize: 11, fontWeight: 900 }}>{booking.status}</span></div>
-                <div style={{ marginTop: 8, color: TEXT, fontWeight: 900 }}>{booking.property_name || booking.airline || booking.destination_city || 'Travel booking'}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}><span style={{ color: ACCENT, fontWeight: 950, fontSize: 12, textTransform: 'uppercase' }}>{booking.booking_type}</span><span style={{ borderRadius: 999, background: booking.status === 'confirmed' ? 'rgba(16,185,129,0.12)' : booking.status === 'cancelled' ? 'rgba(239,68,68,0.12)' : 'rgba(251,191,36,0.12)', color: booking.status === 'confirmed' ? '#86efac' : booking.status === 'cancelled' ? '#fca5a5' : '#fde68a', padding: '3px 8px', fontSize: 11, fontWeight: 900 }}>{booking.status === 'pending' ? 'Opened provider' : booking.status === 'cancelled' ? 'Cancelled' : 'Confirmed'}</span></div>
+                <div style={{ marginTop: 8, color: TEXT, fontWeight: 900 }}>{booking.property_name || booking.airline || booking.destination_city || 'Travel activity'}</div>
                 <div style={{ color: DIM, fontSize: 12, marginTop: 4 }}>{booking.destination_city || 'Destination'}{booking.destination_country ? ` · ${booking.destination_country}` : ''}</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, color: MUTED, fontSize: 12 }}><span>{booking.check_in || booking.departure_date || 'Date pending'}</span><strong style={{ color: ACCENT }}>{booking.price_eur ? `€${Number(booking.price_eur).toFixed(0)}` : 'External price'}</strong></div>
                 <div style={{ marginTop: 8, color: '#a7f3d0', fontSize: 12, fontWeight: 900 }}>₮{booking.trust_coins_earned ?? 0} earned</div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                  {booking.affiliate_url && <a href={booking.affiliate_url} target="_blank" rel="noreferrer" style={{ minHeight: 40, borderRadius: 10, background: CARD_2, border: `1px solid ${BORDER}`, color: TEXT, padding: '9px 11px', fontSize: 12, fontWeight: 900, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Continue to provider</a>}
+                  {booking.status !== 'cancelled' && <button onClick={() => void cancelBooking(booking.id)} disabled={cancellingBookingId === booking.id} style={{ minHeight: 40, borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.28)', color: '#fecaca', padding: '9px 11px', fontSize: 12, fontWeight: 900, fontFamily: 'inherit', cursor: cancellingBookingId === booking.id ? 'wait' : 'pointer' }}>{cancellingBookingId === booking.id ? 'Cancelling…' : 'Cancel activity'}</button>}
+                </div>
               </article>
             ))}
           </div>

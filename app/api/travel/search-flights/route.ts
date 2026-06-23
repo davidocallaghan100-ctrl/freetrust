@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     if (!fromId || !toId || !departDate) return failure('fromId, toId and departDate are required', 400)
 
     const { key, host } = bookingConfig()
-    if (!key || key === 'your_rapidapi_key_here') return failure('RapidAPI Booking.com key is not configured', 500)
+    if (!key || key === 'your_rapidapi_key_here') return failure('Travel partner search is not configured', 500)
 
     const url = new URL(`https://${host}/api/v1/flights/searchFlights`)
     ;['fromId', 'toId', 'departDate', 'returnDate', 'adults', 'cabinClass'].forEach(param => {
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     })
 
     const data = await res.json().catch(() => null)
-    if (!res.ok) return failure(data?.message || data?.error || 'Booking.com flight search failed', res.status)
+    if (!res.ok) return failure(data?.message || data?.error || 'Travel partner flight search failed', res.status)
 
     const flights = Array.isArray(data?.data?.flightOffers)
       ? data.data.flightOffers

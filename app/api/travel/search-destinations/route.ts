@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     if (!query) return failure('query is required', 400)
 
     const { key, host } = bookingConfig()
-    if (!key || key === 'your_rapidapi_key_here') return failure('RapidAPI Booking.com key is not configured', 500)
+    if (!key || key === 'your_rapidapi_key_here') return failure('Travel partner search is not configured', 500)
 
     const url = new URL(`https://${host}/api/v1/hotels/searchDestination`)
     url.searchParams.set('query', query)
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     })
 
     const data = await res.json().catch(() => null)
-    if (!res.ok) return failure(data?.message || data?.error || 'Booking.com destination search failed', res.status)
+    if (!res.ok) return failure(data?.message || data?.error || 'Travel partner destination search failed', res.status)
 
     const destinations = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
     return NextResponse.json({ destinations })
