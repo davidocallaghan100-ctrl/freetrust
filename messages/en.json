@@ -497,6 +497,10 @@
       "return": "Return",
       "cabin": "Cabin"
     },
+    "placeholders": {
+      "destinationCity": "Paris",
+      "departureCity": "Dublin"
+    },
     "cabin": {
       "economy": "Economy",
       "business": "Business",
@@ -531,7 +535,16 @@
       "empty": "Choose an image category or run a member search to see live flights and stays."
     },
     "errors": {
-      "loadTitle": "Travel options could not load"
+      "loadTitle": "Travel options could not load",
+      "destinationSearchFailed": "Destination search failed ({status})",
+      "destinationNotFound": "No travel partner destination found for {city}",
+      "hotelSearchFailed": "Stay search failed ({status})",
+      "flightSearchFailed": "Flight search failed ({status})",
+      "travelSearchFailed": "Travel search failed",
+      "saveActivityFailedWithStatus": "Could not save travel activity ({status})",
+      "saveActivityFailed": "Could not save travel activity",
+      "cancelActivityFailedWithStatus": "Could not cancel travel activity ({status})",
+      "cancelActivityFailed": "Could not cancel travel activity"
     },
     "cards": {
       "viewPrice": "View price",
@@ -807,6 +820,57 @@
       "submitting": "Submitting...",
       "submitFailed": "Could not submit enquiry",
       "submitted": "Enquiry submitted! The provider will be in touch."
+    }
+  },
+  "trustAssistant": {
+    "title": "Trust Assistant",
+    "hide": "Hide Trust Assistant",
+    "status": "Online · Always here to help",
+    "fallbackName": "there",
+    "footer": "Powered by FreeTrust AI · Free support, always",
+    "hints": {
+      "services": "Need help finding the right service?",
+      "products": "Looking for something specific? I can help you find it.",
+      "wallet": "Want to know how to earn more Trust?",
+      "create": "Need help writing your listing?",
+      "checkout": "Questions about our secure payment & escrow?",
+      "cart": "Questions about your order or payment?",
+      "profile": "Want tips to improve your profile and earn more Trust?",
+      "community": "Looking for the right group to join?",
+      "jobs": "Need help finding or posting a job?",
+      "impact": "Want to learn how your purchases drive real-world change?",
+      "onboarding": "Let me guide you through getting started on FreeTrust!",
+      "orders": "Have questions about an order? I can help.",
+      "disputes": "I can guide you through the dispute process step by step."
+    },
+    "greeting": {
+      "user": "Hey {name}! 👋 I'm your **Trust Assistant** — here to help you get the most from FreeTrust.\n\nYour Trust balance: **₮{balance}**\n\n{hint}What can I help you with today?",
+      "guest": "Hey! 👋 I'm your **Trust Assistant** — here to help you get the most from FreeTrust.\n\n{hint}What can I help you with today?"
+    },
+    "quickReplies": {
+      "wallet": ["How do I earn more Trust?", "How do I withdraw?", "What is escrow?"],
+      "marketplace": ["How does buying work?", "Is payment secure?", "How do I leave a review?"],
+      "profile": ["How do I get verified?", "How do I improve my Trust score?", "How do I add a listing?"],
+      "community": ["How do I create a group?", "Are groups free?", "How do I find my people?"],
+      "orders": ["How does escrow work?", "How do I raise a dispute?", "When do I get paid?"],
+      "jobs": ["How do I post a job?", "Is it free to apply?", "How do I find remote jobs?"],
+      "default": ["How does Trust work?", "How do I earn Trust points?", "How does escrow protect me?"]
+    },
+    "errors": {
+      "moment": "Sorry, I'm having a moment — try again?",
+      "generic": "Sorry, something went wrong. Try again in a moment!"
+    },
+    "escalation": {
+      "created": "✅ I've created a support ticket and notified our team. Someone will follow up with you by email within a few hours. Is there anything else I can help with in the meantime?",
+      "failed": "Something went wrong creating your ticket. Please email support@freetrust.co directly.",
+      "creating": "Creating ticket…",
+      "talkToHuman": "👤 Talk to a human instead"
+    },
+    "credits": {
+      "used": "Used {count, plural, one {# AI credit} other {# AI credits}}"
+    },
+    "input": {
+      "placeholder": "Ask me anything…"
     }
   },
   "trust": {

@@ -234,6 +234,10 @@
       "return": "Retour",
       "cabin": "Cabine"
     },
+    "placeholders": {
+      "destinationCity": "Paris",
+      "departureCity": "Dublin"
+    },
     "cabin": {
       "economy": "Économie",
       "business": "Affaires",
@@ -268,7 +272,16 @@
       "empty": "Choisissez une catégorie image ou lancez une recherche membre pour voir les vols et séjours en direct."
     },
     "errors": {
-      "loadTitle": "Impossible de charger les options de voyage"
+      "loadTitle": "Impossible de charger les options de voyage",
+      "destinationSearchFailed": "Échec de la recherche de destination ({status})",
+      "destinationNotFound": "Aucune destination partenaire trouvée pour {city}",
+      "hotelSearchFailed": "Échec de la recherche de séjour ({status})",
+      "flightSearchFailed": "Échec de la recherche de vol ({status})",
+      "travelSearchFailed": "Échec de la recherche voyage",
+      "saveActivityFailedWithStatus": "Impossible d’enregistrer l’activité voyage ({status})",
+      "saveActivityFailed": "Impossible d’enregistrer l’activité voyage",
+      "cancelActivityFailedWithStatus": "Impossible d’annuler l’activité voyage ({status})",
+      "cancelActivityFailed": "Impossible d’annuler l’activité voyage"
     },
     "cards": {
       "viewPrice": "Voir le prix",
@@ -544,6 +557,57 @@
       "submitting": "Envoi...",
       "submitFailed": "Impossible d’envoyer la demande",
       "submitted": "Demande envoyée ! Le fournisseur vous contactera."
+    }
+  },
+  "trustAssistant": {
+    "title": "Assistant Trust",
+    "hide": "Masquer l’assistant Trust",
+    "status": "En ligne · Toujours là pour aider",
+    "fallbackName": "vous",
+    "footer": "Propulsé par FreeTrust AI · Support gratuit, toujours",
+    "hints": {
+      "services": "Besoin d’aide pour trouver le bon service ?",
+      "products": "Vous cherchez quelque chose de précis ? Je peux vous aider à le trouver.",
+      "wallet": "Vous voulez savoir comment gagner plus de Trust ?",
+      "create": "Besoin d’aide pour rédiger votre annonce ?",
+      "checkout": "Des questions sur notre paiement sécurisé et l’escrow ?",
+      "cart": "Des questions sur votre commande ou votre paiement ?",
+      "profile": "Vous voulez des conseils pour améliorer votre profil et gagner plus de Trust ?",
+      "community": "Vous cherchez le bon groupe à rejoindre ?",
+      "jobs": "Besoin d’aide pour trouver ou publier un emploi ?",
+      "impact": "Vous voulez savoir comment vos achats créent un impact réel ?",
+      "onboarding": "Je peux vous guider pour démarrer sur FreeTrust !",
+      "orders": "Des questions sur une commande ? Je peux aider.",
+      "disputes": "Je peux vous guider étape par étape dans le processus de litige."
+    },
+    "greeting": {
+      "user": "Bonjour {name} ! 👋 Je suis votre **Assistant Trust** — là pour vous aider à profiter au mieux de FreeTrust.\n\nVotre solde Trust : **₮{balance}**\n\n{hint}Comment puis-je vous aider aujourd’hui ?",
+      "guest": "Bonjour ! 👋 Je suis votre **Assistant Trust** — là pour vous aider à profiter au mieux de FreeTrust.\n\n{hint}Comment puis-je vous aider aujourd’hui ?"
+    },
+    "quickReplies": {
+      "wallet": ["Comment gagner plus de Trust ?", "Comment retirer ?", "Qu’est-ce que l’escrow ?"],
+      "marketplace": ["Comment fonctionne l’achat ?", "Le paiement est-il sécurisé ?", "Comment laisser un avis ?"],
+      "profile": ["Comment me faire vérifier ?", "Comment améliorer mon Trust Score ?", "Comment ajouter une annonce ?"],
+      "community": ["Comment créer un groupe ?", "Les groupes sont-ils gratuits ?", "Comment trouver ma communauté ?"],
+      "orders": ["Comment fonctionne l’escrow ?", "Comment ouvrir un litige ?", "Quand suis-je payé ?"],
+      "jobs": ["Comment publier un emploi ?", "Est-ce gratuit de postuler ?", "Comment trouver des emplois à distance ?"],
+      "default": ["Comment fonctionne Trust ?", "Comment gagner des points Trust ?", "Comment l’escrow me protège-t-il ?"]
+    },
+    "errors": {
+      "moment": "Désolé, j’ai un petit souci — réessayez ?",
+      "generic": "Désolé, une erreur s’est produite. Réessayez dans un instant !"
+    },
+    "escalation": {
+      "created": "✅ J’ai créé un ticket de support et prévenu notre équipe. Quelqu’un vous répondra par e-mail dans quelques heures. Puis-je vous aider avec autre chose entre-temps ?",
+      "failed": "Une erreur s’est produite lors de la création du ticket. Veuillez écrire directement à support@freetrust.co.",
+      "creating": "Création du ticket…",
+      "talkToHuman": "👤 Parler plutôt à un humain"
+    },
+    "credits": {
+      "used": "{count, plural, one {# crédit IA utilisé} other {# crédits IA utilisés}}"
+    },
+    "input": {
+      "placeholder": "Demandez-moi n’importe quoi…"
     }
   },
   "trust": {

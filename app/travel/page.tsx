@@ -285,9 +285,9 @@ export default function TravelPage() {
     const endpoint = kind === 'flight' ? 'search-flight-destinations' : 'search-destinations'
     const res = await fetch(`/api/travel/${endpoint}?query=${encodeURIComponent(city)}`, { cache: 'no-store' })
     const payload = await res.json().catch(() => null) as { destinations?: Record<string, unknown>[]; error?: string } | null
-    if (!res.ok) throw new Error(payload?.error || `Destination search failed (${res.status})`)
+    if (!res.ok) throw new Error(payload?.error || t('errors.destinationSearchFailed', { status: res.status }))
     const first = payload?.destinations?.[0]
-    if (!first) throw new Error(`No travel partner destination found for ${city}`)
+    if (!first) throw new Error(t('errors.destinationNotFound', { city }))
     return kind === 'flight'
       ? pickString(first, ['id', 'code', 'dest_id', 'city_ufi', 'ufi'], city)
       : pickString(first, ['dest_id', 'id', 'city_ufi', 'ufi'], city)
@@ -349,7 +349,7 @@ export default function TravelPage() {
         if (children > 0) params.set('children_age', Array.from({ length: children }, () => '8').join(','))
         requests.push(fetch(`/api/travel/search-hotels?${params.toString()}`, { cache: 'no-store' }).then(async res => {
           const payload = await res.json().catch(() => null) as { hotels?: unknown[]; error?: string } | null
-          if (!res.ok) throw new Error(payload?.error || `Hotel search failed (${res.status})`)
+          if (!res.ok) throw new Error(payload?.error || t('errors.hotelSearchFailed', { status: res.status }))
           setHotels((payload?.hotels ?? []).slice(0, 12).map(item => mapHotel(item, destinationCityValue)))
         }))
       }
@@ -371,7 +371,7 @@ export default function TravelPage() {
         if (returnDate) params.set('returnDate', returnDate)
         requests.push(fetch(`/api/travel/search-flights?${params.toString()}`, { cache: 'no-store' }).then(async res => {
           const payload = await res.json().catch(() => null) as { flights?: unknown[]; error?: string } | null
-          if (!res.ok) throw new Error(payload?.error || `Flight search failed (${res.status})`)
+          if (!res.ok) throw new Error(payload?.error || t('errors.flightSearchFailed', { status: res.status }))
           setFlights((payload?.flights ?? []).slice(0, 12).map(item => mapFlight(item, departureCity, destinationCityValue)))
         }))
       }
@@ -380,7 +380,7 @@ export default function TravelPage() {
       setActiveTab(needsAccommodationValue ? 'accommodation' : 'flights')
       setLastSearchId(searchId)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Travel search failed')
+      setError(err instanceof Error ? err.message : t('errors.travelSearchFailed'))
     } finally {
       setLoading(false)
     }
@@ -428,11 +428,11 @@ export default function TravelPage() {
         }),
       })
       const payload = await res.json().catch(() => null) as { trustAwarded?: number; error?: string } | null
-      if (!res.ok) throw new Error(payload?.error || `Could not save booking (${res.status})`)
+      if (!res.ok) throw new Error(payload?.error || t('errors.saveActivityFailedWithStatus', { status: res.status }))
       if (payload?.trustAwarded) setToast(t('toasts.trustCoinsAdded', { amount: payload.trustAwarded }))
       await loadBookings(user.id)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save travel booking')
+      setError(err instanceof Error ? err.message : t('errors.saveActivityFailed'))
     } finally {
       setBookingLoadingId(null)
     }
@@ -460,11 +460,11 @@ export default function TravelPage() {
         body: JSON.stringify({ bookingId }),
       })
       const payload = await res.json().catch(() => null) as { error?: string } | null
-      if (!res.ok) throw new Error(payload?.error || `Could not cancel travel activity (${res.status})`)
+      if (!res.ok) throw new Error(payload?.error || t('errors.cancelActivityFailedWithStatus', { status: res.status }))
       setToast(t('toasts.activityCancelled'))
       await loadBookings(user.id)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not cancel travel activity')
+      setError(err instanceof Error ? err.message : t('errors.cancelActivityFailed'))
     } finally {
       setCancellingBookingId(null)
     }
@@ -528,12 +528,12 @@ export default function TravelPage() {
             </label>
             <label style={{ display: 'grid', gap: 6 }}>
               <span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>{t('fields.city')}</span>
-              <input value={destinationCity} onChange={e => setDestinationCity(e.target.value)} placeholder="Paris" autoCorrect="off" spellCheck={false} style={inputStyle} />
+              <input value={destinationCity} onChange={e => setDestinationCity(e.target.value)} placeholder={t('placeholders.destinationCity')} autoCorrect="off" spellCheck={false} style={inputStyle} />
             </label>
 
             {needsFlights && (
               <>
-                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>{t('fields.from')}</span><input value={departureCity} onChange={e => setDepartureCity(e.target.value)} placeholder="Dublin" style={inputStyle} /></label>
+                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>{t('fields.from')}</span><input value={departureCity} onChange={e => setDepartureCity(e.target.value)} placeholder={t('placeholders.departureCity')} style={inputStyle} /></label>
                 <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>{t('fields.depart')}</span><input type="date" value={departureDate} onChange={e => setDepartureDate(e.target.value)} style={inputStyle} /></label>
                 <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>{t('fields.return')}</span><input type="date" value={returnDate} onChange={e => setReturnDate(e.target.value)} style={inputStyle} /></label>
                 <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>{t('fields.cabin')}</span><select value={cabinClass} onChange={e => setCabinClass(e.target.value)} style={inputStyle}><option value="economy">{t('cabin.economy')}</option><option value="business">{t('cabin.business')}</option><option value="first">{t('cabin.first')}</option></select></label>

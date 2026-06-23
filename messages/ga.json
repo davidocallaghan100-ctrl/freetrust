@@ -186,7 +186,628 @@
     "members": "ball",
     "listings": "liostú",
     "communities": "pobal",
-    "liveStats": "Staitisticí beo — athnuachan gach 60s"
+    "liveStats": "Staitisticí beo — athnuachan gach 60s",
+    "stats": {
+      "membersGrowing": "Baill & ag fás",
+      "thisWeek": "+{count} an tseachtain seo",
+      "joinFree": "Glac páirt saor in aisce",
+      "servicesAvailable": "Seirbhísí ar fáil",
+      "beFirst": "Bí ar an gcéad!",
+      "browseNow": "Brabhsáil anois",
+      "productsListed": "Táirgí atá liostaithe",
+      "listYours": "Liostaigh mise",
+      "shopNow": "Siopa anois",
+      "totalIssued": "Iomlán ₮ eisithe",
+      "sinceLaunch": "Ó seoladh",
+      "live": "Beo"
+    },
+    "trustEconomy": {
+      "label": "₮ Geilleagar Iontaobhais",
+      "inCirculation": "₮ i gcúrsaíocht",
+      "currentBalances": "Iarmhéideanna reatha coinnithe",
+      "issuedSinceLaunch": "₮ eisithe ó seoladh é",
+      "totalEarned": "Iomlán tuillte riamh",
+      "membersHolding": "Baill a bhfuil ₮",
+      "activeHolders": "Sealbhóirí gníomhacha iontaobhais"
+    },
+    "premiumHero": {
+      "eyebrow": "🌍 Tá an Geilleagar Iontaobhais Anseo",
+      "titleLead": "Ceannaigh. Dhíol. Ceangail.",
+      "titleAccent": "Iontaobhas.",
+      "subtitle": "Is é FreeTrust an margadh pobail ina n-osclaíonn iontaobhas fíoraithe margaí níos fearr, naisc fhíora, agus geilleagar níos cothroime.",
+      "primaryCta": "Tosaigh saor in aisce,",
+      "secondaryCta": "Féach Conas a Oibríonn sé",
+      "membersBadge": "Baill Bunaithe {count}",
+      "welcomeBonus": "₮ Bónas Fáilte 200",
+      "noSubscription": "Táille Síntiúis 0%."
+    },
+    "floatingBadges": {
+      "balance": "₮ {amount} bal",
+      "trustCoinReady": "Trust Coin réidh",
+      "verifiedMember": "✓ Ball Fíoraithe",
+      "identityProtected": "Féiniúlacht cosanta",
+      "trustScore": "4.9★ Trust Score",
+      "portableReputation": "Cáil iniompartha"
+    },
+    "alt": {
+      "walletScreenshot": "Scáileán soghluaiste iarbhír FreeTrust Trust Wallet",
+      "productScreenshot": "Scáileán soghluaiste margadh táirge FreeTrust iarbhír",
+      "genericScreenshot": "Scáileán soghluaiste iarbhír FreeTrust {name}"
+    },
+    "features": {
+      "eyebrow": "Gnéithe ardán",
+      "title": "Gach rud a theastaíonn uait chun trádáil, íoc, fruiliú, agus nascadh le muinín.",
+      "description": "Tugann FreeTrust tráchtáil, íocaíochtaí, cáil agus pobal sa mhargadh in aon ardán amháin chun muinín a chur ar aghaidh.",
+      "cards": [
+        {
+          "icon": "💳",
+          "title": "Íocaíochtaí Iontaobhais",
+          "desc": "Aistrigh airgead idir piaraí le fíorú iontaobhais ionsuite. Scoilt billí, íoc as seirbhísí, seol chuig an teaghlach — iad uile cosanta ag ciseal clú FreeTrust."
+        },
+        {
+          "icon": "🛒",
+          "title": "Margadh Táirge",
+          "desc": "Ceannaigh agus díol táirgí fisiceacha agus digiteacha le díoltóirí fíoraithe. Cuirtear athbhreithnithe gan ainm in ionad Real Trust Scores. Siopa le muinín."
+        },
+        {
+          "icon": "💼",
+          "title": "Margadh Seirbhíse",
+          "desc": "Fruiliú saorálaithe fíoraithe agus soláthraithe seirbhíse áitiúla. Ó dhearadh go tógáil — tugann an pobal rátáil muiníne do gach soláthraí."
+        },
+        {
+          "icon": "🌐",
+          "title": "Ardán Pobail",
+          "desc": "Tóg do líonra iontaofa. Déan teagmháil le daoine a roinneann do luachanna, comhoibreoidh siad ar thionscadail, agus a fhásann le chéile."
+        },
+        {
+          "icon": "📰",
+          "title": "Fotha nuachta",
+          "desc": "Fotha cruthaitheach, táirgiúil, dearfach agus cuimsitheach. Comhroinn smaointe, taispeáin saothar, ceiliúraigh buanna - gan algartaim tocsaineacha, gan fógraí, díreach pobal."
+        },
+        {
+          "icon": "₮",
+          "title": "Trust Coin",
+          "desc": "Tuill Trust Coin (₮) le haghaidh gach idirbheart, athbhreithniú agus ranníocaíocht fíoraithe. Caith é chun táillí a laghdú, chun liostaí a threisiú, agus chun sochair ardáin a dhíghlasáil."
+        }
+      ]
+    },
+    "testimonials": {
+      "aria": "Scéalta na mball FreeTrust",
+      "eyebrow": "Scéalta na mball",
+      "title": "Cén fáth a roghnaíonn daoine FreeTrust",
+      "description": "Comharthaí muiníne fíor, idirbhearta níos sábháilte, agus geilleagar pobail a thugann luach ar ais.",
+      "showQuote": "Taispeáin luachan {label}",
+      "items": [
+        {
+          "icon": "✅",
+          "label": "Trust Score",
+          "quote": "Is fíorspreagadh é féachaint ar mo Trust Score ag fás. Ciallaíonn sé rud éigin anseo."
+        },
+        {
+          "icon": "🛡️",
+          "label": "Tráchtáil fhíoraithe",
+          "quote": "Sínigh suas i nóiméid agus bhraith sábháilte láithreach. Seo an rud ar cheart do thráchtáil ar líne a mhothú."
+        },
+        {
+          "icon": "🛒",
+          "label": "Táirgí",
+          "quote": "Liostaigh mo réitigh agus dhíol mé trí shraith in aghaidh na seachtaine. Gan cur amú ama - tá gach duine fíoraithe."
+        },
+        {
+          "icon": "🛠️",
+          "label": "Seirbhísí",
+          "quote": "Tagann cliaint cheana féin agus fios acu go bhfuilim fíoraithe. Léimimid an chuid awkward agus díreach a fháil ar an obair."
+        },
+        {
+          "icon": "🏠",
+          "label": "Cíosanna",
+          "quote": "In ionad na hardáin mhóra go hiomlán. Táillí níos ísle agus tá a fhios agam cé atá ag fanacht i mo mhaoin."
+        },
+        {
+          "icon": "🪙",
+          "label": "Trust Coin (₮)",
+          "quote": "Thuill Trust Coins ar mo chéad chúpla díolachán agus d'úsáid mé iad chun liostú préimhe a dhíghlasáil. Córas cliste."
+        },
+        {
+          "icon": "💬",
+          "label": "teachtaireachtaí",
+          "quote": "Comhroinnt glan, príobháideach, ionsuite. Ní gá uimhreacha a mhalartú le strainséirí."
+        },
+        {
+          "icon": "⭐",
+          "label": "Léirmheasanna & Clú",
+          "quote": "Ciallaíonn athbhreithnithe déthreo go bhfuil an dá thaobh cuntasach. Sin é go díreach atá in easnamh ar an Idirlíon."
+        },
+        {
+          "icon": "🤝",
+          "label": "Ciste Tionchair",
+          "quote": "Roghnaím FreeTrust go gníomhach mar go gcuireann gach idirbheart le rud éigin níos mó."
+        },
+        {
+          "icon": "🏆",
+          "label": "Ball Bunaitheach",
+          "quote": "Táillí laghdaithe ar feadh an tsaoil agus isteach ón tús. An cinneadh is fearr a rinne mé i mbliana."
+        }
+      ]
+    },
+    "impact": {
+      "eyebrow": "Geilleagar tionchair",
+      "title": "Tógtha le haghaidh Tionchair, Ní Díreach Brabús",
+      "description": "Cuireann gach idirbheart ar FreeTrust le geilleagar níos cothroime agus níos trédhearcaí.",
+      "stats": {
+        "foundingMembers": "Baill Bunaithe",
+        "welcomeBonus": "Bónas Fáilte",
+        "subscriptionFees": "Táillí Síntiúis",
+        "maxPlatformFee": "Táille Ardáin Uasta"
+      },
+      "body": "Treoraíonn Ciste Tionchair FreeTrust cuid de gach táille idirbhirt i dtreo cúiseanna pobail fíoraithe, arna roghnú go trédhearcach ag comhaltaí."
+    },
+    "showcase": {
+      "open": "Oscail {name} →",
+      "rows": [
+        {
+          "srcKey": "products",
+          "eyebrow": "Margadh",
+          "title": "Siopa níos cliste. Díol le muinín.",
+          "text": "Faigh amach díoltóirí FreeTrust agus aimsíonn miondíoltóir seachtrach in aon taithí táirge iontaofa amháin.",
+          "points": [
+            "Suaitheantais Trust Score ar gach cárta díoltóra.",
+            "Liostaí ball soiléir agus margaí miondíoltóirí.",
+            "Trust Coin a thuilleamh trí ghníomhaíocht mhargaidh fíoraithe."
+          ],
+          "href": "/products"
+        },
+        {
+          "srcKey": "wallet",
+          "eyebrow": "Sparán Iontaobhais",
+          "title": "Seol luach. Muinín a thuilleamh.",
+          "text": "Cónaíonn do chothromaíocht agus do chlú Trust Coin in aice leis an tráchtáil a dhéanann tú gach lá.",
+          "points": [
+            "Tarraingíodh figiúirí Live Trust Economy ó Supabase.",
+            "Iarmhéid TrustCoin in-app le feiceáil.",
+            "Luaíochtaí cáil as ranníocaíochtaí cabhrach."
+          ],
+          "href": "/wallet",
+          "alt": true
+        },
+        {
+          "srcKey": "services",
+          "eyebrow": "Seirbhísí",
+          "title": "Soláthraithe fíoraithe a fhostú.",
+          "text": "Tagann cártaí seirbhíse ar sholáthraithe fíor, rátálacha, dul chun cinn agus comharthaí muiníne sula áirithíonn tú.",
+          "points": [
+            "Soláthraithe seirbhísí áitiúla agus cianda fíoraithe.",
+            "Muinín dul chun cinn agus comharthaí rátála ar gach cárta.",
+            "Tógtha le haghaidh oibrithe neamhspleácha, bunaitheoirí, agus obair phobail."
+          ],
+          "href": "/services"
+        },
+        {
+          "srcKey": "community",
+          "eyebrow": "Pobal",
+          "title": "Do líonra iontaofa.",
+          "text": "Ciseal beathaithe agus nasctha dearfach atá deartha le haghaidh comhoibrithe, ní lúba rannpháirtíochta tocsaineacha.",
+          "points": [
+            "Próifílí ball fíoraithe agus chuimhneacháin pobail.",
+            "Nuashonruithe cruthaitheacha, táirgiúla, cuimsitheacha.",
+            "Éifeachtaí líonra a thugann luach saothair do ranníocaíochtaí cabhracha."
+          ],
+          "href": "/feed",
+          "alt": true
+        }
+      ]
+    },
+    "liveMarketplace": {
+      "eyebrow": "Margadh beo",
+      "title": "Seirbhísí úra, táirgí, jabanna, agus imeachtaí - go léir ag gluaiseacht.",
+      "description": "Fanann sonraí Real FreeTrust sa leathanach tuirlingthe, uasghrádaithe le cártaí dorcha préimhe, táscairí iontaobhais teal, agus fionnachtain chothrománach atá cairdiúil do shoghluaiste.",
+      "tabs": {
+        "services": "🛠 Seirbhísí",
+        "products": "🛒 Táirgí",
+        "jobs": "💼 Jabanna",
+        "events": "📅 Imeachtaí"
+      },
+      "cta": {
+        "open": "Oscail →",
+        "view": "Féach →",
+        "viewEvent": "Féach ar imeacht →"
+      },
+      "badges": {
+        "trustScore": "{score}★ Trust Score",
+        "verifiedService": "Seirbhís deimhnithe",
+        "verifiedListing": "Liostú fíoraithe"
+      },
+      "status": {
+        "showing": "Réamhamhairc ar an margadh beo a thaispeáint nuair atá siad ar fáil",
+        "loaded": "· Cártaí beo {count} luchtaithe"
+      },
+      "fallbacks": {
+        "remote": "cianda",
+        "onSite": "Ar an láthair",
+        "online": "Ar líne",
+        "inPerson": "Go pearsanta",
+        "applyFree": "Déan iarratas saor in aisce",
+        "openRole": "Ról oscailte",
+        "company": "Cuideachta",
+        "event": "Imeacht",
+        "services": [
+          {
+            "title": "Deisiúcháin tithe áitiúla",
+            "subtitle": "Soláthraithe fíoraithe",
+            "price": "Leabhar a saor in aisce",
+            "badge": "Seirbhísí áitiúla"
+          },
+          {
+            "title": "Cabhair deartha & cruthaitheach",
+            "subtitle": "Saorálaithe iontaofa",
+            "price": "Ó €25",
+            "badge": "Cianda-réidh"
+          },
+          {
+            "title": "Tacaíocht gnó",
+            "subtitle": "Soláthraithe ball",
+            "price": "Faigh Sleachta",
+            "badge": "Iontaobhas cosanta"
+          },
+          {
+            "title": "Traenáil & meantóireacht",
+            "subtitle": "Saineolaithe pobail",
+            "price": "Brabhsáil",
+            "badge": "₮ incháilithe"
+          },
+          {
+            "title": "Imeachtaí & fáilteachais",
+            "subtitle": "Soláthraithe áitiúla fíor",
+            "price": "Faigh cabhair",
+            "badge": "Liostaí deimhnithe"
+          },
+          {
+            "title": "Tacaíocht theicniúil",
+            "subtitle": "Ar líne agus áitiúil",
+            "price": "Ar cíos anois",
+            "badge": "Soláthraithe iontaofa"
+          }
+        ],
+        "products": [
+          {
+            "title": "Kit Stiúideo Cruthaitheoir",
+            "subtitle": "Díoltóir fíoraithe",
+            "price": "€84.00",
+            "badge": "4.9★ Trust Score"
+          },
+          {
+            "title": "Beart Tí Inbhuanaithe",
+            "subtitle": "Teacht ar an margadh",
+            "price": "€42.00",
+            "badge": "Liostú fíoraithe"
+          },
+          {
+            "title": "Bunús na hOibre Cianda",
+            "subtitle": "Díoltóir iontaofa",
+            "price": "€119.00",
+            "badge": "Iontaobhas cosanta"
+          },
+          {
+            "title": "Pacáiste Seoladh Cruthaitheach",
+            "subtitle": "Liostú ball",
+            "price": "€67.00",
+            "badge": "₮ incháilithe"
+          },
+          {
+            "title": "Fionnachtana faisin ciorclach",
+            "subtitle": "Margadh pobail",
+            "price": "€35.00",
+            "badge": "Díoltóir fíoraithe"
+          },
+          {
+            "title": "Beart fearas imeachta",
+            "subtitle": "Liostú iontaofa",
+            "price": "€96.00",
+            "badge": "Iontaobhas cosanta"
+          },
+          {
+            "title": "Socrú oifige eco",
+            "subtitle": "Teacht ar an margadh",
+            "price": "€58.00",
+            "badge": "₮ incháilithe"
+          },
+          {
+            "title": "Earraí déantóir áitiúil",
+            "subtitle": "Liostú ball",
+            "price": "€24.00",
+            "badge": "Liostú fíoraithe"
+          }
+        ],
+        "jobs": [
+          {
+            "id": "jobs",
+            "title": "Tionscadal Dearaidh Áitiúil",
+            "company_name": "Cuideachta iontaofa",
+            "location": "Cianda cairdiúil",
+            "salary": "Déan iarratas saor in aisce",
+            "job_type": "Tionscadal"
+          },
+          {
+            "id": "jobs-2",
+            "title": "Treoraí Fáis Pobail",
+            "company_name": "Ball FreeTrust",
+            "location": "hibrideach",
+            "salary": "Ról iontaofa",
+            "job_type": "Páirtaimseartha"
+          },
+          {
+            "id": "jobs-3",
+            "title": "Oibríochtaí sa Mhargadh",
+            "company_name": "Gnó deimhnithe",
+            "location": "Ar an láthair",
+            "salary": "₮ incháilithe",
+            "job_type": "Conradh"
+          }
+        ],
+        "events": [
+          {
+            "id": "events",
+            "title": "Cruinniú Pobail",
+            "category": "Teicneolaíocht",
+            "location": "Ar líne",
+            "catColor": "#00c2cb"
+          },
+          {
+            "id": "events-2",
+            "title": "Ciorcal Iontaobhais bunaitheoir",
+            "category": "Tosaithe",
+            "location": "Go pearsanta",
+            "catColor": "#38bdf8"
+          },
+          {
+            "id": "events-3",
+            "title": "Ceardlann Áit Mhargaidh",
+            "category": "Gnó",
+            "location": "Ar líne",
+            "catColor": "#a78bfa"
+          }
+        ]
+      }
+    },
+    "trustScore": {
+      "eyebrow": "Ciseal clú",
+      "title": "Cad is Trust Score ann?",
+      "description": "Is é FreeTrust's Trust Score do cháil iniompartha - bunaithe ar idirbhearta fíoraithe, athbhreithnithe pobail, agus ranníocaíochtaí ardáin.",
+      "factors": [
+        "Aitheantais Deimhnithe",
+        "47 Idirbhearta Críochnaithe",
+        "4.9★ Meán-Athbhreithniú",
+        "₮ Iarmhéid {balance} Trust Coin",
+        "Ball 2 Bliain"
+      ],
+      "cta": "Tóg Do Trust Score →"
+    },
+    "founding": {
+      "under100": "Faoi 100",
+      "title": "Bí ar an gCéad 1,000 Ball Bunaithe",
+      "description": "Faigh táillí laghdaithe ar feadh an tsaoil, bónas fáilte ₮ 200 Trust Coin, agus suaitheantas Comhalta Bunaithe ar do phróifíl. Níl fágtha ach spotaí {spots}.",
+      "cta": "Éileamh Do Chomhalta Bunaitheach"
+    },
+    "howItWorks": {
+      "eyebrow": "Conas a oibríonn sé",
+      "title": "Ceithre chéim le dul isteach sa gheilleagar iontaobhais",
+      "description": "Gan síntiús, gan aon gheataí. Níl le déanamh ach clárú, rannchuidiú, tógáil cáil, agus fás.",
+      "steps": [
+        [
+          "🪪",
+          "Cláraigh saor in aisce",
+          "Cruthaigh do chuntas agus faigh ₮ 200 TrustCoins nuair a chláraítear é."
+        ],
+        [
+          "📦",
+          "Liostaigh nó faigh amach",
+          "Seirbhís, táirge, post, imeacht nó pobal a fhoilsiú."
+        ],
+        [
+          "🤝",
+          "Déan go sábháilte",
+          "Úsáid próifílí fíoraithe, Trust Scoreanna, agus íocaíochtaí ar ardáin."
+        ],
+        [
+          "🌱",
+          "Tuilleamh agus tionchar",
+          "Tuilleamh ₮, táillí a laghdú, agus tacú le cúiseanna pobail."
+        ]
+      ]
+    },
+    "featuredServices": {
+      "eyebrow": "Margadh seirbhíse",
+      "title": "Fostaigh soláthraithe iontaofa FreeTrust",
+      "description": "Déan iniúchadh ar fhíorsheirbhísí ó chomhaltaí fíoraithe - tógáil gréasáin, margaíocht, straitéis, dearadh, taighde, agus tacaíocht phraiticiúil, agus iad ar fad le tacaíocht ó chomharthaí clú."
+    },
+    "earnings": {
+      "eyebrow": "Do thuilleamh",
+      "title": "Féach cad a thuillfeá ar FreeTrust",
+      "description": "TrustCoins cumaisc - dá mhéad a ghlacann tú páirt, is lú a íocann tú i dtáillí."
+    },
+    "roi": {
+      "sellerTab": "🏪 Is Díoltóir mé",
+      "buyerTab": "🛒 Is Ceannaitheoir mé",
+      "activity": "Do Ghníomhaíocht",
+      "earnings": "Do Thuilleamh",
+      "listingsPerMonth": "Liostaí in aghaidh na míosa",
+      "avgOrderValue": "Meánluach ordaithe",
+      "ordersPerMonth": "Orduithe in aghaidh na míosa",
+      "deliverOnTime": "Seachadadh in am?",
+      "onTimeTip": "Tuilleann seachadtaí ar-am",
+      "lateTip": "Tuilleann seachadtaí déanacha",
+      "perOrder": "in aghaidh an ordaithe",
+      "purchasesPerMonth": "Ceannacháin in aghaidh na míosa",
+      "reviewsPerMonth": "Léirmheasanna fágtha in aghaidh na míosa",
+      "reviewTipLead": "Tuilleann léirmheasanna 5 réalta",
+      "reviewTipTail": "bónas (vs +30₮ le haghaidh athbhreithnithe caighdeánach)",
+      "monthlyRevenue": "💶 Ioncam Míosúil",
+      "annualRevenue": "Ioncam bliantúil",
+      "gross": "comhlán",
+      "feeDeducted": "Táille {fee}% asbhainte",
+      "monthlyTrustCoins": "TrustCoins míosúil",
+      "annual": "Bliantúil",
+      "feeReduction": "Laghdú táille",
+      "offPlatformFees": "as táillí ardán",
+      "unlockSavings": "Tuilleamh 1,000₮ chun coigilteas a dhíghlasáil",
+      "extraKept": "breise coinnithe in aghaidh na bliana",
+      "cta": "Tosaigh Tuilleamh - Glac páirt saor in aisce →",
+      "perListing": "in aghaidh an liostú",
+      "onTimeDelivery": "seachadadh in am",
+      "perReview": "in aghaidh an athbhreithnithe",
+      "liveTracking": "rianú beo",
+      "perPurchase": "in aghaidh an cheannaigh",
+      "fiveStarReview": "Léirmheas 5 réalta",
+      "signupBonus": "bónas clárúcháin",
+      "tiers": {
+        "platinum": "Platanam",
+        "gold": "Óir",
+        "silver": "Airgid",
+        "member": "Ball"
+      }
+    },
+    "faq": {
+      "eyebrow": "Iarrtar go minic",
+      "title": "Ceisteanna, freagraíodh",
+      "description": "Gach rud a chaithfidh tú a bheith ar an eolas faoi FreeTrust sula dtéann tú isteach ann.",
+      "items": [
+        {
+          "question": "Cad é FreeTrust?",
+          "answer": "Is é FreeTrust margadh an gheilleagair phobail — ardán ina dtuilleann baill TrustCoins (₮) ar gach ranníocaíocht a dhéanann siad agus a chaitheann siad chun fás. Is féidir leat seirbhísí a liostú, táirgí a dhíol, poist a phostáil, imeachtaí a reáchtáil, páirt a ghlacadh i bpobail, ailt a fhoilsiú agus tacú le tionscadail inbhuanaitheachta, ar fad in aon áit amháin."
+        },
+        {
+          "question": "An bhfuil FreeTrust saor chun páirt a ghlacadh?",
+          "answer": "Sea, tá FreeTrust saor in aisce chun páirt a ghlacadh. Faigheann baill nua ₮ 200 in TrustCoins ar chlárú agus níl aon síntiús ná táille mhíosúil i gceist. Ní ghearraimid ach táille bheag ar idirbhearta críochnaithe."
+        },
+        {
+          "question": "Cad iad TrustCoins (₮)?",
+          "answer": "Is é TrustCoins (₮) airgeadra cáil dúchais FreeTrust. Gach ranníocaíocht don phobal - seirbhís a liostú, ordú a chomhlánú, alt a fhoilsiú, athbhreithniú a fhágáil - tuilleann tú ₮. Díghlasálann iarmhéideanna níos airde ₮ táillí níos ísle, infheictheacht níos fearr agus rochtain ar bhuntáistí ardáin."
+        },
+        {
+          "question": "Conas a thuillim TrustCoins?",
+          "answer": "Tuilleann tú ₮ as gach gníomh brí: ₮200 ar chlárú, ₮50 as liostú a chruthú, ₮75 as alt a fhoilsiú, ₮100 as ordú a chomhlánú, ₮100 as pobal a chruthú, ₮10 as athbhreithniú a fhágáil, agus tuilleadh. Tá an sceideal tuillimh iomlán i do sparán."
+        },
+        {
+          "question": "An féidir liom fíor-airgead a tharraingt siar ó FreeTrust?",
+          "answer": "Is féidir - nascann díoltóirí cuntas Stripe trí /seller/connect agus is féidir leo na fáltais euro a tharraingt siar ó aon díolachán críochnaithe go díreach lena mbanc. Ní féidir TrustCoins iad féin a tharraingt siar, is airgeadra clúiteach iad a úsáidtear taobh istigh den ardán."
+        },
+        {
+          "question": "Conas a oibríonn an margadh?",
+          "answer": "Liostaigh táirge, seirbhís nó gig ó /seirbhísí/nua nó /táirgí/nua, socraigh do phraghas in EUR, GBP nó USD, agus íocann ceannaitheoirí go slán trí Stripe. Rianaítear orduithe ó cheann ceann le teachtaireachtaí, léirmheasanna agus díospóidí ionsuite. Tuilleann tú TrustCoins ag gach céim agus faigheann tú íocaíocht amach le do bhanc."
+        },
+        {
+          "question": "An d'úsáideoirí áirithe amháin é FreeTrust?",
+          "answer": "Tá FreeTrust tógtha don gheilleagar pobail agus tá sé oscailte do bhaill ar fud an domhain. Tacaímid le hairgeadraí iolracha, le híocaíochtaí idirnáisiúnta Stripe agus tá baill againn sa RA, san AE agus níos faide i gcéin."
+        },
+        {
+          "question": "Conas atá FreeTrust difriúil ó áiteanna margaidh eile?",
+          "answer": "Murab ionann agus ardáin asbhainte táillí, tugann FreeTrust luach saothair díreach don ranníocaíocht. Tuilleann gach gníomh TrustCoins, téann 1% de gach idirbheart chuig an gCiste Inbhuanaitheachta do thionscadail tionchair phobail fíor, agus socraíonn cáil (ní fógraí) infheictheacht. Tá geilleagar comhroinnte á thógáil agat, níl tú ag íoc cíosa ar áit mhargaidh."
+        },
+        {
+          "question": "Cad é an Ciste Inbhuanaitheachta?",
+          "answer": "Is comhthiomsú pobal-rialaithe é an Ciste Inbhuanaitheachta a fhaigheann 1% de gach idirbheart ar FreeTrust móide síntiúis dhíreacha ₮. Vótálann feisirí ar bhonn ráithiúil ar na tionscadail inbhuanaitheachta sa saol mór atá le maoiniú - athfhoraoisiú, fuinneamh glan, glantacháin aigéin, oideachas agus go leor eile."
+        },
+        {
+          "question": "Conas is féidir liom eagraíocht a chruthú ar FreeTrust?",
+          "answer": "Téigh chuig/eagraíochtaí/nua chun leathanach eagraíochta a chruthú do do ghnó, do charthanacht, do ghrúpa pobail nó d’fhiontar sóisialta. Is féidir leat é a liostú san eolaire, postáil ar an bhfotha mar eagraíocht, cuireadh a thabhairt do bhaill foirne agus imeachtaí agus liostaí a reáchtáil faoi bhranda na heagraíochta."
+        },
+        {
+          "question": "An bhfuil mo shonraí sábháilte ar FreeTrust?",
+          "answer": "Tá. Úsáideann FreeTrust Supabase le slándáil ar leibhéal rónna ar gach tábla, íocaíochtaí Stripe fíordheimhnithe, láimhseáil sonraí a chomhlíonann GDPR agus gan aon rianaithe ad-theicneolaíochta. Ní dhíoltar do shonraí pearsanta choíche, agus is féidir leat iad a easpórtáil nó a scriosadh ag am ar bith ó /socruithe."
+        },
+        {
+          "question": "Conas a gheobhaidh mé tacaíocht?",
+          "answer": "Tá cosán tacaíochta ionsuite ag gach leathanach trí /help, nó is féidir leat teachtaireacht a chur chuig an bhfoireann FreeTrust go díreach ó /messages. Maidir le ceisteanna cuntais agus íocaíochta, téigh chuig /socruithe le haghaidh roghanna féinfhreastail ar dtús — freagraítear formhór na gceisteanna laistigh de nóiméad ansiúd."
+        }
+      ]
+    },
+    "footer": {
+      "tagline": "Ceannaigh. Dhíol. Ceangail. Iontaobhas. Geilleagar pobail níos sábháilte faoi thiomáint ag clú fíoraithe.",
+      "legal": "Dlíthiúil",
+      "joinFree": "Glac páirt saor in aisce",
+      "links": [
+        [
+          "Seirbhísí",
+          "/services"
+        ],
+        [
+          "Táirgí",
+          "/products"
+        ],
+        [
+          "Imeachtaí",
+          "/events"
+        ],
+        [
+          "Ailt",
+          "/articles"
+        ],
+        [
+          "Tionchar",
+          "/impact"
+        ],
+        [
+          "Iontaobhas & Sábháilteacht",
+          "/safety"
+        ],
+        [
+          "Beartas Príobháideachta",
+          "/privacy"
+        ],
+        [
+          "Téarmaí Seirbhíse",
+          "/terms"
+        ]
+      ],
+      "vision": {
+        "label": "Fís",
+        "problemTitle": "An fhadhb atá againn le réiteach",
+        "visionTitle": "Ár bhfís",
+        "problem": [
+          "Tá géarchéim muiníne ag baint leis an idirlíon agus cosnaíonn sé gach rud do dhaoine.",
+          "Sháraigh caillteanais scam domhanda ar líne $1.026 trilliún in 2023, de réir an Chomhaontais Frith-Scam Domhanda. Díríodh ar dhuine as gach ceathrar ar fud an domhain le hiarracht calaoise ar líne. In Éirinn amháin, mhéadaigh caillteanais calaoise tuairiscithe os cionn €85 milliún in 2024. Taobh thiar de gach staitistic tá duine, go minic úinéir gnó beag, saoránach, ceannaitheoir céaduaire, a mhéadaigh muinín, agus a dódh.",
+          "Gheall an geilleagar digiteach rochtain. Ba é an rud a thug sé, don iomarca, ná nochtadh.",
+          "Rinneadh veicteoirí le haghaidh dúshaothraithe ar ardáin a tógadh chun daoine a nascadh. Léirmheasanna falsa, díoltóirí phantom, camscéimeanna pearsanaithe, conraitheoirí taibhse, an neamhshiméadracht faisnéise Tá an t-eacnamaí Nobel George Akerlof ar a bhfuil cur síos ina theoiric shuntasach “Margadh na Lemons” meatastasaithe i ngach cúinne den tráchtáil ar líne. Nuair nach féidir le ceannaitheoirí idirdhealú a dhéanamh idir an iontaofa agus an duine calaoiseach, íocann siad préimh ar eagla, agus déantar díoltóirí macánta a thiomáint amach.",
+          "Rugadh FreeTrust ón chréacht seo. Rinneadh calaois ar ár bunaitheoir ag forbróir a d'imigh as cód foinse an ardáin iomláin. Tháinig ceist ar an gcaillteanas sin: cén chuma a bheadh ​​ar thráchtáil mura mbeadh an iontaoibh ina bhaol a bheadh ​​ort a ionsú i d’aonar?"
+        ],
+        "vision": [
+          "Domhan ina bhfuil gach malartú scileanna, earraí, ama agus luacha bunaithe ar iontaoibh fhíoraithe, agus ina dtugann an geilleagar luach saothair dóibh siúd a chuireann leis.",
+          "Creidimid nach só-ghné é muinín. Is é an bonn ar a gcaithfear gach margadh a thógáil. Samhlaímid todhchaí ina mbeidh an t-oibrí neamhspleách, an déantóir áitiúil, an fiontar sóisialta, agus an tomhaltóir comhfhiosach ina n-imreoirí lárnacha sa gheilleagar ciorclach, ní cás an chorrlaigh a fhulaingíonn ardáin níos mó.",
+          "Tá FreeTrust ag tógáil na todhchaí sin: margadh pobail fíoraithe ina bhfuil cáil tuillte, dearbhaítear féiniúlacht, agus sreabhann luach ar ais go dtí na daoine a chruthaíonn é."
+        ]
+      },
+      "mission": {
+        "label": "Misean",
+        "missionTitle": "Ár misean",
+        "mission": "Is é misean FreeTrust tráchtáil ar líne a atógáil thart ar fhéiniúlacht fhíoraithe, cuntasacht phobail, agus geilleagar ciorclach a chuireann tionchar, ní hamháin brabús, ina chroílár.",
+        "commitmentsIntro": "Déanaimid é seo trí cheithre ghealltanas:",
+        "commitments": [
+          {
+            "title": "Iontaobhas de réir réamhshocraithe",
+            "body": "Deimhnítear céannacht gach ball FreeTrust. Tá gach idirbheart tacaithe ag córas clú atá bunaithe ar stair fíor, ní rátálacha gan ainm. Ní hamháin go laghdaítear calaois, déanaimid muinín as an ionchas bunlíne, ní an eisceacht."
+          },
+          {
+            "title": "Geilleagar Pobail Tógtha do Dhaoine",
+            "body": "Ní ardán é FreeTrust a ghnóthaíonn luach óna chomhaltaí. Is pobal é a ghineann le chéile é. Trínár n-airgeadra inmheánach Trust Coin (₮), tuilleann, caitheann, agus scaipeann baill luach laistigh den éiceachóras. Tá téarmaí tosaíochta ar feadh an tsaoil ag Comhaltaí Bunaithe, le teorainn de 1,000, toisc go bhfuil na daoine a thógann rud éigin tuillte acu leas a bhaint as."
+          },
+          {
+            "title": "Tionchar mar Chatagóir den Chéad Scoth",
+            "body": "Ní gá go mbeadh an tráchtáil neodrach. Tá an cumas ag gach idirbheart ar FreeTrust níos mó ná luach malairte a dhéanamh, is féidir leis an tionchar a mhaoiniú. Déanann ár gCiste Tionchair ranníocaíochtaí a dhíriú ar chúiseanna a thugann aghaidh ar an neamhionannas atá ina bhun. Nuair a cheannaíonn tú, a dhíolann nó a thuilleann tú ar FreeTrust, bíonn tú rannpháirteach i ngeilleagar a bhfuil a fhios aige cad a sheasann dó."
+          },
+          {
+            "title": "Geilleagar Ciorclach, Nach Eastóscach",
+            "body": "Tógadh na hardáin ceannasacha le fiche bliain anuas ar mhúnla simplí: soláthar comhiomlán, éileamh gabhála, táillí sleachta, athrá. Tá FreeTrust tógtha ar mhúnla difriúil. Fanann luach ginte laistigh den phobal laistigh den phobal. Bronntar muinín ar iontaobhas. Ní tonnadóir é an geilleagar atá á thógáil againn, is timthriall é."
+          }
+        ],
+        "audienceTitle": "Cé atá uainn",
+        "audience": "Tá FreeTrust don oibrí neamhspleách a bhí taibhseach ar íocaíocht. An cheannaitheora a fuair rud ar bith tar éis a íoc. An gnó beag a thóg seirbhís cúig réalta ach níorbh fhéidir é a chruthú don chéad chustaiméir eile. Ní raibh an fiontar sóisialta in ann áit mhargaidh a aimsiú a roinneadh a luachanna. Táimid ar son na ndaoine a raibh an t-idirlíon ceaptha a shaoradh agus rómhinic theip orthu.",
+        "worldTitle": "An domhan atá á thógáil againn",
+        "world": "Nuair a thagann muinín chun bheith ina bhonneagar, athraíonn tráchtáil. Buann díoltóirí fíoraithe ar thuillteanas. Déanann ceannaitheoirí cinntí go muiníneach. Téann gnólachtaí áitiúla agus neamhspleácha san iomaíocht ar bhonn cothrom. Déantar tionchar a thomhas, ní hamháin é a lua. Agus neartaíonn an sreabhadh ciorclach luach, scileanna, earraí, am, airgeadra, cáil, an pobal a ghluaiseann sé tríd, seachas é a dhraenáil.",
+        "closingStrong": "Ní idéalachas é seo. Is é seo an ailtireacht margadh níos fearr.",
+        "closing": "FreeTrust. Tógtha ar iontaobhas. Tógtha do dhaoine."
+      },
+      "copyright": "© 2026 FreeTrust · Fanann íocaíochtaí taobh istigh de FreeTrust · Tráchtáil bunaithe ar iontaobhas le haghaidh idirlíon níos sábháilte."
+    }
   },
   "marketplace": {
     "title": "Margadh",
