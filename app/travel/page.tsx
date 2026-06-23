@@ -7,6 +7,7 @@ import { buildCountryOptions } from '@/lib/countries'
 
 type SearchType = 'flights' | 'accommodation' | 'both'
 type ResultTab = 'accommodation' | 'flights'
+type TravelSearchOverrides = { searchType?: SearchType; destinationCity?: string; destinationCountry?: string }
 
 type TravelBooking = {
   id: string
@@ -65,25 +66,16 @@ const DIM = '#64748b'
 const TEXT = '#f1f5f9'
 
 const travelCategories = [
-  { icon: '🏖️', label: 'Beach & Resort', city: 'Malaga', type: 'both' as SearchType },
-  { icon: '🏙️', label: 'City Breaks', city: 'Paris', type: 'both' as SearchType },
-  { icon: '🏔️', label: 'Adventure & Nature', city: 'Interlaken', type: 'accommodation' as SearchType },
-  { icon: '🗺️', label: 'Cultural Experiences', city: 'Rome', type: 'both' as SearchType },
-  { icon: '👨‍👩‍👧', label: 'Family Holidays', city: 'Albufeira', type: 'accommodation' as SearchType },
-  { icon: '💑', label: 'Romantic Escapes', city: 'Santorini', type: 'accommodation' as SearchType },
-  { icon: '🎒', label: 'Backpacker & Budget', city: 'Lisbon', type: 'flights' as SearchType },
-  { icon: '✈️', label: 'Long-Haul Flights', city: 'New York', type: 'flights' as SearchType },
-  { icon: '🚢', label: 'Cruise Packages', city: 'Barcelona', type: 'both' as SearchType },
-  { icon: '🧘', label: 'Wellness Retreats', city: 'Bali', type: 'accommodation' as SearchType },
-]
-
-const globalTravelIdeas = [
-  { icon: '🌍', title: 'European city breaks', city: 'Paris', country: 'France', copy: 'Flights and stays for quick cultural weekends.', type: 'both' as SearchType },
-  { icon: '🏖️', title: 'Sun escapes', city: 'Malaga', country: 'Spain', copy: 'Beach stays, resort areas, and family-friendly trips.', type: 'both' as SearchType },
-  { icon: '🏛️', title: 'Historic capitals', city: 'Rome', country: 'Italy', copy: 'Walkable stays close to landmarks and local food.', type: 'both' as SearchType },
-  { icon: '🏔️', title: 'Nature retreats', city: 'Interlaken', country: 'Switzerland', copy: 'Mountain bases for hiking, scenery, and adventure.', type: 'accommodation' as SearchType },
-  { icon: '✈️', title: 'Long-haul ideas', city: 'New York', country: 'United States', copy: 'Flight-led inspiration for bigger international trips.', type: 'flights' as SearchType },
-  { icon: '🧘', title: 'Wellness breaks', city: 'Bali', country: 'Indonesia', copy: 'Retreat-style stays for slower restorative travel.', type: 'accommodation' as SearchType },
+  { icon: '🏙️', label: 'City Breaks', city: 'Paris', country: 'France', countryCode: 'FR', copy: 'Flights and central stays for quick cultural weekends.', image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80', type: 'both' as SearchType },
+  { icon: '🏖️', label: 'Beach & Resort', city: 'Malaga', country: 'Spain', countryCode: 'ES', copy: 'Sunny stays, coastlines, and relaxed resort escapes.', image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80', type: 'both' as SearchType },
+  { icon: '🏔️', label: 'Adventure & Nature', city: 'Interlaken', country: 'Switzerland', countryCode: 'CH', copy: 'Mountain bases for hiking, scenery, and outdoor trips.', image: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80', type: 'accommodation' as SearchType },
+  { icon: '🗺️', label: 'Cultural Experiences', city: 'Rome', country: 'Italy', countryCode: 'IT', copy: 'Historic streets, food, galleries, and landmark stays.', image: 'https://images.unsplash.com/photo-1529260830199-42c24126f198?auto=format&fit=crop&w=900&q=80', type: 'both' as SearchType },
+  { icon: '👨‍👩‍👧', label: 'Family Holidays', city: 'Albufeira', country: 'Portugal', countryCode: 'PT', copy: 'Family-friendly stays and easy beach holiday bases.', image: 'https://images.unsplash.com/photo-1473116763249-2faaef81ccda?auto=format&fit=crop&w=900&q=80', type: 'accommodation' as SearchType },
+  { icon: '💑', label: 'Romantic Escapes', city: 'Santorini', country: 'Greece', countryCode: 'GR', copy: 'Boutique stays and view-led breaks for two.', image: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=900&q=80', type: 'accommodation' as SearchType },
+  { icon: '🎒', label: 'Backpacker & Budget', city: 'Lisbon', country: 'Portugal', countryCode: 'PT', copy: 'Flight-led ideas for affordable city-hopping.', image: 'https://images.unsplash.com/photo-1548707309-dcebeab9ea9b?auto=format&fit=crop&w=900&q=80', type: 'flights' as SearchType },
+  { icon: '✈️', label: 'Long-Haul Flights', city: 'New York', country: 'United States', countryCode: 'US', copy: 'Bigger international routes and long-haul inspiration.', image: 'https://images.unsplash.com/photo-1485871981521-5b1fd3805eee?auto=format&fit=crop&w=900&q=80', type: 'flights' as SearchType },
+  { icon: '🚢', label: 'Cruise Packages', city: 'Barcelona', country: 'Spain', countryCode: 'ES', copy: 'Port-city stays and cruise-ready travel planning.', image: 'https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=900&q=80', type: 'both' as SearchType },
+  { icon: '🧘', label: 'Wellness Retreats', city: 'Bali', country: 'Indonesia', countryCode: 'ID', copy: 'Retreat-style stays for slower restorative travel.', image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=900&q=80', type: 'accommodation' as SearchType },
 ]
 
 const inputStyle = {
@@ -235,7 +227,8 @@ export default function TravelPage() {
   const [toast, setToast] = useState<string | null>(null)
   const [lastSearchId, setLastSearchId] = useState<string | null>(null)
 
-  const selectedCountryLabel = countries.find(c => c.code === destinationCountry)?.label || destinationCountry
+  const getCountryLabel = useCallback((code: string) => countries.find(c => c.code === code)?.label || code, [countries])
+  const selectedCountryLabel = getCountryLabel(destinationCountry)
   const needsFlights = searchType === 'flights' || searchType === 'both'
   const needsAccommodation = searchType === 'accommodation' || searchType === 'both'
 
@@ -291,15 +284,16 @@ export default function TravelPage() {
       : pickString(first, ['dest_id', 'id', 'city_ufi', 'ufi'], city)
   }
 
-  async function saveSearch(uid: string, overrides: { searchType?: SearchType; destinationCity?: string } = {}) {
+  async function saveSearch(uid: string, overrides: TravelSearchOverrides = {}) {
     const searchTypeValue = overrides.searchType ?? searchType
     const destinationCityValue = overrides.destinationCity ?? destinationCity
+    const destinationCountryValue = overrides.destinationCountry ?? destinationCountry
     const { data, error: insertError } = await supabase
       .from('travel_searches')
       .insert({
         user_id: uid,
         search_type: searchTypeValue,
-        destination_country: selectedCountryLabel.replace(/^\S+\s/, ''),
+        destination_country: getCountryLabel(destinationCountryValue).replace(/^\S+\s/, ''),
         destination_city: destinationCityValue || null,
         departure_city: departureCity || null,
         check_in: checkIn || null,
@@ -318,7 +312,7 @@ export default function TravelPage() {
     return data.id as string
   }
 
-  async function runSearch(overrides: { searchType?: SearchType; destinationCity?: string } = {}) {
+  async function runSearch(overrides: TravelSearchOverrides = {}) {
     const user = await requireAuth()
     if (!user) return
     const searchTypeValue = overrides.searchType ?? searchType
@@ -386,7 +380,12 @@ export default function TravelPage() {
   async function handleCategory(cat: typeof travelCategories[number]) {
     setSearchType(cat.type)
     setDestinationCity(cat.city)
-    await runSearch({ searchType: cat.type, destinationCity: cat.city })
+    setDestinationCountry(cat.countryCode)
+    if (!userId) {
+      goToTravelLogin()
+      return
+    }
+    await runSearch({ searchType: cat.type, destinationCity: cat.city, destinationCountry: cat.countryCode })
   }
 
   async function saveBooking(kind: 'flight' | 'accommodation' | 'bundle', item: HotelCard | FlightCard) {
@@ -478,11 +477,11 @@ export default function TravelPage() {
         </div>
       )}
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>
-        <section style={{ background: 'linear-gradient(180deg,rgba(56,189,248,0.08),rgba(15,23,42,0))', border: `1px solid ${BORDER}`, borderRadius: 22, padding: 16, boxShadow: '0 18px 60px rgba(0,0,0,0.25)' }}>
+        <section style={{ background: 'linear-gradient(180deg,rgba(56,189,248,0.08),rgba(15,23,42,0))', border: `1px solid ${BORDER}`, borderRadius: 22, padding: 14, boxShadow: '0 18px 60px rgba(0,0,0,0.25)' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div>
               <div style={{ color: TEAL, fontSize: 11, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Experience</div>
-              <h1 style={{ margin: '4px 0 6px', fontSize: 28, lineHeight: 1.05, letterSpacing: '-0.04em' }}>✈️ Travel</h1>
+              <h1 style={{ margin: '3px 0 5px', fontSize: 26, lineHeight: 1.05, letterSpacing: '-0.04em' }}>✈️ Travel</h1>
               <p style={{ margin: 0, color: MUTED, fontSize: 14, lineHeight: 1.5, maxWidth: 620 }}>Browse global trip ideas, search live travel partner options, and earn Trust Coins when you continue to a provider.</p>
             </div>
             <div style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.22)', borderRadius: 999, padding: '8px 12px', color: ACCENT, fontSize: 12, fontWeight: 900 }}>Member travel rewards</div>
@@ -495,10 +494,10 @@ export default function TravelPage() {
             </div>
           )}
 
-          <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 12 }}>
-            <div style={{ gridColumn: '1 / -1' }}>
-              <div style={{ color: MUTED, fontSize: 12, fontWeight: 800, marginBottom: 8 }}>Step 1 — What are you looking for?</div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 9, alignItems: 'end' }}>
+            <div style={{ display: 'grid', gap: 6 }}>
+              <div style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Trip type</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {([
                   ['flights', '✈️ Flights'],
                   ['accommodation', '🏨 Accommodation'],
@@ -506,78 +505,69 @@ export default function TravelPage() {
                 ] as [SearchType, string][]).map(([value, label]) => {
                   const active = searchType === value
                   return (
-                    <button key={value} onClick={() => setSearchType(value)} style={{ minHeight: 44, borderRadius: 12, border: active ? `2px solid ${TEAL}` : `1px solid ${BORDER}`, background: active ? 'rgba(0,194,203,0.14)' : CARD_2, color: active ? TEAL : MUTED, padding: '10px 14px', fontSize: 14, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit' }}>{label}</button>
+                    <button key={value} onClick={() => setSearchType(value)} style={{ minHeight: 44, borderRadius: 12, border: active ? `2px solid ${TEAL}` : `1px solid ${BORDER}`, background: active ? 'rgba(0,194,203,0.14)' : CARD_2, color: active ? TEAL : MUTED, padding: '8px 10px', fontSize: 13, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit', flex: '1 1 92px' }}>{label}</button>
                   )
                 })}
               </div>
             </div>
 
             <label style={{ display: 'grid', gap: 6 }}>
-              <span style={{ color: MUTED, fontSize: 12, fontWeight: 800 }}>Step 2 — Country</span>
+              <span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Country</span>
               <select value={destinationCountry} onChange={e => setDestinationCountry(e.target.value)} style={inputStyle}>
                 {countries.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
               </select>
             </label>
             <label style={{ display: 'grid', gap: 6 }}>
-              <span style={{ color: MUTED, fontSize: 12, fontWeight: 800 }}>City</span>
+              <span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>City</span>
               <input value={destinationCity} onChange={e => setDestinationCity(e.target.value)} placeholder="Paris" autoCorrect="off" spellCheck={false} style={inputStyle} />
             </label>
 
             {needsFlights && (
               <>
-                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 12, fontWeight: 800 }}>Departure city</span><input value={departureCity} onChange={e => setDepartureCity(e.target.value)} placeholder="Dublin" style={inputStyle} /></label>
-                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 12, fontWeight: 800 }}>Departure date</span><input type="date" value={departureDate} onChange={e => setDepartureDate(e.target.value)} style={inputStyle} /></label>
-                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 12, fontWeight: 800 }}>Return date</span><input type="date" value={returnDate} onChange={e => setReturnDate(e.target.value)} style={inputStyle} /></label>
-                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 12, fontWeight: 800 }}>Cabin class</span><select value={cabinClass} onChange={e => setCabinClass(e.target.value)} style={inputStyle}><option value="economy">Economy</option><option value="business">Business</option><option value="first">First</option></select></label>
+                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>From</span><input value={departureCity} onChange={e => setDepartureCity(e.target.value)} placeholder="Dublin" style={inputStyle} /></label>
+                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Depart</span><input type="date" value={departureDate} onChange={e => setDepartureDate(e.target.value)} style={inputStyle} /></label>
+                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Return</span><input type="date" value={returnDate} onChange={e => setReturnDate(e.target.value)} style={inputStyle} /></label>
+                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Cabin</span><select value={cabinClass} onChange={e => setCabinClass(e.target.value)} style={inputStyle}><option value="economy">Economy</option><option value="business">Business</option><option value="first">First</option></select></label>
               </>
             )}
 
             {needsAccommodation && (
               <>
-                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 12, fontWeight: 800 }}>Check-in</span><input type="date" value={checkIn} onChange={e => setCheckIn(e.target.value)} style={inputStyle} /></label>
-                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 12, fontWeight: 800 }}>Check-out</span><input type="date" value={checkOut} onChange={e => setCheckOut(e.target.value)} style={inputStyle} /></label>
-                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 12, fontWeight: 800 }}>Rooms</span><input type="number" min="1" value={rooms} onChange={e => setRooms(Math.max(1, Number(e.target.value) || 1))} style={inputStyle} /></label>
+                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Check-in</span><input type="date" value={checkIn} onChange={e => setCheckIn(e.target.value)} style={inputStyle} /></label>
+                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Check-out</span><input type="date" value={checkOut} onChange={e => setCheckOut(e.target.value)} style={inputStyle} /></label>
+                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Rooms</span><input type="number" min="1" value={rooms} onChange={e => setRooms(Math.max(1, Number(e.target.value) || 1))} style={inputStyle} /></label>
               </>
             )}
 
-            <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 12, fontWeight: 800 }}>Adults</span><input type="number" min="1" value={adults} onChange={e => setAdults(Math.max(1, Number(e.target.value) || 1))} style={inputStyle} /></label>
-            <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 12, fontWeight: 800 }}>Children</span><input type="number" min="0" value={children} onChange={e => setChildren(Math.max(0, Number(e.target.value) || 0))} style={inputStyle} /></label>
+            <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Adults</span><input type="number" min="1" value={adults} onChange={e => setAdults(Math.max(1, Number(e.target.value) || 1))} style={inputStyle} /></label>
+            <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Children</span><input type="number" min="0" value={children} onChange={e => setChildren(Math.max(0, Number(e.target.value) || 0))} style={inputStyle} /></label>
           </div>
 
           {userId ? (
-            <button id="travel-search-button" onClick={() => void runSearch()} disabled={loading} style={{ marginTop: 14, width: '100%', minHeight: 50, border: 'none', borderRadius: 14, background: loading ? '#334155' : 'linear-gradient(135deg,#00c2cb,#38bdf8)', color: '#0f172a', fontSize: 16, fontWeight: 950, cursor: loading ? 'wait' : 'pointer', fontFamily: 'inherit', boxShadow: '0 14px 34px rgba(56,189,248,0.18)' }}>
+            <button id="travel-search-button" onClick={() => void runSearch()} disabled={loading} style={{ marginTop: 12, width: '100%', minHeight: 46, border: 'none', borderRadius: 14, background: loading ? '#334155' : 'linear-gradient(135deg,#00c2cb,#38bdf8)', color: '#0f172a', fontSize: 16, fontWeight: 950, cursor: loading ? 'wait' : 'pointer', fontFamily: 'inherit', boxShadow: '0 14px 34px rgba(56,189,248,0.18)' }}>
               {loading ? 'Searching travel options…' : 'Find Travel Options'}
             </button>
           ) : (
-            <a id="travel-search-button" href="/login?redirect=/travel" style={{ marginTop: 14, width: '100%', minHeight: 50, border: 'none', borderRadius: 14, background: 'linear-gradient(135deg,#00c2cb,#38bdf8)', color: '#0f172a', fontSize: 16, fontWeight: 950, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 14px 34px rgba(56,189,248,0.18)', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <a id="travel-search-button" href="/login?redirect=/travel" style={{ marginTop: 12, width: '100%', minHeight: 46, border: 'none', borderRadius: 14, background: 'linear-gradient(135deg,#00c2cb,#38bdf8)', color: '#0f172a', fontSize: 16, fontWeight: 950, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 14px 34px rgba(56,189,248,0.18)', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               Sign in to Search Travel
             </a>
           )}
         </section>
 
         <section style={{ marginTop: 18 }}>
-          <SectionTitle eyebrow="Browse globally" title="Travel ideas before you search">Start from a destination style, then adjust the city, dates, guests, and trip type when you are ready.</SectionTitle>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(250px,1fr))', gap: 12 }}>
-            {globalTravelIdeas.map(idea => (
-              <button key={idea.title} onClick={() => void handleCategory({ icon: idea.icon, label: idea.title, city: idea.city, type: idea.type })} style={{ textAlign: 'left', border: `1px solid ${BORDER}`, borderRadius: 18, background: 'linear-gradient(145deg,rgba(30,41,59,0.98),rgba(17,24,39,0.98))', color: TEXT, padding: 16, minHeight: 156, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 14px 34px rgba(0,0,0,0.14)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}><span style={{ fontSize: 28 }}>{idea.icon}</span><span style={{ color: ACCENT, fontSize: 11, fontWeight: 950, textTransform: 'uppercase' }}>{idea.type === 'both' ? 'Flights + stays' : idea.type}</span></div>
-                <div style={{ marginTop: 12, color: TEXT, fontSize: 16, fontWeight: 950 }}>{idea.title}</div>
-                <div style={{ marginTop: 4, color: MUTED, fontSize: 13 }}>{idea.city}, {idea.country}</div>
-                <p style={{ margin: '10px 0 0', color: DIM, fontSize: 12, lineHeight: 1.5 }}>{idea.copy}</p>
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <section style={{ marginTop: 18 }}>
-          <SectionTitle eyebrow="Explore by mood" title="Travel categories">Pick a shortcut to pre-fill a travel search with FreeTrust’s marketplace-style discovery tiles.</SectionTitle>
-          <div style={{ color: DIM, fontSize: 12, margin: '-4px 0 10px' }}>Swipe right-to-left to browse categories.</div>
-          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', overflowY: 'hidden', padding: '2px 2px 12px', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}>
+          <SectionTitle eyebrow="Explore by mood" title="Travel categories">Pick one image tile to pre-fill and run a member search. You can still adjust the compact form above.</SectionTitle>
+          <div style={{ display: 'flex', gap: 12, overflowX: 'auto', overflowY: 'hidden', padding: '2px 2px 14px', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}>
             {travelCategories.map(cat => (
-              <button key={cat.label} onClick={() => void handleCategory(cat)} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'rgba(56,189,248,0.38)' }} onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.borderColor = BORDER }} style={{ flex: '0 0 168px', minHeight: 118, textAlign: 'left', border: `1px solid ${BORDER}`, borderRadius: 18, background: 'linear-gradient(180deg,rgba(30,41,59,0.96),rgba(17,24,39,0.96))', color: TEXT, padding: 14, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', scrollSnapAlign: 'start' }}>
-                <div style={{ fontSize: 26, marginBottom: 10 }}>{cat.icon}</div>
-                <div style={{ fontSize: 14, fontWeight: 900 }}>{cat.label}</div>
-                <div style={{ marginTop: 5, color: DIM, fontSize: 12 }}>{cat.city} · {cat.type === 'both' ? 'Flights + stays' : cat.type}</div>
+              <button key={cat.label} onClick={() => void handleCategory(cat)} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'rgba(56,189,248,0.45)' }} onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.borderColor = BORDER }} style={{ flex: '0 0 228px', minHeight: 238, textAlign: 'left', border: `1px solid ${BORDER}`, borderRadius: 20, background: CARD, color: TEXT, padding: 0, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', boxShadow: '0 14px 36px rgba(0,0,0,0.18)', scrollSnapAlign: 'start', overflow: 'hidden' }}>
+                <div style={{ height: 126, background: `linear-gradient(180deg,rgba(15,23,42,0.02),rgba(15,23,42,0.78)), url(${cat.image}) center/cover`, position: 'relative' }}>
+                  <span style={{ position: 'absolute', top: 10, left: 10, width: 38, height: 38, borderRadius: 14, background: 'rgba(15,23,42,0.72)', border: '1px solid rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>{cat.icon}</span>
+                  <span style={{ position: 'absolute', right: 10, bottom: 10, borderRadius: 999, padding: '5px 8px', background: 'rgba(15,23,42,0.78)', border: '1px solid rgba(56,189,248,0.32)', color: ACCENT, fontSize: 10, fontWeight: 950, textTransform: 'uppercase' }}>{cat.type === 'both' ? 'Flights + stays' : cat.type}</span>
+                </div>
+                <div style={{ padding: 13 }}>
+                  <div style={{ fontSize: 15, fontWeight: 950 }}>{cat.label}</div>
+                  <div style={{ marginTop: 4, color: MUTED, fontSize: 12 }}>{cat.city}, {cat.country}</div>
+                  <p style={{ margin: '8px 0 0', color: DIM, fontSize: 12, lineHeight: 1.45 }}>{cat.copy}</p>
+                </div>
               </button>
             ))}
           </div>
@@ -604,7 +594,7 @@ export default function TravelPage() {
             </div>
           )}
           {loading && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 12 }}>{[1,2,3].map(i => <div key={i} style={{ height: 260, borderRadius: 16, background: 'linear-gradient(90deg,#111827,#1e293b,#111827)', border: `1px solid ${BORDER}` }} />)}</div>}
-          {!showResults && <div style={{ border: `1px dashed ${BORDER}`, borderRadius: 18, padding: 22, background: CARD_2, color: MUTED, textAlign: 'center' }}>Browse the global ideas above, choose a category, or run a member search to see live flights and stays.</div>}
+          {!showResults && <div style={{ border: `1px dashed ${BORDER}`, borderRadius: 18, padding: 22, background: CARD_2, color: MUTED, textAlign: 'center' }}>Choose an image category or run a member search to see live flights and stays.</div>}
 
           {!loading && ((searchType !== 'flights' && activeTab === 'accommodation') || searchType === 'accommodation') && hotels.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 12 }}>
