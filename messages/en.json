@@ -48,7 +48,10 @@
     "social": "SOCIAL",
     "planet": "PLANET",
     "create": "CREATE",
-    "experience": "EXPERIENCE"
+    "experience": "EXPERIENCE",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "balanceAbbr": "bal"
   },
   "auth": {
     "signIn": "Sign In",
@@ -466,17 +469,380 @@
     "both": "Both",
     "whereTo": "Where do you want to go?",
     "searchButton": "Find Travel Options",
+    "searching": "Searching travel options…",
+    "signInSearch": "Sign in to Search Travel",
     "checkIn": "Check-in",
     "checkOut": "Check-out",
     "adults": "Adults",
     "children": "Children",
-    "rooms": "Rooms"
+    "rooms": "Rooms",
+    "saving": "Saving…",
+    "retrySearch": "Retry search",
+    "hero": {
+      "eyebrow": "Experience",
+      "subtitle": "Browse global trip ideas, search live travel partner options, and earn Trust Coins when you continue to a provider.",
+      "badge": "Member travel rewards"
+    },
+    "membersOnly": {
+      "title": "Members-only travel search",
+      "body": "Sign in as a FreeTrust member to search live flights and stays.",
+      "cta": "Sign in to search"
+    },
+    "fields": {
+      "tripType": "Trip type",
+      "country": "Country",
+      "city": "City",
+      "from": "From",
+      "depart": "Depart",
+      "return": "Return",
+      "cabin": "Cabin"
+    },
+    "cabin": {
+      "economy": "Economy",
+      "business": "Business",
+      "first": "First"
+    },
+    "typeBadges": {
+      "flights": "Flights",
+      "accommodation": "Stays",
+      "both": "Flights + stays"
+    },
+    "categoriesSection": {
+      "eyebrow": "Explore by mood",
+      "title": "Travel categories",
+      "body": "Pick one image tile to pre-fill and run a member search. You can still adjust the compact form above."
+    },
+    "categories": {
+      "cityBreaks": {"label": "City Breaks", "country": "France", "copy": "Flights and central stays for quick cultural weekends."},
+      "beachResort": {"label": "Beach & Resort", "country": "Spain", "copy": "Sunny stays, coastlines, and relaxed resort escapes."},
+      "adventureNature": {"label": "Adventure & Nature", "country": "Switzerland", "copy": "Mountain bases for hiking, scenery, and outdoor trips."},
+      "culturalExperiences": {"label": "Cultural Experiences", "country": "Italy", "copy": "Historic streets, food, galleries, and landmark stays."},
+      "familyHolidays": {"label": "Family Holidays", "country": "Portugal", "copy": "Family-friendly stays and easy beach holiday bases."},
+      "romanticEscapes": {"label": "Romantic Escapes", "country": "Greece", "copy": "Boutique stays and view-led breaks for two."},
+      "backpackerBudget": {"label": "Backpacker & Budget", "country": "Portugal", "copy": "Flight-led ideas for affordable city-hopping."},
+      "longHaulFlights": {"label": "Long-Haul Flights", "country": "United States", "copy": "Bigger international routes and long-haul inspiration."},
+      "cruisePackages": {"label": "Cruise Packages", "country": "Spain", "copy": "Port-city stays and cruise-ready travel planning."},
+      "wellnessRetreats": {"label": "Wellness Retreats", "country": "Indonesia", "copy": "Retreat-style stays for slower restorative travel."}
+    },
+    "results": {
+      "eyebrow": "Results",
+      "title": "Travel options",
+      "body": "Live travel partner results appear here after a member search. No fake travel inventory is shown.",
+      "empty": "Choose an image category or run a member search to see live flights and stays."
+    },
+    "errors": {
+      "loadTitle": "Travel options could not load"
+    },
+    "cards": {
+      "viewPrice": "View price",
+      "perNightEstimate": "per night estimate",
+      "reviewScore": "{score} / 10",
+      "reviewed": "Reviewed",
+      "viewDeal": "View Deal",
+      "earn": "Earn ₮{amount}",
+      "direct": "Direct",
+      "stopsVary": "Stops vary",
+      "stops": "{count, plural, one {# stop} other {# stops}}",
+      "depart": "Depart",
+      "arrive": "Arrive",
+      "duration": "Duration",
+      "price": "Price",
+      "bookFlight": "Book Flight"
+    },
+    "bookingTypes": {
+      "flight": "Flight",
+      "accommodation": "Accommodation",
+      "bundle": "Bundle"
+    },
+    "activity": {
+      "eyebrow": "Travel activity",
+      "title": "Saved provider visits",
+      "body": "These are provider links you opened from FreeTrust. Cancel removes them from your active travel activity; confirmed bookings are completed with the travel provider.",
+      "signIn": "Sign in to save travel booking activity.",
+      "empty": "No saved travel activity yet.",
+      "openedProvider": "Opened provider",
+      "cancelled": "Cancelled",
+      "confirmed": "Confirmed",
+      "fallbackTitle": "Travel activity",
+      "destination": "Destination",
+      "datePending": "Date pending",
+      "externalPrice": "External price",
+      "earned": "₮{amount} earned",
+      "continue": "Continue to provider",
+      "cancel": "Cancel activity",
+      "cancelling": "Cancelling…"
+    },
+    "toasts": {
+      "trustCoinsAdded": "₮{amount} Trust Coins added to your wallet!",
+      "popupBlocked": "Opening your travel partner link. If no tab opened, use the deal button again.",
+      "activityCancelled": "Travel activity cancelled."
+    }
+  },
+  "productsPage": {
+    "title": "Products",
+    "foundCount": "{count, plural, one {# product found} other {# products found}}",
+    "listProduct": "+ List Product",
+    "loadingMore": "Loading more products…",
+    "moreRemaining": "{count, plural, one {# more product — scroll to keep browsing} other {# more products — scroll to keep browsing}}",
+    "allLoaded": "All {count, plural, one {# product} other {# products}} loaded",
+    "common": {
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "deleting": "Deleting…",
+      "view": "View",
+      "share": "Share"
+    },
+    "delete": {
+      "title": "Delete product?",
+      "body": "\"{title}\" will be permanently deleted and cannot be recovered."
+    },
+    "sort": {
+      "newest": "Newest",
+      "topRated": "Top Rated",
+      "popular": "Popular",
+      "priceLow": "Price: Low",
+      "priceHigh": "Price: High"
+    },
+    "tabs": {
+      "listings": "FreeTrust Listings",
+      "findOnline": "Find Online"
+    },
+    "filters": {
+      "allTypes": "All Types",
+      "digital": "Digital",
+      "physical": "Physical",
+      "maxPrice": "Max price:",
+      "minRating": "Min rating:",
+      "any": "Any"
+    },
+    "layout": {
+      "button": "Layout",
+      "switchTwo": "Switch to two products per row",
+      "switchOne": "Switch to one product per row",
+      "currentOne": "Currently 1 product per row",
+      "currentTwo": "Currently 2 products per row",
+      "densityHelp": "Choose how dense the marketplace grid feels on your screen.",
+      "desktop": "Desktop",
+      "desktopCols": "{count, plural, one {# product per row on desktop} other {# products per row on desktop}}"
+    },
+    "card": {
+      "freeShipping": "Free shipping",
+      "instantDownload": "Instant download",
+      "standardDelivery": "Standard delivery",
+      "businessDays": "{min}-{max} business days",
+      "productPrice": "Product price"
+    },
+    "external": {
+      "via": "via {provider}",
+      "price": "Price",
+      "reviews": "{count, plural, one {# review} other {# reviews}}",
+      "seePrice": "See price",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "notTrustCoinEligible": "Not Trust Coin eligible"
+    },
+    "retailerModal": {
+      "title": "Retailer product",
+      "viewingPrefix": "You are viewing",
+      "on": "on {provider}.",
+      "warning": "This checkout is completed on the retailer site. FreeTrust does not process the payment or guarantee external stock, delivery, or returns.",
+      "fulfilled": "Fulfilled by external retailer",
+      "opening": "Opening…",
+      "continue": "Continue to retailer"
+    },
+    "basket": {
+      "title": "Basket",
+      "open": "Open basket",
+      "closeOverlay": "Close basket overlay",
+      "communityItems": "Community items",
+      "communityListing": "FreeTrust listing",
+      "externalSaves": "Retailer saves",
+      "externalDescription": "Saved retailer products stay here so you can continue to their provider site.",
+      "retailer": "Retailer",
+      "remove": "Remove",
+      "subtotal": "Subtotal",
+      "total": "Total",
+      "completeOnRetailer": "Complete on retailer site",
+      "savedItems": "Saved retailer products",
+      "noCommunity": "No FreeTrust items in your basket yet.",
+      "noRetailer": "No retailer products saved yet.",
+      "signInPersist": "Sign in to keep this basket across devices.",
+      "addFailed": "Could not add this item to your basket.",
+      "saveRetailerFailed": "Could not save this retailer product."
+    },
+    "checkout": {
+      "communityItems": "Community checkout",
+      "creating": "Creating checkout…",
+      "startFailed": "Checkout could not be started.",
+      "incomplete": "Checkout was created but payment details were incomplete.",
+      "ready": "Secure payment is ready for {amount}.",
+      "connectFailed": "Could not connect to checkout. Please try again.",
+      "refresh": "Refresh checkout"
+    },
+    "payment": {
+      "status": "Payment status",
+      "loadingFields": "Loading secure payment fields…",
+      "stripeLoadFailed": "Payment fields could not load. Please refresh checkout.",
+      "stripeNotConfigured": "Secure payment is not configured yet.",
+      "checkDetails": "Check your payment details and try again.",
+      "failed": "Payment failed. Please try again.",
+      "processing": "Processing…",
+      "confirming": "Confirming payment…",
+      "paySecurely": "Pay securely",
+      "complete": "Complete payment"
+    },
+    "empty": {
+      "title": "No products found",
+      "category": "No products yet in this category — be the first to list one.",
+      "filters": "No products match your filters.",
+      "listProduct": "+ List a Product"
+    },
+    "fallbacks": {
+      "freetrustStore": "FreeTrust Store",
+      "onlineRetailer": "Online retailer",
+      "availableIreland": "Available in Ireland"
+    }
+  },
+  "servicesPage": {
+    "title": "Services Marketplace",
+    "subtitle": "Skilled & professional work — online or in-person",
+    "listService": "List Your Service",
+    "common": {
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "deleting": "Deleting…",
+      "view": "View"
+    },
+    "delete": {
+      "title": "Delete service?",
+      "body": "\"{title}\" will be permanently deleted and cannot be recovered."
+    },
+    "toast": {
+      "published": "🎉 Gig published! It’s now live on Services."
+    },
+    "fallbacks": {
+      "unknown": "Unknown"
+    },
+    "tabs": {
+      "allServices": "All Services",
+      "findProvider": "Find a Provider"
+    },
+    "card": {
+      "online": "Online",
+      "local": "Local",
+      "inPerson": "In-person",
+      "trust": "Trust {score}%",
+      "perProject": "/ project"
+    },
+    "external": {
+      "remote": "Remote",
+      "local": "Local",
+      "remoteLocal": "Remote & Local",
+      "providerBadge": "External Provider",
+      "worldwide": "Worldwide",
+      "notTrustCoinEligible": "Not Trust Coin eligible",
+      "visitPartner": "Visit Partner →",
+      "viewProvider": "View Provider →",
+      "enquire": "Enquire"
+    },
+    "filters": {
+      "searchServices": "Search services…",
+      "searchExternal": "Search external providers…",
+      "all": "All",
+      "categoriesAria": "All Services categories",
+      "categoriesAz": "Categories A–Z",
+      "minPrice": "€ min",
+      "maxPriceShort": "€ max",
+      "clear": "Clear filters"
+    },
+    "sort": {
+      "best": "Best Match",
+      "newest": "Newest",
+      "priceAsc": "Price: Low to High",
+      "priceDesc": "Price: High to Low",
+      "topRated": "Top Rated"
+    },
+    "summary": {
+      "services": "{count, plural, one {# service} other {# services}}",
+      "externalProviders": "{count, plural, one {# external provider} other {# external providers}}",
+      "providers": "{count, plural, one {# provider} other {# providers}}",
+      "in": "in",
+      "near": "near",
+      "onlineLower": "online",
+      "localLower": "local"
+    },
+    "loading": {
+      "services": "Loading services and providers…",
+      "external": "Loading external providers…",
+      "moreServices": "Loading more services…",
+      "moreProviders": "Loading more providers…",
+      "allProvidersLoaded": "All {count, plural, one {# provider} other {# providers}} loaded"
+    },
+    "errors": {
+      "loadServices": "Could not load services",
+      "loadExternal": "Could not load external services",
+      "servicesTitle": "Services could not load",
+      "externalTitle": "External providers could not load",
+      "tryAgain": "Pull to refresh or try again in a moment.",
+      "reloadServices": "Reload services",
+      "reloadProviders": "Reload providers"
+    },
+    "empty": {
+      "noServicesLoaded": "No services loaded yet",
+      "noServicesMatch": "No services match your filters",
+      "beFirst": "Be the first founding member to list your service!",
+      "adjustFilters": "Try adjusting your filters or search term",
+      "noModeInCategory": "No {mode} services yet in {category}",
+      "modeMismatch": "{count, plural, one {# provider is} other {# providers are}} available in this category, but not under the current {mode} filter. Switch to All or clear filters.",
+      "noExternalLoaded": "No external providers loaded yet",
+      "noProvidersMatch": "No providers match your filters",
+      "externalRefresh": "The nightly provider refresh will populate this tab from real SerpApi and Awin data.",
+      "tryAnother": "Try another category or search term."
+    },
+    "enquiry": {
+      "title": "Enquire about this service",
+      "placeholder": "Describe what you need...",
+      "submit": "Submit Enquiry",
+      "submitting": "Submitting...",
+      "submitFailed": "Could not submit enquiry",
+      "submitted": "Enquiry submitted! The provider will be in touch."
+    }
   },
   "trust": {
     "trustScore": "Trust Score",
     "trustCoins": "Trust Coins",
     "earned": "Earned",
     "wallet": "Wallet"
+  },
+  "createMenu": {
+    "title": "Create something",
+    "aria": {"create": "Create"},
+    "items": {
+      "post": {"title": "Post", "subtitle": "Share a quick update"},
+      "job": {"title": "Job", "subtitle": "Post a job listing"},
+      "event": {"title": "Event", "subtitle": "Create an event"},
+      "article": {"title": "Article", "subtitle": "Write a long-form piece"}
+    },
+    "post": {
+      "placeholder": "What's on your mind?",
+      "submit": "Post",
+      "posted": "✓ Posted!"
+    },
+    "categories": {
+      "General": "General",
+      "Services": "Services",
+      "Products": "Products",
+      "Events": "Events",
+      "Jobs": "Jobs",
+      "Group": "Group",
+      "Article": "Article"
+    },
+    "errors": {
+      "writeSomething": "Write something first.",
+      "failedToPost": "Failed to post",
+      "network": "Network error"
+    }
   },
   "common": {
     "loading": "Loading...",

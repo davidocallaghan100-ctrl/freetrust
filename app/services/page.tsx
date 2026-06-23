@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { ONLINE_CATEGORIES, OFFLINE_CATEGORIES, ALL_CATEGORIES as ALL_SERVICE_CATEGORIES, findServiceCategoryByLabel } from '@/lib/service-categories'
 import LocationFilter from '@/components/location/LocationFilter'
@@ -21,21 +22,22 @@ import {
 function DeleteModal({ title, onConfirm, onCancel, deleting }: {
   title: string; onConfirm: () => void; onCancel: () => void; deleting: boolean
 }) {
+  const t = useTranslations('servicesPage')
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
       <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: 14, padding: '1.5rem', maxWidth: 420, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
-        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem' }}>Delete service?</div>
+        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem' }}>{t('delete.title')}</div>
         <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
-          &ldquo;{title}&rdquo; will be permanently deleted and cannot be recovered.
+          {t('delete.body', { title })}
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
           <button onClick={onCancel} disabled={deleting}
             style={{ padding: '0.5rem 1rem', borderRadius: 8, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button onClick={onConfirm} disabled={deleting}
             style={{ padding: '0.5rem 1rem', borderRadius: 8, border: 'none', background: '#ef4444', color: '#fff', cursor: deleting ? 'wait' : 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', fontWeight: 700 }}>
-            {deleting ? 'Deleting…' : 'Delete'}
+            {deleting ? t('common.deleting') : t('common.delete')}
           </button>
         </div>
       </div>
@@ -213,6 +215,7 @@ function ServiceCard({
   onOpen: (id: string | number) => void
   onOpenProfile: (providerId: string) => void
 }) {
+  const t = useTranslations('servicesPage')
   return (
     <div style={{ position: 'relative' }}>
     <Link
@@ -274,7 +277,7 @@ function ServiceCard({
           {/* Mode + badge — right-aligned, shrinkable */}
           <div className="svc-card-badges">
             <span style={{ background: svc.mode === 'online' ? 'rgba(56,189,248,0.08)' : 'rgba(52,211,153,0.08)', border: `1px solid ${svc.mode === 'online' ? 'rgba(56,189,248,0.2)' : 'rgba(52,211,153,0.2)'}`, borderRadius: 999, padding: '2px 6px', fontSize: '9px', color: svc.mode === 'online' ? '#38bdf8' : '#34d399', fontWeight: 700, whiteSpace: 'nowrap' }}>
-              {svc.mode === 'online' ? '💻 Online' : '📍 Local'}
+              {svc.mode === 'online' ? `💻 ${t('card.online')}` : `📍 ${t('card.local')}`}
             </span>
             {svc.badge && <span style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 999, padding: '2px 6px', fontSize: '9px', color: '#38bdf8', fontWeight: 700, whiteSpace: 'nowrap' }}>{svc.badge}</span>}
           </div>
@@ -304,7 +307,7 @@ function ServiceCard({
 
         {/* Trust bar */}
         <div style={{ fontSize: '11px', color: '#38bdf8' }}>
-          Trust {svc.trust}%
+          {t('card.trust', { score: svc.trust })}
           <div style={{ marginTop: '3px', height: 3, background: 'rgba(56,189,248,0.12)', borderRadius: 2 }}>
             <div style={{ width: `${svc.trust}%`, height: '100%', background: '#38bdf8', borderRadius: 2 }} />
           </div>
@@ -320,10 +323,10 @@ function ServiceCard({
               size="md"
               layout="stacked"
             />
-            <span style={{ fontSize: '11px', color: '#475569' }}>/ project</span>
+            <span style={{ fontSize: '11px', color: '#475569' }}>{t('card.perProject')}</span>
           </div>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            <span style={{ background: '#38bdf8', borderRadius: '8px', padding: '7px 16px', fontSize: '12px', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', flexShrink: 0 }}>View</span>
+            <span style={{ background: '#38bdf8', borderRadius: '8px', padding: '7px 16px', fontSize: '12px', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', flexShrink: 0 }}>{t('common.view')}</span>
             {isOwner && onDelete && (
               <button onClick={e => { e.preventDefault(); e.stopPropagation(); onDelete(svc.id, svc.title) }}
                 style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '7px 10px', fontSize: '12px', color: '#ef4444', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
@@ -348,13 +351,14 @@ function ExternalServiceCard({
   onVisit: (item: ExternalService) => void
   onEnquire: (item: ExternalService) => void
 }) {
+  const t = useTranslations('servicesPage')
   const category = categoryMetaForExternalService(item.category)
   const categoryLabel = category?.label ?? item.category.replace(/-/g, ' ')
   const serviceTypeLabel = item.service_type === 'remote'
-    ? '💻 Remote'
+    ? `💻 ${t('external.remote')}`
       : item.service_type === 'local'
-        ? '🏠 Local'
-        : '💻 Remote & Local'
+        ? `🏠 ${t('external.local')}`
+        : `💻 ${t('external.remoteLocal')}`
   const imageUrl = item.thumbnail || faviconForProviderUrl(item.provider_url)
 
   return (
@@ -388,7 +392,7 @@ function ExternalServiceCard({
         padding: '3px 8px', borderRadius: '6px',
         letterSpacing: '0.06em', textTransform: 'uppercase',
       }}>
-        🌐 External Provider
+        🌐 {t('external.providerBadge')}
       </div>
 
       <div style={{
@@ -431,7 +435,7 @@ function ExternalServiceCard({
       )}
 
       <p style={{ color: '#475569', fontSize: '12px', margin: '0 0 6px 0' }}>
-        📍 {item.location || 'Worldwide'} · {serviceTypeLabel}
+        📍 {item.location || t('external.worldwide')} · {serviceTypeLabel}
       </p>
 
       {item.price_display && (
@@ -448,7 +452,7 @@ function ExternalServiceCard({
       )}
 
       <p style={{ color: '#374151', fontSize: '11px', margin: 'auto 0 12px 0' }}>
-        ⚠ Not Trust Coin eligible
+        ⚠ {t('external.notTrustCoinEligible')}
       </p>
 
       <div style={{ display: 'flex', gap: '8px' }}>
@@ -463,7 +467,7 @@ function ExternalServiceCard({
             fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit',
           }}
         >
-          {item.is_awin ? 'Visit Partner →' : 'View Provider →'}
+          {item.is_awin ? t('external.visitPartner') : t('external.viewProvider')}
         </button>
         <button
           onClick={() => onEnquire(item)}
@@ -474,7 +478,7 @@ function ExternalServiceCard({
             fontWeight: 700, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit',
           }}
         >
-          Enquire
+          {t('external.enquire')}
         </button>
       </div>
       </div>
@@ -485,6 +489,7 @@ function ExternalServiceCard({
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function ServicesPage() {
+  const t = useTranslations('servicesPage')
   const [services, setServices] = useState<Service[]>([])
   const [search, setSearch]       = useState('')
   const [sort, setSort]           = useState('best')
@@ -538,11 +543,11 @@ export default function ServicesPage() {
     // Fire the toast and clear the query param so a refresh doesn't
     // re-trigger it. router.replace preserves scroll + history state
     // better than window.history.replaceState in a Next.js app.
-    setToast('🎉 Gig published! It\u2019s now live on Services.')
+    setToast(t('toast.published'))
     router.replace('/services', { scroll: false })
     const timer = setTimeout(() => setToast(''), 4500)
     return () => clearTimeout(timer)
-  }, [router])
+  }, [router, t])
 
   // Generic deep-link support for direct /services?category=<id> URLs.
   // Read via window.location to avoid needing a new Suspense boundary for
@@ -613,7 +618,7 @@ export default function ServicesPage() {
               youtube_url?: string | null
               website_url?: string | null
             } | null
-            const name = seller?.full_name ?? 'Unknown'
+            const name = seller?.full_name ?? t('fallbacks.unknown')
             const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
             const mode = (s.service_mode as string) ?? 'online'
             const categoryLabel = typeof s.category === 'string' ? s.category : ''
@@ -632,13 +637,13 @@ export default function ServicesPage() {
               rating: Number(s.review_count ?? 0) > 0 ? Number(s.avg_rating ?? 5) : 5,
               price: Number(s.price ?? 0),
               currency: String(s.currency_code ?? s.currency ?? 'EUR'),
-              delivery: mode === 'online' ? 'Online' : 'In-person',
+              delivery: mode === 'online' ? t('card.online') : t('card.inPerson'),
               tags: Array.isArray(s.tags) ? (s.tags as string[]) : [],
               category: categoryInfo?.label ?? categoryLabel,
               categoryId: categoryInfo?.id,
               desc: (s.description as string) ?? '',
               trust: 90,
-              badge: Number(s.review_count ?? 0) > 50 ? 'Top Rated' : null,
+              badge: Number(s.review_count ?? 0) > 50 ? t('sort.topRated') : null,
               mode: mode as 'online' | 'offline' | 'both',
               location: (s.location as string) ?? (s.location_label as string) ?? null,
               distance: null,
@@ -665,7 +670,7 @@ export default function ServicesPage() {
         }
       } catch (err) {
         console.error('[services page]', err)
-        if (!cancelled) setServicesError(err instanceof Error ? err.message : 'Could not load services')
+        if (!cancelled) setServicesError(err instanceof Error ? err.message : t('errors.loadServices'))
       } finally {
         if (!cancelled) setLoadingServices(false)
       }
@@ -701,7 +706,7 @@ export default function ServicesPage() {
           setExternalServices(externalRows.map((row: Record<string, unknown>) => ({
             id: String(row.id),
             title: String(row.title ?? ''),
-            provider_name: String(row.provider_name ?? 'External Provider'),
+            provider_name: String(row.provider_name ?? t('external.providerBadge')),
             provider_url: String(row.provider_url ?? ''),
             description: row.description ? String(row.description) : null,
             category: String(row.freetrust_category_id ?? row.category ?? 'business-consulting'),
@@ -727,7 +732,7 @@ export default function ServicesPage() {
         }
       } catch (err) {
         console.error('[external services page]', err)
-        if (!cancelled) setExternalServicesError(err instanceof Error ? err.message : 'Could not load external services')
+        if (!cancelled) setExternalServicesError(err instanceof Error ? err.message : t('errors.loadExternal'))
       } finally {
         if (!cancelled) setLoadingExternalServices(false)
       }
@@ -880,7 +885,7 @@ export default function ServicesPage() {
 
   const activeCategory = activeCatId ? visibleCats.find(c => c.id === activeCatId) : null
   const activeCategoryRawCount = activeCatId ? rawCategoryCount(activeCatId) : 0
-  const activeModeLabel = modeFilter === 'offline' ? 'local' : modeFilter === 'online' ? 'online' : null
+  const activeModeLabel = modeFilter === 'offline' ? t('summary.localLower') : modeFilter === 'online' ? t('summary.onlineLower') : null
   const hasActiveModeMismatch = Boolean(activeCategory && activeModeLabel && activeCategoryRawCount > 0 && mixedServices.length === 0)
 
   const filteredExternalServices = externalServices.filter(item => {
@@ -999,15 +1004,15 @@ export default function ServicesPage() {
         }),
       })
       const payload = await res.json().catch(() => null) as { error?: string } | null
-      if (!res.ok) throw new Error(payload?.error ?? 'Could not submit enquiry')
+      if (!res.ok) throw new Error(payload?.error ?? t('enquiry.submitFailed'))
 
       setExternalServices(prev => prev.map(row => row.id === selectedService.id ? { ...row, lead_count: row.lead_count + 1 } : row))
       setShowEnquiryModal(false)
       setSelectedService(null)
       setEnquiryMessage('')
-      alert('Enquiry submitted! The provider will be in touch.')
+      alert(t('enquiry.submitted'))
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Could not submit enquiry')
+      alert(err instanceof Error ? err.message : t('enquiry.submitFailed'))
     } finally {
       setEnquiryLoading(false)
     }
@@ -1075,14 +1080,14 @@ export default function ServicesPage() {
             border: '1px solid #1e293b', boxSizing: 'border-box',
           }}>
             <h3 style={{ color: '#fff', margin: '0 0 6px 0' }}>
-              Enquire about this service
+              {t('enquiry.title')}
             </h3>
             <p style={{ color: '#94a3b8', fontSize: '14px', margin: '0 0 20px 0', lineHeight: 1.45 }}>
               {selectedService.title} — {selectedService.provider_name}
             </p>
 
             <textarea
-              placeholder="Describe what you need..."
+              placeholder={t('enquiry.placeholder')}
               value={enquiryMessage}
               onChange={e => setEnquiryMessage(e.target.value)}
               rows={4}
@@ -1108,7 +1113,7 @@ export default function ServicesPage() {
                 marginBottom: '10px', fontFamily: 'inherit',
               }}
             >
-              {enquiryLoading ? 'Submitting...' : 'Submit Enquiry'}
+              {enquiryLoading ? t('enquiry.submitting') : t('enquiry.submit')}
             </button>
 
             <button
@@ -1119,7 +1124,7 @@ export default function ServicesPage() {
                 color: '#64748b', fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </div>
@@ -1157,8 +1162,8 @@ export default function ServicesPage() {
       {/* Hero */}
       <div style={{ background: 'linear-gradient(180deg,rgba(56,189,248,0.06) 0%,transparent 100%)', padding: '28px 16px 20px', borderBottom: '1px solid #1e293b' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <h1 style={{ fontSize: '26px', fontWeight: 800, margin: '0 0 4px' }}>🎯 Services Marketplace</h1>
-          <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 16px' }}>Skilled & professional work — online or in-person</p>
+          <h1 style={{ fontSize: '26px', fontWeight: 800, margin: '0 0 4px' }}>🎯 {t('title')}</h1>
+          <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 16px' }}>{t('subtitle')}</p>
 
           <div style={{ display: 'flex', gap: 12, margin: '16px 0', flexWrap: 'wrap', alignItems: 'center' }}>
             <button
@@ -1172,7 +1177,7 @@ export default function ServicesPage() {
                 cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit',
               }}
             >
-              All Services
+              {t('tabs.allServices')}
             </button>
             <button
               onClick={openFindProviderTab}
@@ -1185,7 +1190,7 @@ export default function ServicesPage() {
                 cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit',
               }}
             >
-              🔍 Find a Provider
+              🔍 {t('tabs.findProvider')}
             </button>
           </div>
 
@@ -1215,7 +1220,7 @@ export default function ServicesPage() {
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Search services…"
+                placeholder={t('filters.searchServices')}
                 style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '10px 14px 10px 36px', fontSize: '14px', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box' }}
                 onFocus={e => (e.target.style.borderColor = '#38bdf8')}
                 onBlur={e => (e.target.style.borderColor = '#334155')}
@@ -1224,7 +1229,7 @@ export default function ServicesPage() {
 
             {/* Mode toggle */}
             <div style={{ display: 'flex', gap: '4px', background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '3px' }}>
-              {([['all','🌐 All'], ['online','💻 Online'], ['offline','📍 Local']] as [string, string][]).map(([val, lbl]) => (
+              {([['all', `🌐 ${t('filters.all')}`], ['online', `💻 ${t('card.online')}`], ['offline', `📍 ${t('card.local')}`]] as [string, string][]).map(([val, lbl]) => (
                 <button key={val} onClick={() => setModeFilter(val as 'all'|'online'|'offline')}
                   style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: modeFilter === val ? 700 : 400, fontFamily: 'inherit', background: modeFilter === val ? '#38bdf8' : 'transparent', color: modeFilter === val ? '#0f172a' : '#64748b', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
                   {lbl}
@@ -1234,7 +1239,7 @@ export default function ServicesPage() {
 
             {/* Category dropdown — compact companion to the mobile chip rail */}
             <select
-              aria-label="All Services categories"
+              aria-label={t('filters.categoriesAria')}
               value={activeCatId ?? ''}
               onChange={e => setActiveCatId(e.target.value || null)}
               style={{
@@ -1244,7 +1249,7 @@ export default function ServicesPage() {
                 outline: 'none', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700,
               }}
             >
-              <option value="">✦ All Services ({mixedServices.length})</option>
+              <option value="">✦ {t('tabs.allServices')} ({mixedServices.length})</option>
               {mobileCategoryCats.map(cat => {
                 const count = categoryCount(cat.id)
                 return (
@@ -1257,17 +1262,17 @@ export default function ServicesPage() {
 
             {/* Price filter */}
             <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-              <input value={priceMin} onChange={e => setPriceMin(e.target.value)} placeholder="€ min" type="number" min="0"
+              <input value={priceMin} onChange={e => setPriceMin(e.target.value)} placeholder={t('filters.minPrice')} type="number" min="0"
                 style={{ width: '70px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '9px 8px', fontSize: '12px', color: '#f1f5f9', outline: 'none', textAlign: 'center' }} />
               <span style={{ color: '#475569', fontSize: '12px' }}>–</span>
-              <input value={priceMax} onChange={e => setPriceMax(e.target.value)} placeholder="€ max" type="number" min="0"
+              <input value={priceMax} onChange={e => setPriceMax(e.target.value)} placeholder={t('filters.maxPriceShort')} type="number" min="0"
                 style={{ width: '70px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '9px 8px', fontSize: '12px', color: '#f1f5f9', outline: 'none', textAlign: 'center' }} />
             </div>
 
             {/* Sort */}
             <select value={sort} onChange={e => setSort(e.target.value)}
               style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '9px 12px', fontSize: '12px', color: '#94a3b8', outline: 'none', cursor: 'pointer' }}>
-              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{({best: t('sort.best'), newest: t('sort.newest'), price_asc: t('sort.priceAsc'), price_desc: t('sort.priceDesc'), rating: t('sort.topRated')} as Record<string, string>)[o.value] ?? o.label}</option>)}
             </select>
               </div>
             </>
@@ -1282,11 +1287,11 @@ export default function ServicesPage() {
           <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', overflow: 'hidden' }}>
             <button className="cat-btn" onClick={() => setActiveCatId(null)}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px', background: activeCatId === null ? 'rgba(56,189,248,0.1)' : 'transparent', border: 'none', borderLeft: activeCatId === null ? '3px solid #38bdf8' : '3px solid transparent', color: activeCatId === null ? '#38bdf8' : '#94a3b8', fontSize: '13px', fontWeight: activeCatId === null ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}>
-              <span>✦ All Services</span>
+              <span>✦ {t('tabs.allServices')}</span>
               <span style={{ fontSize: '11px', color: '#475569' }}>{mixedServices.length}</span>
             </button>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '9px 14px', background: '#0f172a', borderTop: '1px solid #334155' }}>
-              <span style={{ fontSize: '10px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Categories A–Z</span>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('filters.categoriesAz')}</span>
               <span style={{ fontSize: '10px', color: '#475569', fontWeight: 800 }}>{sortedServiceCats.length}</span>
             </div>
             {sortedServiceCats.map(cat => {
@@ -1306,13 +1311,13 @@ export default function ServicesPage() {
 
           {/* Post a service CTA */}
           <Link href="/seller/gigs/create" onClick={e => { e.preventDefault(); void openCreateService() }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '12px', padding: '12px', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', borderRadius: '12px', color: '#fff', fontWeight: 700, fontSize: '13px', textDecoration: 'none' }}>
-            ➕ List Your Service
+            ➕ {t('listService')}
           </Link>
         </aside>
 
         {/* Results */}
         <div className="svc-results">
-          <div className="svc-mobile-categories" aria-label="Service categories A to Z">
+          <div className="svc-mobile-categories" aria-label={t('filters.categoriesAz')}>
             <button
               onClick={() => setActiveCatId(null)}
               style={{
@@ -1355,12 +1360,12 @@ export default function ServicesPage() {
           {/* Active filter summary */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
             <div style={{ fontSize: '13px', color: '#64748b' }}>
-              {mixedServices.length} service{mixedServices.length !== 1 ? 's' : ''}
-              {filteredExternalForListings.length > 0 && ` · ${filteredExternalForListings.length} external provider${filteredExternalForListings.length !== 1 ? 's' : ''}`}
-              {activeCatId && ` in ${visibleCats.find(c => c.id === activeCatId)?.label}`}
-              {filterLoc.location_label && ` · near ${filterLoc.location_label}`}
+              {t('summary.services', { count: mixedServices.length })}
+              {filteredExternalForListings.length > 0 && ` · ${t('summary.externalProviders', { count: filteredExternalForListings.length })}`}
+              {activeCatId && ` ${t('summary.in')} ${visibleCats.find(c => c.id === activeCatId)?.label}`}
+              {filterLoc.location_label && ` · ${t('summary.near')} ${filterLoc.location_label}`}
               {countryFilter && ` · ${countryFilter}`}
-              {filterRemote && ' · Remote'}
+              {filterRemote && ` · ${t('external.remote')}`}
             </div>
             {(activeCatId || filterLoc.latitude != null || countryFilter || filterRemote || priceMin || priceMax || search) && (
               <button
@@ -1376,7 +1381,7 @@ export default function ServicesPage() {
                 }}
                 style={{ background: 'none', border: '1px solid #334155', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', color: '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}
               >
-                ✕ Clear filters
+                ✕ {t('filters.clear')}
               </button>
             )}
           </div>
@@ -1384,15 +1389,15 @@ export default function ServicesPage() {
           {loadingServices || loadingExternalServices ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
               <div style={{ fontSize: '34px', marginBottom: '12px' }}>🛠️</div>
-              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8' }}>Loading services and providers…</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8' }}>{t('loading.services')}</div>
             </div>
           ) : servicesError || externalServicesError ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
               <div style={{ fontSize: '34px', marginBottom: '12px' }}>⚠️</div>
-              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8', marginBottom: 6 }}>Services could not load</div>
-              <div style={{ fontSize: '13px', marginBottom: 20 }}>{servicesError ?? externalServicesError ?? 'Pull to refresh or try again in a moment.'}</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8', marginBottom: 6 }}>{t('errors.servicesTitle')}</div>
+              <div style={{ fontSize: '13px', marginBottom: 20 }}>{servicesError ?? externalServicesError ?? t('errors.tryAgain')}</div>
               <button onClick={() => window.location.reload()} style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '10px 24px', borderRadius: 10, fontWeight: 700, border: 'none', fontSize: '14px' }}>
-                Reload services
+                {t('errors.reloadServices')}
               </button>
             </div>
           ) : mixedServices.length === 0 ? (
@@ -1400,21 +1405,21 @@ export default function ServicesPage() {
               <div style={{ fontSize: '40px', marginBottom: '12px' }}>🛠️</div>
               <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8', marginBottom: '6px' }}>
                 {services.length === 0 && externalServices.length === 0
-                  ? 'No services loaded yet'
+                  ? t('empty.noServicesLoaded')
                   : hasActiveModeMismatch && activeCategory && activeModeLabel
-                    ? `No ${activeModeLabel} services yet in ${activeCategory.label}`
-                    : 'No services match your filters'}
+                    ? t('empty.noModeInCategory', { mode: activeModeLabel, category: activeCategory.label })
+                    : t('empty.noServicesMatch')}
               </div>
               <div style={{ fontSize: '13px', marginBottom: '20px' }}>
                 {services.length === 0 && externalServices.length === 0
-                  ? 'Be the first founding member to list your service!'
+                  ? t('empty.beFirst')
                   : hasActiveModeMismatch && activeCategory && activeModeLabel
-                    ? `${activeCategoryRawCount} provider${activeCategoryRawCount !== 1 ? 's are' : ' is'} available in this category, but not under the current ${activeModeLabel} filter. Switch to All or clear filters.`
-                  : 'Try adjusting your filters or search term'}
+                    ? t('empty.modeMismatch', { count: activeCategoryRawCount, mode: activeModeLabel })
+                  : t('empty.adjustFilters')}
               </div>
               {services.length === 0 && externalServices.length === 0 && (
                 <a href="/seller/gigs/create" style={{ display: 'inline-block', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '10px 24px', borderRadius: 10, fontWeight: 700, textDecoration: 'none', fontSize: '14px' }}>
-                  + List Your Service
+                  + {t('listService')}
                 </a>
               )}
             </div>
@@ -1444,7 +1449,7 @@ export default function ServicesPage() {
 
               {servicesHasMore && (
                 <div style={{ textAlign: 'center', marginTop: '24px', color: '#64748b', fontSize: '13px', padding: '12px 0' }}>
-                  Loading more services…
+                  {t('loading.moreServices')}
                 </div>
               )}
             </>
@@ -1460,13 +1465,13 @@ export default function ServicesPage() {
                 <input
                   value={externalSearch}
                   onChange={e => setExternalSearch(e.target.value)}
-                  placeholder="Search external providers…"
+                  placeholder={t('filters.searchExternal')}
                   style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '10px 14px 10px 36px', fontSize: '16px', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
                 />
               </div>
               <div style={{ color: '#64748b', fontSize: '13px', lineHeight: 1.45 }}>
-                {filteredExternalServices.length} provider{filteredExternalServices.length !== 1 ? 's' : ''}
-                {externalCategory !== 'all' && ` in ${EXTERNAL_REFRESH_CATEGORIES.find(c => c.id === externalCategory)?.label ?? externalCategory}`}
+                {t('summary.providers', { count: filteredExternalServices.length })}
+                {externalCategory !== 'all' && ` ${t('summary.in')} ${EXTERNAL_REFRESH_CATEGORIES.find(c => c.id === externalCategory)?.label ?? externalCategory}`}
               </div>
             </div>
 
@@ -1485,7 +1490,7 @@ export default function ServicesPage() {
                   cursor: 'pointer', fontWeight: 600, fontSize: '13px', fontFamily: 'inherit',
                 }}
               >
-                🌐 All Services
+                🌐 {t('tabs.allServices')}
               </button>
               {EXTERNAL_REFRESH_CATEGORIES.filter(cat => externalServices.some(item => item.source_category === cat.id)).map(cat => (
                 <button
@@ -1508,27 +1513,27 @@ export default function ServicesPage() {
           {loadingExternalServices ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
               <div style={{ fontSize: '34px', marginBottom: '12px' }}>🔎</div>
-              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8' }}>Loading external providers…</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8' }}>{t('loading.external')}</div>
             </div>
           ) : externalServicesError ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
               <div style={{ fontSize: '34px', marginBottom: '12px' }}>⚠️</div>
-              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8', marginBottom: 6 }}>External providers could not load</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8', marginBottom: 6 }}>{t('errors.externalTitle')}</div>
               <div style={{ fontSize: '13px', marginBottom: 20 }}>{externalServicesError}</div>
               <button onClick={() => window.location.reload()} style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '10px 24px', borderRadius: 10, fontWeight: 700, border: 'none', fontSize: '14px', fontFamily: 'inherit' }}>
-                Reload providers
+                {t('errors.reloadProviders')}
               </button>
             </div>
           ) : filteredExternalServices.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
               <div style={{ fontSize: '40px', marginBottom: '12px' }}>🌐</div>
               <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8', marginBottom: '6px' }}>
-                {externalServices.length === 0 ? 'No external providers loaded yet' : 'No providers match your filters'}
+                {externalServices.length === 0 ? t('empty.noExternalLoaded') : t('empty.noProvidersMatch')}
               </div>
               <div style={{ fontSize: '13px', marginBottom: '20px' }}>
                 {externalServices.length === 0
-                  ? 'The nightly provider refresh will populate this tab from real SerpApi and Awin data.'
-                  : 'Try another category or search term.'}
+                  ? t('empty.externalRefresh')
+                  : t('empty.tryAnother')}
               </div>
             </div>
           ) : (
@@ -1546,13 +1551,13 @@ export default function ServicesPage() {
 
               {externalHasMore && (
                 <div style={{ textAlign: 'center', marginTop: '24px', color: '#64748b', fontSize: '13px', padding: '12px 0' }}>
-                  Loading more providers…
+                  {t('loading.moreProviders')}
                 </div>
               )}
 
               {!externalHasMore && filteredExternalServices.length > SERVICES_INITIAL_DISPLAY && (
                 <p style={{ textAlign: 'center', color: '#475569', fontSize: '13px', padding: '24px 0', margin: 0 }}>
-                  All {filteredExternalServices.length} providers loaded
+                  {t('loading.allProvidersLoaded', { count: filteredExternalServices.length })}
                 </p>
               )}
             </>

@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 
 const CATEGORIES = ['General', 'Services', 'Products', 'Events', 'Jobs', 'Group', 'Article']
@@ -13,6 +14,8 @@ interface CreateMenuProps {
 
 export default function CreateMenu({ asCenterButton = false, onClose }: CreateMenuProps) {
   const router = useRouter()
+  const t = useTranslations('createMenu')
+  const tCommon = useTranslations('common')
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
 
@@ -64,7 +67,7 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
   }
 
   const handlePost = async () => {
-    if (!postContent.trim()) { setError('Write something first.'); return }
+    if (!postContent.trim()) { setError(t('errors.writeSomething')); return }
     setSubmitting(true)
     setError('')
     try {
@@ -75,13 +78,13 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
       })
       if (!res.ok) {
         const data = await res.json()
-        setError(data.error ?? 'Failed to post')
+        setError(data.error ?? t('errors.failedToPost'))
       } else {
         setSuccess(true)
         setTimeout(closeAll, 1000)
       }
     } catch {
-      setError('Network error')
+      setError(t('errors.network'))
     } finally {
       setSubmitting(false)
     }
@@ -123,7 +126,7 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
     <div ref={containerRef} style={{ position: 'relative', display: 'inline-flex' }}>
       {/* Trigger */}
       <button
-        aria-label="Create"
+        aria-label={t('aria.create')}
         onClick={() => setOpen(v => !v)}
         style={triggerStyle}
       >
@@ -147,7 +150,7 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
         }}>
           <div style={{ padding: '12px 16px', borderBottom: '1px solid #334155' }}>
             <span style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9', letterSpacing: '-0.2px' }}>
-              Create something
+              {t('title')}
             </span>
           </div>
 
@@ -159,9 +162,9 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
                 style={menuItemStyle}
               >
                 <span style={{ fontSize: '18px' }}>📝</span>
-                <div>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9' }}>Post</div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>Share a quick update</div>
+                  <div>
+                   <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9' }}>{t('items.post.title')}</div>
+                   <div style={{ fontSize: '11px', color: '#64748b' }}>{t('items.post.subtitle')}</div>
                 </div>
               </button>
 
@@ -169,8 +172,8 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
               <button onClick={() => navigate('/jobs/new')} style={menuItemStyle}>
                 <span style={{ fontSize: '18px' }}>💼</span>
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9' }}>Job</div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>Post a job listing</div>
+                   <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9' }}>{t('items.job.title')}</div>
+                   <div style={{ fontSize: '11px', color: '#64748b' }}>{t('items.job.subtitle')}</div>
                 </div>
               </button>
 
@@ -178,8 +181,8 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
               <button onClick={() => navigate('/events/create')} style={menuItemStyle}>
                 <span style={{ fontSize: '18px' }}>📅</span>
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9' }}>Event</div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>Create an event</div>
+                   <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9' }}>{t('items.event.title')}</div>
+                   <div style={{ fontSize: '11px', color: '#64748b' }}>{t('items.event.subtitle')}</div>
                 </div>
               </button>
 
@@ -187,8 +190,8 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
               <button onClick={() => navigate('/articles/new')} style={menuItemStyle}>
                 <span style={{ fontSize: '18px' }}>✍️</span>
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9' }}>Article</div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>Write a long-form piece</div>
+                   <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9' }}>{t('items.article.title')}</div>
+                   <div style={{ fontSize: '11px', color: '#64748b' }}>{t('items.article.subtitle')}</div>
                 </div>
               </button>
             </div>
@@ -199,7 +202,7 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
                 autoFocus
                 value={postContent}
                 onChange={e => setPostContent(e.target.value)}
-                placeholder="What's on your mind?"
+                placeholder={t('post.placeholder')}
                 rows={4}
                 style={{
                   width: '100%',
@@ -230,7 +233,7 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
                     outline: 'none',
                   }}
                 >
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  {CATEGORIES.map(c => <option key={c} value={c}>{t(`categories.${c}`)}</option>)}
                 </select>
                 <button
                   onClick={() => setShowPostForm(false)}
@@ -244,7 +247,7 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
                     cursor: 'pointer',
                   }}
                 >
-                  Back
+                  {tCommon('back')}
                 </button>
                 <button
                   onClick={handlePost}
@@ -261,7 +264,7 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
                     opacity: submitting ? 0.6 : 1,
                   }}
                 >
-                  {success ? '✓ Posted!' : submitting ? '…' : 'Post'}
+                  {success ? t('post.posted') : submitting ? '…' : t('post.submit')}
                 </button>
               </div>
               {error && (

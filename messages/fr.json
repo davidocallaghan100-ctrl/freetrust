@@ -11,44 +11,47 @@
     "wallet": "Portefeuille",
     "profile": "Profil",
     "settings": "Paramètres",
-    "dashboard": "Dashboard",
-    "analytics": "Analytics Dashboard",
+    "dashboard": "Tableau de bord",
+    "analytics": "Tableau d’analyse",
     "productMarketplace": "Place de marché",
-    "servicesMarketplace": "Services Marketplace",
-    "grassroots": "Grassroots",
-    "memberDirectory": "Member Directory",
-    "newsfeed": "Newsfeed",
-    "groups": "Groups",
+    "servicesMarketplace": "Place de marché des services",
+    "grassroots": "Initiatives locales",
+    "memberDirectory": "Annuaire des membres",
+    "newsfeed": "Fil d’actualité",
+    "groups": "Groupes",
     "articles": "Articles",
-    "jobs": "Jobs",
-    "rentShare": "Rent & Share",
+    "jobs": "Emplois",
+    "rentShare": "Louer & partager",
     "organisations": "Organisations",
-    "addOrganisation": "Add Organisation",
-    "directory": "Directory",
-    "myCalendar": "My Calendar",
-    "activityMap": "Activity Map",
-    "addEvent": "Add Event",
+    "addOrganisation": "Ajouter une organisation",
+    "directory": "Annuaire",
+    "myCalendar": "Mon calendrier",
+    "activityMap": "Carte d’activité",
+    "addEvent": "Ajouter un événement",
     "impact": "Impact",
-    "earlyInvestors": "Early Investors",
-    "investorDeck": "Investor Deck",
+    "earlyInvestors": "Premiers investisseurs",
+    "investorDeck": "Présentation investisseurs",
     "agents": "Agents",
-    "createPost": "Create Post",
+    "createPost": "Créer une publication",
     "connections": "Connections",
     "notifications": "Notifications",
-    "browse": "Browse",
+    "browse": "Explorer",
     "products": "Place de marché",
-    "events": "Events",
+    "events": "Événements",
     "collab": "Collab",
-    "gigEconomy": "Gig Economy",
-    "createGig": "Create Gig",
-    "accounting": "Accounting",
-    "invest": "Invest",
-    "account": "ACCOUNT",
-    "digital": "DIGITAL",
+    "gigEconomy": "Missions",
+    "createGig": "Créer une mission",
+    "accounting": "Comptabilité",
+    "invest": "Investir",
+    "account": "COMPTE",
+    "digital": "NUMÉRIQUE",
     "social": "SOCIAL",
-    "planet": "PLANET",
-    "create": "CREATE",
-    "experience": "EXPERIENCE"
+    "planet": "PLANÈTE",
+    "create": "CRÉER",
+    "experience": "EXPÉRIENCE",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu",
+    "balanceAbbr": "solde"
   },
   "auth": {
     "signIn": "Se connecter",
@@ -61,11 +64,11 @@
   },
   "language": {
     "selectorLabel": "Choisir la langue",
-    "currentLanguage": "Current language",
-    "saveError": "Language saved on this device; account sync will retry later.",
+    "currentLanguage": "Langue actuelle",
+    "saveError": "Langue enregistrée sur cet appareil ; la synchronisation du compte réessaiera plus tard.",
     "locales": {
       "en": {
-        "flag": "🇬🇧",
+        "flag": "🇺🇸",
         "name": "English"
       },
       "ga": {
@@ -147,29 +150,29 @@
     }
   },
   "profile": {
-    "switchProfile": "Switch profile/page",
-    "myProfile": "My profile",
-    "yourProfile": "Your Profile",
-    "personalProfile": "Personal profile",
-    "adminPage": "Admin page",
-    "ownerPage": "Owner page",
-    "loadingPages": "Loading your pages…",
-    "noAdminPages": "No admin pages found on this session.",
-    "completeSetupTitle": "Complete your account setup",
-    "completeSetupBody": "FreeTrust requires a real first and last name, face photo, bio, location, and at least one hobby before an account appears in the member community or profile pages.",
-    "realName": "Real first and last name",
-    "realPicture": "Real profile picture",
-    "bioLocationHobbies": "Bio, location, and hobbies",
-    "finishSetup": "Finish setup now"
+    "switchProfile": "Changer de profil/page",
+    "myProfile": "Mon profil",
+    "yourProfile": "Votre profil",
+    "personalProfile": "Profil personnel",
+    "adminPage": "Page admin",
+    "ownerPage": "Page propriétaire",
+    "loadingPages": "Chargement de vos pages…",
+    "noAdminPages": "Aucune page admin trouvée dans cette session.",
+    "completeSetupTitle": "Terminez la configuration de votre compte",
+    "completeSetupBody": "FreeTrust exige un vrai prénom et nom, une photo de visage, une bio, une localisation et au moins un loisir avant qu’un compte apparaisse dans la communauté ou sur les pages de profil.",
+    "realName": "Vrai prénom et nom",
+    "realPicture": "Vraie photo de profil",
+    "bioLocationHobbies": "Bio, localisation et loisirs",
+    "finishSetup": "Terminer la configuration"
   },
   "search": {
     "placeholder": "Rechercher sur la place de marché : produits, services, événements…",
-    "seeAll": "See all results for \"{query}\"",
-    "noResults": "No results for \"{query}\"",
-    "member": "Member",
+    "seeAll": "Voir tous les résultats pour \"{query}\"",
+    "noResults": "Aucun résultat pour \"{query}\"",
+    "member": "Membre",
     "service": "Service",
-    "product": "Product",
-    "event": "Event",
+    "product": "Produit",
+    "event": "Événement",
     "article": "Article",
     "org": "Organisation"
   },
@@ -197,23 +200,386 @@
     "noResults": "No results found"
   },
   "travel": {
-    "title": "Travel",
-    "flights": "Flights",
-    "accommodation": "Accommodation",
-    "both": "Both",
-    "whereTo": "Where do you want to go?",
-    "searchButton": "Find Travel Options",
-    "checkIn": "Check-in",
-    "checkOut": "Check-out",
-    "adults": "Adults",
-    "children": "Children",
-    "rooms": "Rooms"
+    "title": "Voyage",
+    "flights": "Vols",
+    "accommodation": "Hébergements",
+    "both": "Les deux",
+    "whereTo": "Où voulez-vous aller ?",
+    "searchButton": "Trouver des options de voyage",
+    "searching": "Recherche d’options de voyage…",
+    "signInSearch": "Connectez-vous pour chercher un voyage",
+    "checkIn": "Arrivée",
+    "checkOut": "Départ",
+    "adults": "Adultes",
+    "children": "Enfants",
+    "rooms": "Chambres",
+    "saving": "Enregistrement…",
+    "retrySearch": "Relancer la recherche",
+    "hero": {
+      "eyebrow": "Expérience",
+      "subtitle": "Explorez des idées de voyage dans le monde entier, recherchez des options partenaires en direct et gagnez des Trust Coins lorsque vous continuez vers un fournisseur.",
+      "badge": "Récompenses voyage membres"
+    },
+    "membersOnly": {
+      "title": "Recherche voyage réservée aux membres",
+      "body": "Connectez-vous comme membre FreeTrust pour rechercher des vols et séjours en direct.",
+      "cta": "Se connecter pour chercher"
+    },
+    "fields": {
+      "tripType": "Type de voyage",
+      "country": "Pays",
+      "city": "Ville",
+      "from": "Départ de",
+      "depart": "Départ",
+      "return": "Retour",
+      "cabin": "Cabine"
+    },
+    "cabin": {
+      "economy": "Économie",
+      "business": "Affaires",
+      "first": "Première"
+    },
+    "typeBadges": {
+      "flights": "Vols",
+      "accommodation": "Séjours",
+      "both": "Vols + séjours"
+    },
+    "categoriesSection": {
+      "eyebrow": "Explorer par envie",
+      "title": "Catégories de voyage",
+      "body": "Choisissez une tuile image pour préremplir et lancer une recherche membre. Vous pouvez toujours ajuster le formulaire compact ci-dessus."
+    },
+    "categories": {
+      "cityBreaks": {"label": "Escapades urbaines", "country": "France", "copy": "Vols et séjours centraux pour de courts week-ends culturels."},
+      "beachResort": {"label": "Plage & resort", "country": "Espagne", "copy": "Séjours ensoleillés, littoraux et escapades détente."},
+      "adventureNature": {"label": "Aventure & nature", "country": "Suisse", "copy": "Bases de montagne pour randonnées, paysages et plein air."},
+      "culturalExperiences": {"label": "Expériences culturelles", "country": "Italie", "copy": "Rues historiques, gastronomie, galeries et sites emblématiques."},
+      "familyHolidays": {"label": "Vacances en famille", "country": "Portugal", "copy": "Séjours adaptés aux familles et bases faciles pour la plage."},
+      "romanticEscapes": {"label": "Escapades romantiques", "country": "Grèce", "copy": "Séjours boutique et pauses avec vue pour deux."},
+      "backpackerBudget": {"label": "Sac à dos & budget", "country": "Portugal", "copy": "Idées axées sur les vols pour voyager de ville en ville à petit prix."},
+      "longHaulFlights": {"label": "Vols long-courriers", "country": "États-Unis", "copy": "Grandes routes internationales et inspiration long-courrier."},
+      "cruisePackages": {"label": "Forfaits croisière", "country": "Espagne", "copy": "Séjours en villes portuaires et planification prête pour la croisière."},
+      "wellnessRetreats": {"label": "Retraites bien-être", "country": "Indonésie", "copy": "Séjours de type retraite pour voyager plus lentement et se ressourcer."}
+    },
+    "results": {
+      "eyebrow": "Résultats",
+      "title": "Options de voyage",
+      "body": "Les résultats partenaires en direct apparaissent ici après une recherche membre. Aucun faux inventaire voyage n’est affiché.",
+      "empty": "Choisissez une catégorie image ou lancez une recherche membre pour voir les vols et séjours en direct."
+    },
+    "errors": {
+      "loadTitle": "Impossible de charger les options de voyage"
+    },
+    "cards": {
+      "viewPrice": "Voir le prix",
+      "perNightEstimate": "estimation par nuit",
+      "reviewScore": "{score} / 10",
+      "reviewed": "Noté",
+      "viewDeal": "Voir l’offre",
+      "earn": "Gagner ₮{amount}",
+      "direct": "Direct",
+      "stopsVary": "Escales variables",
+      "stops": "{count, plural, one {# escale} other {# escales}}",
+      "depart": "Départ",
+      "arrive": "Arrivée",
+      "duration": "Durée",
+      "price": "Prix",
+      "bookFlight": "Réserver le vol"
+    },
+    "bookingTypes": {
+      "flight": "Vol",
+      "accommodation": "Hébergement",
+      "bundle": "Forfait"
+    },
+    "activity": {
+      "eyebrow": "Activité voyage",
+      "title": "Visites fournisseurs enregistrées",
+      "body": "Ce sont les liens fournisseurs ouverts depuis FreeTrust. Annuler les retire de votre activité voyage active ; les réservations confirmées sont finalisées avec le fournisseur.",
+      "signIn": "Connectez-vous pour enregistrer l’activité de réservation voyage.",
+      "empty": "Aucune activité voyage enregistrée pour le moment.",
+      "openedProvider": "Fournisseur ouvert",
+      "cancelled": "Annulé",
+      "confirmed": "Confirmé",
+      "fallbackTitle": "Activité voyage",
+      "destination": "Destination",
+      "datePending": "Date à confirmer",
+      "externalPrice": "Prix externe",
+      "earned": "₮{amount} gagnés",
+      "continue": "Continuer vers le fournisseur",
+      "cancel": "Annuler l’activité",
+      "cancelling": "Annulation…"
+    },
+    "toasts": {
+      "trustCoinsAdded": "₮{amount} Trust Coins ajoutés à votre portefeuille !",
+      "popupBlocked": "Ouverture du lien partenaire voyage. Si aucun onglet ne s’est ouvert, utilisez à nouveau le bouton de l’offre.",
+      "activityCancelled": "Activité voyage annulée."
+    }
+  },
+  "productsPage": {
+    "title": "Produits",
+    "foundCount": "{count, plural, one {# produit trouvé} other {# produits trouvés}}",
+    "listProduct": "+ Ajouter un produit",
+    "loadingMore": "Chargement de plus de produits…",
+    "moreRemaining": "{count, plural, one {# produit restant — faites défiler pour continuer} other {# produits restants — faites défiler pour continuer}}",
+    "allLoaded": "Tous les {count, plural, one {# produit} other {# produits}} sont chargés",
+    "common": {
+      "cancel": "Annuler",
+      "delete": "Supprimer",
+      "deleting": "Suppression…",
+      "view": "Voir",
+      "share": "Partager"
+    },
+    "delete": {
+      "title": "Supprimer le produit ?",
+      "body": "\"{title}\" sera définitivement supprimé et ne pourra pas être récupéré."
+    },
+    "sort": {
+      "newest": "Plus récents",
+      "topRated": "Mieux notés",
+      "popular": "Populaires",
+      "priceLow": "Prix : bas",
+      "priceHigh": "Prix : haut"
+    },
+    "tabs": {
+      "listings": "Annonces FreeTrust",
+      "findOnline": "Trouver en ligne"
+    },
+    "filters": {
+      "allTypes": "Tous les types",
+      "digital": "Numérique",
+      "physical": "Physique",
+      "maxPrice": "Prix max :",
+      "minRating": "Note min :",
+      "any": "Toutes"
+    },
+    "layout": {
+      "button": "Disposition",
+      "switchTwo": "Passer à deux produits par ligne",
+      "switchOne": "Passer à un produit par ligne",
+      "currentOne": "Actuellement 1 produit par ligne",
+      "currentTwo": "Actuellement 2 produits par ligne",
+      "densityHelp": "Choisissez la densité de la grille de la place de marché sur votre écran.",
+      "desktop": "Ordinateur",
+      "desktopCols": "{count, plural, one {# produit par ligne sur ordinateur} other {# produits par ligne sur ordinateur}}"
+    },
+    "card": {
+      "freeShipping": "Livraison gratuite",
+      "instantDownload": "Téléchargement instantané",
+      "standardDelivery": "Livraison standard",
+      "businessDays": "{min}-{max} jours ouvrés",
+      "productPrice": "Prix du produit"
+    },
+    "external": {
+      "via": "via {provider}",
+      "price": "Prix",
+      "reviews": "{count, plural, one {# avis} other {# avis}}",
+      "seePrice": "Voir le prix",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saved": "Enregistré",
+      "notTrustCoinEligible": "Non éligible aux Trust Coins"
+    },
+    "retailerModal": {
+      "title": "Produit détaillant",
+      "viewingPrefix": "Vous consultez",
+      "on": "sur {provider}.",
+      "warning": "Cette commande se termine sur le site du détaillant. FreeTrust ne traite pas le paiement et ne garantit pas le stock, la livraison ni les retours externes.",
+      "fulfilled": "Exécuté par un détaillant externe",
+      "opening": "Ouverture…",
+      "continue": "Continuer vers le détaillant"
+    },
+    "basket": {
+      "title": "Panier",
+      "open": "Ouvrir le panier",
+      "closeOverlay": "Fermer le panneau du panier",
+      "communityItems": "Articles communautaires",
+      "communityListing": "Annonce FreeTrust",
+      "externalSaves": "Produits détaillants enregistrés",
+      "externalDescription": "Les produits de détaillants enregistrés restent ici pour continuer vers le site fournisseur.",
+      "retailer": "Détaillant",
+      "remove": "Retirer",
+      "subtotal": "Sous-total",
+      "total": "Total",
+      "completeOnRetailer": "Terminer sur le site du détaillant",
+      "savedItems": "Produits détaillants enregistrés",
+      "noCommunity": "Aucun article FreeTrust dans votre panier pour le moment.",
+      "noRetailer": "Aucun produit détaillant enregistré pour le moment.",
+      "signInPersist": "Connectez-vous pour conserver ce panier sur tous vos appareils.",
+      "addFailed": "Impossible d’ajouter cet article à votre panier.",
+      "saveRetailerFailed": "Impossible d’enregistrer ce produit détaillant."
+    },
+    "checkout": {
+      "communityItems": "Paiement communautaire",
+      "creating": "Création du paiement…",
+      "startFailed": "Impossible de démarrer le paiement.",
+      "incomplete": "Le paiement a été créé mais les détails de paiement sont incomplets.",
+      "ready": "Paiement sécurisé prêt pour {amount}.",
+      "connectFailed": "Impossible de se connecter au paiement. Veuillez réessayer.",
+      "refresh": "Actualiser le paiement"
+    },
+    "payment": {
+      "status": "Statut du paiement",
+      "loadingFields": "Chargement des champs de paiement sécurisés…",
+      "stripeLoadFailed": "Impossible de charger les champs de paiement. Actualisez le paiement.",
+      "stripeNotConfigured": "Le paiement sécurisé n’est pas encore configuré.",
+      "checkDetails": "Vérifiez vos détails de paiement puis réessayez.",
+      "failed": "Échec du paiement. Veuillez réessayer.",
+      "processing": "Traitement…",
+      "confirming": "Confirmation du paiement…",
+      "paySecurely": "Payer en sécurité",
+      "complete": "Finaliser le paiement"
+    },
+    "empty": {
+      "title": "Aucun produit trouvé",
+      "category": "Aucun produit dans cette catégorie pour le moment — soyez le premier à en ajouter un.",
+      "filters": "Aucun produit ne correspond à vos filtres.",
+      "listProduct": "+ Ajouter un produit"
+    },
+    "fallbacks": {
+      "freetrustStore": "Boutique FreeTrust",
+      "onlineRetailer": "Détaillant en ligne",
+      "availableIreland": "Disponible en Irlande"
+    }
+  },
+  "servicesPage": {
+    "title": "Place de marché des services",
+    "subtitle": "Travail qualifié et professionnel — en ligne ou en personne",
+    "listService": "Ajouter votre service",
+    "common": {
+      "cancel": "Annuler",
+      "delete": "Supprimer",
+      "deleting": "Suppression…",
+      "view": "Voir"
+    },
+    "delete": {
+      "title": "Supprimer le service ?",
+      "body": "\"{title}\" sera définitivement supprimé et ne pourra pas être récupéré."
+    },
+    "toast": {
+      "published": "🎉 Mission publiée ! Elle est maintenant en ligne dans Services."
+    },
+    "fallbacks": {
+      "unknown": "Inconnu"
+    },
+    "tabs": {
+      "allServices": "Tous les services",
+      "findProvider": "Trouver un fournisseur"
+    },
+    "card": {
+      "online": "En ligne",
+      "local": "Local",
+      "inPerson": "En personne",
+      "trust": "Confiance {score}%",
+      "perProject": "/ projet"
+    },
+    "external": {
+      "remote": "À distance",
+      "local": "Local",
+      "remoteLocal": "À distance et local",
+      "providerBadge": "Fournisseur externe",
+      "worldwide": "Monde entier",
+      "notTrustCoinEligible": "Non éligible aux Trust Coins",
+      "visitPartner": "Visiter le partenaire →",
+      "viewProvider": "Voir le fournisseur →",
+      "enquire": "Demander"
+    },
+    "filters": {
+      "searchServices": "Rechercher des services…",
+      "searchExternal": "Rechercher des fournisseurs externes…",
+      "all": "Tous",
+      "categoriesAria": "Catégories de tous les services",
+      "categoriesAz": "Catégories A–Z",
+      "minPrice": "€ min",
+      "maxPriceShort": "€ max",
+      "clear": "Effacer les filtres"
+    },
+    "sort": {
+      "best": "Meilleure correspondance",
+      "newest": "Plus récents",
+      "priceAsc": "Prix : croissant",
+      "priceDesc": "Prix : décroissant",
+      "topRated": "Mieux notés"
+    },
+    "summary": {
+      "services": "{count, plural, one {# service} other {# services}}",
+      "externalProviders": "{count, plural, one {# fournisseur externe} other {# fournisseurs externes}}",
+      "providers": "{count, plural, one {# fournisseur} other {# fournisseurs}}",
+      "in": "dans",
+      "near": "près de",
+      "onlineLower": "en ligne",
+      "localLower": "local"
+    },
+    "loading": {
+      "services": "Chargement des services et fournisseurs…",
+      "external": "Chargement des fournisseurs externes…",
+      "moreServices": "Chargement de plus de services…",
+      "moreProviders": "Chargement de plus de fournisseurs…",
+      "allProvidersLoaded": "Tous les {count, plural, one {# fournisseur} other {# fournisseurs}} sont chargés"
+    },
+    "errors": {
+      "loadServices": "Impossible de charger les services",
+      "loadExternal": "Impossible de charger les services externes",
+      "servicesTitle": "Impossible de charger les services",
+      "externalTitle": "Impossible de charger les fournisseurs externes",
+      "tryAgain": "Tirez pour actualiser ou réessayez dans un instant.",
+      "reloadServices": "Recharger les services",
+      "reloadProviders": "Recharger les fournisseurs"
+    },
+    "empty": {
+      "noServicesLoaded": "Aucun service chargé pour le moment",
+      "noServicesMatch": "Aucun service ne correspond à vos filtres",
+      "beFirst": "Soyez le premier membre fondateur à ajouter votre service !",
+      "adjustFilters": "Essayez de modifier vos filtres ou votre recherche",
+      "noModeInCategory": "Aucun service {mode} pour le moment dans {category}",
+      "modeMismatch": "{count, plural, one {# fournisseur est disponible} other {# fournisseurs sont disponibles}} dans cette catégorie, mais pas avec le filtre {mode} actuel. Passez à Tous ou effacez les filtres.",
+      "noExternalLoaded": "Aucun fournisseur externe chargé pour le moment",
+      "noProvidersMatch": "Aucun fournisseur ne correspond à vos filtres",
+      "externalRefresh": "L’actualisation nocturne des fournisseurs remplira cet onglet avec de vraies données SerpApi et Awin.",
+      "tryAnother": "Essayez une autre catégorie ou un autre terme de recherche."
+    },
+    "enquiry": {
+      "title": "Demander des informations sur ce service",
+      "placeholder": "Décrivez ce dont vous avez besoin...",
+      "submit": "Envoyer la demande",
+      "submitting": "Envoi...",
+      "submitFailed": "Impossible d’envoyer la demande",
+      "submitted": "Demande envoyée ! Le fournisseur vous contactera."
+    }
   },
   "trust": {
     "trustScore": "Trust Score",
     "trustCoins": "Trust Coins",
     "earned": "Earned",
     "wallet": "Wallet"
+  },
+  "createMenu": {
+    "title": "Créer quelque chose",
+    "aria": {"create": "Créer"},
+    "items": {
+      "post": {"title": "Publication", "subtitle": "Partager une mise à jour rapide"},
+      "job": {"title": "Emploi", "subtitle": "Publier une offre d’emploi"},
+      "event": {"title": "Événement", "subtitle": "Créer un événement"},
+      "article": {"title": "Article", "subtitle": "Écrire un texte long"}
+    },
+    "post": {
+      "placeholder": "Qu’avez-vous en tête ?",
+      "submit": "Publier",
+      "posted": "✓ Publié !"
+    },
+    "categories": {
+      "General": "Général",
+      "Services": "Services",
+      "Products": "Produits",
+      "Events": "Événements",
+      "Jobs": "Emplois",
+      "Group": "Groupe",
+      "Article": "Article"
+    },
+    "errors": {
+      "writeSomething": "Écrivez quelque chose d’abord.",
+      "failedToPost": "Échec de la publication",
+      "network": "Erreur réseau"
+    }
   },
   "common": {
     "loading": "Charger...",

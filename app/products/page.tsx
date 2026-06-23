@@ -2,6 +2,7 @@
 import React, { useState, useEffect, Suspense, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { loadStripe, type Stripe, type StripeElements, type StripePaymentElement } from '@stripe/stripe-js'
 import { createClient } from '@/lib/supabase/client'
 import { useCurrency, type CurrencyCode } from '@/context/CurrencyContext'
@@ -30,21 +31,22 @@ function getStripePromise() {
 function DeleteModal({ title, onConfirm, onCancel, deleting }: {
   title: string; onConfirm: () => void; onCancel: () => void; deleting: boolean
 }) {
+  const t = useTranslations('productsPage')
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
       <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: 14, padding: '1.5rem', maxWidth: 420, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
-        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem' }}>Delete product?</div>
+        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem' }}>{t('delete.title')}</div>
         <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
-          &ldquo;{title}&rdquo; will be permanently deleted and cannot be recovered.
+          {t('delete.body', { title })}
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
           <button onClick={onCancel} disabled={deleting}
             style={{ padding: '0.5rem 1rem', borderRadius: 8, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button onClick={onConfirm} disabled={deleting}
             style={{ padding: '0.5rem 1rem', borderRadius: 8, border: 'none', background: '#ef4444', color: '#fff', cursor: deleting ? 'wait' : 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', fontWeight: 700 }}>
-            {deleting ? 'Deleting…' : 'Delete'}
+            {deleting ? t('common.deleting') : t('common.delete')}
           </button>
         </div>
       </div>
@@ -175,6 +177,7 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
   onOpenSeller: (sellerId: string) => void
 }) {
   const { format } = useCurrency()
+  const t = useTranslations('productsPage')
   const gradient = p.image ? undefined : (CAT_GRAD[p.category] ?? 'linear-gradient(135deg,#334155,#1e293b)')
 
   return (
@@ -188,7 +191,7 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
         <div className="ft-product-image-frame" style={{ position: 'relative', height: 160, background: p.image ? undefined : gradient, flexShrink: 0 }}>
           {p.image && <img className="ft-product-image" src={p.image} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#0f172a' }} />}
 
-          <div className="ft-product-price-badge" aria-label="Product price">
+          <div className="ft-product-price-badge" aria-label={t('card.productPrice')}>
             <PriceDisplay
               amountEur={(p.price_eur && p.price_eur > 0) ? p.price_eur : p.price}
               sourceCode={(p.currency || 'EUR') as CurrencyCode}
@@ -256,8 +259,8 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
         {/* Delivery info */}
         <div className="ft-product-card-delivery" style={{ fontSize: '0.7rem', color: p.type === 'digital' ? '#34d399' : '#64748b', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
           <span>{p.type === 'digital' ? '⚡' : '📦'}</span>
-          <span>{p.delivery ?? (p.type === 'digital' ? 'Instant Download' : 'Standard delivery')}</span>
-          {p.free_shipping && <span style={{ marginLeft: 2, color: '#34d399', fontWeight: 700 }}>· Free shipping</span>}
+          <span>{p.delivery ?? (p.type === 'digital' ? t('card.instantDownload') : t('card.standardDelivery'))}</span>
+          {p.free_shipping && <span style={{ marginLeft: 2, color: '#34d399', fontWeight: 700 }}>· {t('card.freeShipping')}</span>}
         </div>
 
         {/* CTA */}
@@ -277,18 +280,18 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
               href={`/products/${p.id}`}
               onClick={e => { e.preventDefault(); e.stopPropagation(); onOpen(p.id) }}
               style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 8, padding: '0.45rem 0.9rem', fontSize: '0.75rem', fontWeight: 700, color: '#fff', cursor: 'pointer', minHeight: 36, display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-              View
+              {t('common.view')}
             </Link>
             <button
               className="ft-product-card-share-btn"
               onClick={e => { e.stopPropagation(); if (navigator.share) { navigator.share({ title: p.title, url: `${window.location.origin}/products/${p.id}` }) } else { navigator.clipboard.writeText(`${window.location.origin}/products/${p.id}`) } }}
               style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.45rem 0.5rem', fontSize: '0.75rem', color: '#38bdf8', cursor: 'pointer', minHeight: 36 }}
-              title="Share">↗</button>
+              title={t('common.share')}>↗</button>
             {isOwner && onDelete && (
               <button
                 onClick={e => { e.preventDefault(); e.stopPropagation(); onDelete(p.id, p.title) }}
                 style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '0.45rem 0.5rem', fontSize: '0.75rem', color: '#ef4444', cursor: 'pointer', minHeight: 36 }}
-                title="Delete">🗑</button>
+                title={t('common.delete')}>🗑</button>
             )}
           </div>
         </div>
@@ -304,6 +307,7 @@ function ExternalProductCard({ product, onClick, inBasket, addingToBasket, onSav
   addingToBasket?: boolean
   onSaveToBasket?: (product: ExternalProduct) => void
 }) {
+  const t = useTranslations('productsPage')
   const category = categoryMeta(product.category)
   const rating = typeof product.rating === 'number' ? Math.max(0, Math.min(5, Math.round(product.rating))) : 0
 
@@ -325,9 +329,9 @@ function ExternalProductCard({ product, onClick, inBasket, addingToBasket, onSav
         ) : (
           <span style={{ fontSize: '2rem' }}>{category.icon}</span>
         )}
-        <div className="ft-product-price-badge" aria-label="Retailer product price">
+        <div className="ft-product-price-badge" aria-label={t('external.price')}>
           <span style={{ color: '#ffffff', fontWeight: 900, fontSize: 13, lineHeight: 1.1, whiteSpace: 'nowrap' }}>
-            {product.price || (product.price_eur ? `€${product.price_eur.toFixed(2)}` : 'See price')}
+            {product.price || (product.price_eur ? `€${product.price_eur.toFixed(2)}` : t('external.seePrice'))}
           </span>
         </div>
       </div>
@@ -348,7 +352,7 @@ function ExternalProductCard({ product, onClick, inBasket, addingToBasket, onSav
         </p>
 
         <p style={{ color: '#64748b', fontSize: '12px', margin: '0 0 10px 0' }}>
-          via {product.retailer_name}
+          {t('external.via', { retailer: product.retailer_name })}
         </p>
 
         {product.availability_label && (
@@ -359,12 +363,12 @@ function ExternalProductCard({ product, onClick, inBasket, addingToBasket, onSav
 
         {product.rating ? (
           <p style={{ color: '#fbbf24', fontSize: '12px', margin: '0 0 10px 0' }}>
-            {'★'.repeat(rating)} {product.rating} ({product.review_count?.toLocaleString() ?? 0} reviews)
+            {'★'.repeat(rating)} {product.rating} ({t('external.reviews', { count: product.review_count?.toLocaleString() ?? '0' })})
           </p>
         ) : <div style={{ height: 24 }} />}
 
         <p style={{ color: '#475569', fontSize: '11px', margin: '0 0 10px 0' }}>
-          ⚠ Not Trust Coin eligible
+          ⚠ {t('external.notTrustCoinEligible')}
         </p>
 
         <div style={{ marginTop: 'auto', display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
@@ -380,7 +384,7 @@ function ExternalProductCard({ product, onClick, inBasket, addingToBasket, onSav
                 fontWeight: 800, fontSize: '13px', cursor: addingToBasket || inBasket ? 'default' : 'pointer',
               }}
             >
-              {addingToBasket ? 'Saving…' : inBasket ? '✓ Saved' : 'Save'}
+              {addingToBasket ? t('external.saving') : inBasket ? t('external.saved') : t('external.save')}
             </button>
           )}
           <button
@@ -397,7 +401,7 @@ function ExternalProductCard({ product, onClick, inBasket, addingToBasket, onSav
               cursor: 'pointer',
             }}
           >
-            View
+            {t('common.view')}
           </button>
         </div>
       </div>
@@ -411,6 +415,7 @@ function RetailerModal({ product, onCancel, onContinue, opening }: {
   onContinue: () => void
   opening: boolean
 }) {
+  const t = useTranslations('productsPage')
   return (
     <div style={{
       position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
@@ -424,20 +429,16 @@ function RetailerModal({ product, onCancel, onContinue, opening }: {
       }}>
         <div style={{ fontSize: '32px', textAlign: 'center', marginBottom: '12px' }}>🏪</div>
         <h3 style={{ color: '#ffffff', textAlign: 'center', margin: '0 0 8px 0' }}>
-          Leaving FreeTrust
+          {t('retailerModal.title')}
         </h3>
         <p style={{ color: '#94a3b8', textAlign: 'center', fontSize: '14px', margin: '0 0 20px 0', lineHeight: 1.5 }}>
-          You&apos;re viewing <strong style={{ color: '#fff' }}>{product.title}</strong> on{' '}
-          <strong style={{ color: '#fff' }}>{product.retailer_name}</strong>.
-          This purchase is fulfilled directly by the retailer.
+          {t('retailerModal.viewingPrefix')} <strong style={{ color: '#fff' }}>{product.title}</strong> {t('retailerModal.on')} <strong style={{ color: '#fff' }}>{product.retailer_name}</strong>. {t('retailerModal.fulfilled')}
         </p>
         <div style={{
           background: '#1e293b', borderRadius: '10px',
           padding: '12px', marginBottom: '20px', fontSize: '13px', color: '#64748b',
         }}>
-          ⚠ Trust Coin rewards and FreeTrust buyer protection do not apply to retailer purchases.
-          FreeTrust may earn a small referral commission on purchases made through this link,
-          at no extra cost to you.
+          ⚠ {t('retailerModal.warning')}
         </div>
         <button
           onClick={onContinue}
@@ -450,7 +451,7 @@ function RetailerModal({ product, onCancel, onContinue, opening }: {
             marginBottom: '10px', opacity: opening ? 0.75 : 1,
           }}
         >
-          {opening ? 'Opening…' : `Continue to ${product.retailer_name} →`}
+          {opening ? t('retailerModal.opening') : t('retailerModal.continue', { retailer: product.retailer_name })}
         </button>
         <button
           onClick={onCancel}
@@ -460,7 +461,7 @@ function RetailerModal({ product, onCancel, onContinue, opening }: {
             border: 'none', fontSize: '14px', cursor: 'pointer',
           }}
         >
-          Cancel
+          {t('common.cancel')}
         </button>
       </div>
     </div>
@@ -473,6 +474,7 @@ function BasketRow({ item, onQuantity, onRemove, onRetailer }: {
   onRemove: (itemId: string) => void
   onRetailer?: (item: BasketItem) => void
 }) {
+  const t = useTranslations('productsPage')
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '54px 1fr', gap: 10, padding: '12px 0', borderBottom: '1px solid rgba(148,163,184,0.12)' }}>
       <div style={{ width: 54, height: 54, borderRadius: 12, overflow: 'hidden', background: '#0f172a', border: '1px solid rgba(148,163,184,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -480,7 +482,7 @@ function BasketRow({ item, onQuantity, onRemove, onRetailer }: {
       </div>
       <div style={{ minWidth: 0 }}>
         <div style={{ color: '#f8fafc', fontSize: 13, fontWeight: 800, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
-        <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 3 }}>{item.product_type === 'external' ? `via ${item.retailer_name ?? 'Retailer'}` : 'FreeTrust community listing'}</div>
+        <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 3 }}>{item.product_type === 'external' ? t('external.via', { retailer: item.retailer_name ?? t('basket.retailer') }) : t('basket.communityListing')}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9, flexWrap: 'wrap' }}>
           <span style={{ color: '#00c2cb', fontSize: 13, fontWeight: 900 }}>{item.price_label}</span>
           {item.product_type === 'community' ? (
@@ -490,9 +492,9 @@ function BasketRow({ item, onQuantity, onRemove, onRetailer }: {
               <button onClick={() => onQuantity(item.id, item.quantity + 1)} style={{ width: 28, height: 28, border: 'none', background: 'transparent', color: '#94a3b8', cursor: 'pointer' }}>+</button>
             </div>
           ) : onRetailer ? (
-            <button onClick={() => onRetailer(item)} style={{ border: '1px solid rgba(0,194,203,0.35)', background: 'transparent', color: '#00c2cb', borderRadius: 999, padding: '5px 9px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>Complete on retailer site</button>
+            <button onClick={() => onRetailer(item)} style={{ border: '1px solid rgba(0,194,203,0.35)', background: 'transparent', color: '#00c2cb', borderRadius: 999, padding: '5px 9px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>{t('basket.completeOnRetailer')}</button>
           ) : null}
-          <button onClick={() => onRemove(item.id)} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: '#64748b', cursor: 'pointer', fontSize: 12 }}>Remove</button>
+          <button onClick={() => onRemove(item.id)} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: '#64748b', cursor: 'pointer', fontSize: 12 }}>{t('basket.remove')}</button>
         </div>
       </div>
     </div>
@@ -504,6 +506,7 @@ function BasketPaymentElement({ clientSecret, totalCents, onPaid }: {
   totalCents: number
   onPaid: () => void
 }) {
+  const t = useTranslations('productsPage')
   const mountRef = useRef<HTMLDivElement | null>(null)
   const elementsRef = useRef<StripeElements | null>(null)
   const paymentElementRef = useRef<StripePaymentElement | null>(null)
@@ -521,7 +524,7 @@ function BasketPaymentElement({ clientSecret, totalCents, onPaid }: {
 
     const promise = getStripePromise()
     if (!promise) {
-      setError('Stripe is not configured for browser checkout.')
+      setError(t('payment.stripeNotConfigured'))
       return
     }
 
@@ -546,7 +549,7 @@ function BasketPaymentElement({ clientSecret, totalCents, onPaid }: {
       paymentElementRef.current = paymentElement
       paymentElement.on('ready', () => setReady(true))
       paymentElement.mount(mountRef.current)
-    }).catch(() => setError('Could not load Stripe checkout.'))
+    }).catch(() => setError(t('payment.stripeLoadFailed')))
 
     return () => {
       cancelled = true
@@ -563,7 +566,7 @@ function BasketPaymentElement({ clientSecret, totalCents, onPaid }: {
     setSuccess(null)
     const { error: submitError } = await elementsRef.current.submit()
     if (submitError) {
-      setError(submitError.message ?? 'Please check your payment details.')
+      setError(submitError.message ?? t('payment.checkDetails'))
       setSubmitting(false)
       return
     }
@@ -575,19 +578,19 @@ function BasketPaymentElement({ clientSecret, totalCents, onPaid }: {
     })
 
     if (confirmError) {
-      setError(confirmError.message ?? 'Payment could not be completed.')
+      setError(confirmError.message ?? t('payment.failed'))
       setSubmitting(false)
       return
     }
 
     if (paymentIntent?.status === 'succeeded') {
-      setSuccess('Payment complete. FreeTrust is finalising seller payouts now.')
+      setSuccess(t('payment.complete'))
       onPaid()
     } else if (paymentIntent?.status === 'processing') {
-      setSuccess('Payment is processing. FreeTrust will update the order automatically.')
+      setSuccess(t('payment.processing'))
       onPaid()
     } else {
-      setSuccess(`Payment status: ${paymentIntent?.status ?? 'created'}.`)
+      setSuccess(t('payment.status', { status: paymentIntent?.status ?? 'created' }))
     }
     setSubmitting(false)
   }
@@ -595,13 +598,13 @@ function BasketPaymentElement({ clientSecret, totalCents, onPaid }: {
   return (
     <div style={{ marginTop: 14, borderTop: '1px solid rgba(148,163,184,0.12)', paddingTop: 14 }}>
       <div ref={mountRef} style={{ minHeight: ready ? undefined : 120 }} />
-      {!ready && !error && <p style={{ margin: '10px 0 0', color: '#94a3b8', fontSize: 12 }}>Loading secure payment fields…</p>}
+      {!ready && !error && <p style={{ margin: '10px 0 0', color: '#94a3b8', fontSize: 12 }}>{t('payment.loadingFields')}</p>}
       <button
         onClick={confirmPayment}
         disabled={!ready || submitting || !!success}
         style={{ width: '100%', marginTop: 12, padding: '13px 14px', borderRadius: 12, border: 'none', background: '#00c2cb', color: '#001014', fontWeight: 950, cursor: !ready || submitting || success ? 'default' : 'pointer', opacity: !ready || success ? 0.7 : 1, fontSize: 15 }}
       >
-        {submitting ? 'Confirming payment…' : `Pay ${formatEuroFromCents(totalCents)} securely`}
+        {submitting ? t('payment.confirming') : t('payment.paySecurely', { amount: formatEuroFromCents(totalCents) })}
       </button>
       {error && <p style={{ margin: '10px 0 0', color: '#f87171', fontSize: 12, lineHeight: 1.45 }}>{error}</p>}
       {success && <p style={{ margin: '10px 0 0', color: '#34d399', fontSize: 12, lineHeight: 1.45 }}>{success}</p>}
@@ -614,6 +617,7 @@ function BasketDrawer({ open, onClose, onRetailer }: {
   onClose: () => void
   onRetailer: (item: BasketItem) => void
 }) {
+  const t = useTranslations('productsPage')
   const basket = useBasket()
   const [checkingOut, setCheckingOut] = useState(false)
   const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null)
@@ -634,11 +638,11 @@ function BasketDrawer({ open, onClose, onRetailer }: {
       const res = await fetch('/api/checkout/create-payment-intent', { method: 'POST' })
       const data = await res.json() as { error?: string; client_secret?: string; payment_intent_id?: string; order_id?: string; total_cents?: number }
       if (!res.ok || data.error) {
-        setCheckoutError(data.error ?? 'Checkout could not be started.')
+        setCheckoutError(data.error ?? t('checkout.startFailed'))
         return
       }
       if (!data.client_secret || !data.payment_intent_id || !data.order_id || !data.total_cents) {
-        setCheckoutError('Checkout was created but payment details were incomplete.')
+        setCheckoutError(t('checkout.incomplete'))
         return
       }
       setCheckoutIntent({
@@ -647,9 +651,9 @@ function BasketDrawer({ open, onClose, onRetailer }: {
         order_id: data.order_id,
         total_cents: data.total_cents,
       })
-      setCheckoutMessage(`Secure payment is ready for ${formatEuroFromCents(data.total_cents)}.`)
+      setCheckoutMessage(t('checkout.ready', { amount: formatEuroFromCents(data.total_cents) }))
     } catch {
-      setCheckoutError('Could not connect to checkout. Please try again.')
+      setCheckoutError(t('checkout.connectFailed'))
     } finally {
       setCheckingOut(false)
     }
@@ -659,13 +663,13 @@ function BasketDrawer({ open, onClose, onRetailer }: {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9300, pointerEvents: 'auto' }}>
-      <button onClick={onClose} aria-label="Close basket overlay" style={{ position: 'absolute', inset: 0, border: 'none', background: 'rgba(2,6,23,0.68)', cursor: 'pointer' }} />
+      <button onClick={onClose} aria-label={t('basket.closeOverlay')} style={{ position: 'absolute', inset: 0, border: 'none', background: 'rgba(2,6,23,0.68)', cursor: 'pointer' }} />
       <aside style={{ position: 'absolute', top: 0, right: 0, height: '100%', width: 'min(440px, 100vw)', background: '#0a0f1e', borderLeft: '1px solid rgba(0,194,203,0.22)', boxShadow: '-24px 0 60px rgba(0,0,0,0.45)', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: 'calc(18px + env(safe-area-inset-top)) 18px 14px', borderBottom: '1px solid rgba(148,163,184,0.12)', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 40, height: 40, borderRadius: 14, background: 'rgba(0,194,203,0.12)', color: '#00c2cb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🧺</div>
           <div style={{ flex: 1 }}>
-            <div style={{ color: '#fff', fontWeight: 900, fontSize: 18 }}>Your basket</div>
-            <div style={{ color: '#94a3b8', fontSize: 12 }}>{basket.itemCount} saved item{basket.itemCount === 1 ? '' : 's'}</div>
+            <div style={{ color: '#fff', fontWeight: 900, fontSize: 18 }}>{t('basket.title')}</div>
+            <div style={{ color: '#94a3b8', fontSize: 12 }}>{t('basket.savedItems', { count: basket.itemCount })}</div>
           </div>
           <button onClick={onClose} style={{ width: 36, height: 36, borderRadius: 999, border: '1px solid rgba(148,163,184,0.18)', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: 18 }}>×</button>
         </div>
@@ -673,17 +677,17 @@ function BasketDrawer({ open, onClose, onRetailer }: {
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 18px 24px' }}>
           {!basket.userId && (
             <div style={{ background: 'rgba(0,194,203,0.08)', border: '1px solid rgba(0,194,203,0.2)', borderRadius: 14, padding: 14, color: '#94a3b8', fontSize: 13, lineHeight: 1.5 }}>
-              Sign in to persist your basket across devices and sessions.
+              {t('basket.signInPersist')}
             </div>
           )}
 
           <section style={{ marginTop: 4 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <h3 style={{ margin: 0, color: '#f8fafc', fontSize: 14, fontWeight: 900 }}>FreeTrust community items</h3>
+              <h3 style={{ margin: 0, color: '#f8fafc', fontSize: 14, fontWeight: 900 }}>{t('basket.communityItems')}</h3>
               <span style={{ color: '#64748b', fontSize: 12 }}>{basket.communityItems.length}</span>
             </div>
             {basket.communityItems.length === 0 ? (
-              <div style={{ border: '1px dashed rgba(148,163,184,0.2)', borderRadius: 14, padding: 18, color: '#64748b', fontSize: 13, textAlign: 'center' }}>No community products yet.</div>
+              <div style={{ border: '1px dashed rgba(148,163,184,0.2)', borderRadius: 14, padding: 18, color: '#64748b', fontSize: 13, textAlign: 'center' }}>{t('basket.noCommunity')}</div>
             ) : basket.communityItems.map(item => (
               <BasketRow key={item.id} item={item} onQuantity={(id, qty) => void basket.updateQuantity(id, qty)} onRemove={(id) => void basket.removeItem(id)} />
             ))}
@@ -692,7 +696,7 @@ function BasketDrawer({ open, onClose, onRetailer }: {
           {basket.communityItems.length > 0 && (
             <div style={{ marginTop: 16, background: '#111827', border: '1px solid rgba(0,194,203,0.14)', borderRadius: 16, padding: 14 }}>
               {[
-                ['Subtotal', formatEuroFromCents(basket.communitySubtotalCents)],
+                [t('basket.subtotal'), formatEuroFromCents(basket.communitySubtotalCents)],
                 [FREETRUST_PRODUCT_FEE_LABEL, formatEuroFromCents(basket.platformFeeCents)],
               ].map(([label, value]) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: 13, padding: '5px 0' }}>
@@ -700,11 +704,11 @@ function BasketDrawer({ open, onClose, onRetailer }: {
                 </div>
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(148,163,184,0.12)', marginTop: 8, paddingTop: 12 }}>
-                <span style={{ color: '#fff', fontWeight: 900 }}>Total</span>
+                <span style={{ color: '#fff', fontWeight: 900 }}>{t('basket.total')}</span>
                 <span style={{ color: '#00c2cb', fontWeight: 950, fontSize: 20 }}>{formatEuroFromCents(basket.communityTotalCents)}</span>
               </div>
               <button onClick={checkoutCommunityItems} disabled={checkingOut || basket.communityTotalCents <= 0} style={{ width: '100%', marginTop: 14, padding: '13px 14px', borderRadius: 12, border: 'none', background: '#00c2cb', color: '#001014', fontWeight: 950, cursor: checkingOut ? 'wait' : 'pointer', fontSize: 15 }}>
-                {checkingOut ? 'Creating secure checkout…' : checkoutIntent ? 'Refresh secure checkout' : 'Checkout community items'}
+                {checkingOut ? t('checkout.creating') : checkoutIntent ? t('checkout.refresh') : t('checkout.communityItems')}
               </button>
               {checkoutMessage && <p style={{ margin: '10px 0 0', color: '#34d399', fontSize: 12, lineHeight: 1.45 }}>{checkoutMessage}</p>}
               {checkoutError && <p style={{ margin: '10px 0 0', color: '#f87171', fontSize: 12, lineHeight: 1.45 }}>{checkoutError}</p>}
@@ -721,12 +725,12 @@ function BasketDrawer({ open, onClose, onRetailer }: {
 
           <section style={{ marginTop: 24 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <h3 style={{ margin: 0, color: '#f8fafc', fontSize: 14, fontWeight: 900 }}>External retailer saves</h3>
+              <h3 style={{ margin: 0, color: '#f8fafc', fontSize: 14, fontWeight: 900 }}>{t('basket.externalSaves')}</h3>
               <span style={{ color: '#64748b', fontSize: 12 }}>{basket.externalItems.length}</span>
             </div>
-            <p style={{ color: '#64748b', fontSize: 12, lineHeight: 1.45, margin: '0 0 8px' }}>Saved retailer products are not charged through FreeTrust and are completed directly on each retailer site.</p>
+            <p style={{ color: '#64748b', fontSize: 12, lineHeight: 1.45, margin: '0 0 8px' }}>{t('basket.externalDescription')}</p>
             {basket.externalItems.length === 0 ? (
-              <div style={{ border: '1px dashed rgba(148,163,184,0.2)', borderRadius: 14, padding: 18, color: '#64748b', fontSize: 13, textAlign: 'center' }}>No retailer products saved.</div>
+              <div style={{ border: '1px dashed rgba(148,163,184,0.2)', borderRadius: 14, padding: 18, color: '#64748b', fontSize: 13, textAlign: 'center' }}>{t('basket.noRetailer')}</div>
             ) : basket.externalItems.map(item => (
               <BasketRow key={item.id} item={item} onQuantity={(id, qty) => void basket.updateQuantity(id, qty)} onRemove={(id) => void basket.removeItem(id)} onRetailer={onRetailer} />
             ))}
@@ -738,11 +742,12 @@ function BasketDrawer({ open, onClose, onRetailer }: {
 }
 
 function ProductBasketButton({ itemCount, onClick }: { itemCount: number; onClick: () => void }) {
+  const t = useTranslations('productsPage')
   return (
     <button
       onClick={onClick}
       className="ft-product-basket-button"
-      aria-label="Open product basket"
+      aria-label={t('basket.open')}
       style={{
         minWidth: 58,
         height: 48,
@@ -769,6 +774,7 @@ function ProductBasketButton({ itemCount, onClick }: { itemCount: number; onClic
 
 // ─── Inner page (needs useSearchParams) ──────────────────────────────────────
 function ProductsInner() {
+  const t = useTranslations('productsPage')
   const { format } = useCurrency()
   const basket = useBasket()
   const searchParams = useSearchParams()
@@ -916,7 +922,7 @@ function ProductsInner() {
               category,
               type: d.product_type === 'digital' ? 'digital' as const : 'physical' as const,
               image: coverImage ?? images[0] ?? undefined,
-              seller_name: String(profile?.full_name ?? 'FreeTrust Store'),
+              seller_name: String(profile?.full_name ?? t('fallbacks.freetrustStore')),
               seller_avatar: profile?.avatar_url ? String(profile.avatar_url) : undefined,
               seller_id: profile?.id ? String(profile.id) : (d.seller_id ? String(d.seller_id) : null),
               seller_verified: true,
@@ -924,7 +930,7 @@ function ProductsInner() {
               rating: Number(d.review_count ?? 0) > 0 ? Number(d.avg_rating ?? 5) : 5,
               quality_score: typeof d.quality_score === 'number' ? (d.quality_score as number) : null,
               free_shipping: true,
-              delivery: d.product_type === 'digital' ? 'Instant Download' : '3–7 business days',
+              delivery: d.product_type === 'digital' ? t('card.instantDownload') : t('card.businessDays'),
               // Globalisation fields
               country:        (d.country as string | null | undefined) ?? null,
               city:           (d.city as string | null | undefined) ?? null,
@@ -946,7 +952,7 @@ function ProductsInner() {
             price: row.price ? String(row.price) : null,
             price_eur: row.price_eur != null && Number.isFinite(Number(row.price_eur)) ? Number(row.price_eur) : null,
             currency: row.currency ? String(row.currency) : 'EUR',
-            retailer_name: String(row.retailer_name ?? 'Online Retailer'),
+            retailer_name: String(row.retailer_name ?? t('fallbacks.onlineRetailer')),
             retailer_url: stripFreetrustReferralParams(String(row.retailer_url ?? '')),
             thumbnail: row.thumbnail ? String(row.thumbnail) : null,
             rating: row.rating != null && Number.isFinite(Number(row.rating)) ? Number(row.rating) : null,
@@ -960,7 +966,7 @@ function ProductsInner() {
             // so this is a real country availability signal, not inferred shop
             // geocoding. We deliberately do not assign precise coordinates.
             availability_country: row.source === 'serpapi' || row.source == null ? 'IE' : null,
-            availability_label: row.source === 'serpapi' || row.source == null ? 'Available in Ireland' : null,
+            availability_label: row.source === 'serpapi' || row.source == null ? t('fallbacks.availableIreland') : null,
             location_precision: (row.source === 'serpapi' || row.source == null ? 'country' : 'none') as 'country' | 'none',
           })).filter(row => row.title && row.retailer_url))
         }
@@ -1178,7 +1184,7 @@ function ProductsInner() {
     setBasketBusyId(`community-${id}`)
     try {
       const result = await basket.addCommunityItem(id)
-      if (!result.ok) alert(result.error ?? 'Could not add this item to your basket.')
+      if (!result.ok) alert(result.error ?? t('basket.addFailed'))
       else setBasketOpen(true)
     } finally {
       setBasketBusyId(null)
@@ -1190,7 +1196,7 @@ function ProductsInner() {
     setBasketBusyId(`external-${product.id}`)
     try {
       const result = await basket.addExternalItem(product.id)
-      if (!result.ok) alert(result.error ?? 'Could not save this retailer product.')
+      if (!result.ok) alert(result.error ?? t('basket.saveRetailerFailed'))
       else setBasketOpen(true)
     } finally {
       setBasketBusyId(null)
@@ -1466,8 +1472,8 @@ function ProductsInner() {
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.5rem' }}>
           <div className="ft-products-title-block">
             <div style={{ minWidth: 0 }}>
-              <h1 style={{ fontSize: 'clamp(1.6rem,4vw,2.2rem)', fontWeight: 900, margin: '0 0 0.25rem', letterSpacing: '-0.5px' }}>Products</h1>
-              <p style={{ color: '#64748b', margin: 0, fontSize: '0.9rem' }}>{activeTab === 'listings' ? mergedProducts.length : filtered.length} product{(activeTab === 'listings' ? mergedProducts.length : filtered.length) !== 1 ? 's' : ''} found</p>
+              <h1 style={{ fontSize: 'clamp(1.6rem,4vw,2.2rem)', fontWeight: 900, margin: '0 0 0.25rem', letterSpacing: '-0.5px' }}>{t('title')}</h1>
+              <p style={{ color: '#64748b', margin: 0, fontSize: '0.9rem' }}>{t('foundCount', { count: activeTab === 'listings' ? mergedProducts.length : filtered.length })}</p>
             </div>
             {activeTab === 'listings' && <ProductBasketButton itemCount={basket.itemCount} onClick={openBasket} />}
           </div>
@@ -1476,10 +1482,18 @@ function ProductsInner() {
               value={sortBy}
               onChange={e => setSortBy(e.target.value)}
               style={{ background: '#1e293b', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: '#94a3b8', cursor: 'pointer', minHeight: 36 }}>
-              {SORT_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+              {SORT_OPTIONS.map(s => (
+                <option key={s} value={s}>{({
+                  Newest: t('sort.newest'),
+                  'Top Rated': t('sort.topRated'),
+                  Popular: t('sort.popular'),
+                  'Price: Low': t('sort.priceLow'),
+                  'Price: High': t('sort.priceHigh'),
+                } as Record<string, string>)[s] ?? s}</option>
+              ))}
             </select>
             <Link href="/products/new" onClick={e => { e.preventDefault(); void openCreateProduct() }} style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.5rem 1.1rem', borderRadius: 9, fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none', minHeight: 36, display: 'flex', alignItems: 'center' }}>
-              + List Product
+              {t('listProduct')}
             </Link>
           </div>
         </div>
@@ -1497,7 +1511,7 @@ function ProductsInner() {
               fontWeight: 600,
             }}
           >
-            FreeTrust Listings
+            {t('tabs.listings')}
           </button>
           <button
               onClick={openFindOnlineTab}
@@ -1511,7 +1525,7 @@ function ProductsInner() {
               fontWeight: 600,
             }}
           >
-            🔍 Find Online
+            🔍 {t('tabs.findOnline')}
           </button>
           {activeTab === 'listings' && (
             <button
@@ -1519,10 +1533,10 @@ function ProductsInner() {
               className="ft-mobile-layout-button"
               onClick={() => setMobileColumns(cols => cols === 1 ? 2 : 1)}
               style={mobileLayoutButtonStyle}
-              aria-label={mobileColumns === 1 ? 'Switch to two products per row' : 'Switch to one product per row'}
-              title={mobileColumns === 1 ? 'Currently 1 product per row' : 'Currently 2 products per row'}
+              aria-label={mobileColumns === 1 ? t('layout.switchTwo') : t('layout.switchOne')}
+              title={mobileColumns === 1 ? t('layout.currentOne') : t('layout.currentTwo')}
             >
-              Layout
+              {t('layout.button')}
             </button>
           )}
         </div>
@@ -1543,9 +1557,9 @@ function ProductsInner() {
 
           {/* Type filters */}
           <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2, marginBottom: '0.75rem' }}>
-            {(['all','digital','physical'] as const).map(t => (
-              <button key={t} onClick={() => setTypeFilter(t)} style={pillStyle(typeFilter === t)}>
-                {t === 'all' ? 'All Types' : t === 'digital' ? '💾 Digital' : '📦 Physical'}
+            {(['all','digital','physical'] as const).map(type => (
+              <button key={type} onClick={() => setTypeFilter(type)} style={pillStyle(typeFilter === type)}>
+                {type === 'all' ? t('filters.allTypes') : type === 'digital' ? `💾 ${t('filters.digital')}` : `📦 ${t('filters.physical')}`}
               </button>
             ))}
           </div>
@@ -1586,17 +1600,17 @@ function ProductsInner() {
           {/* Price + rating */}
           <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', marginBottom: '1.25rem', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#64748b' }}>
-              <span>Max price: <strong style={{ color: '#f1f5f9' }}>{format(maxPrice === 500 ? 501 : maxPrice, 'GBP')}{maxPrice === 500 ? '+' : ''}</strong></span>
+              <span>{t('filters.maxPrice')} <strong style={{ color: '#f1f5f9' }}>{format(maxPrice === 500 ? 501 : maxPrice, 'GBP')}{maxPrice === 500 ? '+' : ''}</strong></span>
               <input type="range" min={5} max={500} step={5} value={maxPrice}
                 onChange={e => setMaxPrice(Number(e.target.value))}
                 style={{ accentColor: '#38bdf8', width: 100 }} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#64748b' }}>
-              <span>Min rating:</span>
+              <span>{t('filters.minRating')}</span>
               {[0,3,4,4.5].map(r => (
                 <button key={r} onClick={() => setMinRating(r)}
                   style={{ ...pillStyle(minRating === r), padding: '0.3rem 0.6rem', fontSize: '0.72rem', minHeight: 30 }}>
-                  {r === 0 ? 'Any' : `${r}★+`}
+                  {r === 0 ? t('filters.any') : `${r}★+`}
                 </button>
               ))}
             </div>
@@ -1604,13 +1618,13 @@ function ProductsInner() {
 
           <div className="ft-grid-density-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: '1rem' }}>
             <div style={{ color: '#64748b', fontSize: 12, lineHeight: 1.4 }}>
-              Choose how dense the marketplace grid feels on your screen.
+              {t('layout.densityHelp')}
             </div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
               <div className="ft-grid-desktop-controls" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ color: '#94a3b8', fontSize: 12, fontWeight: 800 }}>Desktop</span>
+                <span style={{ color: '#94a3b8', fontSize: 12, fontWeight: 800 }}>{t('layout.desktop')}</span>
                 {([1, 2, 3, 4, 5] as const).map(cols => (
-                  <button key={cols} type="button" onClick={() => setDesktopColumns(cols)} style={gridOptionButtonStyle(desktopColumns === cols)} aria-label={`${cols} product${cols === 1 ? '' : 's'} per row on desktop`}>
+                  <button key={cols} type="button" onClick={() => setDesktopColumns(cols)} style={gridOptionButtonStyle(desktopColumns === cols)} aria-label={t('layout.desktopCols', { count: cols })}>
                     {cols}
                   </button>
                 ))}
@@ -1630,12 +1644,12 @@ function ProductsInner() {
           ) : mergedProducts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
               <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>📦</div>
-              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.5rem' }}>No products found</h2>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.5rem' }}>{t('empty.title')}</h2>
               <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>
-                {catFilter !== 'all' ? `No products yet in this category — be the first to list one.` : 'No products match your filters.'}
+                {catFilter !== 'all' ? t('empty.category') : t('empty.filters')}
               </p>
               <Link href="/products/new" onClick={e => { e.preventDefault(); void openCreateProduct() }} style={{ display: 'inline-block', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.75rem 1.75rem', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>
-                + List a Product
+                {t('empty.listProduct')}
               </Link>
             </div>
           ) : (
@@ -1687,8 +1701,8 @@ function ProductsInner() {
                   }}
                 >
                   {loadingMore
-                    ? 'Loading more products…'
-                    : `${mergedProducts.length - displayLimit} more products — scroll to keep browsing`}
+                    ? t('loadingMore')
+                    : t('moreRemaining', { count: mergedProducts.length - displayLimit })}
                 </div>
               )}
 
@@ -1700,7 +1714,7 @@ function ProductsInner() {
                   padding: '24px 0',
                   margin: 0,
                 }}>
-                  All {mergedProducts.length} products loaded
+                  {t('allLoaded', { count: mergedProducts.length })}
                 </p>
               )}
             </>

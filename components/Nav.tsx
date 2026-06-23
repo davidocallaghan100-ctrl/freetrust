@@ -358,7 +358,7 @@ export default function Nav() {
               type="button"
               onClick={() => setProfileOpen(v => !v)}
               style={{ display: 'flex', alignItems: 'center', padding: '3px', borderRadius: '50%', outline: 'none', background: 'transparent', border: 'none', cursor: 'pointer' }}
-              aria-label="Switch profile or admin page"
+              aria-label={tProfile('switchProfile')}
               aria-expanded={profileOpen}
               aria-haspopup="menu"
             >
@@ -401,17 +401,17 @@ export default function Nav() {
                   ))}
                 </div>
                 <div style={{ height: 1, background: '#334155' }} />
-                {[
-                  { href: '/create',      label: '✏️ Create Post'  },
-                  { href: '/dashboard',   label: '📊 Dashboard'    },
-                  { href: '/wallet',      label: '💎 Wallet'       },
-                  { href: '/connections', label: '🔗 Connections'  },
-                  { href: '/settings',    label: '⚙️ Settings'     },
-                ].map(({ href, label }) => (
-                  <Link key={href} href={href} onClick={() => setProfileOpen(false)} style={{ display: 'block', padding: '10px 16px', fontSize: '13px', color: '#cbd5e1', textDecoration: 'none' }}>
-                    {label}
-                  </Link>
-                ))}
+                 {[
+                   { href: '/create',      icon: '✏️', label: tNav('createPost')  },
+                   { href: '/dashboard',   icon: '📊', label: tNav('dashboard')    },
+                   { href: '/wallet',      icon: '💎', label: tNav('wallet')       },
+                   { href: '/connections', icon: '🔗', label: tNav('connections')  },
+                   { href: '/settings',    icon: '⚙️', label: tNav('settings')     },
+                 ].map(({ href, icon, label }) => (
+                   <Link key={href} href={href} onClick={() => setProfileOpen(false)} style={{ display: 'block', padding: '10px 16px', fontSize: '13px', color: '#cbd5e1', textDecoration: 'none' }}>
+                     {icon} {label}
+                   </Link>
+                 ))}
                 <div style={{ borderTop: '1px solid #334155' }}>
                   <button onClick={handleSignOut} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 16px', fontSize: '13px', color: '#f87171', background: 'none', border: 'none', cursor: 'pointer' }}>
                     {tAuth('signOut')}
@@ -433,9 +433,9 @@ export default function Nav() {
         {/* Right side — hamburger always last and always visible */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, paddingRight: '8px' }}>
           {user && walletBalance !== null && (
-            <Link href="/wallet" title="Your total ₮ balance" style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '5px 8px', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '8px', fontSize: '12px', fontWeight: 600, color: '#38bdf8', textDecoration: 'none', flexShrink: 0 }}>
+            <Link href="/wallet" title={tNav('wallet')} style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '5px 8px', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '8px', fontSize: '12px', fontWeight: 600, color: '#38bdf8', textDecoration: 'none', flexShrink: 0 }}>
               ₮{walletBalance.toFixed(0)}
-              <span style={{ fontSize: '9px', fontWeight: 500, color: '#64748b', lineHeight: 1 }}>bal</span>
+              <span style={{ fontSize: '9px', fontWeight: 500, color: '#64748b', lineHeight: 1 }}>{tNav('balanceAbbr')}</span>
             </Link>
           )}
           <CurrencySwitcher compact />
@@ -452,7 +452,7 @@ export default function Nav() {
           {/* ── Hamburger — always last, never squished ── */}
           <button
             onClick={() => setDrawerOpen(v => !v)}
-            aria-label="Open menu"
+            aria-label={tNav('openMenu')}
             style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '5px', width: '36px', height: '36px', minWidth: '36px', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '8px', padding: '6px', flexShrink: 0 }}
           >
             <span style={{ display: 'block', width: '20px', height: '2px', background: '#94a3b8', borderRadius: '2px', transition: 'all 0.25s ease', transform: drawerOpen ? 'translateY(7px) rotate(45deg)' : 'none' }} />
@@ -466,7 +466,7 @@ export default function Nav() {
       {user && (
         <Link
           href="/create"
-          aria-label="Create"
+          aria-label={tNav('create')}
           style={{
             position: 'fixed',
             top: '64px',
@@ -523,7 +523,7 @@ export default function Nav() {
             <img src={FREETRUST_LOGO_SRC} alt="FreeTrust" style={{ ...FREETRUST_LOGO_STYLE, width: '28px', height: '28px' }} />
             <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '15px', letterSpacing: '-0.3px' }}>FreeTrust</span>
           </div>
-          <button onClick={() => setDrawerOpen(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', background: '#1e293b', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#94a3b8', fontSize: '16px' }} aria-label="Close menu">
+          <button onClick={() => setDrawerOpen(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', background: '#1e293b', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#94a3b8', fontSize: '16px' }} aria-label={tNav('closeMenu')}>
             ✕
           </button>
         </div>
@@ -535,7 +535,7 @@ export default function Nav() {
               <Avatar url={user.avatar} name={user.name} email={user.email} size={40} />
             </Link>
             <div style={{ overflow: 'hidden', flex: 1 }}>
-              <div style={{ fontSize: '14px', color: '#f1f5f9', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name ?? 'Your Profile'}</div>
+              <div style={{ fontSize: '14px', color: '#f1f5f9', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name ?? tProfile('yourProfile')}</div>
               <Link href="/profile" onClick={() => setDrawerOpen(false)} style={{ fontSize: '12px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none' }}>{user.email}</Link>
             </div>
           </div>

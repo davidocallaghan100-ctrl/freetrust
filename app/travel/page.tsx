@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { KeyboardEvent } from 'react'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { buildCountryOptions } from '@/lib/countries'
 
@@ -65,17 +66,17 @@ const MUTED = '#94a3b8'
 const DIM = '#64748b'
 const TEXT = '#f1f5f9'
 
-const travelCategories = [
-  { icon: '🏙️', label: 'City Breaks', city: 'Paris', country: 'France', countryCode: 'FR', copy: 'Flights and central stays for quick cultural weekends.', image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80', type: 'both' as SearchType },
-  { icon: '🏖️', label: 'Beach & Resort', city: 'Malaga', country: 'Spain', countryCode: 'ES', copy: 'Sunny stays, coastlines, and relaxed resort escapes.', image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80', type: 'both' as SearchType },
-  { icon: '🏔️', label: 'Adventure & Nature', city: 'Interlaken', country: 'Switzerland', countryCode: 'CH', copy: 'Mountain bases for hiking, scenery, and outdoor trips.', image: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80', type: 'accommodation' as SearchType },
-  { icon: '🗺️', label: 'Cultural Experiences', city: 'Rome', country: 'Italy', countryCode: 'IT', copy: 'Historic streets, food, galleries, and landmark stays.', image: 'https://images.unsplash.com/photo-1529260830199-42c24126f198?auto=format&fit=crop&w=900&q=80', type: 'both' as SearchType },
-  { icon: '👨‍👩‍👧', label: 'Family Holidays', city: 'Albufeira', country: 'Portugal', countryCode: 'PT', copy: 'Family-friendly stays and easy beach holiday bases.', image: 'https://images.unsplash.com/photo-1473116763249-2faaef81ccda?auto=format&fit=crop&w=900&q=80', type: 'accommodation' as SearchType },
-  { icon: '💑', label: 'Romantic Escapes', city: 'Santorini', country: 'Greece', countryCode: 'GR', copy: 'Boutique stays and view-led breaks for two.', image: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=900&q=80', type: 'accommodation' as SearchType },
-  { icon: '🎒', label: 'Backpacker & Budget', city: 'Lisbon', country: 'Portugal', countryCode: 'PT', copy: 'Flight-led ideas for affordable city-hopping.', image: 'https://images.unsplash.com/photo-1548707309-dcebeab9ea9b?auto=format&fit=crop&w=900&q=80', type: 'flights' as SearchType },
-  { icon: '✈️', label: 'Long-Haul Flights', city: 'New York', country: 'United States', countryCode: 'US', copy: 'Bigger international routes and long-haul inspiration.', image: 'https://images.unsplash.com/photo-1485871981521-5b1fd3805eee?auto=format&fit=crop&w=900&q=80', type: 'flights' as SearchType },
-  { icon: '🚢', label: 'Cruise Packages', city: 'Barcelona', country: 'Spain', countryCode: 'ES', copy: 'Port-city stays and cruise-ready travel planning.', image: 'https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=900&q=80', type: 'both' as SearchType },
-  { icon: '🧘', label: 'Wellness Retreats', city: 'Bali', country: 'Indonesia', countryCode: 'ID', copy: 'Retreat-style stays for slower restorative travel.', image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=900&q=80', type: 'accommodation' as SearchType },
+const travelCategoryConfigs = [
+  { key: 'cityBreaks', icon: '🏙️', city: 'Paris', countryCode: 'FR', image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80', type: 'both' as SearchType },
+  { key: 'beachResort', icon: '🏖️', city: 'Malaga', countryCode: 'ES', image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80', type: 'both' as SearchType },
+  { key: 'adventureNature', icon: '🏔️', city: 'Interlaken', countryCode: 'CH', image: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80', type: 'accommodation' as SearchType },
+  { key: 'culturalExperiences', icon: '🗺️', city: 'Rome', countryCode: 'IT', image: 'https://images.unsplash.com/photo-1529260830199-42c24126f198?auto=format&fit=crop&w=900&q=80', type: 'both' as SearchType },
+  { key: 'familyHolidays', icon: '👨‍👩‍👧', city: 'Albufeira', countryCode: 'PT', image: 'https://images.unsplash.com/photo-1473116763249-2faaef81ccda?auto=format&fit=crop&w=900&q=80', type: 'accommodation' as SearchType },
+  { key: 'romanticEscapes', icon: '💑', city: 'Santorini', countryCode: 'GR', image: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=900&q=80', type: 'accommodation' as SearchType },
+  { key: 'backpackerBudget', icon: '🎒', city: 'Lisbon', countryCode: 'PT', image: 'https://images.unsplash.com/photo-1548707309-dcebeab9ea9b?auto=format&fit=crop&w=900&q=80', type: 'flights' as SearchType },
+  { key: 'longHaulFlights', icon: '✈️', city: 'New York', countryCode: 'US', image: 'https://images.unsplash.com/photo-1485871981521-5b1fd3805eee?auto=format&fit=crop&w=900&q=80', type: 'flights' as SearchType },
+  { key: 'cruisePackages', icon: '🚢', city: 'Barcelona', countryCode: 'ES', image: 'https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=900&q=80', type: 'both' as SearchType },
+  { key: 'wellnessRetreats', icon: '🧘', city: 'Bali', countryCode: 'ID', image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=900&q=80', type: 'accommodation' as SearchType },
 ]
 
 const inputStyle = {
@@ -201,6 +202,7 @@ function goToTravelLogin() {
 }
 
 export default function TravelPage() {
+  const t = useTranslations('travel')
   const supabase = useMemo(() => createClient(), [])
   const countries = useMemo(() => buildCountryOptions(new Map()), [])
   const [userId, setUserId] = useState<string | null>(null)
@@ -231,6 +233,13 @@ export default function TravelPage() {
   const selectedCountryLabel = getCountryLabel(destinationCountry)
   const needsFlights = searchType === 'flights' || searchType === 'both'
   const needsAccommodation = searchType === 'accommodation' || searchType === 'both'
+  const travelCategories = useMemo(() => travelCategoryConfigs.map(cat => ({
+    ...cat,
+    label: t(`categories.${cat.key}.label`),
+    copy: t(`categories.${cat.key}.copy`),
+    country: t(`categories.${cat.key}.country`),
+    badge: t(`typeBadges.${cat.type}`),
+  })), [t])
 
   const loadBookings = useCallback(async (uid: string) => {
     const { data } = await supabase
@@ -420,7 +429,7 @@ export default function TravelPage() {
       })
       const payload = await res.json().catch(() => null) as { trustAwarded?: number; error?: string } | null
       if (!res.ok) throw new Error(payload?.error || `Could not save booking (${res.status})`)
-      if (payload?.trustAwarded) setToast(`₮${payload.trustAwarded} Trust Coins added to your wallet!`)
+      if (payload?.trustAwarded) setToast(t('toasts.trustCoinsAdded', { amount: payload.trustAwarded }))
       await loadBookings(user.id)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save travel booking')
@@ -435,7 +444,7 @@ export default function TravelPage() {
       return
     }
     const opened = window.open(item.affiliateUrl, '_blank', 'noopener,noreferrer')
-    if (!opened) setToast('Opening your travel partner link. If no tab opened, use the deal button again.')
+      if (!opened) setToast(t('toasts.popupBlocked'))
     void saveBooking(kind, item)
   }
 
@@ -452,7 +461,7 @@ export default function TravelPage() {
       })
       const payload = await res.json().catch(() => null) as { error?: string } | null
       if (!res.ok) throw new Error(payload?.error || `Could not cancel travel activity (${res.status})`)
-      setToast('Travel activity cancelled.')
+      setToast(t('toasts.activityCancelled'))
       await loadBookings(user.id)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not cancel travel activity')
@@ -480,28 +489,28 @@ export default function TravelPage() {
         <section style={{ background: 'linear-gradient(180deg,rgba(56,189,248,0.08),rgba(15,23,42,0))', border: `1px solid ${BORDER}`, borderRadius: 22, padding: 14, boxShadow: '0 18px 60px rgba(0,0,0,0.25)' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div>
-              <div style={{ color: TEAL, fontSize: 11, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Experience</div>
-              <h1 style={{ margin: '3px 0 5px', fontSize: 26, lineHeight: 1.05, letterSpacing: '-0.04em' }}>✈️ Travel</h1>
-              <p style={{ margin: 0, color: MUTED, fontSize: 14, lineHeight: 1.5, maxWidth: 620 }}>Browse global trip ideas, search live travel partner options, and earn Trust Coins when you continue to a provider.</p>
+              <div style={{ color: TEAL, fontSize: 11, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' }}>{t('hero.eyebrow')}</div>
+              <h1 style={{ margin: '3px 0 5px', fontSize: 26, lineHeight: 1.05, letterSpacing: '-0.04em' }}>✈️ {t('title')}</h1>
+              <p style={{ margin: 0, color: MUTED, fontSize: 14, lineHeight: 1.5, maxWidth: 620 }}>{t('hero.subtitle')}</p>
             </div>
-            <div style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.22)', borderRadius: 999, padding: '8px 12px', color: ACCENT, fontSize: 12, fontWeight: 900 }}>Member travel rewards</div>
+            <div style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.22)', borderRadius: 999, padding: '8px 12px', color: ACCENT, fontSize: 12, fontWeight: 900 }}>{t('hero.badge')}</div>
           </div>
 
           {!userId && (
             <div style={{ marginTop: 16, border: '1px solid rgba(56,189,248,0.28)', background: 'linear-gradient(135deg,rgba(56,189,248,0.12),rgba(0,194,203,0.07))', borderRadius: 16, padding: 14, color: '#dff7ff', display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-              <div><strong style={{ color: TEXT }}>Members-only travel search</strong><div style={{ color: MUTED, fontSize: 13, marginTop: 3 }}>Sign in as a FreeTrust member to search live flights and stays.</div></div>
-              <a href="/login?redirect=/travel" style={{ minHeight: 44, border: 'none', borderRadius: 999, background: ACCENT, color: BG, padding: '9px 14px', fontWeight: 950, fontFamily: 'inherit', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Sign in to search</a>
+              <div><strong style={{ color: TEXT }}>{t('membersOnly.title')}</strong><div style={{ color: MUTED, fontSize: 13, marginTop: 3 }}>{t('membersOnly.body')}</div></div>
+              <a href="/login?redirect=/travel" style={{ minHeight: 44, border: 'none', borderRadius: 999, background: ACCENT, color: BG, padding: '9px 14px', fontWeight: 950, fontFamily: 'inherit', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>{t('membersOnly.cta')}</a>
             </div>
           )}
 
           <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 9, alignItems: 'end' }}>
             <div style={{ display: 'grid', gap: 6 }}>
-              <div style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Trip type</div>
+              <div style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>{t('fields.tripType')}</div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {([
-                  ['flights', '✈️ Flights'],
-                  ['accommodation', '🏨 Accommodation'],
-                  ['both', '🌍 Both'],
+                  ['flights', `✈️ ${t('flights')}`],
+                  ['accommodation', `🏨 ${t('accommodation')}`],
+                  ['both', `🌍 ${t('both')}`],
                 ] as [SearchType, string][]).map(([value, label]) => {
                   const active = searchType === value
                   return (
@@ -512,56 +521,56 @@ export default function TravelPage() {
             </div>
 
             <label style={{ display: 'grid', gap: 6 }}>
-              <span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Country</span>
+              <span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>{t('fields.country')}</span>
               <select value={destinationCountry} onChange={e => setDestinationCountry(e.target.value)} style={inputStyle}>
                 {countries.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
               </select>
             </label>
             <label style={{ display: 'grid', gap: 6 }}>
-              <span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>City</span>
+              <span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>{t('fields.city')}</span>
               <input value={destinationCity} onChange={e => setDestinationCity(e.target.value)} placeholder="Paris" autoCorrect="off" spellCheck={false} style={inputStyle} />
             </label>
 
             {needsFlights && (
               <>
-                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>From</span><input value={departureCity} onChange={e => setDepartureCity(e.target.value)} placeholder="Dublin" style={inputStyle} /></label>
-                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Depart</span><input type="date" value={departureDate} onChange={e => setDepartureDate(e.target.value)} style={inputStyle} /></label>
-                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Return</span><input type="date" value={returnDate} onChange={e => setReturnDate(e.target.value)} style={inputStyle} /></label>
-                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Cabin</span><select value={cabinClass} onChange={e => setCabinClass(e.target.value)} style={inputStyle}><option value="economy">Economy</option><option value="business">Business</option><option value="first">First</option></select></label>
+                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>{t('fields.from')}</span><input value={departureCity} onChange={e => setDepartureCity(e.target.value)} placeholder="Dublin" style={inputStyle} /></label>
+                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>{t('fields.depart')}</span><input type="date" value={departureDate} onChange={e => setDepartureDate(e.target.value)} style={inputStyle} /></label>
+                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>{t('fields.return')}</span><input type="date" value={returnDate} onChange={e => setReturnDate(e.target.value)} style={inputStyle} /></label>
+                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>{t('fields.cabin')}</span><select value={cabinClass} onChange={e => setCabinClass(e.target.value)} style={inputStyle}><option value="economy">{t('cabin.economy')}</option><option value="business">{t('cabin.business')}</option><option value="first">{t('cabin.first')}</option></select></label>
               </>
             )}
 
             {needsAccommodation && (
               <>
-                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Check-in</span><input type="date" value={checkIn} onChange={e => setCheckIn(e.target.value)} style={inputStyle} /></label>
-                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Check-out</span><input type="date" value={checkOut} onChange={e => setCheckOut(e.target.value)} style={inputStyle} /></label>
-                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Rooms</span><input type="number" min="1" value={rooms} onChange={e => setRooms(Math.max(1, Number(e.target.value) || 1))} style={inputStyle} /></label>
+                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>{t('checkIn')}</span><input type="date" value={checkIn} onChange={e => setCheckIn(e.target.value)} style={inputStyle} /></label>
+                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>{t('checkOut')}</span><input type="date" value={checkOut} onChange={e => setCheckOut(e.target.value)} style={inputStyle} /></label>
+                <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>{t('rooms')}</span><input type="number" min="1" value={rooms} onChange={e => setRooms(Math.max(1, Number(e.target.value) || 1))} style={inputStyle} /></label>
               </>
             )}
 
-            <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Adults</span><input type="number" min="1" value={adults} onChange={e => setAdults(Math.max(1, Number(e.target.value) || 1))} style={inputStyle} /></label>
-            <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>Children</span><input type="number" min="0" value={children} onChange={e => setChildren(Math.max(0, Number(e.target.value) || 0))} style={inputStyle} /></label>
+            <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>{t('adults')}</span><input type="number" min="1" value={adults} onChange={e => setAdults(Math.max(1, Number(e.target.value) || 1))} style={inputStyle} /></label>
+            <label style={{ display: 'grid', gap: 6 }}><span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>{t('children')}</span><input type="number" min="0" value={children} onChange={e => setChildren(Math.max(0, Number(e.target.value) || 0))} style={inputStyle} /></label>
           </div>
 
           {userId ? (
             <button id="travel-search-button" onClick={() => void runSearch()} disabled={loading} style={{ marginTop: 12, width: '100%', minHeight: 46, border: 'none', borderRadius: 14, background: loading ? '#334155' : 'linear-gradient(135deg,#00c2cb,#38bdf8)', color: '#0f172a', fontSize: 16, fontWeight: 950, cursor: loading ? 'wait' : 'pointer', fontFamily: 'inherit', boxShadow: '0 14px 34px rgba(56,189,248,0.18)' }}>
-              {loading ? 'Searching travel options…' : 'Find Travel Options'}
+              {loading ? t('searching') : t('searchButton')}
             </button>
           ) : (
             <a id="travel-search-button" href="/login?redirect=/travel" style={{ marginTop: 12, width: '100%', minHeight: 46, border: 'none', borderRadius: 14, background: 'linear-gradient(135deg,#00c2cb,#38bdf8)', color: '#0f172a', fontSize: 16, fontWeight: 950, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 14px 34px rgba(56,189,248,0.18)', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              Sign in to Search Travel
+              {t('signInSearch')}
             </a>
           )}
         </section>
 
         <section style={{ marginTop: 18 }}>
-          <SectionTitle eyebrow="Explore by mood" title="Travel categories">Pick one image tile to pre-fill and run a member search. You can still adjust the compact form above.</SectionTitle>
+          <SectionTitle eyebrow={t('categoriesSection.eyebrow')} title={t('categoriesSection.title')}>{t('categoriesSection.body')}</SectionTitle>
           <div style={{ display: 'flex', gap: 12, overflowX: 'auto', overflowY: 'hidden', padding: '2px 2px 14px', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}>
             {travelCategories.map(cat => (
               <button key={cat.label} onClick={() => void handleCategory(cat)} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'rgba(56,189,248,0.45)' }} onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.borderColor = BORDER }} style={{ flex: '0 0 228px', minHeight: 238, textAlign: 'left', border: `1px solid ${BORDER}`, borderRadius: 20, background: CARD, color: TEXT, padding: 0, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', boxShadow: '0 14px 36px rgba(0,0,0,0.18)', scrollSnapAlign: 'start', overflow: 'hidden' }}>
                 <div style={{ height: 126, background: `linear-gradient(180deg,rgba(15,23,42,0.02),rgba(15,23,42,0.78)), url(${cat.image}) center/cover`, position: 'relative' }}>
                   <span style={{ position: 'absolute', top: 10, left: 10, width: 38, height: 38, borderRadius: 14, background: 'rgba(15,23,42,0.72)', border: '1px solid rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>{cat.icon}</span>
-                  <span style={{ position: 'absolute', right: 10, bottom: 10, borderRadius: 999, padding: '5px 8px', background: 'rgba(15,23,42,0.78)', border: '1px solid rgba(56,189,248,0.32)', color: ACCENT, fontSize: 10, fontWeight: 950, textTransform: 'uppercase' }}>{cat.type === 'both' ? 'Flights + stays' : cat.type}</span>
+                  <span style={{ position: 'absolute', right: 10, bottom: 10, borderRadius: 999, padding: '5px 8px', background: 'rgba(15,23,42,0.78)', border: '1px solid rgba(56,189,248,0.32)', color: ACCENT, fontSize: 10, fontWeight: 950, textTransform: 'uppercase' }}>{cat.badge}</span>
                 </div>
                 <div style={{ padding: 13 }}>
                   <div style={{ fontSize: 15, fontWeight: 950 }}>{cat.label}</div>
@@ -574,12 +583,12 @@ export default function TravelPage() {
         </section>
 
         <section style={{ marginTop: 22 }}>
-          <SectionTitle eyebrow="Results" title="Travel options">Live travel partner results appear here after a member search. No fake travel inventory is shown.</SectionTitle>
+          <SectionTitle eyebrow={t('results.eyebrow')} title={t('results.title')}>{t('results.body')}</SectionTitle>
           {searchType === 'both' && (
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
               {([
-                ['accommodation', `🏨 Accommodation (${hotels.length})`],
-                ['flights', `✈️ Flights (${flights.length})`],
+                ['accommodation', `🏨 ${t('accommodation')} (${hotels.length})`],
+                ['flights', `✈️ ${t('flights')} (${flights.length})`],
               ] as [ResultTab, string][]).map(([tab, label]) => {
                 const active = activeTab === tab
                 return <button key={tab} onClick={() => setActiveTab(tab)} style={{ minHeight: 44, borderRadius: 999, border: active ? `2px solid ${ACCENT}` : `1px solid ${BORDER}`, background: active ? 'rgba(56,189,248,0.12)' : CARD_2, color: active ? ACCENT : MUTED, padding: '9px 14px', fontSize: 13, fontWeight: 900, fontFamily: 'inherit', cursor: 'pointer' }}>{label}</button>
@@ -588,13 +597,13 @@ export default function TravelPage() {
           )}
           {error && (
             <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.28)', color: '#fecaca', borderRadius: 16, padding: 16, marginBottom: 14 }}>
-              <div style={{ fontWeight: 900, marginBottom: 6 }}>Travel options could not load</div>
+              <div style={{ fontWeight: 900, marginBottom: 6 }}>{t('errors.loadTitle')}</div>
               <div style={{ color: '#fca5a5', fontSize: 13, lineHeight: 1.5 }}>{error}</div>
-              <button onClick={() => void runSearch()} style={{ marginTop: 12, minHeight: 44, border: `1px solid ${BORDER}`, borderRadius: 10, background: CARD, color: TEXT, padding: '9px 14px', fontWeight: 800, fontFamily: 'inherit' }}>Retry search</button>
+              <button onClick={() => void runSearch()} style={{ marginTop: 12, minHeight: 44, border: `1px solid ${BORDER}`, borderRadius: 10, background: CARD, color: TEXT, padding: '9px 14px', fontWeight: 800, fontFamily: 'inherit' }}>{t('retrySearch')}</button>
             </div>
           )}
           {loading && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 12 }}>{[1,2,3].map(i => <div key={i} style={{ height: 260, borderRadius: 16, background: 'linear-gradient(90deg,#111827,#1e293b,#111827)', border: `1px solid ${BORDER}` }} />)}</div>}
-          {!showResults && <div style={{ border: `1px dashed ${BORDER}`, borderRadius: 18, padding: 22, background: CARD_2, color: MUTED, textAlign: 'center' }}>Choose an image category or run a member search to see live flights and stays.</div>}
+          {!showResults && <div style={{ border: `1px dashed ${BORDER}`, borderRadius: 18, padding: 22, background: CARD_2, color: MUTED, textAlign: 'center' }}>{t('results.empty')}</div>}
 
           {!loading && ((searchType !== 'flights' && activeTab === 'accommodation') || searchType === 'accommodation') && hotels.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 12 }}>
@@ -606,12 +615,12 @@ export default function TravelPage() {
                     <h3 style={{ margin: '5px 0', fontSize: 16, color: TEXT }}>{hotel.name}</h3>
                     <div style={{ color: DIM, fontSize: 13 }}>{hotel.city || destinationCity}</div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginTop: 12 }}>
-                      <div><div style={{ color: ACCENT, fontSize: 18, fontWeight: 950 }}>{hotel.priceEur ? `€${hotel.priceEur.toFixed(0)}` : 'View price'}</div><div style={{ color: DIM, fontSize: 11 }}>per night estimate</div></div>
-                      <div style={{ color: '#a7f3d0', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 999, padding: '5px 8px', fontSize: 12, fontWeight: 900 }}>{hotel.reviewScore ? `${hotel.reviewScore} / 10` : 'Reviewed'}</div>
+                      <div><div style={{ color: ACCENT, fontSize: 18, fontWeight: 950 }}>{hotel.priceEur ? `€${hotel.priceEur.toFixed(0)}` : t('cards.viewPrice')}</div><div style={{ color: DIM, fontSize: 11 }}>{t('cards.perNightEstimate')}</div></div>
+                      <div style={{ color: '#a7f3d0', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 999, padding: '5px 8px', fontSize: 12, fontWeight: 900 }}>{hotel.reviewScore ? t('cards.reviewScore', { score: hotel.reviewScore }) : t('cards.reviewed')}</div>
                     </div>
                     <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-                      <button onClick={event => { event.stopPropagation(); startBooking('accommodation', hotel) }} disabled={bookingLoadingId === hotel.id} style={{ flex: 1, minHeight: 44, border: 'none', borderRadius: 12, background: ACCENT, color: BG, fontWeight: 950, cursor: 'pointer', fontFamily: 'inherit' }}>{bookingLoadingId === hotel.id ? 'Saving…' : 'View Deal'}</button>
-                      <span style={{ alignSelf: 'center', color: '#a7f3d0', fontSize: 12, fontWeight: 900, whiteSpace: 'nowrap' }}>Earn ₮25</span>
+                       <button onClick={event => { event.stopPropagation(); startBooking('accommodation', hotel) }} disabled={bookingLoadingId === hotel.id} style={{ flex: 1, minHeight: 44, border: 'none', borderRadius: 12, background: ACCENT, color: BG, fontWeight: 950, cursor: 'pointer', fontFamily: 'inherit' }}>{bookingLoadingId === hotel.id ? t('saving') : t('cards.viewDeal')}</button>
+                       <span style={{ alignSelf: 'center', color: '#a7f3d0', fontSize: 12, fontWeight: 900, whiteSpace: 'nowrap' }}>{t('cards.earn', { amount: 25 })}</span>
                     </div>
                   </div>
                 </article>
@@ -625,11 +634,11 @@ export default function TravelPage() {
                 <article key={flight.id} role="button" tabIndex={0} onClick={() => startBooking('flight', flight)} onKeyDown={event => handleBookingKey(event, 'flight', flight)} style={{ background: CARD, border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, padding: 14, cursor: 'pointer', boxShadow: '0 14px 34px rgba(0,0,0,0.16)' }}>
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12 }}>
                     <div style={{ width: 44, height: 44, borderRadius: 12, background: flight.logo ? `${CARD_2} url(${flight.logo}) center/contain no-repeat` : CARD_2, border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>{flight.logo ? null : '✈️'}</div>
-                    <div><div style={{ color: TEXT, fontWeight: 900 }}>{flight.airline}</div><div style={{ color: DIM, fontSize: 12 }}>{flight.stops === 0 ? 'Direct' : flight.stops == null ? 'Stops vary' : `${flight.stops} stop${flight.stops === 1 ? '' : 's'}`}</div></div>
+                    <div><div style={{ color: TEXT, fontWeight: 900 }}>{flight.airline}</div><div style={{ color: DIM, fontSize: 12 }}>{flight.stops === 0 ? t('cards.direct') : flight.stops == null ? t('cards.stopsVary') : t('cards.stops', { count: flight.stops })}</div></div>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, color: TEXT, fontWeight: 950, fontSize: 15 }}><span>{flight.from}</span><span style={{ color: ACCENT }}>→</span><span>{flight.to}</span></div>
-                  <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, color: MUTED, fontSize: 12 }}><div>Depart<br /><strong style={{ color: TEXT }}>{flight.departTime}</strong></div><div>Arrive<br /><strong style={{ color: TEXT }}>{flight.arriveTime}</strong></div><div>Duration<br /><strong style={{ color: TEXT }}>{flight.duration}</strong></div><div>Price<br /><strong style={{ color: ACCENT, fontSize: 18 }}>{flight.priceEur ? `€${flight.priceEur.toFixed(0)}` : 'View price'}</strong></div></div>
-                  <div style={{ display: 'flex', gap: 8, marginTop: 14 }}><button onClick={event => { event.stopPropagation(); startBooking('flight', flight) }} disabled={bookingLoadingId === flight.id} style={{ flex: 1, minHeight: 44, border: 'none', borderRadius: 12, background: ACCENT, color: BG, fontWeight: 950, cursor: 'pointer', fontFamily: 'inherit' }}>{bookingLoadingId === flight.id ? 'Saving…' : 'Book Flight'}</button><span style={{ alignSelf: 'center', color: '#a7f3d0', fontSize: 12, fontWeight: 900, whiteSpace: 'nowrap' }}>Earn ₮20</span></div>
+                  <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, color: MUTED, fontSize: 12 }}><div>{t('cards.depart')}<br /><strong style={{ color: TEXT }}>{flight.departTime}</strong></div><div>{t('cards.arrive')}<br /><strong style={{ color: TEXT }}>{flight.arriveTime}</strong></div><div>{t('cards.duration')}<br /><strong style={{ color: TEXT }}>{flight.duration}</strong></div><div>{t('cards.price')}<br /><strong style={{ color: ACCENT, fontSize: 18 }}>{flight.priceEur ? `€${flight.priceEur.toFixed(0)}` : t('cards.viewPrice')}</strong></div></div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 14 }}><button onClick={event => { event.stopPropagation(); startBooking('flight', flight) }} disabled={bookingLoadingId === flight.id} style={{ flex: 1, minHeight: 44, border: 'none', borderRadius: 12, background: ACCENT, color: BG, fontWeight: 950, cursor: 'pointer', fontFamily: 'inherit' }}>{bookingLoadingId === flight.id ? t('saving') : t('cards.bookFlight')}</button><span style={{ alignSelf: 'center', color: '#a7f3d0', fontSize: 12, fontWeight: 900, whiteSpace: 'nowrap' }}>{t('cards.earn', { amount: 20 })}</span></div>
                 </article>
               ))}
             </div>
@@ -637,20 +646,20 @@ export default function TravelPage() {
         </section>
 
         <section style={{ marginTop: 26 }}>
-          <SectionTitle eyebrow="Travel activity" title="Saved provider visits">These are provider links you opened from FreeTrust. Cancel removes them from your active travel activity; confirmed bookings are completed with the travel provider.</SectionTitle>
-          {!userId && <div style={{ border: `1px dashed ${BORDER}`, borderRadius: 16, padding: 18, color: MUTED, background: CARD_2 }}>Sign in to save travel booking activity.</div>}
-          {userId && bookings.length === 0 && <div style={{ border: `1px dashed ${BORDER}`, borderRadius: 16, padding: 18, color: MUTED, background: CARD_2 }}>No saved travel activity yet.</div>}
+          <SectionTitle eyebrow={t('activity.eyebrow')} title={t('activity.title')}>{t('activity.body')}</SectionTitle>
+          {!userId && <div style={{ border: `1px dashed ${BORDER}`, borderRadius: 16, padding: 18, color: MUTED, background: CARD_2 }}>{t('activity.signIn')}</div>}
+          {userId && bookings.length === 0 && <div style={{ border: `1px dashed ${BORDER}`, borderRadius: 16, padding: 18, color: MUTED, background: CARD_2 }}>{t('activity.empty')}</div>}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 10 }}>
             {bookings.map(booking => (
               <article key={booking.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}><span style={{ color: ACCENT, fontWeight: 950, fontSize: 12, textTransform: 'uppercase' }}>{booking.booking_type}</span><span style={{ borderRadius: 999, background: booking.status === 'confirmed' ? 'rgba(16,185,129,0.12)' : booking.status === 'cancelled' ? 'rgba(239,68,68,0.12)' : 'rgba(251,191,36,0.12)', color: booking.status === 'confirmed' ? '#86efac' : booking.status === 'cancelled' ? '#fca5a5' : '#fde68a', padding: '3px 8px', fontSize: 11, fontWeight: 900 }}>{booking.status === 'pending' ? 'Opened provider' : booking.status === 'cancelled' ? 'Cancelled' : 'Confirmed'}</span></div>
-                <div style={{ marginTop: 8, color: TEXT, fontWeight: 900 }}>{booking.property_name || booking.airline || booking.destination_city || 'Travel activity'}</div>
-                <div style={{ color: DIM, fontSize: 12, marginTop: 4 }}>{booking.destination_city || 'Destination'}{booking.destination_country ? ` · ${booking.destination_country}` : ''}</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, color: MUTED, fontSize: 12 }}><span>{booking.check_in || booking.departure_date || 'Date pending'}</span><strong style={{ color: ACCENT }}>{booking.price_eur ? `€${Number(booking.price_eur).toFixed(0)}` : 'External price'}</strong></div>
-                <div style={{ marginTop: 8, color: '#a7f3d0', fontSize: 12, fontWeight: 900 }}>₮{booking.trust_coins_earned ?? 0} earned</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}><span style={{ color: ACCENT, fontWeight: 950, fontSize: 12, textTransform: 'uppercase' }}>{t(`bookingTypes.${booking.booking_type}`)}</span><span style={{ borderRadius: 999, background: booking.status === 'confirmed' ? 'rgba(16,185,129,0.12)' : booking.status === 'cancelled' ? 'rgba(239,68,68,0.12)' : 'rgba(251,191,36,0.12)', color: booking.status === 'confirmed' ? '#86efac' : booking.status === 'cancelled' ? '#fca5a5' : '#fde68a', padding: '3px 8px', fontSize: 11, fontWeight: 900 }}>{booking.status === 'pending' ? t('activity.openedProvider') : booking.status === 'cancelled' ? t('activity.cancelled') : t('activity.confirmed')}</span></div>
+                <div style={{ marginTop: 8, color: TEXT, fontWeight: 900 }}>{booking.property_name || booking.airline || booking.destination_city || t('activity.fallbackTitle')}</div>
+                <div style={{ color: DIM, fontSize: 12, marginTop: 4 }}>{booking.destination_city || t('activity.destination')}{booking.destination_country ? ` · ${booking.destination_country}` : ''}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, color: MUTED, fontSize: 12 }}><span>{booking.check_in || booking.departure_date || t('activity.datePending')}</span><strong style={{ color: ACCENT }}>{booking.price_eur ? `€${Number(booking.price_eur).toFixed(0)}` : t('activity.externalPrice')}</strong></div>
+                <div style={{ marginTop: 8, color: '#a7f3d0', fontSize: 12, fontWeight: 900 }}>{t('activity.earned', { amount: booking.trust_coins_earned ?? 0 })}</div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-                  {booking.affiliate_url && <a href={booking.affiliate_url} target="_blank" rel="noreferrer" style={{ minHeight: 40, borderRadius: 10, background: CARD_2, border: `1px solid ${BORDER}`, color: TEXT, padding: '9px 11px', fontSize: 12, fontWeight: 900, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Continue to provider</a>}
-                  {booking.status !== 'cancelled' && <button onClick={() => void cancelBooking(booking.id)} disabled={cancellingBookingId === booking.id} style={{ minHeight: 40, borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.28)', color: '#fecaca', padding: '9px 11px', fontSize: 12, fontWeight: 900, fontFamily: 'inherit', cursor: cancellingBookingId === booking.id ? 'wait' : 'pointer' }}>{cancellingBookingId === booking.id ? 'Cancelling…' : 'Cancel activity'}</button>}
+                  {booking.affiliate_url && <a href={booking.affiliate_url} target="_blank" rel="noreferrer" style={{ minHeight: 40, borderRadius: 10, background: CARD_2, border: `1px solid ${BORDER}`, color: TEXT, padding: '9px 11px', fontSize: 12, fontWeight: 900, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>{t('activity.continue')}</a>}
+                  {booking.status !== 'cancelled' && <button onClick={() => void cancelBooking(booking.id)} disabled={cancellingBookingId === booking.id} style={{ minHeight: 40, borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.28)', color: '#fecaca', padding: '9px 11px', fontSize: 12, fontWeight: 900, fontFamily: 'inherit', cursor: cancellingBookingId === booking.id ? 'wait' : 'pointer' }}>{cancellingBookingId === booking.id ? t('activity.cancelling') : t('activity.cancel')}</button>}
                 </div>
               </article>
             ))}
