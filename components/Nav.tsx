@@ -316,6 +316,7 @@ export default function Nav() {
 
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/')
+  const isLanding = pathname === '/'
 
   const chooseFeedIdentity = (href: string, identity: FeedIdentity) => {
     setFeedIdentity(identity)
@@ -438,7 +439,7 @@ export default function Nav() {
             </Link>
           )}
           <CurrencySwitcher compact />
-          <LanguageSelector variant="header" />
+          {isLanding && <LanguageSelector variant="header" />}
           {user && <NotificationBell />}
           {!loading && !user && (
             <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>

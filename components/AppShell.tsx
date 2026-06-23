@@ -171,6 +171,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const tCommon = useTranslations('common')
   const isAuth = AUTH_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
   const isImmersive = pathname === '/agents'
+  const isLanding = pathname === '/'
   const [showPushBanner, setShowPushBanner] = useState(false)
   const [showProfilePrompt, setShowProfilePrompt] = useState(false)
 
@@ -262,7 +263,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <>
       <Nav />
       <SearchBar />
-      <LanguageSelector variant="floating" />
+      {isLanding && <LanguageSelector variant="floating" />}
       <div style={{ display: 'flex' }}>
         <Sidebar />
         <main className="ft-page-content">
