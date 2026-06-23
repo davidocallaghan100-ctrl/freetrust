@@ -1,11 +1,13 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import Nav from './Nav'
 import Sidebar from './Sidebar'
 import BottomNav from './BottomNav'
 import SearchBar from './SearchBar'
 import TrustAssistant from './TrustAssistant'
+import LanguageSelector from './LanguageSelector'
 import { canReceivePush, getPushCapabilities } from '@/lib/push/capabilities'
 import { usePushSubscription } from '@/lib/push/usePushSubscription'
 import { createClient } from '@/lib/supabase/client'
@@ -27,6 +29,7 @@ function profileNeedsSetup(profile: Record<string, unknown> | null | undefined) 
 // ── Push Prompt Banner ────────────────────────────────────────────────────────
 
 function PushPromptBanner({ onDismiss }: { onDismiss: () => void }) {
+  const t = useTranslations('common')
   const { subscribe, loading } = usePushSubscription()
   const caps = getPushCapabilities()
   const isIOSNotInstalled = caps.isIOS && !caps.isStandalone
@@ -65,12 +68,12 @@ function PushPromptBanner({ onDismiss }: { onDismiss: () => void }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         {isIOSNotInstalled ? (
           <p style={{ margin: 0, fontSize: '13px', color: '#cbd5e1', lineHeight: 1.4 }}>
-            Add FreeTrust to your Home Screen to enable push notifications
+            {t('pushHomeScreen')}
             <span style={{ marginLeft: '4px' }}>⬆️</span>
           </p>
         ) : (
           <p style={{ margin: 0, fontSize: '13px', color: '#cbd5e1', lineHeight: 1.4 }}>
-            Get notified when members post, comment or react
+            {t('pushNotify')}
           </p>
         )}
       </div>
@@ -93,7 +96,7 @@ function PushPromptBanner({ onDismiss }: { onDismiss: () => void }) {
               whiteSpace: 'nowrap',
             }}
           >
-            {loading ? '…' : 'Enable'}
+            {loading ? '…' : t('enable')}
           </button>
         )}
         <button
@@ -112,7 +115,7 @@ function PushPromptBanner({ onDismiss }: { onDismiss: () => void }) {
             fontSize: '16px',
             fontFamily: 'inherit',
           }}
-          aria-label="Dismiss"
+          aria-label={t('dismiss')}
         >
           ×
         </button>
@@ -122,6 +125,7 @@ function PushPromptBanner({ onDismiss }: { onDismiss: () => void }) {
 }
 
 function ProfileSetupPrompt() {
+  const t = useTranslations('profile')
   return (
     <div style={{
       position: 'fixed',
@@ -139,22 +143,22 @@ function ProfileSetupPrompt() {
         <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
           <div style={{ width: 46, height: 46, borderRadius: 15, background: 'rgba(0,194,203,0.12)', border: '1px solid rgba(0,194,203,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 23 }}>🛡️</div>
           <div>
-            <h2 style={{ margin: '0 0 6px', color: '#fff', fontSize: 19, fontWeight: 880 }}>Complete your account setup</h2>
+            <h2 style={{ margin: '0 0 6px', color: '#fff', fontSize: 19, fontWeight: 880 }}>{t('completeSetupTitle')}</h2>
             <p style={{ margin: 0, color: '#94a3b8', fontSize: 14, lineHeight: 1.5 }}>
-              FreeTrust requires a real first and last name, face photo, bio, location, and at least one hobby before an account appears in the member community or profile pages.
+              {t('completeSetupBody')}
             </p>
           </div>
         </div>
         <div style={{ display: 'grid', gap: 8, marginTop: 16, color: '#cbd5e1', fontSize: 13 }}>
-          <div>✓ Real first and last name</div>
-          <div>✓ Real profile picture</div>
-          <div>✓ Bio, location, and hobbies</div>
+          <div>✓ {t('realName')}</div>
+          <div>✓ {t('realPicture')}</div>
+          <div>✓ {t('bioLocationHobbies')}</div>
         </div>
         <button
           type="button"
           onClick={() => { window.location.href = '/onboarding?welcome=1' }}
           style={{ width: '100%', marginTop: 18, border: 'none', borderRadius: 12, background: 'linear-gradient(135deg,#00c2cb,#38bdf8)', color: '#0a0f1e', fontWeight: 880, fontSize: 15, padding: '13px 14px', cursor: 'pointer', fontFamily: 'inherit' }}
-        >Finish setup now</button>
+        >{t('finishSetup')}</button>
       </div>
     </div>
   )
@@ -164,6 +168,7 @@ function ProfileSetupPrompt() {
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const tCommon = useTranslations('common')
   const isAuth = AUTH_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
   const isImmersive = pathname === '/agents'
   const [showPushBanner, setShowPushBanner] = useState(false)
@@ -257,6 +262,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <>
       <Nav />
       <SearchBar />
+      <LanguageSelector variant="floating" />
       <div style={{ display: 'flex' }}>
         <Sidebar />
         <main className="ft-page-content">
@@ -269,7 +275,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             color: '#475569',
             marginTop: '2rem',
           }}>
-            &copy; 2026 FreeTrust. All rights reserved.
+            {tCommon('copyright')}
           </footer>
         </main>
       </div>

@@ -1,8 +1,10 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useDirection } from '@/hooks/useDirection'
 
 const NAV_SECTIONS = [
   {
@@ -63,6 +65,8 @@ const NAV_SECTIONS = [
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const tNav = useTranslations('nav')
+  const dir = useDirection()
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
   const [userId, setUserId] = useState<string | null>(null)
@@ -132,6 +136,11 @@ export default function Sidebar() {
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/')
 
+  const navLabel = (label: string) => ({
+    DIGITAL: tNav('digital'), SOCIAL: tNav('social'), EVENTS: tNav('events'), PLANET: tNav('planet'), EARN: tNav('earn'), 'EARLY INVESTORS': tNav('earlyInvestors'),
+    Home: tNav('home'), Feed: tNav('newsfeed'), Connections: tNav('connections'), Messages: tNav('messages'), Notifications: tNav('notifications'), Browse: tNav('browse'), 'Services Marketplace': tNav('servicesMarketplace'), Grassroots: tNav('grassroots'), Products: tNav('products'), 'Experience Travel': tNav('travel'), Organisations: tNav('organisations'), 'Rent & Share': tNav('rentShare'), Events: tNav('events'), 'My Calendar': tNav('myCalendar'), 'Activity Map': tNav('activityMap'), Groups: tNav('groups'), Jobs: tNav('jobs'), Articles: tNav('articles'), Impact: tNav('impact'), Collab: tNav('collab'), 'Gig Economy': tNav('gigEconomy'), 'Create Gig': tNav('createGig'), Accounting: tNav('accounting'), Invest: tNav('invest'), Wallet: tNav('wallet'), Agents: tNav('agents'), Profile: tNav('profile'), Settings: tNav('settings'),
+  } as Record<string, string>)[label] ?? label
+
   // Clear unread badge when on notifications page
   useEffect(() => {
     if (pathname === '/notifications') {
@@ -155,11 +164,13 @@ export default function Sidebar() {
         style={{
           position: 'fixed',
           top: '58px',
-          left: 0,
+          left: dir === 'rtl' ? undefined : 0,
+          right: dir === 'rtl' ? 0 : undefined,
           width: '220px',
           height: 'calc(100vh - 58px)',
           background: '#0f172a',
-          borderRight: '1px solid #1e293b',
+          borderRight: dir === 'rtl' ? undefined : '1px solid #1e293b',
+          borderLeft: dir === 'rtl' ? '1px solid #1e293b' : undefined,
           zIndex: 90,
           overflowY: 'auto',
           overflowX: 'hidden',
@@ -177,7 +188,7 @@ export default function Sidebar() {
                 color: '#475569',
                 userSelect: 'none',
               }}>
-                {section.label}
+                {navLabel(section.label)}
               </div>
               {section.links.map(({ href, label, icon }) => {
                 const active = isActive(href)
@@ -195,13 +206,14 @@ export default function Sidebar() {
                       fontWeight: active ? 600 : 400,
                       color: active ? '#38bdf8' : '#94a3b8',
                       textDecoration: 'none',
-                      borderLeft: active ? '3px solid #38bdf8' : '3px solid transparent',
+                      borderLeft: dir === 'rtl' ? undefined : (active ? '3px solid #38bdf8' : '3px solid transparent'),
+                      borderRight: dir === 'rtl' ? (active ? '3px solid #38bdf8' : '3px solid transparent') : undefined,
                       background: active ? 'rgba(56,189,248,0.08)' : 'transparent',
                       transition: 'all 0.15s',
                     }}
                   >
                     <span style={{ fontSize: '15px', lineHeight: 1, flexShrink: 0 }}>{icon}</span>
-                    <span style={{ flex: 1 }}>{label}</span>
+                    <span style={{ flex: 1 }}>{navLabel(label)}</span>
                     {isNotifications && unreadNotifs > 0 && (
                       <span style={{
                         background: '#ef4444',
@@ -229,12 +241,12 @@ export default function Sidebar() {
               {[
                 {
                   href: '/wallet',
-                  label: walletBalance !== null ? `Wallet (₮${walletBalance.toFixed(0)})` : 'Wallet',
+                  label: walletBalance !== null ? `${tNav('wallet')} (₮${walletBalance.toFixed(0)})` : tNav('wallet'),
                   icon: '💎',
                 },
-                { href: '/agents', label: 'Agents', icon: '😎' },
-                { href: '/profile', label: 'Profile', icon: '👤' },
-                { href: '/settings', label: 'Settings', icon: '⚙️' },
+                  { href: '/agents', label: tNav('agents'), icon: '😎' },
+                  { href: '/profile', label: tNav('profile'), icon: '👤' },
+                  { href: '/settings', label: tNav('settings'), icon: '⚙️' },
               ].map(({ href, label, icon }) => {
                 const active = isActive(href)
                 return (
@@ -247,7 +259,8 @@ export default function Sidebar() {
                     fontWeight: active ? 600 : 400,
                     color: active ? '#38bdf8' : '#94a3b8',
                     textDecoration: 'none',
-                    borderLeft: active ? '3px solid #38bdf8' : '3px solid transparent',
+                    borderLeft: dir === 'rtl' ? undefined : (active ? '3px solid #38bdf8' : '3px solid transparent'),
+                    borderRight: dir === 'rtl' ? (active ? '3px solid #38bdf8' : '3px solid transparent') : undefined,
                     background: active ? 'rgba(56,189,248,0.08)' : 'transparent',
                     transition: 'all 0.15s',
                   }}>

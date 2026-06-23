@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Avatar from '@/components/Avatar'
 import { createClient } from '@/lib/supabase/client'
@@ -55,6 +56,9 @@ function normalisePages(pages: AdminPage[]) {
 export default function BottomNav() {
   const pathname = usePathname()
   const router = useRouter()
+  const tNav = useTranslations('nav')
+  const tAuth = useTranslations('auth')
+  const tProfile = useTranslations('profile')
   const switcherRef = useRef<HTMLDivElement | null>(null)
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const [switcherLoading, setSwitcherLoading] = useState(true)
@@ -260,7 +264,7 @@ export default function BottomNav() {
     ? { name: activeAdminPage.name, image: activeAdminPage.logo_url }
     : feedIdentity?.type === 'org'
       ? { name: feedIdentity.name, image: feedIdentity.logo_url }
-    : { name: personalProfile?.name ?? 'Profile', image: personalProfile?.avatar_url ?? null }
+    : { name: personalProfile?.name ?? tNav('profile'), image: personalProfile?.avatar_url ?? null }
 
   const openProfileSwitcher = () => {
     setSwitcherOpen(v => !v)
@@ -318,7 +322,7 @@ export default function BottomNav() {
                   fontWeight: 700,
                   lineHeight: 1,
                 }}
-                aria-label={authenticated ? 'Create' : 'Sign in to create'}
+                aria-label={authenticated ? tNav('create') : tAuth('signIn')}
               >
                 +
               </button>
@@ -334,7 +338,7 @@ export default function BottomNav() {
                   style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', textDecoration: 'none', flex: 1, padding: '2px 0', position: 'relative' }}
                 >
                   <span style={{ fontSize: '18px', lineHeight: 1 }}>{tab.icon}</span>
-                  <span style={{ fontSize: '9px', fontWeight: 600, color: active ? '#38bdf8' : '#64748b', letterSpacing: '0.1px' }}>Sign in</span>
+                  <span style={{ fontSize: '9px', fontWeight: 600, color: active ? '#38bdf8' : '#64748b', letterSpacing: '0.1px' }}>{tAuth('signIn')}</span>
                 </Link>
               )
             }
@@ -361,10 +365,10 @@ export default function BottomNav() {
                       padding: 8,
                       zIndex: 120,
                     }}
-                    aria-label="Switch profile or page"
+                    aria-label={tProfile('switchProfile')}
                   >
                     <div style={{ color: '#94a3b8', fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '7px 8px 8px' }}>
-                      Switch profile/page
+                      {tProfile('switchProfile')}
                     </div>
                     <button
                       type="button"
@@ -385,10 +389,10 @@ export default function BottomNav() {
                         fontFamily: 'inherit',
                       }}
                     >
-                      <Avatar url={personalProfile?.avatar_url ?? null} name={personalProfile?.name ?? 'Profile'} size={34} />
+                      <Avatar url={personalProfile?.avatar_url ?? null} name={personalProfile?.name ?? tNav('profile')} size={34} />
                       <span style={{ minWidth: 0, flex: 1 }}>
-                        <span style={{ display: 'block', fontSize: 13, fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{personalProfile?.name ?? 'My profile'}</span>
-                        <span style={{ display: 'block', color: '#94a3b8', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{personalProfile?.username ? `@${personalProfile.username}` : 'Personal profile'}</span>
+                        <span style={{ display: 'block', fontSize: 13, fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{personalProfile?.name ?? tProfile('myProfile')}</span>
+                        <span style={{ display: 'block', color: '#94a3b8', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{personalProfile?.username ? `@${personalProfile.username}` : tProfile('personalProfile')}</span>
                       </span>
                       {pathname.startsWith('/profile') || feedIdentity?.type === 'personal' ? <span style={{ color: '#38bdf8', fontSize: 14 }}>✓</span> : null}
                     </button>
@@ -397,12 +401,12 @@ export default function BottomNav() {
                     ) : null}
                     {switcherLoading ? (
                       <div style={{ color: '#94a3b8', fontSize: 12, padding: '9px 10px' }}>
-                        Loading your pages…
+                        {tProfile('loadingPages')}
                       </div>
                     ) : null}
                     {!switcherLoading && adminPages.length === 0 ? (
                       <div style={{ color: '#64748b', fontSize: 12, padding: '9px 10px' }}>
-                        No admin pages found on this session.
+                        {tProfile('noAdminPages')}
                       </div>
                     ) : null}
                     {adminPages.map(page => {
@@ -432,7 +436,7 @@ export default function BottomNav() {
                           <Avatar url={page.logo_url} name={page.name} size={34} />
                           <span style={{ minWidth: 0, flex: 1 }}>
                             <span style={{ display: 'block', fontSize: 13, fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{page.name}</span>
-                            <span style={{ display: 'block', color: '#86efac', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{page.userRole === 'admin' ? 'Admin page' : 'Owner page'}</span>
+                            <span style={{ display: 'block', color: '#86efac', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{page.userRole === 'admin' ? tProfile('adminPage') : tProfile('ownerPage')}</span>
                           </span>
                           {selected ? <span style={{ color: '#22c55e', fontSize: 14 }}>✓</span> : null}
                         </button>
@@ -445,8 +449,8 @@ export default function BottomNav() {
                   onClick={openProfileSwitcher}
                   aria-expanded={switcherOpen}
                   aria-haspopup="menu"
-                  aria-label="Switch profile or admin page"
-                  title="Switch profile or admin page"
+                  aria-label={tProfile('switchProfile')}
+                  title={tProfile('switchProfile')}
                   style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -472,7 +476,7 @@ export default function BottomNav() {
                     color: active ? '#38bdf8' : '#64748b',
                     letterSpacing: '0.1px',
                   }}>
-                    {activeAdminPage || feedIdentity?.type === 'org' ? 'Page' : 'Profile'}
+                    {activeAdminPage || feedIdentity?.type === 'org' ? tProfile('ownerPage').replace(/^.*\s/, '') : tNav('profile')}
                   </span>
                   {active && (
                     <span style={{
@@ -511,7 +515,7 @@ export default function BottomNav() {
                 color: active ? '#38bdf8' : '#64748b',
                 letterSpacing: '0.1px',
               }}>
-                {tab.label}
+                {tab.label === 'Home' ? tNav('home') : tab.label === 'Connect' ? tNav('connect') : tab.label === 'Map' ? tNav('map') : tab.label === 'Calendar' ? tNav('calendar') : tab.label === 'Earn' ? tNav('earn') : tab.label === 'Profile' ? tNav('profile') : tab.label}
               </span>
               {active && (
                 <span style={{

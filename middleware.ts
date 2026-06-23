@@ -1,6 +1,26 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { checkApiRateLimit, checkLoginRateLimit, checkSignupRateLimit } from '@/lib/security/rate-limit'
+import { defaultLocale, isAppLocale, locales } from './i18n/routing'
+
+function preferredLocale(request: NextRequest): string {
+  const cookieLocale = request.cookies.get('NEXT_LOCALE')?.value
+  if (isAppLocale(cookieLocale)) return cookieLocale
+  const accepted = request.headers.get('accept-language') ?? ''
+  const candidates = accepted.split(',').map(part => part.trim().split(';')[0]?.split('-')[0]).filter(Boolean)
+  return candidates.find(candidate => (locales as readonly string[]).includes(candidate)) ?? defaultLocale
+}
+
+function applyLocaleCookie(request: NextRequest, response: NextResponse): NextResponse {
+  if (!request.cookies.get('NEXT_LOCALE')) {
+    response.cookies.set('NEXT_LOCALE', preferredLocale(request), {
+      path: '/',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 365,
+    })
+  }
+  return response
+}
 
 function getClientIp(req: NextRequest): string {
   return (
@@ -130,10 +150,13 @@ export async function middleware(request: NextRequest) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'https://placeholder.supabase.co') {
-    return applySecurityHeaders(NextResponse.next({ request }))
+    const res = NextResponse.next({ request })
+    if (!pathname.startsWith('/api/')) applyLocaleCookie(request, res)
+    return applySecurityHeaders(res)
   }
 
   let supabaseResponse = NextResponse.next({ request })
+  if (!pathname.startsWith('/api/')) applyLocaleCookie(request, supabaseResponse)
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {

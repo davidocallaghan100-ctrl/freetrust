@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { useCurrency } from '@/context/CurrencyContext'
 import FAQAccordion from '@/components/marketing/FAQAccordion'
 import { FAQS } from '@/lib/faq'
@@ -243,6 +244,8 @@ function LegacyTopDesign({
   trustCirculation: number
   trustHolders: number
 }) {
+  const t = useTranslations('landing')
+
   return (
     <>
       {/* ── 2. HERO ── */}
@@ -274,43 +277,43 @@ function LegacyTopDesign({
             {/* Right: headline + CTAs */}
             <div className="hero-text" style={{ flex: 1, minWidth: 280, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '1.25rem', maxWidth: 560 }}>
               <div style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 999, padding: '0.3rem 1rem', fontSize: '0.75rem', color: '#38bdf8', letterSpacing: '0.06em', fontWeight: 700 }}>
-                🌍 COMMUNITY ECONOMY PLATFORM
+                {t('eyebrow')}
               </div>
 
               <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.8rem)', fontWeight: 900, lineHeight: 1.1, margin: 0, letterSpacing: '-1.5px' }}>
-                The marketplace where{' '}
-                <span style={{ background: 'linear-gradient(135deg, #38bdf8 0%, #818cf8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>trust is currency</span>
+                {t('headlineLead')}{' '}
+                <span style={{ background: 'linear-gradient(135deg, #38bdf8 0%, #818cf8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{t('headlineAccent')}</span>
               </h1>
 
               <p style={{ fontSize: '1.05rem', color: '#94a3b8', margin: 0, lineHeight: 1.65, maxWidth: 480 }}>
-                FreeTrust is the secure community economy platform — verified members, protected messaging, on-platform payments and TrustCoins (₮) for every contribution.
+                {t('subtitle')}
               </p>
 
               <div className="hero-cta" style={{ display: 'flex', flexDirection: 'row', gap: '0.75rem', flexWrap: 'wrap' }}>
                 <Link href="/register" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.9rem 2rem', borderRadius: 10, fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.35)' }}>
-                  Join FreeTrust Free →
+                  {t('joinFree')}
                 </Link>
                 <a href="#how-it-works" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', color: '#cbd5e1', padding: '0.9rem 1.75rem', borderRadius: 10, fontWeight: 600, fontSize: '0.95rem', textDecoration: 'none', border: '1px solid rgba(148,163,184,0.2)', scrollBehavior: 'smooth' }}>
-                  See how it works
+                  {t('seeHow')}
                 </a>
               </div>
 
               {/* Trust points */}
               <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.8rem', color: '#64748b' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> Free to join — ₮200 on signup</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> Real people only — no bots</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> Payments stay inside FreeTrust</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> {t('freeToJoin')}</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> {t('realPeople')}</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> {t('paymentsInside')}</span>
               </div>
 
               {/* Server-rendered live stats strip — matches the summary
                   crawled by AI search engines in the JSON-LD. Re-hydrates
                   with the server-fetched counts on first paint. */}
               <div style={{ marginTop: '0.35rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.82rem', color: '#94a3b8' }}>
-                <span><strong style={{ color: '#38bdf8' }}>{initialCounts.members.toLocaleString()}</strong> members</span>
+                <span><strong style={{ color: '#38bdf8' }}>{initialCounts.members.toLocaleString()}</strong> {t('members')}</span>
                 <span aria-hidden="true" style={{ color: '#334155' }}>·</span>
-                <span><strong style={{ color: '#38bdf8' }}>{initialCounts.listings.toLocaleString()}</strong> listings</span>
+                <span><strong style={{ color: '#38bdf8' }}>{initialCounts.listings.toLocaleString()}</strong> {t('listings')}</span>
                 <span aria-hidden="true" style={{ color: '#334155' }}>·</span>
-                <span><strong style={{ color: '#38bdf8' }}>{initialCounts.communities.toLocaleString()}</strong> communities</span>
+                <span><strong style={{ color: '#38bdf8' }}>{initialCounts.communities.toLocaleString()}</strong> {t('communities')}</span>
               </div>
             </div>
           </div>
@@ -321,7 +324,7 @@ function LegacyTopDesign({
       <div style={{ background: 'rgba(56,189,248,0.03)', borderBottom: '1px solid rgba(56,189,248,0.08)' }}>
         <div className="lp" style={{ padding: '1.75rem 1.25rem 1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', marginBottom: '1rem', fontSize: '0.72rem', color: '#475569' }}>
-            <span className="live-dot" /> Live stats — refreshes every 60s
+            <span className="live-dot" /> {t('liveStats')}
           </div>
           <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.85rem', textAlign: 'center' }}>
             {[

@@ -1,11 +1,13 @@
 'use client'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { useState, useEffect, useRef } from 'react'
 import NotificationBell from '@/components/notifications/NotificationBell'
 import Avatar from '@/components/Avatar'
 import { createClient } from '@/lib/supabase/client'
 import CurrencySwitcher from '@/components/CurrencySwitcher'
+import LanguageSelector from '@/components/LanguageSelector'
 
 const FREETRUST_LOGO_SRC = '/icons/freetrust-mark-perfect-transparent-20260521.png'
 const FREETRUST_LOGO_STYLE = {
@@ -24,7 +26,6 @@ const DRAWER_SECTIONS = [
       { href: '/products',  label: 'Product Marketplace',    icon: '📦' },
       { href: '/services',  label: 'Services Marketplace',   icon: '🛠' },
       { href: '/grassroots', label: 'Grassroots',             icon: '🌱' },
-      { href: '/travel',    label: 'Experience Travel',       icon: '✈️' },
       { href: '/members', label: 'Member Directory',     icon: '🔍' },
     ],
   },
@@ -67,6 +68,12 @@ const DRAWER_SECTIONS = [
       { href: '/agents', label: 'Agents', icon: '😎' },
     ],
   },
+  {
+    label: 'EXPERIENCE',
+    links: [
+      { href: '/travel', label: 'Travel', icon: '✈️' },
+    ],
+  },
 ]
 
 type AdminPage = {
@@ -106,6 +113,9 @@ function normalisePages(pages: AdminPage[]) {
 export default function Nav() {
   const router   = useRouter()
   const pathname = usePathname()
+  const tNav = useTranslations('nav')
+  const tAuth = useTranslations('auth')
+  const tProfile = useTranslations('profile')
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
 
@@ -136,7 +146,7 @@ export default function Nav() {
           setUser(nextUser)
           setWalletBalance(walletRes.data?.balance ?? null)
           try {
-            const personal: FeedIdentity = { type: 'personal', id: nextUser.id, name: nextUser.name ?? 'My profile', username: null, avatar_url: nextUser.avatar }
+            const personal: FeedIdentity = { type: 'personal', id: nextUser.id, name: nextUser.name ?? tProfile('myProfile'), username: null, avatar_url: nextUser.avatar }
             window.localStorage.setItem(FEED_IDENTITY_KEY, JSON.stringify(personal))
             setFeedIdentity(personal)
           } catch { /* ignore storage */ }
@@ -241,7 +251,7 @@ export default function Nav() {
         setUser(nextUser)
         setWalletBalance(walletRes.data?.balance ?? null)
         try {
-          const personal: FeedIdentity = { type: 'personal', id: nextUser.id, name: nextUser.name ?? 'My profile', username: null, avatar_url: nextUser.avatar }
+          const personal: FeedIdentity = { type: 'personal', id: nextUser.id, name: nextUser.name ?? tProfile('myProfile'), username: null, avatar_url: nextUser.avatar }
           window.localStorage.setItem(FEED_IDENTITY_KEY, JSON.stringify(personal))
           setFeedIdentity(personal)
         } catch { /* ignore storage */ }
@@ -318,8 +328,15 @@ export default function Nav() {
   }
 
   const activeProfileIdentity = feedIdentity?.type === 'org'
-    ? { name: feedIdentity.name, image: feedIdentity.logo_url, subtitle: feedIdentity.userRole === 'admin' ? 'Admin page' : 'Owner page' }
-    : { name: user?.name ?? 'Your Profile', image: user?.avatar ?? null, subtitle: user?.email ?? '' }
+    ? { name: feedIdentity.name, image: feedIdentity.logo_url, subtitle: feedIdentity.userRole === 'admin' ? tProfile('adminPage') : tProfile('ownerPage') }
+    : { name: user?.name ?? tProfile('yourProfile'), image: user?.avatar ?? null, subtitle: user?.email ?? '' }
+
+  const navLabel = (label: string) => ({
+    DIGITAL: tNav('digital'), SOCIAL: tNav('social'), EVENTS: tNav('events'), PLANET: tNav('planet'), 'EARLY INVESTORS': tNav('earlyInvestors'), CREATE: tNav('create'), EXPERIENCE: tNav('experience'), ACCOUNT: tNav('account'),
+    'Trust Wallet': tNav('wallet'), Newsfeed: tNav('newsfeed'), 'Product Marketplace': tNav('productMarketplace'), 'Services Marketplace': tNav('servicesMarketplace'), Grassroots: tNav('grassroots'), 'Member Directory': tNav('memberDirectory'),
+    Groups: tNav('groups'), Articles: tNav('articles'), Jobs: tNav('jobs'), 'Rent & Share': tNav('rentShare'), Organisations: tNav('organisations'), 'Add Organisation': tNav('addOrganisation'), Directory: tNav('directory'), 'My Calendar': tNav('myCalendar'), 'Activity Map': tNav('activityMap'), 'Add Event': tNav('addEvent'),
+    Impact: tNav('impact'), 'Early Investors': tNav('earlyInvestors'), 'Investor Deck': tNav('investorDeck'), Agents: tNav('agents'), Travel: tNav('travel'), Profile: tNav('profile'), 'Analytics Dashboard': tNav('analytics'), Settings: tNav('settings'),
+  } as Record<string, string>)[label] ?? label
 
   if (pathname === '/agents') return null
 
@@ -357,26 +374,26 @@ export default function Nav() {
                 </div>
                 <div style={{ padding: '8px 8px 4px' }}>
                   <div style={{ color: '#94a3b8', fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '2px 8px 7px' }}>
-                    Switch profile/page
+                    {tProfile('switchProfile')}
                   </div>
-                  <button type="button" onClick={() => chooseFeedIdentity('/profile', { type: 'personal', id: user.id, name: user.name ?? 'My profile', username: null, avatar_url: user.avatar })} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '8px', fontSize: '13px', color: '#f8fafc', textDecoration: 'none', borderRadius: 10, background: (pathname.startsWith('/profile') || feedIdentity?.type === 'personal') ? 'rgba(56,189,248,0.12)' : 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                  <button type="button" onClick={() => chooseFeedIdentity('/profile', { type: 'personal', id: user.id, name: user.name ?? tProfile('myProfile'), username: null, avatar_url: user.avatar })} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '8px', fontSize: '13px', color: '#f8fafc', textDecoration: 'none', borderRadius: 10, background: (pathname.startsWith('/profile') || feedIdentity?.type === 'personal') ? 'rgba(56,189,248,0.12)' : 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
                     <Avatar url={user.avatar} name={user.name} email={user.email} size={30} />
                     <span style={{ minWidth: 0, flex: 1 }}>
-                      <span style={{ display: 'block', fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name ?? 'My profile'}</span>
-                      <span style={{ display: 'block', color: '#94a3b8', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Personal profile</span>
+                      <span style={{ display: 'block', fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name ?? tProfile('myProfile')}</span>
+                      <span style={{ display: 'block', color: '#94a3b8', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tProfile('personalProfile')}</span>
                     </span>
                     {feedIdentity?.type === 'personal' ? <span style={{ color: '#38bdf8', fontSize: 14 }}>✓</span> : null}
                   </button>
                   {pagesLoading ? (
-                    <div style={{ color: '#94a3b8', fontSize: 12, padding: '8px' }}>Loading your pages…</div>
+                    <div style={{ color: '#94a3b8', fontSize: 12, padding: '8px' }}>{tProfile('loadingPages')}</div>
                   ) : adminPages.length === 0 ? (
-                    <div style={{ color: '#64748b', fontSize: 12, padding: '8px' }}>No admin pages found on this session.</div>
+                    <div style={{ color: '#64748b', fontSize: 12, padding: '8px' }}>{tProfile('noAdminPages')}</div>
                   ) : adminPages.map(page => (
                     <button key={page.id} type="button" onClick={() => chooseFeedIdentity(pageHref(page), { type: 'org', ...page })} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '8px', fontSize: '13px', color: '#f8fafc', textDecoration: 'none', borderRadius: 10, background: feedIdentity?.type === 'org' && feedIdentity.id === page.id ? 'rgba(34,197,94,0.12)' : 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
                       <Avatar url={page.logo_url} name={page.name} size={30} />
                       <span style={{ minWidth: 0, flex: 1 }}>
                         <span style={{ display: 'block', fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{page.name}</span>
-                        <span style={{ display: 'block', color: '#86efac', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{page.userRole === 'admin' ? 'Admin page' : 'Owner page'}</span>
+                        <span style={{ display: 'block', color: '#86efac', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{page.userRole === 'admin' ? tProfile('adminPage') : tProfile('ownerPage')}</span>
                       </span>
                       {feedIdentity?.type === 'org' && feedIdentity.id === page.id ? <span style={{ color: '#22c55e', fontSize: 14 }}>✓</span> : null}
                     </button>
@@ -396,7 +413,7 @@ export default function Nav() {
                 ))}
                 <div style={{ borderTop: '1px solid #334155' }}>
                   <button onClick={handleSignOut} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 16px', fontSize: '13px', color: '#f87171', background: 'none', border: 'none', cursor: 'pointer' }}>
-                    Sign out
+                    {tAuth('signOut')}
                   </button>
                 </div>
               </div>
@@ -421,11 +438,12 @@ export default function Nav() {
             </Link>
           )}
           <CurrencySwitcher compact />
+          <LanguageSelector variant="header" />
           {user && <NotificationBell />}
           {!loading && !user && (
             <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-              <Link href="/login" style={{ padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 500, color: '#94a3b8', textDecoration: 'none', border: '1px solid #334155' }}>Sign in</Link>
-              <Link href="/register" style={{ padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #38bdf8, #818cf8)' }}>Sign up</Link>
+              <Link href="/login" style={{ padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 500, color: '#94a3b8', textDecoration: 'none', border: '1px solid #334155' }}>{tAuth('signIn')}</Link>
+              <Link href="/register" style={{ padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, #38bdf8, #818cf8)' }}>{tAuth('signUp')}</Link>
             </div>
           )}
           {loading && <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#1e293b', flexShrink: 0 }} />}
@@ -527,7 +545,7 @@ export default function Nav() {
           {DRAWER_SECTIONS.map(section => (
             <div key={section.label} style={{ marginBottom: '8px' }}>
               <div style={{ padding: '8px 20px 4px', fontSize: '10px', fontWeight: 700, color: '#475569', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                {section.label}
+                {navLabel(section.label)}
               </div>
               {section.links.map(({ href, label, icon }) => {
                 const active = isActive(href)
@@ -550,7 +568,7 @@ export default function Nav() {
                     }}
                   >
                     <span style={{ fontSize: '16px', lineHeight: 1 }}>{icon}</span>
-                    {label}
+                    {navLabel(label)}
                   </Link>
                 )
               })}
@@ -561,7 +579,7 @@ export default function Nav() {
         {/* Account section at bottom */}
         <div style={{ borderTop: '1px solid #1e293b', paddingTop: '8px', paddingBottom: '16px' }}>
           <div style={{ padding: '8px 20px 4px', fontSize: '10px', fontWeight: 700, color: '#475569', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-            ACCOUNT
+            {tNav('account')}
           </div>
           {user && [
             { href: '/profile',    label: 'Profile',             icon: '👤' },
@@ -583,7 +601,7 @@ export default function Nav() {
                 }}
               >
                 <span style={{ fontSize: '16px', lineHeight: 1 }}>{icon}</span>
-                {label}
+                {navLabel(label)}
               </Link>
             )
           })}
@@ -598,17 +616,17 @@ export default function Nav() {
               }}
             >
               <span style={{ fontSize: '16px', lineHeight: 1 }}>🚪</span>
-              Sign Out
+              {tAuth('signOut')}
             </button>
           ) : (
             <>
               <Link href="/login" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', fontSize: '14px', color: '#38bdf8', textDecoration: 'none', borderLeft: '3px solid transparent' }}>
                 <span style={{ fontSize: '16px', lineHeight: 1 }}>🔑</span>
-                Sign In
+                {tAuth('signIn')}
               </Link>
               <Link href="/register" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', fontSize: '14px', color: '#c4b5fd', textDecoration: 'none', borderLeft: '3px solid transparent' }}>
                 <span style={{ fontSize: '16px', lineHeight: 1 }}>✨</span>
-                Create Account
+                {tAuth('createAccount')}
               </Link>
             </>
           )}

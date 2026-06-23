@@ -1,0 +1,236 @@
+{
+  "nav": {
+    "home": "الرئيسية",
+    "connect": "تواصل",
+    "map": "الخريطة",
+    "calendar": "التقويم",
+    "earn": "اكسب",
+    "marketplace": "السوق",
+    "travel": "السفر",
+    "messages": "الرسائل",
+    "wallet": "المحفظة",
+    "profile": "الملف الشخصي",
+    "settings": "الإعدادات",
+    "dashboard": "لوحة التحكم",
+    "analytics": "لوحة التحليلات",
+    "productMarketplace": "سوق المنتجات",
+    "servicesMarketplace": "سوق الخدمات",
+    "grassroots": "المجتمع المحلي",
+    "memberDirectory": "دليل الأعضاء",
+    "newsfeed": "آخر الأخبار",
+    "groups": "المجموعات",
+    "articles": "المقالات",
+    "jobs": "الوظائف",
+    "rentShare": "الإيجار والمشاركة",
+    "organisations": "المؤسسات",
+    "addOrganisation": "إضافة مؤسسة",
+    "directory": "الدليل",
+    "myCalendar": "تقويمي",
+    "activityMap": "خريطة النشاط",
+    "addEvent": "إضافة فعالية",
+    "impact": "الأثر",
+    "earlyInvestors": "المستثمرون الأوائل",
+    "investorDeck": "عرض المستثمرين",
+    "agents": "الوكلاء",
+    "createPost": "إنشاء منشور",
+    "connections": "العلاقات",
+    "notifications": "الإشعارات",
+    "browse": "تصفح",
+    "products": "المنتجات",
+    "events": "الفعاليات",
+    "collab": "تعاون",
+    "gigEconomy": "اقتصاد الأعمال المستقلة",
+    "createGig": "إنشاء خدمة",
+    "accounting": "المحاسبة",
+    "invest": "استثمر",
+    "account": "الحساب",
+    "digital": "رقمي",
+    "social": "اجتماعي",
+    "planet": "الكوكب",
+    "create": "إنشاء",
+    "experience": "تجربة"
+  },
+  "auth": {
+    "signIn": "تسجيل الدخول",
+    "signUp": "إنشاء حساب",
+    "signOut": "تسجيل الخروج",
+    "createAccount": "إنشاء حساب",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?"
+  },
+  "language": {
+    "selectorLabel": "اختر اللغة",
+    "currentLanguage": "Current language",
+    "saveError": "Language saved on this device; account sync will retry later.",
+    "locales": {
+      "en": {
+        "flag": "🇬🇧",
+        "name": "English"
+      },
+      "ga": {
+        "flag": "🇮🇪",
+        "name": "Gaeilge"
+      },
+      "fr": {
+        "flag": "🇫🇷",
+        "name": "Français"
+      },
+      "de": {
+        "flag": "🇩🇪",
+        "name": "Deutsch"
+      },
+      "es": {
+        "flag": "🇪🇸",
+        "name": "Español"
+      },
+      "it": {
+        "flag": "🇮🇹",
+        "name": "Italiano"
+      },
+      "pt": {
+        "flag": "🇵🇹",
+        "name": "Português"
+      },
+      "pl": {
+        "flag": "🇵🇱",
+        "name": "Polski"
+      },
+      "nl": {
+        "flag": "🇳🇱",
+        "name": "Nederlands"
+      },
+      "sv": {
+        "flag": "🇸🇪",
+        "name": "Svenska"
+      },
+      "ro": {
+        "flag": "🇷🇴",
+        "name": "Română"
+      },
+      "uk": {
+        "flag": "🇺🇦",
+        "name": "Українська"
+      },
+      "ar": {
+        "flag": "🇦🇪",
+        "name": "العربية"
+      },
+      "zh": {
+        "flag": "🇨🇳",
+        "name": "简体中文"
+      },
+      "ja": {
+        "flag": "🇯🇵",
+        "name": "日本語"
+      },
+      "ko": {
+        "flag": "🇰🇷",
+        "name": "한국어"
+      },
+      "hi": {
+        "flag": "🇮🇳",
+        "name": "हिन्दी"
+      },
+      "tr": {
+        "flag": "🇹🇷",
+        "name": "Türkçe"
+      },
+      "ru": {
+        "flag": "🇷🇺",
+        "name": "Русский"
+      },
+      "cs": {
+        "flag": "🇨🇿",
+        "name": "Čeština"
+      }
+    }
+  },
+  "profile": {
+    "switchProfile": "تبديل الملف/الصفحة",
+    "myProfile": "ملفي الشخصي",
+    "yourProfile": "ملفك الشخصي",
+    "personalProfile": "ملف شخصي",
+    "adminPage": "صفحة مدير",
+    "ownerPage": "صفحة مالك",
+    "loadingPages": "جارٍ تحميل صفحاتك…",
+    "noAdminPages": "لم يتم العثور على صفحات إدارة في هذه الجلسة.",
+    "completeSetupTitle": "أكمل إعداد حسابك",
+    "completeSetupBody": "يتطلب FreeTrust اسمًا حقيقيًا وصورة وجه ونبذة وموقعًا وهواية واحدة على الأقل قبل ظهور الحساب في مجتمع الأعضاء أو صفحات الملف الشخصي.",
+    "realName": "الاسم واللقب الحقيقيان",
+    "realPicture": "صورة ملف شخصي حقيقية",
+    "bioLocationHobbies": "نبذة وموقع وهوايات",
+    "finishSetup": "أكمل الإعداد الآن"
+  },
+  "search": {
+    "placeholder": "ابحث في السوق: منتجات، خدمات، فعاليات…",
+    "seeAll": "عرض كل النتائج عن “{query}”",
+    "noResults": "لا توجد نتائج عن “{query}”",
+    "member": "عضو",
+    "service": "خدمة",
+    "product": "منتج",
+    "event": "فعالية",
+    "article": "مقال",
+    "org": "مؤسسة"
+  },
+  "landing": {
+    "eyebrow": "🌍 منصة اقتصاد المجتمع",
+    "headlineLead": "السوق حيث",
+    "headlineAccent": "الثقة هي العملة",
+    "subtitle": "FreeTrust هي منصة اقتصاد مجتمعي آمنة — أعضاء موثقون، مراسلة محمية، مدفوعات داخل المنصة وTrustCoins (₮) لكل مساهمة.",
+    "joinFree": "انضم إلى FreeTrust مجانًا ←",
+    "seeHow": "اعرف كيف يعمل",
+    "freeToJoin": "الانضمام مجاني — ₮200 عند التسجيل",
+    "realPeople": "أشخاص حقيقيون فقط — بلا روبوتات",
+    "paymentsInside": "تبقى المدفوعات داخل FreeTrust",
+    "members": "أعضاء",
+    "listings": "قوائم",
+    "communities": "مجتمعات",
+    "liveStats": "إحصاءات مباشرة — تتحدث كل 60 ثانية"
+  },
+  "marketplace": {
+    "title": "Marketplace",
+    "searchPlaceholder": "Search products and services...",
+    "categories": "Categories",
+    "viewDeal": "View Deal",
+    "addToCart": "Add to Cart",
+    "noResults": "No results found"
+  },
+  "travel": {
+    "title": "Travel",
+    "flights": "Flights",
+    "accommodation": "Accommodation",
+    "both": "Both",
+    "whereTo": "Where do you want to go?",
+    "searchButton": "Find Travel Options",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "adults": "Adults",
+    "children": "Children",
+    "rooms": "Rooms"
+  },
+  "trust": {
+    "trustScore": "Trust Score",
+    "trustCoins": "Trust Coins",
+    "earned": "Earned",
+    "wallet": "Wallet"
+  },
+  "common": {
+    "loading": "جارٍ التحميل...",
+    "error": "حدث خطأ ما",
+    "retry": "حاول مرة أخرى",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "confirm": "تأكيد",
+    "back": "رجوع",
+    "next": "التالي",
+    "close": "إغلاق",
+    "viewAll": "عرض الكل",
+    "learnMore": "اعرف المزيد",
+    "enable": "تفعيل",
+    "dismiss": "تجاهل",
+    "copyright": "© 2026 FreeTrust. جميع الحقوق محفوظة.",
+    "pushHomeScreen": "أضف FreeTrust إلى الشاشة الرئيسية لتفعيل الإشعارات",
+    "pushNotify": "احصل على إشعار عندما ينشر الأعضاء أو يعلقون أو يتفاعلون"
+  }
+}

@@ -1,7 +1,9 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
+import { useDirection } from '@/hooks/useDirection'
 
 interface SearchHit {
   id: string
@@ -19,12 +21,11 @@ interface SearchResults {
 function typeIcon(t: SearchHit['type']) {
   return { member: '👤', service: '🛠', product: '📦', event: '📅', article: '✍️', org: '🏢' }[t]
 }
-function typeLabel(t: SearchHit['type']) {
-  return { member: 'Member', service: 'Service', product: 'Product', event: 'Event', article: 'Article', org: 'Organisation' }[t]
-}
 
 export default function SearchBar() {
   const router = useRouter()
+  const t = useTranslations('search')
+  const dir = useDirection()
   const [query, setQuery]         = useState('')
   const [results, setResults]     = useState<SearchHit[]>([])
   const [loading, setLoading]     = useState(false)
@@ -82,7 +83,7 @@ export default function SearchBar() {
 
   // Group hits by type for display
   const grouped = results.reduce<Record<string, SearchHit[]>>((acc, hit) => {
-    const label = typeLabel(hit.type)
+    const label = t(hit.type === 'org' ? 'org' : hit.type)
     if (!acc[label]) acc[label] = []
     acc[label].push(hit)
     return acc
@@ -105,7 +106,7 @@ export default function SearchBar() {
       <div style={{ maxWidth: '600px', margin: '0 auto', position: 'relative' }}>
         <form onSubmit={handleSubmit}>
           <div style={{ position: 'relative' }}>
-            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', color: '#64748b', pointerEvents: 'none' }}>
+            <span style={{ position: 'absolute', left: dir === 'rtl' ? undefined : '12px', right: dir === 'rtl' ? '12px' : undefined, top: '50%', transform: 'translateY(-50%)', fontSize: '14px', color: '#64748b', pointerEvents: 'none' }}>
               {loading ? '⏳' : '🔍'}
             </span>
             <input
@@ -114,12 +115,12 @@ export default function SearchBar() {
               value={query}
               onChange={handleChange}
               onFocus={() => { if (results.length > 0) setOpen(true) }}
-              placeholder="Search marketplace: products, services, events…"
+              placeholder={t('placeholder')}
               autoComplete="off"
               style={{
                 width: '100%', background: '#1e293b', border: '1px solid #334155',
                 borderRadius: open && results.length > 0 ? '10px 10px 0 0' : '10px',
-                padding: '8px 14px 8px 36px', fontSize: '14px', color: '#f1f5f9',
+                padding: dir === 'rtl' ? '8px 36px 8px 14px' : '8px 14px 8px 36px', fontSize: '16px', color: '#f1f5f9',
                 outline: 'none', transition: 'border-color 0.2s', boxSizing: 'border-box',
               }}
               onFocusCapture={e => (e.target.style.borderColor = '#38bdf8')}
@@ -129,7 +130,7 @@ export default function SearchBar() {
               <button
                 type="button"
                 onClick={() => { setQuery(''); setResults([]); setOpen(false) }}
-                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '16px', lineHeight: 1, padding: '2px' }}
+                style={{ position: 'absolute', right: dir === 'rtl' ? undefined : '10px', left: dir === 'rtl' ? '10px' : undefined, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '16px', lineHeight: 1, padding: '2px' }}
               >✕</button>
             )}
           </div>
@@ -175,9 +176,9 @@ export default function SearchBar() {
             <div style={{ borderTop: '1px solid #334155', padding: '8px 14px' }}>
               <button
                 onClick={() => { setOpen(false); router.push(`/search?q=${encodeURIComponent(query)}`) }}
-                style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', color: '#38bdf8', fontSize: '12px', fontWeight: 600, fontFamily: 'inherit', textAlign: 'left', padding: 0 }}
-              >
-                🔍 See all results for "{query}"
+                 style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', color: '#38bdf8', fontSize: '12px', fontWeight: 600, fontFamily: 'inherit', textAlign: dir === 'rtl' ? 'right' : 'left', padding: 0 }}
+               >
+                 🔍 {t('seeAll', { query })}
               </button>
             </div>
           </div>
@@ -191,7 +192,7 @@ export default function SearchBar() {
             borderRadius: '0 0 12px 12px', padding: '16px 14px',
             color: '#64748b', fontSize: '13px', textAlign: 'center', zIndex: 91,
           }}>
-            No results for "{query}"
+            {t('noResults', { query })}
           </div>
         )}
       </div>

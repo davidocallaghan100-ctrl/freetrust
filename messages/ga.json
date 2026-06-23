@@ -1,0 +1,236 @@
+{
+  "nav": {
+    "home": "Baile",
+    "connect": "Ceangail",
+    "map": "Léarscáil",
+    "calendar": "Féilire",
+    "earn": "Tuilleamh",
+    "marketplace": "Margadh",
+    "travel": "Taisteal",
+    "messages": "Teachtaireachtaí",
+    "wallet": "Sparán",
+    "profile": "Próifíl",
+    "settings": "Socruithe",
+    "dashboard": "Painéal",
+    "analytics": "Painéal Anailísíochta",
+    "productMarketplace": "Margadh Táirgí",
+    "servicesMarketplace": "Margadh Seirbhísí",
+    "grassroots": "Pobal Áitiúil",
+    "memberDirectory": "Eolaire Ball",
+    "newsfeed": "Fotha Nuachta",
+    "groups": "Grúpaí",
+    "articles": "Ailt",
+    "jobs": "Poist",
+    "rentShare": "Cíos & Comhroinnt",
+    "organisations": "Eagraíochtaí",
+    "addOrganisation": "Cuir Eagraíocht Leis",
+    "directory": "Eolaire",
+    "myCalendar": "M’fhéilire",
+    "activityMap": "Léarscáil Ghníomhaíochta",
+    "addEvent": "Cuir Imeacht Leis",
+    "impact": "Tionchar",
+    "earlyInvestors": "Infheisteoirí Luatha",
+    "investorDeck": "Deic Infheisteoirí",
+    "agents": "Gníomhairí",
+    "createPost": "Cruthaigh Postáil",
+    "connections": "Naisc",
+    "notifications": "Fógraí",
+    "browse": "Brabhsáil",
+    "products": "Táirgí",
+    "events": "Imeachtaí",
+    "collab": "Comhoibriú",
+    "gigEconomy": "Geilleagar Gigeanna",
+    "createGig": "Cruthaigh Gig",
+    "accounting": "Cuntasaíocht",
+    "invest": "Infheistigh",
+    "account": "CUNTAS",
+    "digital": "DIGITEACH",
+    "social": "SÓISIALTA",
+    "planet": "PLÁINÉAD",
+    "create": "CRUTHAIGH",
+    "experience": "TAITHÍ"
+  },
+  "auth": {
+    "signIn": "Sínigh Isteach",
+    "signUp": "Cláraigh",
+    "signOut": "Sínigh Amach",
+    "createAccount": "Cruthaigh Cuntas",
+    "email": "Ríomhphost",
+    "password": "Pasfhocal",
+    "forgotPassword": "Dearmad déanta ar an bpasfhocal?"
+  },
+  "language": {
+    "selectorLabel": "Roghnaigh teanga",
+    "currentLanguage": "An teanga reatha",
+    "saveError": "Sábháladh an teanga ar an ngléas seo; bainfear triail as sioncronú cuntais arís níos déanaí.",
+    "locales": {
+      "en": {
+        "flag": "🇬🇧",
+        "name": "English"
+      },
+      "ga": {
+        "flag": "🇮🇪",
+        "name": "Gaeilge"
+      },
+      "fr": {
+        "flag": "🇫🇷",
+        "name": "Français"
+      },
+      "de": {
+        "flag": "🇩🇪",
+        "name": "Deutsch"
+      },
+      "es": {
+        "flag": "🇪🇸",
+        "name": "Español"
+      },
+      "it": {
+        "flag": "🇮🇹",
+        "name": "Italiano"
+      },
+      "pt": {
+        "flag": "🇵🇹",
+        "name": "Português"
+      },
+      "pl": {
+        "flag": "🇵🇱",
+        "name": "Polski"
+      },
+      "nl": {
+        "flag": "🇳🇱",
+        "name": "Nederlands"
+      },
+      "sv": {
+        "flag": "🇸🇪",
+        "name": "Svenska"
+      },
+      "ro": {
+        "flag": "🇷🇴",
+        "name": "Română"
+      },
+      "uk": {
+        "flag": "🇺🇦",
+        "name": "Українська"
+      },
+      "ar": {
+        "flag": "🇦🇪",
+        "name": "العربية"
+      },
+      "zh": {
+        "flag": "🇨🇳",
+        "name": "简体中文"
+      },
+      "ja": {
+        "flag": "🇯🇵",
+        "name": "日本語"
+      },
+      "ko": {
+        "flag": "🇰🇷",
+        "name": "한국어"
+      },
+      "hi": {
+        "flag": "🇮🇳",
+        "name": "हिन्दी"
+      },
+      "tr": {
+        "flag": "🇹🇷",
+        "name": "Türkçe"
+      },
+      "ru": {
+        "flag": "🇷🇺",
+        "name": "Русский"
+      },
+      "cs": {
+        "flag": "🇨🇿",
+        "name": "Čeština"
+      }
+    }
+  },
+  "profile": {
+    "switchProfile": "Athraigh próifíl/leathanach",
+    "myProfile": "Mo phróifíl",
+    "yourProfile": "Do phróifíl",
+    "personalProfile": "Próifíl phearsanta",
+    "adminPage": "Leathanach riarthóra",
+    "ownerPage": "Leathanach úinéara",
+    "loadingPages": "Do leathanaigh á lódáil…",
+    "noAdminPages": "Níor aimsíodh leathanaigh riarthóra sa seisiún seo.",
+    "completeSetupTitle": "Críochnaigh socrú do chuntais",
+    "completeSetupBody": "Éilíonn FreeTrust fíorainm agus sloinne, grianghraf aghaidhe, beathaisnéis, suíomh agus caitheamh aimsire amháin ar a laghad sula bhfeictear cuntas sa phobal ball nó ar leathanaigh phróifíle.",
+    "realName": "Fíorainm agus sloinne",
+    "realPicture": "Fíorphictiúr próifíle",
+    "bioLocationHobbies": "Beathaisnéis, suíomh agus caitheamh aimsire",
+    "finishSetup": "Críochnaigh an socrú anois"
+  },
+  "search": {
+    "placeholder": "Cuardaigh an margadh: táirgí, seirbhísí, imeachtaí…",
+    "seeAll": "Féach ar gach toradh do “{query}”",
+    "noResults": "Gan torthaí do “{query}”",
+    "member": "Ball",
+    "service": "Seirbhís",
+    "product": "Táirge",
+    "event": "Imeacht",
+    "article": "Alt",
+    "org": "Eagraíocht"
+  },
+  "landing": {
+    "eyebrow": "🌍 ARDÁN GEILLEAGAIR POBAIL",
+    "headlineLead": "An margadh ina bhfuil",
+    "headlineAccent": "muinín mar airgeadra",
+    "subtitle": "Is é FreeTrust an t-ardán slán geilleagair pobail — baill fhíoraithe, teachtaireachtaí cosanta, íocaíochtaí ar an ardán agus TrustCoins (₮) as gach rannchuidiú.",
+    "joinFree": "Cláraigh le FreeTrust Saor in Aisce →",
+    "seeHow": "Féach conas a oibríonn sé",
+    "freeToJoin": "Saor le clárú — ₮200 ag clárú",
+    "realPeople": "Fíordhaoine amháin — gan botaí",
+    "paymentsInside": "Fanann íocaíochtaí laistigh de FreeTrust",
+    "members": "ball",
+    "listings": "liostú",
+    "communities": "pobal",
+    "liveStats": "Staitisticí beo — athnuachan gach 60s"
+  },
+  "marketplace": {
+    "title": "Margadh",
+    "searchPlaceholder": "Cuardaigh táirgí agus seirbhísí...",
+    "categories": "Catagóirí",
+    "viewDeal": "Féach ar an Margadh",
+    "addToCart": "Cuir leis an gCiseán",
+    "noResults": "Níor aimsíodh torthaí"
+  },
+  "travel": {
+    "title": "Taisteal",
+    "flights": "Eitiltí",
+    "accommodation": "Cóiríocht",
+    "both": "An dá cheann",
+    "whereTo": "Cá bhfuil tú ag iarraidh dul?",
+    "searchButton": "Aimsigh Roghanna Taistil",
+    "checkIn": "Teacht isteach",
+    "checkOut": "Imeacht",
+    "adults": "Daoine fásta",
+    "children": "Leanaí",
+    "rooms": "Seomraí"
+  },
+  "trust": {
+    "trustScore": "Scór Muiníne",
+    "trustCoins": "Trust Coins",
+    "earned": "Tuillte",
+    "wallet": "Sparán"
+  },
+  "common": {
+    "loading": "Á lódáil...",
+    "error": "Chuaigh rud éigin mícheart",
+    "retry": "Bain triail eile as",
+    "save": "Sábháil",
+    "cancel": "Cealaigh",
+    "confirm": "Deimhnigh",
+    "back": "Siar",
+    "next": "Ar aghaidh",
+    "close": "Dún",
+    "viewAll": "Féach ar Uile",
+    "learnMore": "Foghlaim Tuilleadh",
+    "enable": "Cumasaigh",
+    "dismiss": "Díbhe",
+    "copyright": "© 2026 FreeTrust. Gach ceart ar cosaint.",
+    "pushHomeScreen": "Cuir FreeTrust le do Scáileán Baile chun fógraí brú a chumasú",
+    "pushNotify": "Faigh fógra nuair a phostálann, a dhéanann trácht nó a imoibríonn baill"
+  }
+}

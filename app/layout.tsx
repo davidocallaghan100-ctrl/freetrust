@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import Script from "next/script";
+import { cookies } from "next/headers";
+import { NextIntlClientProvider } from "next-intl";
 import "./globals.css";
 // Globally load MapLibre styles so maps inside dynamic({ ssr:false })
 // components always have canvas sizing rules available at mount.
@@ -12,6 +14,7 @@ import { BasketProvider } from "@/context/BasketContext";
 import AppShell from "@/components/AppShell";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
 import { OrganizationSchema } from "@/components/seo/OrganizationSchema";
+import { defaultLocale, directionForLocale, isAppLocale } from "@/i18n/routing";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -110,13 +113,18 @@ export const viewport: Viewport = {
   themeColor: '#00b4d8',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const localeCookie = cookies().get('NEXT_LOCALE')?.value
+  const locale = isAppLocale(localeCookie) ? localeCookie : defaultLocale
+  const dir = directionForLocale(locale)
+  const messages = (await import(`../messages/${locale}.json`)).default
+
   return (
-    <html lang="en">
+    <html lang={locale} dir={dir} suppressHydrationWarning>
       <head>
         <meta name="copyright" content="FreeTrust 2026" />
         <meta name="author" content="FreeTrust" />
@@ -137,14 +145,16 @@ export default function RootLayout({
         {/* Structured data — global */}
         <OrganizationSchema />
 
-        <CurrencyProvider>
-          <BasketProvider>
-            <AppShell>
-              {children}
-            </AppShell>
-            <PWAInstallBanner />
-          </BasketProvider>
-        </CurrencyProvider>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <CurrencyProvider>
+            <BasketProvider>
+              <AppShell>
+                {children}
+              </AppShell>
+              <PWAInstallBanner />
+            </BasketProvider>
+          </CurrencyProvider>
+        </NextIntlClientProvider>
 
         {/* Google Analytics 4 — loaded after page is interactive */}
         {process.env.NEXT_PUBLIC_GA_ID && (

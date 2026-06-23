@@ -1,0 +1,236 @@
+{
+  "nav": {
+    "home": "Home",
+    "connect": "Connetti",
+    "map": "Mappa",
+    "calendar": "Calendario",
+    "earn": "Guadagna",
+    "marketplace": "Marketplace",
+    "travel": "Viaggi",
+    "messages": "Messaggi",
+    "wallet": "Portafoglio",
+    "profile": "Profilo",
+    "settings": "Impostazioni",
+    "dashboard": "Dashboard",
+    "analytics": "Analytics Dashboard",
+    "productMarketplace": "Marketplace",
+    "servicesMarketplace": "Services Marketplace",
+    "grassroots": "Grassroots",
+    "memberDirectory": "Member Directory",
+    "newsfeed": "Newsfeed",
+    "groups": "Groups",
+    "articles": "Articles",
+    "jobs": "Jobs",
+    "rentShare": "Rent & Share",
+    "organisations": "Organisations",
+    "addOrganisation": "Add Organisation",
+    "directory": "Directory",
+    "myCalendar": "My Calendar",
+    "activityMap": "Activity Map",
+    "addEvent": "Add Event",
+    "impact": "Impact",
+    "earlyInvestors": "Early Investors",
+    "investorDeck": "Investor Deck",
+    "agents": "Agents",
+    "createPost": "Create Post",
+    "connections": "Connections",
+    "notifications": "Notifications",
+    "browse": "Browse",
+    "products": "Marketplace",
+    "events": "Events",
+    "collab": "Collab",
+    "gigEconomy": "Gig Economy",
+    "createGig": "Create Gig",
+    "accounting": "Accounting",
+    "invest": "Invest",
+    "account": "ACCOUNT",
+    "digital": "DIGITAL",
+    "social": "SOCIAL",
+    "planet": "PLANET",
+    "create": "CREATE",
+    "experience": "EXPERIENCE"
+  },
+  "auth": {
+    "signIn": "Accedi",
+    "signUp": "Registrati",
+    "signOut": "Esci",
+    "createAccount": "Registrati",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?"
+  },
+  "language": {
+    "selectorLabel": "Scegli lingua",
+    "currentLanguage": "Current language",
+    "saveError": "Language saved on this device; account sync will retry later.",
+    "locales": {
+      "en": {
+        "flag": "🇬🇧",
+        "name": "English"
+      },
+      "ga": {
+        "flag": "🇮🇪",
+        "name": "Gaeilge"
+      },
+      "fr": {
+        "flag": "🇫🇷",
+        "name": "Français"
+      },
+      "de": {
+        "flag": "🇩🇪",
+        "name": "Deutsch"
+      },
+      "es": {
+        "flag": "🇪🇸",
+        "name": "Español"
+      },
+      "it": {
+        "flag": "🇮🇹",
+        "name": "Italiano"
+      },
+      "pt": {
+        "flag": "🇵🇹",
+        "name": "Português"
+      },
+      "pl": {
+        "flag": "🇵🇱",
+        "name": "Polski"
+      },
+      "nl": {
+        "flag": "🇳🇱",
+        "name": "Nederlands"
+      },
+      "sv": {
+        "flag": "🇸🇪",
+        "name": "Svenska"
+      },
+      "ro": {
+        "flag": "🇷🇴",
+        "name": "Română"
+      },
+      "uk": {
+        "flag": "🇺🇦",
+        "name": "Українська"
+      },
+      "ar": {
+        "flag": "🇦🇪",
+        "name": "العربية"
+      },
+      "zh": {
+        "flag": "🇨🇳",
+        "name": "简体中文"
+      },
+      "ja": {
+        "flag": "🇯🇵",
+        "name": "日本語"
+      },
+      "ko": {
+        "flag": "🇰🇷",
+        "name": "한국어"
+      },
+      "hi": {
+        "flag": "🇮🇳",
+        "name": "हिन्दी"
+      },
+      "tr": {
+        "flag": "🇹🇷",
+        "name": "Türkçe"
+      },
+      "ru": {
+        "flag": "🇷🇺",
+        "name": "Русский"
+      },
+      "cs": {
+        "flag": "🇨🇿",
+        "name": "Čeština"
+      }
+    }
+  },
+  "profile": {
+    "switchProfile": "Switch profile/page",
+    "myProfile": "My profile",
+    "yourProfile": "Your Profile",
+    "personalProfile": "Personal profile",
+    "adminPage": "Admin page",
+    "ownerPage": "Owner page",
+    "loadingPages": "Loading your pages…",
+    "noAdminPages": "No admin pages found on this session.",
+    "completeSetupTitle": "Complete your account setup",
+    "completeSetupBody": "FreeTrust requires a real first and last name, face photo, bio, location, and at least one hobby before an account appears in the member community or profile pages.",
+    "realName": "Real first and last name",
+    "realPicture": "Real profile picture",
+    "bioLocationHobbies": "Bio, location, and hobbies",
+    "finishSetup": "Finish setup now"
+  },
+  "search": {
+    "placeholder": "Cerca nel marketplace: prodotti, servizi, eventi…",
+    "seeAll": "See all results for \"{query}\"",
+    "noResults": "No results for \"{query}\"",
+    "member": "Member",
+    "service": "Service",
+    "product": "Product",
+    "event": "Event",
+    "article": "Article",
+    "org": "Organisation"
+  },
+  "landing": {
+    "eyebrow": "🌍 COMMUNITY ECONOMY PLATFORM",
+    "headlineLead": "Il marketplace dove",
+    "headlineAccent": "la fiducia è valuta",
+    "subtitle": "FreeTrust is the secure community economy platform — verified members, protected messaging, on-platform payments and TrustCoins (₮) for every contribution.",
+    "joinFree": "Unisciti gratis a FreeTrust →",
+    "seeHow": "Scopri come funziona",
+    "freeToJoin": "Free to join — ₮200 on signup",
+    "realPeople": "Real people only — no bots",
+    "paymentsInside": "Payments stay inside FreeTrust",
+    "members": "members",
+    "listings": "listings",
+    "communities": "communities",
+    "liveStats": "Live stats — refreshes every 60s"
+  },
+  "marketplace": {
+    "title": "Marketplace",
+    "searchPlaceholder": "Search products and services...",
+    "categories": "Categories",
+    "viewDeal": "View Deal",
+    "addToCart": "Add to Cart",
+    "noResults": "No results found"
+  },
+  "travel": {
+    "title": "Travel",
+    "flights": "Flights",
+    "accommodation": "Accommodation",
+    "both": "Both",
+    "whereTo": "Where do you want to go?",
+    "searchButton": "Find Travel Options",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "adults": "Adults",
+    "children": "Children",
+    "rooms": "Rooms"
+  },
+  "trust": {
+    "trustScore": "Trust Score",
+    "trustCoins": "Trust Coins",
+    "earned": "Earned",
+    "wallet": "Wallet"
+  },
+  "common": {
+    "loading": "Caricamento...",
+    "error": "Something went wrong",
+    "retry": "Try again",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "close": "Chiudi",
+    "viewAll": "View All",
+    "learnMore": "Learn More",
+    "enable": "Enable",
+    "dismiss": "Dismiss",
+    "copyright": "© 2026 FreeTrust. All rights reserved.",
+    "pushHomeScreen": "Add FreeTrust to your Home Screen to enable push notifications",
+    "pushNotify": "Get notified when members post, comment or react"
+  }
+}
