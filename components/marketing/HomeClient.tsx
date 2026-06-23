@@ -110,6 +110,19 @@ const FEATURE_CARDS = [
   { icon: '₮', title: 'Trust Coin', desc: 'Earn Trust Coin (₮) for every verified transaction, review, and contribution. Spend it to reduce fees, boost listings, and unlock platform benefits.' },
 ]
 
+const TESTIMONIAL_QUOTES = [
+  { icon: '✅', label: 'Trust Score', quote: 'Watching my Trust Score grow is genuinely motivating. It means something here.' },
+  { icon: '🛡️', label: 'Verified commerce', quote: 'Signed up in minutes and felt safe straight away. This is what online commerce should feel like.' },
+  { icon: '🛒', label: 'Products', quote: 'Listed my solutions and sold three sets in a week. No time-wasters — everyone\'s verified.' },
+  { icon: '🛠️', label: 'Services', quote: 'Clients arrive already knowing I\'m verified. We skip the awkward part and just get to work.' },
+  { icon: '🏠', label: 'Rentals', quote: 'Replaced the big platforms entirely. Lower fees and I actually know who\'s staying in my property.' },
+  { icon: '🪙', label: 'Trust Coin (₮)', quote: 'Earned Trust Coins on my first few sales and used them to unlock a premium listing. Clever system.' },
+  { icon: '💬', label: 'Messaging', quote: 'Clean, private, file sharing built in. No need to swap numbers with strangers.' },
+  { icon: '⭐', label: 'Reviews & Reputation', quote: 'Two way reviews mean both sides are accountable. That\'s exactly what the internet has been missing.' },
+  { icon: '🤝', label: 'Impact Fund', quote: 'I actively choose FreeTrust because every transaction contributes to something bigger.' },
+  { icon: '🏆', label: 'Founding Member', quote: 'Lifetime reduced fees and in from the start. Best decision I made this year.' },
+]
+
 const FOOTER_VISION_COPY = {
   problem: [
     'The internet has a trust crisis and it is costing people everything.',
@@ -414,6 +427,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
   const [homeEvents, setHomeEvents] = useState<HomeEvent[] | null>(null)
   const [homeJobs, setHomeJobs] = useState<HomeJob[] | null>(null)
   const [homeRentShare, setHomeRentShare] = useState<HomeRentShare[] | null>(null)
+  const [testimonialIndex, setTestimonialIndex] = useState(0)
 
   const fetchStats = useCallback(async () => {
     try {
@@ -436,6 +450,13 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
     void fetchJsonWithTimeout<{ listings?: HomeRentShare[] }>('/api/rent-share?limit=6', { listings: [] }).then(d => setHomeRentShare((d.listings ?? []).slice(0, 6)))
   }, [])
 
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setTestimonialIndex(index => (index + 1) % TESTIMONIAL_QUOTES.length)
+    }, 5200)
+    return () => window.clearInterval(interval)
+  }, [])
+
   const tm = stats?.members.total ?? initialCounts.members
   const tw = stats?.members.thisWeek ?? 0
   const tt = stats?.trust.total ?? 9415
@@ -447,6 +468,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
   const spotsRemaining = Math.max(0, goal - tm)
   const displaySpots = spotsRemaining > 0 && spotsRemaining < 100 ? spotsRemaining.toLocaleString() : 'Under 100'
   const liveListings = (featuredProducts.length + featuredServices.length + (homeEvents?.length ?? 0) + (homeJobs?.length ?? 0))
+  const activeTestimonial = TESTIMONIAL_QUOTES[testimonialIndex] ?? TESTIMONIAL_QUOTES[0]
 
   const serviceSlides = useMemo(() => {
     const serviceCards = featuredServices.slice(0, 6).map(s => ({ type: 'service', title: s.title, subtitle: s.provider, price: format(s.price, s.currency as 'GBP' | 'EUR' | 'USD'), image: s.coverImage || screenshots.services, href: `/services/${s.id}`, badge: s.reviews > 0 ? `${s.rating.toFixed(1)}★ Trust Score` : 'Verified service' }))
@@ -643,6 +665,62 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
                 <p style={{ color: SLATE, lineHeight: 1.65, margin: 0, fontSize: 15 }}>{card.desc}</p>
               </article>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="ft-section" aria-label="FreeTrust member stories" style={{ background: 'radial-gradient(circle at 18% 0%, rgba(0,194,203,.18), transparent 32%), linear-gradient(180deg,#0b1327,#07111f)', borderBottom: '1px solid rgba(0,194,203,.08)' }}>
+        <div className="ft-container">
+          <SectionHeader eyebrow="Member stories" title="Why people choose FreeTrust">Real trust signals, safer transactions, and a community economy that gives value back.</SectionHeader>
+          <div style={{ maxWidth: 900, margin: '0 auto', position: 'relative' }}>
+            <article
+              key={activeTestimonial.label}
+              style={{
+                minHeight: 286,
+                borderRadius: 28,
+                border: '1px solid rgba(127,247,255,.2)',
+                background: 'linear-gradient(145deg, rgba(17,24,39,.94), rgba(8,16,32,.82))',
+                boxShadow: '0 28px 90px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.05)',
+                padding: '34px clamp(22px, 5vw, 54px)',
+                display: 'grid',
+                alignItems: 'center',
+                textAlign: 'center',
+                overflow: 'hidden',
+                position: 'relative',
+              }}
+            >
+              <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 78% 20%, rgba(0,194,203,.16), transparent 34%)', pointerEvents: 'none' }} />
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{ width: 62, height: 62, margin: '0 auto 18px', borderRadius: 18, display: 'grid', placeItems: 'center', fontSize: 30, background: 'rgba(0,194,203,.13)', border: '1px solid rgba(0,194,203,.28)', boxShadow: '0 18px 44px rgba(0,194,203,.12)' }}>{activeTestimonial.icon}</div>
+                <div style={{ color: '#7ff7ff', fontSize: 12, fontWeight: 950, letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 14 }}>{activeTestimonial.label}</div>
+                <blockquote style={{ margin: 0, color: '#f8fafc', fontSize: 'clamp(22px, 4vw, 34px)', lineHeight: 1.22, letterSpacing: '-0.045em', fontWeight: 850 }}>
+                  “{activeTestimonial.quote}”
+                </blockquote>
+              </div>
+            </article>
+
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap', marginTop: 20 }}>
+              {TESTIMONIAL_QUOTES.map((item, index) => {
+                const active = index === testimonialIndex
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    aria-label={`Show ${item.label} quote`}
+                    onClick={() => setTestimonialIndex(index)}
+                    style={{
+                      width: active ? 34 : 10,
+                      height: 10,
+                      borderRadius: 999,
+                      border: 'none',
+                      background: active ? TEAL : 'rgba(148,163,184,.28)',
+                      cursor: 'pointer',
+                      transition: 'width .2s ease, background .2s ease',
+                    }}
+                  />
+                )
+              })}
+            </div>
           </div>
         </div>
       </section>

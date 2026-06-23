@@ -65,6 +65,20 @@ export default function LanguageSelector({variant = 'header'}: LanguageSelectorP
 
   const options = useMemo(() => locales.map(code => ({code, ...localeNames[code]})), [])
 
+  async function syncAccountLocale(nextLocale: AppLocale) {
+    try {
+      const supabase = createClient()
+      const {data: {user}} = await supabase.auth.getUser()
+      if (!user) return
+      const {error} = await supabase
+        .from('user_preferences')
+        .upsert({user_id: user.id, locale: nextLocale, updated_at: new Date().toISOString()}, {onConflict: 'user_id'})
+      if (error) throw error
+    } catch {
+      setSyncError(true)
+    }
+  }
+
   async function selectLocale(nextLocale: AppLocale) {
     setSaving(true)
     setSyncError(false)
@@ -73,22 +87,12 @@ export default function LanguageSelector({variant = 'header'}: LanguageSelectorP
       document.cookie = `NEXT_LOCALE=${nextLocale}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`
       document.documentElement.lang = nextLocale
       document.documentElement.dir = directionForLocale(nextLocale)
-
-      try {
-        const supabase = createClient()
-        const {data: {user}} = await supabase.auth.getUser()
-        if (user) {
-          const {error} = await supabase
-            .from('user_preferences')
-            .upsert({user_id: user.id, locale: nextLocale, updated_at: new Date().toISOString()}, {onConflict: 'user_id'})
-          if (error) throw error
-        }
-      } catch {
-        setSyncError(true)
-      }
-
       setOpen(false)
+      void syncAccountLocale(nextLocale)
       router.refresh()
+      window.setTimeout(() => {
+        window.location.reload()
+      }, 80)
     } finally {
       setSaving(false)
     }
@@ -98,6 +102,7 @@ export default function LanguageSelector({variant = 'header'}: LanguageSelectorP
   if (!floating && isMobile) return null
 
   const triggerLabel = `${current.flag} ${current.nativeName}`
+  const mobileTriggerText = 'Translate'
 
   return (
     <div
@@ -105,7 +110,7 @@ export default function LanguageSelector({variant = 'header'}: LanguageSelectorP
       style={floating ? {
         position: 'fixed',
         top: '112px',
-        right: '14px',
+        right: 0,
         zIndex: 101,
       } : {
         position: 'relative',
@@ -118,26 +123,28 @@ export default function LanguageSelector({variant = 'header'}: LanguageSelectorP
         aria-label={t('selectorLabel')}
         aria-expanded={open}
         style={{
-          minWidth: floating ? 46 : 118,
-          height: floating ? 46 : 34,
-          borderRadius: floating ? 15 : 999,
+          minWidth: floating ? 116 : 118,
+          height: floating ? 42 : 34,
+          borderRadius: floating ? '12px 0 0 12px' : 999,
           border: '1px solid rgba(56,189,248,0.28)',
           background: floating ? 'rgba(15,23,42,0.88)' : 'rgba(15,23,42,0.72)',
           color: '#e0f2fe',
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 7,
-          padding: floating ? 0 : '0 10px',
+          gap: floating ? 8 : 7,
+          padding: floating ? '0 12px' : '0 10px',
           cursor: 'pointer',
           fontFamily: 'inherit',
           fontWeight: 800,
-          fontSize: floating ? 22 : 12,
+          fontSize: floating ? 13 : 12,
           boxShadow: floating ? '0 12px 30px rgba(2,6,23,0.48), 0 0 18px rgba(56,189,248,0.16)' : 'none',
           backdropFilter: 'blur(12px)',
         }}
       >
-        <span aria-hidden="true">{current.flag}</span>
+        <span aria-hidden="true" style={{fontSize: floating ? 17 : undefined}}>{floating ? '🌐' : current.flag}</span>
+        {floating && <span>{mobileTriggerText}</span>}
+        {floating && <span aria-hidden="true" style={{fontSize: 15}}>{current.flag}</span>}
         {!floating && <span>{current.nativeName}</span>}
         {!floating && <span style={{color: '#64748b', fontSize: 10}}>▾</span>}
       </button>

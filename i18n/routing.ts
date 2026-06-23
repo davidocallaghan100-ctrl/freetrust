@@ -9,7 +9,7 @@ export const defaultLocale: AppLocale = 'en'
 export const rtlLocales: AppLocale[] = ['ar']
 
 export const localeNames: Record<AppLocale, { flag: string; nativeName: string; englishName: string }> = {
-  en: { flag: '🇬🇧', nativeName: 'English', englishName: 'English' },
+  en: { flag: '🇺🇸', nativeName: 'English', englishName: 'English' },
   ga: { flag: '🇮🇪', nativeName: 'Gaeilge', englishName: 'Irish' },
   fr: { flag: '🇫🇷', nativeName: 'Français', englishName: 'French' },
   de: { flag: '🇩🇪', nativeName: 'Deutsch', englishName: 'German' },
