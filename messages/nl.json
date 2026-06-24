@@ -186,7 +186,635 @@
     "members": "members",
     "listings": "listings",
     "communities": "communities",
-    "liveStats": "Live stats — refreshes every 60s"
+    "liveStats": "Live stats — refreshes every 60s",
+    "stats": {
+      "membersGrowing": "Leden en groeiend",
+      "thisWeek": "+{count} deze week",
+      "joinFree": "Doe gratis mee",
+      "servicesAvailable": "Diensten beschikbaar",
+      "beFirst": "Wees de eerste!",
+      "browseNow": "Blader nu",
+      "productsListed": "Producten vermeld",
+      "listYours": "Maak een lijst van de jouwe",
+      "shopNow": "Winkel nu",
+      "totalIssued": "Totaal ₮ uitgegeven",
+      "sinceLaunch": "Sinds de lancering",
+      "live": "Live",
+      "ticker": {
+        "someone": "Iemand",
+        "join": "{name} is zojuist lid geworden van FreeTrust",
+        "joinWithLocation": "{name} van {location} heeft zich zojuist aangesloten bij FreeTrust",
+        "trust": "₮{amount} Vertrouwen verdiend door een lid",
+        "article": "Nieuw artikel gepubliceerd: \"{title}\""
+      }
+    },
+    "trustEconomy": {
+      "label": "₮ Vertrouwenseconomie",
+      "inCirculation": "₮ in omloop",
+      "currentBalances": "Lopende saldi aangehouden",
+      "issuedSinceLaunch": "₮ uitgegeven sinds de lancering",
+      "totalEarned": "Totaal ooit verdiend",
+      "membersHolding": "Leden met ₮",
+      "activeHolders": "Actieve trusthouders"
+    },
+    "premiumHero": {
+      "eyebrow": "🌍 De vertrouwenseconomie is er",
+      "titleLead": "Kopen. Verkopen. Verbinden.",
+      "titleAccent": "Vertrouwen.",
+      "subtitle": "FreeTrust is de gemeenschapsmarktplaats waar geverifieerd vertrouwen betere deals, echte verbindingen en een eerlijkere economie mogelijk maakt.",
+      "primaryCta": "Ga gratis aan de slag",
+      "secondaryCta": "Zie hoe het werkt",
+      "membersBadge": "{count} Stichtende leden",
+      "welcomeBonus": "₮200 Welkomstbonus",
+      "noSubscription": "0% abonnementskosten"
+    },
+    "floatingBadges": {
+      "balance": "₮{amount} bal",
+      "trustCoinReady": "Trust Coin klaar",
+      "verifiedMember": "✓ Geverifieerd lid",
+      "identityProtected": "Identiteit beschermd",
+      "trustScore": "4,9★Trust Score",
+      "portableReputation": "Draagbare reputatie"
+    },
+    "alt": {
+      "walletScreenshot": "Werkelijke FreeTrust Trust Wallet mobiele screenshot",
+      "productScreenshot": "Werkelijke screenshot van de mobiele FreeTrust-productmarktplaats",
+      "genericScreenshot": "Werkelijke FreeTrust {name} mobiele screenshot"
+    },
+    "features": {
+      "eyebrow": "Platformfuncties",
+      "title": "Alles wat u nodig heeft om met vertrouwen te handelen, betalen, inhuren en verbinding te maken.",
+      "description": "FreeTrust brengt marktplaatshandel, betalingen, reputatie en gemeenschap samen in één vertrouwensplatform.",
+      "cards": [
+        {
+          "icon": "💳",
+          "title": "Vertrouw op betalingen",
+          "desc": "Maak peer-to-peer geld over met ingebouwde vertrouwensverificatie. Splits rekeningen, betaal voor diensten, stuur naar familie - allemaal beschermd door de reputatielaag van FreeTrust."
+        },
+        {
+          "icon": "🛒",
+          "title": "Productmarktplaats",
+          "desc": "Koop en verkoop fysieke en digitale producten met geverifieerde verkopers. Echte Trust Score's vervangen anonieme beoordelingen. Winkel met vertrouwen."
+        },
+        {
+          "icon": "💼",
+          "title": "Dienstenmarktplaats",
+          "desc": "Huur geverifieerde freelancers en lokale dienstverleners in. Van ontwerp tot constructie: elke aanbieder wordt door de gemeenschap vertrouwd."
+        },
+        {
+          "icon": "🌐",
+          "title": "Gemeenschapsplatform",
+          "desc": "Bouw uw vertrouwde netwerk. Maak contact met mensen die jouw waarden delen, werk samen aan projecten en groei samen."
+        },
+        {
+          "icon": "📰",
+          "title": "Nieuwsfeed",
+          "desc": "Een creatieve, productieve, positieve en inclusieve feed. Deel ideeën, laat werk zien, vier overwinningen – geen giftige algoritmen, geen advertenties, alleen een community."
+        },
+        {
+          "icon": "₮",
+          "title": "Trust Coin",
+          "desc": "Verdien Trust Coin (₮) voor elke geverifieerde transactie, recensie en bijdrage. Geef het uit om de kosten te verlagen, vermeldingen een boost te geven en platformvoordelen te ontgrendelen."
+        }
+      ]
+    },
+    "testimonials": {
+      "aria": "FreeTrust-ledenverhalen",
+      "eyebrow": "Verhalen van leden",
+      "title": "Waarom mensen voor FreeTrust kiezen",
+      "description": "Echte vertrouwenssignalen, veiligere transacties en een gemeenschapseconomie die waarde teruggeeft.",
+      "showQuote": "{label}-citaat tonen",
+      "items": [
+        {
+          "icon": "✅",
+          "label": "Trust Score",
+          "quote": "Mijn Trust Score zien groeien is echt motiverend. Het betekent hier iets."
+        },
+        {
+          "icon": "🛡️",
+          "label": "Geverifieerde handel",
+          "quote": "Binnen enkele minuten aangemeld en voelde me meteen veilig. Dit is hoe online handel zou moeten voelen."
+        },
+        {
+          "icon": "🛒",
+          "label": "Producten",
+          "quote": "Ik heb mijn oplossingen op een rij gezet en drie sets in een week verkocht. Geen tijdverspillers: iedereen is geverifieerd."
+        },
+        {
+          "icon": "🛠️",
+          "label": "Diensten",
+          "quote": "Klanten arriveren al in de wetenschap dat ik geverifieerd ben. We slaan het lastige gedeelte over en gaan gewoon aan de slag."
+        },
+        {
+          "icon": "🏠",
+          "label": "Verhuur",
+          "quote": "De grote platforms volledig vervangen. Lagere kosten en ik weet daadwerkelijk wie er in mijn accommodatie verblijft."
+        },
+        {
+          "icon": "🪙",
+          "label": "Trust Coin (₮)",
+          "quote": "Ik heb Trust Coin's verdiend bij mijn eerste paar verkopen en heb deze gebruikt om een ​​premium vermelding te ontgrendelen. Slim systeem."
+        },
+        {
+          "icon": "💬",
+          "label": "Berichten",
+          "quote": "Schoon, privé, ingebouwde bestandsdeling. U hoeft geen nummers uit te wisselen met vreemden."
+        },
+        {
+          "icon": "⭐",
+          "label": "Recensies en reputatie",
+          "quote": "Tweezijdige beoordelingen betekenen dat beide partijen verantwoordelijk zijn. Dat is precies wat het internet heeft gemist."
+        },
+        {
+          "icon": "🤝",
+          "label": "Impactfonds",
+          "quote": "Ik kies actief voor FreeTrust omdat elke transactie bijdraagt ​​aan iets groters."
+        },
+        {
+          "icon": "🏆",
+          "label": "Stichtend lid",
+          "quote": "Levenslang lagere kosten en vanaf het begin. Beste beslissing die ik dit jaar heb genomen."
+        }
+      ]
+    },
+    "impact": {
+      "eyebrow": "Impact-economie",
+      "title": "Gebouwd voor impact, niet alleen voor winst",
+      "description": "Elke transactie op FreeTrust draagt ​​bij aan een eerlijkere, transparantere economie.",
+      "stats": {
+        "foundingMembers": "Stichtende leden",
+        "welcomeBonus": "Welkomstbonus",
+        "subscriptionFees": "Abonnementskosten",
+        "maxPlatformFee": "Maximale platformkosten"
+      },
+      "body": "Het FreeTrust Impact Fund besteedt een deel van elke transactiekosten aan geverifieerde gemeenschapsdoelen, transparant geselecteerd door leden."
+    },
+    "showcase": {
+      "open": "Open {name} →",
+      "rows": [
+        {
+          "srcKey": "products",
+          "eyebrow": "Marktplaats",
+          "title": "Winkel slimmer. Verkoop met vertrouwen.",
+          "text": "Ontdek FreeTrust-verkopers en externe retailers in één vertrouwde productervaring.",
+          "points": [
+            "Trust Score-badges op elke verkoperskaart.",
+            "Duidelijke ledenlijsten en detailhandelaarsdeals.",
+            "Verdien Trust Coin via geverifieerde marktactiviteit."
+          ],
+          "href": "/products"
+        },
+        {
+          "srcKey": "wallet",
+          "eyebrow": "Vertrouwen portemonnee",
+          "title": "Waarde verzenden. Verdien vertrouwen.",
+          "text": "Uw Trust Coin-saldo en reputatie leven naast de handel die u elke dag doet.",
+          "points": [
+            "Live Trust Economy-cijfers uit Supabase.",
+            "TrustCoin-saldo zichtbaar in-app.",
+            "Reputatiebeloningen voor nuttige bijdragen."
+          ],
+          "href": "/wallet",
+          "alt": true
+        },
+        {
+          "srcKey": "services",
+          "eyebrow": "Diensten",
+          "title": "Huur geverifieerde aanbieders in.",
+          "text": "Servicekaarten tonen echte aanbieders, beoordelingen, voortgang en vertrouwenssignalen voordat u boekt.",
+          "points": [
+            "Geverifieerde lokale en externe dienstverleners.",
+            "Vertrouw op de voortgangs- en beoordelingssignalen op elke kaart.",
+            "Gebouwd voor freelancers, oprichters en gemeenschapswerk."
+          ],
+          "href": "/services"
+        },
+        {
+          "srcKey": "community",
+          "eyebrow": "Gemeenschap",
+          "title": "Uw vertrouwde netwerk.",
+          "text": "Een positieve feed- en verbindingslaag ontworpen voor samenwerking, niet voor giftige betrokkenheidslussen.",
+          "points": [
+            "Geverifieerde ledenprofielen en communitymomenten.",
+            "Creatieve, productieve, inclusieve updates.",
+            "Netwerkeffecten die nuttige bijdragen belonen."
+          ],
+          "href": "/feed",
+          "alt": true
+        }
+      ]
+    },
+    "liveMarketplace": {
+      "eyebrow": "Live marktplaats",
+      "title": "Nieuwe diensten, producten, banen en evenementen – allemaal in beweging.",
+      "description": "Echte FreeTrust-gegevens blijven op de landingspagina staan, geüpgraded met premium dark cards, blauwgroen vertrouwensindicatoren en mobielvriendelijke horizontale ontdekking.",
+      "tabs": {
+        "services": "🛠 Diensten",
+        "products": "🛒 Producten",
+        "jobs": "💼 Banen",
+        "events": "📅 Evenementen"
+      },
+      "cta": {
+        "open": "→ openen",
+        "view": "Bekijk →",
+        "viewEvent": "Bekijk evenement →"
+      },
+      "badges": {
+        "trustScore": "{score}★ Trust Score",
+        "verifiedService": "Geverifieerde dienst",
+        "verifiedListing": "Geverifieerde vermelding"
+      },
+      "status": {
+        "showing": "Live marktplaatsvoorbeelden tonen, indien beschikbaar",
+        "loaded": "· {count} live-kaarten geladen"
+      },
+      "fallbacks": {
+        "remote": "Op afstand",
+        "onSite": "Ter plaatse",
+        "online": "Online",
+        "inPerson": "Persoonlijk",
+        "applyFree": "Gratis solliciteren",
+        "openRole": "Open rol",
+        "company": "Bedrijf",
+        "event": "Evenement",
+        "services": [
+          {
+            "title": "Lokale huisreparaties",
+            "subtitle": "Geverifieerde aanbieders",
+            "price": "Boek gratis",
+            "badge": "Lokale diensten"
+          },
+          {
+            "title": "Ontwerp- en creatieve hulp",
+            "subtitle": "Vertrouwde freelancers",
+            "price": "Vanaf €25",
+            "badge": "Klaar voor gebruik op afstand"
+          },
+          {
+            "title": "Zakelijke ondersteuning",
+            "subtitle": "Aangesloten aanbieders",
+            "price": "Ontvang offertes",
+            "badge": "Vertrouwen beschermd"
+          },
+          {
+            "title": "Coaching en begeleiding",
+            "subtitle": "Gemeenschapsdeskundigen",
+            "price": "Blader",
+            "badge": "₮ komt in aanmerking"
+          },
+          {
+            "title": "Evenementen & horeca",
+            "subtitle": "Echte lokale aanbieders",
+            "price": "Zoek hulp",
+            "badge": "Geverifieerde vermeldingen"
+          },
+          {
+            "title": "Technische ondersteuning",
+            "subtitle": "Online en lokaal",
+            "price": "Huur nu",
+            "badge": "Betrouwbare aanbieders"
+          }
+        ],
+        "products": [
+          {
+            "title": "Creator Studio-kit",
+            "subtitle": "Geverifieerde verkoper",
+            "price": "€84.00",
+            "badge": "4,9★Trust Score"
+          },
+          {
+            "title": "Duurzame Woningbundel",
+            "subtitle": "Marktplaats gevonden",
+            "price": "€42.00",
+            "badge": "Geverifieerde vermelding"
+          },
+          {
+            "title": "Essentiële zaken voor werken op afstand",
+            "subtitle": "Vertrouwde verkoper",
+            "price": "€119.00",
+            "badge": "Vertrouwen beschermd"
+          },
+          {
+            "title": "Creatief lanceringspakket",
+            "subtitle": "Ledenlijst",
+            "price": "€67.00",
+            "badge": "₮ komt in aanmerking"
+          },
+          {
+            "title": "Circulaire modevondsten",
+            "subtitle": "Communautaire marktplaats",
+            "price": "€35.00",
+            "badge": "Geverifieerde verkoper"
+          },
+          {
+            "title": "Bundel voor evenementenuitrusting",
+            "subtitle": "Vertrouwde vermelding",
+            "price": "€96.00",
+            "badge": "Vertrouwen beschermd"
+          },
+          {
+            "title": "Eco-kantoorinrichting",
+            "subtitle": "Marktplaats gevonden",
+            "price": "€58.00",
+            "badge": "₮ komt in aanmerking"
+          },
+          {
+            "title": "Goederen van lokale makers",
+            "subtitle": "Ledenlijst",
+            "price": "€24.00",
+            "badge": "Geverifieerde vermelding"
+          }
+        ],
+        "jobs": [
+          {
+            "id": "jobs",
+            "title": "Lokaal ontwerpproject",
+            "company_name": "Vertrouwd bedrijf",
+            "location": "Afstandsbediening vriendelijk",
+            "salary": "Gratis solliciteren",
+            "job_type": "Project"
+          },
+          {
+            "id": "jobs-2",
+            "title": "Leider voor gemeenschapsgroei",
+            "company_name": "FreeTrust-lid",
+            "location": "Hybride",
+            "salary": "Vertrouwde rol",
+            "job_type": "Parttime"
+          },
+          {
+            "id": "jobs-3",
+            "title": "Marktplaatsoperaties",
+            "company_name": "Geverifieerd bedrijf",
+            "location": "Ter plaatse",
+            "salary": "₮ komt in aanmerking",
+            "job_type": "Contract"
+          }
+        ],
+        "events": [
+          {
+            "id": "events",
+            "title": "Gemeenschapsbijeenkomst",
+            "category": "Technologie",
+            "location": "Online",
+            "catColor": "#00c2cb"
+          },
+          {
+            "id": "events-2",
+            "title": "Oprichter Trust Circle",
+            "category": "Opstarten",
+            "location": "Persoonlijk",
+            "catColor": "#38bdf8"
+          },
+          {
+            "id": "events-3",
+            "title": "Marktplaats workshop",
+            "category": "Bedrijf",
+            "location": "Online",
+            "catColor": "#a78bfa"
+          }
+        ]
+      }
+    },
+    "trustScore": {
+      "eyebrow": "Reputatielaag",
+      "title": "Wat is een Trust Score?",
+      "description": "FreeTrust's Trust Score is uw draagbare reputatie - opgebouwd uit geverifieerde transacties, communityrecensies en platformbijdragen.",
+      "factors": [
+        "Identiteit geverifieerd",
+        "47 Voltooide transacties",
+        "4,9★ Gemiddelde beoordeling",
+        "₮{balance} Trust Coin Balans",
+        "2 jaar lid"
+      ],
+      "cta": "Bouw uw Trust Score →"
+    },
+    "founding": {
+      "under100": "Onder de 100",
+      "title": "Sluit u aan bij de eerste 1.000 stichtende leden",
+      "description": "Ontvang levenslange lagere kosten, ₮200 Trust Coin welkomstbonus en een Founding Member-badge op uw profiel. Er zijn nog maar {spots}-plekken over.",
+      "cta": "Claim jouw Founding Member-plek"
+    },
+    "howItWorks": {
+      "eyebrow": "Hoe het werkt",
+      "title": "Vier stappen om deel te nemen aan de trusteconomie",
+      "description": "Geen abonnementen, geen poortwachters. Meld u aan, draag bij, bouw een reputatie op en groei.",
+      "steps": [
+        [
+          "🪪",
+          "Meld u gratis aan",
+          "Maak uw account aan en ontvang ₮200 TrustCoins bij aanmelding."
+        ],
+        [
+          "📦",
+          "Lijst of ontdek",
+          "Publiceer een dienst, product, baan, evenement of community."
+        ],
+        [
+          "🤝",
+          "Veilig transacties uitvoeren",
+          "Gebruik geverifieerde profielen, Trust Score's en platformbetalingen."
+        ],
+        [
+          "🌱",
+          "Verdien en impact",
+          "Verdien ₮, verlaag de kosten en steun gemeenschapsdoelen."
+        ]
+      ]
+    },
+    "featuredServices": {
+      "eyebrow": "Dienstenmarktplaats",
+      "title": "Huur vertrouwde FreeTrust-aanbieders in",
+      "description": "Ontdek echte diensten van geverifieerde leden: webbouw, marketing, strategie, ontwerp, onderzoek en praktische ondersteuning, allemaal ondersteund door reputatiesignalen."
+    },
+    "earnings": {
+      "eyebrow": "Uw inkomsten",
+      "title": "Bekijk wat u zou verdienen op FreeTrust",
+      "description": "TrustCoins-compound — hoe meer u deelneemt, hoe minder u aan kosten betaalt."
+    },
+    "roi": {
+      "sellerTab": "🏪 Ik ben een verkoper",
+      "buyerTab": "🛒 Ik ben een koper",
+      "activity": "Jouw activiteit",
+      "earnings": "Uw inkomsten",
+      "listingsPerMonth": "Advertenties per maand",
+      "avgOrderValue": "Gem. bestelwaarde",
+      "ordersPerMonth": "Bestellingen per maand",
+      "deliverOnTime": "Op tijd leveren?",
+      "onTimeTip": "Tijdige leveringen verdienen",
+      "lateTip": "Late leveringen verdienen",
+      "perOrder": "per bestelling",
+      "purchasesPerMonth": "Aankopen per maand",
+      "reviewsPerMonth": "Recensies achtergelaten per maand",
+      "reviewTipLead": "5-sterrenrecensies verdienen",
+      "reviewTipTail": "bonus (vs +30₮ voor standaardrecensies)",
+      "monthlyRevenue": "💶 Maandelijkse omzet",
+      "annualRevenue": "Jaarlijkse omzet",
+      "gross": "goor",
+      "feeDeducted": "{fee}% kosten afgetrokken",
+      "monthlyTrustCoins": "Maandelijks TrustCoins",
+      "annual": "Jaarlijks",
+      "feeReduction": "Verlaging van de vergoedingen",
+      "offPlatformFees": "buitenplatformkosten",
+      "unlockSavings": "Verdien 1.000₮ om spaargeld vrij te spelen",
+      "extraKept": "extra per jaar bewaard",
+      "cta": "Begin met verdienen - Doe gratis mee →",
+      "perListing": "per vermelding",
+      "onTimeDelivery": "tijdige levering",
+      "perReview": "per recensie",
+      "liveTracking": "live volgen",
+      "perPurchase": "per aankoop",
+      "fiveStarReview": "5-sterren beoordeling",
+      "signupBonus": "aanmeldingsbonus",
+      "tiers": {
+        "platinum": "Platina",
+        "gold": "Goud",
+        "silver": "Zilver",
+        "member": "Lid"
+      }
+    },
+    "faq": {
+      "eyebrow": "Vaak gevraagd",
+      "title": "Vragen, beantwoord",
+      "description": "Alles wat u moet weten over FreeTrust voordat u lid wordt.",
+      "items": [
+        {
+          "question": "Wat is FreeTrust?",
+          "answer": "FreeTrust is de marktplaats voor de gemeenschapseconomie: een platform waar leden TrustCoins (₮) verdienen voor elke bijdrage die ze leveren en deze uitgeven om te groeien. U kunt diensten aanbieden, producten verkopen, vacatures plaatsen, evenementen organiseren, lid worden van communities, artikelen publiceren en duurzaamheidsprojecten ondersteunen, allemaal op één plek."
+        },
+        {
+          "question": "Is deelname aan FreeTrust gratis?",
+          "answer": "Ja, deelname aan FreeTrust is volledig gratis. Nieuwe leden ontvangen ₮200 in TrustCoins bij aanmelding en er zijn geen abonnements- of maandelijkse kosten verbonden. Wij rekenen slechts een kleine vergoeding over voltooide transacties."
+        },
+        {
+          "question": "Wat zijn TrustCoins (₮)?",
+          "answer": "TrustCoins (₮) is de oorspronkelijke reputatievaluta van FreeTrust. Elke bijdrage aan de gemeenschap – het aanbieden van een dienst, het voltooien van een bestelling, het publiceren van een artikel, het achterlaten van een recensie – levert u ₮ op. Hogere ₮-saldi zorgen voor lagere kosten, betere zichtbaarheid en toegang tot platformvoordelen."
+        },
+        {
+          "question": "Hoe verdien ik TrustCoins?",
+          "answer": "Je verdient ₮ voor elke betekenisvolle actie: ₮200 bij aanmelding, ₮50 voor het maken van een vermelding, ₮75 voor het publiceren van een artikel, ₮100 voor het voltooien van een bestelling, ₮100 voor het maken van een community, ₮10 voor het achterlaten van een recensie, en meer. Het volledige verdienschema bevindt zich in uw portemonnee."
+        },
+        {
+          "question": "Kan ik echt geld opnemen bij FreeTrust?",
+          "answer": "Ja – verkopers koppelen een Stripe-rekening via /seller/connect en kunnen de euro-opbrengsten van elke voltooide verkoop rechtstreeks bij hun bank opnemen. TrustCoins zelf is niet opneembaar, het is een reputatievaluta die binnen het platform wordt gebruikt."
+        },
+        {
+          "question": "Hoe werkt de marktplaats?",
+          "answer": "Vermeld een product, dienst of optreden uit /services/new of /products/new, stel uw prijs in EUR, GBP of USD, en kopers betalen veilig via Stripe. Bestellingen worden van begin tot eind gevolgd, waarbij berichten, beoordelingen en geschillen zijn ingebouwd. U verdient bij elke stap TrustCoins en wordt uitbetaald aan uw bank."
+        },
+        {
+          "question": "Is FreeTrust alleen voor bepaalde gebruikers?",
+          "answer": "FreeTrust is gebouwd voor de gemeenschapseconomie en staat open voor leden over de hele wereld. We ondersteunen meerdere valuta's, internationale Stripe-uitbetalingen en hebben leden in het VK, de EU en daarbuiten."
+        },
+        {
+          "question": "Waarin verschilt FreeTrust van andere marktplaatsen?",
+          "answer": "In tegenstelling tot platforms die vergoedingen vragen, beloont FreeTrust de bijdrage rechtstreeks. Elke actie levert TrustCoins op, 1% van elke transactie gaat naar het Duurzaamheidsfonds voor projecten met echte impact op de gemeenschap, en reputatie (geen advertenties) bepaalt de zichtbaarheid. Je bouwt aan een gedeelde economie en betaalt geen huur aan een marktplaats."
+        },
+        {
+          "question": "Wat is het Duurzaamheidsfonds?",
+          "answer": "Het Duurzaamheidsfonds is een door de gemeenschap bestuurde pool die 1% van elke transactie op FreeTrust ontvangt, plus directe ₮-donaties. De leden stemmen elk kwartaal over welke duurzaamheidsprojecten in de echte wereld ze willen financieren: herbebossing, schone energie, het opruimen van de oceanen, onderwijs en meer."
+        },
+        {
+          "question": "Hoe maak ik een organisatie aan op FreeTrust?",
+          "answer": "Ga naar /organisaties/nieuw om een ​​organisatiepagina te maken voor uw bedrijf, liefdadigheidsinstelling, gemeenschapsgroep of sociale onderneming. U kunt deze in de directory vermelden, op de feed posten als de organisatie, teamleden uitnodigen en evenementen en vermeldingen uitvoeren onder het merk van de organisatie."
+        },
+        {
+          "question": "Zijn mijn gegevens veilig op FreeTrust?",
+          "answer": "Ja. FreeTrust maakt gebruik van Supabase met beveiliging op rijniveau op elke tafel, geauthenticeerde Stripe-betalingen, AVG-conforme gegevensverwerking en geen ad-tech trackers. Uw persoonlijke gegevens worden nooit verkocht en u kunt deze op elk gewenst moment exporteren of verwijderen via /settings."
+        },
+        {
+          "question": "Hoe krijg ik ondersteuning?",
+          "answer": "Elke pagina heeft een ingebouwd ondersteuningspad via /help, of u kunt rechtstreeks vanuit /messages een bericht sturen naar het FreeTrust-team. Voor account- en betalingsproblemen gaat u eerst naar /settings voor zelfbedieningsopties. De meeste vragen worden daar binnen een minuut beantwoord."
+        }
+      ]
+    },
+    "footer": {
+      "tagline": "Kopen. Verkopen. Verbinden. Vertrouwen. Een veiligere gemeenschapseconomie, mogelijk gemaakt door een geverifieerde reputatie.",
+      "legal": "Legaal",
+      "joinFree": "Doe gratis mee",
+      "links": [
+        [
+          "Diensten",
+          "/services"
+        ],
+        [
+          "Producten",
+          "/products"
+        ],
+        [
+          "Evenementen",
+          "/events"
+        ],
+        [
+          "Artikelen",
+          "/articles"
+        ],
+        [
+          "Invloed",
+          "/impact"
+        ],
+        [
+          "Vertrouwen en veiligheid",
+          "/safety"
+        ],
+        [
+          "Privacybeleid",
+          "/privacy"
+        ],
+        [
+          "Servicevoorwaarden",
+          "/terms"
+        ]
+      ],
+      "vision": {
+        "label": "Visie",
+        "problemTitle": "Het probleem dat we bestaan ​​om op te lossen",
+        "visionTitle": "Onze visie",
+        "problem": [
+          "Het internet kent een vertrouwenscrisis en het kost mensen alles.",
+          "Volgens de Global Anti Scam Alliance bedroegen de wereldwijde verliezen op het gebied van online oplichting in 2023 meer dan 1,026 biljoen dollar. Eén op de vier mensen wereldwijd was het doelwit van een online fraudepoging. Alleen al in Ierland stegen de gerapporteerde verliezen door fraude in 2024 tot boven de € 85 miljoen. Achter elke statistiek staat een persoon, vaak een eigenaar van een klein bedrijf, een freelancer, een eerste koper, die vertrouwen schonk en verbrand werd.",
+          "De digitale economie beloofde toegang. Wat het voor te veel mensen opleverde, was bekendheid.",
+          "Platforms die werden gebouwd om mensen met elkaar te verbinden, werden vectoren voor uitbuiting. Valse recensies, fantoomverkopers, nabootsing van identiteit, spookcontractanten, de informatie-asymmetrie die Nobel-econoom George Akerlof beschreef in zijn historische ‘Market for Lemons’-theorie is uitgezaaid naar alle uithoeken van de online handel. Als kopers het betrouwbare niet van het frauduleuze kunnen onderscheiden, betalen ze een premie uit angst en worden eerlijke verkopers verdreven.",
+          "FreeTrust werd uit deze wond geboren. Onze oprichter werd opgelicht door een ontwikkelaar die verdween met de broncode van een heel platform. Dat verlies werd een vraag: hoe zou de handel eruit zien als vertrouwen niet een risico was dat je alleen moest dragen?"
+        ],
+        "vision": [
+          "Een wereld waarin elke uitwisseling van vaardigheden, goederen, tijd en waarde gebaseerd is op geverifieerd vertrouwen, en waar de economie degenen beloont die daaraan bijdragen.",
+          "Wij geloven dat vertrouwen geen luxe eigenschap is. Het is de basis waarop elke markt moet worden gebouwd. Wij stellen ons een toekomst voor waarin de onafhankelijke werknemer, de lokale maker, de sociale onderneming en de bewuste consument de centrale spelers zijn in een circulaire economie, en niet het margegeval dat grotere platforms tolereren.",
+          "FreeTrust bouwt aan die toekomst: een geverifieerde gemeenschapsmarktplaats waar reputatie wordt verdiend, identiteit wordt bevestigd en waarde terugvloeit naar de mensen die deze creëren."
+        ]
+      },
+      "mission": {
+        "label": "Missie",
+        "missionTitle": "Onze missie",
+        "mission": "De missie van FreeTrust is om de online handel opnieuw op te bouwen rond geverifieerde identiteit, gemeenschapsverantwoordelijkheid en een circulaire economie waarin impact, en niet alleen winst, centraal staat.",
+        "commitmentsIntro": "Dit doen wij via vier engagementen:",
+        "commitments": [
+          {
+            "title": "Standaard vertrouwen",
+            "body": "Elk FreeTrust-lid is identiteitsverifieerd. Elke transactie wordt ondersteund door een reputatiesysteem dat is gebaseerd op echte geschiedenis, en niet op anonieme beoordelingen. We verminderen niet alleen fraude, we maken vertrouwen tot de basisverwachting en niet tot de uitzondering."
+          },
+          {
+            "title": "Een gemeenschapseconomie gebouwd voor mensen",
+            "body": "FreeTrust is geen platform dat waarde uit zijn leden haalt. Het is een gemeenschap die het samen genereert. Via onze interne valuta Trust Coin (₮) kunnen leden waarde verdienen, uitgeven en laten circuleren binnen het ecosysteem. De oprichtende leden, met een maximum van duizend, hebben levenslang preferentiële voorwaarden, omdat de mensen die iets bouwen het verdienen ervan te profiteren."
+          },
+          {
+            "title": "Impact als eersteklascategorie",
+            "body": "Handel hoeft niet neutraal te zijn. Elke transactie op FreeTrust heeft het potentieel om meer te doen dan alleen waarde uit te wisselen; het kan impact financieren. Ons Impact Fund kanaliseert bijdragen naar oorzaken die de ongelijkheid bij de wortels aanpakken. Wanneer u koopt, verkoopt of verdient op FreeTrust, neemt u deel aan een economie die weet waar deze voor staat."
+          },
+          {
+            "title": "Een circulaire economie, geen extractieve economie",
+            "body": "De dominante platforms van de afgelopen twintig jaar zijn gebouwd op een eenvoudig model: het aanbod verzamelen, de vraag opvangen, vergoedingen extraheren, herhaling. FreeTrust is gebouwd op een ander model. Waarde die binnen de gemeenschap wordt gegenereerd, blijft binnen de gemeenschap. Gewonnen vertrouwen is vertrouwen beloond. De economie die we opbouwen is geen trechter, het is een cyclus."
+          }
+        ],
+        "audienceTitle": "Voor wie zijn wij",
+        "audience": "FreeTrust is voor de onafhankelijke werknemer die tegen betaling werd geghost. De koper die na betaling niets heeft ontvangen. Het kleine bedrijf dat een vijfsterrenservice opbouwde, maar dit niet aan de volgende klant kon bewijzen. De sociale onderneming die geen markt kon vinden die haar waarden deelde. Wij zijn voor de mensen die het internet had moeten bevrijden en maar al te vaak faalde.",
+        "worldTitle": "De wereld die we aan het bouwen zijn",
+        "world": "Wanneer vertrouwen infrastructuur wordt, verandert de handel. Geverifieerde verkopers winnen op basis van verdienste. Kopers nemen beslissingen met vertrouwen. Lokale en onafhankelijke bedrijven concurreren op een gelijk veld. Impact wordt gemeten, niet alleen genoemd. En de circulaire stroom van waarde, vaardigheden, goederen, tijd, valuta en reputatie versterkt de gemeenschap waar ze doorheen beweegt, in plaats van deze uit te putten.",
+        "closingStrong": "Dit is geen idealisme. Dit is de architectuur van een betere markt.",
+        "closing": "FreeTrust. Gebouwd op vertrouwen. Gebouwd voor mensen."
+      },
+      "copyright": "© 2026 FreeTrust · Betalingen blijven binnen FreeTrust · Op vertrouwen gebaseerde handel voor een veiliger internet."
+    }
   },
   "marketplace": {
     "title": "Marketplace",

@@ -186,7 +186,635 @@
     "members": "members",
     "listings": "listings",
     "communities": "communities",
-    "liveStats": "Live stats — refreshes every 60s"
+    "liveStats": "Live stats — refreshes every 60s",
+    "stats": {
+      "membersGrowing": "Miembros y creciendo",
+      "thisWeek": "+{count} esta semana",
+      "joinFree": "Únete gratis",
+      "servicesAvailable": "Servicios disponibles",
+      "beFirst": "¡Sé el primero!",
+      "browseNow": "Navegar ahora",
+      "productsListed": "Productos listados",
+      "listYours": "Lista el tuyo",
+      "shopNow": "Compra ahora",
+      "totalIssued": "Total ₮ emitido",
+      "sinceLaunch": "Desde el lanzamiento",
+      "live": "Vivir",
+      "ticker": {
+        "someone": "Alguien",
+        "join": "{name} acaba de unirse a FreeTrust",
+        "joinWithLocation": "{name} de {location} acaba de unirse a FreeTrust",
+        "trust": "₮{amount} Confianza ganada por un miembro",
+        "article": "Nuevo artículo publicado: \"{title}\""
+      }
+    },
+    "trustEconomy": {
+      "label": "₮ Economía Confiable",
+      "inCirculation": "₮ en circulación",
+      "currentBalances": "Saldos actuales mantenidos",
+      "issuedSinceLaunch": "₮ emitido desde el lanzamiento",
+      "totalEarned": "Total jamás ganado",
+      "membersHolding": "Miembros titulares de ₮",
+      "activeHolders": "Titulares activos de fideicomisos"
+    },
+    "premiumHero": {
+      "eyebrow": "🌍 La economía de la confianza ya está aquí",
+      "titleLead": "Comprar. Vender. Conectar.",
+      "titleAccent": "Confianza.",
+      "subtitle": "FreeTrust es el mercado comunitario donde la confianza verificada genera mejores ofertas, conexiones reales y una economía más justa.",
+      "primaryCta": "Comience gratis",
+      "secondaryCta": "Vea cómo funciona",
+      "membersBadge": "{count} Miembros Fundadores",
+      "welcomeBonus": "₮200 Bono de Bienvenida",
+      "noSubscription": "0% de tarifa de suscripción"
+    },
+    "floatingBadges": {
+      "balance": "₮Q{amount} bola",
+      "trustCoinReady": "Trust Coin listo",
+      "verifiedMember": "✓ Miembro verificado",
+      "identityProtected": "Identidad protegida",
+      "trustScore": "4.9★ Trust Score",
+      "portableReputation": "reputación portátil"
+    },
+    "alt": {
+      "walletScreenshot": "Captura de pantalla móvil real de FreeTrust Trust Wallet",
+      "productScreenshot": "Captura de pantalla móvil del mercado de productos FreeTrust real",
+      "genericScreenshot": "Captura de pantalla móvil FreeTrust {name} real"
+    },
+    "features": {
+      "eyebrow": "Características de la plataforma",
+      "title": "Todo lo que necesita para comerciar, pagar, contratar y conectarse con confianza.",
+      "description": "FreeTrust reúne el comercio del mercado, los pagos, la reputación y la comunidad en una plataforma de confianza.",
+      "cards": [
+        {
+          "icon": "💳",
+          "title": "Pagos fiduciarios",
+          "desc": "Transfiera dinero de igual a igual con verificación de confianza incorporada. Divida facturas, pague servicios, envíelos a familiares, todo protegido por la capa de reputación de FreeTrust."
+        },
+        {
+          "icon": "🛒",
+          "title": "Mercado de productos",
+          "desc": "Compra y vende productos físicos y digitales con vendedores verificados. Los Trust Score reales reemplazan las reseñas anónimas. Compre con confianza."
+        },
+        {
+          "icon": "💼",
+          "title": "Mercado de servicios",
+          "desc": "Contrate autónomos verificados y proveedores de servicios locales. Desde el diseño hasta la construcción: cada proveedor cuenta con la confianza de la comunidad."
+        },
+        {
+          "icon": "🌐",
+          "title": "Plataforma comunitaria",
+          "desc": "Construya su red de confianza. Conéctese con personas que comparten sus valores, colaboran en proyectos y crecen juntos."
+        },
+        {
+          "icon": "📰",
+          "title": "suministro de noticias",
+          "desc": "Un feed creativo, productivo, positivo e inclusivo. Comparta ideas, muestre su trabajo, celebre los logros: sin algoritmos tóxicos ni anuncios, solo comunidad."
+        },
+        {
+          "icon": "₮",
+          "title": "Trust Coin",
+          "desc": "Gane Trust Coin (₮) por cada transacción, revisión y contribución verificada. Gastelo para reducir tarifas, aumentar los listados y desbloquear los beneficios de la plataforma."
+        }
+      ]
+    },
+    "testimonials": {
+      "aria": "FreeTrust historias de miembros",
+      "eyebrow": "Historias de miembros",
+      "title": "Por qué la gente elige FreeTrust",
+      "description": "Señales de confianza reales, transacciones más seguras y una economía comunitaria que devuelve valor.",
+      "showQuote": "Mostrar cotización {label}",
+      "items": [
+        {
+          "icon": "✅",
+          "label": "Trust Score",
+          "quote": "Ver crecer mi Trust Score es realmente motivador. Significa algo aquí."
+        },
+        {
+          "icon": "🛡️",
+          "label": "Comercio verificado",
+          "quote": "Me registré en minutos y me sentí seguro de inmediato. Así es como debería sentirse el comercio online."
+        },
+        {
+          "icon": "🛒",
+          "label": "Productos",
+          "quote": "Enumeré mis soluciones y vendí tres juegos en una semana. No hay pérdida de tiempo: todos están verificados."
+        },
+        {
+          "icon": "🛠️",
+          "label": "Servicios",
+          "quote": "Los clientes llegan sabiendo que estoy verificado. Nos saltamos la parte incómoda y nos ponemos manos a la obra."
+        },
+        {
+          "icon": "🏠",
+          "label": "Alquileres",
+          "quote": "Reemplazó las grandes plataformas por completo. Tarifas más bajas y realmente sé quién se hospeda en mi propiedad."
+        },
+        {
+          "icon": "🪙",
+          "label": "Trust Coin (₮)",
+          "quote": "Obtuve Trust Coin en mis primeras ventas y los usé para desbloquear un listado premium. Sistema inteligente."
+        },
+        {
+          "icon": "💬",
+          "label": "Mensajería",
+          "quote": "Uso compartido de archivos limpio y privado integrado. No es necesario intercambiar números con extraños."
+        },
+        {
+          "icon": "⭐",
+          "label": "Reseñas y reputación",
+          "quote": "Las revisiones bidireccionales significan que ambas partes son responsables. Eso es exactamente lo que le faltaba a Internet."
+        },
+        {
+          "icon": "🤝",
+          "label": "Fondo de Impacto",
+          "quote": "Elijo activamente FreeTrust porque cada transacción contribuye a algo más grande."
+        },
+        {
+          "icon": "🏆",
+          "label": "Miembro fundador",
+          "quote": "Tarifas reducidas de por vida y desde el principio. La mejor decisión que tomé este año."
+        }
+      ]
+    },
+    "impact": {
+      "eyebrow": "Economía de impacto",
+      "title": "Construido para generar impacto, no solo ganancias",
+      "description": "Cada transacción en FreeTrust contribuye a una economía más justa y transparente.",
+      "stats": {
+        "foundingMembers": "Miembros fundadores",
+        "welcomeBonus": "Bono de bienvenida",
+        "subscriptionFees": "Tarifas de suscripción",
+        "maxPlatformFee": "Tarifa máxima de plataforma"
+      },
+      "body": "El Fondo de Impacto FreeTrust dirige una parte de cada tarifa de transacción hacia causas comunitarias verificadas, seleccionadas de forma transparente por los miembros."
+    },
+    "showcase": {
+      "open": "Abrir {name} →",
+      "rows": [
+        {
+          "srcKey": "products",
+          "eyebrow": "Mercado",
+          "title": "Compre de forma más inteligente. Vender con confianza.",
+          "text": "Descubra los vendedores FreeTrust y los hallazgos de minoristas externos en una experiencia de producto confiable.",
+          "points": [
+            "Insignias Trust Score en cada tarjeta de vendedor.",
+            "Borrar listados de miembros y ofertas de minoristas.",
+            "Gane Trust Coin a través de la actividad del mercado verificada."
+          ],
+          "href": "/products"
+        },
+        {
+          "srcKey": "wallet",
+          "eyebrow": "Monedero de confianza",
+          "title": "Enviar valor. Gana confianza.",
+          "text": "Su saldo y reputación Trust Coin conviven con el comercio que realiza todos los días.",
+          "points": [
+            "Cifras de Live Trust Economy extraídas de Supabase.",
+            "Saldo TrustCoin visible en la aplicación.",
+            "Recompensas de reputación por contribuciones útiles."
+          ],
+          "href": "/wallet",
+          "alt": true
+        },
+        {
+          "srcKey": "services",
+          "eyebrow": "Servicios",
+          "title": "Contrata proveedores verificados.",
+          "text": "Las tarjetas de servicio muestran proveedores reales, calificaciones, progreso y señales de confianza antes de reservar.",
+          "points": [
+            "Proveedores de servicios locales y remotos verificados.",
+            "Confíe en las señales de progreso y calificación en cada tarjeta.",
+            "Creado para autónomos, fundadores y trabajo comunitario."
+          ],
+          "href": "/services"
+        },
+        {
+          "srcKey": "community",
+          "eyebrow": "Comunidad",
+          "title": "Tu red de confianza.",
+          "text": "Una capa de conexión y alimentación positiva diseñada para la colaboración, no para bucles de participación tóxicos.",
+          "points": [
+            "Perfiles de miembros verificados y momentos comunitarios.",
+            "Actualizaciones creativas, productivas e inclusivas.",
+            "Efectos de red que recompensan las contribuciones útiles."
+          ],
+          "href": "/feed",
+          "alt": true
+        }
+      ]
+    },
+    "liveMarketplace": {
+      "eyebrow": "Mercado en vivo",
+      "title": "Servicios, productos, empleos y eventos nuevos: todo en movimiento.",
+      "description": "Los datos reales FreeTrust permanecen en la página de destino, actualizados con tarjetas oscuras premium, indicadores de confianza verde azulado y descubrimiento horizontal compatible con dispositivos móviles.",
+      "tabs": {
+        "services": "🛠 Servicios",
+        "products": "🛒 Productos",
+        "jobs": "💼 Empleos",
+        "events": "📅 Eventos"
+      },
+      "cta": {
+        "open": "Abrir →",
+        "view": "Ver →",
+        "viewEvent": "Ver evento →"
+      },
+      "badges": {
+        "trustScore": "{score}★ Trust Score",
+        "verifiedService": "Servicio verificado",
+        "verifiedListing": "Listado verificado"
+      },
+      "status": {
+        "showing": "Mostrando vistas previas del mercado en vivo cuando estén disponibles",
+        "loaded": "· Tarjetas en vivo {count} cargadas"
+      },
+      "fallbacks": {
+        "remote": "Remoto",
+        "onSite": "In situ",
+        "online": "En línea",
+        "inPerson": "En persona",
+        "applyFree": "Aplicar gratis",
+        "openRole": "Rol abierto",
+        "company": "Compañía",
+        "event": "Evento",
+        "services": [
+          {
+            "title": "Reparaciones locales del hogar.",
+            "subtitle": "Proveedores verificados",
+            "price": "Reserva gratis",
+            "badge": "Servicios locales"
+          },
+          {
+            "title": "Diseño y ayuda creativa",
+            "subtitle": "Autónomos de confianza",
+            "price": "Desde 25€",
+            "badge": "Listo para control remoto"
+          },
+          {
+            "title": "Apoyo empresarial",
+            "subtitle": "Proveedores miembros",
+            "price": "Obtener cotizaciones",
+            "badge": "Confianza protegida"
+          },
+          {
+            "title": "Entrenamiento y tutoría",
+            "subtitle": "Expertos comunitarios",
+            "price": "Navegar",
+            "badge": "₮ elegible"
+          },
+          {
+            "title": "Eventos y hospitalidad",
+            "subtitle": "Proveedores locales reales",
+            "price": "encontrar ayuda",
+            "badge": "Anuncios verificados"
+          },
+          {
+            "title": "Soporte técnico",
+            "subtitle": "En línea y local",
+            "price": "Contrata ahora",
+            "badge": "Proveedores de confianza"
+          }
+        ],
+        "products": [
+          {
+            "title": "Kit de estudio para creadores",
+            "subtitle": "Vendedor verificado",
+            "price": "€84.00",
+            "badge": "4.9★ Trust Score"
+          },
+          {
+            "title": "Paquete de hogar sostenible",
+            "subtitle": "Búsqueda en el mercado",
+            "price": "€42.00",
+            "badge": "Listado verificado"
+          },
+          {
+            "title": "Conceptos básicos del trabajo remoto",
+            "subtitle": "Vendedor de confianza",
+            "price": "€119.00",
+            "badge": "Confianza protegida"
+          },
+          {
+            "title": "Paquete de lanzamiento creativo",
+            "subtitle": "Listado de miembros",
+            "price": "€67.00",
+            "badge": "₮ elegible"
+          },
+          {
+            "title": "Hallazgos de moda circular",
+            "subtitle": "Mercado comunitario",
+            "price": "€35.00",
+            "badge": "Vendedor verificado"
+          },
+          {
+            "title": "Paquete de equipo para eventos",
+            "subtitle": "Listado de confianza",
+            "price": "€96.00",
+            "badge": "Confianza protegida"
+          },
+          {
+            "title": "Configuración de oficina ecológica",
+            "subtitle": "Búsqueda en el mercado",
+            "price": "€58.00",
+            "badge": "₮ elegible"
+          },
+          {
+            "title": "Productos de fabricación local",
+            "subtitle": "Listado de miembros",
+            "price": "€24.00",
+            "badge": "Listado verificado"
+          }
+        ],
+        "jobs": [
+          {
+            "id": "jobs",
+            "title": "Proyecto de diseño local",
+            "company_name": "Empresa de confianza",
+            "location": "Compatible con control remoto",
+            "salary": "Aplicar gratis",
+            "job_type": "Proyecto"
+          },
+          {
+            "id": "jobs-2",
+            "title": "Líder de crecimiento comunitario",
+            "company_name": "Miembro FreeTrust",
+            "location": "Híbrido",
+            "salary": "Rol de confianza",
+            "job_type": "Tiempo parcial"
+          },
+          {
+            "id": "jobs-3",
+            "title": "Operaciones del mercado",
+            "company_name": "Negocio verificado",
+            "location": "In situ",
+            "salary": "₮ elegible",
+            "job_type": "Contrato"
+          }
+        ],
+        "events": [
+          {
+            "id": "events",
+            "title": "Reunión comunitaria",
+            "category": "Tecnología",
+            "location": "En línea",
+            "catColor": "#00c2cb"
+          },
+          {
+            "id": "events-2",
+            "title": "Círculo de confianza del fundador",
+            "category": "Puesta en marcha",
+            "location": "En persona",
+            "catColor": "#38bdf8"
+          },
+          {
+            "id": "events-3",
+            "title": "Taller de mercado",
+            "category": "Negocio",
+            "location": "En línea",
+            "catColor": "#a78bfa"
+          }
+        ]
+      }
+    },
+    "trustScore": {
+      "eyebrow": "Capa de reputación",
+      "title": "¿Qué es un Trust Score?",
+      "description": "Trust Score de FreeTrust es su reputación portátil, creada a partir de transacciones verificadas, reseñas de la comunidad y contribuciones de la plataforma.",
+      "factors": [
+        "Identidad verificada",
+        "47 transacciones completadas",
+        "4.9★ Revisión promedio",
+        "₮{balance} Trust Coin Saldo",
+        "Miembro de 2 años"
+      ],
+      "cta": "Construye tu Trust Score →"
+    },
+    "founding": {
+      "under100": "Menos de 100",
+      "title": "Únase a los primeros 1000 miembros fundadores",
+      "description": "Obtenga tarifas reducidas de por vida, un bono de bienvenida ₮200 Trust Coin y una insignia de miembro fundador en su perfil. Sólo quedan plazas {spots}.",
+      "cta": "Reclama tu lugar como miembro fundador"
+    },
+    "howItWorks": {
+      "eyebrow": "como funciona",
+      "title": "Cuatro pasos para unirse a la economía de la confianza",
+      "description": "Sin suscripciones, sin guardianes. Simplemente regístrese, contribuya, genere reputación y crezca.",
+      "steps": [
+        [
+          "🪪",
+          "Regístrate gratis",
+          "Cree su cuenta y obtenga ₮200 TrustCoins al registrarse."
+        ],
+        [
+          "📦",
+          "Listar o descubrir",
+          "Publicar un servicio, producto, trabajo, evento o comunidad."
+        ],
+        [
+          "🤝",
+          "Realice transacciones de forma segura",
+          "Utilice perfiles verificados, Trust Score y pagos en la plataforma."
+        ],
+        [
+          "🌱",
+          "Gana e impacta",
+          "Gane ₮, reduzca tarifas y apoye causas comunitarias."
+        ]
+      ]
+    },
+    "featuredServices": {
+      "eyebrow": "Mercado de servicios",
+      "title": "Contrata proveedores FreeTrust de confianza",
+      "description": "Explore servicios reales de miembros verificados: creación web, marketing, estrategia, diseño, investigación y soporte práctico, todo respaldado por señales de reputación."
+    },
+    "earnings": {
+      "eyebrow": "Tus ganancias",
+      "title": "Vea lo que ganaría en FreeTrust",
+      "description": "Compuesto TrustCoins: cuanto más participe, menos pagará en tarifas."
+    },
+    "roi": {
+      "sellerTab": "🏪 Soy vendedor",
+      "buyerTab": "🛒 Soy comprador",
+      "activity": "Tu actividad",
+      "earnings": "Tus ganancias",
+      "listingsPerMonth": "Listados por mes",
+      "avgOrderValue": "Valor medio del pedido",
+      "ordersPerMonth": "Pedidos por mes",
+      "deliverOnTime": "¿Entregar a tiempo?",
+      "onTimeTip": "Las entregas a tiempo ganan",
+      "lateTip": "Las entregas tardías ganan",
+      "perOrder": "por pedido",
+      "purchasesPerMonth": "Compras por mes",
+      "reviewsPerMonth": "Reseñas dejadas por mes",
+      "reviewTipLead": "Las reseñas de 5 estrellas ganan",
+      "reviewTipTail": "bonificación (frente a +30₮ para revisiones estándar)",
+      "monthlyRevenue": "💶 Ingresos mensuales",
+      "annualRevenue": "Ingresos anuales",
+      "gross": "bruto",
+      "feeDeducted": "{fee}% de tarifa deducida",
+      "monthlyTrustCoins": "Mensual TrustCoins",
+      "annual": "Anual",
+      "feeReduction": "Reducción de tarifas",
+      "offPlatformFees": "tarifas fuera de la plataforma",
+      "unlockSavings": "Gana 1,000₮ para desbloquear ahorros",
+      "extraKept": "extra mantenido por año",
+      "cta": "Comience a ganar - Únase gratis →",
+      "perListing": "por listado",
+      "onTimeDelivery": "entrega a tiempo",
+      "perReview": "por reseña",
+      "liveTracking": "seguimiento en vivo",
+      "perPurchase": "por compra",
+      "fiveStarReview": "reseña de 5 estrellas",
+      "signupBonus": "bono de registro",
+      "tiers": {
+        "platinum": "Platino",
+        "gold": "Oro",
+        "silver": "Plata",
+        "member": "Miembro"
+      }
+    },
+    "faq": {
+      "eyebrow": "Preguntas frecuentes",
+      "title": "Preguntas, respondidas",
+      "description": "Todo lo que necesitas saber sobre FreeTrust antes de unirte.",
+      "items": [
+        {
+          "question": "¿Qué es FreeTrust?",
+          "answer": "FreeTrust es el mercado de economía comunitaria: una plataforma donde los miembros ganan TrustCoins (₮) por cada contribución que hacen y las gastan para crecer. Puede enumerar servicios, vender productos, publicar trabajos, organizar eventos, unirse a comunidades, publicar artículos y apoyar proyectos de sostenibilidad, todo en un solo lugar."
+        },
+        {
+          "question": "¿Es gratuito unirse a FreeTrust?",
+          "answer": "Sí, unirse a FreeTrust es completamente gratuito. Los nuevos miembros reciben ₮200 en TrustCoins al registrarse y no hay suscripción ni tarifa mensual. Solo cobramos una pequeña tarifa por las transacciones completadas."
+        },
+        {
+          "question": "¿Qué son TrustCoins (₮)?",
+          "answer": "TrustCoins (₮) es la moneda de reputación nativa de FreeTrust. Cada contribución a la comunidad (publicar un servicio, completar un pedido, publicar un artículo, dejar una reseña) le otorga ₮. Los saldos ₮ más altos desbloquean tarifas más bajas, mejor visibilidad y acceso a los beneficios de la plataforma."
+        },
+        {
+          "question": "¿Cómo gano TrustCoins?",
+          "answer": "Usted gana ₮ por cada acción significativa: ₮200 al registrarse, ₮50 por crear una lista, ₮75 por publicar un artículo, ₮100 por completar un pedido, ₮100 por crear una comunidad, ₮10 por dejar una reseña y más. El calendario de ganancias completo está en su billetera."
+        },
+        {
+          "question": "¿Puedo retirar dinero real de FreeTrust?",
+          "answer": "Sí, los vendedores conectan una cuenta Stripe a través de /seller/connect y pueden retirar los ingresos en euros de cualquier venta completada directamente a su banco. Los TrustCoins en sí no son retirables, son una moneda de reputación utilizada dentro de la plataforma."
+        },
+        {
+          "question": "¿Cómo funciona el mercado?",
+          "answer": "Incluya un producto, servicio o trabajo de /servicios/nuevo o /productos/nuevo, establezca su precio en EUR, GBP o USD y los compradores pagarán de forma segura a través de Stripe. Los pedidos se rastrean de principio a fin con mensajes, revisiones y disputas integradas. Usted gana TrustCoins en cada paso y recibe pagos a su banco."
+        },
+        {
+          "question": "¿FreeTrust es solo para ciertos usuarios?",
+          "answer": "FreeTrust está diseñado para la economía comunitaria y está abierto a miembros de todo el mundo. Admitimos múltiples monedas, pagos internacionales Stripe y tenemos miembros en el Reino Unido, la UE y más allá."
+        },
+        {
+          "question": "¿En qué se diferencia FreeTrust de otros mercados?",
+          "answer": "A diferencia de las plataformas de extracción de tarifas, FreeTrust recompensa la contribución directamente. Cada acción genera TrustCoins, el 1% de cada transacción se destina al Fondo de Sostenibilidad para proyectos de impacto real en la comunidad y la reputación (no los anuncios) determina la visibilidad. Estás construyendo una economía compartida, no pagando alquiler a un mercado."
+        },
+        {
+          "question": "¿Qué es el Fondo de Sostenibilidad?",
+          "answer": "El Fondo de Sostenibilidad es un fondo gobernado por la comunidad que recibe el 1% de cada transacción en FreeTrust más donaciones directas de ₮. Los miembros votan trimestralmente qué proyectos de sostenibilidad del mundo real financiar: reforestación, energía limpia, limpieza de océanos, educación y más."
+        },
+        {
+          "question": "¿Cómo creo una organización en FreeTrust?",
+          "answer": "Dirígete a /organizaciones/nuevo para crear una página de organización para tu empresa, organización benéfica, grupo comunitario o empresa social. Puede incluirlo en el directorio, publicar en el feed como la organización, invitar a miembros del equipo y realizar eventos y listados bajo la marca de la organización."
+        },
+        {
+          "question": "¿Están mis datos seguros en FreeTrust?",
+          "answer": "Sí. FreeTrust utiliza Supabase con seguridad a nivel de fila en cada tabla, pagos Stripe autenticados, manejo de datos compatible con GDPR y sin rastreadores de tecnología publicitaria. Tus datos personales nunca se venden y puedes exportarlos o eliminarlos en cualquier momento desde /settings."
+        },
+        {
+          "question": "¿Cómo obtengo soporte?",
+          "answer": "Cada página tiene una ruta de soporte incorporada a través de /help, o puede enviar un mensaje al equipo FreeTrust directamente desde /messages. Para problemas con la cuenta y el pago, diríjase primero a /settings para ver las opciones de autoservicio; la mayoría de las preguntas se responden allí en menos de un minuto."
+        }
+      ]
+    },
+    "footer": {
+      "tagline": "Comprar. Vender. Conectar. Confianza. Una economía comunitaria más segura impulsada por una reputación verificada.",
+      "legal": "Legal",
+      "joinFree": "Únete gratis",
+      "links": [
+        [
+          "Servicios",
+          "/services"
+        ],
+        [
+          "Productos",
+          "/products"
+        ],
+        [
+          "Eventos",
+          "/events"
+        ],
+        [
+          "Artículos",
+          "/articles"
+        ],
+        [
+          "Impacto",
+          "/impact"
+        ],
+        [
+          "Confianza y seguridad",
+          "/safety"
+        ],
+        [
+          "política de privacidad",
+          "/privacy"
+        ],
+        [
+          "Términos de servicio",
+          "/terms"
+        ]
+      ],
+      "vision": {
+        "label": "Visión",
+        "problemTitle": "El problema que existimos para resolver",
+        "visionTitle": "Nuestra visión",
+        "problem": [
+          "Internet tiene una crisis de confianza y le está costando todo a la gente.",
+          "Las pérdidas mundiales por estafas en línea superaron los 1,026 billones de dólares en 2023, según la Global Anti Scam Alliance. Una de cada cuatro personas en todo el mundo fue objeto de un intento de fraude en línea. Solo en Irlanda, las pérdidas por fraude reportadas superaron los 85 millones de euros en 2024. Detrás de cada estadística hay una persona, a menudo propietario de una pequeña empresa, un profesional independiente, un comprador por primera vez, que brindó confianza y fue quemado.",
+          "La economía digital prometió acceso. Lo que proporcionó, para muchos, fue exposición.",
+          "Las plataformas que se construyeron para conectar a las personas se convirtieron en vectores de explotación. Reseñas falsas, vendedores fantasma, estafas de suplantación de identidad, contratistas fantasma, la asimetría de información que el economista Nobel George Akerlof describió en su histórica teoría del “Mercado de limones” se ha metastatizado en todos los rincones del comercio en línea. Cuando los compradores no pueden distinguir lo confiable de lo fraudulento, pagan una prima por miedo y los vendedores honestos son expulsados.",
+          "FreeTrust nació de esta herida. Nuestro fundador fue defraudado por un desarrollador que desapareció con el código fuente de toda una plataforma. Esa pérdida se convirtió en una pregunta: ¿cómo sería el comercio si la confianza no fuera un riesgo que uno tuviera que asumir solo?"
+        ],
+        "vision": [
+          "Un mundo donde cada intercambio de habilidades, bienes, tiempo y valor se base en una confianza verificada, y donde la economía recompense a quienes contribuyen a ella.",
+          "Creemos que la confianza no es un lujo. Es la base sobre la que debe construirse todo mercado. Visualizamos un futuro en el que el trabajador independiente, el fabricante local, la empresa social y el consumidor consciente sean los actores centrales de una economía circular, no el caso marginal que toleran las plataformas más grandes.",
+          "FreeTrust está construyendo ese futuro: un mercado comunitario verificado donde se gana la reputación, se confirma la identidad y el valor regresa a las personas que lo crean."
+        ]
+      },
+      "mission": {
+        "label": "Misión",
+        "missionTitle": "Nuestra misión",
+        "mission": "La misión de FreeTrust es reconstruir el comercio en línea en torno a la identidad verificada, la responsabilidad comunitaria y una economía circular que ponga el impacto, no solo las ganancias, en su centro.",
+        "commitmentsIntro": "Lo hacemos a través de cuatro compromisos:",
+        "commitments": [
+          {
+            "title": "Confianza por defecto",
+            "body": "Se verifica la identidad de cada miembro de FreeTrust. Cada transacción está respaldada por un sistema de reputación basado en un historial real, no en calificaciones anónimas. No solo reducimos el fraude, sino que hacemos de la confianza la expectativa básica, no la excepción."
+          },
+          {
+            "title": "Una economía comunitaria construida para las personas",
+            "body": "FreeTrust no es una plataforma que extraiga valor de sus miembros. Es una comunidad que lo genera juntos. A través de nuestra moneda interna Trust Coin (₮), los miembros ganan, gastan y hacen circular valor dentro del ecosistema. Los miembros fundadores, con un límite de 1.000, tienen condiciones preferenciales vitalicias, porque las personas que construyen algo merecen beneficiarse de ello."
+          },
+          {
+            "title": "Impacto como categoría de primera clase",
+            "body": "El comercio no tiene por qué ser neutral. Cada transacción en FreeTrust tiene el potencial de hacer más que valor de intercambio: puede financiar el impacto. Nuestro Fondo de Impacto canaliza contribuciones hacia causas que abordan la desigualdad desde sus raíces. Cuando compra, vende o gana en FreeTrust, participa en una economía que sabe lo que representa."
+          },
+          {
+            "title": "Una economía circular, no extractiva",
+            "body": "Las plataformas dominantes de las últimas dos décadas se construyeron sobre un modelo simple: oferta agregada, captura de la demanda, extracción de tarifas, repetición. FreeTrust se basa en un modelo diferente. El valor generado dentro de la comunidad permanece dentro de la comunidad. La confianza ganada es la confianza recompensada. La economía que estamos construyendo no es un embudo, es un ciclo."
+          }
+        ],
+        "audienceTitle": "¿Para quién somos?",
+        "audience": "FreeTrust es para el trabajador independiente que fue engañado en el pago. El comprador que no recibió nada después de pagar. La pequeña empresa que creó un servicio de cinco estrellas pero no pudo demostrárselo al siguiente cliente. La empresa social que no pudo encontrar un mercado que compartiera sus valores. Estamos a favor de las personas que Internet supuestamente debía liberar y con demasiada frecuencia fracasó.",
+        "worldTitle": "El mundo que estamos construyendo.",
+        "world": "Cuando la confianza se convierte en infraestructura, el comercio cambia. Los vendedores verificados ganan por mérito. Los compradores toman decisiones con confianza. Las empresas locales e independientes compiten en igualdad de condiciones. El impacto se mide, no sólo se menciona. Y el flujo circular de valor, habilidades, bienes, tiempo, moneda y reputación fortalece a la comunidad por la que se mueve, en lugar de agotarla.",
+        "closingStrong": "Esto no es idealismo. Esta es la arquitectura de un mercado mejor.",
+        "closing": "FreeTrust. Construido sobre la confianza. Construido para personas."
+      },
+      "copyright": "© 2026 FreeTrust · Los pagos permanecen dentro de FreeTrust · Comercio basado en la confianza para una Internet más segura."
+    }
   },
   "marketplace": {
     "title": "Marketplace",

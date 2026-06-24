@@ -202,7 +202,14 @@
       "shopNow": "Shop now",
       "totalIssued": "Total ₮ issued",
       "sinceLaunch": "Since launch",
-      "live": "Live"
+      "live": "Live",
+      "ticker": {
+        "someone": "Someone",
+        "join": "{name} just joined FreeTrust",
+        "joinWithLocation": "{name} from {location} just joined FreeTrust",
+        "trust": "₮{amount} Trust earned by a member",
+        "article": "New article published: \"{title}\""
+      }
     },
     "trustEconomy": {
       "label": "₮ Trust Economy",
@@ -242,12 +249,36 @@
       "title": "Everything you need to trade, pay, hire, and connect with confidence.",
       "description": "FreeTrust brings marketplace commerce, payments, reputation, and community into one trust-forward platform.",
       "cards": [
-        {"icon": "💳", "title": "Trust Payments", "desc": "Transfer money peer-to-peer with trust verification built in. Split bills, pay for services, send to family — all protected by FreeTrust’s reputation layer."},
-        {"icon": "🛒", "title": "Product Marketplace", "desc": "Buy and sell physical and digital products with verified sellers. Real Trust Scores replace anonymous reviews. Shop with confidence."},
-        {"icon": "💼", "title": "Service Marketplace", "desc": "Hire verified freelancers and local service providers. From design to construction — every provider is trust-rated by the community."},
-        {"icon": "🌐", "title": "Community Platform", "desc": "Build your trusted network. Connect with people who share your values, collaborate on projects, and grow together."},
-        {"icon": "📰", "title": "Newsfeed", "desc": "A creative, productive, positive, and inclusive feed. Share ideas, showcase work, celebrate wins — no toxic algorithms, no ads, just community."},
-        {"icon": "₮", "title": "Trust Coin", "desc": "Earn Trust Coin (₮) for every verified transaction, review, and contribution. Spend it to reduce fees, boost listings, and unlock platform benefits."}
+        {
+          "icon": "💳",
+          "title": "Trust Payments",
+          "desc": "Transfer money peer-to-peer with trust verification built in. Split bills, pay for services, send to family — all protected by FreeTrust’s reputation layer."
+        },
+        {
+          "icon": "🛒",
+          "title": "Product Marketplace",
+          "desc": "Buy and sell physical and digital products with verified sellers. Real Trust Scores replace anonymous reviews. Shop with confidence."
+        },
+        {
+          "icon": "💼",
+          "title": "Service Marketplace",
+          "desc": "Hire verified freelancers and local service providers. From design to construction — every provider is trust-rated by the community."
+        },
+        {
+          "icon": "🌐",
+          "title": "Community Platform",
+          "desc": "Build your trusted network. Connect with people who share your values, collaborate on projects, and grow together."
+        },
+        {
+          "icon": "📰",
+          "title": "Newsfeed",
+          "desc": "A creative, productive, positive, and inclusive feed. Share ideas, showcase work, celebrate wins — no toxic algorithms, no ads, just community."
+        },
+        {
+          "icon": "₮",
+          "title": "Trust Coin",
+          "desc": "Earn Trust Coin (₮) for every verified transaction, review, and contribution. Spend it to reduce fees, boost listings, and unlock platform benefits."
+        }
       ]
     },
     "testimonials": {
@@ -257,16 +288,56 @@
       "description": "Real trust signals, safer transactions, and a community economy that gives value back.",
       "showQuote": "Show {label} quote",
       "items": [
-        {"icon": "✅", "label": "Trust Score", "quote": "Watching my Trust Score grow is genuinely motivating. It means something here."},
-        {"icon": "🛡️", "label": "Verified commerce", "quote": "Signed up in minutes and felt safe straight away. This is what online commerce should feel like."},
-        {"icon": "🛒", "label": "Products", "quote": "Listed my solutions and sold three sets in a week. No time-wasters — everyone’s verified."},
-        {"icon": "🛠️", "label": "Services", "quote": "Clients arrive already knowing I’m verified. We skip the awkward part and just get to work."},
-        {"icon": "🏠", "label": "Rentals", "quote": "Replaced the big platforms entirely. Lower fees and I actually know who’s staying in my property."},
-        {"icon": "🪙", "label": "Trust Coin (₮)", "quote": "Earned Trust Coins on my first few sales and used them to unlock a premium listing. Clever system."},
-        {"icon": "💬", "label": "Messaging", "quote": "Clean, private, file sharing built in. No need to swap numbers with strangers."},
-        {"icon": "⭐", "label": "Reviews & Reputation", "quote": "Two way reviews mean both sides are accountable. That’s exactly what the internet has been missing."},
-        {"icon": "🤝", "label": "Impact Fund", "quote": "I actively choose FreeTrust because every transaction contributes to something bigger."},
-        {"icon": "🏆", "label": "Founding Member", "quote": "Lifetime reduced fees and in from the start. Best decision I made this year."}
+        {
+          "icon": "✅",
+          "label": "Trust Score",
+          "quote": "Watching my Trust Score grow is genuinely motivating. It means something here."
+        },
+        {
+          "icon": "🛡️",
+          "label": "Verified commerce",
+          "quote": "Signed up in minutes and felt safe straight away. This is what online commerce should feel like."
+        },
+        {
+          "icon": "🛒",
+          "label": "Products",
+          "quote": "Listed my solutions and sold three sets in a week. No time-wasters — everyone’s verified."
+        },
+        {
+          "icon": "🛠️",
+          "label": "Services",
+          "quote": "Clients arrive already knowing I’m verified. We skip the awkward part and just get to work."
+        },
+        {
+          "icon": "🏠",
+          "label": "Rentals",
+          "quote": "Replaced the big platforms entirely. Lower fees and I actually know who’s staying in my property."
+        },
+        {
+          "icon": "🪙",
+          "label": "Trust Coin (₮)",
+          "quote": "Earned Trust Coins on my first few sales and used them to unlock a premium listing. Clever system."
+        },
+        {
+          "icon": "💬",
+          "label": "Messaging",
+          "quote": "Clean, private, file sharing built in. No need to swap numbers with strangers."
+        },
+        {
+          "icon": "⭐",
+          "label": "Reviews & Reputation",
+          "quote": "Two way reviews mean both sides are accountable. That’s exactly what the internet has been missing."
+        },
+        {
+          "icon": "🤝",
+          "label": "Impact Fund",
+          "quote": "I actively choose FreeTrust because every transaction contributes to something bigger."
+        },
+        {
+          "icon": "🏆",
+          "label": "Founding Member",
+          "quote": "Lifetime reduced fees and in from the start. Best decision I made this year."
+        }
       ]
     },
     "impact": {
@@ -284,20 +355,82 @@
     "showcase": {
       "open": "Open {name} →",
       "rows": [
-        {"srcKey": "products", "eyebrow": "Marketplace", "title": "Shop smarter. Sell with trust.", "text": "Discover FreeTrust sellers and external retailer finds in one trusted product experience.", "points": ["Trust Score badges on every seller card.", "Clear member listings and retailer deals.", "Earn Trust Coin through verified marketplace activity."], "href": "/products"},
-        {"srcKey": "wallet", "eyebrow": "Trust Wallet", "title": "Send value. Earn trust.", "text": "Your Trust Coin balance and reputation live beside the commerce you do every day.", "points": ["Live Trust Economy figures pulled from Supabase.", "TrustCoin balance visible in-app.", "Reputation rewards for helpful contributions."], "href": "/wallet", "alt": true},
-        {"srcKey": "services", "eyebrow": "Services", "title": "Hire verified providers.", "text": "Service cards surface real providers, ratings, progress, and trust signals before you book.", "points": ["Verified local and remote service providers.", "Trust progress and rating signals on each card.", "Built for freelancers, founders, and community work."], "href": "/services"},
-        {"srcKey": "community", "eyebrow": "Community", "title": "Your trusted network.", "text": "A positive feed and connection layer designed for collaboration, not toxic engagement loops.", "points": ["Verified member profiles and community moments.", "Creative, productive, inclusive updates.", "Network effects that reward helpful contributions."], "href": "/feed", "alt": true}
+        {
+          "srcKey": "products",
+          "eyebrow": "Marketplace",
+          "title": "Shop smarter. Sell with trust.",
+          "text": "Discover FreeTrust sellers and external retailer finds in one trusted product experience.",
+          "points": [
+            "Trust Score badges on every seller card.",
+            "Clear member listings and retailer deals.",
+            "Earn Trust Coin through verified marketplace activity."
+          ],
+          "href": "/products"
+        },
+        {
+          "srcKey": "wallet",
+          "eyebrow": "Trust Wallet",
+          "title": "Send value. Earn trust.",
+          "text": "Your Trust Coin balance and reputation live beside the commerce you do every day.",
+          "points": [
+            "Live Trust Economy figures pulled from Supabase.",
+            "TrustCoin balance visible in-app.",
+            "Reputation rewards for helpful contributions."
+          ],
+          "href": "/wallet",
+          "alt": true
+        },
+        {
+          "srcKey": "services",
+          "eyebrow": "Services",
+          "title": "Hire verified providers.",
+          "text": "Service cards surface real providers, ratings, progress, and trust signals before you book.",
+          "points": [
+            "Verified local and remote service providers.",
+            "Trust progress and rating signals on each card.",
+            "Built for freelancers, founders, and community work."
+          ],
+          "href": "/services"
+        },
+        {
+          "srcKey": "community",
+          "eyebrow": "Community",
+          "title": "Your trusted network.",
+          "text": "A positive feed and connection layer designed for collaboration, not toxic engagement loops.",
+          "points": [
+            "Verified member profiles and community moments.",
+            "Creative, productive, inclusive updates.",
+            "Network effects that reward helpful contributions."
+          ],
+          "href": "/feed",
+          "alt": true
+        }
       ]
     },
     "liveMarketplace": {
       "eyebrow": "Live marketplace",
       "title": "Fresh services, products, jobs, and events — all in motion.",
       "description": "Real FreeTrust data stays in the landing page, upgraded with premium dark cards, teal trust indicators, and mobile-friendly horizontal discovery.",
-      "tabs": {"services": "🛠 Services", "products": "🛒 Products", "jobs": "💼 Jobs", "events": "📅 Events"},
-      "cta": {"open": "Open →", "view": "View →", "viewEvent": "View event →"},
-      "badges": {"trustScore": "{score}★ Trust Score", "verifiedService": "Verified service", "verifiedListing": "Verified listing"},
-      "status": {"showing": "Showing live marketplace previews where available", "loaded": " · {count} live cards loaded"},
+      "tabs": {
+        "services": "🛠 Services",
+        "products": "🛒 Products",
+        "jobs": "💼 Jobs",
+        "events": "📅 Events"
+      },
+      "cta": {
+        "open": "Open →",
+        "view": "View →",
+        "viewEvent": "View event →"
+      },
+      "badges": {
+        "trustScore": "{score}★ Trust Score",
+        "verifiedService": "Verified service",
+        "verifiedListing": "Verified listing"
+      },
+      "status": {
+        "showing": "Showing live marketplace previews where available",
+        "loaded": " · {count} live cards loaded"
+      },
       "fallbacks": {
         "remote": "Remote",
         "onSite": "On-site",
@@ -308,32 +441,141 @@
         "company": "Company",
         "event": "Event",
         "services": [
-          {"title": "Local home repairs", "subtitle": "Verified providers", "price": "Book free", "badge": "Local services"},
-          {"title": "Design & creative help", "subtitle": "Trusted freelancers", "price": "From €25", "badge": "Remote-ready"},
-          {"title": "Business support", "subtitle": "Member providers", "price": "Get quotes", "badge": "Trust protected"},
-          {"title": "Coaching & mentoring", "subtitle": "Community experts", "price": "Browse", "badge": "₮ eligible"},
-          {"title": "Events & hospitality", "subtitle": "Real local providers", "price": "Find help", "badge": "Verified listings"},
-          {"title": "Tech support", "subtitle": "Online and local", "price": "Hire now", "badge": "Trusted providers"}
+          {
+            "title": "Local home repairs",
+            "subtitle": "Verified providers",
+            "price": "Book free",
+            "badge": "Local services"
+          },
+          {
+            "title": "Design & creative help",
+            "subtitle": "Trusted freelancers",
+            "price": "From €25",
+            "badge": "Remote-ready"
+          },
+          {
+            "title": "Business support",
+            "subtitle": "Member providers",
+            "price": "Get quotes",
+            "badge": "Trust protected"
+          },
+          {
+            "title": "Coaching & mentoring",
+            "subtitle": "Community experts",
+            "price": "Browse",
+            "badge": "₮ eligible"
+          },
+          {
+            "title": "Events & hospitality",
+            "subtitle": "Real local providers",
+            "price": "Find help",
+            "badge": "Verified listings"
+          },
+          {
+            "title": "Tech support",
+            "subtitle": "Online and local",
+            "price": "Hire now",
+            "badge": "Trusted providers"
+          }
         ],
         "products": [
-          {"title": "Creator Studio Kit", "subtitle": "Verified seller", "price": "€84.00", "badge": "4.9★ Trust Score"},
-          {"title": "Sustainable Home Bundle", "subtitle": "Marketplace find", "price": "€42.00", "badge": "Verified listing"},
-          {"title": "Remote Work Essentials", "subtitle": "Trusted seller", "price": "€119.00", "badge": "Trust protected"},
-          {"title": "Creative Launch Pack", "subtitle": "Member listing", "price": "€67.00", "badge": "₮ eligible"},
-          {"title": "Circular fashion finds", "subtitle": "Community marketplace", "price": "€35.00", "badge": "Verified seller"},
-          {"title": "Event gear bundle", "subtitle": "Trusted listing", "price": "€96.00", "badge": "Trust protected"},
-          {"title": "Eco office setup", "subtitle": "Marketplace find", "price": "€58.00", "badge": "₮ eligible"},
-          {"title": "Local maker goods", "subtitle": "Member listing", "price": "€24.00", "badge": "Verified listing"}
+          {
+            "title": "Creator Studio Kit",
+            "subtitle": "Verified seller",
+            "price": "€84.00",
+            "badge": "4.9★ Trust Score"
+          },
+          {
+            "title": "Sustainable Home Bundle",
+            "subtitle": "Marketplace find",
+            "price": "€42.00",
+            "badge": "Verified listing"
+          },
+          {
+            "title": "Remote Work Essentials",
+            "subtitle": "Trusted seller",
+            "price": "€119.00",
+            "badge": "Trust protected"
+          },
+          {
+            "title": "Creative Launch Pack",
+            "subtitle": "Member listing",
+            "price": "€67.00",
+            "badge": "₮ eligible"
+          },
+          {
+            "title": "Circular fashion finds",
+            "subtitle": "Community marketplace",
+            "price": "€35.00",
+            "badge": "Verified seller"
+          },
+          {
+            "title": "Event gear bundle",
+            "subtitle": "Trusted listing",
+            "price": "€96.00",
+            "badge": "Trust protected"
+          },
+          {
+            "title": "Eco office setup",
+            "subtitle": "Marketplace find",
+            "price": "€58.00",
+            "badge": "₮ eligible"
+          },
+          {
+            "title": "Local maker goods",
+            "subtitle": "Member listing",
+            "price": "€24.00",
+            "badge": "Verified listing"
+          }
         ],
         "jobs": [
-          {"id": "jobs", "title": "Local Design Project", "company_name": "Trusted company", "location": "Remote friendly", "salary": "Apply free", "job_type": "Project"},
-          {"id": "jobs-2", "title": "Community Growth Lead", "company_name": "FreeTrust member", "location": "Hybrid", "salary": "Trusted role", "job_type": "Part-time"},
-          {"id": "jobs-3", "title": "Marketplace Operations", "company_name": "Verified business", "location": "On-site", "salary": "₮ eligible", "job_type": "Contract"}
+          {
+            "id": "jobs",
+            "title": "Local Design Project",
+            "company_name": "Trusted company",
+            "location": "Remote friendly",
+            "salary": "Apply free",
+            "job_type": "Project"
+          },
+          {
+            "id": "jobs-2",
+            "title": "Community Growth Lead",
+            "company_name": "FreeTrust member",
+            "location": "Hybrid",
+            "salary": "Trusted role",
+            "job_type": "Part-time"
+          },
+          {
+            "id": "jobs-3",
+            "title": "Marketplace Operations",
+            "company_name": "Verified business",
+            "location": "On-site",
+            "salary": "₮ eligible",
+            "job_type": "Contract"
+          }
         ],
         "events": [
-          {"id": "events", "title": "Community Meetup", "category": "Technology", "location": "Online", "catColor": "#00c2cb"},
-          {"id": "events-2", "title": "Founder Trust Circle", "category": "Startup", "location": "In person", "catColor": "#38bdf8"},
-          {"id": "events-3", "title": "Marketplace Workshop", "category": "Business", "location": "Online", "catColor": "#a78bfa"}
+          {
+            "id": "events",
+            "title": "Community Meetup",
+            "category": "Technology",
+            "location": "Online",
+            "catColor": "#00c2cb"
+          },
+          {
+            "id": "events-2",
+            "title": "Founder Trust Circle",
+            "category": "Startup",
+            "location": "In person",
+            "catColor": "#38bdf8"
+          },
+          {
+            "id": "events-3",
+            "title": "Marketplace Workshop",
+            "category": "Business",
+            "location": "Online",
+            "catColor": "#a78bfa"
+          }
         ]
       }
     },
@@ -341,7 +583,13 @@
       "eyebrow": "Reputation layer",
       "title": "What is a Trust Score?",
       "description": "FreeTrust's Trust Score is your portable reputation — built from verified transactions, community reviews, and platform contributions.",
-      "factors": ["Identity Verified", "47 Completed Transactions", "4.9★ Average Review", "₮{balance} Trust Coin Balance", "2 Years Member"],
+      "factors": [
+        "Identity Verified",
+        "47 Completed Transactions",
+        "4.9★ Average Review",
+        "₮{balance} Trust Coin Balance",
+        "2 Years Member"
+      ],
       "cta": "Build Your Trust Score →"
     },
     "founding": {
@@ -354,7 +602,28 @@
       "eyebrow": "How it works",
       "title": "Four steps to join the trust economy",
       "description": "No subscriptions, no gatekeepers. Just sign up, contribute, build reputation, and grow.",
-      "steps": [["🪪", "Sign up free", "Create your account and get ₮200 TrustCoins on signup."], ["📦", "List or discover", "Publish a service, product, job, event, or community."], ["🤝", "Transact safely", "Use verified profiles, Trust Scores, and on-platform payments."], ["🌱", "Earn and impact", "Earn ₮, reduce fees, and support community causes."]]
+      "steps": [
+        [
+          "🪪",
+          "Sign up free",
+          "Create your account and get ₮200 TrustCoins on signup."
+        ],
+        [
+          "📦",
+          "List or discover",
+          "Publish a service, product, job, event, or community."
+        ],
+        [
+          "🤝",
+          "Transact safely",
+          "Use verified profiles, Trust Scores, and on-platform payments."
+        ],
+        [
+          "🌱",
+          "Earn and impact",
+          "Earn ₮, reduce fees, and support community causes."
+        ]
+      ]
     },
     "featuredServices": {
       "eyebrow": "Service marketplace",
@@ -400,38 +669,122 @@
       "perPurchase": "per purchase",
       "fiveStarReview": "5-star review",
       "signupBonus": "signup bonus",
-      "tiers": {"platinum": "Platinum", "gold": "Gold", "silver": "Silver", "member": "Member"}
+      "tiers": {
+        "platinum": "Platinum",
+        "gold": "Gold",
+        "silver": "Silver",
+        "member": "Member"
+      }
     },
     "faq": {
       "eyebrow": "Frequently asked",
       "title": "Questions, answered",
       "description": "Everything you need to know about FreeTrust before you join.",
       "items": [
-        {"question": "What is FreeTrust?", "answer": "FreeTrust is the community economy marketplace — a platform where members earn TrustCoins (₮) for every contribution they make and spend them to grow. You can list services, sell products, post jobs, run events, join communities, publish articles and support sustainability projects, all in one place."},
-        {"question": "Is FreeTrust free to join?", "answer": "Yes, FreeTrust is completely free to join. New members receive ₮200 in TrustCoins on signup and there is no subscription or monthly fee. We only charge a small fee on completed transactions."},
-        {"question": "What are TrustCoins (₮)?", "answer": "TrustCoins (₮) are the native reputation currency of FreeTrust. Every contribution to the community — listing a service, completing an order, publishing an article, leaving a review — earns you ₮. Higher ₮ balances unlock lower fees, better visibility and access to platform perks."},
-        {"question": "How do I earn TrustCoins?", "answer": "You earn ₮ for every meaningful action: ₮200 on signup, ₮50 for creating a listing, ₮75 for publishing an article, ₮100 for completing an order, ₮100 for creating a community, ₮10 for leaving a review, and more. The full earning schedule is in your wallet."},
-        {"question": "Can I withdraw real money from FreeTrust?", "answer": "Yes — sellers connect a Stripe account via /seller/connect and can withdraw the euro proceeds from any completed sale directly to their bank. TrustCoins themselves are not withdrawable, they are a reputation currency used inside the platform."},
-        {"question": "How does the marketplace work?", "answer": "List a product, service or gig from /services/new or /products/new, set your price in EUR, GBP or USD, and buyers pay securely via Stripe. Orders are tracked end-to-end with messaging, reviews and disputes built in. You earn TrustCoins at each step and get paid out to your bank."},
-        {"question": "Is FreeTrust only for certain users?", "answer": "FreeTrust is built for the community economy and is open to members worldwide. We support multiple currencies, international Stripe payouts and have members in the UK, EU and beyond."},
-        {"question": "How is FreeTrust different from other marketplaces?", "answer": "Unlike fee-extracting platforms, FreeTrust rewards contribution directly. Every action earns TrustCoins, 1% of every transaction goes to the Sustainability Fund for real community impact projects, and reputation (not ads) determines visibility. You are building a shared economy, not paying rent to a marketplace."},
-        {"question": "What is the Sustainability Fund?", "answer": "The Sustainability Fund is a community-governed pool that receives 1% of every transaction on FreeTrust plus direct ₮ donations. Members vote quarterly on which real-world sustainability projects to fund — reforestation, clean energy, ocean clean-ups, education and more."},
-        {"question": "How do I create an organisation on FreeTrust?", "answer": "Head to /organisations/new to create an organisation page for your business, charity, community group or social enterprise. You can list it in the directory, post on the feed as the organisation, invite team members and run events and listings under the organisation brand."},
-        {"question": "Is my data safe on FreeTrust?", "answer": "Yes. FreeTrust uses Supabase with row-level security on every table, authenticated Stripe payments, GDPR-compliant data handling and no ad-tech trackers. Your personal data is never sold, and you can export or delete it at any time from /settings."},
-        {"question": "How do I get support?", "answer": "Every page has a built-in support path via /help, or you can message the FreeTrust team directly from /messages. For account and payment issues, head to /settings for self-serve options first — most questions are answered in under a minute there."}
+        {
+          "question": "What is FreeTrust?",
+          "answer": "FreeTrust is the community economy marketplace — a platform where members earn TrustCoins (₮) for every contribution they make and spend them to grow. You can list services, sell products, post jobs, run events, join communities, publish articles and support sustainability projects, all in one place."
+        },
+        {
+          "question": "Is FreeTrust free to join?",
+          "answer": "Yes, FreeTrust is completely free to join. New members receive ₮200 in TrustCoins on signup and there is no subscription or monthly fee. We only charge a small fee on completed transactions."
+        },
+        {
+          "question": "What are TrustCoins (₮)?",
+          "answer": "TrustCoins (₮) are the native reputation currency of FreeTrust. Every contribution to the community — listing a service, completing an order, publishing an article, leaving a review — earns you ₮. Higher ₮ balances unlock lower fees, better visibility and access to platform perks."
+        },
+        {
+          "question": "How do I earn TrustCoins?",
+          "answer": "You earn ₮ for every meaningful action: ₮200 on signup, ₮50 for creating a listing, ₮75 for publishing an article, ₮100 for completing an order, ₮100 for creating a community, ₮10 for leaving a review, and more. The full earning schedule is in your wallet."
+        },
+        {
+          "question": "Can I withdraw real money from FreeTrust?",
+          "answer": "Yes — sellers connect a Stripe account via /seller/connect and can withdraw the euro proceeds from any completed sale directly to their bank. TrustCoins themselves are not withdrawable, they are a reputation currency used inside the platform."
+        },
+        {
+          "question": "How does the marketplace work?",
+          "answer": "List a product, service or gig from /services/new or /products/new, set your price in EUR, GBP or USD, and buyers pay securely via Stripe. Orders are tracked end-to-end with messaging, reviews and disputes built in. You earn TrustCoins at each step and get paid out to your bank."
+        },
+        {
+          "question": "Is FreeTrust only for certain users?",
+          "answer": "FreeTrust is built for the community economy and is open to members worldwide. We support multiple currencies, international Stripe payouts and have members in the UK, EU and beyond."
+        },
+        {
+          "question": "How is FreeTrust different from other marketplaces?",
+          "answer": "Unlike fee-extracting platforms, FreeTrust rewards contribution directly. Every action earns TrustCoins, 1% of every transaction goes to the Sustainability Fund for real community impact projects, and reputation (not ads) determines visibility. You are building a shared economy, not paying rent to a marketplace."
+        },
+        {
+          "question": "What is the Sustainability Fund?",
+          "answer": "The Sustainability Fund is a community-governed pool that receives 1% of every transaction on FreeTrust plus direct ₮ donations. Members vote quarterly on which real-world sustainability projects to fund — reforestation, clean energy, ocean clean-ups, education and more."
+        },
+        {
+          "question": "How do I create an organisation on FreeTrust?",
+          "answer": "Head to /organisations/new to create an organisation page for your business, charity, community group or social enterprise. You can list it in the directory, post on the feed as the organisation, invite team members and run events and listings under the organisation brand."
+        },
+        {
+          "question": "Is my data safe on FreeTrust?",
+          "answer": "Yes. FreeTrust uses Supabase with row-level security on every table, authenticated Stripe payments, GDPR-compliant data handling and no ad-tech trackers. Your personal data is never sold, and you can export or delete it at any time from /settings."
+        },
+        {
+          "question": "How do I get support?",
+          "answer": "Every page has a built-in support path via /help, or you can message the FreeTrust team directly from /messages. For account and payment issues, head to /settings for self-serve options first — most questions are answered in under a minute there."
+        }
       ]
     },
     "footer": {
       "tagline": "Buy. Sell. Connect. Trust. A safer community economy powered by verified reputation.",
       "legal": "Legal",
       "joinFree": "Join free",
-      "links": [["Services", "/services"], ["Products", "/products"], ["Events", "/events"], ["Articles", "/articles"], ["Impact", "/impact"], ["Trust & Safety", "/safety"], ["Privacy Policy", "/privacy"], ["Terms of Service", "/terms"]],
+      "links": [
+        [
+          "Services",
+          "/services"
+        ],
+        [
+          "Products",
+          "/products"
+        ],
+        [
+          "Events",
+          "/events"
+        ],
+        [
+          "Articles",
+          "/articles"
+        ],
+        [
+          "Impact",
+          "/impact"
+        ],
+        [
+          "Trust & Safety",
+          "/safety"
+        ],
+        [
+          "Privacy Policy",
+          "/privacy"
+        ],
+        [
+          "Terms of Service",
+          "/terms"
+        ]
+      ],
       "vision": {
         "label": "Vision",
         "problemTitle": "The problem we exist to solve",
         "visionTitle": "Our vision",
-        "problem": ["The internet has a trust crisis and it is costing people everything.", "Global online scam losses exceeded $1.026 trillion in 2023, according to the Global Anti Scam Alliance. One in four people worldwide was targeted by an online fraud attempt. In Ireland alone, reported fraud losses climbed past €85 million in 2024. Behind every statistic is a person, often a small business owner, a freelancer, a first time buyer, who extended trust, and was burned.", "The digital economy promised access. What it delivered, for too many, was exposure.", "Platforms that were built to connect people became vectors for exploitation. Fake reviews, phantom sellers, impersonation scams, ghost contractors, the information asymmetry Nobel economist George Akerlof described in his landmark “Market for Lemons” theory has metastasised into every corner of online commerce. When buyers cannot distinguish the trustworthy from the fraudulent, they pay a premium for fear, and honest sellers are driven out.", "FreeTrust was born from this wound. Our founder was defrauded by a developer who disappeared with the source code of an entire platform. That loss became a question: what would commerce look like if trust was not a risk you had to absorb alone?"],
-        "vision": ["A world where every exchange of skills, goods, time, and value is grounded in verified trust, and where the economy rewards those who contribute to it.", "We believe trust is not a luxury feature. It is the foundation on which every market must be built. We envision a future where the independent worker, the local maker, the social enterprise, and the conscious consumer are the central players in a circular economy, not the margin case that larger platforms tolerate.", "FreeTrust is building that future: a verified community marketplace where reputation is earned, identity is confirmed, and value flows back to the people who create it."]
+        "problem": [
+          "The internet has a trust crisis and it is costing people everything.",
+          "Global online scam losses exceeded $1.026 trillion in 2023, according to the Global Anti Scam Alliance. One in four people worldwide was targeted by an online fraud attempt. In Ireland alone, reported fraud losses climbed past €85 million in 2024. Behind every statistic is a person, often a small business owner, a freelancer, a first time buyer, who extended trust, and was burned.",
+          "The digital economy promised access. What it delivered, for too many, was exposure.",
+          "Platforms that were built to connect people became vectors for exploitation. Fake reviews, phantom sellers, impersonation scams, ghost contractors, the information asymmetry Nobel economist George Akerlof described in his landmark “Market for Lemons” theory has metastasised into every corner of online commerce. When buyers cannot distinguish the trustworthy from the fraudulent, they pay a premium for fear, and honest sellers are driven out.",
+          "FreeTrust was born from this wound. Our founder was defrauded by a developer who disappeared with the source code of an entire platform. That loss became a question: what would commerce look like if trust was not a risk you had to absorb alone?"
+        ],
+        "vision": [
+          "A world where every exchange of skills, goods, time, and value is grounded in verified trust, and where the economy rewards those who contribute to it.",
+          "We believe trust is not a luxury feature. It is the foundation on which every market must be built. We envision a future where the independent worker, the local maker, the social enterprise, and the conscious consumer are the central players in a circular economy, not the margin case that larger platforms tolerate.",
+          "FreeTrust is building that future: a verified community marketplace where reputation is earned, identity is confirmed, and value flows back to the people who create it."
+        ]
       },
       "mission": {
         "label": "Mission",
@@ -439,10 +792,22 @@
         "mission": "FreeTrust’s mission is to rebuild online commerce around verified identity, community accountability, and a circular economy that puts impact, not just profit, at its core.",
         "commitmentsIntro": "We do this through four commitments:",
         "commitments": [
-          {"title": "Trust by Default", "body": "Every FreeTrust member is identity verified. Every transaction is backed by a reputation system built on real history, not anonymous ratings. We do not just reduce fraud, we make trust the baseline expectation, not the exception."},
-          {"title": "A Community Economy Built for People", "body": "FreeTrust is not a platform that extracts value from its members. It is a community that generates it together. Through our Trust Coin (₮) internal currency, members earn, spend, and circulate value within the ecosystem. Founding Members, capped at 1,000, hold lifetime preferential terms, because the people who build something deserve to benefit from it."},
-          {"title": "Impact as a First Class Category", "body": "Commerce does not have to be neutral. Every transaction on FreeTrust carries the potential to do more than exchange value, it can fund impact. Our Impact Fund channels contributions toward causes that address inequality at its roots. When you buy, sell, or earn on FreeTrust, you participate in an economy that knows what it stands for."},
-          {"title": "A Circular Economy, Not an Extractive One", "body": "The dominant platforms of the last two decades were built on a simple model: aggregate supply, capture demand, extract fees, repeat. FreeTrust is built on a different model. Value generated within the community stays within the community. Trust earned is trust rewarded. The economy we are building is not a funnel, it is a cycle."}
+          {
+            "title": "Trust by Default",
+            "body": "Every FreeTrust member is identity verified. Every transaction is backed by a reputation system built on real history, not anonymous ratings. We do not just reduce fraud, we make trust the baseline expectation, not the exception."
+          },
+          {
+            "title": "A Community Economy Built for People",
+            "body": "FreeTrust is not a platform that extracts value from its members. It is a community that generates it together. Through our Trust Coin (₮) internal currency, members earn, spend, and circulate value within the ecosystem. Founding Members, capped at 1,000, hold lifetime preferential terms, because the people who build something deserve to benefit from it."
+          },
+          {
+            "title": "Impact as a First Class Category",
+            "body": "Commerce does not have to be neutral. Every transaction on FreeTrust carries the potential to do more than exchange value, it can fund impact. Our Impact Fund channels contributions toward causes that address inequality at its roots. When you buy, sell, or earn on FreeTrust, you participate in an economy that knows what it stands for."
+          },
+          {
+            "title": "A Circular Economy, Not an Extractive One",
+            "body": "The dominant platforms of the last two decades were built on a simple model: aggregate supply, capture demand, extract fees, repeat. FreeTrust is built on a different model. Value generated within the community stays within the community. Trust earned is trust rewarded. The economy we are building is not a funnel, it is a cycle."
+          }
         ],
         "audienceTitle": "Who we are for",
         "audience": "FreeTrust is for the independent worker who was ghosted on payment. The buyer who received nothing after paying. The small business that built five star service but could not prove it to the next customer. The social enterprise that could not find a marketplace that shared its values. We are for the people the internet was supposed to liberate and too often failed.",
@@ -497,6 +862,12 @@
       "return": "Return",
       "cabin": "Cabin"
     },
+    "fallbacks": {
+      "stayName": "Travel partner stay",
+      "airline": "Airline",
+      "departure": "Departure",
+      "destination": "Destination"
+    },
     "placeholders": {
       "destinationCity": "Paris",
       "departureCity": "Dublin"
@@ -517,16 +888,56 @@
       "body": "Pick one image tile to pre-fill and run a member search. You can still adjust the compact form above."
     },
     "categories": {
-      "cityBreaks": {"label": "City Breaks", "country": "France", "copy": "Flights and central stays for quick cultural weekends."},
-      "beachResort": {"label": "Beach & Resort", "country": "Spain", "copy": "Sunny stays, coastlines, and relaxed resort escapes."},
-      "adventureNature": {"label": "Adventure & Nature", "country": "Switzerland", "copy": "Mountain bases for hiking, scenery, and outdoor trips."},
-      "culturalExperiences": {"label": "Cultural Experiences", "country": "Italy", "copy": "Historic streets, food, galleries, and landmark stays."},
-      "familyHolidays": {"label": "Family Holidays", "country": "Portugal", "copy": "Family-friendly stays and easy beach holiday bases."},
-      "romanticEscapes": {"label": "Romantic Escapes", "country": "Greece", "copy": "Boutique stays and view-led breaks for two."},
-      "backpackerBudget": {"label": "Backpacker & Budget", "country": "Portugal", "copy": "Flight-led ideas for affordable city-hopping."},
-      "longHaulFlights": {"label": "Long-Haul Flights", "country": "United States", "copy": "Bigger international routes and long-haul inspiration."},
-      "cruisePackages": {"label": "Cruise Packages", "country": "Spain", "copy": "Port-city stays and cruise-ready travel planning."},
-      "wellnessRetreats": {"label": "Wellness Retreats", "country": "Indonesia", "copy": "Retreat-style stays for slower restorative travel."}
+      "cityBreaks": {
+        "label": "City Breaks",
+        "country": "France",
+        "copy": "Flights and central stays for quick cultural weekends."
+      },
+      "beachResort": {
+        "label": "Beach & Resort",
+        "country": "Spain",
+        "copy": "Sunny stays, coastlines, and relaxed resort escapes."
+      },
+      "adventureNature": {
+        "label": "Adventure & Nature",
+        "country": "Switzerland",
+        "copy": "Mountain bases for hiking, scenery, and outdoor trips."
+      },
+      "culturalExperiences": {
+        "label": "Cultural Experiences",
+        "country": "Italy",
+        "copy": "Historic streets, food, galleries, and landmark stays."
+      },
+      "familyHolidays": {
+        "label": "Family Holidays",
+        "country": "Portugal",
+        "copy": "Family-friendly stays and easy beach holiday bases."
+      },
+      "romanticEscapes": {
+        "label": "Romantic Escapes",
+        "country": "Greece",
+        "copy": "Boutique stays and view-led breaks for two."
+      },
+      "backpackerBudget": {
+        "label": "Backpacker & Budget",
+        "country": "Portugal",
+        "copy": "Flight-led ideas for affordable city-hopping."
+      },
+      "longHaulFlights": {
+        "label": "Long-Haul Flights",
+        "country": "United States",
+        "copy": "Bigger international routes and long-haul inspiration."
+      },
+      "cruisePackages": {
+        "label": "Cruise Packages",
+        "country": "Spain",
+        "copy": "Port-city stays and cruise-ready travel planning."
+      },
+      "wellnessRetreats": {
+        "label": "Wellness Retreats",
+        "country": "Indonesia",
+        "copy": "Retreat-style stays for slower restorative travel."
+      }
     },
     "results": {
       "eyebrow": "Results",
@@ -848,13 +1259,41 @@
       "guest": "Hey! 👋 I'm your **Trust Assistant** — here to help you get the most from FreeTrust.\n\n{hint}What can I help you with today?"
     },
     "quickReplies": {
-      "wallet": ["How do I earn more Trust?", "How do I withdraw?", "What is escrow?"],
-      "marketplace": ["How does buying work?", "Is payment secure?", "How do I leave a review?"],
-      "profile": ["How do I get verified?", "How do I improve my Trust score?", "How do I add a listing?"],
-      "community": ["How do I create a group?", "Are groups free?", "How do I find my people?"],
-      "orders": ["How does escrow work?", "How do I raise a dispute?", "When do I get paid?"],
-      "jobs": ["How do I post a job?", "Is it free to apply?", "How do I find remote jobs?"],
-      "default": ["How does Trust work?", "How do I earn Trust points?", "How does escrow protect me?"]
+      "wallet": [
+        "How do I earn more Trust?",
+        "How do I withdraw?",
+        "What is escrow?"
+      ],
+      "marketplace": [
+        "How does buying work?",
+        "Is payment secure?",
+        "How do I leave a review?"
+      ],
+      "profile": [
+        "How do I get verified?",
+        "How do I improve my Trust score?",
+        "How do I add a listing?"
+      ],
+      "community": [
+        "How do I create a group?",
+        "Are groups free?",
+        "How do I find my people?"
+      ],
+      "orders": [
+        "How does escrow work?",
+        "How do I raise a dispute?",
+        "When do I get paid?"
+      ],
+      "jobs": [
+        "How do I post a job?",
+        "Is it free to apply?",
+        "How do I find remote jobs?"
+      ],
+      "default": [
+        "How does Trust work?",
+        "How do I earn Trust points?",
+        "How does escrow protect me?"
+      ]
     },
     "errors": {
       "moment": "Sorry, I'm having a moment — try again?",
@@ -881,12 +1320,26 @@
   },
   "createMenu": {
     "title": "Create something",
-    "aria": {"create": "Create"},
+    "aria": {
+      "create": "Create"
+    },
     "items": {
-      "post": {"title": "Post", "subtitle": "Share a quick update"},
-      "job": {"title": "Job", "subtitle": "Post a job listing"},
-      "event": {"title": "Event", "subtitle": "Create an event"},
-      "article": {"title": "Article", "subtitle": "Write a long-form piece"}
+      "post": {
+        "title": "Post",
+        "subtitle": "Share a quick update"
+      },
+      "job": {
+        "title": "Job",
+        "subtitle": "Post a job listing"
+      },
+      "event": {
+        "title": "Event",
+        "subtitle": "Create an event"
+      },
+      "article": {
+        "title": "Article",
+        "subtitle": "Write a long-form piece"
+      }
     },
     "post": {
       "placeholder": "What's on your mind?",
@@ -924,6 +1377,8 @@
     "dismiss": "Dismiss",
     "copyright": "© 2026 FreeTrust. All rights reserved.",
     "pushHomeScreen": "Add FreeTrust to your Home Screen to enable push notifications",
-    "pushNotify": "Get notified when members post, comment or react"
+    "pushNotify": "Get notified when members post, comment or react",
+    "installApp": "Install FreeTrust App",
+    "install": "Install"
   }
 }

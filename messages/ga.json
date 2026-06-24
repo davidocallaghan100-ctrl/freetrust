@@ -199,7 +199,14 @@
       "shopNow": "Siopa anois",
       "totalIssued": "Iomlán ₮ eisithe",
       "sinceLaunch": "Ó seoladh",
-      "live": "Beo"
+      "live": "Beo",
+      "ticker": {
+        "someone": "Duine éigin",
+        "join": "Tá {name} díreach tar éis dul isteach i FreeTrust",
+        "joinWithLocation": "Tá {name} ó {location} díreach tar éis dul isteach i FreeTrust",
+        "trust": "Iontaobhas ₮{amount} tuillte ag ball",
+        "article": "Foilsíodh alt nua: \"{title}\""
+      }
     },
     "trustEconomy": {
       "label": "₮ Geilleagar Iontaobhais",

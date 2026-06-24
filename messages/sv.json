@@ -186,7 +186,635 @@
     "members": "members",
     "listings": "listings",
     "communities": "communities",
-    "liveStats": "Live stats — refreshes every 60s"
+    "liveStats": "Live stats — refreshes every 60s",
+    "stats": {
+      "membersGrowing": "Medlemmar & växande",
+      "thisWeek": "+{count} denna vecka",
+      "joinFree": "Gå med gratis",
+      "servicesAvailable": "Tjänster tillgängliga",
+      "beFirst": "Bli först!",
+      "browseNow": "Bläddra nu",
+      "productsListed": "Produkter listade",
+      "listYours": "Lista dina",
+      "shopNow": "Handla nu",
+      "totalIssued": "Totalt utfärdat ₮",
+      "sinceLaunch": "Sedan lanseringen",
+      "live": "Bo",
+      "ticker": {
+        "someone": "Någon",
+        "join": "{name} gick precis med i FreeTrust",
+        "joinWithLocation": "{name} från {location} gick precis med i FreeTrust",
+        "trust": "₮{amount} Trust som en medlem tjänar",
+        "article": "Ny artikel publicerad: \"{title}\""
+      }
+    },
+    "trustEconomy": {
+      "label": "₮ Trust Economy",
+      "inCirculation": "₮ i omlopp",
+      "currentBalances": "Aktuella saldon som innehas",
+      "issuedSinceLaunch": "₮ utfärdat sedan lanseringen",
+      "totalEarned": "Totalt någonsin tjänat",
+      "membersHolding": "Medlemmar som innehar ₮",
+      "activeHolders": "Aktiva förtroendeinnehavare"
+    },
+    "premiumHero": {
+      "eyebrow": "🌍 Trust Economy är här",
+      "titleLead": "Köpa. Sälja. Ansluta.",
+      "titleAccent": "Förtroende.",
+      "subtitle": "FreeTrust är gemenskapsmarknadsplatsen där verifierat förtroende låser upp bättre erbjudanden, riktiga kontakter och en mer rättvis ekonomi.",
+      "primaryCta": "Kom igång gratis",
+      "secondaryCta": "Se hur det fungerar",
+      "membersBadge": "{count} grundande medlemmar",
+      "welcomeBonus": "₮200 Välkomstbonus",
+      "noSubscription": "0 % prenumerationsavgift"
+    },
+    "floatingBadges": {
+      "balance": "₮{amount} bal",
+      "trustCoinReady": "Trust Coin redo",
+      "verifiedMember": "✓ Verifierad medlem",
+      "identityProtected": "Identitet skyddad",
+      "trustScore": "4.9★ Trust Score",
+      "portableReputation": "Bärbart rykte"
+    },
+    "alt": {
+      "walletScreenshot": "Faktisk FreeTrust Trust Wallet mobil skärmdump",
+      "productScreenshot": "Faktisk FreeTrust produktmarknadsplats mobil skärmdump",
+      "genericScreenshot": "Faktisk FreeTrust {name} mobil skärmdump"
+    },
+    "features": {
+      "eyebrow": "Plattformsfunktioner",
+      "title": "Allt du behöver för att byta, betala, anställa och ansluta med förtroende.",
+      "description": "FreeTrust samlar marknadsplatshandel, betalningar, rykte och gemenskap till en plattform för förtroende framåt.",
+      "cards": [
+        {
+          "icon": "💳",
+          "title": "Trust Payments",
+          "desc": "Överför pengar peer-to-peer med inbyggd förtroendeverifiering. Dela räkningar, betala för tjänster, skicka till familjen – allt skyddat av FreeTrusts rykteskikt."
+        },
+        {
+          "icon": "🛒",
+          "title": "Produktmarknadsplats",
+          "desc": "Köp och sälj fysiska och digitala produkter med verifierade säljare. Riktiga Trust Scores ersätter anonyma recensioner. Handla med självförtroende."
+        },
+        {
+          "icon": "💼",
+          "title": "Service Marketplace",
+          "desc": "Anställ verifierade frilansare och lokala tjänsteleverantörer. Från design till konstruktion – alla leverantörer är bedömda av samhället."
+        },
+        {
+          "icon": "🌐",
+          "title": "Gemenskapsplattform",
+          "desc": "Bygg ditt pålitliga nätverk. Få kontakt med människor som delar dina värderingar, samarbeta i projekt och växa tillsammans."
+        },
+        {
+          "icon": "📰",
+          "title": "Nyhetsflöde",
+          "desc": "Ett kreativt, produktivt, positivt och inkluderande flöde. Dela idéer, visa upp arbete, fira vinster – inga giftiga algoritmer, inga annonser, bara gemenskap."
+        },
+        {
+          "icon": "₮",
+          "title": "Trust Coin",
+          "desc": "Tjäna Trust Coin (₮) för varje verifierad transaktion, recension och bidrag. Spendera det för att minska avgifterna, öka listorna och låsa upp plattformsförmåner."
+        }
+      ]
+    },
+    "testimonials": {
+      "aria": "FreeTrust medlemsberättelser",
+      "eyebrow": "Medlemsberättelser",
+      "title": "Varför människor väljer FreeTrust",
+      "description": "Verkliga förtroendesignaler, säkrare transaktioner och en samhällsekonomi som ger värde tillbaka.",
+      "showQuote": "Visa {label} offert",
+      "items": [
+        {
+          "icon": "✅",
+          "label": "Trust Score",
+          "quote": "Att se min Trust Score växa är verkligen motiverande. Det betyder något här."
+        },
+        {
+          "icon": "🛡️",
+          "label": "Verifierad handel",
+          "quote": "Registrerade dig på några minuter och kände mig säker direkt. Det är så näthandel ska kännas."
+        },
+        {
+          "icon": "🛒",
+          "label": "Produkter",
+          "quote": "Listade mina lösningar och sålde tre set på en vecka. Inga tidsödande – alla är verifierade."
+        },
+        {
+          "icon": "🛠️",
+          "label": "Tjänster",
+          "quote": "Kunder anländer redan och vet att jag är verifierad. Vi hoppar över det besvärliga och börjar bara jobba."
+        },
+        {
+          "icon": "🏠",
+          "label": "Uthyrning",
+          "quote": "Ersatte de stora plattformarna helt. Lägre avgifter och jag vet faktiskt vem som bor i min fastighet."
+        },
+        {
+          "icon": "🪙",
+          "label": "Trust Coin (₮)",
+          "quote": "Tjänade Trust Coins på mina första försäljningar och använde dem för att låsa upp en premiumnotering. Smart system."
+        },
+        {
+          "icon": "💬",
+          "label": "Meddelanden",
+          "quote": "Ren, privat, inbyggd fildelning. Du behöver inte byta nummer med främlingar."
+        },
+        {
+          "icon": "⭐",
+          "label": "Recensioner & rykte",
+          "quote": "Tvåvägsrecensioner innebär att båda sidor är ansvariga. Det är precis vad internet har saknat."
+        },
+        {
+          "icon": "🤝",
+          "label": "Impact Fund",
+          "quote": "Jag väljer aktivt FreeTrust eftersom varje transaktion bidrar till något större."
+        },
+        {
+          "icon": "🏆",
+          "label": "Grundare",
+          "quote": "Livstidssänkta avgifter och in från start. Bästa beslutet jag tagit i år."
+        }
+      ]
+    },
+    "impact": {
+      "eyebrow": "Effektekonomi",
+      "title": "Byggd för effekt, inte bara vinst",
+      "description": "Varje transaktion på FreeTrust bidrar till en mer rättvis, mer transparent ekonomi.",
+      "stats": {
+        "foundingMembers": "Grundande medlemmar",
+        "welcomeBonus": "Välkomstbonus",
+        "subscriptionFees": "Prenumerationsavgifter",
+        "maxPlatformFee": "Max plattformsavgift"
+      },
+      "body": "FreeTrust Impact Fund riktar en del av varje transaktionsavgift mot verifierade samhällsorsaker, utvalda öppet av medlemmarna."
+    },
+    "showcase": {
+      "open": "Öppna {name} →",
+      "rows": [
+        {
+          "srcKey": "products",
+          "eyebrow": "Marknad",
+          "title": "Handla smartare. Sälj med förtroende.",
+          "text": "Upptäck FreeTrust-säljare och externa återförsäljares fynd i en pålitlig produktupplevelse.",
+          "points": [
+            "Trust Score märken på varje säljarkort.",
+            "Rensa medlemslistor och återförsäljarerbjudanden.",
+            "Tjäna Trust Coin genom verifierad marknadsplatsaktivitet."
+          ],
+          "href": "/products"
+        },
+        {
+          "srcKey": "wallet",
+          "eyebrow": "Trust Wallet",
+          "title": "Skicka värde. Förtjäna förtroende.",
+          "text": "Ditt Trust Coin-saldo och ditt rykte lever vid sidan av den handel du gör varje dag.",
+          "points": [
+            "Live Trust Economy-siffror hämtade från Supabase.",
+            "TrustCoin saldo synligt i appen.",
+            "Rykte belönar för användbara bidrag."
+          ],
+          "href": "/wallet",
+          "alt": true
+        },
+        {
+          "srcKey": "services",
+          "eyebrow": "Tjänster",
+          "title": "Anlita verifierade leverantörer.",
+          "text": "Servicekort visar riktiga leverantörer, betyg, framsteg och förtroendesignaler innan du bokar.",
+          "points": [
+            "Verifierade lokala och fjärranslutna tjänsteleverantörer.",
+            "Lita på framsteg och betygssignaler på varje kort.",
+            "Byggd för frilansare, grundare och samhällsarbete."
+          ],
+          "href": "/services"
+        },
+        {
+          "srcKey": "community",
+          "eyebrow": "Gemenskap",
+          "title": "Ditt betrodda nätverk.",
+          "text": "Ett positivt matnings- och anslutningsskikt designat för samarbete, inte giftiga engagemangsslingor.",
+          "points": [
+            "Verifierade medlemsprofiler och mötestillfällen.",
+            "Kreativa, produktiva, inkluderande uppdateringar.",
+            "Nätverkseffekter som belönar hjälpsamma bidrag."
+          ],
+          "href": "/feed",
+          "alt": true
+        }
+      ]
+    },
+    "liveMarketplace": {
+      "eyebrow": "Live marknadsplats",
+      "title": "Färska tjänster, produkter, jobb och evenemang – allt i rörelse.",
+      "description": "Äkta FreeTrust-data stannar på målsidan, uppgraderad med premium mörka kort, kricka förtroendeindikatorer och mobilvänlig horisontell upptäckt.",
+      "tabs": {
+        "services": "🛠 Tjänster",
+        "products": "🛒 Produkter",
+        "jobs": "💼 Jobb",
+        "events": "📅 Evenemang"
+      },
+      "cta": {
+        "open": "Öppna →",
+        "view": "Visa →",
+        "viewEvent": "Visa händelse →"
+      },
+      "badges": {
+        "trustScore": "{score}★ Trust Score",
+        "verifiedService": "Verifierad tjänst",
+        "verifiedListing": "Verifierad lista"
+      },
+      "status": {
+        "showing": "Visar förhandsvisningar av livemarknadsplatsen där det är tillgängligt",
+        "loaded": "· {count} live-kort laddade"
+      },
+      "fallbacks": {
+        "remote": "Avlägsen",
+        "onSite": "På plats",
+        "online": "Online",
+        "inPerson": "Personligen",
+        "applyFree": "Ansök gratis",
+        "openRole": "Öppen roll",
+        "company": "Företag",
+        "event": "Händelse",
+        "services": [
+          {
+            "title": "Lokala hemreparationer",
+            "subtitle": "Verifierade leverantörer",
+            "price": "Boka gratis",
+            "badge": "Lokala tjänster"
+          },
+          {
+            "title": "Design & kreativ hjälp",
+            "subtitle": "Pålitliga frilansare",
+            "price": "Från €25",
+            "badge": "Fjärrklar"
+          },
+          {
+            "title": "Företagsstöd",
+            "subtitle": "Medlemsleverantörer",
+            "price": "Få offerter",
+            "badge": "Förtroende skyddad"
+          },
+          {
+            "title": "Coaching & mentorskap",
+            "subtitle": "gemenskapsexperter",
+            "price": "Bläddra",
+            "badge": "₮ kvalificerad"
+          },
+          {
+            "title": "Evenemang & gästfrihet",
+            "subtitle": "Verkliga lokala leverantörer",
+            "price": "Hitta hjälp",
+            "badge": "Verifierade listor"
+          },
+          {
+            "title": "Teknisk support",
+            "subtitle": "Online och lokalt",
+            "price": "Anställ nu",
+            "badge": "Pålitliga leverantörer"
+          }
+        ],
+        "products": [
+          {
+            "title": "Creator Studio Kit",
+            "subtitle": "Verifierad säljare",
+            "price": "€84.00",
+            "badge": "4.9★ Trust Score"
+          },
+          {
+            "title": "Hållbart hempaket",
+            "subtitle": "Marknadsfynd",
+            "price": "€42.00",
+            "badge": "Verifierad lista"
+          },
+          {
+            "title": "Fjärrarbete Essentials",
+            "subtitle": "Pålitlig säljare",
+            "price": "€119.00",
+            "badge": "Förtroende skyddad"
+          },
+          {
+            "title": "Creative Launch Pack",
+            "subtitle": "Medlemsförteckning",
+            "price": "€67.00",
+            "badge": "₮ kvalificerad"
+          },
+          {
+            "title": "Cirkulära modefynd",
+            "subtitle": "gemenskapens marknadsplats",
+            "price": "€35.00",
+            "badge": "Verifierad säljare"
+          },
+          {
+            "title": "Händelseutrustningspaket",
+            "subtitle": "Pålitlig lista",
+            "price": "€96.00",
+            "badge": "Förtroende skyddad"
+          },
+          {
+            "title": "Eco kontorsinställning",
+            "subtitle": "Marknadsfynd",
+            "price": "€58.00",
+            "badge": "₮ kvalificerad"
+          },
+          {
+            "title": "Lokala tillverkningsvaror",
+            "subtitle": "Medlemsförteckning",
+            "price": "€24.00",
+            "badge": "Verifierad lista"
+          }
+        ],
+        "jobs": [
+          {
+            "id": "jobs",
+            "title": "Lokalt designprojekt",
+            "company_name": "Pålitligt företag",
+            "location": "Fjärrvänlig",
+            "salary": "Ansök gratis",
+            "job_type": "Projekt"
+          },
+          {
+            "id": "jobs-2",
+            "title": "Ledande för samhällstillväxt",
+            "company_name": "FreeTrust medlem",
+            "location": "Hybrid",
+            "salary": "Pålitlig roll",
+            "job_type": "På deltid"
+          },
+          {
+            "id": "jobs-3",
+            "title": "Marketplace Operations",
+            "company_name": "Verifierat företag",
+            "location": "På plats",
+            "salary": "₮ kvalificerad",
+            "job_type": "Kontrakt"
+          }
+        ],
+        "events": [
+          {
+            "id": "events",
+            "title": "Gemenskapsmöte",
+            "category": "Teknologi",
+            "location": "Online",
+            "catColor": "#00c2cb"
+          },
+          {
+            "id": "events-2",
+            "title": "Grundare Trust Circle",
+            "category": "Uppstart",
+            "location": "Personligen",
+            "catColor": "#38bdf8"
+          },
+          {
+            "id": "events-3",
+            "title": "Marketplace Workshop",
+            "category": "Företag",
+            "location": "Online",
+            "catColor": "#a78bfa"
+          }
+        ]
+      }
+    },
+    "trustScore": {
+      "eyebrow": "Rykte lager",
+      "title": "Vad är en Trust Score?",
+      "description": "FreeTrust:s Trust Score är ditt bärbara rykte – byggt av verifierade transaktioner, community-recensioner och plattformsbidrag.",
+      "factors": [
+        "Identitet verifierad",
+        "47 Genomförda transaktioner",
+        "4.9★ Genomsnittlig recension",
+        "₮{balance} Trust Coin Saldo",
+        "2 års medlem"
+      ],
+      "cta": "Bygg din Trust Score →"
+    },
+    "founding": {
+      "under100": "Under 100",
+      "title": "Gå med i de första 1 000 grundande medlemmarna",
+      "description": "Få livstidssänkta avgifter, ₮200 Trust Coin välkomstbonus och en grundare-emblem på din profil. Endast {spots} platser kvar.",
+      "cta": "Gör anspråk på din plats som grundande medlem"
+    },
+    "howItWorks": {
+      "eyebrow": "Hur det fungerar",
+      "title": "Fyra steg för att gå med i förtroendeekonomin",
+      "description": "Inga abonnemang, inga grindvakter. Bara registrera dig, bidra, bygg rykte och växa.",
+      "steps": [
+        [
+          "🪪",
+          "Registrera dig gratis",
+          "Skapa ditt konto och få ₮200 TrustCoins vid registrering."
+        ],
+        [
+          "📦",
+          "Lista eller upptäck",
+          "Publicera en tjänst, produkt, jobb, evenemang eller community."
+        ],
+        [
+          "🤝",
+          "Handla säkert",
+          "Använd verifierade profiler, Trust Scores och betalningar på plattformen."
+        ],
+        [
+          "🌱",
+          "Tjäna och påverka",
+          "Tjäna ₮, minska avgifterna och stödja gemenskapssaker."
+        ]
+      ]
+    },
+    "featuredServices": {
+      "eyebrow": "Servicemarknadsplats",
+      "title": "Anlita betrodda FreeTrust-leverantörer",
+      "description": "Utforska verkliga tjänster från verifierade medlemmar – webbbyggen, marknadsföring, strategi, design, forskning och praktisk support, allt med stöd av ryktessignaler."
+    },
+    "earnings": {
+      "eyebrow": "Dina inkomster",
+      "title": "Se vad du skulle tjäna på FreeTrust",
+      "description": "TrustCoins förening — ju mer du deltar, desto mindre betalar du i avgifter."
+    },
+    "roi": {
+      "sellerTab": "🏪 Jag är en säljare",
+      "buyerTab": "🛒 Jag är en köpare",
+      "activity": "Din aktivitet",
+      "earnings": "Dina inkomster",
+      "listingsPerMonth": "Listor per månad",
+      "avgOrderValue": "Genomsnittligt ordervärde",
+      "ordersPerMonth": "Beställningar per månad",
+      "deliverOnTime": "Leverera i tid?",
+      "onTimeTip": "Leveranser i tid tjänar",
+      "lateTip": "Sena leveranser tjänar",
+      "perOrder": "per beställning",
+      "purchasesPerMonth": "Inköp per månad",
+      "reviewsPerMonth": "Recensioner kvar per månad",
+      "reviewTipLead": "5-stjärniga recensioner tjänar",
+      "reviewTipTail": "bonus (mot +30₮ för standardrecensioner)",
+      "monthlyRevenue": "💶 Månadsintäkter",
+      "annualRevenue": "Årliga intäkter",
+      "gross": "brutto",
+      "feeDeducted": "{fee}% avgift dras av",
+      "monthlyTrustCoins": "Månatlig TrustCoins",
+      "annual": "Årlig",
+      "feeReduction": "Avgiftsreduktion",
+      "offPlatformFees": "avgifter utanför plattformen",
+      "unlockSavings": "Tjäna 1 000₮ för att låsa upp besparingar",
+      "extraKept": "extra hålls per år",
+      "cta": "Börja tjäna — Gå med gratis →",
+      "perListing": "per notering",
+      "onTimeDelivery": "leverans i tid",
+      "perReview": "per recension",
+      "liveTracking": "livespårning",
+      "perPurchase": "per köp",
+      "fiveStarReview": "5-stjärnig recension",
+      "signupBonus": "registreringsbonus",
+      "tiers": {
+        "platinum": "Platina",
+        "gold": "Guld",
+        "silver": "Silver",
+        "member": "Medlem"
+      }
+    },
+    "faq": {
+      "eyebrow": "Vanliga frågor",
+      "title": "Frågor, besvarade",
+      "description": "Allt du behöver veta om FreeTrust innan du går med.",
+      "items": [
+        {
+          "question": "Vad är FreeTrust?",
+          "answer": "FreeTrust är samhällsekonomins marknadsplats - en plattform där medlemmar tjänar TrustCoins (₮) för varje bidrag de gör och spenderar dem för att växa. Du kan lista tjänster, sälja produkter, lägga upp jobb, arrangera evenemang, gå med i gemenskaper, publicera artiklar och stödja hållbarhetsprojekt, allt på ett och samma ställe."
+        },
+        {
+          "question": "Är FreeTrust gratis att gå med?",
+          "answer": "Ja, FreeTrust är helt gratis att gå med. Nya medlemmar får ₮200 i TrustCoins vid registrering och det tillkommer ingen prenumeration eller månadsavgift. Vi tar endast ut en liten avgift på genomförda transaktioner."
+        },
+        {
+          "question": "Vad är TrustCoins (₮)?",
+          "answer": "TrustCoins (₮) är den ursprungliga ryktesvalutan för FreeTrust. Varje bidrag till gemenskapen – att lista en tjänst, slutföra en beställning, publicera en artikel, lämna en recension – ger dig ₮. Högre ₮-saldon låser upp lägre avgifter, bättre synlighet och tillgång till plattformsförmåner."
+        },
+        {
+          "question": "Hur tjänar jag TrustCoins?",
+          "answer": "Du tjänar ₮ för varje meningsfull åtgärd: ₮200 vid registrering, ₮50 för att skapa en lista, ₮75 för att publicera en artikel, ₮100 för att slutföra en beställning, ₮100 för att skapa en community, ₮10 för att lämna en recension och mer. Hela intäktsschemat finns i din plånbok."
+        },
+        {
+          "question": "Kan jag ta ut riktiga pengar från FreeTrust?",
+          "answer": "Ja — säljare ansluter ett Stripe-konto via /seller/connect och kan ta ut eurointäkterna från en genomförd försäljning direkt till sin bank. TrustCoins själva är inte uttagbara, de är en ryktevaluta som används inuti plattformen."
+        },
+        {
+          "question": "Hur fungerar marknadsplatsen?",
+          "answer": "Lista en produkt, tjänst eller spelning från /services/new eller /products/new, ställ in ditt pris i EUR, GBP eller USD, så betalar köpare säkert via Stripe. Beställningar spåras från början till slut med meddelanden, recensioner och inbyggda tvister. Du tjänar TrustCoins vid varje steg och får utbetalning till din bank."
+        },
+        {
+          "question": "Är FreeTrust endast för vissa användare?",
+          "answer": "FreeTrust är byggd för samhällsekonomin och är öppen för medlemmar över hela världen. Vi stöder flera valutor, internationella Stripe-utbetalningar och har medlemmar i Storbritannien, EU och utanför."
+        },
+        {
+          "question": "Hur skiljer sig FreeTrust från andra marknadsplatser?",
+          "answer": "Till skillnad från avgiftsuttagande plattformar belönar FreeTrust bidrag direkt. Varje åtgärd tjänar TrustCoins, 1 % av varje transaktion går till Sustainability Fund för verkliga samhällspåverkansprojekt, och rykte (inte annonser) avgör synligheten. Du bygger en delad ekonomi, inte betalar hyra till en marknadsplats."
+        },
+        {
+          "question": "Vad är hållbarhetsfonden?",
+          "answer": "Hållbarhetsfonden är en gemenskapsstyrd pool som får 1 % av varje transaktion på FreeTrust plus direkta ₮-donationer. Medlemmarna röstar kvartalsvis om vilka hållbarhetsprojekt i verkligheten som ska finansieras – återplantering av skog, ren energi, sanering av havet, utbildning och mer."
+        },
+        {
+          "question": "Hur skapar jag en organisation på FreeTrust?",
+          "answer": "Gå till /organisations/new för att skapa en organisationssida för ditt företag, välgörenhet, samhällsgrupp eller socialt företag. Du kan lista det i katalogen, lägga upp på flödet som organisationen, bjuda in teammedlemmar och köra evenemang och listor under organisationens varumärke."
+        },
+        {
+          "question": "Är min data säker på FreeTrust?",
+          "answer": "Ja. FreeTrust använder Supabase med säkerhet på radnivå på varje bord, autentiserade Stripe-betalningar, GDPR-kompatibel datahantering och inga ad-tech trackers. Dina personuppgifter säljs aldrig och du kan exportera eller radera dem när som helst från /inställningar."
+        },
+        {
+          "question": "Hur får jag stöd?",
+          "answer": "Varje sida har en inbyggd supportväg via /help, eller så kan du skicka ett meddelande till FreeTrust-teamet direkt från /messages. För konto- och betalningsproblem, gå till /inställningar för självbetjäningsalternativ först - de flesta frågorna besvaras på under en minut där."
+        }
+      ]
+    },
+    "footer": {
+      "tagline": "Köpa. Sälja. Ansluta. Förtroende. En säkrare samhällsekonomi som drivs av verifierat rykte.",
+      "legal": "Rättslig",
+      "joinFree": "Gå med gratis",
+      "links": [
+        [
+          "Tjänster",
+          "/services"
+        ],
+        [
+          "Produkter",
+          "/products"
+        ],
+        [
+          "Händelser",
+          "/events"
+        ],
+        [
+          "Artiklar",
+          "/articles"
+        ],
+        [
+          "Inverkan",
+          "/impact"
+        ],
+        [
+          "Förtroende och säkerhet",
+          "/safety"
+        ],
+        [
+          "Sekretesspolicy",
+          "/privacy"
+        ],
+        [
+          "Användarvillkor",
+          "/terms"
+        ]
+      ],
+      "vision": {
+        "label": "Vision",
+        "problemTitle": "Problemet vi finns för att lösa",
+        "visionTitle": "Vår vision",
+        "problem": [
+          "Internet har en förtroendekris och det kostar människor allt.",
+          "Globala onlinebedrägeriförluster översteg 1 026 biljoner dollar 2023, enligt Global Anti Scam Alliance. En av fyra personer över hela världen utsattes för ett bedrägeriförsök på nätet. Bara på Irland klättrade de rapporterade bedrägeriförlusterna till över 85 miljoner euro 2024. Bakom varje statistik finns en person, ofta en småföretagare, en frilansare, en förstagångsköpare, som utökade förtroendet och blev bränd.",
+          "Den digitala ekonomin lovade tillgång. Vad det levererade, för alltför många, var exponering.",
+          "Plattformar som byggdes för att koppla samman människor blev vektorer för exploatering. Falska recensioner, fantomsäljare, bedrägerier efter identitetsstöt, spökentreprenörer, informationsasymmetrin som Nobelekonomen George Akerlof beskrev i sin landmärke \"Market for Lemons\"-teori har spridits in i varje hörn av onlinehandel. När köpare inte kan skilja de pålitliga från de bedrägliga, betalar de en premie av rädsla, och ärliga säljare drivs ut.",
+          "FreeTrust föddes från detta sår. Vår grundare blev lurad av en utvecklare som försvann med källkoden för en hel plattform. Den förlusten blev en fråga: hur skulle handeln se ut om förtroende inte var en risk du var tvungen att absorbera ensam?"
+        ],
+        "vision": [
+          "En värld där varje utbyte av kompetens, varor, tid och värde grundar sig på verifierat förtroende, och där ekonomin belönar dem som bidrar till det.",
+          "Vi tror att tillit inte är en lyxig egenskap. Det är grunden på vilken varje marknad måste byggas. Vi föreställer oss en framtid där den oberoende arbetaren, den lokala skaparen, det sociala företaget och den medvetna konsumenten är de centrala aktörerna i en cirkulär ekonomi, inte marginalfallet som större plattformar tolererar.",
+          "FreeTrust bygger den framtiden: en verifierad gemenskapsmarknad där rykte förtjänas, identitet bekräftas och värde flödar tillbaka till människorna som skapar den."
+        ]
+      },
+      "mission": {
+        "label": "Uppdrag",
+        "missionTitle": "Vårt uppdrag",
+        "mission": "FreeTrusts uppdrag är att återuppbygga onlinehandel kring verifierad identitet, gemenskapsansvar och en cirkulär ekonomi som sätter inverkan, inte bara vinst, i centrum.",
+        "commitmentsIntro": "Vi gör detta genom fyra åtaganden:",
+        "commitments": [
+          {
+            "title": "Förtroende som standard",
+            "body": "Varje FreeTrust-medlem är identitetsverifierad. Varje transaktion backas upp av ett ryktesystem byggt på verklig historia, inte anonyma betyg. Vi minskar inte bara bedrägerier, vi gör förtroende för grundförväntningarna, inte undantaget."
+          },
+          {
+            "title": "En samhällsekonomi byggd för människor",
+            "body": "FreeTrust är inte en plattform som utvinner värde från sina medlemmar. Det är en gemenskap som skapar det tillsammans. Genom vår Trust Coin (₮) interna valuta tjänar, spenderar och cirkulerar medlemmar värde inom ekosystemet. Grundande medlemmar, med ett tak på 1 000, har livstidsförmånsvillkor, eftersom de som bygger något förtjänar att dra nytta av det."
+          },
+          {
+            "title": "Effekt som en förstaklasskategori",
+            "body": "Handeln behöver inte vara neutral. Varje transaktion på FreeTrust har potential att göra mer än att byta värde, det kan finansiera påverkan. Vår Impact Fund kanaliserar bidrag till ändamål som tar itu med ojämlikhet i dess rötter. När du köper, säljer eller tjänar på FreeTrust deltar du i en ekonomi som vet vad den står för."
+          },
+          {
+            "title": "En cirkulär ekonomi, inte en extraktiv",
+            "body": "De dominerande plattformarna under de senaste två decennierna byggdes på en enkel modell: aggregerat utbud, fånga efterfrågan, extrahera avgifter, upprepa. FreeTrust är byggd på en annan modell. Värde som genereras inom gemenskapen stannar inom gemenskapen. Intjänat förtroende belönas förtroende. Ekonomin vi bygger är inte en tratt, det är ett kretslopp."
+          }
+        ],
+        "audienceTitle": "Vem vi är till för",
+        "audience": "FreeTrust är för den oberoende arbetaren som spökades mot betalning. Köparen som inte fick något efter att ha betalat. Det lilla företaget som byggde femstjärniga tjänster men inte kunde bevisa det för nästa kund. Det sociala företaget som inte kunde hitta en marknadsplats som delade dess värderingar. Vi är för de människor som internet var tänkt att befria och alltför ofta misslyckades.",
+        "worldTitle": "Världen vi bygger",
+        "world": "När förtroende blir infrastruktur förändras handeln. Verifierade säljare vinner på meriter. Köpare fattar beslut med tillförsikt. Lokala och oberoende företag konkurrerar på ett jämnt fält. Påverkan mäts, inte bara nämns. Och det cirkulära flödet av värde, kompetens, varor, tid, valuta, rykte, stärker samhället det rör sig genom, snarare än att dränera det.",
+        "closingStrong": "Detta är inte idealism. Detta är arkitekturen för en bättre marknad.",
+        "closing": "FreeTrust. Byggd på förtroende. Byggd för människor."
+      },
+      "copyright": "© 2026 FreeTrust · Betalningar stannar inom FreeTrust · Förtroendebaserad handel för ett säkrare internet."
+    }
   },
   "marketplace": {
     "title": "Marketplace",

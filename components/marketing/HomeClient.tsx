@@ -188,6 +188,30 @@ async function fetchJsonWithTimeout<T>(url: string, fallback: T, timeoutMs = 800
   }
 }
 
+function translateTickerText(item: TickerItem, t: (key: string, values?: Record<string, string | number>) => string) {
+  if (item.type === 'trust') {
+    const amount = item.text.match(/^₮([^\s]+) Trust earned by a member$/)?.[1]
+    if (amount) return t('stats.ticker.trust', { amount })
+  }
+
+  if (item.type === 'article') {
+    const title = item.text.match(/^New article published: "(.+)"$/)?.[1]
+    if (title) return t('stats.ticker.article', { title })
+  }
+
+  if (item.type === 'join') {
+    const joined = item.text.match(/^(.+) just joined FreeTrust$/)?.[1]
+    if (joined) {
+      const [name, location] = joined.split(' from ')
+      return location
+        ? t('stats.ticker.joinWithLocation', { name, location })
+        : t('stats.ticker.join', { name: name === 'Someone' ? t('stats.ticker.someone') : name })
+    }
+  }
+
+  return item.text
+}
+
 function Counter({ target, prefix = '', suffix = '' }: { target: number; prefix?: string; suffix?: string }) {
   const [count, setCount] = useState(0)
   const prevTarget = useRef(0)
@@ -403,7 +427,7 @@ function LegacyTopDesign({
                   return (
                     <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0 1.25rem', fontSize: '0.75rem', color: '#94a3b8', borderRight: '1px solid rgba(56,189,248,0.06)', flexShrink: 0 }}>
                       <span style={{ fontSize: '0.8rem' }}>{icon}</span>
-                      {item.text}
+                      {translateTickerText(item, t)}
                     </span>
                   )
                 })}
@@ -876,7 +900,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
 
       {stats?.ticker && stats.ticker.length > 0 && (
         <section style={{ background: 'rgba(0,194,203,.045)', borderBottom: '1px solid rgba(0,194,203,.08)', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', alignItems: 'center', padding: '0.65rem 0' }}><div style={{ flexShrink: 0, padding: '0 1rem', borderRight: '1px solid rgba(0,194,203,.18)', fontSize: 12, color: '#7ff7ff', fontWeight: 900 }}>{t('stats.live')}</div><div style={{ flex: 1, overflow: 'hidden' }}><div className="ticker-track">{[...stats.ticker, ...stats.ticker].map((item, i) => <span key={`${item.id}-${i}`} style={{ padding: '0 1.25rem', color: SLATE, fontSize: 13, borderRight: '1px solid rgba(0,194,203,.08)' }}>{item.text}</span>)}</div></div></div>
+          <div style={{ display: 'flex', alignItems: 'center', padding: '0.65rem 0' }}><div style={{ flexShrink: 0, padding: '0 1rem', borderRight: '1px solid rgba(0,194,203,.18)', fontSize: 12, color: '#7ff7ff', fontWeight: 900 }}>{t('stats.live')}</div><div style={{ flex: 1, overflow: 'hidden' }}><div className="ticker-track">{[...stats.ticker, ...stats.ticker].map((item, i) => <span key={`${item.id}-${i}`} style={{ padding: '0 1.25rem', color: SLATE, fontSize: 13, borderRight: '1px solid rgba(0,194,203,.08)' }}>{translateTickerText(item, t)}</span>)}</div></div></div>
         </section>
       )}
 

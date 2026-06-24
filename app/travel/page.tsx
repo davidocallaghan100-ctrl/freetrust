@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { KeyboardEvent } from 'react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { buildCountryOptions } from '@/lib/countries'
 
@@ -54,6 +54,13 @@ type FlightCard = {
   priceEur: number | null
   affiliateUrl: string
   raw: Record<string, unknown>
+}
+
+type TravelFallbackLabels = {
+  stayName: string
+  airline: string
+  departure: string
+  destination: string
 }
 
 const ACCENT = '#38bdf8'
@@ -123,7 +130,7 @@ function bookingSearchUrl(city: string, type: SearchType) {
   return url.toString()
 }
 
-function mapHotel(item: unknown, destinationCity: string): HotelCard {
+function mapHotel(item: unknown, destinationCity: string, fallbacks: Pick<TravelFallbackLabels, 'stayName'>): HotelCard {
   const row = asRecord(item)
   const property = asRecord(row.property)
   const accessibility = asRecord(row.accessibilityLabel)
@@ -133,7 +140,7 @@ function mapHotel(item: unknown, destinationCity: string): HotelCard {
   const photo = asRecord(property.photoUrls || row.photoUrls)
   const photoUrls = Array.isArray(property.photoUrls) ? property.photoUrls : Array.isArray(row.photoUrls) ? row.photoUrls : []
   const hotelId = pickString(property, ['id', 'hotel_id'], pickString(row, ['id', 'hotel_id'], `hotel-${Math.random()}`))
-  const name = pickString(property, ['name', 'title'], pickString(row, ['hotel_name', 'name', 'title'], 'Travel partner stay'))
+  const name = pickString(property, ['name', 'title'], pickString(row, ['hotel_name', 'name', 'title'], fallbacks.stayName))
   const city = pickString(property, ['wishlistName', 'city'], pickString(row, ['city', 'city_name'], destinationCity))
   const directUrl = pickString(property, ['url', 'deeplink'], pickString(row, ['url', 'deeplink', 'affiliate_url']))
   const price = pickNumber(grossPrice, ['value', 'amount']) ?? pickNumber(property, ['price', 'price_eur']) ?? pickNumber(row, ['price', 'price_eur'])
@@ -151,7 +158,7 @@ function mapHotel(item: unknown, destinationCity: string): HotelCard {
   }
 }
 
-function mapFlight(item: unknown, departureCity: string, destinationCity: string): FlightCard {
+function mapFlight(item: unknown, departureCity: string, destinationCity: string, fallbacks: Pick<TravelFallbackLabels, 'airline' | 'departure' | 'destination'>): FlightCard {
   const row = asRecord(item)
   const segments = Array.isArray(row.segments) ? row.segments : []
   const firstSegment = asRecord(segments[0])
@@ -173,10 +180,10 @@ function mapFlight(item: unknown, departureCity: string, destinationCity: string
 
   return {
     id,
-    airline: pickString(carrierData, ['name'], pickString(airline, ['name'], pickString(row, ['airline', 'carrier'], 'Airline'))),
+    airline: pickString(carrierData, ['name'], pickString(airline, ['name'], pickString(row, ['airline', 'carrier'], fallbacks.airline))),
     logo: pickString(carrierData, ['logoUrl', 'logo'], pickString(airline, ['logoUrl', 'logo'], '')) || null,
-    from: pickString(departAirport, ['cityName', 'name', 'code'], departureCity || 'Departure'),
-    to: pickString(arriveAirport, ['cityName', 'name', 'code'], destinationCity || 'Destination'),
+    from: pickString(departAirport, ['cityName', 'name', 'code'], departureCity || fallbacks.departure),
+    to: pickString(arriveAirport, ['cityName', 'name', 'code'], destinationCity || fallbacks.destination),
     departTime: pickString(firstSegment, ['departureTime', 'departTime'], pickString(firstLeg, ['departureTime'], '—')),
     arriveTime: pickString(lastSegment, ['arrivalTime', 'arriveTime'], pickString(firstLeg, ['arrivalTime'], '—')),
     duration: pickString(firstLeg, ['totalTime', 'duration'], pickString(row, ['duration'], '—')),
@@ -203,8 +210,20 @@ function goToTravelLogin() {
 
 export default function TravelPage() {
   const t = useTranslations('travel')
+  const locale = useLocale()
   const supabase = useMemo(() => createClient(), [])
-  const countries = useMemo(() => buildCountryOptions(new Map()), [])
+  const countries = useMemo(() => {
+    const options = buildCountryOptions(new Map())
+    const displayNames = typeof Intl !== 'undefined' && 'DisplayNames' in Intl
+      ? new Intl.DisplayNames([locale], { type: 'region' })
+      : null
+    return options.map(option => {
+      const [flagCandidate] = option.label.split(' ')
+      const flag = flagCandidate && flagCandidate.length > 1 ? flagCandidate : ''
+      const name = displayNames?.of(option.code)
+      return name ? { ...option, label: `${flag ? `${flag} ` : ''}${name}` } : option
+    })
+  }, [locale])
   const [userId, setUserId] = useState<string | null>(null)
   const [searchType, setSearchType] = useState<SearchType>('both')
   const [destinationCountry, setDestinationCountry] = useState('IE')
@@ -240,6 +259,12 @@ export default function TravelPage() {
     country: t(`categories.${cat.key}.country`),
     badge: t(`typeBadges.${cat.type}`),
   })), [t])
+  const fallbackLabels = useMemo<TravelFallbackLabels>(() => ({
+    stayName: t('fallbacks.stayName'),
+    airline: t('fallbacks.airline'),
+    departure: t('fallbacks.departure'),
+    destination: t('fallbacks.destination'),
+  }), [t])
 
   const loadBookings = useCallback(async (uid: string) => {
     const { data } = await supabase
@@ -350,7 +375,7 @@ export default function TravelPage() {
         requests.push(fetch(`/api/travel/search-hotels?${params.toString()}`, { cache: 'no-store' }).then(async res => {
           const payload = await res.json().catch(() => null) as { hotels?: unknown[]; error?: string } | null
           if (!res.ok) throw new Error(payload?.error || t('errors.hotelSearchFailed', { status: res.status }))
-          setHotels((payload?.hotels ?? []).slice(0, 12).map(item => mapHotel(item, destinationCityValue)))
+          setHotels((payload?.hotels ?? []).slice(0, 12).map(item => mapHotel(item, destinationCityValue, fallbackLabels)))
         }))
       }
 
@@ -372,7 +397,7 @@ export default function TravelPage() {
         requests.push(fetch(`/api/travel/search-flights?${params.toString()}`, { cache: 'no-store' }).then(async res => {
           const payload = await res.json().catch(() => null) as { flights?: unknown[]; error?: string } | null
           if (!res.ok) throw new Error(payload?.error || t('errors.flightSearchFailed', { status: res.status }))
-          setFlights((payload?.flights ?? []).slice(0, 12).map(item => mapFlight(item, departureCity, destinationCityValue)))
+          setFlights((payload?.flights ?? []).slice(0, 12).map(item => mapFlight(item, departureCity, destinationCityValue, fallbackLabels)))
         }))
       }
 

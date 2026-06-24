@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 
 // Minimal BeforeInstallPromptEvent shape — not in the standard DOM lib yet.
 type BIP = Event & {
@@ -10,6 +11,7 @@ type BIP = Event & {
 
 export default function PWAInstallBanner() {
   const pathname = usePathname()
+  const t = useTranslations('common')
   const [prompt, setPrompt] = useState<BIP | null>(null)
   const [show, setShow] = useState(false)
   const hasMobileServiceCheckoutBar = /^\/services\/[^/]+/.test(pathname)
@@ -51,7 +53,7 @@ export default function PWAInstallBanner() {
         boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
       }}
     >
-      <span style={{ fontWeight: 600 }}>Install FreeTrust App</span>
+      <span style={{ fontWeight: 600 }}>{t('installApp')}</span>
       <button
         type="button"
         onClick={handleInstall}
@@ -65,7 +67,7 @@ export default function PWAInstallBanner() {
           cursor: 'pointer',
         }}
       >
-        Install
+        {t('install')}
       </button>
       <button
         type="button"
@@ -78,7 +80,7 @@ export default function PWAInstallBanner() {
           cursor: 'pointer',
           padding: '0 4px',
         }}
-        aria-label="Dismiss"
+        aria-label={t('dismiss')}
       >
         ✕
       </button>
