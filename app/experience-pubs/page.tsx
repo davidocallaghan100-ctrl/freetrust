@@ -78,13 +78,16 @@ const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 const HARP_LOGO_URL = 'https://davidocallaghan100829028694.adaptive.ai/cdn/L7R6HFi879eCpWRNirDQ6zbcgxeiTJyN.webp'
 
 const COLORS = {
-  bg: '#11100D',
-  panel: '#1B1914',
-  card: '#242016',
-  accent: '#C8A24C',
-  light: '#F1D682',
+  bg: '#030303',
+  panel: '#080806',
+  card: '#11100A',
+  cardAlt: '#161306',
+  accent: '#D4AF37',
+  light: '#FFD966',
   cream: '#FFF4CB',
-  muted: '#B8AA86',
+  muted: '#D0C39A',
+  border: 'rgba(255,217,102,0.24)',
+  borderStrong: 'rgba(255,217,102,0.48)',
   green: '#3DAA5C',
   red: '#D94444',
 }
@@ -190,6 +193,7 @@ function startOfFutureInput() {
 
 export default function ExperiencePubsPage() {
   const mapRef = useRef<MapRef | null>(null)
+  const mapShellRef = useRef<HTMLDivElement | null>(null)
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   const [userId, setUserId] = useState<string | null>(null)
@@ -218,6 +222,26 @@ export default function ExperiencePubsPage() {
     media.addEventListener('change', update)
     return () => media.removeEventListener('change', update)
   }, [])
+
+  useEffect(() => {
+    const resizeMap = () => mapRef.current?.resize()
+    const frame = window.requestAnimationFrame(resizeMap)
+    const quick = window.setTimeout(resizeMap, 80)
+    const settled = window.setTimeout(resizeMap, 420)
+    window.addEventListener('resize', resizeMap)
+
+    const shell = mapShellRef.current
+    const observer = typeof ResizeObserver !== 'undefined' && shell ? new ResizeObserver(resizeMap) : null
+    if (observer && shell) observer.observe(shell)
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.clearTimeout(quick)
+      window.clearTimeout(settled)
+      window.removeEventListener('resize', resizeMap)
+      observer?.disconnect()
+    }
+  }, [isMobile, loading, pubs.length])
 
   const activityCountByPub = useMemo(() => {
     const counts = new Map<string, number>()
@@ -364,7 +388,7 @@ export default function ExperiencePubsPage() {
     minHeight: 42,
     padding: '10px 14px',
     background: `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.light})`,
-    color: '#1A1008',
+    color: '#050504',
     fontWeight: 900,
     cursor: 'pointer',
     fontSize: 13,
@@ -373,7 +397,7 @@ export default function ExperiencePubsPage() {
   if (!userId && !loading) {
     return (
       <div style={{ minHeight: 'calc(100vh - 104px)', background: `radial-gradient(circle at 50% 0%, rgba(241,214,130,0.13), transparent 42%), ${COLORS.bg}`, color: COLORS.cream, display: 'grid', placeItems: 'center', padding: 24, textAlign: 'center' }}>
-        <section style={{ maxWidth: 440, background: COLORS.panel, border: `1px solid rgba(241,214,130,0.25)`, borderRadius: 28, padding: 28, boxShadow: '0 28px 80px rgba(0,0,0,0.45)' }}>
+        <section style={{ maxWidth: 440, background: COLORS.panel, border: `1px solid ${COLORS.borderStrong}`, borderRadius: 28, padding: 28, boxShadow: '0 28px 80px rgba(0,0,0,0.45)' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}><HarpLogo size={92} /></div>
           <h1 style={{ margin: 0, fontFamily: 'Playfair Display, Georgia, serif', fontSize: 34 }}>Experience Pubs</h1>
           <p style={{ color: COLORS.muted, lineHeight: 1.6 }}>Sign in to discover pub plans, join trusted members, and invite friends around Cork.</p>
@@ -386,7 +410,7 @@ export default function ExperiencePubsPage() {
   return (
     <div style={pageStyle}>
       <main style={{ flex: isMobile ? '0 0 auto' : 1, width: '100%', minWidth: 0, display: 'flex', flexDirection: 'column', position: 'relative', boxSizing: 'border-box' }}>
-        <div style={{ padding: isMobile ? '12px 14px 10px' : '14px 16px 12px', background: 'linear-gradient(135deg, rgba(17,16,13,0.96), rgba(36,32,22,0.94))', borderBottom: '1px solid rgba(241,214,130,0.16)', display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: 12, boxSizing: 'border-box' }}>
+        <div style={{ padding: isMobile ? '12px 14px 10px' : '14px 16px 12px', background: 'linear-gradient(135deg, rgba(3,3,3,0.98), rgba(18,16,8,0.96))', borderBottom: `1px solid ${COLORS.border}`, display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: 12, boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 14, minWidth: 0 }}>
             <HarpLogo size={isMobile ? 48 : 64} />
             <div style={{ minWidth: 0 }}>
@@ -398,14 +422,15 @@ export default function ExperiencePubsPage() {
           <button type="button" onClick={() => setMobilePanelOpen(v => !v)} style={{ ...buttonStyle, display: 'none' }}>Panel</button>
         </div>
 
-        <div style={{ flex: isMobile ? '0 0 auto' : 1, position: 'relative', minHeight: isMobile ? 300 : 360, height: isMobile ? '42vh' : undefined, maxHeight: isMobile ? 420 : undefined, width: '100%', overflow: 'hidden' }}>
+        <div ref={mapShellRef} style={{ flex: isMobile ? '0 0 auto' : 1, position: 'relative', minHeight: isMobile ? 300 : 360, height: isMobile ? '42vh' : undefined, maxHeight: isMobile ? 420 : undefined, width: '100%', minWidth: 0, overflow: 'hidden', background: '#050504' }}>
           <MapboxMap
             ref={mapRef}
             mapboxAccessToken={MAPBOX_TOKEN}
             mapStyle={MAP_STYLE}
             initialViewState={{ longitude: location?.lng ?? -8.4756, latitude: location?.lat ?? 51.8985, zoom: 14 }}
-            style={{ width: '100%', height: '100%' }}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
             attributionControl={false}
+            onLoad={() => mapRef.current?.resize()}
             onMove={event => setMapZoom(event.viewState.zoom)}
             onError={e => console.error('[ExperiencePubs] map error', e)}
           >
@@ -422,7 +447,7 @@ export default function ExperiencePubsPage() {
                     <div style={{ width: inner, height: inner, borderRadius: '50% 50% 50% 0', background: `linear-gradient(135deg, ${COLORS.light}, ${COLORS.accent})`, transform: 'rotate(45deg)', border: `${Math.max(1, Math.round(2 * scale))}px solid rgba(255,244,203,0.82)`, boxShadow: pub.is_verified ? `0 0 0 ${Math.max(2, Math.round(4 * scale))}px rgba(61,170,92,0.24), 0 0 ${Math.round(22 * scale)}px ${COLORS.green}` : `0 ${Math.round(8 * scale)}px ${Math.round(24 * scale)}px rgba(0,0,0,0.45)`, display: 'grid', placeItems: 'center' }}>
                       <span style={{ transform: 'rotate(-45deg)', fontSize: iconSize, lineHeight: 1 }}>🍺</span>
                     </div>
-                    {count > 0 && <span style={{ position: 'absolute', top: -7, right: -6, minWidth: 20, height: 20, padding: '0 5px', borderRadius: 999, background: COLORS.red, color: '#fff', fontSize: 11, display: 'grid', placeItems: 'center', fontWeight: 900, border: '2px solid #1A1008' }}>{count}</span>}
+                    {count > 0 && <span style={{ position: 'absolute', top: -7, right: -6, minWidth: 20, height: 20, padding: '0 5px', borderRadius: 999, background: COLORS.red, color: '#fff', fontSize: 11, display: 'grid', placeItems: 'center', fontWeight: 900, border: '2px solid #050504' }}>{count}</span>}
                   </div>
                 </Marker>
               )
@@ -440,17 +465,17 @@ export default function ExperiencePubsPage() {
 
           <div style={{ position: 'absolute', left: isMobile ? 10 : 14, right: isMobile ? 10 : 14, bottom: isMobile ? 10 : 14, display: 'flex', gap: 8, flexWrap: isMobile ? 'nowrap' : 'wrap', overflowX: isMobile ? 'auto' : 'visible', maxWidth: '100%', zIndex: 4, paddingBottom: isMobile ? 3 : 0, WebkitOverflowScrolling: 'touch' }}>
             {FILTERS.map(filter => (
-              <button key={filter.key} type="button" onClick={() => setActiveFilter(filter.key)} style={{ border: `1px solid ${activeFilter === filter.key ? COLORS.light : 'rgba(245,237,214,0.2)'}`, background: activeFilter === filter.key ? 'rgba(201,125,46,0.92)' : 'rgba(45,31,15,0.9)', color: activeFilter === filter.key ? '#1A1008' : COLORS.cream, borderRadius: 999, padding: '9px 12px', fontSize: 12, fontWeight: 850, cursor: 'pointer', minHeight: 38, backdropFilter: 'blur(12px)', flexShrink: 0 }}>{filter.label}</button>
+              <button key={filter.key} type="button" onClick={() => setActiveFilter(filter.key)} style={{ border: `1px solid ${activeFilter === filter.key ? COLORS.light : COLORS.border}`, background: activeFilter === filter.key ? `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.light})` : 'rgba(8,8,6,0.92)', color: activeFilter === filter.key ? '#050504' : COLORS.cream, borderRadius: 999, padding: '9px 12px', fontSize: 12, fontWeight: 850, cursor: 'pointer', minHeight: 38, backdropFilter: 'blur(12px)', flexShrink: 0 }}>{filter.label}</button>
             ))}
           </div>
         </div>
       </main>
 
-      <aside style={{ width: isMobile ? '100%' : mobilePanelOpen ? 360 : 0, maxWidth: '100%', flex: isMobile ? '0 0 auto' : undefined, background: COLORS.panel, borderLeft: isMobile ? 'none' : '1px solid rgba(201,125,46,0.2)', borderTop: isMobile ? '1px solid rgba(201,125,46,0.2)' : 'none', overflow: isMobile ? 'visible' : 'hidden', transition: isMobile ? 'none' : 'width 180ms ease', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
-        <div style={{ padding: isMobile ? 12 : 14, borderBottom: '1px solid rgba(201,125,46,0.16)' }}>
+      <aside style={{ width: isMobile ? '100%' : mobilePanelOpen ? 360 : 0, maxWidth: '100%', flex: isMobile ? '0 0 auto' : undefined, background: COLORS.panel, borderLeft: isMobile ? 'none' : `1px solid ${COLORS.border}`, borderTop: isMobile ? `1px solid ${COLORS.border}` : 'none', overflow: isMobile ? 'visible' : 'hidden', transition: isMobile ? 'none' : 'width 180ms ease', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+        <div style={{ padding: isMobile ? 12 : 14, borderBottom: `1px solid ${COLORS.border}` }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
             {(['nearby', 'activities', 'invites'] as TabKey[]).map(tab => (
-              <button key={tab} type="button" onClick={() => setActiveTab(tab)} style={{ border: `1px solid ${activeTab === tab ? COLORS.accent : 'rgba(245,237,214,0.14)'}`, background: activeTab === tab ? 'rgba(201,125,46,0.18)' : 'rgba(26,16,8,0.54)', color: activeTab === tab ? COLORS.light : COLORS.muted, borderRadius: 12, padding: '10px 6px', fontSize: 12, fontWeight: 900, cursor: 'pointer', minHeight: 42 }}>
+              <button key={tab} type="button" onClick={() => setActiveTab(tab)} style={{ border: `1px solid ${activeTab === tab ? COLORS.light : COLORS.border}`, background: activeTab === tab ? 'rgba(212,175,55,0.16)' : 'rgba(8,8,6,0.64)', color: activeTab === tab ? COLORS.light : COLORS.muted, borderRadius: 12, padding: '10px 6px', fontSize: 12, fontWeight: 900, cursor: 'pointer', minHeight: 42 }}>
                 {tab === 'nearby' ? 'Nearby' : tab === 'activities' ? 'Activities' : `Invites${invites.length ? ` · ${invites.length}` : ''}`}
               </button>
             ))}
@@ -469,7 +494,7 @@ export default function ExperiencePubsPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {activities.map(activity => <ActivityCard key={activity.id} activity={activity} userId={userId} onJoin={() => joinActivity(activity)} onInvite={() => activity.pub && setInviteContext({ pub: activity.pub, activity })} />)}
               {activities.length === 0 && <PanelEmpty text="No upcoming pub activities yet." />}
-              <button type="button" onClick={() => setCreatePub(selectedPub)} style={{ border: `1.5px dashed rgba(201,125,46,0.55)`, background: 'rgba(26,16,8,0.38)', borderRadius: 18, padding: 18, color: COLORS.light, fontWeight: 900, cursor: 'pointer', minHeight: 82 }}>＋ Host your own pub activity</button>
+              <button type="button" onClick={() => setCreatePub(selectedPub)} style={{ border: `1.5px dashed ${COLORS.borderStrong}`, background: 'rgba(8,8,6,0.5)', borderRadius: 18, padding: 18, color: COLORS.light, fontWeight: 900, cursor: 'pointer', minHeight: 82 }}>＋ Host your own pub activity</button>
             </div>
           )}
           {activeTab === 'invites' && (
@@ -489,13 +514,13 @@ export default function ExperiencePubsPage() {
 }
 
 function PanelEmpty({ text }: { text: string }) {
-  return <div style={{ border: '1px solid rgba(245,237,214,0.12)', background: 'rgba(26,16,8,0.38)', borderRadius: 18, padding: 18, color: COLORS.muted, textAlign: 'center', lineHeight: 1.5 }}>{text}</div>
+  return <div style={{ border: `1px solid ${COLORS.border}`, background: 'rgba(0,0,0,0.48)', borderRadius: 18, padding: 18, color: COLORS.muted, textAlign: 'center', lineHeight: 1.5 }}>{text}</div>
 }
 
 function PubCard({ pub, km, selected, activityCount, onClick, onInvite, onCreate, setRef }: { pub: Pub; km: number | null; selected: boolean; activityCount: number; onClick: () => void; onInvite: () => void; onCreate: () => void; setRef: (el: HTMLDivElement | null) => void }) {
   const tags = pubTagLabels(pub)
   return (
-    <div ref={setRef} onClick={onClick} style={{ background: COLORS.card, border: selected ? '1px solid rgba(201,125,46,0.5)' : '1px solid rgba(245,237,214,0.1)', borderRadius: 18, padding: 14, cursor: 'pointer', boxShadow: selected ? '0 0 0 3px rgba(201,125,46,0.14)' : 'none' }}>
+    <div ref={setRef} onClick={onClick} style={{ background: selected ? COLORS.cardAlt : COLORS.card, border: selected ? `1px solid ${COLORS.borderStrong}` : `1px solid ${COLORS.border}`, borderRadius: 18, padding: 14, cursor: 'pointer', boxShadow: selected ? '0 0 0 3px rgba(212,175,55,0.14)' : 'none' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
         <h2 style={{ margin: 0, fontFamily: 'Playfair Display, Georgia, serif', fontSize: 20 }}>{pub.name}</h2>
         {pub.is_verified && <span style={{ color: COLORS.green, fontSize: 16 }}>●</span>}
@@ -503,13 +528,13 @@ function PubCard({ pub, km, selected, activityCount, onClick, onInvite, onCreate
       <div style={{ color: COLORS.muted, fontSize: 12, marginTop: 6, lineHeight: 1.45 }}>{pub.address || 'Cork'} · {formatKm(km)} · {walkMinutes(km)}</div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10, alignItems: 'center' }}>
         {pub.data_source === 'openstreetmap' && <span style={{ borderRadius: 999, padding: '5px 8px', background: 'rgba(241,214,130,0.12)', color: COLORS.light, fontSize: 11, fontWeight: 850 }}>OSM sourced</span>}
-        {pub.avg_rating !== null && <span style={{ borderRadius: 999, padding: '5px 8px', background: 'rgba(232,168,75,0.14)', color: COLORS.light, fontSize: 11, fontWeight: 850 }}>★ {asNumber(pub.avg_rating).toFixed(1)}</span>}
+        {pub.avg_rating !== null && <span style={{ borderRadius: 999, padding: '5px 8px', background: 'rgba(212,175,55,0.14)', color: COLORS.light, fontSize: 11, fontWeight: 850 }}>★ {asNumber(pub.avg_rating).toFixed(1)}</span>}
         <span style={{ color: COLORS.muted, fontSize: 12 }}>{activityCount} activities</span>
       </div>
       {tags.length > 0 && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>{tags.map(tag => <span key={tag} style={{ borderRadius: 999, padding: '4px 7px', background: 'rgba(255,244,203,0.08)', color: COLORS.muted, fontSize: 10, fontWeight: 800 }}>{tag}</span>)}</div>}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
-        <button type="button" onClick={event => { event.stopPropagation(); onInvite() }} style={{ minHeight: 40, borderRadius: 12, border: '1px solid rgba(232,168,75,0.35)', background: 'rgba(201,125,46,0.18)', color: COLORS.light, fontWeight: 900, cursor: 'pointer' }}>Invite Friends</button>
-        <button type="button" onClick={event => { event.stopPropagation(); onCreate() }} style={{ minHeight: 40, borderRadius: 12, border: 'none', background: COLORS.accent, color: '#1A1008', fontWeight: 900, cursor: 'pointer' }}>Create Activity</button>
+        <button type="button" onClick={event => { event.stopPropagation(); onInvite() }} style={{ minHeight: 40, borderRadius: 12, border: `1px solid ${COLORS.borderStrong}`, background: 'rgba(0,0,0,0.44)', color: COLORS.light, fontWeight: 900, cursor: 'pointer' }}>Invite Friends</button>
+        <button type="button" onClick={event => { event.stopPropagation(); onCreate() }} style={{ minHeight: 40, borderRadius: 12, border: 'none', background: COLORS.accent, color: '#050504', fontWeight: 900, cursor: 'pointer' }}>Create Activity</button>
       </div>
     </div>
   )
@@ -522,9 +547,9 @@ function ActivityCard({ activity, userId, onJoin, onInvite }: { activity: Activi
   const full = attendees.length >= max
   const type = ACTIVITY_LABELS[activity.activity_type ?? 'other']
   return (
-    <div style={{ background: COLORS.card, border: '1px solid rgba(245,237,214,0.1)', borderRadius: 18, padding: 14 }}>
+    <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 18, padding: 14 }}>
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-        <div style={{ width: 42, height: 42, borderRadius: 14, background: 'rgba(232,168,75,0.16)', display: 'grid', placeItems: 'center', fontSize: 22 }}>{type.emoji}</div>
+        <div style={{ width: 42, height: 42, borderRadius: 14, background: 'rgba(212,175,55,0.16)', display: 'grid', placeItems: 'center', fontSize: 22 }}>{type.emoji}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <h3 style={{ margin: 0, fontSize: 16, color: COLORS.cream }}>{activity.title}</h3>
           <div style={{ color: COLORS.light, fontSize: 12, marginTop: 3 }}>{activity.pub?.name ?? 'Pub'} · {formatDateTime(activity.scheduled_at)}</div>
@@ -536,8 +561,8 @@ function ActivityCard({ activity, userId, onJoin, onInvite }: { activity: Activi
         <div style={{ display: 'flex', marginRight: 4 }}>{attendees.slice(0, 4).map((a, idx) => <span key={`${a.user_id}-${idx}`} style={{ width: 24, height: 24, borderRadius: '50%', background: COLORS.accent, marginLeft: idx ? -8 : 0, border: `2px solid ${COLORS.card}`, display: 'grid', placeItems: 'center', fontSize: 10 }}>👤</span>)}{attendees.length > 4 && <span style={{ color: COLORS.muted, fontSize: 12, marginLeft: 4 }}>+{attendees.length - 4}</span>}</div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
-        <button type="button" disabled={going || full} onClick={onJoin} style={{ minHeight: 40, borderRadius: 12, border: 'none', background: going ? COLORS.green : full ? '#5f5140' : COLORS.accent, color: going || full ? '#fff' : '#1A1008', fontWeight: 900, cursor: going || full ? 'not-allowed' : 'pointer' }}>{going ? '✅ Going' : full ? 'Full' : 'Join Activity'}</button>
-        <button type="button" onClick={onInvite} style={{ minHeight: 40, borderRadius: 12, border: '1px solid rgba(232,168,75,0.35)', background: 'rgba(201,125,46,0.16)', color: COLORS.light, fontWeight: 900, cursor: 'pointer' }}>Invite Friends</button>
+        <button type="button" disabled={going || full} onClick={onJoin} style={{ minHeight: 40, borderRadius: 12, border: 'none', background: going ? COLORS.green : full ? '#2A2A2A' : COLORS.accent, color: going || full ? '#fff' : '#050504', fontWeight: 900, cursor: going || full ? 'not-allowed' : 'pointer' }}>{going ? '✅ Going' : full ? 'Full' : 'Join Activity'}</button>
+        <button type="button" onClick={onInvite} style={{ minHeight: 40, borderRadius: 12, border: `1px solid ${COLORS.borderStrong}`, background: 'rgba(0,0,0,0.44)', color: COLORS.light, fontWeight: 900, cursor: 'pointer' }}>Invite Friends</button>
       </div>
     </div>
   )
@@ -545,7 +570,7 @@ function ActivityCard({ activity, userId, onJoin, onInvite }: { activity: Activi
 
 function InviteCard({ invite, onAccept, onDecline }: { invite: InviteRow; onAccept: () => void; onDecline: () => void }) {
   return (
-    <div style={{ background: COLORS.card, border: '1px solid rgba(245,237,214,0.1)', borderRadius: 18, padding: 14 }}>
+    <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 18, padding: 14 }}>
       <div style={{ color: COLORS.light, fontWeight: 900 }}>{profileName(invite.sender)} invited you</div>
       <div style={{ color: COLORS.muted, fontSize: 12, marginTop: 4 }}>Trust Score ₮{invite.senderTrust ?? 0}</div>
       <h3 style={{ margin: '10px 0 4px', fontSize: 16 }}>{invite.activity?.title ?? 'Pub plan'}</h3>
@@ -553,8 +578,8 @@ function InviteCard({ invite, onAccept, onDecline }: { invite: InviteRow; onAcce
       {invite.message && <p style={{ color: COLORS.cream, fontSize: 13, lineHeight: 1.45, margin: '10px 0 0' }}>{invite.message}</p>}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 12 }}>
         <button type="button" onClick={onAccept} style={{ minHeight: 40, borderRadius: 12, border: 'none', background: COLORS.green, color: '#fff', fontWeight: 900, cursor: 'pointer' }}>Accept</button>
-        <button type="button" onClick={onDecline} style={{ minHeight: 40, borderRadius: 12, border: '1px solid rgba(245,237,214,0.16)', background: 'rgba(26,16,8,0.4)', color: COLORS.muted, fontWeight: 900, cursor: 'pointer' }}>Decline</button>
-        <a href={`/messages?to=${invite.from_user_id}`} style={{ minHeight: 40, borderRadius: 12, border: '1px solid rgba(232,168,75,0.35)', color: COLORS.light, textDecoration: 'none', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 900 }}>Message</a>
+        <button type="button" onClick={onDecline} style={{ minHeight: 40, borderRadius: 12, border: `1px solid ${COLORS.border}`, background: 'rgba(0,0,0,0.46)', color: COLORS.muted, fontWeight: 900, cursor: 'pointer' }}>Decline</button>
+        <a href={`/messages?to=${invite.from_user_id}`} style={{ minHeight: 40, borderRadius: 12, border: `1px solid ${COLORS.borderStrong}`, color: COLORS.light, textDecoration: 'none', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 900 }}>Message</a>
       </div>
     </div>
   )
@@ -563,10 +588,10 @@ function InviteCard({ invite, onAccept, onDecline }: { invite: InviteRow; onAcce
 function ModalShell({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 30, background: 'rgba(0,0,0,0.58)', display: 'grid', placeItems: 'center', padding: 18 }}>
-      <section style={{ width: 'min(520px, 100%)', maxHeight: '88vh', overflowY: 'auto', background: COLORS.panel, color: COLORS.cream, border: `1px solid rgba(201,125,46,0.38)`, borderRadius: 24, boxShadow: '0 30px 100px rgba(0,0,0,0.6)', padding: 18 }}>
+      <section style={{ width: 'min(520px, 100%)', maxHeight: '88vh', overflowY: 'auto', background: COLORS.panel, color: COLORS.cream, border: `1px solid ${COLORS.borderStrong}`, borderRadius: 24, boxShadow: '0 30px 100px rgba(0,0,0,0.6)', padding: 18 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
           <h2 style={{ margin: 0, fontFamily: 'Playfair Display, Georgia, serif', fontSize: 26 }}>{title}</h2>
-          <button type="button" onClick={onClose} style={{ width: 40, height: 40, borderRadius: '50%', border: '1px solid rgba(245,237,214,0.16)', background: 'rgba(26,16,8,0.55)', color: COLORS.cream, cursor: 'pointer', fontSize: 18 }}>×</button>
+          <button type="button" onClick={onClose} style={{ width: 40, height: 40, borderRadius: '50%', border: `1px solid ${COLORS.border}`, background: 'rgba(0,0,0,0.62)', color: COLORS.cream, cursor: 'pointer', fontSize: 18 }}>×</button>
         </div>
         {children}
       </section>
@@ -574,7 +599,7 @@ function ModalShell({ title, children, onClose }: { title: string; children: Rea
   )
 }
 
-const fieldStyle: CSSProperties = { width: '100%', minHeight: 46, borderRadius: 12, border: '1px solid rgba(245,237,214,0.16)', background: 'rgba(26,16,8,0.55)', color: COLORS.cream, padding: '10px 12px', fontSize: 16, boxSizing: 'border-box' }
+const fieldStyle: CSSProperties = { width: '100%', minHeight: 46, borderRadius: 12, border: `1px solid ${COLORS.border}`, background: 'rgba(0,0,0,0.62)', color: COLORS.cream, padding: '10px 12px', fontSize: 16, boxSizing: 'border-box' }
 const labelStyle: CSSProperties = { display: 'block', color: COLORS.muted, fontSize: 12, fontWeight: 900, margin: '12px 0 6px' }
 
 function InviteModal({ context, activities, friends, userId, onClose, onSent }: { context: { pub: Pub; activity?: ActivityRow | null }; activities: ActivityRow[]; friends: Friend[]; userId: string | null; onClose: () => void; onSent: () => void }) {
@@ -603,7 +628,7 @@ function InviteModal({ context, activities, friends, userId, onClose, onSent }: 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {friends.map(friend => {
           const checked = selected.has(friend.id)
-          return <button key={friend.id} type="button" onClick={() => setSelected(prev => { const next = new Set(prev); if (next.has(friend.id)) next.delete(friend.id); else next.add(friend.id); return next })} style={{ border: `1px solid ${checked ? COLORS.light : 'rgba(245,237,214,0.16)'}`, background: checked ? 'rgba(201,125,46,0.22)' : 'rgba(26,16,8,0.5)', color: COLORS.cream, borderRadius: 999, padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 7, minHeight: 42, cursor: 'pointer' }}><span>{friend.avatar_url ? '👤' : '🙂'}</span>{profileName(friend)} · ₮{friend.trust_score}</button>
+          return <button key={friend.id} type="button" onClick={() => setSelected(prev => { const next = new Set(prev); if (next.has(friend.id)) next.delete(friend.id); else next.add(friend.id); return next })} style={{ border: `1px solid ${checked ? COLORS.light : COLORS.border}`, background: checked ? 'rgba(212,175,55,0.18)' : 'rgba(0,0,0,0.5)', color: COLORS.cream, borderRadius: 999, padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 7, minHeight: 42, cursor: 'pointer' }}><span>{friend.avatar_url ? '👤' : '🙂'}</span>{profileName(friend)} · ₮{friend.trust_score}</button>
         })}
         {friends.length === 0 && <div style={{ color: COLORS.muted, fontSize: 13 }}>No mutual friends with Trust Score ≥ 30 found yet.</div>}
       </div>
@@ -615,7 +640,7 @@ function InviteModal({ context, activities, friends, userId, onClose, onSent }: 
       {!activityId && <><label style={labelStyle}>When</label><input type="datetime-local" value={when} onChange={e => setWhen(e.target.value)} style={fieldStyle} /></>}
       <label style={labelStyle}>Message</label>
       <textarea value={message} onChange={e => setMessage(e.target.value)} rows={4} style={{ ...fieldStyle, resize: 'vertical', lineHeight: 1.45 }} />
-      <button type="button" onClick={submit} disabled={busy || selected.size === 0} style={{ marginTop: 14, width: '100%', minHeight: 48, borderRadius: 14, border: 'none', background: selected.size ? COLORS.accent : '#5f5140', color: selected.size ? '#1A1008' : COLORS.muted, fontWeight: 950, cursor: selected.size ? 'pointer' : 'not-allowed' }}>{busy ? 'Sending…' : 'Send Invites'}</button>
+      <button type="button" onClick={submit} disabled={busy || selected.size === 0} style={{ marginTop: 14, width: '100%', minHeight: 48, borderRadius: 14, border: 'none', background: selected.size ? COLORS.accent : '#2A2A2A', color: selected.size ? '#050504' : COLORS.muted, fontWeight: 950, cursor: selected.size ? 'pointer' : 'not-allowed' }}>{busy ? 'Sending…' : 'Send Invites'}</button>
     </ModalShell>
   )
 }
@@ -654,7 +679,7 @@ function CreateActivityModal({ pubs, initialPub, userId, onClose, onCreated }: {
       <label style={labelStyle}>Activity Type</label><select value={type} onChange={e => setType(e.target.value as ActivityType)} style={fieldStyle}>{Object.entries(ACTIVITY_LABELS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}</select>
       <label style={labelStyle}>Description</label><textarea value={description} onChange={e => setDescription(e.target.value)} rows={4} style={{ ...fieldStyle, resize: 'vertical', lineHeight: 1.45 }} />
       <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 10 }}><input type="checkbox" checked={open} onChange={e => setOpen(e.target.checked)} style={{ width: 18, height: 18 }} /> Open to all</label>
-      <button type="button" onClick={submit} disabled={busy} style={{ marginTop: 14, width: '100%', minHeight: 48, borderRadius: 14, border: 'none', background: COLORS.accent, color: '#1A1008', fontWeight: 950, cursor: 'pointer' }}>{busy ? 'Posting…' : 'Post Activity'}</button>
+      <button type="button" onClick={submit} disabled={busy} style={{ marginTop: 14, width: '100%', minHeight: 48, borderRadius: 14, border: 'none', background: COLORS.accent, color: '#050504', fontWeight: 950, cursor: 'pointer' }}>{busy ? 'Posting…' : 'Post Activity'}</button>
     </ModalShell>
   )
 }
