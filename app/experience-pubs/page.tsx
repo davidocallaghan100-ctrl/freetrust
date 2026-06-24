@@ -586,9 +586,17 @@ function InviteCard({ invite, onAccept, onDecline }: { invite: InviteRow; onAcce
 }
 
 function ModalShell({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
+  useEffect(() => {
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previous
+    }
+  }, [])
+
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 30, background: 'rgba(0,0,0,0.58)', display: 'grid', placeItems: 'center', padding: 18 }}>
-      <section style={{ width: 'min(520px, 100%)', maxHeight: '88vh', overflowY: 'auto', background: COLORS.panel, color: COLORS.cream, border: `1px solid ${COLORS.borderStrong}`, borderRadius: 24, boxShadow: '0 30px 100px rgba(0,0,0,0.6)', padding: 18 }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.68)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom))', boxSizing: 'border-box', overflowY: 'auto' }}>
+      <section role="dialog" aria-modal="true" aria-label={title} style={{ width: 'min(520px, calc(100vw - 28px))', maxHeight: 'calc(100dvh - 28px)', overflowY: 'auto', background: COLORS.panel, color: COLORS.cream, border: `1px solid ${COLORS.borderStrong}`, borderRadius: 24, boxShadow: '0 30px 100px rgba(0,0,0,0.72)', padding: 18, boxSizing: 'border-box', WebkitOverflowScrolling: 'touch' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
           <h2 style={{ margin: 0, fontFamily: 'Playfair Display, Georgia, serif', fontSize: 26 }}>{title}</h2>
           <button type="button" onClick={onClose} style={{ width: 40, height: 40, borderRadius: '50%', border: `1px solid ${COLORS.border}`, background: 'rgba(0,0,0,0.62)', color: COLORS.cream, cursor: 'pointer', fontSize: 18 }}>×</button>
