@@ -18,6 +18,9 @@ type Pub = {
   lng: string | number
   is_verified: boolean | null
   avg_rating: string | number | null
+  data_source?: string | null
+  source_url?: string | null
+  tags?: { osm_tags?: string[] } | null
 }
 
 type Profile = {
@@ -72,15 +75,16 @@ type Friend = Profile & { trust_score: number }
 
 const MAP_STYLE = 'mapbox://styles/davos212/cmo7emfe2000x01r3b3cn2zgq'
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
+const HARP_LOGO_URL = 'https://davidocallaghan100829028694.adaptive.ai/cdn/L7R6HFi879eCpWRNirDQ6zbcgxeiTJyN.webp'
 
 const COLORS = {
-  bg: '#1A1008',
-  panel: '#2D1F0F',
-  card: '#352512',
-  accent: '#C97D2E',
-  light: '#E8A84B',
-  cream: '#F5EDD6',
-  muted: '#A0927A',
+  bg: '#11100D',
+  panel: '#1B1914',
+  card: '#242016',
+  accent: '#C8A24C',
+  light: '#F1D682',
+  cream: '#FFF4CB',
+  muted: '#B8AA86',
   green: '#3DAA5C',
   red: '#D94444',
 }
@@ -140,6 +144,39 @@ function formatDateTime(value: string) {
   }).format(new Date(value))
 }
 
+function HarpLogo({ size = 52 }: { size?: number }) {
+  return <div aria-label="FreeTrust pubs harp logo" style={{ width: size, height: Math.round(size * 0.72), borderRadius: Math.max(12, Math.round(size * 0.22)), backgroundImage: `linear-gradient(135deg, rgba(17,16,13,0.12), rgba(17,16,13,0.42)), url(${HARP_LOGO_URL})`, backgroundSize: 'cover', backgroundPosition: 'center', border: `1px solid rgba(241,214,130,0.62)`, boxShadow: '0 10px 30px rgba(0,0,0,0.46), inset 0 0 0 1px rgba(255,244,203,0.12)', flexShrink: 0 }} />
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
+}
+
+function markerScaleForZoom(zoom: number, selected: boolean) {
+  const base = clamp((zoom - 10.2) / 5.4, 0.46, 1)
+  return selected ? base * 1.18 : base
+}
+
+function pubTagLabels(pub: Pub) {
+  const tags = pub.tags?.osm_tags ?? []
+  return tags.map(tag => ({
+    outdoor_seating: 'Outdoor seating',
+    wifi: 'Wi‑Fi',
+    brewery_or_cask_tags: 'Cask/brewery tags',
+    wheelchair_accessible: 'Accessible',
+    wheelchair_limited: 'Limited access',
+    opening_hours_available: 'Hours listed',
+  }[tag] ?? tag.replace(/_/g, ' '))).slice(0, 3)
+}
+
+function normalisePubName(name: string) {
+  return name
+    .toLowerCase()
+    .replace(/^the\s+/, '')
+    .replace(/[’']/g, '')
+    .replace(/[^a-z0-9]+/g, '')
+}
+
 function profileName(profile?: Profile | null) {
   if (!profile) return 'FreeTrust member'
   return profile.full_name || [profile.first_name, profile.last_name].filter(Boolean).join(' ') || 'FreeTrust member'
@@ -172,6 +209,7 @@ export default function ExperiencePubsPage() {
   const [submitting, setSubmitting] = useState(false)
   const [mobilePanelOpen, setMobilePanelOpen] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
+  const [mapZoom, setMapZoom] = useState(14)
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)')
@@ -186,6 +224,20 @@ export default function ExperiencePubsPage() {
     for (const activity of activities) counts.set(activity.pub_id, (counts.get(activity.pub_id) ?? 0) + 1)
     return counts
   }, [activities])
+
+  const displayPubs = useMemo(() => {
+    const groups = new Map<string, Pub[]>()
+    for (const pub of pubs) {
+      const key = normalisePubName(pub.name)
+      const group = groups.get(key) ?? []
+      group.push(pub)
+      groups.set(key, group)
+    }
+    return Array.from(groups.values()).map(group => group.slice().sort((a, b) => {
+      const score = (pub: Pub) => (activityCountByPub.get(pub.id) ?? 0) * 100 + (pub.is_verified ? 20 : 0) + (pub.avg_rating !== null ? 10 : 0) + (pub.address && pub.address !== 'Cork' ? 3 : 0) + (pub.source_url ? 2 : 0)
+      return score(b) - score(a)
+    })[0]).sort((a, b) => a.name.localeCompare(b.name))
+  }, [activityCountByPub, pubs])
 
   const showToast = useCallback((message: string) => {
     setToast(message)
@@ -232,9 +284,9 @@ export default function ExperiencePubsPage() {
     )
   }, [])
 
-  const sortedPubs = useMemo(() => pubs
+  const sortedPubs = useMemo(() => displayPubs
     .map(pub => ({ pub, km: distanceKm(location, pub) }))
-    .sort((a, b) => (a.km ?? 9999) - (b.km ?? 9999)), [location, pubs])
+    .sort((a, b) => (a.km ?? 9999) - (b.km ?? 9999)), [displayPubs, location])
 
   const visiblePubRows = useMemo(() => sortedPubs.filter(({ pub }) => {
     if (activeFilter === 'all') return true
@@ -244,7 +296,7 @@ export default function ExperiencePubsPage() {
     return pubActivities.some(activity => activity.activity_type === activeFilter)
   }), [activeFilter, activities, friendIds, sortedPubs])
 
-  const selectedPub = useMemo(() => pubs.find(pub => pub.id === selectedPubId) ?? null, [pubs, selectedPubId])
+  const selectedPub = useMemo(() => displayPubs.find(pub => pub.id === selectedPubId) ?? null, [displayPubs, selectedPubId])
 
   const selectPub = useCallback((pub: Pub) => {
     setSelectedPubId(pub.id)
@@ -320,9 +372,9 @@ export default function ExperiencePubsPage() {
 
   if (!userId && !loading) {
     return (
-      <div style={{ minHeight: 'calc(100vh - 104px)', background: COLORS.bg, color: COLORS.cream, display: 'grid', placeItems: 'center', padding: 24, textAlign: 'center' }}>
-        <section style={{ maxWidth: 440, background: COLORS.panel, border: `1px solid rgba(201,125,46,0.25)`, borderRadius: 28, padding: 28, boxShadow: '0 28px 80px rgba(0,0,0,0.45)' }}>
-          <div style={{ fontSize: 46, marginBottom: 14 }}>🍺</div>
+      <div style={{ minHeight: 'calc(100vh - 104px)', background: `radial-gradient(circle at 50% 0%, rgba(241,214,130,0.13), transparent 42%), ${COLORS.bg}`, color: COLORS.cream, display: 'grid', placeItems: 'center', padding: 24, textAlign: 'center' }}>
+        <section style={{ maxWidth: 440, background: COLORS.panel, border: `1px solid rgba(241,214,130,0.25)`, borderRadius: 28, padding: 28, boxShadow: '0 28px 80px rgba(0,0,0,0.45)' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}><HarpLogo size={92} /></div>
           <h1 style={{ margin: 0, fontFamily: 'Playfair Display, Georgia, serif', fontSize: 34 }}>Experience Pubs</h1>
           <p style={{ color: COLORS.muted, lineHeight: 1.6 }}>Sign in to discover pub plans, join trusted members, and invite friends around Cork.</p>
           <a href="/login?redirect=/experience-pubs" style={{ ...buttonStyle, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', marginTop: 10 }}>Sign in to continue</a>
@@ -334,10 +386,14 @@ export default function ExperiencePubsPage() {
   return (
     <div style={pageStyle}>
       <main style={{ flex: isMobile ? '0 0 auto' : 1, width: '100%', minWidth: 0, display: 'flex', flexDirection: 'column', position: 'relative', boxSizing: 'border-box' }}>
-        <div style={{ padding: isMobile ? '12px 14px 10px' : '14px 16px 12px', background: 'rgba(26,16,8,0.92)', borderBottom: '1px solid rgba(201,125,46,0.16)', display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: 12, boxSizing: 'border-box' }}>
-          <div style={{ minWidth: 0 }}>
+        <div style={{ padding: isMobile ? '12px 14px 10px' : '14px 16px 12px', background: 'linear-gradient(135deg, rgba(17,16,13,0.96), rgba(36,32,22,0.94))', borderBottom: '1px solid rgba(241,214,130,0.16)', display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: 12, boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 14, minWidth: 0 }}>
+            <HarpLogo size={isMobile ? 48 : 64} />
+            <div style={{ minWidth: 0 }}>
             <div style={{ color: COLORS.light, fontSize: 12, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Experience</div>
             <h1 style={{ margin: '2px 0 0', fontFamily: 'Playfair Display, Georgia, serif', fontSize: isMobile ? 31 : 'clamp(24px, 4vw, 38px)', lineHeight: 1, overflowWrap: 'break-word' }}>🍺 Experience Pubs</h1>
+            <div style={{ color: COLORS.muted, fontSize: 12, marginTop: 5 }}>{displayPubs.length ? `${displayPubs.length} real Cork pubs from OpenStreetMap + FreeTrust community` : 'Real Cork pub map'}</div>
+            </div>
           </div>
           <button type="button" onClick={() => setMobilePanelOpen(v => !v)} style={{ ...buttonStyle, display: 'none' }}>Panel</button>
         </div>
@@ -350,16 +406,21 @@ export default function ExperiencePubsPage() {
             initialViewState={{ longitude: location?.lng ?? -8.4756, latitude: location?.lat ?? 51.8985, zoom: 14 }}
             style={{ width: '100%', height: '100%' }}
             attributionControl={false}
+            onMove={event => setMapZoom(event.viewState.zoom)}
             onError={e => console.error('[ExperiencePubs] map error', e)}
           >
             {visiblePubRows.map(({ pub, km }) => {
               const count = activityCountByPub.get(pub.id) ?? 0
               const selected = selectedPubId === pub.id
+              const scale = markerScaleForZoom(mapZoom, selected)
+              const outer = Math.round(44 * scale)
+              const inner = Math.round(38 * scale)
+              const iconSize = Math.round(19 * scale)
               return (
                 <Marker key={pub.id} longitude={asNumber(pub.lng)} latitude={asNumber(pub.lat)} anchor="bottom" onClick={event => { event.originalEvent.stopPropagation(); selectPub(pub) }}>
-                  <div style={{ position: 'relative', width: 44, height: 44, transform: selected ? 'scale(1.2)' : 'scale(1)', transition: 'transform 160ms ease', cursor: 'pointer' }}>
-                    <div style={{ width: 38, height: 38, borderRadius: '50% 50% 50% 0', background: COLORS.accent, transform: 'rotate(45deg)', border: `2px solid ${COLORS.light}`, boxShadow: pub.is_verified ? `0 0 0 4px rgba(61,170,92,0.24), 0 0 22px ${COLORS.green}` : '0 8px 24px rgba(0,0,0,0.45)', display: 'grid', placeItems: 'center' }}>
-                      <span style={{ transform: 'rotate(-45deg)', fontSize: 19 }}>🍺</span>
+                  <div style={{ position: 'relative', width: outer, height: outer, transition: 'width 160ms ease, height 160ms ease', cursor: 'pointer' }}>
+                    <div style={{ width: inner, height: inner, borderRadius: '50% 50% 50% 0', background: `linear-gradient(135deg, ${COLORS.light}, ${COLORS.accent})`, transform: 'rotate(45deg)', border: `${Math.max(1, Math.round(2 * scale))}px solid rgba(255,244,203,0.82)`, boxShadow: pub.is_verified ? `0 0 0 ${Math.max(2, Math.round(4 * scale))}px rgba(61,170,92,0.24), 0 0 ${Math.round(22 * scale)}px ${COLORS.green}` : `0 ${Math.round(8 * scale)}px ${Math.round(24 * scale)}px rgba(0,0,0,0.45)`, display: 'grid', placeItems: 'center' }}>
+                      <span style={{ transform: 'rotate(-45deg)', fontSize: iconSize, lineHeight: 1 }}>🍺</span>
                     </div>
                     {count > 0 && <span style={{ position: 'absolute', top: -7, right: -6, minWidth: 20, height: 20, padding: '0 5px', borderRadius: 999, background: COLORS.red, color: '#fff', fontSize: 11, display: 'grid', placeItems: 'center', fontWeight: 900, border: '2px solid #1A1008' }}>{count}</span>}
                   </div>
@@ -368,9 +429,10 @@ export default function ExperiencePubsPage() {
             })}
             {selectedPub && (
               <Popup longitude={asNumber(selectedPub.lng)} latitude={asNumber(selectedPub.lat)} anchor="bottom" offset={52} closeButton={false} closeOnClick={false} maxWidth="240px">
-                <div style={{ background: COLORS.panel, color: COLORS.cream, border: `1px solid ${COLORS.accent}`, borderRadius: 16, padding: 12, boxShadow: '0 18px 44px rgba(0,0,0,0.45)' }}>
-                  <strong style={{ fontFamily: 'Playfair Display, Georgia, serif', fontSize: 16 }}>{selectedPub.name}</strong>
+                <div style={{ background: COLORS.panel, color: COLORS.cream, border: `1px solid ${COLORS.light}`, borderRadius: 16, padding: 12, boxShadow: '0 18px 44px rgba(0,0,0,0.45)' }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}><HarpLogo size={42} /><strong style={{ fontFamily: 'Playfair Display, Georgia, serif', fontSize: 16 }}>{selectedPub.name}</strong></div>
                   <div style={{ color: COLORS.muted, fontSize: 12, marginTop: 4 }}>{formatKm(distanceKm(location, selectedPub))} · {activityCountByPub.get(selectedPub.id) ?? 0} activities</div>
+                  {selectedPub.source_url && <a href={selectedPub.source_url} target="_blank" rel="noreferrer" style={{ display: 'inline-block', color: COLORS.light, fontSize: 11, marginTop: 7, fontWeight: 900, textDecoration: 'none' }}>OpenStreetMap source ↗</a>}
                 </div>
               </Popup>
             )}
@@ -421,7 +483,7 @@ export default function ExperiencePubsPage() {
 
       {toast && <div style={{ position: 'absolute', left: '50%', bottom: 24, transform: 'translateX(-50%)', background: COLORS.green, color: '#fff', borderRadius: 999, padding: '12px 18px', fontWeight: 900, zIndex: 20, boxShadow: '0 18px 48px rgba(0,0,0,0.45)' }}>{toast}</div>}
       {inviteContext && <InviteModal context={inviteContext} activities={activities.filter(a => a.pub_id === inviteContext.pub.id)} friends={friends} userId={userId} onClose={() => setInviteContext(null)} onSent={async () => { setInviteContext(null); showToast('✅ Invites sent via FreeTrust!'); await loadAll() }} />}
-      {createPub !== null && <CreateActivityModal pubs={pubs} initialPub={createPub} userId={userId} onClose={() => setCreatePub(null)} onCreated={async () => { setCreatePub(null); showToast('🎉 Activity posted to the community!'); await loadAll(); setActiveTab('activities') }} />}
+      {createPub !== null && <CreateActivityModal pubs={displayPubs} initialPub={createPub} userId={userId} onClose={() => setCreatePub(null)} onCreated={async () => { setCreatePub(null); showToast('🎉 Activity posted to the community!'); await loadAll(); setActiveTab('activities') }} />}
     </div>
   )
 }
@@ -431,6 +493,7 @@ function PanelEmpty({ text }: { text: string }) {
 }
 
 function PubCard({ pub, km, selected, activityCount, onClick, onInvite, onCreate, setRef }: { pub: Pub; km: number | null; selected: boolean; activityCount: number; onClick: () => void; onInvite: () => void; onCreate: () => void; setRef: (el: HTMLDivElement | null) => void }) {
+  const tags = pubTagLabels(pub)
   return (
     <div ref={setRef} onClick={onClick} style={{ background: COLORS.card, border: selected ? '1px solid rgba(201,125,46,0.5)' : '1px solid rgba(245,237,214,0.1)', borderRadius: 18, padding: 14, cursor: 'pointer', boxShadow: selected ? '0 0 0 3px rgba(201,125,46,0.14)' : 'none' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
@@ -439,10 +502,11 @@ function PubCard({ pub, km, selected, activityCount, onClick, onInvite, onCreate
       </div>
       <div style={{ color: COLORS.muted, fontSize: 12, marginTop: 6, lineHeight: 1.45 }}>{pub.address || 'Cork'} · {formatKm(km)} · {walkMinutes(km)}</div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10, alignItems: 'center' }}>
-        <span style={{ borderRadius: 999, padding: '5px 8px', background: 'rgba(61,170,92,0.16)', color: COLORS.green, fontSize: 11, fontWeight: 850 }}>Open</span>
-        <span style={{ borderRadius: 999, padding: '5px 8px', background: 'rgba(232,168,75,0.14)', color: COLORS.light, fontSize: 11, fontWeight: 850 }}>★ {asNumber(pub.avg_rating).toFixed(1)}</span>
+        {pub.data_source === 'openstreetmap' && <span style={{ borderRadius: 999, padding: '5px 8px', background: 'rgba(241,214,130,0.12)', color: COLORS.light, fontSize: 11, fontWeight: 850 }}>OSM sourced</span>}
+        {pub.avg_rating !== null && <span style={{ borderRadius: 999, padding: '5px 8px', background: 'rgba(232,168,75,0.14)', color: COLORS.light, fontSize: 11, fontWeight: 850 }}>★ {asNumber(pub.avg_rating).toFixed(1)}</span>}
         <span style={{ color: COLORS.muted, fontSize: 12 }}>{activityCount} activities</span>
       </div>
+      {tags.length > 0 && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>{tags.map(tag => <span key={tag} style={{ borderRadius: 999, padding: '4px 7px', background: 'rgba(255,244,203,0.08)', color: COLORS.muted, fontSize: 10, fontWeight: 800 }}>{tag}</span>)}</div>}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
         <button type="button" onClick={event => { event.stopPropagation(); onInvite() }} style={{ minHeight: 40, borderRadius: 12, border: '1px solid rgba(232,168,75,0.35)', background: 'rgba(201,125,46,0.18)', color: COLORS.light, fontWeight: 900, cursor: 'pointer' }}>Invite Friends</button>
         <button type="button" onClick={event => { event.stopPropagation(); onCreate() }} style={{ minHeight: 40, borderRadius: 12, border: 'none', background: COLORS.accent, color: '#1A1008', fontWeight: 900, cursor: 'pointer' }}>Create Activity</button>
