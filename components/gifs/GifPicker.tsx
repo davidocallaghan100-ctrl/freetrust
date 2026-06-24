@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { GifResult } from '@/lib/gifs'
 
 type GifPickerProps = {
@@ -15,6 +15,8 @@ export default function GifPicker({ selectedGif, onSelect, disabled = false, com
   const [query, setQuery] = useState('')
   const [gifs, setGifs] = useState<GifResult[]>([])
   const [loading, setLoading] = useState(false)
+  const triggerRef = useRef<HTMLDivElement>(null)
+  const [panelPosition, setPanelPosition] = useState<{ left: number; bottom: number; width: number } | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -42,8 +44,38 @@ export default function GifPicker({ selectedGif, onSelect, disabled = false, com
 
   const panelWidth = useMemo(() => compact ? 290 : 330, [compact])
 
+  const updatePanelPosition = useCallback(() => {
+    const trigger = triggerRef.current
+    if (!trigger || typeof window === 'undefined') return
+    const rect = trigger.getBoundingClientRect()
+    const visualViewport = window.visualViewport
+    const viewportWidth = visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || panelWidth
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0
+    const viewportLeft = visualViewport?.offsetLeft || 0
+    const gutter = 16
+    const width = Math.min(panelWidth, Math.max(220, viewportWidth - gutter * 2))
+    const left = viewportLeft + viewportWidth / 2
+    const bottom = Math.max(gutter, viewportHeight - rect.top + 10)
+    setPanelPosition({ left, bottom, width })
+  }, [panelWidth])
+
+  useEffect(() => {
+    if (!open) return
+    updatePanelPosition()
+    window.addEventListener('resize', updatePanelPosition)
+    window.addEventListener('scroll', updatePanelPosition, true)
+    window.visualViewport?.addEventListener('resize', updatePanelPosition)
+    window.visualViewport?.addEventListener('scroll', updatePanelPosition)
+    return () => {
+      window.removeEventListener('resize', updatePanelPosition)
+      window.removeEventListener('scroll', updatePanelPosition, true)
+      window.visualViewport?.removeEventListener('resize', updatePanelPosition)
+      window.visualViewport?.removeEventListener('scroll', updatePanelPosition)
+    }
+  }, [open, updatePanelPosition])
+
   return (
-    <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+    <div ref={triggerRef} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
@@ -88,17 +120,20 @@ export default function GifPicker({ selectedGif, onSelect, disabled = false, com
       {open && (
         <div
           style={{
-            position: 'absolute',
-            right: 0,
-            bottom: 'calc(100% + 10px)',
-            width: panelWidth,
-            maxWidth: 'calc(100vw - 28px)',
+            position: 'fixed',
+            left: panelPosition?.left ?? '50%',
+            bottom: panelPosition?.bottom ?? 88,
+            width: panelPosition?.width ?? panelWidth,
+            maxWidth: 'calc(100vw - 32px)',
+            transform: 'translateX(-50%)',
+            maxHeight: 'min(58vh, 390px)',
             padding: 10,
             borderRadius: 18,
             border: '1px solid rgba(56,189,248,0.2)',
             background: 'linear-gradient(180deg, rgba(15,23,42,0.98), rgba(2,6,23,0.98))',
             boxShadow: '0 24px 70px rgba(0,0,0,0.55)',
-            zIndex: 80,
+            zIndex: 10050,
+            boxSizing: 'border-box',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -118,12 +153,12 @@ export default function GifPicker({ selectedGif, onSelect, disabled = false, com
                 outline: 'none',
                 padding: '0 12px',
                 fontFamily: 'inherit',
-                fontSize: 13,
+                fontSize: 16,
               }}
             />
             <button type="button" onClick={() => setOpen(false)} style={{ border: 'none', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, maxHeight: compact ? 250 : 320, overflowY: 'auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, maxHeight: compact ? 'min(36vh, 250px)' : 'min(44vh, 320px)', overflowY: 'auto' }}>
             {gifs.map(gif => (
               <button
                 type="button"

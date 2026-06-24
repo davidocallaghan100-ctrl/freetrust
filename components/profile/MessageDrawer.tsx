@@ -6,7 +6,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import MessageAttachments from '@/components/messaging/MessageAttachments'
 import GifPicker from '@/components/gifs/GifPicker'
 import GifContent from '@/components/gifs/GifContent'
-import { appendGifMarker, type GifResult } from '@/lib/gifs'
+import { appendGifMarker, decodeGifMarker, gifPreviewLabel, stripGifMarkers, type GifResult } from '@/lib/gifs'
 import {
   formatAttachmentSize,
   uploadMessageAttachments,
@@ -51,6 +51,7 @@ interface Message {
   attachments?:    MessageAttachment[]
   reply_to_id?:     string | null
   read_receipts?:   MessageReadReceipt[]
+  sender?:          Profile
 }
 
 export interface MessageDrawerProps {
@@ -63,6 +64,50 @@ export interface MessageDrawerProps {
 function getInitials(name: string | null | undefined): string {
   if (!name) return '?'
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+}
+
+function cssUrl(url: string): string {
+  return `url("${url.replace(/"/g, '\\"')}")`
+}
+
+function AvatarCircle({
+  profile,
+  size = 38,
+  fontSize = '0.78rem',
+}: {
+  profile?: Pick<Profile, 'avatar_url' | 'full_name' | 'id'> | null
+  size?: number
+  fontSize?: string
+}) {
+  const avatarUrl = profile?.avatar_url || null
+  const label = profile?.full_name || 'Member'
+  return (
+    <div
+      aria-label={label}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        background: avatarUrl ? '#0f172a' : 'linear-gradient(135deg,#34d399,#059669)',
+        backgroundImage: avatarUrl ? cssUrl(avatarUrl) : undefined,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontWeight: 800,
+        fontSize,
+        color: '#0f172a',
+        flexShrink: 0,
+      }}
+    >
+      {!avatarUrl ? getInitials(label) : null}
+    </div>
+  )
+}
+
+function isGifOnlyMessage(content: string | null | undefined): boolean {
+  return !!decodeGifMarker(content) && stripGifMarkers(content).length === 0
 }
 
 export default function MessageDrawer({
@@ -540,6 +585,7 @@ export default function MessageDrawer({
         }
         .drawer-bubble.sent { background: #34d399; color: #0f172a; border-bottom-right-radius: 4px; }
         .drawer-bubble.recv { background: #1e293b; color: #e2e8f0; border-bottom-left-radius: 4px; border: 1px solid rgba(56,189,248,0.1); }
+        .drawer-bubble.gif-only { padding: 0; background: transparent; border: none; max-width: min(80%, 250px); }
         .drawer-bubble.pending { opacity: 0.6; }
         .drawer-message-highlight .drawer-bubble { box-shadow: 0 0 0 3px rgba(251,191,36,0.55); }
         .drawer-reply-action { align-self: center; border: none; background: transparent; color: #64748b; cursor: pointer; font-size: 0.7rem; padding: 0.2rem 0.35rem; }
@@ -563,18 +609,7 @@ export default function MessageDrawer({
         {/* Header */}
         <div className="drawer-header">
           {recipient && (
-            <div
-              aria-hidden="true"
-              style={{
-                width: 38, height: 38, borderRadius: '50%',
-                background: 'linear-gradient(135deg,#34d399,#059669)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 700, fontSize: '0.78rem', color: '#0f172a',
-                flexShrink: 0,
-              }}
-            >
-              {getInitials(recipient.full_name)}
-            </div>
+            <AvatarCircle profile={recipient} size={38} />
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -657,6 +692,7 @@ export default function MessageDrawer({
             const isSent  = m.sender_id === currentUserId
             const isPend  = m.id.startsWith('opt_')
             const prev    = messages[i - 1]
+            const gifOnly = isGifOnlyMessage(m.content)
             const showTime = !prev || new Date(m.created_at).getTime() - new Date(prev.created_at).getTime() > 300_000
             return (
               <div key={m.id}>
@@ -673,13 +709,18 @@ export default function MessageDrawer({
                   data-message-id={m.id}
                   style={{ display: 'flex', justifyContent: isSent ? 'flex-end' : 'flex-start', marginBottom: '0.35rem', gap: '0.25rem' }}
                 >
-                  <div className={`drawer-bubble ${isSent ? 'sent' : 'recv'}${isPend ? ' pending' : ''}`}>
+                  {!isSent && (
+                    <div style={{ marginRight: '0.35rem', alignSelf: 'flex-end' }}>
+                      <AvatarCircle profile={m.sender ?? recipient} size={26} fontSize="0.6rem" />
+                    </div>
+                  )}
+                  <div className={`drawer-bubble ${isSent ? 'sent' : 'recv'}${gifOnly ? ' gif-only' : ''}${isPend ? ' pending' : ''}`}>
                     {m.reply_to_id && (() => {
                       const replied = messagesById.get(m.reply_to_id)
                       return (
                         <button type="button" className="drawer-quote" onClick={() => scrollToMessage(m.reply_to_id!)}>
                           <span className="drawer-quote-label">Replying to {replied?.sender_id === currentUserId ? 'you' : 'member'}</span>
-                          <span className="drawer-quote-text">{replied?.content || (replied?.attachments?.length ? 'Attachment' : 'Original message')}</span>
+                          <span className="drawer-quote-text">{gifPreviewLabel(replied?.content, replied?.attachments?.length ? 'Attachment' : 'Original message')}</span>
                         </button>
                       )
                     })()}

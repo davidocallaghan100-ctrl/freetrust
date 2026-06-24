@@ -8,7 +8,7 @@ import MessageDrawer from '@/components/profile/MessageDrawer'
 import MessageAttachments from '@/components/messaging/MessageAttachments'
 import GifPicker from '@/components/gifs/GifPicker'
 import GifContent from '@/components/gifs/GifContent'
-import { appendGifMarker, gifPreviewLabel, type GifResult } from '@/lib/gifs'
+import { appendGifMarker, decodeGifMarker, gifPreviewLabel, stripGifMarkers, type GifResult } from '@/lib/gifs'
 import {
   formatAttachmentSize,
   uploadMessageAttachments,
@@ -68,6 +68,59 @@ const GRADIENTS = [
 function pickGradient(id: string): string {
   let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) & 0xffff
   return GRADIENTS[h % GRADIENTS.length]
+}
+
+function cssUrl(url: string): string {
+  return `url("${url.replace(/"/g, '\\"')}")`
+}
+
+function AvatarCircle({
+  profile,
+  id,
+  name,
+  size = 38,
+  fontSize = '0.72rem',
+  ring = false,
+}: {
+  profile?: Pick<Profile, 'avatar_url' | 'full_name' | 'id'> | null
+  id?: string | null
+  name?: string | null
+  size?: number
+  fontSize?: string
+  ring?: boolean
+}) {
+  const avatarUrl = profile?.avatar_url || null
+  const label = profile?.full_name || name || 'Member'
+  const profileId = profile?.id || id || label
+  return (
+    <div
+      aria-label={label}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        background: avatarUrl ? '#0f172a' : pickGradient(profileId),
+        backgroundImage: avatarUrl ? cssUrl(avatarUrl) : undefined,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize,
+        fontWeight: 800,
+        color: '#0f172a',
+        flexShrink: 0,
+        position: 'relative',
+        boxShadow: ring ? '0 0 0 2px rgba(45,212,191,0.45)' : undefined,
+      }}
+    >
+      {!avatarUrl ? getInitials(label) : null}
+    </div>
+  )
+}
+
+function isGifOnlyMessage(content: string | null | undefined): boolean {
+  return !!decodeGifMarker(content) && stripGifMarkers(content).length === 0
 }
 
 function formatTime(iso: string): string {
@@ -586,6 +639,8 @@ function MessagesPageInner() {
         .msg-bubble { max-width: 72%; padding: 0.7rem 0.9rem 0.45rem; border-radius: 20px; font-size: 0.92rem; line-height: 1.5; word-break: break-word; box-shadow: 0 10px 28px rgba(0,0,0,0.18); }
         .msg-bubble.sent { background: linear-gradient(135deg,#22d3ee,#0ea5e9); color: #effcff; border-bottom-right-radius: 6px; }
         .msg-bubble.recv { background: rgba(30,41,59,0.96); color: #e2e8f0; border-bottom-left-radius: 6px; border: 1px solid rgba(148,163,184,0.1); }
+        .msg-bubble.gif-only { padding: 0; background: transparent; border: none; box-shadow: none; max-width: min(72%, 280px); }
+        .msg-bubble.gif-only .msg-bubble-time { color: #64748b; padding-right: 0.2rem; }
         .msg-bubble-time { display: block; margin-top: 0.3rem; font-size: 0.68rem; line-height: 1; opacity: 0.7; text-align: right; }
         .msg-message-highlight .msg-bubble { box-shadow: 0 0 0 3px rgba(251,191,36,0.55), 0 10px 28px rgba(0,0,0,0.18); }
         .msg-reply-action { align-self: center; border: none; background: transparent; color: #64748b; cursor: pointer; font-size: 0.72rem; padding: 0.25rem 0.4rem; }
@@ -695,8 +750,8 @@ function MessagesPageInner() {
               className={`msg-conv-item${activeId === conv.id ? ' active' : ''}`}
               onClick={() => selectConversation(conv.id)}
             >
-              <div style={{ width: 38, height: 38, borderRadius: '50%', background: pickGradient(conv.other_user.id), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#0f172a', flexShrink: 0, position: 'relative' }}>
-                {getInitials(conv.other_user.full_name)}
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <AvatarCircle profile={conv.other_user} size={38} />
                 {conv.unread_count > 0 && (
                   <span style={{ position: 'absolute', top: -2, right: -2, width: 14, height: 14, background: '#38bdf8', borderRadius: '50%', border: '2px solid #111827', fontSize: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0f172a', fontWeight: 700 }}>
                     {conv.unread_count}
@@ -738,8 +793,8 @@ function MessagesPageInner() {
               <button onClick={() => { setActiveId(null); setMobileView('list') }} style={{ background: 'none', border: 'none', color: '#dbeafe', cursor: 'pointer', fontSize: '1.35rem', padding: '0.1rem 0.4rem', lineHeight: 1 }}>
                 ←
               </button>
-              <div style={{ width: 42, height: 42, borderRadius: '50%', background: pickGradient(activeConv?.other_user.id || ''), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 800, color: '#0f172a', flexShrink: 0, position: 'relative', boxShadow: '0 0 0 2px rgba(45,212,191,0.45)' }}>
-                {getInitials(activeConv?.other_user.full_name)}
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <AvatarCircle profile={activeConv?.other_user ?? null} id={activeConv?.other_user.id} name={activeConv?.other_user.full_name} size={42} fontSize="0.78rem" ring />
                 <span aria-hidden="true" style={{ position: 'absolute', right: -3, bottom: -3, width: 16, height: 16, borderRadius: '50%', background: '#2dd4bf', color: '#042f2e', border: '2px solid #0a1423', fontSize: '0.62rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>✓</span>
               </div>
               <div style={{ flex: 1 }}>
@@ -757,6 +812,7 @@ function MessagesPageInner() {
             <div className="msg-thread-scroll">
               {messages.map((msg, i) => {
                 const isSent = msg.sender_id === userId || msg.sender_id === 'me'
+                const gifOnly = isGifOnlyMessage(msg.content)
                 const prevMsg = messages[i - 1]
                 const showTime = !prevMsg || new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() > 300000
                 return (
@@ -776,17 +832,17 @@ function MessagesPageInner() {
                       style={{ gap: '0.25rem' }}
                     >
                       {!isSent && (
-                        <div style={{ width: 28, height: 28, borderRadius: '50%', background: pickGradient(msg.sender_id), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 700, color: '#0f172a', flexShrink: 0, marginRight: '0.5rem', alignSelf: 'flex-end' }}>
-                          {getInitials(activeConv?.other_user.full_name)}
+                        <div style={{ marginRight: '0.5rem', alignSelf: 'flex-end' }}>
+                          <AvatarCircle profile={msg.sender ?? activeConv?.other_user ?? null} id={msg.sender_id} name={msg.sender?.full_name ?? activeConv?.other_user.full_name} size={28} fontSize="0.6rem" />
                         </div>
                       )}
-                      <div className={`msg-bubble ${isSent ? 'sent' : 'recv'}`}>
+                      <div className={`msg-bubble ${isSent ? 'sent' : 'recv'}${gifOnly ? ' gif-only' : ''}`}>
                         {msg.reply_to_id && (() => {
                           const replied = messagesById.get(msg.reply_to_id)
                           return (
                             <button type="button" className="msg-quote" onClick={() => scrollToMessage(msg.reply_to_id!)}>
                               <span className="msg-quote-label">Replying to {replied?.sender_id === userId ? 'you' : 'member'}</span>
-                              <span className="msg-quote-text">{replied?.content || (replied?.attachments?.length ? 'Attachment' : 'Original message')}</span>
+                              <span className="msg-quote-text">{gifPreviewLabel(replied?.content, replied?.attachments?.length ? 'Attachment' : 'Original message')}</span>
                             </button>
                           )
                         })()}

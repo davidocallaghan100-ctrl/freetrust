@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 function getAutoDeleteCutoffIso(days: unknown): string | null {
   if (!Number.isInteger(days) || typeof days !== 'number' || days <= 0) return null
@@ -16,23 +17,39 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Use the admin client for message/conversation reads. Some older
+    // production RLS policies on conversation_participants can hide rows or
+    // recurse for the user-session client, which makes the inbox look empty
+    // even though direct conversation pages still load through the admin-backed
+    // /api/messages/:id route.
+    const admin = createAdminClient()
+
     // Get all conversation IDs the user is part of
     const { data: participantRows, error: partErr } = await supabase
       .from('conversation_participants')
       .select('conversation_id, last_read_at')
       .eq('user_id', user.id)
 
-    if (partErr) {
-      return NextResponse.json({ error: partErr.message }, { status: 500 })
+    const { data: adminParticipantRows, error: adminPartErr } = partErr || !participantRows || participantRows.length === 0
+      ? await admin
+        .from('conversation_participants')
+        .select('conversation_id, last_read_at')
+        .eq('user_id', user.id)
+      : { data: participantRows, error: null }
+
+    if (adminPartErr) {
+      return NextResponse.json({ error: adminPartErr.message }, { status: 500 })
     }
 
-    if (!participantRows || participantRows.length === 0) {
+    const visibleParticipantRows = adminParticipantRows ?? []
+
+    if (visibleParticipantRows.length === 0) {
       return NextResponse.json({ conversations: [] })
     }
 
-    const convIds = participantRows.map(p => p.conversation_id)
+    const convIds = visibleParticipantRows.map(p => p.conversation_id)
 
-    const { data: profile, error: profileErr } = await supabase
+    const { data: profile, error: profileErr } = await admin
       .from('profiles')
       .select('message_auto_delete_days')
       .eq('id', user.id)
@@ -45,7 +62,7 @@ export async function GET() {
     const autoDeleteCutoffIso = getAutoDeleteCutoffIso(profile?.message_auto_delete_days)
 
     // Get conversations with last message
-    const { data: conversations, error: convErr } = await supabase
+    const { data: conversations, error: convErr } = await admin
       .from('conversations')
       .select(`
         id,
@@ -66,9 +83,9 @@ export async function GET() {
 
     // Get last message for each conversation
     const enriched = await Promise.all((conversations || []).map(async (conv) => {
-      const { data: lastMsg } = await supabase
+      const { data: lastMsg } = await admin
         .from('messages')
-        .select('id, sender_id, content, created_at, attachments')
+        .select('id, sender_id, content, created_at, attachments, sender:profiles(id, full_name, avatar_url)')
         .eq('conversation_id', conv.id)
         .gte('created_at', autoDeleteCutoffIso ?? '0001-01-01T00:00:00.000Z')
         .order('created_at', { ascending: false })
@@ -76,11 +93,11 @@ export async function GET() {
         .single()
 
       // Calculate unread count
-      const myParticipant = participantRows.find(p => p.conversation_id === conv.id)
+      const myParticipant = visibleParticipantRows.find(p => p.conversation_id === conv.id)
       const lastReadAt = myParticipant?.last_read_at
       let unreadCount = 0
       if (lastReadAt) {
-        const { count } = await supabase
+        const { count } = await admin
           .from('messages')
           .select('id', { count: 'exact', head: true })
           .eq('conversation_id', conv.id)

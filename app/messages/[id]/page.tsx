@@ -7,7 +7,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import MessageAttachments from '@/components/messaging/MessageAttachments'
 import GifPicker from '@/components/gifs/GifPicker'
 import GifContent from '@/components/gifs/GifContent'
-import { appendGifMarker, type GifResult } from '@/lib/gifs'
+import { appendGifMarker, decodeGifMarker, gifPreviewLabel, stripGifMarkers, type GifResult } from '@/lib/gifs'
 import {
   formatAttachmentSize,
   uploadMessageAttachments,
@@ -56,6 +56,55 @@ function pickGradient(id: string): string {
   let h = 0
   for (const c of id) h = (h * 31 + c.charCodeAt(0)) & 0xffff
   return GRADIENTS[h % GRADIENTS.length]
+}
+
+function cssUrl(url: string): string {
+  return `url("${url.replace(/"/g, '\\"')}")`
+}
+
+function AvatarCircle({
+  profile,
+  id,
+  name,
+  size = 36,
+  fontSize = '0.72rem',
+}: {
+  profile?: Pick<Profile, 'avatar_url' | 'full_name' | 'id'> | null
+  id?: string | null
+  name?: string | null
+  size?: number
+  fontSize?: string
+}) {
+  const avatarUrl = profile?.avatar_url || null
+  const label = profile?.full_name || name || 'Member'
+  const profileId = profile?.id || id || label
+  return (
+    <div
+      aria-label={label}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        background: avatarUrl ? '#0f172a' : pickGradient(profileId),
+        backgroundImage: avatarUrl ? cssUrl(avatarUrl) : undefined,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize,
+        fontWeight: 800,
+        color: '#0f172a',
+        flexShrink: 0,
+      }}
+    >
+      {!avatarUrl ? getInitials(label) : null}
+    </div>
+  )
+}
+
+function isGifOnlyMessage(content: string | null | undefined): boolean {
+  return !!decodeGifMarker(content) && stripGifMarkers(content).length === 0
 }
 
 export default function ConversationPage() {
@@ -448,6 +497,7 @@ export default function ConversationPage() {
         }
         .conv-bubble.sent { background: #38bdf8; color: #0f172a; border-bottom-right-radius: 4px; }
         .conv-bubble.recv { background: #1e293b; color: #e2e8f0; border-bottom-left-radius: 4px; border: 1px solid rgba(56,189,248,0.1); }
+        .conv-bubble.gif-only { padding: 0; background: transparent; border: none; max-width: min(72%, 260px); }
         .conv-bubble.pending { opacity: 0.6; }
         .conv-message-highlight .conv-bubble { box-shadow: 0 0 0 3px rgba(251,191,36,0.55); }
         .conv-reply-action {
@@ -631,9 +681,7 @@ export default function ConversationPage() {
         </Link>
         {otherUser ? (
           <>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', background: pickGradient(otherUser.id), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#0f172a', flexShrink: 0 }}>
-              {getInitials(otherUser.full_name)}
-            </div>
+            <AvatarCircle profile={otherUser} size={36} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {otherUser.full_name || 'Member'}
@@ -697,6 +745,7 @@ export default function ConversationPage() {
         {messages.map((msg, i) => {
           const isSent  = msg.sender_id === userId
           const prev    = messages[i - 1]
+          const gifOnly = isGifOnlyMessage(msg.content)
           const showTime = !prev || new Date(msg.created_at).getTime() - new Date(prev.created_at).getTime() > 300_000
           const isPending = msg.id.startsWith('opt_')
           return (
@@ -715,17 +764,17 @@ export default function ConversationPage() {
                 style={{ display: 'flex', justifyContent: isSent ? 'flex-end' : 'flex-start', marginBottom: '0.3rem', gap: '0.25rem' }}
               >
                 {!isSent && otherUser && (
-                  <div style={{ width: 26, height: 26, borderRadius: '50%', background: pickGradient(otherUser.id), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 700, color: '#0f172a', flexShrink: 0, marginRight: '0.4rem', alignSelf: 'flex-end' }}>
-                    {getInitials(otherUser.full_name)}
+                  <div style={{ marginRight: '0.4rem', alignSelf: 'flex-end' }}>
+                    <AvatarCircle profile={msg.sender ?? otherUser} id={msg.sender_id} name={msg.sender?.full_name ?? otherUser.full_name} size={26} fontSize="0.6rem" />
                   </div>
                 )}
-                <div className={`conv-bubble ${isSent ? 'sent' : 'recv'}${isPending ? ' pending' : ''}`}>
+                <div className={`conv-bubble ${isSent ? 'sent' : 'recv'}${gifOnly ? ' gif-only' : ''}${isPending ? ' pending' : ''}`}>
                   {msg.reply_to_id && (() => {
                     const replied = messagesById.get(msg.reply_to_id)
                     return (
                       <button type="button" className="conv-quote" onClick={() => scrollToMessage(msg.reply_to_id!)}>
                         <span className="conv-quote-label">Replying to {replied?.sender_id === userId ? 'you' : 'member'}</span>
-                        <span className="conv-quote-text">{replied?.content || (replied?.attachments?.length ? 'Attachment' : 'Original message')}</span>
+                        <span className="conv-quote-text">{gifPreviewLabel(replied?.content, replied?.attachments?.length ? 'Attachment' : 'Original message')}</span>
                       </button>
                     )
                   })()}
