@@ -6,6 +6,11 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useDirection } from '@/hooks/useDirection'
 
+const EMOJI_STYLE = {
+  fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol", sans-serif',
+  lineHeight: 1,
+} as const
+
 const NAV_SECTIONS = [
   {
     label: 'DIGITAL',
@@ -25,6 +30,7 @@ const NAV_SECTIONS = [
       { href: '/grassroots', label: 'Grassroots', icon: '🌱' },
       { href: '/products', label: 'Products', icon: '📦' },
       { href: '/travel', label: 'Experience Travel', icon: '✈️' },
+      { href: '/experience-pubs', label: 'Pubs', icon: '🍺' },
       { href: '/organisations', label: 'Organisations', icon: '🏢' },
       { href: '/rent-share', label: 'Rent & Share', icon: '♻️' },
     ],
@@ -138,7 +144,7 @@ export default function Sidebar() {
 
   const navLabel = (label: string) => ({
     DIGITAL: tNav('digital'), SOCIAL: tNav('social'), EVENTS: tNav('events'), PLANET: tNav('planet'), EARN: tNav('earn'), 'EARLY INVESTORS': tNav('earlyInvestors'),
-    Home: tNav('home'), Feed: tNav('newsfeed'), Connections: tNav('connections'), Messages: tNav('messages'), Notifications: tNav('notifications'), Browse: tNav('browse'), 'Services Marketplace': tNav('servicesMarketplace'), Grassroots: tNav('grassroots'), Products: tNav('products'), 'Experience Travel': tNav('travel'), Organisations: tNav('organisations'), 'Rent & Share': tNav('rentShare'), Events: tNav('events'), 'My Calendar': tNav('myCalendar'), 'Activity Map': tNav('activityMap'), Groups: tNav('groups'), Jobs: tNav('jobs'), Articles: tNav('articles'), Impact: tNav('impact'), Collab: tNav('collab'), 'Gig Economy': tNav('gigEconomy'), 'Create Gig': tNav('createGig'), Accounting: tNav('accounting'), Invest: tNav('invest'), Wallet: tNav('wallet'), Agents: tNav('agents'), Profile: tNav('profile'), Settings: tNav('settings'),
+    Home: tNav('home'), Feed: tNav('newsfeed'), Connections: tNav('connections'), Messages: tNav('messages'), Notifications: tNav('notifications'), Browse: tNav('browse'), 'Services Marketplace': tNav('servicesMarketplace'), Grassroots: tNav('grassroots'), Products: tNav('products'), 'Experience Travel': tNav('travel'), Pubs: 'Pubs', Organisations: tNav('organisations'), 'Rent & Share': tNav('rentShare'), Events: tNav('events'), 'My Calendar': tNav('myCalendar'), 'Activity Map': tNav('activityMap'), Groups: tNav('groups'), Jobs: tNav('jobs'), Articles: tNav('articles'), Impact: tNav('impact'), Collab: tNav('collab'), 'Gig Economy': tNav('gigEconomy'), 'Create Gig': tNav('createGig'), Accounting: tNav('accounting'), Invest: tNav('invest'), Wallet: tNav('wallet'), Agents: tNav('agents'), Profile: tNav('profile'), Settings: tNav('settings'),
   } as Record<string, string>)[label] ?? label
 
   // Clear unread badge when on notifications page
@@ -212,7 +218,7 @@ export default function Sidebar() {
                       transition: 'all 0.15s',
                     }}
                   >
-                    <span style={{ fontSize: '15px', lineHeight: 1, flexShrink: 0 }}>{icon}</span>
+                    <span style={{ ...EMOJI_STYLE, fontSize: '15px', flexShrink: 0 }}>{icon}</span>
                     <span style={{ flex: 1 }}>{navLabel(label)}</span>
                     {isNotifications && unreadNotifs > 0 && (
                       <span style={{
@@ -264,7 +270,7 @@ export default function Sidebar() {
                     background: active ? 'rgba(56,189,248,0.08)' : 'transparent',
                     transition: 'all 0.15s',
                   }}>
-                    <span style={{ fontSize: '15px', lineHeight: 1, flexShrink: 0 }}>{icon}</span>
+                    <span style={{ ...EMOJI_STYLE, fontSize: '15px', flexShrink: 0 }}>{icon}</span>
                     <span>{label}</span>
                   </Link>
                 )

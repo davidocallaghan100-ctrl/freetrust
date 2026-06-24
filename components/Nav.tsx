@@ -17,6 +17,11 @@ const FREETRUST_LOGO_STYLE = {
   filter: 'drop-shadow(0 0 8px rgba(56,189,248,0.55)) drop-shadow(0 0 5px rgba(52,211,153,0.35))',
 }
 
+const EMOJI_STYLE = {
+  fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol", sans-serif',
+  lineHeight: 1,
+} as const
+
 const DRAWER_SECTIONS = [
   {
     label: 'DIGITAL',
@@ -72,6 +77,7 @@ const DRAWER_SECTIONS = [
     label: 'EXPERIENCE',
     links: [
       { href: '/travel', label: 'Travel', icon: '✈️' },
+      { href: '/experience-pubs', label: 'Pubs', icon: '🍺' },
     ],
   },
 ]
@@ -336,7 +342,7 @@ export default function Nav() {
     DIGITAL: tNav('digital'), SOCIAL: tNav('social'), EVENTS: tNav('events'), PLANET: tNav('planet'), 'EARLY INVESTORS': tNav('earlyInvestors'), CREATE: tNav('create'), EXPERIENCE: tNav('experience'), ACCOUNT: tNav('account'),
     'Trust Wallet': tNav('wallet'), Newsfeed: tNav('newsfeed'), 'Product Marketplace': tNav('productMarketplace'), 'Services Marketplace': tNav('servicesMarketplace'), Grassroots: tNav('grassroots'), 'Member Directory': tNav('memberDirectory'),
     Groups: tNav('groups'), Articles: tNav('articles'), Jobs: tNav('jobs'), 'Rent & Share': tNav('rentShare'), Organisations: tNav('organisations'), 'Add Organisation': tNav('addOrganisation'), Directory: tNav('directory'), 'My Calendar': tNav('myCalendar'), 'Activity Map': tNav('activityMap'), 'Add Event': tNav('addEvent'),
-    Impact: tNav('impact'), 'Early Investors': tNav('earlyInvestors'), 'Investor Deck': tNav('investorDeck'), Agents: tNav('agents'), Travel: tNav('travel'), Profile: tNav('profile'), 'Analytics Dashboard': tNav('analytics'), Settings: tNav('settings'),
+    Impact: tNav('impact'), 'Early Investors': tNav('earlyInvestors'), 'Investor Deck': tNav('investorDeck'), Agents: tNav('agents'), Travel: tNav('travel'), Pubs: 'Pubs', Profile: tNav('profile'), 'Analytics Dashboard': tNav('analytics'), Settings: tNav('settings'),
   } as Record<string, string>)[label] ?? label
 
   if (pathname === '/agents') return null
@@ -408,8 +414,9 @@ export default function Nav() {
                    { href: '/connections', icon: '🔗', label: tNav('connections')  },
                    { href: '/settings',    icon: '⚙️', label: tNav('settings')     },
                  ].map(({ href, icon, label }) => (
-                   <Link key={href} href={href} onClick={() => setProfileOpen(false)} style={{ display: 'block', padding: '10px 16px', fontSize: '13px', color: '#cbd5e1', textDecoration: 'none' }}>
-                     {icon} {label}
+                   <Link key={href} href={href} onClick={() => setProfileOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', fontSize: '13px', color: '#cbd5e1', textDecoration: 'none' }}>
+                     <span style={{ ...EMOJI_STYLE, fontSize: '14px' }}>{icon}</span>
+                     <span>{label}</span>
                    </Link>
                  ))}
                 <div style={{ borderTop: '1px solid #334155' }}>
@@ -568,7 +575,7 @@ export default function Nav() {
                       transition: 'all 0.15s ease',
                     }}
                   >
-                    <span style={{ fontSize: '16px', lineHeight: 1 }}>{icon}</span>
+                    <span style={{ ...EMOJI_STYLE, fontSize: '16px' }}>{icon}</span>
                     {navLabel(label)}
                   </Link>
                 )
@@ -601,7 +608,7 @@ export default function Nav() {
                   transition: 'all 0.15s ease',
                 }}
               >
-                <span style={{ fontSize: '16px', lineHeight: 1 }}>{icon}</span>
+                <span style={{ ...EMOJI_STYLE, fontSize: '16px' }}>{icon}</span>
                 {navLabel(label)}
               </Link>
             )

@@ -6,6 +6,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Avatar from '@/components/Avatar'
 import { createClient } from '@/lib/supabase/client'
 
+const EMOJI_STYLE = {
+  fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol", sans-serif',
+  lineHeight: 1,
+} as const
+
 const tabs = [
   { href: '/feed',        icon: '🏠', label: 'Home'     },
   { href: '/connections', icon: '🔗', label: 'Connect'  },
@@ -337,7 +342,7 @@ export default function BottomNav() {
                   href="/login?redirect=%2Fprofile"
                   style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', textDecoration: 'none', flex: 1, padding: '2px 0', position: 'relative' }}
                 >
-                  <span style={{ fontSize: '18px', lineHeight: 1 }}>{tab.icon}</span>
+                  <span style={{ ...EMOJI_STYLE, fontSize: '18px' }}>{tab.icon}</span>
                   <span style={{ fontSize: '9px', fontWeight: 600, color: active ? '#38bdf8' : '#64748b', letterSpacing: '0.1px' }}>{tAuth('signIn')}</span>
                 </Link>
               )
@@ -508,7 +513,7 @@ export default function BottomNav() {
                 position: 'relative',
               }}
             >
-              <span style={{ fontSize: '18px', lineHeight: 1 }}>{tab.icon}</span>
+              <span style={{ ...EMOJI_STYLE, fontSize: '18px' }}>{tab.icon}</span>
               <span style={{
                 fontSize: '9px',
                 fontWeight: 600,
