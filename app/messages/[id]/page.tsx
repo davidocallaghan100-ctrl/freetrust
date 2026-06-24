@@ -5,6 +5,9 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import MessageAttachments from '@/components/messaging/MessageAttachments'
+import GifPicker from '@/components/gifs/GifPicker'
+import GifContent from '@/components/gifs/GifContent'
+import { appendGifMarker, type GifResult } from '@/lib/gifs'
 import {
   formatAttachmentSize,
   uploadMessageAttachments,
@@ -65,6 +68,7 @@ export default function ConversationPage() {
   const [participantIds, setParticipantIds] = useState<string[]>([])
   const [otherUser, setOtherUser] = useState<Profile | null>(null)
   const [input,     setInput]     = useState('')
+  const [selectedGif, setSelectedGif] = useState<GifResult | null>(null)
   const [attachedFiles, setAttachedFiles] = useState<File[]>([])
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
   const [sending,   setSending]   = useState(false)
@@ -269,8 +273,11 @@ export default function ConversationPage() {
   // but the conversation sort order never updates.
   const send = async () => {
     const text = input.trim()
-    if ((!text && attachedFiles.length === 0) || !userId) return
+    if ((!text && attachedFiles.length === 0 && !selectedGif) || !userId) return
+    const gifToSend = selectedGif
+    const content = appendGifMarker(text, gifToSend)
     setInput('')
+    setSelectedGif(null)
     const filesToSend = attachedFiles
     setAttachedFiles([])
     const replyTarget = replyingTo
@@ -283,7 +290,7 @@ export default function ConversationPage() {
       id:              optimisticId,
       conversation_id: conversationId,
       sender_id:       userId,
-      content:         text,
+      content,
       created_at:      new Date().toISOString(),
       attachments:     filesToSend.map(file => ({ url: '', type: file.type, name: file.name, size: file.size })),
       reply_to_id:     replyTarget?.id ?? null,
@@ -298,7 +305,7 @@ export default function ConversationPage() {
       const res = await fetch(`/api/messages/${conversationId}`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ content: text, attachments: uploadedAttachments, replyToId: replyTarget?.id ?? null }),
+        body:    JSON.stringify({ content, attachments: uploadedAttachments, replyToId: replyTarget?.id ?? null }),
       })
       const data = await res.json().catch(() => null) as
         | { message?: Message; error?: string }
@@ -312,6 +319,7 @@ export default function ConversationPage() {
         // they don't lose what they typed.
         setMessages(prev => prev.filter(m => m.id !== optimisticId))
         setInput(text)
+        setSelectedGif(gifToSend)
         setAttachedFiles(filesToSend)
         setReplyingTo(replyTarget)
         return
@@ -331,6 +339,7 @@ export default function ConversationPage() {
       setSendError(msg)
       setMessages(prev => prev.filter(m => m.id !== optimisticId))
       setInput(text)
+      setSelectedGif(gifToSend)
       setAttachedFiles(filesToSend)
       setReplyingTo(replyTarget)
     } finally {
@@ -720,7 +729,7 @@ export default function ConversationPage() {
                       </button>
                     )
                   })()}
-                  {msg.content && <div>{msg.content}</div>}
+                  {msg.content && <GifContent content={msg.content} gifStyle={{ width: 'min(100%, 240px)', maxHeight: 240 }} />}
                   <MessageAttachments attachments={msg.attachments ?? []} compact />
                   {isSent && !isPending && (
                     <div style={{ marginTop: 4, fontSize: '0.68rem', textAlign: 'right', opacity: 0.72 }}>
@@ -797,6 +806,13 @@ export default function ConversationPage() {
             ))}
           </div>
         )}
+        {selectedGif && (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: 6, borderRadius: 14, border: '1px solid rgba(52,211,153,0.24)', background: 'rgba(15,23,42,0.72)', alignSelf: 'flex-start' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={selectedGif.previewUrl} alt={selectedGif.title} style={{ width: 96, height: 72, borderRadius: 10, objectFit: 'cover', display: 'block' }} />
+            <span style={{ maxWidth: 160, color: '#cbd5e1', fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedGif.title || 'GIF'}</span>
+          </div>
+        )}
         <div className="conv-input-area">
         <input
           ref={fileInputRef}
@@ -816,6 +832,7 @@ export default function ConversationPage() {
         >
           +
         </button>
+        <GifPicker selectedGif={selectedGif} onSelect={setSelectedGif} disabled={sending} compact />
         <textarea
           ref={inputRef}
           className="conv-textarea"
@@ -829,7 +846,7 @@ export default function ConversationPage() {
         <button
           className="conv-send-btn"
           onClick={send}
-          disabled={(!input.trim() && attachedFiles.length === 0) || sending}
+          disabled={(!input.trim() && attachedFiles.length === 0 && !selectedGif) || sending}
           aria-label="Send message"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

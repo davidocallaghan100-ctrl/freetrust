@@ -5,6 +5,9 @@ import Avatar from '@/components/Avatar'
 import { createClient } from '@/lib/supabase/client'
 import { compressImage } from '@/lib/image-compression'
 import { trackEvent, trackEventOnce } from '@/lib/analytics'
+import GifPicker from '@/components/gifs/GifPicker'
+import GifContent from '@/components/gifs/GifContent'
+import { appendGifMarker, type GifResult } from '@/lib/gifs'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1201,6 +1204,7 @@ export default function PostCard({
   const [comments,          setComments]          = useState<Comment[]>([])
   const [commentCount,      setCommentCount]      = useState(commentInitial)
   const [newComment,        setNewComment]        = useState('')
+  const [selectedCommentGif,setSelectedCommentGif]= useState<GifResult | null>(null)
   const [submitting,        setSubmitting]        = useState(false)
   const [commentExpanded,   setCommentExpanded]   = useState(false)
   const [showShare,         setShowShare]         = useState(false)
@@ -1766,14 +1770,15 @@ export default function PostCard({
   }
 
   const submitComment = async () => {
-    if (!newComment.trim()) return
+    if (!newComment.trim() && !selectedCommentGif) return
     setSubmitting(true)
+    const commentBody = appendGifMarker(newComment.trim(), selectedCommentGif)
     try {
       const res = await fetch(`/api/feed/posts/${post.id}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          content: newComment.trim(),
+          content: commentBody,
           posted_as_organisation_id: feedIdentity?.type === 'org' ? feedIdentity.id : null,
         }),
       })
@@ -1785,7 +1790,7 @@ export default function PostCard({
           entityId: post.id,
           metadata: { title: postTitle ?? stripInternalMarkers(postContent)?.slice(0, 80) ?? null },
         })
-        setNewComment(''); setCommentCount(c => c + 1); await loadComments()
+        setNewComment(''); setSelectedCommentGif(null); setCommentCount(c => c + 1); await loadComments()
       }
     } catch { /* silent */ }
     finally { setSubmitting(false) }
@@ -2613,19 +2618,30 @@ export default function PostCard({
                 </button>
               </div>
 
+              {selectedCommentGif && (
+                <div style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 8, padding: 6, borderRadius: 14, border: '1px solid rgba(52,211,153,0.24)', background: 'rgba(15,23,42,0.72)' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={selectedCommentGif.previewUrl} alt={selectedCommentGif.title} style={{ width: 96, height: 72, borderRadius: 10, objectFit: 'cover', display: 'block' }} />
+                  <span style={{ maxWidth: 160, color: '#cbd5e1', fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedCommentGif.title || 'GIF'}</span>
+                </div>
+              )}
+
               {/* Character counter + Post button row */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
-                <span style={{
-                  fontSize: '11px',
-                  color: newComment.length > 450 ? '#f87171' : '#475569',
-                  opacity: newComment.length > 0 ? 1 : 0,
-                  transition: 'opacity 0.15s',
-                }}>
-                  {newComment.length} / 500
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <GifPicker selectedGif={selectedCommentGif} onSelect={setSelectedCommentGif} disabled={submitting} compact />
+                  <span style={{
+                    fontSize: '11px',
+                    color: newComment.length > 450 ? '#f87171' : '#475569',
+                    opacity: newComment.length > 0 ? 1 : 0,
+                    transition: 'opacity 0.15s',
+                  }}>
+                    {newComment.length} / 500
+                  </span>
+                </div>
                 <button
                   onClick={submitComment}
-                  disabled={submitting || !newComment.trim()}
+                  disabled={submitting || (!newComment.trim() && !selectedCommentGif)}
                   style={{
                     background: '#38bdf8',
                     border: 'none',
@@ -2634,9 +2650,9 @@ export default function PostCard({
                     fontSize: '13px',
                     fontWeight: 700,
                     color: '#0f172a',
-                    cursor: submitting || !newComment.trim() ? 'not-allowed' : 'pointer',
+                    cursor: submitting || (!newComment.trim() && !selectedCommentGif) ? 'not-allowed' : 'pointer',
                     fontFamily: 'inherit',
-                    opacity: (submitting || !newComment.trim()) ? 0.5 : 1,
+                    opacity: (submitting || (!newComment.trim() && !selectedCommentGif)) ? 0.5 : 1,
                     transition: 'opacity 0.15s',
                   }}
                 >
@@ -2703,7 +2719,9 @@ function CommentRow({
           ) : (
             <div style={{ fontSize: '12px', fontWeight: 600, color: org ? '#86efac' : '#94a3b8', marginBottom: '2px' }}>{cName}{org ? <span style={{ marginLeft: 6, color: '#c4b5fd', fontSize: 10, textTransform: 'uppercase' }}>Page</span> : null}</div>
           )}
-          <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{comment.content}</div>
+          <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5, wordBreak: 'break-word' }}>
+            <GifContent content={comment.content} gifStyle={{ width: 'min(100%, 220px)', maxHeight: 220 }} />
+          </div>
         </div>
         {/* Like row + Val badge */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', marginLeft: '4px' }}>

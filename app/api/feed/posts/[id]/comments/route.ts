@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail } from '@/lib/email/send'
 import { sendPushNotification } from '@/lib/push/sendPushNotification'
+import { gifPreviewLabel } from '@/lib/gifs'
 
 async function canPostAsOrganisation(admin: ReturnType<typeof createAdminClient>, userId: string, organisationId: string) {
   const { data: membership } = await admin
@@ -134,7 +135,8 @@ export async function POST(
             .maybeSingle()
           commenterName = commenter?.full_name ?? 'Someone'
         }
-        const preview = content.length > 200 ? content.slice(0, 200) + '…' : content
+        const cleanPreview = gifPreviewLabel(content, content)
+        const preview = cleanPreview.length > 200 ? cleanPreview.slice(0, 200) + '…' : cleanPreview
         sendEmail({
           type: 'new_comment',
           userId: postData.user_id,

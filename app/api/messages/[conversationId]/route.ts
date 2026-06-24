@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { insertNotification } from '@/lib/notifications/insert'
 import { sendEmail } from '@/lib/email/send'
 import { recordAnalyticsEvent } from '@/lib/analytics-server'
+import { gifPreviewLabel } from '@/lib/gifs'
 import {
   ALLOWED_MESSAGE_ATTACHMENT_TYPES,
   MAX_MESSAGE_ATTACHMENTS,
@@ -367,7 +368,8 @@ export async function POST(
         ])
 
         const senderName = (senderProfile?.full_name as string | null) ?? 'A member'
-        const preview   = content.slice(0, 140)
+        const cleanPreview = gifPreviewLabel(content, content)
+        const preview   = cleanPreview.slice(0, 140)
         const link      = `/messages/${conversationId}`
 
         await Promise.all(

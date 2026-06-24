@@ -32,6 +32,7 @@ const DRAWER_SECTIONS = [
       { href: '/services',  label: 'Services Marketplace',   icon: '🛠' },
       { href: '/grassroots', label: 'Grassroots',             icon: '🌱' },
       { href: '/members', label: 'Member Directory',     icon: '🔍' },
+      { href: '/messages', label: 'Messages',             icon: '💬' },
     ],
   },
   {

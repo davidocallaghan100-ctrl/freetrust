@@ -6,6 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import MessageDrawer from '@/components/profile/MessageDrawer'
 import MessageAttachments from '@/components/messaging/MessageAttachments'
+import GifPicker from '@/components/gifs/GifPicker'
+import GifContent from '@/components/gifs/GifContent'
+import { appendGifMarker, gifPreviewLabel, type GifResult } from '@/lib/gifs'
 import {
   formatAttachmentSize,
   uploadMessageAttachments,
@@ -78,7 +81,7 @@ function formatTime(iso: string): string {
 }
 
 function messagePreview(message: Message): string {
-  if (message.content) return message.content
+  if (message.content) return gifPreviewLabel(message.content, message.content)
   const count = message.attachments?.length ?? 0
   if (count === 0) return ''
   return count === 1 ? '📎 Attachment' : `📎 ${count} attachments`
@@ -103,6 +106,7 @@ function MessagesPageInner() {
   const [messages, setMessages] = useState<Message[]>([])
   const [participantIds, setParticipantIds] = useState<string[]>([])
   const [input, setInput] = useState('')
+  const [selectedGif, setSelectedGif] = useState<GifResult | null>(null)
   const [attachedFiles, setAttachedFiles] = useState<File[]>([])
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
   const [sending, setSending] = useState(false)
@@ -375,6 +379,7 @@ function MessagesPageInner() {
     setSendError(null)
     setPendingResend(null)
     setAttachedFiles([])
+    setSelectedGif(null)
     setReplyingTo(null)
     setParticipantIds([])
     markedReadRef.current.clear()
@@ -421,11 +426,14 @@ function MessagesPageInner() {
   }
 
   const sendMessage = async () => {
-    if ((!input.trim() && attachedFiles.length === 0) || !activeId || !userId) return
+    if ((!input.trim() && attachedFiles.length === 0 && !selectedGif) || !activeId || !userId) return
     const text = input.trim()
+    const gifToSend = selectedGif
+    const content = appendGifMarker(text, gifToSend)
     const filesToSend = attachedFiles
     const replyTarget = replyingTo
     setInput('')
+    setSelectedGif(null)
     setAttachedFiles([])
     setReplyingTo(null)
     setSending(true)
@@ -438,7 +446,7 @@ function MessagesPageInner() {
       id: optimisticId,
       conversation_id: activeId,
       sender_id: userId,
-      content: text,
+      content,
       created_at: new Date().toISOString(),
       attachments: filesToSend.map(file => ({ url: '', type: file.type, name: file.name, size: file.size })),
       reply_to_id: replyTarget?.id ?? null,
@@ -450,9 +458,10 @@ function MessagesPageInner() {
       const uploadedAttachments = filesToSend.length > 0
         ? await uploadMessageAttachments(createClient(), filesToSend, { userId, conversationId: activeId })
         : []
-      const sent = await doSend(text, optimisticId, uploadedAttachments, replyTarget?.id ?? null)
+      const sent = await doSend(content, optimisticId, uploadedAttachments, replyTarget?.id ?? null)
       if (!sent) {
         setAttachedFiles(filesToSend)
+        setSelectedGif(gifToSend)
         setReplyingTo(replyTarget)
       }
     } catch (err) {
@@ -462,8 +471,9 @@ function MessagesPageInner() {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[messages] sendMessage threw:', msg)
       setSendError(msg)
-      setPendingResend({ id: optimisticId, text })
+      setPendingResend({ id: optimisticId, text: content })
       setAttachedFiles(filesToSend)
+      setSelectedGif(gifToSend)
       setReplyingTo(replyTarget)
     }
     setSending(false)
@@ -780,7 +790,7 @@ function MessagesPageInner() {
                             </button>
                           )
                         })()}
-                        {msg.content && <div>{msg.content}</div>}
+                        {msg.content && <GifContent content={msg.content} />}
                         <MessageAttachments attachments={msg.attachments ?? []} compact />
                         <span className="msg-bubble-time">
                           {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{isSent ? ` ${isMessageReadByAllOthers(msg, userId, participantIds) ? '✓✓' : '✓'}` : ''}
@@ -902,6 +912,13 @@ function MessagesPageInner() {
                   ))}
                 </div>
               )}
+              {selectedGif && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: 6, margin: '0 1rem', borderRadius: 14, border: '1px solid rgba(52,211,153,0.24)', background: 'rgba(15,23,42,0.72)', alignSelf: 'flex-start' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={selectedGif.previewUrl} alt={selectedGif.title} style={{ width: 96, height: 72, borderRadius: 10, objectFit: 'cover', display: 'block' }} />
+                  <span style={{ maxWidth: 160, color: '#cbd5e1', fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedGif.title || 'GIF'}</span>
+                </div>
+              )}
               <div className="msg-input-area">
               <input
                 ref={fileInputRef}
@@ -921,6 +938,7 @@ function MessagesPageInner() {
               >
                 +
               </button>
+              <GifPicker selectedGif={selectedGif} onSelect={setSelectedGif} disabled={sending} compact />
               <textarea
                 ref={inputRef}
                 className="msg-textarea"
@@ -930,7 +948,7 @@ function MessagesPageInner() {
                 placeholder="Type a message…"
                 rows={1}
               />
-              <button className="msg-send-btn" onClick={sendMessage} disabled={(!input.trim() && attachedFiles.length === 0) || sending} title="Send">
+              <button className="msg-send-btn" onClick={sendMessage} disabled={(!input.trim() && attachedFiles.length === 0 && !selectedGif) || sending} title="Send">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
                 </svg>

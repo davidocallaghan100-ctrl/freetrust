@@ -4,6 +4,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import MessageAttachments from '@/components/messaging/MessageAttachments'
+import GifPicker from '@/components/gifs/GifPicker'
+import GifContent from '@/components/gifs/GifContent'
+import { appendGifMarker, type GifResult } from '@/lib/gifs'
 import {
   formatAttachmentSize,
   uploadMessageAttachments,
@@ -72,6 +75,7 @@ export default function MessageDrawer({
   const [messages,       setMessages]       = useState<Message[]>([])
   const [participantIds, setParticipantIds] = useState<string[]>([])
   const [input,          setInput]          = useState('')
+  const [selectedGif,    setSelectedGif]    = useState<GifResult | null>(null)
   const [attachedFiles,  setAttachedFiles]  = useState<File[]>([])
   const [replyingTo,     setReplyingTo]     = useState<Message | null>(null)
   const [setupLoading,   setSetupLoading]   = useState(false)
@@ -97,6 +101,7 @@ export default function MessageDrawer({
     setMessages([])
     setParticipantIds([])
     setInput('')
+    setSelectedGif(null)
     setAttachedFiles([])
     setReplyingTo(null)
     markedReadRef.current.clear()
@@ -255,8 +260,11 @@ export default function MessageDrawer({
 
   const send = async () => {
     const text = input.trim()
-    if ((!text && attachedFiles.length === 0) || !conversationId || !currentUserId) return
+    if ((!text && attachedFiles.length === 0 && !selectedGif) || !conversationId || !currentUserId) return
+    const gifToSend = selectedGif
+    const content = appendGifMarker(text, gifToSend)
     setInput('')
+    setSelectedGif(null)
     const filesToSend = attachedFiles
     setAttachedFiles([])
     const replyTarget = replyingTo
@@ -273,7 +281,7 @@ export default function MessageDrawer({
       id:              optimisticId,
       conversation_id: conversationId,
       sender_id:       currentUserId,
-      content:         text,
+      content,
       created_at:      new Date().toISOString(),
       attachments:     filesToSend.map(file => ({ url: '', type: file.type, name: file.name, size: file.size })),
       reply_to_id:     replyTarget?.id ?? null,
@@ -288,7 +296,7 @@ export default function MessageDrawer({
       const res = await fetch(`/api/messages/${conversationId}`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ content: text, attachments: uploadedAttachments, replyToId: replyTarget?.id ?? null }),
+        body:    JSON.stringify({ content, attachments: uploadedAttachments, replyToId: replyTarget?.id ?? null }),
       })
       const data = await res.json().catch(() => null) as
         | { message?: Message; error?: string }
@@ -297,6 +305,7 @@ export default function MessageDrawer({
         setError(data?.error || `Failed to send (HTTP ${res.status})`)
         setMessages(prev => prev.filter(m => m.id !== optimisticId))
         setInput(text)
+        setSelectedGif(gifToSend)
         setAttachedFiles(filesToSend)
         setReplyingTo(replyTarget)
         return
@@ -314,6 +323,7 @@ export default function MessageDrawer({
       setError(msg)
       setMessages(prev => prev.filter(m => m.id !== optimisticId))
       setInput(text)
+      setSelectedGif(gifToSend)
       setAttachedFiles(filesToSend)
       setReplyingTo(replyTarget)
     } finally {
@@ -673,7 +683,7 @@ export default function MessageDrawer({
                         </button>
                       )
                     })()}
-                    {m.content && <div>{m.content}</div>}
+                    {m.content && <GifContent content={m.content} gifStyle={{ width: 'min(100%, 230px)', maxHeight: 230 }} />}
                     <MessageAttachments attachments={m.attachments ?? []} compact />
                     {isSent && !isPend && (
                       <div style={{ marginTop: 4, fontSize: '0.66rem', textAlign: 'right', opacity: 0.72 }}>
@@ -722,6 +732,13 @@ export default function MessageDrawer({
               ))}
             </div>
           )}
+          {selectedGif && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: 6, borderRadius: 14, border: '1px solid rgba(52,211,153,0.24)', background: 'rgba(15,23,42,0.72)', alignSelf: 'flex-start' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={selectedGif.previewUrl} alt={selectedGif.title} style={{ width: 88, height: 66, borderRadius: 10, objectFit: 'cover', display: 'block' }} />
+              <span style={{ maxWidth: 150, color: '#cbd5e1', fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedGif.title || 'GIF'}</span>
+            </div>
+          )}
           <div className="drawer-input-row">
           <input
             ref={fileInputRef}
@@ -741,6 +758,7 @@ export default function MessageDrawer({
           >
             +
           </button>
+          <GifPicker selectedGif={selectedGif} onSelect={setSelectedGif} disabled={!conversationId || setupLoading || sending} compact />
           <textarea
             ref={inputRef}
             className="drawer-textarea"
@@ -762,7 +780,7 @@ export default function MessageDrawer({
             type="button"
             className="drawer-send"
             onClick={send}
-            disabled={(!input.trim() && attachedFiles.length === 0) || !conversationId || sending || setupLoading}
+            disabled={(!input.trim() && attachedFiles.length === 0 && !selectedGif) || !conversationId || sending || setupLoading}
             aria-label="Send message"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
