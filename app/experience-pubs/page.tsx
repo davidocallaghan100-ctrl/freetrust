@@ -171,6 +171,15 @@ export default function ExperiencePubsPage() {
   const [createPub, setCreatePub] = useState<Pub | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [mobilePanelOpen, setMobilePanelOpen] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)')
+    const update = () => setIsMobile(media.matches)
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
 
   const activityCountByPub = useMemo(() => {
     const counts = new Map<string, number>()
@@ -287,8 +296,14 @@ export default function ExperiencePubsPage() {
     background: COLORS.bg,
     color: COLORS.cream,
     display: 'flex',
-    overflow: 'hidden',
+    flexDirection: isMobile ? 'column' : 'row',
+    width: '100%',
+    maxWidth: '100vw',
+    overflowX: 'hidden',
+    overflowY: isMobile ? 'visible' : 'hidden',
     position: 'relative',
+    paddingBottom: isMobile ? 86 : 0,
+    boxSizing: 'border-box',
   }
 
   const buttonStyle: CSSProperties = {
@@ -318,16 +333,16 @@ export default function ExperiencePubsPage() {
 
   return (
     <div style={pageStyle}>
-      <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', position: 'relative' }}>
-        <div style={{ padding: '14px 16px 12px', background: 'rgba(26,16,8,0.92)', borderBottom: '1px solid rgba(201,125,46,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <div>
+      <main style={{ flex: isMobile ? '0 0 auto' : 1, width: '100%', minWidth: 0, display: 'flex', flexDirection: 'column', position: 'relative', boxSizing: 'border-box' }}>
+        <div style={{ padding: isMobile ? '12px 14px 10px' : '14px 16px 12px', background: 'rgba(26,16,8,0.92)', borderBottom: '1px solid rgba(201,125,46,0.16)', display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: 12, boxSizing: 'border-box' }}>
+          <div style={{ minWidth: 0 }}>
             <div style={{ color: COLORS.light, fontSize: 12, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Experience</div>
-            <h1 style={{ margin: '2px 0 0', fontFamily: 'Playfair Display, Georgia, serif', fontSize: 'clamp(24px, 4vw, 38px)', lineHeight: 1 }}>🍺 Experience Pubs</h1>
+            <h1 style={{ margin: '2px 0 0', fontFamily: 'Playfair Display, Georgia, serif', fontSize: isMobile ? 31 : 'clamp(24px, 4vw, 38px)', lineHeight: 1, overflowWrap: 'break-word' }}>🍺 Experience Pubs</h1>
           </div>
           <button type="button" onClick={() => setMobilePanelOpen(v => !v)} style={{ ...buttonStyle, display: 'none' }}>Panel</button>
         </div>
 
-        <div style={{ flex: 1, position: 'relative', minHeight: 360 }}>
+        <div style={{ flex: isMobile ? '0 0 auto' : 1, position: 'relative', minHeight: isMobile ? 300 : 360, height: isMobile ? '42vh' : undefined, maxHeight: isMobile ? 420 : undefined, width: '100%', overflow: 'hidden' }}>
           <MapboxMap
             ref={mapRef}
             mapboxAccessToken={MAPBOX_TOKEN}
@@ -361,17 +376,17 @@ export default function ExperiencePubsPage() {
             )}
           </MapboxMap>
 
-          <div style={{ position: 'absolute', left: 14, right: 14, bottom: 14, display: 'flex', gap: 8, flexWrap: 'wrap', zIndex: 4 }}>
+          <div style={{ position: 'absolute', left: isMobile ? 10 : 14, right: isMobile ? 10 : 14, bottom: isMobile ? 10 : 14, display: 'flex', gap: 8, flexWrap: isMobile ? 'nowrap' : 'wrap', overflowX: isMobile ? 'auto' : 'visible', maxWidth: '100%', zIndex: 4, paddingBottom: isMobile ? 3 : 0, WebkitOverflowScrolling: 'touch' }}>
             {FILTERS.map(filter => (
-              <button key={filter.key} type="button" onClick={() => setActiveFilter(filter.key)} style={{ border: `1px solid ${activeFilter === filter.key ? COLORS.light : 'rgba(245,237,214,0.2)'}`, background: activeFilter === filter.key ? 'rgba(201,125,46,0.92)' : 'rgba(45,31,15,0.9)', color: activeFilter === filter.key ? '#1A1008' : COLORS.cream, borderRadius: 999, padding: '9px 12px', fontSize: 12, fontWeight: 850, cursor: 'pointer', minHeight: 38, backdropFilter: 'blur(12px)' }}>{filter.label}</button>
+              <button key={filter.key} type="button" onClick={() => setActiveFilter(filter.key)} style={{ border: `1px solid ${activeFilter === filter.key ? COLORS.light : 'rgba(245,237,214,0.2)'}`, background: activeFilter === filter.key ? 'rgba(201,125,46,0.92)' : 'rgba(45,31,15,0.9)', color: activeFilter === filter.key ? '#1A1008' : COLORS.cream, borderRadius: 999, padding: '9px 12px', fontSize: 12, fontWeight: 850, cursor: 'pointer', minHeight: 38, backdropFilter: 'blur(12px)', flexShrink: 0 }}>{filter.label}</button>
             ))}
           </div>
         </div>
       </main>
 
-      <aside style={{ width: mobilePanelOpen ? 360 : 0, maxWidth: '100%', background: COLORS.panel, borderLeft: '1px solid rgba(201,125,46,0.2)', overflow: 'hidden', transition: 'width 180ms ease', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: 14, borderBottom: '1px solid rgba(201,125,46,0.16)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+      <aside style={{ width: isMobile ? '100%' : mobilePanelOpen ? 360 : 0, maxWidth: '100%', flex: isMobile ? '0 0 auto' : undefined, background: COLORS.panel, borderLeft: isMobile ? 'none' : '1px solid rgba(201,125,46,0.2)', borderTop: isMobile ? '1px solid rgba(201,125,46,0.2)' : 'none', overflow: isMobile ? 'visible' : 'hidden', transition: isMobile ? 'none' : 'width 180ms ease', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+        <div style={{ padding: isMobile ? 12 : 14, borderBottom: '1px solid rgba(201,125,46,0.16)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
             {(['nearby', 'activities', 'invites'] as TabKey[]).map(tab => (
               <button key={tab} type="button" onClick={() => setActiveTab(tab)} style={{ border: `1px solid ${activeTab === tab ? COLORS.accent : 'rgba(245,237,214,0.14)'}`, background: activeTab === tab ? 'rgba(201,125,46,0.18)' : 'rgba(26,16,8,0.54)', color: activeTab === tab ? COLORS.light : COLORS.muted, borderRadius: 12, padding: '10px 6px', fontSize: 12, fontWeight: 900, cursor: 'pointer', minHeight: 42 }}>
                 {tab === 'nearby' ? 'Nearby' : tab === 'activities' ? 'Activities' : `Invites${invites.length ? ` · ${invites.length}` : ''}`}
@@ -379,7 +394,7 @@ export default function ExperiencePubsPage() {
             ))}
           </div>
         </div>
-        <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
+        <div style={{ flex: isMobile ? '0 0 auto' : 1, overflowY: isMobile ? 'visible' : 'auto', padding: isMobile ? '12px 12px 20px' : 14 }}>
           {activeTab === 'nearby' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {loading ? <PanelEmpty text="Loading nearby pubs…" /> : visiblePubRows.map(({ pub, km }) => (
