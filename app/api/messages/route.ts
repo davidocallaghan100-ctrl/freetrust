@@ -61,24 +61,56 @@ export async function GET() {
 
     const autoDeleteCutoffIso = getAutoDeleteCutoffIso(profile?.message_auto_delete_days)
 
-    // Get conversations with last message
+    // Get conversations first, then enrich participants with profiles in a
+    // separate query. Production does not currently expose a PostgREST FK
+    // relationship from conversation_participants.user_id -> profiles.id, so
+    // nested `profile:profiles(...)` fails with PGRST200 and the client keeps
+    // rendering an empty inbox even though the message drawer can load threads.
     const { data: conversations, error: convErr } = await admin
       .from('conversations')
       .select(`
         id,
         updated_at,
-        last_message_at,
-        participants:conversation_participants(
-          user_id,
-          last_read_at,
-          profile:profiles(id, full_name, avatar_url)
-        )
+        last_message_at
       `)
       .in('id', convIds)
       .order('last_message_at', { ascending: false, nullsFirst: false })
 
     if (convErr) {
       return NextResponse.json({ error: convErr.message }, { status: 500 })
+    }
+
+    const { data: allParticipants, error: allParticipantsErr } = await admin
+      .from('conversation_participants')
+      .select('conversation_id, user_id, last_read_at')
+      .in('conversation_id', convIds)
+
+    if (allParticipantsErr) {
+      return NextResponse.json({ error: allParticipantsErr.message }, { status: 500 })
+    }
+
+    const participantUserIds = Array.from(new Set((allParticipants ?? [])
+      .map(p => p.user_id)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0)))
+
+    const { data: participantProfiles, error: participantProfilesErr } = participantUserIds.length > 0
+      ? await admin
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .in('id', participantUserIds)
+      : { data: [], error: null }
+
+    if (participantProfilesErr) {
+      return NextResponse.json({ error: participantProfilesErr.message }, { status: 500 })
+    }
+
+    const profileById = new Map((participantProfiles ?? []).map(profile => [profile.id, profile]))
+    const participantsByConversation = new Map<string, Array<{ user_id: string; last_read_at: string | null }>>()
+    for (const participant of allParticipants ?? []) {
+      if (typeof participant.conversation_id !== 'string' || typeof participant.user_id !== 'string') continue
+      const rows = participantsByConversation.get(participant.conversation_id) ?? []
+      rows.push({ user_id: participant.user_id, last_read_at: participant.last_read_at ?? null })
+      participantsByConversation.set(participant.conversation_id, rows)
     }
 
     // Get last message for each conversation
@@ -108,15 +140,16 @@ export async function GET() {
       }
 
       // Get other participant
-      const otherParticipant = (conv.participants as unknown as Array<{ user_id: string; profile: { id: string; full_name: string | null; avatar_url: string | null } }>)
+      const otherParticipant = (participantsByConversation.get(conv.id) ?? [])
         .find(p => p.user_id !== user.id)
+      const otherProfile = otherParticipant ? profileById.get(otherParticipant.user_id) : null
 
       return {
         id: conv.id,
         updated_at: conv.updated_at,
         last_message: lastMsg || null,
         unread_count: unreadCount,
-        other_user: otherParticipant?.profile || null,
+        other_user: otherProfile || null,
       }
     }))
 
