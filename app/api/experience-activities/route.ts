@@ -10,6 +10,7 @@ type ActivityAction =
   | { action: 'joinActivity'; activity_id: string }
   | { action: 'leaveActivity'; activity_id: string }
   | { action: 'cancelActivity'; activity_id: string }
+  | { action: 'deleteActivity'; activity_id: string }
   | { action: 'sendInvites'; to_user_ids: string[]; activity_id: string; message?: string | null }
   | { action: 'updateInvite'; invite_id: string; status: 'accepted' | 'declined' }
   | { action: 'addComment'; activity_id: string; content: string }
@@ -213,6 +214,15 @@ export async function POST(req: NextRequest) {
       if (activityError) throw activityError
       if (activity.created_by !== userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       const { error } = await admin.from('community_activities').update({ status: 'cancelled' }).eq('id', body.activity_id)
+      if (error) throw error
+      return NextResponse.json({ ok: true })
+    }
+
+    if (body.action === 'deleteActivity') {
+      const { data: activity, error: activityError } = await admin.from('community_activities').select('created_by').eq('id', body.activity_id).single()
+      if (activityError) throw activityError
+      if (activity.created_by !== userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      const { error } = await admin.from('community_activities').update({ status: 'deleted' }).eq('id', body.activity_id)
       if (error) throw error
       return NextResponse.json({ ok: true })
     }
