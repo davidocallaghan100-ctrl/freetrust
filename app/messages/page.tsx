@@ -712,6 +712,20 @@ function MessagesPageInner() {
           .msg-input-area {
             padding-bottom: calc(0.85rem + 64px + env(safe-area-inset-bottom, 0px));
           }
+          .msg-input-stack {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+            z-index: 70;
+            box-shadow: 0 -14px 34px rgba(2,6,23,0.72);
+          }
+          .msg-input-stack .msg-input-area {
+            padding: 0.75rem 1rem;
+          }
+          .msg-thread-scroll {
+            padding-bottom: calc(8.75rem + 64px + env(safe-area-inset-bottom, 0px));
+          }
           .msg-bubble { max-width: 84%; font-size: 0.96rem; }
         }
       `}</style>

@@ -12,12 +12,33 @@ const FALLBACK_GIFS: Array<GifResult & { tags: string[] }> = [
   { id: 'artj92V8o75VPL7AeQ', title: 'This is fine', url: 'https://media.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif', previewUrl: 'https://media.giphy.com/media/artj92V8o75VPL7AeQ/200w.gif', width: 480, height: 270, source: 'curated', pageUrl: 'https://giphy.com/gifs/artj92V8o75VPL7AeQ', tags: ['funny', 'fine', 'chaos', 'reaction'] },
   { id: '11ISwbgCxEzMyY', title: 'Applause', url: 'https://media.giphy.com/media/11ISwbgCxEzMyY/giphy.gif', previewUrl: 'https://media.giphy.com/media/11ISwbgCxEzMyY/200w.gif', width: 480, height: 270, source: 'curated', pageUrl: 'https://giphy.com/gifs/11ISwbgCxEzMyY', tags: ['clap', 'applause', 'bravo', 'reaction'] },
   { id: '3o7abldj0b3rxrZUxW', title: 'Nope', url: 'https://media.giphy.com/media/3o7abldj0b3rxrZUxW/giphy.gif', previewUrl: 'https://media.giphy.com/media/3o7abldj0b3rxrZUxW/200w.gif', width: 480, height: 270, source: 'curated', pageUrl: 'https://giphy.com/gifs/3o7abldj0b3rxrZUxW', tags: ['nope', 'no', 'reaction', 'funny'] },
+  { id: 'GCvktC0KFy9l6', title: 'Thumbs up', url: 'https://media.giphy.com/media/GCvktC0KFy9l6/giphy.gif', previewUrl: 'https://media.giphy.com/media/GCvktC0KFy9l6/200w.gif', width: 480, height: 270, source: 'curated', pageUrl: 'https://giphy.com/gifs/GCvktC0KFy9l6', tags: ['thumbs up', 'yes', 'ok', 'okay', 'approve', 'good'] },
+  { id: '3ohzdIuqJoo8QdKlnW', title: 'Thank you', url: 'https://media.giphy.com/media/3ohzdIuqJoo8QdKlnW/giphy.gif', previewUrl: 'https://media.giphy.com/media/3ohzdIuqJoo8QdKlnW/200w.gif', width: 480, height: 270, source: 'curated', pageUrl: 'https://giphy.com/gifs/3ohzdIuqJoo8QdKlnW', tags: ['thank you', 'thanks', 'grateful', 'appreciate'] },
+  { id: 'BPJmthQ3YRwD6QqcVD', title: 'Congratulations', url: 'https://media.giphy.com/media/BPJmthQ3YRwD6QqcVD/giphy.gif', previewUrl: 'https://media.giphy.com/media/BPJmthQ3YRwD6QqcVD/200w.gif', width: 480, height: 270, source: 'curated', pageUrl: 'https://giphy.com/gifs/BPJmthQ3YRwD6QqcVD', tags: ['congrats', 'congratulations', 'cheers', 'celebrate', 'win'] },
+  { id: 'TdfyKrN7HGTIY', title: 'Good morning', url: 'https://media.giphy.com/media/TdfyKrN7HGTIY/giphy.gif', previewUrl: 'https://media.giphy.com/media/TdfyKrN7HGTIY/200w.gif', width: 480, height: 270, source: 'curated', pageUrl: 'https://giphy.com/gifs/TdfyKrN7HGTIY', tags: ['good morning', 'morning', 'hello', 'hi', 'wave'] },
+  { id: '3o7TKsQ8gqVrX6yU6A', title: 'Hello wave', url: 'https://media.giphy.com/media/3o7TKsQ8gqVrX6yU6A/giphy.gif', previewUrl: 'https://media.giphy.com/media/3o7TKsQ8gqVrX6yU6A/200w.gif', width: 480, height: 270, source: 'curated', pageUrl: 'https://giphy.com/gifs/3o7TKsQ8gqVrX6yU6A', tags: ['hello', 'hi', 'wave', 'greeting'] },
+  { id: 'OPU6wzx8JrHna', title: 'Sad', url: 'https://media.giphy.com/media/OPU6wzx8JrHna/giphy.gif', previewUrl: 'https://media.giphy.com/media/OPU6wzx8JrHna/200w.gif', width: 480, height: 270, source: 'curated', pageUrl: 'https://giphy.com/gifs/OPU6wzx8JrHna', tags: ['sad', 'cry', 'upset', 'sorry', 'emotional'] },
+  { id: '3M4NpbLCTxBqU', title: 'Hug', url: 'https://media.giphy.com/media/3M4NpbLCTxBqU/giphy.gif', previewUrl: 'https://media.giphy.com/media/3M4NpbLCTxBqU/200w.gif', width: 480, height: 270, source: 'curated', pageUrl: 'https://giphy.com/gifs/3M4NpbLCTxBqU', tags: ['hug', 'love', 'support', 'comfort', 'care'] },
+  { id: 'TJawtKM6OCKkvwCIqX', title: 'Facepalm', url: 'https://media.giphy.com/media/TJawtKM6OCKkvwCIqX/giphy.gif', previewUrl: 'https://media.giphy.com/media/TJawtKM6OCKkvwCIqX/200w.gif', width: 480, height: 270, source: 'curated', pageUrl: 'https://giphy.com/gifs/TJawtKM6OCKkvwCIqX', tags: ['facepalm', 'oops', 'fail', 'annoyed', 'reaction'] },
+  { id: '11tTNkNy1SdXGg', title: 'Angry', url: 'https://media.giphy.com/media/11tTNkNy1SdXGg/giphy.gif', previewUrl: 'https://media.giphy.com/media/11tTNkNy1SdXGg/200w.gif', width: 480, height: 270, source: 'curated', pageUrl: 'https://giphy.com/gifs/11tTNkNy1SdXGg', tags: ['angry', 'mad', 'rage', 'annoyed', 'frustrated'] },
+  { id: 'l3q2K5jinAlChoCLS', title: 'Shocked', url: 'https://media.giphy.com/media/l3q2K5jinAlChoCLS/giphy.gif', previewUrl: 'https://media.giphy.com/media/l3q2K5jinAlChoCLS/200w.gif', width: 480, height: 270, source: 'curated', pageUrl: 'https://giphy.com/gifs/l3q2K5jinAlChoCLS', tags: ['shocked', 'surprised', 'what', 'wow', 'reaction'] },
+  { id: 'blSTtZehjAZ8I', title: 'Party dance', url: 'https://media.giphy.com/media/blSTtZehjAZ8I/giphy.gif', previewUrl: 'https://media.giphy.com/media/blSTtZehjAZ8I/200w.gif', width: 480, height: 270, source: 'curated', pageUrl: 'https://giphy.com/gifs/blSTtZehjAZ8I', tags: ['party', 'dance', 'celebrate', 'music', 'fun'] },
 ]
 
 function fallbackResults(query: string, limit: number): GifResult[] {
   const q = query.toLowerCase().trim()
+  const tokens = q.split(/\s+/).filter(token => token.length > 1)
   const ranked = q
-    ? FALLBACK_GIFS.filter(gif => `${gif.title} ${gif.tags.join(' ')}`.toLowerCase().includes(q))
+    ? FALLBACK_GIFS
+      .map(gif => {
+        const haystack = `${gif.title} ${gif.tags.join(' ')}`.toLowerCase()
+        const exact = haystack.includes(q) ? 4 : 0
+        const tokenScore = tokens.reduce((score, token) => score + (haystack.includes(token) ? 1 : 0), 0)
+        return { gif, score: exact + tokenScore }
+      })
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(item => item.gif)
     : FALLBACK_GIFS
   const pool = ranked.length > 0 ? ranked : FALLBACK_GIFS
   return pool.slice(0, limit).map(({ tags: _tags, ...gif }) => gif)

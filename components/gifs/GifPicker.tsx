@@ -80,8 +80,8 @@ export default function GifPicker({ selectedGif, onSelect, disabled = false, com
         type="button"
         onClick={() => setOpen(v => !v)}
         disabled={disabled}
-        aria-label="Add a GIF"
-        title="Add a funny GIF"
+          aria-label="Add a GIF"
+          title="Add a GIF"
         style={{
           border: selectedGif ? '1px solid rgba(52,211,153,0.45)' : '1px solid rgba(148,163,184,0.2)',
           background: selectedGif ? 'rgba(52,211,153,0.14)' : 'rgba(15,23,42,0.75)',
@@ -140,7 +140,7 @@ export default function GifPicker({ selectedGif, onSelect, disabled = false, com
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="Search funny GIFs"
+              placeholder="Search GIFs"
               autoFocus
               style={{
                 flex: 1,
