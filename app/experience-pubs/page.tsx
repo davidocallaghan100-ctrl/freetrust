@@ -20,7 +20,7 @@ type Pub = {
   avg_rating: string | number | null
   data_source?: string | null
   source_url?: string | null
-  tags?: { osm_tags?: string[] } | null
+  tags?: { osm_tags?: string[] | Record<string, string | number | boolean | null | undefined> } | null
 }
 
 type Profile = {
@@ -167,9 +167,40 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
 }
 
+function interpolateZoomScale(zoom: number, stops: Array<[number, number]>) {
+  const sortedStops = stops.slice().sort((a, b) => a[0] - b[0])
+  const first = sortedStops[0]
+  const last = sortedStops[sortedStops.length - 1]
+  if (!first || !last) return 1
+  if (zoom <= first[0]) return first[1]
+  if (zoom >= last[0]) return last[1]
+
+  for (let index = 1; index < sortedStops.length; index += 1) {
+    const previous = sortedStops[index - 1]
+    const next = sortedStops[index]
+    if (!previous || !next || zoom > next[0]) continue
+    const progress = (zoom - previous[0]) / (next[0] - previous[0])
+    return previous[1] + (next[1] - previous[1]) * progress
+  }
+
+  return last[1]
+}
+
 function markerScaleForZoom(zoom: number, selected: boolean) {
-  const base = clamp((zoom - 5.4) / 8.2, 0.24, 1)
-  return selected ? base * 1.18 : base
+  const base = interpolateZoomScale(zoom, [
+    [5.2, 0.34],
+    [6.5, 0.42],
+    [8.2, 0.58],
+    [10.2, 0.78],
+    [12.4, 0.98],
+    [14.6, 1.12],
+    [16.2, 1.22],
+  ])
+  return selected ? base * 1.16 : base
+}
+
+function countBadgeVisibleZoom(zoom: number) {
+  return zoom >= 9.4
 }
 
 function markerStyleForPub(pub: Pub, activities: ActivityRow[]) {
@@ -181,8 +212,20 @@ function markerStyleForPub(pub: Pub, activities: ActivityRow[]) {
 }
 
 function pubTagLabels(pub: Pub) {
-  const tags = pub.tags?.osm_tags ?? []
-  return tags.map(tag => ({
+  const rawTags = pub.tags?.osm_tags
+  const tags = Array.isArray(rawTags)
+    ? rawTags
+    : rawTags && typeof rawTags === 'object'
+      ? [
+        rawTags.outdoor_seating === 'yes' || rawTags.outdoor_seating === true ? 'outdoor_seating' : null,
+        rawTags.internet_access === 'wlan' || rawTags.wifi === 'yes' || rawTags.wifi === true ? 'wifi' : null,
+        rawTags.brewery || rawTags.cask_ale || rawTags.real_ale ? 'brewery_or_cask_tags' : null,
+        rawTags.wheelchair === 'yes' ? 'wheelchair_accessible' : null,
+        rawTags.wheelchair === 'limited' ? 'wheelchair_limited' : null,
+        rawTags.opening_hours ? 'opening_hours_available' : null,
+      ].filter((tag): tag is string => Boolean(tag))
+      : []
+  return Array.from(new Set(tags)).map(tag => ({
     outdoor_seating: 'Outdoor seating',
     wifi: 'Wi‑Fi',
     brewery_or_cask_tags: 'Cask/brewery tags',
@@ -234,6 +277,11 @@ export default function ExperiencePubsPage() {
   const [mobilePanelOpen, setMobilePanelOpen] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
   const [mapZoom, setMapZoom] = useState(14)
+
+  const updateMapZoom = useCallback((zoom: number) => {
+    const roundedZoom = Math.round(zoom * 10) / 10
+    setMapZoom(currentZoom => currentZoom === roundedZoom ? currentZoom : roundedZoom)
+  }, [])
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)')
@@ -450,8 +498,12 @@ export default function ExperiencePubsPage() {
             initialViewState={{ longitude: location?.lng ?? -8.4756, latitude: location?.lat ?? 51.8985, zoom: 14 }}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
             attributionControl={false}
-            onLoad={() => mapRef.current?.resize()}
-            onMove={event => setMapZoom(event.viewState.zoom)}
+            onLoad={() => {
+              mapRef.current?.resize()
+              const zoom = mapRef.current?.getZoom()
+              if (typeof zoom === 'number') updateMapZoom(zoom)
+            }}
+            onMove={event => updateMapZoom(event.viewState.zoom)}
             onError={e => console.error('[ExperiencePubs] map error', e)}
           >
             {visiblePubRows.map(({ pub, km }) => {
@@ -459,16 +511,13 @@ export default function ExperiencePubsPage() {
               const selected = selectedPubId === pub.id
               const scale = markerScaleForZoom(mapZoom, selected)
               const marker = markerStyleForPub(pub, activities)
-              const outer = Math.round(34 * scale)
-              const inner = Math.round(30 * scale)
-              const iconSize = Math.round(15 * scale)
               return (
                 <Marker key={pub.id} longitude={asNumber(pub.lng)} latitude={asNumber(pub.lat)} anchor="bottom" onClick={event => { event.originalEvent.stopPropagation(); selectPub(pub) }}>
-                  <div style={{ position: 'relative', width: outer, height: outer, transition: 'width 160ms ease, height 160ms ease, opacity 160ms ease', cursor: 'pointer', opacity: selected ? 1 : clamp(0.62 + scale * 0.38, 0.62, 1) }}>
-                    <div style={{ width: inner, height: inner, borderRadius: '50% 50% 50% 0', background: `linear-gradient(135deg, ${COLORS.light}, ${marker.colour})`, transform: 'rotate(45deg)', border: `${Math.max(1, Math.round(2 * scale))}px solid rgba(255,244,203,0.82)`, boxShadow: pub.is_verified ? `0 0 0 ${Math.max(1, Math.round(3 * scale))}px rgba(61,170,92,0.24), 0 0 ${Math.round(14 * scale)}px ${COLORS.green}` : `0 ${Math.round(5 * scale)}px ${Math.round(16 * scale)}px rgba(0,0,0,0.38)`, display: 'grid', placeItems: 'center' }}>
-                      <span style={{ transform: 'rotate(-45deg)', fontSize: iconSize, lineHeight: 1 }}>{marker.emoji}</span>
+                  <div style={{ position: 'relative', width: 40, height: 40, cursor: 'pointer', opacity: selected ? 1 : clamp(0.56 + scale * 0.36, 0.56, 0.96), transform: `scale(${scale})`, transformOrigin: '50% 100%', transition: 'transform 180ms ease, opacity 180ms ease' }}>
+                    <div style={{ width: 32, height: 32, borderRadius: '50% 50% 50% 0', background: `linear-gradient(135deg, ${COLORS.light}, ${marker.colour})`, transform: 'rotate(45deg)', border: '2px solid rgba(255,244,203,0.82)', boxShadow: pub.is_verified ? `0 0 0 3px rgba(61,170,92,0.24), 0 0 15px ${COLORS.green}` : '0 7px 18px rgba(0,0,0,0.38)', display: 'grid', placeItems: 'center' }}>
+                      <span style={{ transform: 'rotate(-45deg)', fontSize: 16, lineHeight: 1 }}>{marker.emoji}</span>
                     </div>
-                    {count > 0 && mapZoom >= 10.2 && <span style={{ position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 999, background: COLORS.red, color: '#fff', fontSize: 10, display: 'grid', placeItems: 'center', fontWeight: 900, border: '2px solid #050504' }}>{count}</span>}
+                    {count > 0 && countBadgeVisibleZoom(mapZoom) && <span style={{ position: 'absolute', top: -6, right: 0, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 999, background: COLORS.red, color: '#fff', fontSize: 10, display: 'grid', placeItems: 'center', fontWeight: 900, border: '2px solid #050504', boxSizing: 'border-box' }}>{count}</span>}
                   </div>
                 </Marker>
               )
