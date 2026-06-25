@@ -16,20 +16,28 @@ async function currentUserId() {
   return user?.id ?? null
 }
 
+async function fetchAllRows<T = any>(buildQuery: () => any, pageSize = 1000): Promise<T[]> {
+  const rows: T[] = []
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await buildQuery().range(from, from + pageSize - 1)
+    if (error) throw error
+    const page = (data ?? []) as T[]
+    rows.push(...page)
+    if (page.length < pageSize) break
+  }
+  return rows
+}
+
 export async function GET() {
   try {
     const userId = await currentUserId()
     const admin = createAdminClient()
 
-    const [pubsRes, activitiesRes] = await Promise.all([
-      admin.from('pubs').select('*').order('name'),
-      admin.from('pub_activities').select('*, pub:pubs(*), attendees:pub_activity_attendees(*)').gt('scheduled_at', new Date().toISOString()).eq('status', 'active').order('scheduled_at', { ascending: true }),
+    const [pubs, activities] = await Promise.all([
+      fetchAllRows(() => admin.from('pubs').select('*').order('name')),
+      fetchAllRows(() => admin.from('pub_activities').select('*, pub:pubs(*), attendees:pub_activity_attendees(*)').gt('scheduled_at', new Date().toISOString()).eq('status', 'active').order('scheduled_at', { ascending: true })),
     ])
 
-    if (pubsRes.error) throw pubsRes.error
-    if (activitiesRes.error) throw activitiesRes.error
-
-    const activities = activitiesRes.data ?? []
     const creatorIds = Array.from(new Set(activities.map((row) => row.created_by).filter(Boolean)))
     const [creatorProfilesRes, creatorBalancesRes] = creatorIds.length ? await Promise.all([
       admin.from('profiles').select('id, first_name, last_name, full_name, avatar_url, trust_balance').in('id', creatorIds),
@@ -68,7 +76,7 @@ export async function GET() {
 
     return NextResponse.json({
       userId,
-      pubs: pubsRes.data ?? [],
+      pubs,
       activities: activities.map((row) => ({ ...row, creator: creatorProfiles.get(row.created_by) ?? null, creatorTrust: creatorBalances.get(row.created_by) ?? Number(creatorProfiles.get(row.created_by)?.trust_balance ?? 0) })),
       invites,
       friendIds,

@@ -103,6 +103,18 @@ const ACTIVITY_LABELS: Record<ActivityType, { label: string; emoji: string }> = 
   other: { label: 'Other', emoji: '✨' },
 }
 
+const ACTIVITY_MARKERS: Record<ActivityType | 'pub', { emoji: string; colour: string }> = {
+  casual_pints: { emoji: '🍻', colour: '#D4AF37' },
+  trad_session: { emoji: '🎻', colour: '#A855F7' },
+  quiz_night: { emoji: '🧠', colour: '#2563EB' },
+  sport_watch: { emoji: '🏟️', colour: '#16A34A' },
+  live_music: { emoji: '🎶', colour: '#EC4899' },
+  after_work: { emoji: '💼', colour: '#64748B' },
+  celebration: { emoji: '🎉', colour: '#F97316' },
+  other: { emoji: '✨', colour: '#38BDF8' },
+  pub: { emoji: '🍺', colour: '#D4AF37' },
+}
+
 const FILTERS: Array<{ key: FilterKey; label: string }> = [
   { key: 'all', label: 'All Pubs' },
   { key: 'live_music', label: 'Live Music' },
@@ -156,8 +168,16 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function markerScaleForZoom(zoom: number, selected: boolean) {
-  const base = clamp((zoom - 10.2) / 5.4, 0.46, 1)
+  const base = clamp((zoom - 5.4) / 8.2, 0.24, 1)
   return selected ? base * 1.18 : base
+}
+
+function markerStyleForPub(pub: Pub, activities: ActivityRow[]) {
+  const nextActivity = activities
+    .filter(activity => activity.pub_id === pub.id)
+    .slice()
+    .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())[0]
+  return ACTIVITY_MARKERS[nextActivity?.activity_type ?? 'pub'] ?? ACTIVITY_MARKERS.pub
 }
 
 function pubTagLabels(pub: Pub) {
@@ -416,7 +436,7 @@ export default function ExperiencePubsPage() {
             <div style={{ minWidth: 0 }}>
             <div style={{ color: COLORS.light, fontSize: 12, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Experience</div>
             <h1 style={{ margin: '2px 0 0', fontFamily: 'Playfair Display, Georgia, serif', fontSize: isMobile ? 31 : 'clamp(24px, 4vw, 38px)', lineHeight: 1, overflowWrap: 'break-word' }}>🍺 Experience Pubs</h1>
-            <div style={{ color: COLORS.muted, fontSize: 12, marginTop: 5 }}>{displayPubs.length ? `${displayPubs.length} real Cork pubs from OpenStreetMap + FreeTrust community` : 'Real Cork pub map'}</div>
+            <div style={{ color: COLORS.muted, fontSize: 12, marginTop: 5 }}>{displayPubs.length ? `${displayPubs.length} real Ireland pubs from OpenStreetMap + FreeTrust community` : 'Real Ireland pub map'}</div>
             </div>
           </div>
           <button type="button" onClick={() => setMobilePanelOpen(v => !v)} style={{ ...buttonStyle, display: 'none' }}>Panel</button>
@@ -438,16 +458,17 @@ export default function ExperiencePubsPage() {
               const count = activityCountByPub.get(pub.id) ?? 0
               const selected = selectedPubId === pub.id
               const scale = markerScaleForZoom(mapZoom, selected)
-              const outer = Math.round(44 * scale)
-              const inner = Math.round(38 * scale)
-              const iconSize = Math.round(19 * scale)
+              const marker = markerStyleForPub(pub, activities)
+              const outer = Math.round(34 * scale)
+              const inner = Math.round(30 * scale)
+              const iconSize = Math.round(15 * scale)
               return (
                 <Marker key={pub.id} longitude={asNumber(pub.lng)} latitude={asNumber(pub.lat)} anchor="bottom" onClick={event => { event.originalEvent.stopPropagation(); selectPub(pub) }}>
-                  <div style={{ position: 'relative', width: outer, height: outer, transition: 'width 160ms ease, height 160ms ease', cursor: 'pointer' }}>
-                    <div style={{ width: inner, height: inner, borderRadius: '50% 50% 50% 0', background: `linear-gradient(135deg, ${COLORS.light}, ${COLORS.accent})`, transform: 'rotate(45deg)', border: `${Math.max(1, Math.round(2 * scale))}px solid rgba(255,244,203,0.82)`, boxShadow: pub.is_verified ? `0 0 0 ${Math.max(2, Math.round(4 * scale))}px rgba(61,170,92,0.24), 0 0 ${Math.round(22 * scale)}px ${COLORS.green}` : `0 ${Math.round(8 * scale)}px ${Math.round(24 * scale)}px rgba(0,0,0,0.45)`, display: 'grid', placeItems: 'center' }}>
-                      <span style={{ transform: 'rotate(-45deg)', fontSize: iconSize, lineHeight: 1 }}>🍺</span>
+                  <div style={{ position: 'relative', width: outer, height: outer, transition: 'width 160ms ease, height 160ms ease, opacity 160ms ease', cursor: 'pointer', opacity: selected ? 1 : clamp(0.62 + scale * 0.38, 0.62, 1) }}>
+                    <div style={{ width: inner, height: inner, borderRadius: '50% 50% 50% 0', background: `linear-gradient(135deg, ${COLORS.light}, ${marker.colour})`, transform: 'rotate(45deg)', border: `${Math.max(1, Math.round(2 * scale))}px solid rgba(255,244,203,0.82)`, boxShadow: pub.is_verified ? `0 0 0 ${Math.max(1, Math.round(3 * scale))}px rgba(61,170,92,0.24), 0 0 ${Math.round(14 * scale)}px ${COLORS.green}` : `0 ${Math.round(5 * scale)}px ${Math.round(16 * scale)}px rgba(0,0,0,0.38)`, display: 'grid', placeItems: 'center' }}>
+                      <span style={{ transform: 'rotate(-45deg)', fontSize: iconSize, lineHeight: 1 }}>{marker.emoji}</span>
                     </div>
-                    {count > 0 && <span style={{ position: 'absolute', top: -7, right: -6, minWidth: 20, height: 20, padding: '0 5px', borderRadius: 999, background: COLORS.red, color: '#fff', fontSize: 11, display: 'grid', placeItems: 'center', fontWeight: 900, border: '2px solid #050504' }}>{count}</span>}
+                    {count > 0 && mapZoom >= 10.2 && <span style={{ position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 999, background: COLORS.red, color: '#fff', fontSize: 10, display: 'grid', placeItems: 'center', fontWeight: 900, border: '2px solid #050504' }}>{count}</span>}
                   </div>
                 </Marker>
               )

@@ -92,6 +92,23 @@ const VENUE_ICONS: Record<string, string> = {
   sports_ground: '🏟️', dance_studio: '💃', gym: '🏋️', park: '🌳', community_hall: '🏛️', swimming_pool: '🏊', tennis_court: '🎾', golf_course: '⛳', yoga_studio: '🧘', arts_centre: '🎨', beach: '🏖️', hiking_trail: '🥾', cycling_route: '🚴', other: '📍',
 }
 
+const VENUE_CATEGORY_STYLE: Record<string, { emoji: string; colour: string }> = {
+  sports_ground: { emoji: '⚽', colour: '#0EA5E9' },
+  dance_studio: { emoji: '💃', colour: '#A855F7' },
+  gym: { emoji: '🏋️', colour: '#EF4444' },
+  park: { emoji: '🌳', colour: '#22C55E' },
+  community_hall: { emoji: '🏛️', colour: '#F59E0B' },
+  swimming_pool: { emoji: '🏊', colour: '#06B6D4' },
+  tennis_court: { emoji: '🎾', colour: '#84CC16' },
+  golf_course: { emoji: '⛳', colour: '#15803D' },
+  yoga_studio: { emoji: '🧘', colour: '#14B8A6' },
+  arts_centre: { emoji: '🎨', colour: '#EC4899' },
+  beach: { emoji: '🏖️', colour: '#38BDF8' },
+  hiking_trail: { emoji: '🥾', colour: '#92400E' },
+  cycling_route: { emoji: '🚴', colour: '#F97316' },
+  other: { emoji: '📍', colour: '#64748B' },
+}
+
 function asNumber(value: string | number | null | undefined) {
   const n = typeof value === 'number' ? value : Number(value ?? 0)
   return Number.isFinite(n) ? n : 0
@@ -122,7 +139,22 @@ function hexToRgba(hex: string, alpha: number) {
   const b = parseInt(value.slice(4, 6), 16)
   return Number.isFinite(r + g + b) ? `rgba(${r},${g},${b},${alpha})` : `rgba(14,165,233,${alpha})`
 }
+function clamp(value: number, min: number, max: number) { return Math.min(max, Math.max(min, value)) }
+function markerScaleForZoom(zoom: number, selected: boolean) {
+  const base = clamp((zoom - 5.4) / 8.2, 0.24, 1)
+  return selected ? base * 1.22 : base
+}
 function categoryForActivity(activity?: ActivityRow | null, categories?: Category[]) { return activity?.category ?? categories?.find(c => c.id === activity?.category_id) ?? null }
+function markerStyleForVenue(venue: Venue, activity?: ActivityRow | null, categories?: Category[]) {
+  const category = categoryForActivity(activity, categories)
+  if (category) return { emoji: category.emoji, colour: category.colour }
+  return VENUE_CATEGORY_STYLE[venue.venue_type ?? 'other'] ?? VENUE_CATEGORY_STYLE.other
+}
+function isUsefulActivityVenueName(name: string) {
+  const compact = name.trim().replace(/[^A-Za-zÀ-ÖØ-öø-ÿ0-9]+/g, '')
+  const lower = name.toLowerCase()
+  return compact.length >= 3 && /[A-Za-zÀ-ÖØ-öø-ÿ]/.test(compact) && !/(^|\b)(disused|abandoned|derelict|proposed|construction)(\b|$)/i.test(lower)
+}
 function skillLabel(skill?: SkillLevel | null) { return skill === 'beginner' ? 'Beginner' : skill === 'intermediate' ? 'Intermediate' : skill === 'advanced' ? 'Advanced' : 'All Welcome' }
 function venueLocation(venue: Venue): { lat: string | number; lng: string | number } { return { lat: venue.lat, lng: venue.lng } }
 function activityLocation(activity: ActivityRow) { return activity.venue ? venueLocation(activity.venue) : { lat: activity.location_lat, lng: activity.location_lng } }
@@ -152,6 +184,7 @@ export default function ExperienceActivitiesPage() {
   const [createContext, setCreateContext] = useState<{ venue?: Venue | null; activity?: ActivityRow | null } | null>(null)
   const [inviteActivity, setInviteActivity] = useState<ActivityRow | null>(null)
   const [isMobile, setIsMobile] = useState(false)
+  const [mapZoom, setMapZoom] = useState(8)
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)')
@@ -232,7 +265,7 @@ export default function ExperienceActivitiesPage() {
     for (const activity of filteredActivities) if (activity.venue_id) map.set(activity.venue_id, [...(map.get(activity.venue_id) ?? []), activity])
     return map
   }, [filteredActivities])
-  const sortedVenues = useMemo(() => venues.map(venue => ({ venue, km: distanceKm(location, venueLocation(venue)), count: venueActivityMap.get(venue.id)?.length ?? 0 })).sort((a, b) => (a.km ?? 9999) - (b.km ?? 9999)), [location, venues, venueActivityMap])
+  const sortedVenues = useMemo(() => venues.filter(venue => isUsefulActivityVenueName(venue.name)).map(venue => ({ venue, km: distanceKm(location, venueLocation(venue)), count: venueActivityMap.get(venue.id)?.length ?? 0 })).sort((a, b) => (a.km ?? 9999) - (b.km ?? 9999)), [location, venues, venueActivityMap])
   const visibleVenues = useMemo(() => sortedVenues.filter(({ venue, count }) => activeFilter === 'verified' ? Boolean(venue.is_verified) : (activeCategoryId || activeFilter !== 'all') ? count > 0 : true), [activeCategoryId, activeFilter, sortedVenues])
   const featuredActivities = useMemo(() => filteredActivities.filter(a => new Date(a.scheduled_at).getTime() <= weekEnd).slice(0, 12), [filteredActivities, weekEnd])
   const selectedVenue = useMemo(() => venues.find(venue => venue.id === selectedVenueId) ?? null, [selectedVenueId, venues])
@@ -285,13 +318,18 @@ export default function ExperienceActivitiesPage() {
           <CategoryBar categories={categories} activeCategoryId={activeCategoryId} onSelect={id => { setActiveCategoryId(id); setVenueFilterId(null) }} />
         </div>
         <div ref={mapShellRef} style={{ flex: isMobile ? '0 0 auto' : 1, position: 'relative', minHeight: isMobile ? 315 : 360, height: isMobile ? '43vh' : undefined, maxHeight: isMobile ? 440 : undefined, width: '100%', minWidth: 0, overflow: 'hidden', background: '#EAF6FF' }}>
-          <MapboxMap ref={mapRef} mapboxAccessToken={MAPBOX_TOKEN} mapStyle={MAP_STYLE} initialViewState={{ longitude: location?.lng ?? -8.4756, latitude: location?.lat ?? 51.8985, zoom: 13 }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} attributionControl={false} onLoad={() => mapRef.current?.resize()} onClick={() => setSelectedVenueId(null)} onError={e => console.error('[ExperienceActivities] map error', e)}>
+          <MapboxMap ref={mapRef} mapboxAccessToken={MAPBOX_TOKEN} mapStyle={MAP_STYLE} initialViewState={{ longitude: location?.lng ?? -8.4756, latitude: location?.lat ?? 51.8985, zoom: 8 }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} attributionControl={false} onLoad={() => mapRef.current?.resize()} onMove={event => setMapZoom(event.viewState.zoom)} onClick={() => setSelectedVenueId(null)} onError={e => console.error('[ExperienceActivities] map error', e)}>
             {visibleVenues.map(({ venue }) => {
               const dominant = dominantActivity(venue)
-              const cat = categoryForActivity(dominant, categories)
+              const marker = markerStyleForVenue(venue, dominant, categories)
               const count = venueActivityMap.get(venue.id)?.length ?? 0
               const selected = selectedVenueId === venue.id
-              return <Marker key={venue.id} longitude={asNumber(venue.lng)} latitude={asNumber(venue.lat)} anchor="bottom" onClick={event => { event.originalEvent.stopPropagation(); selectVenue(venue) }}><div style={{ position: 'relative', width: selected ? 48 : 42, height: selected ? 48 : 42, cursor: 'pointer', transition: 'transform 160ms ease, width 160ms ease, height 160ms ease', transform: selected ? 'scale(1.2)' : 'scale(1)' }}><div style={{ width: selected ? 42 : 38, height: selected ? 42 : 38, borderRadius: '50% 50% 50% 0', background: `linear-gradient(135deg, ${cat?.colour ?? COLORS.lightAmber}, ${COLORS.amber})`, transform: 'rotate(45deg)', border: '2px solid rgba(255,255,255,0.92)', boxShadow: venue.is_verified ? `0 0 0 4px rgba(14,167,112,0.18), 0 0 22px ${COLORS.green}` : '0 8px 24px rgba(14,165,233,0.22)', display: 'grid', placeItems: 'center' }}><span style={{ transform: 'rotate(-45deg)', fontSize: 19, lineHeight: 1 }}>{cat?.emoji ?? '✨'}</span></div>{count > 0 && <span style={{ position: 'absolute', top: -7, right: -6, minWidth: 20, height: 20, padding: '0 5px', borderRadius: 999, background: COLORS.red, color: '#fff', fontSize: 11, display: 'grid', placeItems: 'center', fontWeight: 900, border: '2px solid #F4FBFF' }}>{count}</span>}</div></Marker>
+              const scale = markerScaleForZoom(mapZoom, selected)
+              const outer = Math.round(34 * scale)
+              const inner = Math.round(30 * scale)
+              const iconSize = Math.round(15 * scale)
+              const borderWidth = Math.max(1, Math.round(2 * scale))
+              return <Marker key={venue.id} longitude={asNumber(venue.lng)} latitude={asNumber(venue.lat)} anchor="bottom" onClick={event => { event.originalEvent.stopPropagation(); selectVenue(venue) }}><div style={{ position: 'relative', width: outer, height: outer, cursor: 'pointer', transition: 'width 160ms ease, height 160ms ease, opacity 160ms ease', opacity: selected ? 1 : clamp(0.62 + scale * 0.38, 0.62, 1) }}><div style={{ width: inner, height: inner, borderRadius: '50% 50% 50% 0', background: `linear-gradient(135deg, ${marker.colour}, ${COLORS.amber})`, transform: 'rotate(45deg)', border: `${borderWidth}px solid rgba(255,255,255,0.9)`, boxShadow: venue.is_verified ? `0 0 0 ${Math.max(1, Math.round(3 * scale))}px rgba(14,167,112,0.18), 0 0 ${Math.round(14 * scale)}px ${COLORS.green}` : `0 ${Math.round(5 * scale)}px ${Math.round(16 * scale)}px rgba(14,165,233,0.20)`, display: 'grid', placeItems: 'center' }}><span style={{ transform: 'rotate(-45deg)', fontSize: iconSize, lineHeight: 1 }}>{marker.emoji}</span></div>{count > 0 && mapZoom >= 10.2 && <span style={{ position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 999, background: COLORS.red, color: '#fff', fontSize: 10, display: 'grid', placeItems: 'center', fontWeight: 900, border: '2px solid #F4FBFF' }}>{count}</span>}</div></Marker>
             })}
             {selectedVenue && <Popup longitude={asNumber(selectedVenue.lng)} latitude={asNumber(selectedVenue.lat)} anchor="bottom" offset={52} closeButton={false} closeOnClick={false} maxWidth="260px"><div style={{ background: COLORS.panel, color: COLORS.cream, border: `1px solid ${COLORS.lightAmber}`, borderRadius: 16, padding: 12, boxShadow: '0 18px 44px rgba(14,165,233,0.16)' }}><strong style={{ fontFamily: 'Playfair Display, Georgia, serif', fontSize: 17 }}>{selectedVenue.name}</strong><div style={{ color: COLORS.muted, fontSize: 12, marginTop: 4 }}>{formatKm(distanceKm(location, venueLocation(selectedVenue)))} · {venueActivityMap.get(selectedVenue.id)?.length ?? 0} upcoming</div>{(venueActivityMap.get(selectedVenue.id) ?? []).slice(0, 3).map(activity => <div key={activity.id} style={{ color: COLORS.amber, fontSize: 12, marginTop: 6 }}>• {activity.title}</div>)}</div></Popup>}
           </MapboxMap>

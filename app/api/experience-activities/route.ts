@@ -43,6 +43,18 @@ async function currentUserId() {
   return user?.id ?? null
 }
 
+async function fetchAllRows<T = any>(buildQuery: () => any, pageSize = 1000): Promise<T[]> {
+  const rows: T[] = []
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await buildQuery().range(from, from + pageSize - 1)
+    if (error) throw error
+    const page = (data ?? []) as T[]
+    rows.push(...page)
+    if (page.length < pageSize) break
+  }
+  return rows
+}
+
 function cleanActivity(input: ActivityInput, userId?: string) {
   const scheduled = input.scheduled_at ? new Date(input.scheduled_at) : null
   if (!input.title?.trim()) throw new Error('Activity title is required')
@@ -109,14 +121,12 @@ export async function GET() {
     const admin = createAdminClient()
     const now = new Date().toISOString()
 
-    const [venuesRes, categoriesRes, activitiesRes] = await Promise.all([
-      admin.from('activity_venues').select('*').order('name'),
+    const [venues, categoriesRes, activities] = await Promise.all([
+      fetchAllRows(() => admin.from('activity_venues').select('*').order('name')),
       admin.from('activity_categories').select('*').order('sort_order'),
-      admin.from('community_activities').select('*, venue:activity_venues(*), category:activity_categories(*), attendees:community_activity_attendees(*), comments:community_activity_comments(*)').gt('scheduled_at', now).eq('status', 'active').order('scheduled_at', { ascending: true }),
+      fetchAllRows(() => admin.from('community_activities').select('*, venue:activity_venues(*), category:activity_categories(*), attendees:community_activity_attendees(*), comments:community_activity_comments(*)').gt('scheduled_at', now).eq('status', 'active').order('scheduled_at', { ascending: true })),
     ])
-    if (venuesRes.error) throw venuesRes.error
     if (categoriesRes.error) throw categoriesRes.error
-    if (activitiesRes.error) throw activitiesRes.error
 
     let invites: any[] = []
     let hosting: any[] = []
@@ -147,12 +157,12 @@ export async function GET() {
       friends = mutual.map((profile: any) => ({ ...profile, trust_score: balanceById.get(profile.id) ?? Number(profile.trust_balance ?? 0) })).filter((profile: any) => profile.trust_score >= 30)
     }
 
-    const people = await attachProfiles(admin, [...(activitiesRes.data ?? []), ...hosting], invites)
-    const activityCount = (activitiesRes.data ?? []).length
+    const people = await attachProfiles(admin, [...activities, ...hosting], invites)
+    const activityCount = activities.length
 
     return NextResponse.json({
       userId,
-      venues: venuesRes.data ?? [],
+      venues,
       categories: categoriesRes.data ?? [],
       activities: people.rows.slice(0, activityCount),
       invites: people.inviteRows,
