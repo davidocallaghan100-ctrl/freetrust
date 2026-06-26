@@ -8,6 +8,7 @@ import Avatar from '@/components/Avatar'
 import { createClient } from '@/lib/supabase/client'
 import CurrencySwitcher from '@/components/CurrencySwitcher'
 import LanguageSelector from '@/components/LanguageSelector'
+import { isWholeIslandIrelandProfile } from '@/lib/experience/irelandAccess'
 
 const FREETRUST_LOGO_SRC = '/icons/freetrust-mark-perfect-transparent-20260521.png'
 const FREETRUST_LOGO_STYLE = {
@@ -137,6 +138,7 @@ export default function Nav() {
   const [adminPages, setAdminPages] = useState<AdminPage[]>([])
   const [pagesLoading, setPagesLoading] = useState(true)
   const [feedIdentity, setFeedIdentity] = useState<FeedIdentity | null>(null)
+  const [pubExperienceEligible, setPubExperienceEligible] = useState(false)
 
   const profileRef = useRef<HTMLDivElement>(null)
 
@@ -147,11 +149,12 @@ export default function Nav() {
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user) {
           const [profileRes, walletRes] = await Promise.all([
-            supabase.from('profiles').select('full_name, avatar_url').eq('id', session.user.id).maybeSingle(),
+            supabase.from('profiles').select('full_name, avatar_url, country, city, location, location_label').eq('id', session.user.id).maybeSingle(),
             supabase.from('trust_balances').select('balance').eq('user_id', session.user.id).maybeSingle(),
           ])
           const nextUser = { id: session.user.id, email: session.user.email ?? null, name: profileRes.data?.full_name ?? null, avatar: profileRes.data?.avatar_url ?? null }
           setUser(nextUser)
+          setPubExperienceEligible(isWholeIslandIrelandProfile(profileRes.data))
           setWalletBalance(walletRes.data?.balance ?? null)
           try {
             const personal: FeedIdentity = { type: 'personal', id: nextUser.id, name: nextUser.name ?? tProfile('myProfile'), username: null, avatar_url: nextUser.avatar }
@@ -164,6 +167,7 @@ export default function Nav() {
           setWalletBalance(null)
           setAdminPages([])
           setFeedIdentity(null)
+          setPubExperienceEligible(false)
           clearStoredFeedIdentity()
           setPagesLoading(false)
         }
@@ -252,11 +256,12 @@ export default function Nav() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, session) => {
       if (session?.user) {
         const [profileRes, walletRes] = await Promise.all([
-          supabase.from('profiles').select('full_name, avatar_url').eq('id', session.user.id).maybeSingle(),
+          supabase.from('profiles').select('full_name, avatar_url, country, city, location, location_label').eq('id', session.user.id).maybeSingle(),
           supabase.from('trust_balances').select('balance').eq('user_id', session.user.id).maybeSingle(),
         ])
         const nextUser = { id: session.user.id, email: session.user.email ?? null, name: profileRes.data?.full_name ?? null, avatar: profileRes.data?.avatar_url ?? null }
         setUser(nextUser)
+        setPubExperienceEligible(isWholeIslandIrelandProfile(profileRes.data))
         setWalletBalance(walletRes.data?.balance ?? null)
         try {
           const personal: FeedIdentity = { type: 'personal', id: nextUser.id, name: nextUser.name ?? tProfile('myProfile'), username: null, avatar_url: nextUser.avatar }
@@ -264,7 +269,7 @@ export default function Nav() {
           setFeedIdentity(personal)
         } catch { /* ignore storage */ }
         await loadAdminPages(session.user.id, session.access_token)
-      } else { setUser(null); setWalletBalance(null); setAdminPages([]); setFeedIdentity(null); clearStoredFeedIdentity(); setPagesLoading(false) }
+      } else { setUser(null); setWalletBalance(null); setAdminPages([]); setFeedIdentity(null); setPubExperienceEligible(false); clearStoredFeedIdentity(); setPagesLoading(false) }
       setLoading(false)
     })
     return () => subscription.unsubscribe()
@@ -346,6 +351,10 @@ export default function Nav() {
     Groups: tNav('groups'), Articles: tNav('articles'), Jobs: tNav('jobs'), 'Rent & Share': tNav('rentShare'), Organisations: tNav('organisations'), 'Add Organisation': tNav('addOrganisation'), Directory: tNav('directory'), 'My Calendar': tNav('myCalendar'), 'Activity Map': tNav('activityMap'), 'Add Event': tNav('addEvent'),
     Impact: tNav('impact'), 'Early Investors': tNav('earlyInvestors'), 'Investor Deck': tNav('investorDeck'), Agents: tNav('agents'), Travel: tNav('travel'), Pubs: 'Pubs', Profile: tNav('profile'), 'Analytics Dashboard': tNav('analytics'), Settings: tNav('settings'),
   } as Record<string, string>)[label] ?? label
+
+  const visibleDrawerSections = DRAWER_SECTIONS
+    .map(section => ({ ...section, links: section.links.filter(link => link.href !== '/experience-pubs' || pubExperienceEligible) }))
+    .filter(section => section.links.length > 0)
 
   if (pathname === '/agents') return null
 
@@ -552,7 +561,7 @@ export default function Nav() {
 
         {/* Nav sections */}
         <div style={{ padding: '12px 0', flex: 1 }}>
-          {DRAWER_SECTIONS.map(section => (
+          {visibleDrawerSections.map(section => (
             <div key={section.label} style={{ marginBottom: '8px' }}>
               <div style={{ padding: '8px 20px 4px', fontSize: '10px', fontWeight: 700, color: '#475569', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                 {navLabel(section.label)}

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import MapboxMap, { Marker, Popup, type MapRef } from 'react-map-gl/mapbox'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import { PUB_EXPERIENCE_RESTRICTED_MESSAGE } from '@/lib/experience/irelandAccess'
 
 type ActivityType = 'casual_pints' | 'trad_session' | 'quiz_night' | 'sport_watch' | 'live_music' | 'after_work' | 'celebration' | 'other'
 type TabKey = 'nearby' | 'activities' | 'invites'
@@ -277,6 +278,7 @@ export default function ExperiencePubsPage() {
   const [mobilePanelOpen, setMobilePanelOpen] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
   const [mapZoom, setMapZoom] = useState(14)
+  const [restrictedMessage, setRestrictedMessage] = useState<string | null>(null)
 
   const updateMapZoom = useCallback((zoom: number) => {
     const roundedZoom = Math.round(zoom * 10) / 10
@@ -340,8 +342,24 @@ export default function ExperiencePubsPage() {
     setLoading(true)
     try {
       const res = await fetch('/api/experience-pubs', { cache: 'no-store' })
-      const data = await res.json() as { userId?: string | null; pubs?: Pub[]; activities?: ActivityRow[]; invites?: InviteRow[]; friendIds?: string[]; friends?: Friend[]; error?: string }
+      const data = await res.json() as { userId?: string | null; pubs?: Pub[]; activities?: ActivityRow[]; invites?: InviteRow[]; friendIds?: string[]; friends?: Friend[]; error?: string; restrictedToIreland?: boolean }
+      if (res.status === 403 && data.restrictedToIreland) {
+        setRestrictedMessage(data.error ?? PUB_EXPERIENCE_RESTRICTED_MESSAGE)
+        setUserId(null)
+        setPubs([])
+        setActivities([])
+        setInvites([])
+        setFriendIds(new Set())
+        setFriends([])
+        return
+      }
+      if (res.status === 401) {
+        setRestrictedMessage(null)
+        setUserId(null)
+        return
+      }
       if (!res.ok) throw new Error(data.error ?? 'Could not load Experience Pubs')
+      setRestrictedMessage(null)
       setUserId(data.userId ?? null)
       setPubs(data.pubs ?? [])
       setActivities(data.activities ?? [])
@@ -463,6 +481,19 @@ export default function ExperiencePubsPage() {
   }
 
   if (!userId && !loading) {
+    if (restrictedMessage) {
+      return (
+        <div style={{ minHeight: 'calc(100vh - 104px)', background: `radial-gradient(circle at 50% 0%, rgba(241,214,130,0.13), transparent 42%), ${COLORS.bg}`, color: COLORS.cream, display: 'grid', placeItems: 'center', padding: 24, textAlign: 'center' }}>
+          <section style={{ maxWidth: 460, background: COLORS.panel, border: `1px solid ${COLORS.borderStrong}`, borderRadius: 28, padding: 28, boxShadow: '0 28px 80px rgba(0,0,0,0.45)' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}><HarpLogo size={92} /></div>
+            <h1 style={{ margin: 0, fontFamily: 'Playfair Display, Georgia, serif', fontSize: 34 }}>Experience Pubs</h1>
+            <p style={{ color: COLORS.muted, lineHeight: 1.6 }}>{restrictedMessage}</p>
+            <p style={{ color: COLORS.light, fontSize: 13, lineHeight: 1.5, margin: '10px 0 0' }}>If this looks wrong, update your FreeTrust profile location to Ireland or Northern Ireland.</p>
+            <a href="/settings" style={{ ...buttonStyle, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', marginTop: 14 }}>Update profile location</a>
+          </section>
+        </div>
+      )
+    }
     return (
       <div style={{ minHeight: 'calc(100vh - 104px)', background: `radial-gradient(circle at 50% 0%, rgba(241,214,130,0.13), transparent 42%), ${COLORS.bg}`, color: COLORS.cream, display: 'grid', placeItems: 'center', padding: 24, textAlign: 'center' }}>
         <section style={{ maxWidth: 440, background: COLORS.panel, border: `1px solid ${COLORS.borderStrong}`, borderRadius: 28, padding: 28, boxShadow: '0 28px 80px rgba(0,0,0,0.45)' }}>

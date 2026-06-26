@@ -33,6 +33,12 @@ type StatsData = {
   growth: { date: string; count: number; cumulative: number }[]
   foundingGoal: number
 }
+
+const FREETRUST_SOCIAL_LINKS = {
+  instagram: 'https://www.instagram.com/freetrust.co',
+  linkedin: 'https://www.linkedin.com/company/freetrust/',
+} as const
+
 type FeaturedService = {
   id: string
   title: string
@@ -945,7 +951,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
             <button type="button" className={`ft-footer-link-button${footerStory === 'vision' ? ' is-active' : ''}`} onClick={() => setFooterStory(footerStory === 'vision' ? null : 'vision')} aria-expanded={footerStory === 'vision'}>{t('footer.vision.label')}</button>
             <button type="button" className={`ft-footer-link-button${footerStory === 'mission' ? ' is-active' : ''}`} onClick={() => setFooterStory(footerStory === 'mission' ? null : 'mission')} aria-expanded={footerStory === 'mission'}>{t('footer.mission.label')}</button>
             <Link href="/register" style={{ color: TEAL, textDecoration: 'none', fontWeight: 750 }}>{t('footer.joinFree')}</Link>
-            <span style={{ color: '#64748b' }}>Instagram</span><span style={{ color: '#64748b' }}>X</span><span style={{ color: '#64748b' }}>LinkedIn</span>
+            <a href={FREETRUST_SOCIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" style={{ color: '#cbd5e1', textDecoration: 'none', fontWeight: 750 }}>Instagram</a><span style={{ color: '#64748b' }}>X</span><a href={FREETRUST_SOCIAL_LINKS.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: '#cbd5e1', textDecoration: 'none', fontWeight: 750 }}>LinkedIn</a>
           </div>
             {footerStory === 'vision' && (
               <div className="ft-footer-story-body">

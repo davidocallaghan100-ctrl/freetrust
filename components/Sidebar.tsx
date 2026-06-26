@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useDirection } from '@/hooks/useDirection'
+import { isWholeIslandIrelandProfile } from '@/lib/experience/irelandAccess'
 
 const EMOJI_STYLE = {
   fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol", sans-serif',
@@ -78,6 +79,7 @@ export default function Sidebar() {
   const [userId, setUserId] = useState<string | null>(null)
   const [walletBalance, setWalletBalance] = useState<number | null>(null)
   const [unreadNotifs, setUnreadNotifs] = useState(0)
+  const [pubExperienceEligible, setPubExperienceEligible] = useState(false)
 
   // Fetch unread notification count
   const fetchUnread = async () => {
@@ -101,7 +103,13 @@ export default function Sidebar() {
             .select('balance')
             .eq('user_id', session.user.id)
             .maybeSingle()
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('country, city, location, location_label')
+            .eq('id', session.user.id)
+            .maybeSingle()
           setWalletBalance(data?.balance ?? null)
+          setPubExperienceEligible(isWholeIslandIrelandProfile(profile))
           // Fetch unread count on mount
           void fetchUnread()
           // Subscribe to realtime notifications
@@ -127,12 +135,19 @@ export default function Sidebar() {
           .select('balance')
           .eq('user_id', session.user.id)
           .maybeSingle()
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('country, city, location, location_label')
+          .eq('id', session.user.id)
+          .maybeSingle()
         setWalletBalance(data?.balance ?? null)
+        setPubExperienceEligible(isWholeIslandIrelandProfile(profile))
         void fetchUnread()
       } else {
         setUserId(null)
         setWalletBalance(null)
         setUnreadNotifs(0)
+        setPubExperienceEligible(false)
       }
     })
 
@@ -146,6 +161,10 @@ export default function Sidebar() {
     DIGITAL: tNav('digital'), SOCIAL: tNav('social'), EVENTS: tNav('events'), PLANET: tNav('planet'), EARN: tNav('earn'), 'EARLY INVESTORS': tNav('earlyInvestors'),
     Home: tNav('home'), Feed: tNav('newsfeed'), Connections: tNav('connections'), Messages: tNav('messages'), Notifications: tNav('notifications'), Browse: tNav('browse'), 'Services Marketplace': tNav('servicesMarketplace'), Grassroots: tNav('grassroots'), Products: tNav('products'), 'Experience Travel': tNav('travel'), Pubs: 'Pubs', Organisations: tNav('organisations'), 'Rent & Share': tNav('rentShare'), Events: tNav('events'), 'My Calendar': tNav('myCalendar'), 'Activity Map': tNav('activityMap'), Groups: tNav('groups'), Jobs: tNav('jobs'), Articles: tNav('articles'), Impact: tNav('impact'), Collab: tNav('collab'), 'Gig Economy': tNav('gigEconomy'), 'Create Gig': tNav('createGig'), Accounting: tNav('accounting'), Invest: tNav('invest'), Wallet: tNav('wallet'), Agents: tNav('agents'), Profile: tNav('profile'), Settings: tNav('settings'),
   } as Record<string, string>)[label] ?? label
+
+  const visibleNavSections = NAV_SECTIONS
+    .map(section => ({ ...section, links: section.links.filter(link => link.href !== '/experience-pubs' || pubExperienceEligible) }))
+    .filter(section => section.links.length > 0)
 
   // Clear unread badge when on notifications page
   useEffect(() => {
@@ -184,7 +203,7 @@ export default function Sidebar() {
         }}
       >
         <nav style={{ padding: '12px 0 24px' }}>
-          {NAV_SECTIONS.map(section => (
+          {visibleNavSections.map(section => (
             <div key={section.label} style={{ marginBottom: '4px' }}>
               <div style={{
                 padding: '10px 16px 4px',

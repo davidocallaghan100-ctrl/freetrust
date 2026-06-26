@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { PUB_EXPERIENCE_RESTRICTED_MESSAGE, isWholeIslandIrelandProfile } from '@/lib/experience/irelandAccess'
 
 type PubAction =
   | { action: 'createActivity'; pub_id: string; title: string; description?: string | null; activity_type?: string; scheduled_at: string; max_attendees?: number; is_open_to_all?: boolean }
@@ -14,6 +15,24 @@ async function currentUserId() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   return user?.id ?? null
+}
+
+async function requirePubExperienceMember(admin = createAdminClient()) {
+  const userId = await currentUserId()
+  if (!userId) return { ok: false as const, status: 401, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+
+  const { data: profile, error } = await admin
+    .from('profiles')
+    .select('country, city, location, location_label')
+    .eq('id', userId)
+    .maybeSingle()
+  if (error) throw error
+
+  if (!isWholeIslandIrelandProfile(profile)) {
+    return { ok: false as const, status: 403, response: NextResponse.json({ error: PUB_EXPERIENCE_RESTRICTED_MESSAGE, restrictedToIreland: true }, { status: 403 }) }
+  }
+
+  return { ok: true as const, userId }
 }
 
 async function fetchAllRows<T = any>(buildQuery: () => any, pageSize = 1000): Promise<T[]> {
@@ -30,8 +49,10 @@ async function fetchAllRows<T = any>(buildQuery: () => any, pageSize = 1000): Pr
 
 export async function GET() {
   try {
-    const userId = await currentUserId()
     const admin = createAdminClient()
+    const member = await requirePubExperienceMember(admin)
+    if (!member.ok) return member.response
+    const userId = member.userId
 
     const [pubs, activities] = await Promise.all([
       fetchAllRows(() => admin.from('pubs').select('*').order('name')),
@@ -90,10 +111,11 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await currentUserId()
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const body = await req.json() as PubAction
     const admin = createAdminClient()
+    const member = await requirePubExperienceMember(admin)
+    if (!member.ok) return member.response
+    const userId = member.userId
+    const body = await req.json() as PubAction
 
     if (body.action === 'createActivity') {
       const { data, error } = await admin.from('pub_activities').insert({ pub_id: body.pub_id, created_by: userId, title: body.title.trim(), description: body.description?.trim() || null, activity_type: body.activity_type ?? 'casual_pints', scheduled_at: body.scheduled_at, max_attendees: Math.min(50, Math.max(2, Number(body.max_attendees ?? 20))), is_open_to_all: body.is_open_to_all ?? true, status: 'active' }).select('id').single()

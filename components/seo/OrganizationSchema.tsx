@@ -37,6 +37,8 @@ export function OrganizationSchema() {
       'Sustainability impact',
     ],
     sameAs: [
+      'https://www.linkedin.com/company/freetrust/',
+      'https://www.instagram.com/freetrust.co',
       'https://twitter.com/freetrust',
     ],
   }

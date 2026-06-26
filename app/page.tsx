@@ -99,6 +99,8 @@ export default async function Page() {
     image:             `${BASE_URL}/icons/freetrust-share-logo-20260524.png`,
     slogan:            'The community economy marketplace where trust is currency.',
     sameAs: [
+      'https://www.linkedin.com/company/freetrust/',
+      'https://www.instagram.com/freetrust.co',
       'https://twitter.com/freetrust',
     ],
   }
