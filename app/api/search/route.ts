@@ -86,15 +86,17 @@ function displayDate(value: unknown): string | null {
   try { return new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) } catch { return null }
 }
 
-function matchesText(row: Record<string, unknown>, q: string, fields: string[]): boolean {
-  if (!q) return true
-  const needle = q.toLowerCase()
-  return fields.some((field) => String(row[field] ?? '').toLowerCase().includes(needle))
-}
-
 function searchOr(fields: string[], q: string): string {
   const safe = q.replace(/[%,]/g, ' ').trim()
   return fields.map((field) => `${field}.ilike.%${safe}%`).join(',')
+}
+
+function postSearchOr(q: string, authorIds: Set<string>): string {
+  const clauses = [searchOr(['title', 'content'], q)]
+  if (authorIds.size > 0) {
+    clauses.push(`user_id.in.(${Array.from(authorIds).join(',')})`)
+  }
+  return clauses.filter(Boolean).join(',')
 }
 
 export async function GET(req: NextRequest) {
@@ -130,17 +132,22 @@ export async function GET(req: NextRequest) {
     const profileIds = new Set<string>()
     const profileById = new Map<string, { full_name?: string | null; avatar_url?: string | null; location?: string | null }>()
     if (include('member') || include('post')) {
+      // Use a wider profile search window than the displayed member hit quota.
+      // The matched profile IDs are also used to find posts by author; limiting
+      // this too aggressively can make matching posts disappear before the post
+      // query ever gets a chance to rank them.
+      const profileSearchLimit = Math.min(100, Math.max(limit * 4, filter === 'all' ? 40 : limit * 2))
       const { data } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, full_name, location, avatar_url, bio, hobbies, onboarding_complete, created_at, deleted_at')
         .is('deleted_at', null)
         .or(searchOr(['full_name', 'location', 'bio'], q))
-        .limit(filter === 'all' ? perType : limit)
+        .limit(profileSearchLimit)
       for (const row of ((data ?? []) as Record<string, unknown>[]).filter(isCommunityVisibleProfile)) {
         const id = String(row.id)
         profileIds.add(id)
         profileById.set(id, row as any)
-        if (include('member')) {
+        if (include('member') && hits.filter(hit => hit.type === 'member').length < (filter === 'all' ? perType : limit)) {
           const title = firstText(row.full_name) ?? 'Member'
           hits.push({
             id,
@@ -165,6 +172,7 @@ export async function GET(req: NextRequest) {
         .from('feed_posts')
         .select('id, user_id, type, title, content, media_url, media_type, link_url, created_at, likes_count, comments_count, profiles!feed_posts_user_id_fkey(id, full_name, avatar_url)')
         .lte('created_at', new Date().toISOString())
+        .or(postSearchOr(q, profileIds))
         .order(filter === 'trending' ? 'likes_count' : 'created_at', { ascending: false })
         .limit(filter === 'all' ? perType * 3 : limit * 2)
       if (filter === 'photos') postQuery = postQuery.or('type.eq.photo,media_type.eq.image')
@@ -173,8 +181,6 @@ export async function GET(req: NextRequest) {
       for (const row of ((data ?? []) as any[])) {
         const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
         const authorName = firstText(profile?.full_name) ?? 'FreeTrust member'
-        const matchesAuthor = String(authorName).toLowerCase().includes(q.toLowerCase()) || profileIds.has(String(row.user_id))
-        if (!matchesAuthor && !matchesText(row, q, ['title', 'content'])) continue
         const title = firstText(row.title) ?? `Post by ${authorName}`
         const media = firstImage(row.media_url)
         hits.push({
@@ -287,7 +293,8 @@ export async function GET(req: NextRequest) {
       const { data } = await supabase
         .from('articles')
         .select('*')
-        .or(searchOr(['title', 'excerpt', 'content'], q))
+        .eq('status', 'published')
+        .or(searchOr(['title', 'excerpt', 'body'], q))
         .order('created_at', { ascending: false })
         .limit(filter === 'all' ? perType : limit)
       for (const row of ((data ?? []) as any[])) {

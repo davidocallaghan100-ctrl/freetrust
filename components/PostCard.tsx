@@ -598,8 +598,10 @@ function LinkPreviewCard({ url }: { url: string }) {
   const [preview, setPreview] = useState<LinkPreviewData | null>(null)
   const [failed, setFailed] = useState(false)
 
+  const isInternalUrl = url.startsWith('/')
+
   useEffect(() => {
-    if (!url || getSpotifyEmbedUrl(url)) return
+    if (!url || isInternalUrl || getSpotifyEmbedUrl(url)) return
     let cancelled = false
     setFailed(false)
     fetch(`/api/link-preview?url=${encodeURIComponent(url)}`)
@@ -607,7 +609,15 @@ function LinkPreviewCard({ url }: { url: string }) {
       .then((data: { preview?: LinkPreviewData }) => { if (!cancelled) setPreview(data.preview ?? null) })
       .catch(() => { if (!cancelled) setFailed(true) })
     return () => { cancelled = true }
-  }, [url])
+  }, [isInternalUrl, url])
+
+  if (isInternalUrl) {
+    return (
+      <Link href={url} style={{ display: 'block', margin: '0 16px 12px', border: '1px solid #334155', borderRadius: '10px', padding: '12px 14px', color: '#38bdf8', textDecoration: 'none', fontSize: '13px', overflowWrap: 'anywhere', background: '#0f172a' }}>
+        🔗 {url}
+      </Link>
+    )
+  }
 
   if (getSpotifyEmbedUrl(url)) return <SpotifyEmbed url={url} />
   if (failed) {
@@ -1611,18 +1621,24 @@ export default function PostCard({
   //   listing-<uuid> → /listings/<uuid>
   //   article-<uuid> → /articles/<uuid>
   //   <plain-uuid>   → /feed/<uuid>  (regular feed post)
-  function getCanonicalUrl(postId: string, postType: string): string {
+  function getCanonicalUrl(postId: string, postType: string, linkUrl: string | null): string {
+    const internalLink = typeof linkUrl === 'string' && linkUrl.startsWith('/') ? linkUrl : null
+    const isCrossTableType = ['article', 'service', 'product', 'listing', 'job', 'event'].includes(postType)
+    if (internalLink && isCrossTableType) return internalLink
     if (postId.startsWith('job-'))     return `/jobs/${postId.slice(4)}`
     if (postId.startsWith('event-'))   return `/events/${postId.slice(6)}`
+    if (postId.startsWith('service-')) return `/services/${postId.slice(8)}`
     if (postId.startsWith('listing-')) return `/listings/${postId.slice(8)}`
     if (postId.startsWith('article-')) return `/articles/${postId.slice(8)}`
     // For cross-table types without a prefix, use the type to route correctly
     if (postType === 'job')     return `/jobs/${postId}`
     if (postType === 'event')   return `/events/${postId}`
-    if (postType === 'listing' || postType === 'service' || postType === 'product') return `/listings/${postId}`
+    if (postType === 'service') return `/services/${postId}`
+    if (postType === 'product') return `/products/${postId}`
+    if (postType === 'listing') return `/listings/${postId}`
     return `/feed/${postId}`
   }
-  const canonicalUrl = getCanonicalUrl(post.id, post.type)
+  const canonicalUrl = getCanonicalUrl(post.id, post.type, postLinkUrl)
 
   // ── Author display — "post as organisation" override ─────────────────────
   // When post.posted_as_organisation is set, the card renders with the
@@ -2089,6 +2105,12 @@ export default function PostCard({
         )}
       </div>
 
+      {/* Link preview. Render immediately after the content so service cards show
+          their destination before the image/media. Photo Spotify tracks are shown
+          as the rotated overlay in the carousel; rendering the full iframe above
+          the media looks like a random box on mobile and duplicates the song. */}
+      {attachedUrl && !isPhotoSpotifyAttachment ? <LinkPreviewCard url={attachedUrl} /> : null}
+
       {/* ── Media ── */}
       {isVideo && mediaUrls.length > 0 ? (
         <div className="ft-post-media-wrap" style={{ padding: '0 16px' }}>
@@ -2099,11 +2121,6 @@ export default function PostCard({
           <PhotoCarousel urls={mediaUrls} alt={name} soundtrack={post.type === 'photo' ? spotifyTrack : null} textOverlay={textOverlay} />
         </div>
       ) : null}
-
-      {/* Link preview. Photo Spotify tracks are shown as the rotated overlay
-          above; rendering the full iframe underneath looks like a random box
-          on mobile and duplicates the same song. */}
-      {attachedUrl && !isPhotoSpotifyAttachment ? <LinkPreviewCard url={attachedUrl} /> : null}
 
       {/* ── Poll ── */}
       {post.type === 'poll' && (() => {

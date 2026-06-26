@@ -116,11 +116,13 @@ export async function GET(req: NextRequest) {
     }
 
     // ── feed_posts query (all/discover / photos / videos / trending / following) ─────
-    // For 'discover' (default) we fetch a wider candidate set, then re-rank in
-    // memory using a smart score combining recency + engagement + author trust.
-    const isDiscover = !isProfileScoped && (filter === 'all' || filter === 'discover')
-    const candidateMultiplier = isDiscover ? 3 : 1
-    const fetchLimit = limit * candidateMultiplier
+    // All/Discover is the canonical newsfeed. Keep it complete and stable:
+    // fetch from the start of each source window, merge by created_at, then
+    // apply the global page slice once. The previous wider-candidate ranking
+    // fetched 60 rows for page 1, sliced to 20, then page 2 started at row 60;
+    // posts ranked 21–60 could therefore disappear entirely.
+    const isUnifiedAll = !isProfileScoped && (filter === 'all' || filter === 'discover')
+    const fetchLimit = isUnifiedAll ? offset + limit : limit
 
     // NOTE: keep this select list as a single template literal. Supabase's
     // typed client infers the row type from the literal argument; splitting
@@ -180,10 +182,11 @@ export async function GET(req: NextRequest) {
       query = query.order('created_at', { ascending: false })
     }
 
-    if (isDiscover) {
-      // Fetch a wider candidate window for re-ranking. Pagination still uses
-      // offset/limit but we widen each page's candidate pool by the multiplier.
-      query = query.range(offset * candidateMultiplier, offset * candidateMultiplier + fetchLimit - 1)
+    if (isUnifiedAll) {
+      // Fetch the full source window needed for this global page. This is more
+      // predictable than ranking a partial window, and lets services/articles
+      // be merged into the same All feed without skipping middle items.
+      query = query.range(0, fetchLimit - 1)
     } else {
       query = query.range(offset, offset + limit - 1)
     }
@@ -203,7 +206,6 @@ export async function GET(req: NextRequest) {
     const reactionCountsMap: Record<string, { trust: number; love: number; insightful: number; collab: number; total: number }> = {}
     const userReactionMap: Record<string, string> = {}
     const topCommentMap: Record<string, { id: string; content: string; author_name: string | null } | null> = {}
-    let followingSet: Set<string> = new Set()
 
     if (posts && posts.length > 0) {
       const postIds = posts.map((p: { id: string }) => p.id)
@@ -219,7 +221,6 @@ export async function GET(req: NextRequest) {
         allReactionsRes,
         userReactionsRes,
         topCommentsRes,
-        followingRes,
       ] = await Promise.all([
         supabase.from('feed_likes').select('post_id').in('post_id', postIds),
         supabase.from('feed_saves').select('post_id').in('post_id', postIds),
@@ -236,9 +237,6 @@ export async function GET(req: NextRequest) {
           .select('id, post_id, content, created_at, profiles:user_id(full_name)')
           .in('post_id', postIds)
           .order('created_at', { ascending: false }),
-        user
-          ? supabase.from('user_follows').select('following_id').eq('follower_id', user.id)
-          : Promise.resolve({ data: [] }),
       ])
 
       // Per-post counts
@@ -289,9 +287,6 @@ export async function GET(req: NextRequest) {
       // Per-user flags
       likedIds = ((userLikesRes as { data: { post_id: string }[] | null }).data ?? []).map((l) => l.post_id)
       savedIds = ((userSavesRes as { data: { post_id: string }[] | null }).data ?? []).map((s) => s.post_id)
-
-      // Followed users (boost their posts in Discover ranking)
-      followingSet = new Set(((followingRes.data ?? []) as { following_id: string }[]).map(f => f.following_id))
     }
 
     // ── Poll vote data ───────────────────────────────────────────────────────
@@ -345,56 +340,18 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    // ── Smart Discover ranking ───────────────────────────────────────────────
-    // Score = engagementWeight * (likes + 2*comments + reactions)
-    //       + recencyWeight * 1/(1 + ageHours)
-    //       + trustWeight * sqrt(authorTrust)
-    //       + followBoost (if author is followed by viewer)
-    if (isDiscover) {
-      const now = Date.now()
-      const W_ENGAGEMENT = 1.0
-      const W_RECENCY    = 80.0
-      const W_TRUST      = 0.4
-      const FOLLOW_BOOST = 25.0
-
-      enriched = enriched
-        .map((p: Record<string, unknown>) => {
-          const created = new Date(p.created_at as string).getTime()
-          const ageHours = Math.max(0.5, (now - created) / 3_600_000)
-          const recencyScore = 1 / (1 + ageHours / 6) // half-life ~6h
-          const likes = (p.likes_count as number) ?? 0
-          const comments = (p.comments_count as number) ?? 0
-          const reactionsTotal = ((p.reactions as { total?: number })?.total) ?? 0
-          const engagement = likes + 2 * comments + reactionsTotal
-          const profile = p.profiles as { trust_balance?: number } | { trust_balance?: number }[] | null
-          const author = Array.isArray(profile) ? profile[0] : profile
-          const trustScore = Math.sqrt(Math.max(0, author?.trust_balance ?? 0))
-          const isFollowed = user && followingSet.has(p.user_id as string)
-          const score =
-            W_ENGAGEMENT * engagement +
-            W_RECENCY    * recencyScore +
-            W_TRUST      * trustScore +
-            (isFollowed ? FOLLOW_BOOST : 0)
-          return { ...p, _score: score }
-        })
-        .sort((a, b) => (b._score as number) - (a._score as number))
-        .slice(0, limit)
-        .map((p: Record<string, unknown>) => {
-          // Strip internal score before sending to client
-          const { _score, ...rest } = p as Record<string, unknown> & { _score?: number }
-          void _score
-          return rest
-        })
-    }
-
-    const postsWithBadges = await withProfileVerificationBadges(supabase, enriched.map((p) => ({
+    const feedItemsWithBadges = await withProfileVerificationBadges(supabase, enriched.map((p) => ({
       ...(p as FeedItem),
       profiles: normaliseProfile((p as { profiles?: unknown }).profiles),
     })))
 
+    const unifiedResult = isUnifiedAll
+      ? await buildUnifiedAllFeed(supabase, feedItemsWithBadges, offset, limit, fetchLimit)
+      : { posts: feedItemsWithBadges, hasMore: enriched.length === limit }
+
     return NextResponse.json({
-      posts: postsWithBadges,
-      hasMore: enriched.length === limit,
+      posts: unifiedResult.posts,
+      hasMore: unifiedResult.hasMore,
     })
   } catch (err) {
     console.error('[feed/posts GET]', err)
@@ -406,7 +363,30 @@ export async function GET(req: NextRequest) {
 // Each one queries a different table and maps the result to the FeedItem shape
 // so PostCard can render them without changes.
 
-async function fetchArticles(supabase: SupabaseLike, offset: number, limit: number) {
+function byNewestCreatedAt(a: FeedItem, b: FeedItem): number {
+  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+}
+
+async function buildUnifiedAllFeed(
+  supabase: SupabaseLike,
+  feedPosts: FeedItem[],
+  offset: number,
+  limit: number,
+  sourceWindow: number,
+): Promise<{ posts: FeedItem[]; hasMore: boolean }> {
+  const [articles, services] = await Promise.all([
+    loadArticles(supabase, 0, sourceWindow),
+    loadServices(supabase, 0, sourceWindow),
+  ])
+
+  const merged = [...feedPosts, ...articles, ...services].sort(byNewestCreatedAt)
+  return {
+    posts: merged.slice(offset, offset + limit),
+    hasMore: merged.length > offset + limit,
+  }
+}
+
+async function loadArticles(supabase: SupabaseLike, offset: number, limit: number): Promise<FeedItem[]> {
   const { data, error } = await supabase
     .from('articles')
     .select(`
@@ -422,7 +402,7 @@ async function fetchArticles(supabase: SupabaseLike, offset: number, limit: numb
 
   if (error) {
     console.error('[feed/posts articles]', error.message)
-    return NextResponse.json({ posts: [], hasMore: false })
+    return []
   }
 
   // Don't trust the cached articles.comment_count / clap_count columns —
@@ -475,10 +455,10 @@ async function fetchArticles(supabase: SupabaseLike, offset: number, limit: numb
     }
   })
 
-  return NextResponse.json({ posts: await withProfileVerificationBadges(supabase, items), hasMore: items.length === limit })
+  return await withProfileVerificationBadges(supabase, items)
 }
 
-async function fetchServices(supabase: SupabaseLike, offset: number, limit: number) {
+async function loadServices(supabase: SupabaseLike, offset: number, limit: number): Promise<FeedItem[]> {
   // Services live in the `listings` table with product_type='service'.
   // Same canonical pattern as app/services/page.tsx and
   // app/api/admin/content/route.ts. There is no separate `services` table.
@@ -495,7 +475,7 @@ async function fetchServices(supabase: SupabaseLike, offset: number, limit: numb
 
   if (error) {
     console.error('[feed/posts services]', error.message)
-    return NextResponse.json({ posts: [], hasMore: false })
+    return []
   }
 
   const items: FeedItem[] = (data ?? []).map((s: Record<string, unknown>) => ({
@@ -515,7 +495,17 @@ async function fetchServices(supabase: SupabaseLike, offset: number, limit: numb
     profiles: normaliseProfile(s.seller),
   }))
 
-  return NextResponse.json({ posts: await withProfileVerificationBadges(supabase, items), hasMore: items.length === limit })
+  return await withProfileVerificationBadges(supabase, items)
+}
+
+async function fetchArticles(supabase: SupabaseLike, offset: number, limit: number) {
+  const items = await loadArticles(supabase, offset, limit)
+  return NextResponse.json({ posts: items, hasMore: items.length === limit })
+}
+
+async function fetchServices(supabase: SupabaseLike, offset: number, limit: number) {
+  const items = await loadServices(supabase, offset, limit)
+  return NextResponse.json({ posts: items, hasMore: items.length === limit })
 }
 
 async function fetchJobs(supabase: SupabaseLike, offset: number, limit: number) {
