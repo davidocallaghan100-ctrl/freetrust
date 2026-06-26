@@ -727,7 +727,7 @@ function TextMediaOverlay({ overlay, compact = false }: { overlay: TextOverlayDa
 
 const FEED_SOUNDTRACK_PLAY_EVENT = 'freetrust:feed-soundtrack-play'
 
-function PhotoCarousel({ urls, alt, soundtrack, textOverlay }: { urls: string[]; alt: string; soundtrack?: SpotifyTrackData | null; textOverlay?: TextOverlayData | null }) {
+function PhotoCarousel({ urls, alt, soundtrack, textOverlay, imageHref }: { urls: string[]; alt: string; soundtrack?: SpotifyTrackData | null; textOverlay?: TextOverlayData | null; imageHref?: string | null }) {
   const [index, setIndex] = useState(0)
   const [soundtrackPlaying, setSoundtrackPlaying] = useState(false)
   const [soundtrackNotice, setSoundtrackNotice] = useState('')
@@ -822,16 +822,29 @@ function PhotoCarousel({ urls, alt, soundtrack, textOverlay }: { urls: string[];
         onTouchEnd={e => handleTouchEnd(e.changedTouches[0]?.clientX ?? 0)}
       >
         <div style={{ display: 'flex', transform: `translateX(-${index * 100}%)`, transition: 'transform 260ms ease', width: '100%' }}>
-          {urls.map((url, i) => (
-            <div key={`${url}-${i}`} style={{ flex: '0 0 100%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#020617' }}>
+          {urls.map((url, i) => {
+            const image = (
               <img
                 src={url}
                 alt={`${alt} ${i + 1}`}
                 loading="lazy"
                 style={{ width: '100%', height: 'auto', maxHeight: 'none', objectFit: 'cover', display: 'block', background: '#020617' }}
               />
-            </div>
-          ))}
+            )
+            return (
+              <div key={`${url}-${i}`} style={{ flex: '0 0 100%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#020617' }}>
+                {imageHref ? (
+                  <Link
+                    href={imageHref}
+                    aria-label={`Open ${alt} service page`}
+                    style={{ display: 'block', width: '100%', color: 'inherit', textDecoration: 'none', cursor: 'pointer' }}
+                  >
+                    {image}
+                  </Link>
+                ) : image}
+              </div>
+            )
+          })}
         </div>
         <TextMediaOverlay overlay={textOverlay ?? null} />
 
@@ -2118,7 +2131,7 @@ export default function PostCard({
         </div>
       ) : mediaUrls.length > 0 ? (
         <div className="ft-post-media-wrap" style={{ padding: '0 16px' }}>
-          <PhotoCarousel urls={mediaUrls} alt={name} soundtrack={post.type === 'photo' ? spotifyTrack : null} textOverlay={textOverlay} />
+          <PhotoCarousel urls={mediaUrls} alt={name} soundtrack={post.type === 'photo' ? spotifyTrack : null} textOverlay={textOverlay} imageHref={post.type === 'service' ? canonicalUrl : null} />
         </div>
       ) : null}
 
