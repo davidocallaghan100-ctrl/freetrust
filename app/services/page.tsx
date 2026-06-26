@@ -190,6 +190,34 @@ function categoryMetaForExternalService(categoryId: string) {
     ?? EXTERNAL_REFRESH_CATEGORIES.find(c => c.id === categoryId)
 }
 
+function inferServiceCategoryFromContent({
+  title,
+  description,
+  tags,
+  categoryLabel,
+}: {
+  title: string
+  description: string
+  tags: string[]
+  categoryLabel: string
+}) {
+  const haystack = `${title} ${description} ${tags.join(' ')} ${categoryLabel}`.toLowerCase()
+  const keywordRules: Array<{ id: string; terms: string[] }> = [
+    { id: 'ai-automation', terms: ['ai automation', 'chatbot', 'sales assistant', 'claude', 'agent', 'zapier', 'make'] },
+    { id: 'development-tech', terms: ['web app', 'webapp', 'website', 'full-stack', 'full stack', 'app development', 'tech'] },
+    { id: 'seo-digital', terms: ['seo', 'search engine'] },
+    { id: 'marketing-growth', terms: ['marketing', 'linkedin', 'cold email', 'outreach campaign', 'digital strategy'] },
+    { id: 'sales-online', terms: ['b2b sales', 'sales strategy', 'sales funnel', 'lead generation', 'sales outreach'] },
+    { id: 'coaching-mentoring', terms: ['coaching', 'mentoring', 'mentor', 'board advisor', 'startup business coaching'] },
+    { id: 'business-consulting', terms: ['consulting', 'business strategy', 'business transition', 'sustainability strategy', 'esg impact', 'advisory'] },
+    { id: 'design-creative', terms: ['ux research', 'usability', 'design', 'creative'] },
+    { id: 'social-media', terms: ['social media', 'social'] },
+  ]
+
+  const matched = keywordRules.find(rule => rule.terms.some(term => haystack.includes(term)))
+  return matched ? ALL_SERVICE_CATEGORIES.find(cat => cat.id === matched.id) ?? null : null
+}
+
 function faviconForProviderUrl(url: string): string | null {
   try {
     const hostname = new URL(url).hostname.replace(/^www\./, '')
@@ -526,8 +554,8 @@ export default function ServicesPage() {
   }, [activeTab, externalCategory, externalSearch])
 
   useEffect(() => {
-    setServiceDisplayLimit(SERVICES_INITIAL_DISPLAY)
-  }, [modeFilter, activeCatId, search, priceMin, priceMax, sort, countryFilter, filterRemote, searchRadiusKm, filterLoc.latitude, filterLoc.longitude])
+    setServiceDisplayLimit(Math.max(SERVICES_INITIAL_DISPLAY, services.length))
+  }, [modeFilter, activeCatId, search, priceMin, priceMax, sort, countryFilter, filterRemote, searchRadiusKm, filterLoc.latitude, filterLoc.longitude, services.length])
 
   // ── Success toast ──────────────────────────────────────────────────
   // Fires when the user arrives from /seller/gigs/create?published=true.
@@ -622,9 +650,17 @@ export default function ServicesPage() {
             const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
             const mode = (s.service_mode as string) ?? 'online'
             const categoryLabel = typeof s.category === 'string' ? s.category : ''
+            const tags = Array.isArray(s.tags) ? (s.tags as string[]) : []
+            const description = (s.description as string) ?? ''
             const categoryInfo = (typeof s.category_id === 'string' && s.category_id)
               ? [...ONLINE_CATEGORIES, ...OFFLINE_CATEGORIES].find(cat => cat.id === s.category_id)
               : findServiceCategoryByLabel(categoryLabel)
+                ?? inferServiceCategoryFromContent({
+                  title: (s.title as string) ?? '',
+                  description,
+                  tags,
+                  categoryLabel,
+                })
             return {
               id: s.id as string,
               title: s.title as string,
@@ -638,10 +674,10 @@ export default function ServicesPage() {
               price: Number(s.price ?? 0),
               currency: String(s.currency_code ?? s.currency ?? 'EUR'),
               delivery: mode === 'online' ? t('card.online') : t('card.inPerson'),
-              tags: Array.isArray(s.tags) ? (s.tags as string[]) : [],
+              tags,
               category: categoryInfo?.label ?? categoryLabel,
               categoryId: categoryInfo?.id,
-              desc: (s.description as string) ?? '',
+              desc: description,
               trust: 90,
               badge: Number(s.review_count ?? 0) > 50 ? t('sort.topRated') : null,
               mode: mode as 'online' | 'offline' | 'both',
@@ -667,6 +703,7 @@ export default function ServicesPage() {
             }
           })
           setServices(mapped)
+          setServiceDisplayLimit(prev => Math.max(prev, mapped.length, SERVICES_INITIAL_DISPLAY))
         }
       } catch (err) {
         console.error('[services page]', err)
@@ -785,7 +822,11 @@ export default function ServicesPage() {
       const includeCategory = options.includeCategory ?? true
       if (modeFilter !== 'all' && s.mode !== modeFilter && s.mode !== 'both') return false
       if (includeCategory && activeCatId && s.categoryId !== activeCatId) return false
-      if (search && !s.title.toLowerCase().includes(search.toLowerCase()) && !s.desc.toLowerCase().includes(search.toLowerCase()) && !s.category.toLowerCase().includes(search.toLowerCase())) return false
+      if (search) {
+        const query = search.toLowerCase()
+        const haystack = `${s.title} ${s.desc} ${s.category} ${s.provider} ${s.tags.join(' ')}`.toLowerCase()
+        if (!haystack.includes(query)) return false
+      }
       if (priceMin && s.price < Number(priceMin)) return false
       if (priceMax && s.price > Number(priceMax)) return false
       // ── Globalisation filters ───────────────────────────────────────
@@ -864,9 +905,10 @@ export default function ServicesPage() {
     ...filtered.map(item => ({ _type: 'community' as const, item })),
     ...filteredExternalForListings.map(item => ({ _type: 'external' as const, item })),
   ].sort((a, b) => {
+    // FreeTrust member services must always appear before external providers.
+    if (a._type !== b._type) return a._type === 'community' ? -1 : 1
     const localRank = serviceListEntryLocalFirstRank(a) - serviceListEntryLocalFirstRank(b)
     if (localRank !== 0) return localRank
-    if (a._type !== b._type) return a._type === 'community' ? -1 : 1
     return 0
   })
 
