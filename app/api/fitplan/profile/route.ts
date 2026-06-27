@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { cleanStringArray, fitPlanCostsSummary, getTrustBalance } from '@/lib/fitplan/server'
 import { kgFromInput } from '@/lib/fitplan/constants'
+import { buildFitPlanCalendar } from '@/lib/fitplan/calendar'
 
 const ALLOWED_GOALS = new Set([
   'fat_loss',
@@ -46,14 +47,23 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = createAdminClient()
-  const [profileRes, planRes, progressRes, checkinsRes, messagesRes, balance] = await Promise.all([
+  const [profileRes, planRes, progressRes, checkinsRes, messagesRes, completionsRes, balance] = await Promise.all([
     admin.from('fitplan_profiles').select('*').eq('user_id', user.id).maybeSingle(),
     admin.from('fitplan_plans').select('*').eq('user_id', user.id).eq('status', 'active').order('created_at', { ascending: false }).limit(1).maybeSingle(),
     admin.from('fitplan_progress').select('*').eq('user_id', user.id).order('logged_on', { ascending: false }).limit(30),
     admin.from('fitplan_checkins').select('*').eq('user_id', user.id).order('week_start', { ascending: false }).limit(12),
     admin.from('fitplan_coach_messages').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(12),
+    admin.from('fitplan_completion_events').select('*').eq('user_id', user.id).order('completed_on', { ascending: false }).limit(500),
     getTrustBalance(user.id),
   ])
+
+  const completions = completionsRes.data ?? []
+  const calendar = buildFitPlanCalendar({
+    plan: planRes.data,
+    completions,
+    progress: progressRes.data ?? [],
+    checkins: checkinsRes.data ?? [],
+  })
 
   return NextResponse.json({
     profile: profileRes.data ?? null,
@@ -61,6 +71,8 @@ export async function GET() {
     progress: progressRes.data ?? [],
     checkins: checkinsRes.data ?? [],
     messages: (messagesRes.data ?? []).reverse(),
+    completions,
+    calendar,
     trustBalance: balance,
     costs: fitPlanCostsSummary(),
   }, { headers: { 'Cache-Control': 'no-store' } })

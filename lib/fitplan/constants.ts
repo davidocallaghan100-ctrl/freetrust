@@ -2,10 +2,29 @@ export const FITPLAN_MODEL = process.env.FITPLAN_MODEL || 'claude-sonnet-4-6'
 
 export const FITPLAN_COSTS = {
   planGeneration: 50,
+  planGenerationWeekly: 50,
+  planGenerationMonthly: 150,
+  planGenerationQuarterly: 350,
   coachMessage: 5,
   checkinReward: 10,
   progressReward: 3,
 } as const
+
+export const FITPLAN_PLAN_DURATIONS = {
+  weekly: { id: 'weekly', label: 'Weekly', days: 7, weeks: 1, cost: FITPLAN_COSTS.planGenerationWeekly },
+  monthly: { id: 'monthly', label: 'Monthly', days: 28, weeks: 4, cost: FITPLAN_COSTS.planGenerationMonthly },
+  quarterly: { id: 'quarterly', label: 'Quarterly', days: 91, weeks: 13, cost: FITPLAN_COSTS.planGenerationQuarterly },
+} as const
+
+export type FitPlanDuration = keyof typeof FITPLAN_PLAN_DURATIONS
+
+export function normalizeFitPlanDuration(value: unknown): FitPlanDuration {
+  return value === 'monthly' || value === 'quarterly' ? value : 'weekly'
+}
+
+export function getFitPlanDurationConfig(value: unknown) {
+  return FITPLAN_PLAN_DURATIONS[normalizeFitPlanDuration(value)]
+}
 
 export const FITPLAN_TOPUP_PACKAGES = [
   { id: 'starter', label: 'Starter pack', trust: 250, amountCents: 499 },

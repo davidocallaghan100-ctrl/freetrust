@@ -1,14 +1,14 @@
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { FITPLAN_COSTS, FITPLAN_MODEL } from '@/lib/fitplan/constants'
+import { FITPLAN_MODEL, getFitPlanDurationConfig } from '@/lib/fitplan/constants'
 import { awardFitPlanBadge, refundTrust, spendTrust } from '@/lib/fitplan/server'
 import { generateFitPlan } from '@/lib/fitplan/ai'
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -18,16 +18,20 @@ export async function POST() {
   if (profileError) return NextResponse.json({ error: profileError.message }, { status: 500 })
   if (!profile?.agreed_terms) return NextResponse.json({ error: 'Complete FitPlan onboarding first' }, { status: 400 })
 
+  const body = await req.json().catch(() => ({})) as { duration?: unknown }
+  const durationConfig = getFitPlanDurationConfig(body.duration)
+  const cost = durationConfig.cost
+
   try {
-    await spendTrust(user.id, FITPLAN_COSTS.planGeneration, 'fitplan_generate_plan', 'FitPlan AI plan generation')
+    await spendTrust(user.id, cost, 'fitplan_generate_plan', `FitPlan ${durationConfig.label.toLowerCase()} plan generation`)
   } catch (err: any) {
     const msg = err?.message ?? String(err)
     const balanceRes = await admin.from('trust_balances').select('balance').eq('user_id', user.id).maybeSingle()
-    return NextResponse.json({ error: msg.includes('insufficient_funds') ? 'Insufficient Trust Coins' : msg, code: msg.includes('insufficient_funds') ? 'insufficient_funds' : 'spend_failed', balance: balanceRes.data?.balance ?? 0, required: FITPLAN_COSTS.planGeneration }, { status: msg.includes('insufficient_funds') ? 402 : 500 })
+    return NextResponse.json({ error: msg.includes('insufficient_funds') ? 'Insufficient Trust Coins' : msg, code: msg.includes('insufficient_funds') ? 'insufficient_funds' : 'spend_failed', balance: balanceRes.data?.balance ?? 0, required: cost }, { status: msg.includes('insufficient_funds') ? 402 : 500 })
   }
 
   try {
-    const plan = await generateFitPlan(profile as any)
+    const plan = await generateFitPlan(profile as any, durationConfig.id)
     await admin.from('fitplan_plans').update({ status: 'archived' }).eq('user_id', user.id).eq('status', 'active')
     const { data, error } = await admin.from('fitplan_plans').insert({
       user_id: user.id,
@@ -36,14 +40,19 @@ export async function POST() {
       goal: profile.goal,
       summary: plan.summary,
       plan_json: plan,
-      cost_trust: FITPLAN_COSTS.planGeneration,
+      cost_trust: cost,
       doctor_clearance: profile.doctor_clearance,
+      duration: durationConfig.id,
+      starts_on: plan.startDate,
+      ends_on: plan.endDate,
+      total_workouts: Array.isArray(plan.workouts) ? plan.workouts.length : 0,
+      total_meals: Array.isArray(plan.nutrition?.meals) ? plan.nutrition.meals.length : 0,
     }).select('*').single()
     if (error) throw error
     await awardFitPlanBadge(user.id)
     return NextResponse.json({ plan: data })
   } catch (err) {
-    await refundTrust(user.id, FITPLAN_COSTS.planGeneration, 'fitplan_generate_plan_refund', 'Refund: FitPlan plan generation failed')
+    await refundTrust(user.id, cost, 'fitplan_generate_plan_refund', `Refund: FitPlan ${durationConfig.label.toLowerCase()} plan generation failed`)
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[FitPlan generate-plan] failed:', err)
     const userMessage = msg.toLowerCase().includes('json') || msg.includes('Expected')

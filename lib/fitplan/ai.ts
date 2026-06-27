@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { FITPLAN_MODEL } from '@/lib/fitplan/constants'
+import { FITPLAN_MODEL, getFitPlanDurationConfig, type FitPlanDuration } from '@/lib/fitplan/constants'
 import { fitPlanSafetyNote, type FitPlanProfile } from '@/lib/fitplan/server'
 
 function anthropicClient() {
@@ -48,9 +48,14 @@ async function repairAndParseJsonObject<T>(input: {
 
 export type FitPlanAiPlan = {
   summary: string
+  duration?: FitPlanDuration
+  durationDays?: number
+  startDate?: string
+  endDate?: string
+  generatedAt?: string
   safety: string[]
   dailyTargets: { steps?: string; hydration?: string; protein?: string; sleep?: string }
-  workouts: Array<{ day: string; focus: string; durationMinutes: number; blocks: string[]; modifications?: string[] }>
+  workouts: Array<{ day: string; focus: string; durationMinutes: number; blocks: string[]; modifications?: string[]; scheduledDate?: string; weekNumber?: number; dayIndex?: number }>
   nutrition: { approach: string; meals: string[]; prepTips: string[]; avoid?: string[] }
   habits: string[]
   checkinQuestions: string[]
@@ -75,7 +80,20 @@ function splitList(values: string[] | null | undefined, fallback: string[]) {
   return Array.isArray(values) && values.length ? values : fallback
 }
 
-function buildFastFitPlan(profile: FitPlanProfile): FitPlanAiPlan {
+function addDays(date: Date, days: number) {
+  const next = new Date(date)
+  next.setUTCDate(next.getUTCDate() + days)
+  return next
+}
+
+function dateKey(date: Date) {
+  return date.toISOString().slice(0, 10)
+}
+
+function buildFastFitPlan(profile: FitPlanProfile, duration: FitPlanDuration): FitPlanAiPlan {
+  const config = getFitPlanDurationConfig(duration)
+  const start = new Date()
+  const startUtc = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()))
   const goals = splitList(profile.goals, [profile.goal]).map(goalLabel).slice(0, 5)
   const goalText = goals.length > 1 ? `${goals.slice(0, -1).join(', ')} and ${goals.at(-1)}` : goals[0]
   const level = profile.experience_level || 'beginner'
@@ -104,15 +122,21 @@ function buildFastFitPlan(profile: FitPlanProfile): FitPlanAiPlan {
     `Cooldown: 5 minutes stretching plus note energy, mood, and any warning signs`,
   ]
 
-  const workouts = Array.from({ length: 7 }, (_, index) => {
-    const day = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][index]
-    const isTraining = index < days
-    const focus = isTraining ? focusPool[index % focusPool.length] : (index % 2 ? 'Recovery walk' : 'Rest and mobility')
+  const workouts = Array.from({ length: config.days }, (_, index) => {
+    const dayOfWeek = index % 7
+    const day = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][dayOfWeek]
+    const weekNumber = Math.floor(index / 7) + 1
+    const progression = config.weeks > 1 ? ` Week ${weekNumber}: ${weekNumber === 1 ? 'baseline technique' : weekNumber < config.weeks ? 'small controlled progression' : 'review and consolidate'}.` : ''
+    const isTraining = dayOfWeek < days
+    const focus = isTraining ? focusPool[(index + weekNumber - 1) % focusPool.length] : (index % 2 ? 'Recovery walk' : 'Rest and mobility')
     return {
-      day,
+      day: `${day} · Week ${weekNumber}`,
+      scheduledDate: dateKey(addDays(startUtc, index)),
+      weekNumber,
+      dayIndex: index,
       focus,
       durationMinutes: isTraining ? minutes : Math.min(25, Math.max(10, Math.round(minutes * 0.5))),
-      blocks: isTraining ? trainingBlocks : [
+      blocks: isTraining ? trainingBlocks.map((block, blockIndex) => blockIndex === 1 ? `${block}.${progression}` : block) : [
         'Easy walk, light mobility, or complete rest',
         'Prepare one simple protein-forward meal for tomorrow',
         'Sleep wind-down: screens down, hydrate, and plan the next session',
@@ -125,7 +149,12 @@ function buildFastFitPlan(profile: FitPlanProfile): FitPlanAiPlan {
   })
 
   return {
-    summary: `A fast-start 7-day FitPlan for ${goalText}. It balances ${days} training day${days === 1 ? '' : 's'}, recovery, nutrition, and safe progression so you can begin right away.`,
+    summary: `A ${config.label.toLowerCase()} FitPlan for ${goalText}. It balances ${days} training day${days === 1 ? '' : 's'} per week, recovery, nutrition, and safe progression so you can see what is due and ticked across the full schedule.`,
+    duration: config.id,
+    durationDays: config.days,
+    startDate: dateKey(startUtc),
+    endDate: dateKey(addDays(startUtc, config.days - 1)),
+    generatedAt: new Date().toISOString(),
     safety: [
       'This is general wellness information only, not medical advice or diagnosis.',
       noClearance ? 'Because you selected no doctor clearance, keep sessions gentle and speak with a GP or qualified professional before progressing.' : 'Stop if you feel pain, dizziness, chest pain, unusual shortness of breath, or other concerning symptoms.',
@@ -173,10 +202,11 @@ function buildFastFitPlan(profile: FitPlanProfile): FitPlanAiPlan {
   }
 }
 
-export async function generateFitPlan(profile: FitPlanProfile): Promise<FitPlanAiPlan> {
-  if (process.env.FITPLAN_AI_PLAN_GENERATION !== 'true') return buildFastFitPlan(profile)
+export async function generateFitPlan(profile: FitPlanProfile, duration: FitPlanDuration = 'weekly'): Promise<FitPlanAiPlan> {
+  const config = getFitPlanDurationConfig(duration)
+  if (process.env.FITPLAN_AI_PLAN_GENERATION !== 'true') return buildFastFitPlan(profile, config.id)
   const client = anthropicClient()
-  const planShape = `{"summary":"string","safety":["string"],"dailyTargets":{"steps":"string","hydration":"string","protein":"string","sleep":"string"},"workouts":[{"day":"string","focus":"string","durationMinutes":35,"blocks":["string"],"modifications":["string"]}],"nutrition":{"approach":"string","meals":["string"],"prepTips":["string"],"avoid":["string"]},"habits":["string"],"checkinQuestions":["string"]}`
+  const planShape = `{"summary":"string","duration":"weekly|monthly|quarterly","durationDays":7,"startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","generatedAt":"ISO string","safety":["string"],"dailyTargets":{"steps":"string","hydration":"string","protein":"string","sleep":"string"},"workouts":[{"day":"string","scheduledDate":"YYYY-MM-DD","weekNumber":1,"dayIndex":0,"focus":"string","durationMinutes":35,"blocks":["string"],"modifications":["string"]}],"nutrition":{"approach":"string","meals":["string"],"prepTips":["string"],"avoid":["string"]},"habits":["string"],"checkinQuestions":["string"]}`
   const message = await client.messages.create({
     model: FITPLAN_MODEL,
     max_tokens: 2400,
@@ -184,7 +214,7 @@ export async function generateFitPlan(profile: FitPlanProfile): Promise<FitPlanA
     system: `You are FreeTrust FitPlan, a careful fitness and nutrition coach. Return one valid JSON object only. No markdown fences, comments, prose, or trailing commas. Every array item must be comma-separated. Never invent medical certainty. Never recommend extreme dieting, unsafe supplements, or diagnosing/treating conditions. ${fitPlanSafetyNote(profile)} JSON shape: ${planShape}`,
     messages: [{
       role: 'user',
-      content: `Create a practical 7-day FitPlan from this profile. Keep it mobile-readable, specific, conservative, and achievable. Use kg internally. Profile JSON:\n${JSON.stringify(profile)}`,
+      content: `Create a practical ${config.label.toLowerCase()} FitPlan covering ${config.days} days from this profile. Include one scheduled workout/recovery item per calendar day. Keep it mobile-readable, specific, conservative, and achievable. Use kg internally. Profile JSON:\n${JSON.stringify(profile)}`,
     }],
   })
   const text = extractText(message)

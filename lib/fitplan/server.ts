@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { FITPLAN_COSTS } from '@/lib/fitplan/constants'
+import { FITPLAN_COSTS, FITPLAN_PLAN_DURATIONS } from '@/lib/fitplan/constants'
 
 export type FitPlanProfile = {
   user_id: string
@@ -127,6 +127,10 @@ export function fitPlanSafetyNote(profile: Pick<FitPlanProfile, 'doctor_clearanc
 export function fitPlanCostsSummary() {
   return {
     planGeneration: FITPLAN_COSTS.planGeneration,
+    planGenerationWeekly: FITPLAN_COSTS.planGenerationWeekly,
+    planGenerationMonthly: FITPLAN_COSTS.planGenerationMonthly,
+    planGenerationQuarterly: FITPLAN_COSTS.planGenerationQuarterly,
+    planDurations: FITPLAN_PLAN_DURATIONS,
     coachMessage: FITPLAN_COSTS.coachMessage,
     checkinReward: FITPLAN_COSTS.checkinReward,
     progressReward: FITPLAN_COSTS.progressReward,
