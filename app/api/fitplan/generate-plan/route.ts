@@ -46,6 +46,9 @@ export async function POST() {
     await refundTrust(user.id, FITPLAN_COSTS.planGeneration, 'fitplan_generate_plan_refund', 'Refund: FitPlan plan generation failed')
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[FitPlan generate-plan] failed:', err)
-    return NextResponse.json({ error: msg }, { status: 500 })
+    const userMessage = msg.toLowerCase().includes('json') || msg.includes('Expected')
+      ? 'FitPlan had trouble formatting your plan. Your Trust Coins were refunded — please tap Generate plan again.'
+      : msg
+    return NextResponse.json({ error: userMessage }, { status: 500 })
   }
 }
