@@ -1,28 +1,19 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requireFreeTrustAdmin } from '@/lib/admin/access'
 
 // ── Auth helper ────────────────────────────────────────────────────────────────
 async function requireAdmin() {
-  const supabase = await createClient()
-  const { data: { user }, error } = await supabase.auth.getUser()
-  if (error || !user) return { user: null, error: 'Unauthorized' }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .maybeSingle()
-
-  if (!profile || profile.role !== 'admin') return { user: null, error: 'Forbidden' }
-  return { user, error: null }
+  const auth = await requireFreeTrustAdmin()
+  if (!auth.ok) return { user: null, error: 'Forbidden' }
+  return { user: auth.user, error: null }
 }
 
 // GET /api/campaigns — list all campaigns (admin only)
 export async function GET(_req: NextRequest) {
   const { user, error } = await requireAdmin()
-  if (!user) return NextResponse.json({ error }, { status: error === 'Unauthorized' ? 401 : 403 })
+  if (!user) return NextResponse.json({ error }, { status: 403 })
 
   try {
     const admin = createAdminClient()
@@ -46,7 +37,7 @@ export async function GET(_req: NextRequest) {
 // POST /api/campaigns — create a draft campaign
 export async function POST(req: NextRequest) {
   const { user, error } = await requireAdmin()
-  if (!user) return NextResponse.json({ error }, { status: error === 'Unauthorized' ? 401 : 403 })
+  if (!user) return NextResponse.json({ error }, { status: 403 })
 
   try {
     const body = await req.json() as {

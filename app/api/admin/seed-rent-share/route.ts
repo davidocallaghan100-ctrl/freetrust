@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient as createServerClient } from '@/lib/supabase/server'
+import { requireFreeTrustAdmin } from '@/lib/admin/access'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 
 const LISTINGS = [
@@ -152,12 +152,8 @@ const LISTINGS = [
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createServerClient()
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-    if (!profile || profile.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const auth = await requireFreeTrustAdmin()
+    if (!auth.ok) return auth.response
 
     const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -165,7 +161,7 @@ export async function POST(req: NextRequest) {
 
     const rows = LISTINGS.map(l => ({
       ...l,
-      user_id: user.id,
+      user_id: auth.user.id,
       status: 'active',
     }))
 

@@ -1,28 +1,19 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { executeCampaignSend } from '@/lib/campaigns/send'
+import { requireFreeTrustAdmin } from '@/lib/admin/access'
 
 async function requireAdmin() {
-  const supabase = await createClient()
-  const { data: { user }, error } = await supabase.auth.getUser()
-  if (error || !user) return { user: null, error: 'Unauthorized' }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .maybeSingle()
-
-  if (!profile || profile.role !== 'admin') return { user: null, error: 'Forbidden' }
-  return { user, error: null }
+  const auth = await requireFreeTrustAdmin()
+  if (!auth.ok) return { user: null, error: 'Forbidden' }
+  return { user: auth.user, error: null }
 }
 
 // POST /api/campaigns/[id]/send — manually trigger a campaign send
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   const { user, error } = await requireAdmin()
-  if (!user) return NextResponse.json({ error }, { status: error === 'Unauthorized' ? 401 : 403 })
+  if (!user) return NextResponse.json({ error }, { status: 403 })
 
   try {
     const admin = createAdminClient()

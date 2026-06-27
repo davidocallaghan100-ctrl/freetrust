@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import CurrencySwitcher from '@/components/CurrencySwitcher'
 import LanguageSelector from '@/components/LanguageSelector'
 import { isWholeIslandIrelandProfile } from '@/lib/experience/irelandAccess'
+import { isFreeTrustAdminEmail } from '@/lib/admin/emails'
 
 const FREETRUST_LOGO_SRC = '/icons/freetrust-mark-perfect-transparent-20260521.png'
 const FREETRUST_LOGO_STYLE = {
@@ -345,6 +346,7 @@ export default function Nav() {
   const activeProfileIdentity = feedIdentity?.type === 'org'
     ? { name: feedIdentity.name, image: feedIdentity.logo_url, subtitle: feedIdentity.userRole === 'admin' ? tProfile('adminPage') : tProfile('ownerPage') }
     : { name: user?.name ?? tProfile('yourProfile'), image: user?.avatar ?? null, subtitle: user?.email ?? '' }
+  const isAdminUser = isFreeTrustAdminEmail(user?.email)
 
   const navLabel = (label: string) => ({
     DIGITAL: tNav('digital'), SOCIAL: tNav('social'), EVENTS: tNav('events'), PLANET: tNav('planet'), 'EARLY INVESTORS': tNav('earlyInvestors'), CREATE: tNav('create'), EXPERIENCE: tNav('experience'), ACCOUNT: tNav('account'),
@@ -603,7 +605,7 @@ export default function Nav() {
           </div>
           {user && [
             { href: '/profile',    label: 'Profile',             icon: '👤' },
-            { href: '/analytics',  label: 'Analytics Dashboard', icon: '📊' },
+            { href: isAdminUser ? '/admin' : '/analytics', label: 'Analytics Dashboard', icon: '📊' },
             { href: '/settings',   label: 'Settings',            icon: '⚙️' },
           ].map(({ href, label, icon }) => {
             const active = isActive(href)

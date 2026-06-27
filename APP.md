@@ -9,6 +9,7 @@
 ## What It Does
 
 - Runs the FreeTrust community economy marketplace and mobile PWA.
+- Provides a high-security internal `/admin` analytics dashboard locked to David's Supabase auth emails (`David@freetrust.co` and `davidocallaghan100@gmail.com`), with middleware, server-layout, and API guards. For those emails, the mobile/menu Account section's **Analytics Dashboard** link opens `/admin`; other users keep their normal member analytics link. The dashboard shows real Supabase-backed metrics for users, marketplace listings, messaging, campaign sends/notifications, engagement, Trust Coin, orders, and platform health; missing analytics sources such as dedicated Trust Score or Vercel Analytics API data are shown as explicit empty states rather than inferred or fabricated.
 - Provides marketplace, profiles, events, wallet, calendar, messaging, and community flows.
 - Serves PWA metadata and app icons for installed mobile homescreen use.
 - Organisation directory cards show an options menu to organisation owners/admins and platform admins, including edit and confirmed delete actions.

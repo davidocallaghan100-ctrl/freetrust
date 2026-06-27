@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { checkApiRateLimit, checkLoginRateLimit, checkSignupRateLimit } from '@/lib/security/rate-limit'
+import { isFreeTrustAdminEmail } from '@/lib/admin/emails'
 import { defaultLocale, isAppLocale, locales } from './i18n/routing'
 
 function preferredLocale(request: NextRequest): string {
@@ -181,7 +182,26 @@ export async function middleware(request: NextRequest) {
     // Auth check failed — allow through, page-level will handle
   }
 
-  // ── 3. Protected route redirect ─────────────────────────────────────────
+  // ── 3. High-security admin lock ──────────────────────────────────────────
+  // `/admin` and every nested admin route are single-user internal tooling.
+  // Non-matching users are silently sent home with no error or role leak.
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+    if (!user || !isFreeTrustAdminEmail(user.email)) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      url.search = ''
+      const redirectRes = NextResponse.redirect(url)
+      return applySecurityHeaders(redirectRes)
+    }
+  }
+
+  if (pathname.startsWith('/api/admin/')) {
+    if (!user || !isFreeTrustAdminEmail(user.email)) {
+      return applySecurityHeaders(NextResponse.json({ error: 'Forbidden' }, { status: 403 }))
+    }
+  }
+
+  // ── 4. Protected route redirect ─────────────────────────────────────────
   const protectedPaths = [
     // Account & commerce
     '/dashboard',
