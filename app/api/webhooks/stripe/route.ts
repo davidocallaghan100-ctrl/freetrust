@@ -206,6 +206,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return
   }
 
+  // ── FitPlan Trust Coin top-up ─────────────────────────────────────────────
+  if (type === 'fitplan_topup' || session.metadata?.reason === 'fitplan_topup') {
+    await handleFitPlanTopup(session)
+    return
+  }
+
   // ── Standard escrow checkout (services / products) ────────────────────────
   const orderId = session.metadata?.order_id;
   if (!orderId) {
@@ -307,6 +313,77 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   } catch (err) {
     console.error('[Stripe Webhook] service/product checkout handler error:', err);
   }
+}
+
+async function handleFitPlanTopup(session: Stripe.Checkout.Session) {
+  const userId = session.metadata?.user_id
+  const trustAmount = parseInt(session.metadata?.trust_amount ?? '0', 10)
+  const amountCents = parseInt(session.metadata?.amount_cents ?? String(session.amount_total ?? 0), 10)
+
+  if (!userId || !trustAmount || !amountCents) {
+    console.error('[Webhook] fitplan_topup missing metadata', session.metadata)
+    return
+  }
+
+  const supabase = createAdminClient()
+  const paymentIntentId = typeof session.payment_intent === 'string'
+    ? session.payment_intent
+    : String(session.payment_intent ?? '')
+
+  const { data: existing } = await supabase
+    .from('fitplan_topups')
+    .select('id, status')
+    .eq('stripe_session_id', session.id)
+    .maybeSingle()
+
+  if (existing?.status === 'completed') {
+    console.log('[Webhook] FitPlan top-up already completed:', session.id)
+    return
+  }
+
+  const { data: topup, error: topupError } = await supabase
+    .from('fitplan_topups')
+    .upsert({
+      id: existing?.id,
+      user_id: userId,
+      stripe_session_id: session.id,
+      stripe_payment_intent_id: paymentIntentId || null,
+      amount_cents: amountCents,
+      trust_amount: trustAmount,
+      status: 'completed',
+    }, { onConflict: 'stripe_session_id' })
+    .select('id')
+    .single()
+
+  if (topupError) {
+    console.error('[Webhook] FitPlan top-up record failed:', topupError)
+    return
+  }
+
+  const { error: issueError } = await supabase.rpc('issue_trust', {
+    p_user_id: userId,
+    p_amount: trustAmount,
+    p_type: 'fitplan_topup',
+    p_ref: topup.id,
+    p_desc: `FitPlan Trust Coin top-up — ₮${trustAmount}`,
+  })
+
+  if (issueError) {
+    console.error('[Webhook] FitPlan Trust Coin credit failed:', issueError)
+    await supabase.from('fitplan_topups').update({ status: 'failed' }).eq('id', topup.id)
+    return
+  }
+
+  await supabase.from('notifications').insert({
+    user_id: userId,
+    type: 'fitplan',
+    title: '🏋️ FitPlan credits added',
+    body: `₮${trustAmount} has been added for FitPlan coaching and plans.`,
+    link: '/fitplan/dashboard',
+    data: { topup_id: topup.id, trust_amount: trustAmount },
+  })
+
+  console.log(`[Webhook] FitPlan top-up complete: user=${userId} trust=₮${trustAmount}`)
 }
 
 async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {

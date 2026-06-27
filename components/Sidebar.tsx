@@ -32,6 +32,8 @@ const NAV_SECTIONS = [
       { href: '/products', label: 'Products', icon: '📦' },
       { href: '/travel', label: 'Experience Travel', icon: '✈️' },
       { href: '/experience-pubs', label: 'Pubs', icon: '🍺' },
+      { href: '/experience-activities', label: 'Activities', icon: '🏃' },
+      { href: '/fitplan', label: 'FitPlan', icon: '🏋️' },
       { href: '/organisations', label: 'Organisations', icon: '🏢' },
       { href: '/rent-share', label: 'Rent & Share', icon: '♻️' },
     ],
@@ -159,7 +161,7 @@ export default function Sidebar() {
 
   const navLabel = (label: string) => ({
     DIGITAL: tNav('digital'), SOCIAL: tNav('social'), EVENTS: tNav('events'), PLANET: tNav('planet'), EARN: tNav('earn'), 'EARLY INVESTORS': tNav('earlyInvestors'),
-    Home: tNav('home'), Feed: tNav('newsfeed'), Connections: tNav('connections'), Messages: tNav('messages'), Notifications: tNav('notifications'), Browse: tNav('browse'), 'Services Marketplace': tNav('servicesMarketplace'), Grassroots: tNav('grassroots'), Products: tNav('products'), 'Experience Travel': tNav('travel'), Pubs: 'Pubs', Organisations: tNav('organisations'), 'Rent & Share': tNav('rentShare'), Events: tNav('events'), 'My Calendar': tNav('myCalendar'), 'Activity Map': tNav('activityMap'), Groups: tNav('groups'), Jobs: tNav('jobs'), Articles: tNav('articles'), Impact: tNav('impact'), Collab: tNav('collab'), 'Gig Economy': tNav('gigEconomy'), 'Create Gig': tNav('createGig'), Accounting: tNav('accounting'), Invest: tNav('invest'), Wallet: tNav('wallet'), Agents: tNav('agents'), Profile: tNav('profile'), Settings: tNav('settings'),
+    Home: tNav('home'), Feed: tNav('newsfeed'), Activities: 'Activities', FitPlan: 'FitPlan', Connections: tNav('connections'), Messages: tNav('messages'), Notifications: tNav('notifications'), Browse: tNav('browse'), 'Services Marketplace': tNav('servicesMarketplace'), Grassroots: tNav('grassroots'), Products: tNav('products'), 'Experience Travel': tNav('travel'), Pubs: 'Pubs', Organisations: tNav('organisations'), 'Rent & Share': tNav('rentShare'), Events: tNav('events'), 'My Calendar': tNav('myCalendar'), 'Activity Map': tNav('activityMap'), Groups: tNav('groups'), Jobs: tNav('jobs'), Articles: tNav('articles'), Impact: tNav('impact'), Collab: tNav('collab'), 'Gig Economy': tNav('gigEconomy'), 'Create Gig': tNav('createGig'), Accounting: tNav('accounting'), Invest: tNav('invest'), Wallet: tNav('wallet'), Agents: tNav('agents'), Profile: tNav('profile'), Settings: tNav('settings'),
   } as Record<string, string>)[label] ?? label
 
   const visibleNavSections = NAV_SECTIONS
