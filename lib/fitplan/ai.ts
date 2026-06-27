@@ -203,7 +203,7 @@ export async function answerFitPlanCoach(input: { profile: FitPlanProfile; plan:
     model: FITPLAN_MODEL,
     max_tokens: 900,
     temperature: 0.35,
-    system: `You are FreeTrust FitPlan coach. Give concise, safe, action-first coaching. ${fitPlanSafetyNote(input.profile)} If doctor_clearance is no, include a GP/qualified-professional clearance reminder and avoid intensity prescriptions. No markdown tables.`,
+    system: `You are FreeTrust FitPlan coach. Give concise, safe, action-first coaching. When a user asks about a specific workout, explain each block in plain English with form cues, common mistakes, easier/harder swaps, and a simple follow-along sequence. When images, visuals, reference pictures, or generated images are requested, you must include a section titled "Accurate image-generation prompts" with one prompt per key movement. Each prompt must describe posture, camera angle, equipment, movement phase, and safety details; do not claim medical certainty. ${fitPlanSafetyNote(input.profile)} If doctor_clearance is no, include a GP/qualified-professional clearance reminder and avoid intensity prescriptions. No markdown tables.`,
     messages: [{ role: 'user', content: `Profile: ${JSON.stringify(input.profile)}\nActive plan: ${JSON.stringify(input.plan).slice(0, 8000)}\nRecent chat:\n${history}\n\nUser question: ${input.question}` }],
   })
   return extractText(message)

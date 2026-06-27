@@ -646,6 +646,7 @@ export default function AgentsPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const deepLinkLoadedRef = useRef(false);
 
   const groupedAgents = useMemo(() => Object.entries(AGENT_GROUPS).map(([label, keys]) => ({
     label,
@@ -682,6 +683,23 @@ export default function AgentsPage() {
 
   useEffect(() => { fetchBalance(); }, [fetchBalance]);
   useEffect(() => { setSavedConversations(readSavedConversations()); }, []);
+  useEffect(() => {
+    if (deepLinkLoadedRef.current || typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const prompt = params.get('prompt')?.trim();
+    if (!prompt) return;
+    deepLinkLoadedRef.current = true;
+    const agentName = params.get('agent')?.trim() || 'generalResearch';
+    const agent = getAgentByName(agentName) ?? DEFAULT_AGENT;
+    setConversationId(makeId('conversation'));
+    setSelectedAgent(agent);
+    setMessages([{ id: makeId('msg'), role: 'assistant', content: cleanAssistantText(`I've prefilled ${agent.displayName} from FitPlan. Review it, then tap run when you're ready.`) }]);
+    setAttachments([]);
+    setInput(prompt);
+    setError(null);
+    setIdeaOpen(false);
+    setMenuOpen(false);
+  }, []);
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [messages, running]);
   useEffect(() => {
     if (messages.length === 0) return;

@@ -9,9 +9,10 @@ export async function POST(req: NextRequest) {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await req.json().catch(() => null) as { index?: unknown; completed?: unknown } | null
+  const body = await req.json().catch(() => null) as { kind?: unknown; index?: unknown; completed?: unknown } | null
+  const kind = body?.kind === 'meal' ? 'meal' : 'workout'
   const index = typeof body?.index === 'number' ? body.index : Number(body?.index)
-  if (!Number.isInteger(index) || index < 0 || index > 13) return NextResponse.json({ error: 'Invalid workout index' }, { status: 400 })
+  if (!Number.isInteger(index) || index < 0 || index > 50) return NextResponse.json({ error: `Invalid ${kind} index` }, { status: 400 })
 
   const admin = createAdminClient()
   const { data: plan, error: planError } = await admin
@@ -27,9 +28,12 @@ export async function POST(req: NextRequest) {
   if (!plan?.id) return NextResponse.json({ error: 'No active FitPlan found' }, { status: 404 })
 
   const planJson = (plan.plan_json && typeof plan.plan_json === 'object' && !Array.isArray(plan.plan_json)) ? plan.plan_json as Record<string, unknown> : {}
-  const previous = (planJson.completedWorkouts && typeof planJson.completedWorkouts === 'object' && !Array.isArray(planJson.completedWorkouts)) ? planJson.completedWorkouts as Record<string, unknown> : {}
-  const completedWorkouts = { ...previous, [String(index)]: body?.completed === true }
-  const nextPlanJson = { ...planJson, completedWorkouts }
+  const list = kind === 'meal' ? (planJson as { nutrition?: { meals?: unknown[] } }).nutrition?.meals : (planJson as { workouts?: unknown[] }).workouts
+  if (Array.isArray(list) && index >= list.length) return NextResponse.json({ error: `${kind === 'meal' ? 'Meal' : 'Workout'} not found` }, { status: 404 })
+  const field = kind === 'meal' ? 'completedMeals' : 'completedWorkouts'
+  const previous = (planJson[field] && typeof planJson[field] === 'object' && !Array.isArray(planJson[field])) ? planJson[field] as Record<string, unknown> : {}
+  const nextCompletion = { ...previous, [String(index)]: body?.completed === true }
+  const nextPlanJson = { ...planJson, [field]: nextCompletion }
 
   const { data, error } = await admin
     .from('fitplan_plans')
