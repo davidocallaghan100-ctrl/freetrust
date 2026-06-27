@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireFreeTrustAdmin } from '@/lib/admin/access'
+import { FREETRUST_ADMIN_EMAILS } from '@/lib/admin/emails'
 
 type Row = Record<string, unknown>
 type ChartPoint = { label: string; value: number }
@@ -213,6 +214,21 @@ export async function GET() {
     return NextResponse.json({
       queriedAt,
       adminEmail: auth.user.email,
+      adminAccess: {
+        owner: 'David O Callaghan',
+        mode: 'David-only exact Supabase auth email allowlist',
+        approvedEmails: [...FREETRUST_ADMIN_EMAILS],
+        currentEmail: auth.user.email,
+        nonAdminPageBehavior: 'Redirect to / with no error message',
+        nonAdminApiBehavior: '403 {"error":"Forbidden"}',
+        protectionLayers: [
+          { layer: 'Middleware /admin', behavior: 'Redirects non-matching sessions home before page render' },
+          { layer: 'Middleware /api/admin/*', behavior: 'Returns 403 Forbidden for non-matching API sessions' },
+          { layer: 'Server admin layout', behavior: 'Re-checks Supabase auth user before rendering dashboard UI' },
+          { layer: 'Admin API helper', behavior: 'Re-checks exact email before querying service-role analytics data' },
+          { layer: 'Profile menu navigation', behavior: 'Only approved admin emails see Analytics Dashboard in the menu' },
+        ],
+      },
       dataSource: {
         supabaseProjectRef: 'tioqakxnqjxyuzgnwhrb',
         emailTablesFound: {

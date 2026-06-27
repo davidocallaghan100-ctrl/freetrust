@@ -20,6 +20,15 @@ type NamedCount = { name: string; count: number }
 type AdminPayload = {
   queriedAt: string
   adminEmail: string
+  adminAccess: {
+    owner: string
+    mode: string
+    approvedEmails: string[]
+    currentEmail: string
+    nonAdminPageBehavior: string
+    nonAdminApiBehavior: string
+    protectionLayers: { layer: string; behavior: string }[]
+  }
   dataSource: {
     supabaseProjectRef: string
     emailTablesFound: Record<string, boolean>
@@ -111,6 +120,7 @@ type AdminPayload = {
 
 const SECTIONS = [
   ['overview', 'Overview'],
+  ['david-only', 'David Only'],
   ['users', 'Users'],
   ['trust', 'Trust Scores'],
   ['marketplace', 'Marketplace'],
@@ -289,7 +299,7 @@ export default function AdminDashboardClient() {
         <nav className="ft-admin-nav">
           {nav.map(([id, label]) => <a key={id} href={`#${id}`}>{label}</a>)}
         </nav>
-        <div className="ft-admin-secure">Locked to exactly <strong>David@freetrust.co</strong>. Non-matching sessions redirect home.</div>
+        <div className="ft-admin-secure">David-only dashboard. Locked to exact approved Supabase auth emails; non-matching sessions redirect home.</div>
       </aside>
 
       <div className="ft-admin-main">
@@ -316,6 +326,32 @@ export default function AdminDashboardClient() {
               <div className="ft-admin-two" style={{ marginTop: '.8rem' }}>
                 <ChartShell title="Signup trend"><LineViz data={data.users.signupSeries} /></ChartShell>
                 <ChartShell title="Engagement events"><LineViz data={data.engagement.eventSeries} color="#a78bfa" /></ChartShell>
+              </div>
+            </SectionCard>
+
+            <SectionCard id="david-only" title="David-Only Access" updatedAt={updatedAt} onRefresh={loadData} loading={loading}>
+              <div className="ft-admin-grid">
+                <StatCard label="Dedicated owner" value={data.adminAccess.owner} sub="No shared admin roles" accent="#34d399" />
+                <StatCard label="Current session" value={data.adminAccess.currentEmail} sub="Supabase auth email matched exactly" />
+                <StatCard label="Approved emails" value={fmt(data.adminAccess.approvedEmails.length)} sub={data.adminAccess.approvedEmails.join(' · ')} accent="#fbbf24" />
+                <StatCard label="Access model" value="Exact email" sub={data.adminAccess.mode} accent="#a78bfa" />
+              </div>
+              <div className="ft-admin-two" style={{ marginTop: '.8rem' }}>
+                <div className="ft-admin-card">
+                  <h3>Only David can access this dashboard</h3>
+                  <p className="ft-admin-note">The dashboard is intentionally not tied to profile roles. Access is granted only when the authenticated Supabase email is one of David's approved emails. Other users do not see the Analytics Dashboard menu item.</p>
+                  <div style={{ display: 'grid', gap: '.55rem', marginTop: '.9rem' }}>
+                    <span className="ft-admin-status">Page access: {data.adminAccess.nonAdminPageBehavior}</span>
+                    <span className="ft-admin-status ft-admin-warn">API access: {data.adminAccess.nonAdminApiBehavior}</span>
+                  </div>
+                </div>
+                <div className="ft-admin-card">
+                  <h3>Protection layers</h3>
+                  <DataTable
+                    headers={['Layer', 'Behavior']}
+                    rows={data.adminAccess.protectionLayers.map(row => [row.layer, row.behavior])}
+                  />
+                </div>
               </div>
             </SectionCard>
 
