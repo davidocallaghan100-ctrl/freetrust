@@ -604,9 +604,10 @@ export default function Nav() {
             {tNav('account')}
           </div>
           {user && [
-            { href: '/profile',    label: 'Profile',             icon: '👤' },
-            { href: isAdminUser ? '/admin' : '/analytics', label: 'Analytics Dashboard', icon: '📊' },
-            { href: '/settings',   label: 'Settings',            icon: '⚙️' },
+            { href: '/profile', label: 'Profile', icon: '👤' },
+            { href: '/analytics', label: 'Analytics Dashboard', icon: '📊' },
+            ...(isAdminUser ? [{ href: '/admin', label: 'Admin Analytics', icon: '🔒' }] : []),
+            { href: '/settings', label: 'Settings', icon: '⚙️' },
           ].map(({ href, label, icon }) => {
             const active = isActive(href)
             return (
