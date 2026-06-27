@@ -6,6 +6,17 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { cleanStringArray, fitPlanCostsSummary, getTrustBalance } from '@/lib/fitplan/server'
 import { kgFromInput } from '@/lib/fitplan/constants'
 
+const ALLOWED_GOALS = new Set([
+  'fat_loss',
+  'muscle_gain',
+  'strength',
+  'endurance',
+  'general_wellness',
+  'mobility',
+  'energy',
+  'nutrition',
+])
+
 function asString(value: unknown, fallback = '') {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback
 }
@@ -13,6 +24,14 @@ function asString(value: unknown, fallback = '') {
 function asNumber(value: unknown) {
   const n = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN
   return Number.isFinite(n) ? n : null
+}
+
+function cleanGoals(value: unknown) {
+  const raw = Array.isArray(value) ? value : typeof value === 'string' ? [value] : []
+  const goals = raw
+    .map(item => typeof item === 'string' ? item.trim() : '')
+    .filter(goal => ALLOWED_GOALS.has(goal))
+  return Array.from(new Set(goals)).slice(0, 5)
 }
 
 async function getUser() {
@@ -59,10 +78,13 @@ export async function POST(req: NextRequest) {
 
   const weightUnit = body.weight_unit === 'lb' ? 'lb' : 'kg'
   const weightInput = asNumber(body.weight)
+  const goals = cleanGoals(body.goals)
+  const primaryGoal = goals[0] ?? asString(body.goal, 'general_wellness').slice(0, 80)
   const payload = {
     user_id: user.id,
     display_name: asString(body.display_name, user.email?.split('@')[0] ?? 'FreeTrust member').slice(0, 120),
-    goal: asString(body.goal, 'general_wellness').slice(0, 80),
+    goal: primaryGoal,
+    goals: goals.length ? goals : [primaryGoal],
     experience_level: asString(body.experience_level, 'beginner').slice(0, 40),
     training_days: Math.min(7, Math.max(1, asNumber(body.training_days) ?? 3)),
     preferred_workout_minutes: Math.min(180, Math.max(10, asNumber(body.preferred_workout_minutes) ?? 35)),
@@ -78,7 +100,7 @@ export async function POST(req: NextRequest) {
     progress_photos_private: body.progress_photos_private !== false,
     share_updates_default: body.share_updates_default === true,
     agreed_terms: agreedTerms,
-    terms_version: 'fitplan-2026-06-27',
+    terms_version: 'fitplan-2026-06-27-safety-v2',
   }
 
   const admin = createAdminClient()

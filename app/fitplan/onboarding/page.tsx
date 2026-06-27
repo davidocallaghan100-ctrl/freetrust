@@ -6,6 +6,17 @@ import { useRouter } from 'next/navigation'
 
 const C = { bg: '#06131f', panel: '#0c1f30', card: '#10283b', line: 'rgba(148,163,184,.18)', text: '#f8fafc', muted: '#9fb2c7', green: '#10b981', gold: '#f4c96b', blue: '#38bdf8' }
 
+const GOALS = [
+  ['fat_loss', 'Fat loss'],
+  ['muscle_gain', 'Muscle gain'],
+  ['strength', 'Strength'],
+  ['endurance', 'Endurance'],
+  ['general_wellness', 'General wellness'],
+  ['mobility', 'Mobility'],
+  ['energy', 'More energy'],
+  ['nutrition', 'Better nutrition'],
+] as const
+
 function inputStyle() {
   return { width: '100%', boxSizing: 'border-box' as const, border: `1px solid ${C.line}`, borderRadius: 14, background: 'rgba(255,255,255,.05)', color: C.text, padding: '13px 14px', fontSize: 16, outline: 'none' }
 }
@@ -23,6 +34,17 @@ export default function FitPlanOnboardingPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [unit, setUnit] = useState<'kg' | 'lb'>('kg')
+  const [goals, setGoals] = useState<string[]>(['general_wellness'])
+
+  function toggleGoal(goal: string) {
+    setGoals(current => {
+      if (current.includes(goal)) {
+        const next = current.filter(item => item !== goal)
+        return next.length ? next : ['general_wellness']
+      }
+      return [...current, goal].slice(0, 5)
+    })
+  }
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -31,7 +53,8 @@ export default function FitPlanOnboardingPage() {
     const form = new FormData(e.currentTarget)
     const payload = {
       display_name: String(form.get('display_name') || ''),
-      goal: String(form.get('goal') || 'general_wellness'),
+      goal: goals[0] || 'general_wellness',
+      goals,
       experience_level: String(form.get('experience_level') || 'beginner'),
       training_days: Number(form.get('training_days') || 3),
       preferred_workout_minutes: Number(form.get('preferred_workout_minutes') || 35),
@@ -64,12 +87,19 @@ export default function FitPlanOnboardingPage() {
       <section style={{ marginTop: 16, padding: 20, borderRadius: 28, background: 'linear-gradient(145deg, rgba(16,185,129,.16), rgba(56,189,248,.08)), rgba(12,31,48,.92)', border: `1px solid ${C.line}`, boxShadow: '0 24px 70px rgba(0,0,0,.35)' }}>
         <div style={{ display: 'inline-flex', padding: '7px 11px', borderRadius: 999, color: C.gold, background: 'rgba(244,201,107,.12)', border: '1px solid rgba(244,201,107,.25)', fontSize: 12, fontWeight: 900 }}>AI FitPlan · Trust Coin powered</div>
         <h1 style={{ margin: '14px 0 8px', fontSize: 'clamp(32px, 10vw, 58px)', lineHeight: .95, letterSpacing: '-.06em' }}>Your private plan, built around real life.</h1>
-        <p style={{ margin: 0, color: C.muted, lineHeight: 1.6 }}>Tell FitPlan enough to create a safe first week. Health fields are optional except accepting terms. Weight is stored internally in kg and displayed in your chosen unit.</p>
+        <p style={{ margin: 0, color: C.muted, lineHeight: 1.6 }}>Tell FitPlan enough to create a safe first week. Choose up to five goals. Health fields are optional except accepting terms. Weight is stored internally in kg and displayed in your chosen unit.</p>
       </section>
 
       <form onSubmit={submit} style={{ marginTop: 16, padding: 18, borderRadius: 24, background: C.panel, border: `1px solid ${C.line}` }}>
         <Label>Name</Label><input name="display_name" placeholder="What should FitPlan call you?" style={inputStyle()} />
-        <Label>Main goal</Label><select name="goal" style={inputStyle()} defaultValue="general_wellness"><option value="fat_loss">Fat loss</option><option value="muscle_gain">Muscle gain</option><option value="strength">Strength</option><option value="endurance">Endurance</option><option value="general_wellness">General wellness</option></select>
+        <Label>Main goals — choose multiple</Label>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))', gap: 9 }}>
+          {GOALS.map(([value, label]) => {
+            const active = goals.includes(value)
+            return <button key={value} type="button" onClick={() => toggleGoal(value)} aria-pressed={active} style={{ minHeight: 46, borderRadius: 15, border: `1px solid ${active ? C.green : C.line}`, background: active ? 'rgba(16,185,129,.18)' : 'rgba(255,255,255,.04)', color: active ? C.text : C.muted, fontWeight: 900, textAlign: 'left', padding: '0 12px' }}>{active ? '✓ ' : ''}{label}</button>
+          })}
+        </div>
+        <p style={{ margin: '8px 0 0', color: C.muted, fontSize: 12, lineHeight: 1.45 }}>FitPlan will treat the first selected goal as your primary goal and balance the rest safely.</p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><div><Label>Level</Label><select name="experience_level" style={inputStyle()} defaultValue="beginner"><option>beginner</option><option>intermediate</option><option>advanced</option></select></div><div><Label>Days/week</Label><input name="training_days" type="number" min={1} max={7} defaultValue={3} style={inputStyle()} /></div></div>
         <Label>Workout minutes</Label><input name="preferred_workout_minutes" type="number" min={10} max={180} defaultValue={35} style={inputStyle()} />
         <Label>Equipment</Label><input name="equipment" placeholder="Dumbbells, bands, gym, none" style={inputStyle()} />
@@ -82,7 +112,18 @@ export default function FitPlanOnboardingPage() {
         <div style={{ marginTop: 18, display: 'grid', gap: 10 }}>
           <label style={{ display: 'flex', gap: 10, color: C.muted, fontSize: 14 }}><input name="progress_photos_private" type="checkbox" defaultChecked /> Keep progress photos private by default</label>
           <label style={{ display: 'flex', gap: 10, color: C.muted, fontSize: 14 }}><input name="share_updates_default" type="checkbox" /> Default progress updates to shareable (you still confirm every post)</label>
-          <label style={{ display: 'flex', gap: 10, color: C.text, fontSize: 14, lineHeight: 1.45 }}><input name="agreed_terms" type="checkbox" required /> I understand FitPlan is wellness guidance, not medical advice. For medical concerns I will contact a qualified professional. Support: David@freetrust.co.</label>
+          <section style={{ padding: 14, borderRadius: 18, border: `1px solid ${C.line}`, background: 'rgba(255,255,255,.04)' }}>
+            <strong style={{ display: 'block', color: C.gold, marginBottom: 8 }}>FitPlan safety terms</strong>
+            <ul style={{ margin: '0 0 10px 18px', padding: 0, color: C.muted, fontSize: 13, lineHeight: 1.55 }}>
+              <li>FitPlan gives general wellness, fitness, and nutrition information only — not medical, legal, mental-health, diagnosis, treatment, or emergency advice.</li>
+              <li>You are responsible for deciding whether an exercise, food, habit, or plan is safe for you. Stop if you feel pain, dizziness, chest pain, shortness of breath, or unusual symptoms.</li>
+              <li>Consult a GP, dietitian, physiotherapist, or qualified professional before starting if you have injuries, medical conditions, pregnancy, eating-disorder history, medication concerns, or no doctor clearance.</li>
+              <li>Results are not guaranteed. Progress depends on your health, consistency, environment, and professional guidance. FreeTrust is not liable for choices made outside the app.</li>
+              <li>Use respectful, accurate inputs. Keep private health/photo information private unless you explicitly choose to share it.</li>
+              <li>If a dispute or concern arises, contact support first at David@freetrust.co so FreeTrust can review and help resolve it fairly.</li>
+            </ul>
+            <label style={{ display: 'flex', gap: 10, color: C.text, fontSize: 14, lineHeight: 1.45 }}><input name="agreed_terms" type="checkbox" required /> I have read and accept these FitPlan safety terms.</label>
+          </section>
         </div>
         {error && <div style={{ marginTop: 14, color: '#fecaca', background: 'rgba(239,68,68,.12)', border: '1px solid rgba(239,68,68,.3)', padding: 12, borderRadius: 14 }}>{error}</div>}
         <button disabled={busy} style={{ marginTop: 18, width: '100%', minHeight: 52, border: 'none', borderRadius: 16, background: busy ? '#475569' : `linear-gradient(135deg, ${C.green}, #0ea5e9)`, color: '#fff', fontWeight: 950, fontSize: 16 }}>{busy ? 'Saving…' : 'Save and open dashboard'}</button>

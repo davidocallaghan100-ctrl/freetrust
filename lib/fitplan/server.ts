@@ -5,6 +5,7 @@ export type FitPlanProfile = {
   user_id: string
   display_name?: string | null
   goal: string
+  goals?: string[] | null
   experience_level: string
   training_days: number
   preferred_workout_minutes: number
