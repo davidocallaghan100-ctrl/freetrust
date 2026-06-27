@@ -728,7 +728,7 @@ function TextMediaOverlay({ overlay, compact = false }: { overlay: TextOverlayDa
 
 const FEED_SOUNDTRACK_PLAY_EVENT = 'freetrust:feed-soundtrack-play'
 
-function PhotoCarousel({ urls, alt, soundtrack, textOverlay, imageHref }: { urls: string[]; alt: string; soundtrack?: SpotifyTrackData | null; textOverlay?: TextOverlayData | null; imageHref?: string | null }) {
+function PhotoCarousel({ urls, alt, soundtrack, textOverlay, imageHref, imageBadge }: { urls: string[]; alt: string; soundtrack?: SpotifyTrackData | null; textOverlay?: TextOverlayData | null; imageHref?: string | null; imageBadge?: { label: string; href: string; ariaLabel: string } | null }) {
   const [index, setIndex] = useState(0)
   const [soundtrackPlaying, setSoundtrackPlaying] = useState(false)
   const [soundtrackNotice, setSoundtrackNotice] = useState('')
@@ -848,6 +848,39 @@ function PhotoCarousel({ urls, alt, soundtrack, textOverlay, imageHref }: { urls
           })}
         </div>
         <TextMediaOverlay overlay={textOverlay ?? null} />
+
+        {imageBadge ? (
+          <Link
+            href={imageBadge.href}
+            aria-label={imageBadge.ariaLabel}
+            style={{
+              position: 'absolute',
+              top: 12,
+              right: 12,
+              zIndex: 4,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              minHeight: 34,
+              padding: '7px 12px',
+              borderRadius: 999,
+              background: 'rgba(2,6,23,0.78)',
+              border: '1px solid rgba(56,189,248,0.65)',
+              boxShadow: '0 12px 28px rgba(0,0,0,0.35), 0 0 22px rgba(56,189,248,0.18)',
+              color: '#e0f2fe',
+              fontSize: 12,
+              fontWeight: 850,
+              letterSpacing: '0.02em',
+              lineHeight: 1,
+              textDecoration: 'none',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+            }}
+          >
+            <span aria-hidden="true" style={{ color: '#38bdf8', fontSize: 13 }}>🛠</span>
+            {imageBadge.label}
+          </Link>
+        ) : null}
 
         {soundtrack?.name && previewUrl ? (
           <button
@@ -2126,7 +2159,7 @@ export default function PostCard({
           their destination before the image/media. Photo Spotify tracks are shown
           as the rotated overlay in the carousel; rendering the full iframe above
           the media looks like a random box on mobile and duplicates the song. */}
-      {attachedUrl && !isPhotoSpotifyAttachment ? <LinkPreviewCard url={attachedUrl} /> : null}
+      {attachedUrl && post.type !== 'service' && !isPhotoSpotifyAttachment ? <LinkPreviewCard url={attachedUrl} /> : null}
 
       {/* ── Media ── */}
       {isVideo && mediaUrls.length > 0 ? (
@@ -2135,7 +2168,7 @@ export default function PostCard({
         </div>
       ) : mediaUrls.length > 0 ? (
         <div className="ft-post-media-wrap" style={{ padding: '0 16px' }}>
-          <PhotoCarousel urls={mediaUrls} alt={name} soundtrack={post.type === 'photo' ? spotifyTrack : null} textOverlay={textOverlay} imageHref={post.type === 'service' ? canonicalUrl : null} />
+          <PhotoCarousel urls={mediaUrls} alt={name} soundtrack={post.type === 'photo' ? spotifyTrack : null} textOverlay={textOverlay} imageHref={post.type === 'service' ? canonicalUrl : null} imageBadge={post.type === 'service' ? { label: 'Service', href: canonicalUrl, ariaLabel: `Open ${name} service page` } : null} />
         </div>
       ) : null}
 
