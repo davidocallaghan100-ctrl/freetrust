@@ -530,7 +530,7 @@ export default function FeedPage() {
           </div>
           <div style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: '12px', padding: '1.25rem' }}>
             <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.5rem', color: '#f1f5f9' }}>✨ Discover</div>
-            <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.5, marginBottom: '0.75rem' }}>The Discover feed shows the latest real FreeTrust activity, including posts, member services, and published articles, in one continuous feed.</p>
+            <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.5, marginBottom: '0.75rem' }}>The Discover feed shows the latest real FreeTrust activity, including posts, hosted activities, member services, and published articles, in one continuous feed.</p>
             <button onClick={() => { setScope('discover'); setActiveFilter('all') }} style={{ display: 'block', width: '100%', padding: '0.5rem', borderRadius: 7, border: '1px solid rgba(56,189,248,0.2)', background: 'transparent', color: '#38bdf8', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Open All</button>
           </div>
         </aside>

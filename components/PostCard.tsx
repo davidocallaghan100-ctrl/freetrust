@@ -415,6 +415,7 @@ export const TYPE_META: Record<string, { label: string; color: string; bg: strin
   product:   { label: '📦 Product',   color: '#34d399', bg: 'rgba(52,211,153,0.1)'  },
   job:       { label: '💼 Job',       color: '#a78bfa', bg: 'rgba(167,139,250,0.1)' },
   event:     { label: '📅 Event',     color: '#fb923c', bg: 'rgba(251,146,60,0.1)'  },
+  activity:  { label: '🏃 Activity',  color: '#0ea5e9', bg: 'rgba(14,165,233,0.1)'  },
   poll:      { label: '📊 Poll',      color: '#fbbf24', bg: 'rgba(251,191,36,0.1)'  },
   link:      { label: '🔗 Link',      color: '#38bdf8', bg: 'rgba(56,189,248,0.1)'  },
   milestone: { label: '🏆 Milestone', color: '#fbbf24', bg: 'rgba(251,191,36,0.1)'  },
@@ -1633,22 +1634,25 @@ export default function PostCard({
   //   event-<uuid>   → /events/<uuid>
   //   listing-<uuid> → /listings/<uuid>
   //   article-<uuid> → /articles/<uuid>
+  //   activity-<uuid> → /experience-activities?activity=<uuid>
   //   <plain-uuid>   → /feed/<uuid>  (regular feed post)
   function getCanonicalUrl(postId: string, postType: string, linkUrl: string | null): string {
     const internalLink = typeof linkUrl === 'string' && linkUrl.startsWith('/') ? linkUrl : null
-    const isCrossTableType = ['article', 'service', 'product', 'listing', 'job', 'event'].includes(postType)
+    const isCrossTableType = ['article', 'service', 'product', 'listing', 'job', 'event', 'activity'].includes(postType)
     if (internalLink && isCrossTableType) return internalLink
     if (postId.startsWith('job-'))     return `/jobs/${postId.slice(4)}`
     if (postId.startsWith('event-'))   return `/events/${postId.slice(6)}`
     if (postId.startsWith('service-')) return `/services/${postId.slice(8)}`
     if (postId.startsWith('listing-')) return `/listings/${postId.slice(8)}`
     if (postId.startsWith('article-')) return `/articles/${postId.slice(8)}`
+    if (postId.startsWith('activity-')) return `/experience-activities?activity=${postId.slice(9)}`
     // For cross-table types without a prefix, use the type to route correctly
     if (postType === 'job')     return `/jobs/${postId}`
     if (postType === 'event')   return `/events/${postId}`
     if (postType === 'service') return `/services/${postId}`
     if (postType === 'product') return `/products/${postId}`
     if (postType === 'listing') return `/listings/${postId}`
+    if (postType === 'activity') return `/experience-activities?activity=${postId}`
     return `/feed/${postId}`
   }
   const canonicalUrl = getCanonicalUrl(post.id, post.type, postLinkUrl)

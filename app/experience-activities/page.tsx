@@ -62,6 +62,9 @@ type MyAttendance = Attendee & { activity?: ActivityRow | null }
 
 const MAP_STYLE = 'mapbox://styles/davos212/cmo7emfe2000x01r3b3cn2zgq'
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
+const MOBILE_MAP_MARKER_LIMIT = 220
+const MOBILE_DISCOVER_VENUE_LIMIT = 120
+const DESKTOP_MAP_MARKER_LIMIT = 900
 
 const COLORS = {
   bg: '#F4FBFF',
@@ -214,7 +217,8 @@ export default function ExperienceActivitiesPage() {
   const loadAll = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/experience-activities', { cache: 'no-store' })
+      const prefersMobilePayload = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+      const res = await fetch(`/api/experience-activities?mobile=${prefersMobilePayload ? '1' : '0'}`, { cache: 'no-store' })
       const data = await res.json() as { userId?: string | null; venues?: Venue[]; categories?: Category[]; activities?: ActivityRow[]; invites?: InviteRow[]; friends?: Friend[]; friendIds?: string[]; myHosting?: ActivityRow[]; myAttending?: MyAttendance[]; error?: string }
       if (!res.ok) throw new Error(data.error ?? 'Could not load Experience Activities')
       setUserId(data.userId ?? null)
@@ -233,6 +237,17 @@ export default function ExperienceActivitiesPage() {
   }, [showToast])
 
   useEffect(() => { void loadAll() }, [loadAll])
+
+  useEffect(() => {
+    if (!activities.length || typeof window === 'undefined') return
+    const activityId = new URLSearchParams(window.location.search).get('activity')
+    if (!activityId) return
+    const activity = activities.find(row => row.id === activityId)
+    if (!activity) return
+    setSelectedActivity(activity)
+    setActiveTab('activities')
+    if (activity.venue_id) setVenueFilterId(activity.venue_id)
+  }, [activities])
 
   useEffect(() => {
     if (!navigator.geolocation) { setLocation({ lat: 51.8985, lng: -8.4756 }); return }
@@ -267,6 +282,8 @@ export default function ExperienceActivitiesPage() {
   }, [filteredActivities])
   const sortedVenues = useMemo(() => venues.filter(venue => isUsefulActivityVenueName(venue.name)).map(venue => ({ venue, km: distanceKm(location, venueLocation(venue)), count: venueActivityMap.get(venue.id)?.length ?? 0 })).sort((a, b) => (a.km ?? 9999) - (b.km ?? 9999)), [location, venues, venueActivityMap])
   const visibleVenues = useMemo(() => sortedVenues.filter(({ venue, count }) => activeFilter === 'verified' ? Boolean(venue.is_verified) : (activeCategoryId || activeFilter !== 'all') ? count > 0 : true), [activeCategoryId, activeFilter, sortedVenues])
+  const mapVenues = useMemo(() => visibleVenues.slice(0, isMobile ? MOBILE_MAP_MARKER_LIMIT : DESKTOP_MAP_MARKER_LIMIT), [isMobile, visibleVenues])
+  const discoverVenues = useMemo(() => visibleVenues.slice(0, isMobile ? MOBILE_DISCOVER_VENUE_LIMIT : DESKTOP_MAP_MARKER_LIMIT), [isMobile, visibleVenues])
   const featuredActivities = useMemo(() => filteredActivities.filter(a => new Date(a.scheduled_at).getTime() <= weekEnd).slice(0, 12), [filteredActivities, weekEnd])
   const selectedVenue = useMemo(() => venues.find(venue => venue.id === selectedVenueId) ?? null, [selectedVenueId, venues])
 
@@ -319,7 +336,7 @@ export default function ExperienceActivitiesPage() {
         </div>
         <div ref={mapShellRef} style={{ flex: isMobile ? '0 0 auto' : 1, position: 'relative', minHeight: isMobile ? 315 : 360, height: isMobile ? '43vh' : undefined, maxHeight: isMobile ? 440 : undefined, width: '100%', minWidth: 0, overflow: 'hidden', background: '#EAF6FF' }}>
           <MapboxMap ref={mapRef} mapboxAccessToken={MAPBOX_TOKEN} mapStyle={MAP_STYLE} initialViewState={{ longitude: location?.lng ?? -8.4756, latitude: location?.lat ?? 51.8985, zoom: 8 }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} attributionControl={false} onLoad={() => mapRef.current?.resize()} onMove={event => setMapZoom(event.viewState.zoom)} onClick={() => setSelectedVenueId(null)} onError={e => console.error('[ExperienceActivities] map error', e)}>
-            {visibleVenues.map(({ venue }) => {
+            {mapVenues.map(({ venue }) => {
               const dominant = dominantActivity(venue)
               const marker = markerStyleForVenue(venue, dominant, categories)
               const count = venueActivityMap.get(venue.id)?.length ?? 0
@@ -339,7 +356,7 @@ export default function ExperienceActivitiesPage() {
       <aside style={{ width: isMobile ? '100%' : 380, maxWidth: '100%', flex: isMobile ? '0 0 auto' : undefined, background: COLORS.panel, borderLeft: isMobile ? 'none' : `1px solid ${COLORS.border}`, borderTop: isMobile ? `1px solid ${COLORS.border}` : 'none', overflow: isMobile ? 'visible' : 'hidden', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
         <div style={{ padding: isMobile ? 12 : 14, borderBottom: `1px solid ${COLORS.border}` }}><div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 7 }}>{(['discover', 'activities', 'invites', 'mine'] as TabKey[]).map(tab => <button key={tab} type="button" onClick={() => setActiveTab(tab)} style={{ border: `1px solid ${activeTab === tab ? COLORS.lightAmber : COLORS.border}`, background: activeTab === tab ? 'rgba(14,165,233,0.14)' : 'rgba(255,255,255,0.72)', color: activeTab === tab ? COLORS.amber : COLORS.muted, borderRadius: 12, padding: '10px 5px', fontSize: 11, fontWeight: 900, cursor: 'pointer', minHeight: 42 }}>{tab === 'discover' ? 'Discover' : tab === 'activities' ? 'Activities' : tab === 'invites' ? `Invites${invites.length ? ` · ${invites.length}` : ''}` : 'My Activities'}</button>)}</div></div>
         <div style={{ flex: isMobile ? '0 0 auto' : 1, overflowY: isMobile ? 'visible' : 'auto', padding: isMobile ? '12px 12px 20px' : 14 }}>
-          {activeTab === 'discover' && <DiscoverTab loading={loading} venues={visibleVenues} activities={featuredActivities} selectedVenueId={selectedVenueId} cardRefs={cardRefs} onSelectVenue={selectVenue} onSeeActivities={venue => { setVenueFilterId(venue.id); setActiveTab('activities') }} onOpenActivity={setSelectedActivity} />}
+          {activeTab === 'discover' && <DiscoverTab loading={loading} venues={discoverVenues} activities={featuredActivities} selectedVenueId={selectedVenueId} cardRefs={cardRefs} onSelectVenue={selectVenue} onSeeActivities={venue => { setVenueFilterId(venue.id); setActiveTab('activities') }} onOpenActivity={setSelectedActivity} />}
           {activeTab === 'activities' && <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>{venueFilterId && <button type="button" onClick={() => setVenueFilterId(null)} style={{ border: `1px solid ${COLORS.border}`, background: 'rgba(255,255,255,0.78)', color: COLORS.amber, borderRadius: 999, padding: 10, cursor: 'pointer' }}>Clear venue filter</button>}{filteredActivities.map(activity => <ActivityCard key={activity.id} activity={activity} userId={userId} location={location} onJoin={() => joinActivity(activity)} onInvite={() => setInviteActivity(activity)} onComment={(content) => addComment(activity, content)} onEdit={() => setCreateContext({ activity, venue: activity.venue })} />)}{filteredActivities.length === 0 && <PanelEmpty text="No upcoming community activities match these filters." />}<button type="button" onClick={() => setCreateContext({ venue: selectedVenue })} style={{ border: `1.5px dashed ${COLORS.borderStrong}`, background: 'rgba(255,255,255,0.76)', borderRadius: 18, padding: 18, color: COLORS.amber, fontWeight: 900, cursor: 'pointer', minHeight: 82 }}>＋ Host an Activity</button></div>}
           {activeTab === 'invites' && <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>{invites.map(invite => <InviteCard key={invite.id} invite={invite} onAccept={() => acceptInvite(invite)} onDecline={() => declineInvite(invite)} />)}{invites.length === 0 && <PanelEmpty text="No pending activity invites." />}</div>}
           {activeTab === 'mine' && <MyActivitiesTab hosting={myHosting} attending={myAttending} onCancel={activity => { if (window.confirm('Delete this activity? It will be removed from Experience Activities.')) void postAction({ action: 'deleteActivity', activity_id: activity.id }, 'Activity deleted') }} onEdit={activity => setCreateContext({ activity, venue: activity.venue })} onLeave={activityId => postAction({ action: 'leaveActivity', activity_id: activityId }, 'Left activity')} />}

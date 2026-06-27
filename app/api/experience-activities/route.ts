@@ -3,6 +3,12 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { awardTrust } from '@/lib/trust/award'
+import { TRUST_LEDGER_TYPES, TRUST_REWARDS } from '@/lib/trust/rewards'
+
+const VENUE_FIELDS = 'id, name, address, city, country, lat, lng, venue_type, is_verified, avg_rating'
+const MOBILE_VENUE_LIMIT = 320
+const DESKTOP_VENUE_LIMIT = 900
 
 type ActivityAction =
   | { action: 'createActivity'; activity?: ActivityInput }
@@ -55,6 +61,36 @@ async function fetchAllRows<T = any>(buildQuery: () => any, pageSize = 1000): Pr
   return rows
 }
 
+function clampVenueLimit(value: number) {
+  if (!Number.isFinite(value)) return DESKTOP_VENUE_LIMIT
+  return Math.min(1200, Math.max(120, Math.floor(value)))
+}
+
+function mergeVenues(baseRows: any[], activityRows: any[]) {
+  const byId = new Map<string, any>()
+  for (const venue of baseRows) {
+    if (venue?.id) byId.set(String(venue.id), venue)
+  }
+  for (const activity of activityRows) {
+    const venue = activity?.venue
+    if (venue?.id && !byId.has(String(venue.id))) {
+      byId.set(String(venue.id), {
+        id: venue.id,
+        name: venue.name,
+        address: venue.address ?? null,
+        city: venue.city ?? null,
+        country: venue.country ?? null,
+        lat: venue.lat,
+        lng: venue.lng,
+        venue_type: venue.venue_type ?? null,
+        is_verified: venue.is_verified ?? null,
+        avg_rating: venue.avg_rating ?? null,
+      })
+    }
+  }
+  return Array.from(byId.values())
+}
+
 function cleanActivity(input: ActivityInput, userId?: string) {
   const scheduled = input.scheduled_at ? new Date(input.scheduled_at) : null
   if (!input.title?.trim()) throw new Error('Activity title is required')
@@ -87,6 +123,34 @@ function cleanActivity(input: ActivityInput, userId?: string) {
   }
 }
 
+async function awardActivityTrustOnce(
+  admin: ReturnType<typeof createAdminClient>,
+  input: { userId: string; amount: number; type: string; ref: string; desc: string },
+) {
+  const { userId, amount, type, ref, desc } = input
+  try {
+    const { data, error } = await admin
+      .from('trust_ledger')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('type', type)
+      .eq('reference_id', ref)
+      .maybeSingle()
+
+    if (error) {
+      console.error('[experience-activities] trust idempotency check failed', { userId, type, ref, message: error.message })
+      return { ok: false, amount: 0, error: error.message }
+    }
+    if (data?.id) return { ok: true, amount: 0, error: null }
+
+    return await awardTrust({ userId, amount, type, ref, desc })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[experience-activities] trust award failed', { userId, type, ref, message })
+    return { ok: false, amount: 0, error: message }
+  }
+}
+
 async function attachProfiles(admin: ReturnType<typeof createAdminClient>, rows: any[], inviteRows: any[] = []) {
   const creatorIds = rows.map((row) => row.created_by).filter(Boolean)
   const commentUserIds = rows.flatMap((row) => (row.comments ?? []).map((comment: any) => comment.user_id).filter(Boolean))
@@ -115,18 +179,24 @@ async function attachProfiles(admin: ReturnType<typeof createAdminClient>, rows:
   return { rows: withPeople, inviteRows: withSenders, profiles, balances }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const url = new URL(req.url)
+    const mobile = url.searchParams.get('mobile') === '1'
+    const requestedLimit = Number(url.searchParams.get('venueLimit') ?? (mobile ? MOBILE_VENUE_LIMIT : DESKTOP_VENUE_LIMIT))
+    const venueLimit = clampVenueLimit(requestedLimit)
     const userId = await currentUserId()
     const admin = createAdminClient()
     const now = new Date().toISOString()
 
-    const [venues, categoriesRes, activities] = await Promise.all([
-      fetchAllRows(() => admin.from('activity_venues').select('*').order('name')),
+    const [venuesRes, categoriesRes, activities] = await Promise.all([
+      admin.from('activity_venues').select(VENUE_FIELDS).not('lat', 'is', null).not('lng', 'is', null).order('is_verified', { ascending: false }).order('avg_rating', { ascending: false, nullsFirst: false }).order('name').limit(venueLimit),
       admin.from('activity_categories').select('*').order('sort_order'),
       fetchAllRows(() => admin.from('community_activities').select('*, venue:activity_venues(*), category:activity_categories(*), attendees:community_activity_attendees(*), comments:community_activity_comments(*)').gt('scheduled_at', now).eq('status', 'active').order('scheduled_at', { ascending: true })),
     ])
+    if (venuesRes.error) throw venuesRes.error
     if (categoriesRes.error) throw categoriesRes.error
+    const venues = mergeVenues(venuesRes.data ?? [], activities)
 
     let invites: any[] = []
     let hosting: any[] = []
@@ -163,11 +233,14 @@ export async function GET() {
     return NextResponse.json({
       userId,
       venues,
+      venueLimit,
       categories: categoriesRes.data ?? [],
       activities: people.rows.slice(0, activityCount),
       invites: people.inviteRows,
       hosting: people.rows.slice(activityCount),
       attending,
+      myHosting: people.rows.slice(activityCount),
+      myAttending: attending,
       friendIds,
       friends,
     }, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } })
@@ -189,7 +262,14 @@ export async function POST(req: NextRequest) {
       const { data, error } = await admin.from('community_activities').insert(row).select('id').single()
       if (error) throw error
       await admin.from('community_activity_attendees').insert({ activity_id: data.id, user_id: userId, status: 'going' })
-      return NextResponse.json({ id: data.id })
+      const trustResult = await awardActivityTrustOnce(admin, {
+        userId,
+        amount: TRUST_REWARDS.CREATE_ACTIVITY,
+        type: TRUST_LEDGER_TYPES.CREATE_ACTIVITY,
+        ref: data.id,
+        desc: `Hosted activity: ${row.title}`,
+      })
+      return NextResponse.json({ id: data.id, trustAwarded: trustResult.amount })
     }
 
     if (body.action === 'updateActivity') {
@@ -205,12 +285,29 @@ export async function POST(req: NextRequest) {
     if (body.action === 'joinActivity') {
       const { data: activity, error: activityError } = await admin.from('community_activities').select('id, max_attendees').eq('id', body.activity_id).eq('status', 'active').single()
       if (activityError) throw activityError
+      const { data: existingAttendance, error: existingAttendanceError } = await admin
+        .from('community_activity_attendees')
+        .select('status')
+        .eq('activity_id', body.activity_id)
+        .eq('user_id', userId)
+        .maybeSingle()
+      if (existingAttendanceError) throw existingAttendanceError
+      if (existingAttendance?.status === 'going') return NextResponse.json({ ok: true, status: 'going', trustAwarded: 0 })
       const { count, error: countError } = await admin.from('community_activity_attendees').select('id', { count: 'exact', head: true }).eq('activity_id', body.activity_id).eq('status', 'going')
       if (countError) throw countError
       const status = Number(count ?? 0) >= Number(activity.max_attendees ?? 20) ? 'waitlist' : 'going'
       const { error } = await admin.from('community_activity_attendees').upsert({ activity_id: body.activity_id, user_id: userId, status }, { onConflict: 'activity_id,user_id' })
       if (error) throw error
-      return NextResponse.json({ ok: true, status })
+      const trustResult = status === 'going'
+        ? await awardActivityTrustOnce(admin, {
+          userId,
+          amount: TRUST_REWARDS.ATTEND_ACTIVITY,
+          type: TRUST_LEDGER_TYPES.ATTEND_ACTIVITY,
+          ref: body.activity_id,
+          desc: 'Joined an Experience Activity',
+        })
+        : { amount: 0 }
+      return NextResponse.json({ ok: true, status, trustAwarded: trustResult.amount })
     }
 
     if (body.action === 'leaveActivity') {
@@ -245,13 +342,25 @@ export async function POST(req: NextRequest) {
     }
 
     if (body.action === 'updateInvite') {
-      const { data: invite, error: inviteError } = await admin.from('community_activity_invites').select('id, to_user_id, activity_id').eq('id', body.invite_id).single()
+      const { data: invite, error: inviteError } = await admin.from('community_activity_invites').select('id, to_user_id, activity_id, status').eq('id', body.invite_id).single()
       if (inviteError) throw inviteError
       if (invite.to_user_id !== userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       const { error } = await admin.from('community_activity_invites').update({ status: body.status }).eq('id', body.invite_id)
       if (error) throw error
-      if (body.status === 'accepted') await admin.from('community_activity_attendees').upsert({ activity_id: invite.activity_id, user_id: userId, status: 'going' }, { onConflict: 'activity_id,user_id' })
-      return NextResponse.json({ ok: true })
+      let trustAwarded = 0
+      if (body.status === 'accepted') {
+        const { error: attendeeError } = await admin.from('community_activity_attendees').upsert({ activity_id: invite.activity_id, user_id: userId, status: 'going' }, { onConflict: 'activity_id,user_id' })
+        if (attendeeError) throw attendeeError
+        const trustResult = await awardActivityTrustOnce(admin, {
+          userId,
+          amount: TRUST_REWARDS.ATTEND_ACTIVITY,
+          type: TRUST_LEDGER_TYPES.ATTEND_ACTIVITY,
+          ref: invite.activity_id,
+          desc: 'Accepted an Experience Activity invite',
+        })
+        trustAwarded = trustResult.amount
+      }
+      return NextResponse.json({ ok: true, trustAwarded })
     }
 
     if (body.action === 'addComment') {

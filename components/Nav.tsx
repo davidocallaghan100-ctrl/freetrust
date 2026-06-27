@@ -80,7 +80,7 @@ const DRAWER_SECTIONS = [
     links: [
       { href: '/travel', label: 'Travel', icon: '✈️' },
       { href: '/experience-pubs', label: 'Pubs', icon: '🍺' },
-      { href: '/experience-activities', label: 'Experience Activities', icon: '🏃' },
+      { href: '/experience-activities', label: 'Activities', icon: '🏃' },
     ],
   },
 ]

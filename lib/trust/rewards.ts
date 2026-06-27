@@ -31,12 +31,14 @@ export const TRUST_REWARDS = {
   CREATE_PRODUCT:    50,   // Physical/digital product listed
   CREATE_JOB:        30,   // Job posted
   CREATE_EVENT:      50,   // Event created
+  CREATE_ACTIVITY:   50,   // Experience Activity hosted
   PUBLISH_ARTICLE:   75,   // Article published
 
   // ── Community ────────────────────────────────────────────────────
   CREATE_COMMUNITY:  100,  // User creates a new community
   JOIN_COMMUNITY:    20,   // User joins an existing community
   RSVP_EVENT:        10,   // User RSVPs to an event
+  ATTEND_ACTIVITY:   10,   // User joins an Experience Activity
 
   // ── Transactions ─────────────────────────────────────────────────
   COMPLETE_ORDER:    100,  // Order marked complete (seller side)
@@ -67,11 +69,13 @@ export const TRUST_LEDGER_TYPES = {
   CREATE_PRODUCT:   'create_product',
   CREATE_JOB:       'create_job',
   CREATE_EVENT:     'create_event',
+  CREATE_ACTIVITY:  'create_activity',
   PUBLISH_ARTICLE:  'publish_article',
 
   CREATE_COMMUNITY: 'create_community',
   JOIN_COMMUNITY:   'join_community',
   RSVP_EVENT:       'rsvp_event',
+  ATTEND_ACTIVITY:  'attend_activity',
 
   COMPLETE_ORDER:   'complete_order',
   LEAVE_REVIEW:     'leave_review',

@@ -374,12 +374,13 @@ async function buildUnifiedAllFeed(
   limit: number,
   sourceWindow: number,
 ): Promise<{ posts: FeedItem[]; hasMore: boolean }> {
-  const [articles, services] = await Promise.all([
+  const [articles, services, activities] = await Promise.all([
     loadArticles(supabase, 0, sourceWindow),
     loadServices(supabase, 0, sourceWindow),
+    loadActivities(supabase, 0, sourceWindow),
   ])
 
-  const merged = [...feedPosts, ...articles, ...services].sort(byNewestCreatedAt)
+  const merged = [...feedPosts, ...articles, ...services, ...activities].sort(byNewestCreatedAt)
   return {
     posts: merged.slice(offset, offset + limit),
     hasMore: merged.length > offset + limit,
@@ -494,6 +495,65 @@ async function loadServices(supabase: SupabaseLike, offset: number, limit: numbe
     created_at: s.created_at as string,
     profiles: normaliseProfile(s.seller),
   }))
+
+  return await withProfileVerificationBadges(supabase, items)
+}
+
+async function loadActivities(supabase: SupabaseLike, offset: number, limit: number): Promise<FeedItem[]> {
+  const { data, error } = await supabase
+    .from('community_activities')
+    .select(`
+      id, created_by, title, description, activity_type, scheduled_at, duration_minutes,
+      skill_level, cost_per_person, location_name, created_at,
+      venue:activity_venues(id, name, city, country),
+      category:activity_categories(id, name, emoji),
+      creator:profiles!created_by(id, full_name, avatar_url, trust_balance, is_verified, verified_at, verification_status)
+    `)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1)
+
+  if (error) {
+    console.error('[feed/posts activities]', error.message)
+    return []
+  }
+
+  const items: FeedItem[] = (data ?? []).map((a: Record<string, unknown>) => {
+    const venueRaw = a.venue
+    const venue = Array.isArray(venueRaw) ? (venueRaw[0] ?? null) : (venueRaw as Record<string, unknown> | null)
+    const categoryRaw = a.category
+    const category = Array.isArray(categoryRaw) ? (categoryRaw[0] ?? null) : (categoryRaw as Record<string, unknown> | null)
+    const schedule = a.scheduled_at ? new Date(a.scheduled_at as string) : null
+    const scheduleText = schedule && !Number.isNaN(schedule.getTime())
+      ? new Intl.DateTimeFormat('en-IE', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(schedule)
+      : null
+    const venueText = venue?.name ? ` at ${venue.name}` : a.location_name ? ` at ${a.location_name}` : ''
+    const categoryText = category?.name ? `${category.name} · ` : ''
+    const contentPrefix = `${categoryText}${scheduleText ?? 'Upcoming activity'}${venueText}`
+    return {
+      id: `activity-${a.id}`,
+      user_id: a.created_by as string,
+      type: 'activity',
+      content: [contentPrefix, a.description].filter(Boolean).join('\n\n'),
+      media_url: null,
+      media_type: null,
+      title: a.title as string,
+      link_url: `/experience-activities?activity=${a.id}`,
+      likes_count: 0,
+      comments_count: 0,
+      saves_count: 0,
+      views_count: 0,
+      created_at: (a.created_at as string) ?? (a.scheduled_at as string),
+      profiles: normaliseProfile(a.creator),
+      metadata: {
+        scheduled_at: a.scheduled_at,
+        activity_type: a.activity_type,
+        skill_level: a.skill_level,
+        cost_per_person: a.cost_per_person,
+        feed_author_subtitle: 'Activity host',
+      },
+    }
+  })
 
   return await withProfileVerificationBadges(supabase, items)
 }
