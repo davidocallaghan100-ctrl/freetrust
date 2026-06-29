@@ -189,6 +189,21 @@ function MessagesPageInner() {
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map())
   const markedReadRef = useRef<Set<string>>(new Set())
 
+  const selectConversation = useCallback((id: string) => {
+    setActiveId(id)
+    setMobileView('thread')
+    setSafetyWarning(null)
+    setSendError(null)
+    setPendingResend(null)
+    setAttachedFiles([])
+    setSelectedGif(null)
+    setReplyingTo(null)
+    setParticipantIds([])
+    markedReadRef.current.clear()
+    // Mark as read
+    setConversations(prev => prev.map(c => c.id === id ? { ...c, unread_count: 0 } : c))
+  }, [])
+
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -225,6 +240,18 @@ function MessagesPageInner() {
     // Clean up the URL so the back button doesn't re-trigger the drawer
     router.replace('/messages')
   }, [searchParams, userId, router])
+
+  // Support legacy/deep links from older message buttons that used to route
+  // directly to /messages/[conversationId]. The current, safer mobile UI lives
+  // in this inbox page, so open the thread here and clean the URL once loaded.
+  useEffect(() => {
+    const conversationId = searchParams.get('conversation') || searchParams.get('conversationId')
+    if (!conversationId || !userId || conversations.length === 0) return
+    const exists = conversations.some(conversation => conversation.id === conversationId)
+    if (!exists) return
+    selectConversation(conversationId)
+    router.replace('/messages')
+  }, [searchParams, userId, conversations, router, selectConversation])
 
   // Refresh the conversation list whenever the tab comes back into
   // view so unread counts + last-message previews stay current.
@@ -424,21 +451,6 @@ function MessagesPageInner() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView()
   }, [messages])
-
-  const selectConversation = (id: string) => {
-    setActiveId(id)
-    setMobileView('thread')
-    setSafetyWarning(null)
-    setSendError(null)
-    setPendingResend(null)
-    setAttachedFiles([])
-    setSelectedGif(null)
-    setReplyingTo(null)
-    setParticipantIds([])
-    markedReadRef.current.clear()
-    // Mark as read
-    setConversations(prev => prev.map(c => c.id === id ? { ...c, unread_count: 0 } : c))
-  }
 
   const doSend = async (text: string, optimisticId: string, attachments: MessageAttachment[], replyToId: string | null): Promise<boolean> => {
     if (!activeId || !userId) return false

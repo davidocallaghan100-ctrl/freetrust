@@ -159,11 +159,12 @@
     "loadingPages": "Chargement de vos pages…",
     "noAdminPages": "Aucune page admin trouvée dans cette session.",
     "completeSetupTitle": "Terminez la configuration de votre compte",
-    "completeSetupBody": "FreeTrust exige un vrai prénom et nom, une photo de visage, une bio, une localisation et au moins un loisir avant qu’un compte apparaisse dans la communauté ou sur les pages de profil.",
+    "completeSetupBody": "FreeTrust exige un vrai prénom et nom, une photo de visage, une localisation et au moins un loisir avant qu’un compte apparaisse dans la communauté ou sur les pages de profil. La bio est facultative.",
     "realName": "Vrai prénom et nom",
     "realPicture": "Vraie photo de profil",
-    "bioLocationHobbies": "Bio, localisation et loisirs",
-    "finishSetup": "Terminer la configuration"
+    "bioLocationHobbies": "Localisation et loisirs",
+    "finishSetup": "Terminer la configuration",
+    "locationHobbies": "Localisation et loisirs"
   },
   "search": {
     "placeholder": "Rechercher sur la place de marché : produits, services, événements…",
@@ -1379,6 +1380,7 @@
     "pushHomeScreen": "Ajoutez FreeTrust à votre écran d’accueil pour activer les notifications push",
     "pushNotify": "Recevez une notification quand les membres publient, commentent ou réagissent",
     "installApp": "Installer l’application FreeTrust",
-    "install": "Installer"
+    "install": "Installer",
+    "locationHobbies": "Location and hobbies"
   }
 }

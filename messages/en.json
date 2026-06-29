@@ -159,10 +159,11 @@
     "loadingPages": "Loading your pages…",
     "noAdminPages": "No admin pages found on this session.",
     "completeSetupTitle": "Complete your account setup",
-    "completeSetupBody": "FreeTrust requires a real first and last name, face photo, bio, location, and at least one hobby before an account appears in the member community or profile pages.",
+    "completeSetupBody": "FreeTrust requires a real first and last name, face photo, location, and at least one hobby before an account appears in the member community or profile pages. Bio is optional.",
     "realName": "Real first and last name",
     "realPicture": "Real profile picture",
-    "bioLocationHobbies": "Bio, location, and hobbies",
+    "bioLocationHobbies": "Location and hobbies",
+    "locationHobbies": "Location and hobbies",
     "finishSetup": "Finish setup now"
   },
   "search": {
@@ -1379,6 +1380,7 @@
     "pushHomeScreen": "Add FreeTrust to your Home Screen to enable push notifications",
     "pushNotify": "Get notified when members post, comment or react",
     "installApp": "Install FreeTrust App",
-    "install": "Install"
+    "install": "Install",
+    "locationHobbies": "Location and hobbies"
   }
 }

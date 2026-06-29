@@ -156,11 +156,12 @@
     "loadingPages": "Do leathanaigh á lódáil…",
     "noAdminPages": "Níor aimsíodh leathanaigh riarthóra sa seisiún seo.",
     "completeSetupTitle": "Críochnaigh socrú do chuntais",
-    "completeSetupBody": "Éilíonn FreeTrust fíorainm agus sloinne, grianghraf aghaidhe, beathaisnéis, suíomh agus caitheamh aimsire amháin ar a laghad sula bhfeictear cuntas sa phobal ball nó ar leathanaigh phróifíle.",
+    "completeSetupBody": "Éilíonn FreeTrust fíorainm agus sloinne, grianghraf aghaidhe, suíomh agus caitheamh aimsire amháin ar a laghad sula bhfeictear cuntas sa phobal ball nó ar leathanaigh phróifíle. Tá beathaisnéis roghnach.",
     "realName": "Fíorainm agus sloinne",
     "realPicture": "Fíorphictiúr próifíle",
-    "bioLocationHobbies": "Beathaisnéis, suíomh agus caitheamh aimsire",
-    "finishSetup": "Críochnaigh an socrú anois"
+    "bioLocationHobbies": "Suíomh agus caitheamh aimsire",
+    "finishSetup": "Críochnaigh an socrú anois",
+    "locationHobbies": "Suíomh agus caitheamh aimsire"
   },
   "search": {
     "placeholder": "Cuardaigh an margadh: táirgí, seirbhísí, imeachtaí…",
@@ -859,6 +860,7 @@
     "dismiss": "Díbhe",
     "copyright": "© 2026 FreeTrust. Gach ceart ar cosaint.",
     "pushHomeScreen": "Cuir FreeTrust le do Scáileán Baile chun fógraí brú a chumasú",
-    "pushNotify": "Faigh fógra nuair a phostálann, a dhéanann trácht nó a imoibríonn baill"
+    "pushNotify": "Faigh fógra nuair a phostálann, a dhéanann trácht nó a imoibríonn baill",
+    "locationHobbies": "Location and hobbies"
   }
 }

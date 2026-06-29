@@ -77,7 +77,6 @@ export function getProfileCompletionIssues(profile: ProfileCompletionRecord | nu
   }
   if (!hasRealName(profile)) issues.push('real_name_missing')
   if (!hasProfilePhoto(profile)) issues.push('profile_photo_missing')
-  if (!hasMeaningfulText(profile.bio, 10)) issues.push('bio_missing')
   if (!hasMeaningfulText(profile.location, 2)) issues.push('location_missing')
   if (profile.onboarding_complete !== true) issues.push('onboarding_incomplete')
   if (!hasHobbies(profile)) issues.push('hobbies_missing')

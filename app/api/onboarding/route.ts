@@ -50,9 +50,6 @@ export async function POST(request: NextRequest) {
     if (!hasProfilePhoto({ avatar_url })) {
       return NextResponse.json({ error: 'A real profile photo is required before your account can be completed.' }, { status: 400 })
     }
-    if (bioClean.length < 10) {
-      return NextResponse.json({ error: 'Please add a short bio so members know who they are dealing with.' }, { status: 400 })
-    }
     if (locationClean.length < 2) {
       return NextResponse.json({ error: 'Please add your city or location.' }, { status: 400 })
     }

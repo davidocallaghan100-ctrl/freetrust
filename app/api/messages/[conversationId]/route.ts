@@ -370,7 +370,7 @@ export async function POST(
         const senderName = (senderProfile?.full_name as string | null) ?? 'A member'
         const cleanPreview = gifPreviewLabel(content, content)
         const preview   = cleanPreview.slice(0, 140)
-        const link      = `/messages/${conversationId}`
+        const link      = `/messages?conversation=${encodeURIComponent(conversationId)}`
 
         await Promise.all(
           (others ?? []).map(async row => {

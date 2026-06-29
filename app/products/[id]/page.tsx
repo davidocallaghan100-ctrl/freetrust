@@ -167,7 +167,7 @@ export default function ProductDetailPage() {
           entityId: listing?.id ?? null,
           metadata: { title: listingTitle },
         })
-        router.push(data.conversation_id ? `/messages/${data.conversation_id}` : '/messages')
+        router.push(data.conversation_id ? `/messages?conversation=${encodeURIComponent(data.conversation_id)}` : '/messages')
       }
     } catch {
       alert('Could not send message. Please try again.')

@@ -16,6 +16,7 @@
     "@supabase/ssr": "^0.10.0",
     "@supabase/supabase-js": "^2.101.1",
     "@types/dompurify": "^3.0.5",
+    "@vercel/analytics": "^2.0.1",
     "date-fns": "^4.1.0",
     "googleapis": "^144.0.0",
     "isomorphic-dompurify": "^3.8.0",

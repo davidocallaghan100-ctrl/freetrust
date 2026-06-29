@@ -152,7 +152,7 @@ function ProfileSetupPrompt() {
         <div style={{ display: 'grid', gap: 8, marginTop: 16, color: '#cbd5e1', fontSize: 13 }}>
           <div>✓ {t('realName')}</div>
           <div>✓ {t('realPicture')}</div>
-          <div>✓ {t('bioLocationHobbies')}</div>
+          <div>✓ {t('locationHobbies')}</div>
         </div>
         <button
           type="button"

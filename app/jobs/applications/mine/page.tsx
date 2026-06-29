@@ -183,7 +183,7 @@ function ApplicationCard({ app }: { app: JobApplication }) {
       {job && (
         <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', paddingTop: '0.25rem', borderTop: '1px solid rgba(148,163,184,0.08)' }}>
           <Link
-            href={`/messages/new?userId=${job.poster_id}`}
+            href={`/messages?to=${job.poster_id}`}
             style={{
               background: 'rgba(56,189,248,0.1)', color: '#38bdf8',
               border: '1px solid rgba(56,189,248,0.2)', borderRadius: 7,

@@ -162,7 +162,7 @@ export async function PATCH(request: NextRequest) {
     const completionIssues = getProfileCompletionIssues(mergedProfile)
       .filter(issue => issue !== 'onboarding_incomplete')
     if ((currentProfile as { onboarding_complete?: boolean | null } | null)?.onboarding_complete === true && completionIssues.length > 0) {
-      return NextResponse.json({ error: 'Your profile must keep a real name, face photo, bio, location, and hobbies to remain visible on FreeTrust.' }, { status: 400 })
+      return NextResponse.json({ error: 'Your profile must keep a real name, face photo, location, and hobbies to remain visible on FreeTrust.' }, { status: 400 })
     }
 
     const { data: profile, error } = await supabase

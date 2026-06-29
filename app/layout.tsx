@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
 import { cookies } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import "./globals.css";
@@ -173,6 +174,7 @@ export default async function RootLayout({
             </BasketProvider>
           </CurrencyProvider>
         </NextIntlClientProvider>
+        <Analytics />
 
         {/* Google Analytics 4 — loaded after page is interactive */}
         {process.env.NEXT_PUBLIC_GA_ID && (

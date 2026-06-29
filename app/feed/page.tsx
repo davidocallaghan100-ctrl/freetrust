@@ -31,6 +31,11 @@ const isInteractiveTarget = (target: EventTarget | null) => {
   return target instanceof Element && Boolean(target.closest(INTERACTIVE_SELECTOR))
 }
 
+const isAndroidRuntime = () => {
+  if (typeof navigator === 'undefined') return false
+  return /Android/i.test(navigator.userAgent || '')
+}
+
 const EMPTY_META: Record<Filter, { icon: string; title: string; sub: string }> = {
   all:      { icon: '🌱', title: 'No posts yet',         sub: 'Be the first to share something!' },
   photos:   { icon: '📷', title: 'No photos yet',        sub: 'Share a photo to get this filter going.' },
@@ -253,6 +258,11 @@ export default function FeedPage() {
   }, [fetchPosts, refreshing])
 
   const handleTouchStart = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+    // Android Chrome/WebView can stall native document scrolling when React
+    // touch handlers sit on the full feed root. Leave Android scrolling fully
+    // native and keep the custom pull-to-refresh only for platforms that do
+    // not report the feed getting stuck.
+    if (isAndroidRuntime()) return
     if (loading || refreshing || window.scrollY > 2) return
     if (isInteractiveTarget(event.target)) return
     pullStartYRef.current = event.touches[0]?.clientY ?? null
@@ -260,6 +270,7 @@ export default function FeedPage() {
   }, [loading, refreshing])
 
   const handleTouchMove = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+    if (isAndroidRuntime()) return
     if (pullStartYRef.current === null || loading || refreshing || window.scrollY > 2) return
     const currentY = event.touches[0]?.clientY ?? pullStartYRef.current
     const delta = currentY - pullStartYRef.current
@@ -274,6 +285,7 @@ export default function FeedPage() {
   }, [loading, refreshing])
 
   const handleTouchEnd = useCallback(async () => {
+    if (isAndroidRuntime()) return
     const shouldRefresh = pullActiveRef.current && pullDistance >= PULL_REFRESH_THRESHOLD
     pullStartYRef.current = null
     pullActiveRef.current = false
@@ -348,10 +360,12 @@ export default function FeedPage() {
       onPointerMove={handlePointerMove}
       onPointerUp={finishPenDrag}
       onPointerCancel={() => { penDragRef.current = { active: false, startY: 0, lastY: 0, total: 0 }; pullStartYRef.current = null; pullActiveRef.current = false; setPullDistance(0) }}
-      style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', overscrollBehaviorY: 'contain', touchAction: 'pan-y' }}
+      className="feed-scroll-root"
+      style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', overscrollBehaviorY: 'auto', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
     >
       <style>{`
-        html, body { overscroll-behavior-y: contain; }
+        html, body { overscroll-behavior-y: auto; }
+        .feed-scroll-root { min-height: 100vh; min-height: 100dvh; }
         .feed-grid { display: grid; grid-template-columns: 1fr 272px; gap: 1.5rem; max-width: 1080px; margin: 0 auto; padding: 1.5rem; align-items: start; }
         .feed-main-col { min-width: 0; width: 100%; overflow: hidden; }
         .feed-sidebar-col { position: sticky; top: 110px; display: flex; flex-direction: column; gap: 1rem; }

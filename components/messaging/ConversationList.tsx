@@ -33,7 +33,7 @@ export default function ConversationList({
     if (onSelect) {
       onSelect(id)
     } else {
-      router.push(`/messages/${id}`)
+      router.push(`/messages?conversation=${encodeURIComponent(id)}`)
     }
   }
 
@@ -156,4 +156,3 @@ export default function ConversationList({
     </ul>
   )
 }
-

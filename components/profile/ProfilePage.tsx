@@ -1388,7 +1388,7 @@ export default function ProfilePage() {
         <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>{profileHiddenUntilComplete ? 'Profile hidden until setup is complete' : 'Profile not found'}</h3>
         {profileHiddenUntilComplete && (
           <p style={{ color: '#94a3b8', maxWidth: 420, margin: 0, lineHeight: 1.5 }}>
-            FreeTrust only displays member accounts after they have a real name, face photo, bio, location, hobbies, and completed onboarding.
+            FreeTrust only displays member accounts after they have a real name, face photo, location, hobbies, and completed onboarding. Bio is optional.
           </p>
         )}
         <Link href="/members" style={{ color: '#38bdf8', textDecoration: 'none', fontSize: '0.9rem' }}>← Back to Members</Link>

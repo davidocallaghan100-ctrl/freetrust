@@ -112,6 +112,12 @@ export default function ConversationPage() {
   const router         = useRouter()
   const conversationId = params.id as string
 
+  useEffect(() => {
+    if (conversationId) {
+      router.replace(`/messages?conversation=${encodeURIComponent(conversationId)}`)
+    }
+  }, [conversationId, router])
+
   const [userId,    setUserId]    = useState<string | null>(null)
   const [messages,  setMessages]  = useState<Message[]>([])
   const [participantIds, setParticipantIds] = useState<string[]>([])
@@ -461,6 +467,14 @@ export default function ConversationPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView()
   }, [messages])
+
+  if (conversationId) {
+    return (
+      <div style={{ minHeight: 'calc(100dvh - 58px)', display: 'grid', placeItems: 'center', background: '#07111f', color: '#94a3b8', fontFamily: 'system-ui', padding: 24, textAlign: 'center' }}>
+        Opening the updated FreeTrust messages…
+      </div>
+    )
+  }
 
   return (
     <div className="conv-root">

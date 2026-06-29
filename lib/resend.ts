@@ -74,7 +74,7 @@ export async function sendWelcomeEmail(to: string, name: string, amount: number 
     ${divider()}
     <div style="background:rgba(56,189,248,0.07);border:1px solid rgba(56,189,248,0.15);border-radius:12px;padding:20px 24px;margin:0 0 20px;">
       <div style="font-size:13px;font-weight:700;color:#38bdf8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Your profile is your reputation</div>
-      <p style="margin:0 0 12px;font-size:14px;color:#94a3b8;line-height:1.6;">Members with a real photo and complete profile get <strong style="color:#f1f5f9;">3x more engagement</strong>. Take 60 seconds to add your face and a short bio — it's the single biggest thing you can do to get your first sale.</p>
+      <p style="margin:0 0 12px;font-size:14px;color:#94a3b8;line-height:1.6;">Members with a real photo, location, and interests get <strong style="color:#f1f5f9;">3x more engagement</strong>. Take 60 seconds to finish the required setup — you can add a bio later if you want.</p>
       <div style="text-align:center;">${btn('Complete My Profile →', `${BASE_URL}/profile`)}</div>
     </div>
     ${divider()}
