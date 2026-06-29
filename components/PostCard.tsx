@@ -1001,10 +1001,11 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
   const videoRef = useRef<HTMLVideoElement>(null)
   const autoPausedRef = useRef(false)
   const userPausedRef = useRef(false)
+  const audioEnabledRef = useRef(true)
   const posterCapturedRef = useRef(false)
   const [playing, setPlaying] = useState(false)
   const [duration, setDuration] = useState<number | null>(null)
-  const [muted, setMuted] = useState(true)
+  const [muted, setMuted] = useState(false)
   const [posterUrl, setPosterUrl] = useState<string | null>(null)
   const [previewReady, setPreviewReady] = useState(false)
   const frameStyle = isShort
@@ -1042,21 +1043,35 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
     setDuration(null)
   }, [src])
 
-  // Auto-play muted video when it is visibly in the feed. This applies to
-  // normal videos and shorts; browsers require autoplay to remain muted.
+  // Auto-play video when it is visibly in the feed. Sound is enabled by
+  // default so users hear feed videos without manually unmuting. Browser
+  // autoplay policies can still block sound before a user gesture, so we
+  // gracefully fall back to muted autoplay instead of leaving the card paused.
   useEffect(() => {
     const el = videoRef.current
     if (!el) return
 
     const tryAutoplay = () => {
-      el.muted = true
-      setMuted(true)
+      const shouldMute = !audioEnabledRef.current
+      el.muted = shouldMute
+      setMuted(shouldMute)
       el.play()
         .then(() => {
           autoPausedRef.current = false
           setPlaying(true)
         })
-        .catch(() => {})
+        .catch(() => {
+          if (!shouldMute) {
+            el.muted = true
+            setMuted(true)
+            el.play()
+              .then(() => {
+                autoPausedRef.current = false
+                setPlaying(true)
+              })
+              .catch(() => {})
+          }
+        })
     }
 
     const observer = new IntersectionObserver(
@@ -1119,14 +1134,40 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
     const visibleBottom = Math.min(viewportHeight, rect.bottom)
     const visiblePx = Math.max(0, visibleBottom - visibleTop)
     if (visiblePx < Math.min(240, rect.height * 0.3)) return
-    el.muted = true
-    setMuted(true)
+    const shouldMute = !audioEnabledRef.current
+    el.muted = shouldMute
+    setMuted(shouldMute)
     el.play()
       .then(() => {
         autoPausedRef.current = false
         setPlaying(true)
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!shouldMute) {
+          el.muted = true
+          setMuted(true)
+          el.play()
+            .then(() => {
+              autoPausedRef.current = false
+              setPlaying(true)
+            })
+            .catch(() => {})
+        }
+      })
+  }
+
+  const toggleMute = (e: ReactMouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation()
+    const el = videoRef.current
+    const nextMuted = !muted
+    audioEnabledRef.current = !nextMuted
+    if (el) {
+      el.muted = nextMuted
+      if (!nextMuted && el.paused) {
+        el.play().then(() => setPlaying(true)).catch(() => {})
+      }
+    }
+    setMuted(nextMuted)
   }
 
   return (
@@ -1139,6 +1180,7 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
       <video
         ref={videoRef}
         src={src}
+        autoPlay
         muted={muted}
         playsInline
         loop={isShort}
@@ -1177,8 +1219,9 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
       {/* Mute toggle while playing */}
       {playing && (
         <button
-          onClick={e => { e.stopPropagation(); setMuted(m => { if (videoRef.current) videoRef.current.muted = !m; return !m }) }}
+          onClick={toggleMute}
           style={{ position: 'absolute', bottom: '10px', right: '10px', zIndex: 5, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', color: '#fff', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          aria-label={muted ? 'Enable video sound' : 'Disable video sound'}
         >
           {muted ? '🔇' : '🔊'}
         </button>

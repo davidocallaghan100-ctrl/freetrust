@@ -647,7 +647,7 @@ async function fetchEvents(supabase: SupabaseLike, offset: number, limit: number
   const { data, error } = await supabase
     .from('events')
     .select(`
-      id, creator_id, title, description, starts_at, ends_at, venue_name, is_online, cover_image_url, category, created_at,
+      id, creator_id, title, description, starts_at, ends_at, venue_name, is_online, cover_image_url, category, organiser_name, created_at,
       creator:profiles!creator_id(id, full_name, avatar_url, trust_balance, is_verified, verified_at, verification_status)
     `)
     .eq('status', 'published')
@@ -661,22 +661,36 @@ async function fetchEvents(supabase: SupabaseLike, offset: number, limit: number
     return NextResponse.json({ posts: [], hasMore: false })
   }
 
-  const items: FeedItem[] = (data ?? []).map((e: Record<string, unknown>) => ({
-    id: `event-${e.id}`,
-    user_id: e.creator_id as string,
-    type: 'event',
-    content: (e.description as string) ?? null,
-    media_url: (e.cover_image_url as string) ?? null,
-    media_type: e.cover_image_url ? 'image' : null,
-    title: e.title as string,
-    link_url: `/events/${e.id}`,
-    likes_count: 0,
-    comments_count: 0,
-    saves_count: 0,
-    views_count: 0,
-    created_at: (e.starts_at as string) ?? (e.created_at as string),
-    profiles: normaliseProfile(e.creator),
-  }))
+  const items: FeedItem[] = (data ?? []).map((e: Record<string, unknown>) => {
+    const organiserName = typeof e.organiser_name === 'string' && e.organiser_name.trim()
+      ? e.organiser_name.trim()
+      : null
+    return {
+      id: `event-${e.id}`,
+      user_id: e.creator_id as string,
+      type: 'event',
+      content: (e.description as string) ?? null,
+      media_url: (e.cover_image_url as string) ?? null,
+      media_type: e.cover_image_url ? 'image' : null,
+      title: e.title as string,
+      link_url: `/events/${e.id}`,
+      likes_count: 0,
+      comments_count: 0,
+      saves_count: 0,
+      views_count: 0,
+      created_at: (e.starts_at as string) ?? (e.created_at as string),
+      profiles: normaliseProfile(e.creator),
+      metadata: organiserName
+        ? {
+            feed_author_name: organiserName,
+            feed_author_href: `/events/${e.id}`,
+            feed_author_subtitle: 'Event organiser',
+            feed_hide_personal_byline: true,
+            feed_suppress_owner_menu: true,
+          }
+        : null,
+    }
+  })
 
   return NextResponse.json({ posts: await withProfileVerificationBadges(supabase, items), hasMore: items.length === limit })
 }

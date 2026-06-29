@@ -165,12 +165,11 @@ export async function POST(req: NextRequest) {
       type?: string
       data?: Record<string, unknown>
       visibility?: string
-      // Optional: publish this post under an organisation's identity
-      // instead of the caller's personal profile. Honoured for
-      // type ∈ {text, article, photo, service, product}. Feed/article
-      // posts use it as the public byline; services/products store it
-      // as the offering organisation while seller_id remains the
-      // accountable human.
+      // Optional: publish under an organisation's identity instead of
+      // the caller's personal profile. Feed/article posts use it as a
+      // public byline; listings/jobs store it as the offering org;
+      // events copy the org name into organiser fields because the
+      // current events table has no stable organisation FK.
       // Server verifies the caller is the org creator or has role
       // owner/admin in organisation_members.
       organisation_id?: string
@@ -196,11 +195,11 @@ export async function POST(req: NextRequest) {
 
     // ── Post-as-organisation auth check ─────────────────────────────────────
     // Resolve once, reuse in the article + feed_posts branches below.
-    // Only allowed for text/article/photo/service/product; on every other type
-    // we silently drop the field so a stale client or malicious caller
-    // can't smuggle an org byline/owner onto unrelated content.
-    const ALLOWED_ORG_TYPES = new Set(['text', 'article', 'photo', 'service', 'product'])
+    // Allowed for every type exposed by /create. The actual storage field
+    // differs by destination table, but the authorisation rule is identical.
+    const ALLOWED_ORG_TYPES = new Set(['text', 'article', 'photo', 'video', 'short', 'link', 'poll', 'article', 'job', 'event', 'service', 'product'])
     let postedAsOrganisationId: string | null = null
+    let postedAsOrganisation: { id: string; name: string; logo_url: string | null; slug: string | null } | null = null
     if (body.organisation_id && ALLOWED_ORG_TYPES.has(type)) {
       const orgId = body.organisation_id
       // Membership row is the canonical check — the 20260414000001
@@ -229,6 +228,14 @@ export async function POST(req: NextRequest) {
         return fail('You are not authorised to post as that organisation', 403)
       }
       postedAsOrganisationId = orgId
+      const { data: orgDetails } = await admin
+        .from('organisations')
+        .select('id, name, logo_url, slug')
+        .eq('id', orgId)
+        .maybeSingle()
+      if (orgDetails) {
+        postedAsOrganisation = orgDetails as { id: string; name: string; logo_url: string | null; slug: string | null }
+      }
     }
 
     let redirectUrl = '/feed'
@@ -330,6 +337,9 @@ export async function POST(req: NextRequest) {
         currency_code:  currencyCode,
         salary_min_eur: salaryMinEur,
         salary_max_eur: salaryMaxEur,
+        org_id: postedAsOrganisationId,
+        company_name: postedAsOrganisation?.name ?? data.company_name ?? null,
+        company_logo_url: postedAsOrganisation?.logo_url ?? data.company_logo_url ?? null,
       }).select('id').single()
       if (error) {
         console.error('[publish job]', error)
@@ -383,6 +393,8 @@ export async function POST(req: NextRequest) {
         location_label:   struct.location_label ?? null,
         currency_code:    currencyCode,
         ticket_price_eur: ticketPriceEur,
+        organiser_name: postedAsOrganisation?.name ?? data.organiser_name ?? null,
+        organiser_bio: postedAsOrganisation ? 'Hosted by this FreeTrust organisation.' : data.organiser_bio ?? null,
       }).select('id').single()
       if (error) {
         console.error('[publish event]', error)
@@ -677,10 +689,7 @@ export async function POST(req: NextRequest) {
         media_url: mapped.media_url ?? null,
         media_type: type === 'photo' ? 'image' : type === 'video' || type === 'short' ? 'video' : null,
         // Display override — null for personal posts, set to an
-        // organisation id when the caller publishes as an org AND
-        // the type is allowed (text/photo; video/short/link/poll
-        // skip this because postedAsOrganisationId is only set for
-        // ALLOWED_ORG_TYPES above).
+        // organisation id when the caller publishes as an org.
         posted_as_organisation_id: postedAsOrganisationId,
       })
       if (error) {

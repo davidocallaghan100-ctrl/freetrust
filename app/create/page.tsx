@@ -336,13 +336,41 @@ function SharedFields({
 
 // Orgs the current user can post on behalf of — populated on mount
 // from organisation_members (filtered to owner/admin) + organisations
-// (via the FK join). Used to render the "Post as" selector on
-// text/article/photo types.
+// (via the FK join). Used to render the "Post as" selector across
+// create flows that support a public organisation identity.
 type ManageableOrg = {
   id: string
   name: string
   logo_url: string | null
   slug: string | null
+}
+
+type FeedIdentity =
+  | { type: 'personal'; id: string; name: string; username: string | null; avatar_url: string | null }
+  | { type: 'org'; id: string; name: string; slug: string | null; logo_url: string | null; userRole?: string | null }
+
+const FEED_IDENTITY_KEY = 'freetrust.feed.identity.v1'
+
+function readStoredFeedIdentity(): FeedIdentity | null {
+  try {
+    const raw = window.localStorage.getItem(FEED_IDENTITY_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<FeedIdentity>
+    if (parsed?.type === 'personal' && typeof parsed.id === 'string' && typeof parsed.name === 'string') {
+      return parsed as Extract<FeedIdentity, { type: 'personal' }>
+    }
+    if (parsed?.type === 'org' && typeof parsed.id === 'string' && typeof parsed.name === 'string') {
+      return parsed as Extract<FeedIdentity, { type: 'org' }>
+    }
+  } catch { /* ignore malformed storage */ }
+  return null
+}
+
+function persistFeedIdentity(identity: FeedIdentity) {
+  try {
+    window.localStorage.setItem(FEED_IDENTITY_KEY, JSON.stringify(identity))
+    window.dispatchEvent(new CustomEvent('freetrust:feed-identity-change', { detail: identity }))
+  } catch { /* identity sync is progressive enhancement */ }
 }
 
 export default function CreatePage() {
@@ -364,10 +392,12 @@ export default function CreatePage() {
   //   manageableOrgs — the list of orgs the user can post under,
   //     loaded once on mount. Empty array means "show no selector".
   //   selectedOrgId  — null for "post as @me" (default), or the id
-  //     of one of the manageable orgs. Only sent in the publish
-  //     payload for text/article/photo types; other types ignore it.
+  //     of one of the manageable orgs. Sent in the publish payload for
+  //     every post type; the server maps it to the appropriate table
+  //     field for feed posts, articles, listings, jobs, and events.
   const [manageableOrgs, setManageableOrgs] = useState<ManageableOrg[]>([])
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null)
+  const [personalIdentity, setPersonalIdentity] = useState<Extract<FeedIdentity, { type: 'personal' }> | null>(null)
 
   // Per-type form data
   const [formData, setFormData] = useState<Record<string, string>>({})
@@ -414,6 +444,20 @@ export default function CreatePage() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user || cancelled) return
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, username, avatar_url')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (!cancelled) {
+        setPersonalIdentity({
+          type: 'personal',
+          id: user.id,
+          name: (profile?.full_name as string | null) || (profile?.username as string | null) || 'My profile',
+          username: (profile?.username as string | null) ?? null,
+          avatar_url: (profile?.avatar_url as string | null) ?? null,
+        })
+      }
       const { data, error } = await supabase
         .from('organisation_members')
         .select('role, organisation:organisations!organisation_id(id, name, logo_url, slug)')
@@ -445,20 +489,43 @@ export default function CreatePage() {
         return true
       }).sort((a, b) => a.name.localeCompare(b.name))
       setManageableOrgs(unique)
+      const stored = readStoredFeedIdentity()
+      if (stored?.type === 'org' && unique.some(org => org.id === stored.id)) {
+        setSelectedOrgId(stored.id)
+      } else if (stored?.type === 'personal') {
+        setSelectedOrgId(null)
+      }
     }
     loadManageableOrgs()
     return () => { cancelled = true }
   }, [])
 
-  // Reset the "post as org" selection when the user switches to a
-  // type that doesn't support it. Prevents a stale org id from
-  // being submitted if the user picks Text → Product → Text again.
   useEffect(() => {
-    const ORG_POSTABLE_TYPES: PostType[] = ['text', 'article', 'photo']
-    if (selectedType && !ORG_POSTABLE_TYPES.includes(selectedType)) {
-      setSelectedOrgId(null)
+    const syncSelectedIdentity = (event: Event) => {
+      const detail = 'detail' in event ? (event as CustomEvent<FeedIdentity>).detail : readStoredFeedIdentity()
+      if (detail?.type === 'org' && manageableOrgs.some(org => org.id === detail.id)) {
+        setSelectedOrgId(detail.id)
+      } else if (detail?.type === 'personal') {
+        setSelectedOrgId(null)
+      }
     }
-  }, [selectedType])
+    window.addEventListener('freetrust:feed-identity-change', syncSelectedIdentity)
+    window.addEventListener('storage', syncSelectedIdentity)
+    return () => {
+      window.removeEventListener('freetrust:feed-identity-change', syncSelectedIdentity)
+      window.removeEventListener('storage', syncSelectedIdentity)
+    }
+  }, [manageableOrgs])
+
+  const choosePersonalIdentity = () => {
+    setSelectedOrgId(null)
+    if (personalIdentity) persistFeedIdentity(personalIdentity)
+  }
+
+  const chooseOrgIdentity = (org: ManageableOrg) => {
+    setSelectedOrgId(org.id)
+    persistFeedIdentity({ type: 'org', id: org.id, name: org.name, slug: org.slug, logo_url: org.logo_url })
+  }
 
   // Direct client-to-Supabase upload. Uses the Storage REST endpoint with an
   // AbortController timeout instead of storage-js `.upload()`, because mobile
@@ -974,11 +1041,6 @@ export default function CreatePage() {
         delivery_notes: deliveryNotes.trim() || null,
       }
     }
-    // Only include organisation_id for types where it's honoured
-    // server-side (text / article / photo). The publish route strips
-    // it for other types anyway, but sending it explicitly keeps the
-    // client + server in lockstep and avoids a confusing "why didn't
-    // my product post use the org byline?" question later.
     const payload: Record<string, unknown> = {
       type: selectedType,
       data,
@@ -987,8 +1049,7 @@ export default function CreatePage() {
       taggedUsers,
       category,
     }
-    const ORG_POSTABLE = new Set<PostType>(['text', 'article', 'photo'])
-    if (selectedOrgId && ORG_POSTABLE.has(selectedType)) {
+    if (selectedOrgId) {
       payload.organisation_id = selectedOrgId
     }
     return payload
@@ -1092,12 +1153,10 @@ export default function CreatePage() {
 
         {preview ? renderPreview() : (
           <>
-            {/* "Post as" selector — shown only when:
-                  1. The user manages at least one organisation, AND
-                  2. The selected type is text / article / photo
-                Other types (product/service/job/event/video/etc.)
-                have their own author context so we hide the chip. */}
-            {manageableOrgs.length > 0 && selectedType && ['text', 'article', 'photo'].includes(selectedType) && (
+            {/* "Post as" selector — shown whenever the user manages at least
+                one organisation. The publish route maps the selected account
+                to the correct author/owner field for every post type. */}
+            {manageableOrgs.length > 0 && selectedType && (
               <div style={{ marginBottom: '1.25rem' }}>
                 <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.5rem' }}>
                   Post as
@@ -1105,7 +1164,7 @@ export default function CreatePage() {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <button
                     type="button"
-                    onClick={() => setSelectedOrgId(null)}
+                    onClick={choosePersonalIdentity}
                     style={{
                       padding: '0.55rem 1rem',
                       borderRadius: 999,
@@ -1130,7 +1189,7 @@ export default function CreatePage() {
                       <button
                         key={org.id}
                         type="button"
-                        onClick={() => setSelectedOrgId(org.id)}
+                        onClick={() => chooseOrgIdentity(org)}
                         title={`Post as ${org.name}`}
                         style={{
                           padding: '0.55rem 1rem',
@@ -1165,7 +1224,7 @@ export default function CreatePage() {
                 </div>
                 {selectedOrgId && (
                   <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.45rem' }}>
-                    This post will appear in the feed under the organisation&rsquo;s name and logo. You&rsquo;ll still be recorded as the author for accountability.
+                    This will appear under the organisation&rsquo;s name where that content type supports public bylines. You&rsquo;ll still be recorded as the accountable creator.
                   </div>
                 )}
               </div>
