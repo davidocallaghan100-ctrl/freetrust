@@ -730,9 +730,13 @@ const FEED_SOUNDTRACK_PLAY_EVENT = 'freetrust:feed-soundtrack-play'
 
 function PhotoCarousel({ urls, alt, soundtrack, textOverlay, imageHref, imageBadge }: { urls: string[]; alt: string; soundtrack?: SpotifyTrackData | null; textOverlay?: TextOverlayData | null; imageHref?: string | null; imageBadge?: { label: string; href: string; ariaLabel: string } | null }) {
   const [index, setIndex] = useState(0)
+  const [soundtrackEnabled, setSoundtrackEnabled] = useState(true)
   const [soundtrackPlaying, setSoundtrackPlaying] = useState(false)
   const [soundtrackNotice, setSoundtrackNotice] = useState('')
+  const carouselRef = useRef<HTMLDivElement | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const soundtrackEnabledRef = useRef(true)
+  const soundtrackVisibleRef = useRef(false)
   const playerIdRef = useRef(`ft-soundtrack-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`)
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartX = useRef<number | null>(null)
@@ -748,9 +752,16 @@ function PhotoCarousel({ urls, alt, soundtrack, textOverlay, imageHref, imageBad
 
   useEffect(() => {
     audioRef.current?.pause()
+    soundtrackEnabledRef.current = true
+    soundtrackVisibleRef.current = false
+    setSoundtrackEnabled(true)
     setSoundtrackPlaying(false)
     setSoundtrackNotice('')
   }, [soundtrack?.url])
+
+  useEffect(() => {
+    soundtrackEnabledRef.current = soundtrackEnabled
+  }, [soundtrackEnabled])
 
   useEffect(() => {
     const stopForAnotherPost = (event: Event) => {
@@ -776,27 +787,91 @@ function PhotoCarousel({ urls, alt, soundtrack, textOverlay, imageHref, imageBad
     noticeTimerRef.current = setTimeout(() => setSoundtrackNotice(''), 3200)
   }
 
+  const pauseSoundtrack = useCallback((resetToStart = false) => {
+    const audio = audioRef.current
+    if (!audio) return
+    audio.pause()
+    if (resetToStart) audio.currentTime = 0
+    setSoundtrackPlaying(false)
+  }, [])
+
+  const playSoundtrack = useCallback(async (options?: { showNotice?: boolean }) => {
+    if (!soundtrack?.name || !previewUrl || !soundtrackEnabledRef.current) return false
+    const audio = audioRef.current
+    if (!audio) return false
+    if (!audio.paused) return true
+
+    try {
+      announceSoundtrackPlayback()
+      audio.muted = false
+      audio.volume = 1
+      await audio.play()
+      setSoundtrackPlaying(true)
+      setSoundtrackNotice('')
+      return true
+    } catch {
+      setSoundtrackPlaying(false)
+      if (options?.showNotice) showSoundtrackNotice('Your browser blocked automatic audio — tap once to enable')
+      return false
+    }
+  }, [previewUrl, soundtrack?.name])
+
+  useEffect(() => {
+    if (!previewUrl) return
+    const node = carouselRef.current
+    if (!node) return
+
+    const observer = new IntersectionObserver(entries => {
+      const entry = entries[0]
+      const isMeaningfullyVisible = Boolean(entry?.isIntersecting && entry.intersectionRatio >= 0.55)
+      soundtrackVisibleRef.current = isMeaningfullyVisible
+      if (isMeaningfullyVisible) {
+        void playSoundtrack({ showNotice: false })
+      } else {
+        pauseSoundtrack(true)
+      }
+    }, { threshold: [0, 0.55, 0.85] })
+
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [pauseSoundtrack, playSoundtrack, previewUrl])
+
+  useEffect(() => {
+    if (!previewUrl) return
+    const retryAfterUserGesture = () => {
+      if (!soundtrackVisibleRef.current || !soundtrackEnabledRef.current) return
+      const audio = audioRef.current
+      if (!audio || !audio.paused) return
+      void playSoundtrack({ showNotice: false })
+    }
+    document.addEventListener('pointerdown', retryAfterUserGesture, { passive: true, capture: true })
+    document.addEventListener('touchstart', retryAfterUserGesture, { passive: true, capture: true })
+    document.addEventListener('keydown', retryAfterUserGesture, { capture: true })
+    return () => {
+      document.removeEventListener('pointerdown', retryAfterUserGesture, { capture: true })
+      document.removeEventListener('touchstart', retryAfterUserGesture, { capture: true })
+      document.removeEventListener('keydown', retryAfterUserGesture, { capture: true })
+    }
+  }, [playSoundtrack, previewUrl])
+
   const toggleSoundtrack = async () => {
     if (!soundtrack?.name) return
-    const audio = audioRef.current
-    if (previewUrl && audio) {
-      if (!audio.paused) {
-        audio.pause()
-        setSoundtrackPlaying(false)
+    if (previewUrl) {
+      if (soundtrackEnabledRef.current) {
+        soundtrackEnabledRef.current = false
+        setSoundtrackEnabled(false)
+        pauseSoundtrack(true)
         return
       }
-      try {
-        announceSoundtrackPlayback()
-        await audio.play()
-        setSoundtrackPlaying(true)
-        setSoundtrackNotice('')
-      } catch {
-        setSoundtrackPlaying(false)
-        showSoundtrackNotice('Tap again or check device volume')
-      }
+
+      soundtrackEnabledRef.current = true
+      setSoundtrackEnabled(true)
+      await playSoundtrack({ showNotice: true })
       return
     }
 
+    soundtrackEnabledRef.current = false
+    setSoundtrackEnabled(false)
     setSoundtrackPlaying(false)
     showSoundtrackNotice('Preview unavailable for this song')
   }
@@ -815,7 +890,7 @@ function PhotoCarousel({ urls, alt, soundtrack, textOverlay, imageHref, imageBad
   }
 
   return (
-    <div className="ft-photo-carousel" style={{ marginBottom: '12px' }}>
+    <div ref={carouselRef} className="ft-photo-carousel" style={{ marginBottom: '12px' }}>
       <div
         className="ft-photo-carousel-frame"
         style={{ position: 'relative', overflow: 'hidden', borderRadius: '14px', background: '#020617', border: '1px solid rgba(51,65,85,0.75)', touchAction: 'pan-y' }}
@@ -886,7 +961,7 @@ function PhotoCarousel({ urls, alt, soundtrack, textOverlay, imageHref, imageBad
           <button
             type="button"
             onClick={toggleSoundtrack}
-            aria-label={`${soundtrackPlaying ? 'Pause' : 'Play'} ${soundtrack.name} in the FreeTrust feed`}
+            aria-label={`${soundtrackEnabled ? 'Mute' : 'Enable'} ${soundtrack.name} in the FreeTrust feed`}
             title={`${soundtrack.name}${soundtrack.artists ? ` · ${soundtrack.artists}` : ''}`}
             style={{
               position: 'absolute',
@@ -898,9 +973,9 @@ function PhotoCarousel({ urls, alt, soundtrack, textOverlay, imageHref, imageBad
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: '50%',
-              background: soundtrackPlaying ? 'rgba(22,163,74,0.92)' : 'rgba(2,6,23,0.76)',
-              border: soundtrackPlaying ? '1px solid rgba(187,247,208,0.85)' : '1px solid rgba(30,215,96,0.55)',
-              boxShadow: soundtrackPlaying ? '0 12px 32px rgba(0,0,0,0.34), 0 0 30px rgba(34,197,94,0.38)' : '0 12px 32px rgba(0,0,0,0.34), 0 0 24px rgba(30,215,96,0.18)',
+              background: soundtrackEnabled ? 'rgba(22,163,74,0.92)' : 'rgba(2,6,23,0.76)',
+              border: soundtrackEnabled ? '1px solid rgba(187,247,208,0.85)' : '1px solid rgba(30,215,96,0.55)',
+              boxShadow: soundtrackEnabled ? '0 12px 32px rgba(0,0,0,0.34), 0 0 30px rgba(34,197,94,0.38)' : '0 12px 32px rgba(0,0,0,0.34), 0 0 24px rgba(30,215,96,0.18)',
               color: '#bbf7d0',
               backdropFilter: 'blur(8px)',
               zIndex: 3,
@@ -910,7 +985,7 @@ function PhotoCarousel({ urls, alt, soundtrack, textOverlay, imageHref, imageBad
               transform: 'none',
             }}
           >
-            🔊
+            {soundtrackEnabled ? '🔊' : '🔇'}
           </button>
         ) : null}
 
@@ -918,7 +993,9 @@ function PhotoCarousel({ urls, alt, soundtrack, textOverlay, imageHref, imageBad
           <audio
             ref={audioRef}
             src={previewUrl}
-            preload="none"
+            preload="auto"
+            autoPlay
+            loop
             onEnded={() => setSoundtrackPlaying(false)}
             onPause={() => setSoundtrackPlaying(false)}
             onPlay={() => setSoundtrackPlaying(true)}
