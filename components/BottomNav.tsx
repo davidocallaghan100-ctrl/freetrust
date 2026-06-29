@@ -58,6 +58,21 @@ function normalisePages(pages: AdminPage[]) {
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
+function readStoredFeedIdentity(): FeedIdentity | null {
+  try {
+    const raw = window.localStorage.getItem(FEED_IDENTITY_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<FeedIdentity>
+    if (parsed?.type === 'personal' && typeof parsed.id === 'string' && typeof parsed.name === 'string') {
+      return parsed as Extract<FeedIdentity, { type: 'personal' }>
+    }
+    if (parsed?.type === 'org' && typeof parsed.id === 'string' && typeof parsed.name === 'string') {
+      return parsed as Extract<FeedIdentity, { type: 'org' }>
+    }
+  } catch { /* ignore malformed storage */ }
+  return null
+}
+
 export default function BottomNav() {
   const pathname = usePathname()
   const router = useRouter()
@@ -82,6 +97,7 @@ export default function BottomNav() {
         const supabase = createClient()
         const { data: { session } } = await supabase.auth.getSession()
         const user = session?.user ?? null
+        let resolvedPersonalIdentity: Extract<FeedIdentity, { type: 'personal' }> | null = null
         if (!user || cancelled) {
           if (!cancelled) {
             setAuthenticated(false)
@@ -109,12 +125,13 @@ export default function BottomNav() {
             username: (profile?.username as string | null) ?? null,
             avatar_url: (profile?.avatar_url as string | null) ?? null,
           }
+          resolvedPersonalIdentity = { type: 'personal', ...nextProfile }
           setPersonalProfile(nextProfile)
-          try {
-            const personal: FeedIdentity = { type: 'personal', ...nextProfile }
-            window.localStorage.setItem(FEED_IDENTITY_KEY, JSON.stringify(personal))
-            setFeedIdentity(personal)
-          } catch { /* ignore storage */ }
+          const stored = readStoredFeedIdentity()
+          setFeedIdentity(stored ?? resolvedPersonalIdentity)
+          if (!stored) {
+            try { window.localStorage.setItem(FEED_IDENTITY_KEY, JSON.stringify(resolvedPersonalIdentity)) } catch { /* ignore storage */ }
+          }
         }
 
         let pages: AdminPage[] = []
@@ -188,9 +205,16 @@ export default function BottomNav() {
         if (!cancelled) {
           setAdminPages(pages)
           setFeedIdentity(current => {
-            if (current?.type !== 'org') return current
+            const personal = resolvedPersonalIdentity
+            if (!current) return personal
+            if (current.type !== 'org') return current
             const refreshed = pages.find(page => page.id === current.id)
-            return refreshed ? { type: 'org', ...refreshed } : current
+            if (refreshed) return { type: 'org', ...refreshed }
+            if (personal) {
+              try { window.localStorage.setItem(FEED_IDENTITY_KEY, JSON.stringify(personal)) } catch { /* ignore storage */ }
+              return personal
+            }
+            return null
           })
           setSwitcherLoading(false)
         }

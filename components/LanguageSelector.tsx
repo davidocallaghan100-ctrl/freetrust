@@ -14,7 +14,11 @@ const STORAGE_KEY = 'freetrust_locale'
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 
 function useViewportWidth() {
-  const [width, setWidth] = useState<number>(() => (typeof window === 'undefined' ? 1024 : window.innerWidth))
+  // Keep the first client render identical to SSR. Reading window.innerWidth in
+  // the initial state makes mobile clients render different markup during
+  // hydration (header selector hidden, floating selector shown), which React
+  // reports as hydration mismatch/recovery on every public page.
+  const [width, setWidth] = useState<number | null>(null)
   useEffect(() => {
     const update = () => setWidth(window.innerWidth)
     update()
@@ -29,7 +33,8 @@ export default function LanguageSelector({variant = 'header'}: LanguageSelectorP
   const activeLocale = useLocale()
   const t = useTranslations('language')
   const width = useViewportWidth()
-  const isMobile = width < 768
+  const viewportResolved = width !== null
+  const isMobile = viewportResolved && width < 768
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [syncError, setSyncError] = useState(false)
@@ -98,7 +103,7 @@ export default function LanguageSelector({variant = 'header'}: LanguageSelectorP
     }
   }
 
-  if (floating && !isMobile) return null
+  if (floating && (!viewportResolved || !isMobile)) return null
   if (!floating && isMobile) return null
 
   const triggerLabel = `${current.flag} ${current.nativeName}`
