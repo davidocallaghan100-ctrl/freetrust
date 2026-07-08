@@ -537,8 +537,13 @@ export default function ProfilePage() {
           .maybeSingle()
         setTrustBalance(data?.balance ?? 0)
       } else {
-        // Own trust balance via API
-        const res = await fetch('/api/trust')
+        // Own trust balance via API (retry once — a transient failure must not
+        // leave the UI showing 0 or the signup-bonus figure instead of the real balance)
+        let res = await fetch('/api/trust')
+        if (!res.ok) {
+          await new Promise(r => setTimeout(r, 1200))
+          res = await fetch('/api/trust')
+        }
         if (res.ok) {
           const data = await res.json() as { balance?: number }
           const bal = data.balance ?? 0
@@ -550,8 +555,16 @@ export default function ProfilePage() {
             try {
               const bonusRes = await fetch('/api/auth/signup-bonus', { method: 'POST' })
               if (bonusRes.ok) {
-                const bonusData = await bonusRes.json() as { balance?: number }
-                if ((bonusData.balance ?? 0) > 0) setTrustBalance(bonusData.balance!)
+                // Re-fetch the authoritative balance rather than trusting the
+                // bonus response, which only reflects the bonus amount itself.
+                const verify = await fetch('/api/trust')
+                if (verify.ok) {
+                  const verifyData = await verify.json() as { balance?: number }
+                  setTrustBalance(prev => Math.max(prev, verifyData.balance ?? 0))
+                } else {
+                  const bonusData = await bonusRes.json() as { balance?: number }
+                  if ((bonusData.balance ?? 0) > 0) setTrustBalance(prev => Math.max(prev, bonusData.balance!))
+                }
               }
             } catch { /* non-critical */ }
           }

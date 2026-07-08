@@ -17,7 +17,7 @@ export async function GET() {
         .from('trust_balances')
         .select('balance, lifetime, updated_at')
         .eq('user_id', user.id)
-        .single(),
+        .maybeSingle(),
       supabase
         .from('trust_ledger')
         .select('amount, type, description, created_at')
@@ -25,6 +25,13 @@ export async function GET() {
         .order('created_at', { ascending: false })
         .limit(20),
     ])
+
+    // A transient query error must NOT be reported as balance 0 — the client
+    // treats 0 as authoritative and may overwrite the UI with the signup bonus.
+    if (balanceResult.error) {
+      console.error('[GET /api/trust] balance query error:', balanceResult.error)
+      return NextResponse.json({ error: 'Balance temporarily unavailable' }, { status: 503 })
+    }
 
     return NextResponse.json({
       balance: balanceResult.data?.balance ?? 0,
