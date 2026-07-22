@@ -57,7 +57,7 @@ async function getLandingCounts() {
   try {
     const supabase = await createClient()
     const [profilesRes, listingsRes, communitiesRes] = await Promise.all([
-      supabase.from('profiles').select('id', { count: 'exact', head: true }),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).is('deleted_at', null),
       supabase.from('listings').select('id', { count: 'exact', head: true }),
       supabase.from('communities').select('id', { count: 'exact', head: true }),
     ])
