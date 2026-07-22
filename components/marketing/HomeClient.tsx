@@ -52,19 +52,6 @@ type FeaturedService = {
   tags: string[]
   grad: string
 }
-type FeaturedProduct = {
-  id: string
-  title: string
-  seller: string
-  avatarUrl: string | null
-  coverImage?: string | null
-  price: number
-  currency: string
-  rating: number
-  reviews: number
-  type: string
-  grad: string
-}
 type HomeEvent = {
   id: string
   title: string
@@ -451,10 +438,9 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
   const t = useTranslations('landing')
   const [isLegalLibraryOpen, setIsLegalLibraryOpen] = useState(false)
   const [footerStory, setFooterStory] = useState<'vision' | 'mission' | null>(null)
-  const [marketplaceTab, setMarketplaceTab] = useState<'services' | 'products' | 'jobs' | 'events'>('services')
+  const [marketplaceTab, setMarketplaceTab] = useState<'services' | 'jobs' | 'events'>('services')
   const [stats, setStats] = useState<StatsData | null>(null)
   const [featuredServices, setFeaturedServices] = useState<FeaturedService[]>([])
-  const [featuredProducts, setFeaturedProducts] = useState<FeaturedProduct[]>([])
   const [homeEvents, setHomeEvents] = useState<HomeEvent[] | null>(null)
   const [homeJobs, setHomeJobs] = useState<HomeJob[] | null>(null)
   const [homeRentShare, setHomeRentShare] = useState<HomeRentShare[] | null>(null)
@@ -470,7 +456,6 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
   const footerMissionCommitments = t.raw('footer.mission.commitments') as typeof FOOTER_MISSION_COMMITMENTS
   const faqItems = t.raw('faq.items') as typeof FAQS
   const serviceFallbacks = t.raw('liveMarketplace.fallbacks.services') as Array<{title: string; subtitle: string; price: string; badge: string}>
-  const productFallbacks = t.raw('liveMarketplace.fallbacks.products') as Array<{title: string; subtitle: string; price: string; badge: string}>
   const jobFallbacks = t.raw('liveMarketplace.fallbacks.jobs') as Array<{id: string; title: string; company_name: string; location: string; salary: string; job_type: string}>
   const eventFallbacks = t.raw('liveMarketplace.fallbacks.events') as Array<{id: string; title: string; category: string; location: string; catColor: string}>
 
@@ -489,7 +474,6 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
 
   useEffect(() => {
     void fetchJsonWithTimeout<FeaturedService[]>('/api/listings/featured', []).then(setFeaturedServices)
-    void fetchJsonWithTimeout<FeaturedProduct[]>('/api/listings/featured-products', []).then(setFeaturedProducts)
     void fetchJsonWithTimeout<HomeEvent[]>('/api/landing/events-preview?limit=6', []).then(setHomeEvents)
     void fetchJsonWithTimeout<HomeJob[]>('/api/landing/jobs-preview?limit=6', []).then(setHomeJobs)
     void fetchJsonWithTimeout<{ listings?: HomeRentShare[] }>('/api/rent-share?limit=6', { listings: [] }).then(d => setHomeRentShare((d.listings ?? []).slice(0, 6)))
@@ -512,7 +496,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
   const goal = stats?.foundingGoal ?? 1000
   const spotsRemaining = Math.max(0, goal - tm)
   const displaySpots = spotsRemaining > 0 && spotsRemaining < 100 ? spotsRemaining.toLocaleString() : t('founding.under100')
-  const liveListings = (featuredProducts.length + featuredServices.length + (homeEvents?.length ?? 0) + (homeJobs?.length ?? 0))
+  const liveListings = (featuredServices.length + (homeEvents?.length ?? 0) + (homeJobs?.length ?? 0))
   const activeTestimonial = testimonialQuotes[testimonialIndex] ?? testimonialQuotes[0]
 
   const serviceSlides = useMemo(() => {
@@ -522,14 +506,6 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
       ...serviceFallbacks.map(item => ({...item, type: 'service', image: screenshots.services, href: '/services'})),
     ]].slice(0, 6)
   }, [featuredServices, format, serviceFallbacks, t])
-
-  const productSlides = useMemo(() => {
-    const productCards = featuredProducts.slice(0, 8).map(p => ({ type: 'product', title: p.title, subtitle: p.seller, price: format(p.price, p.currency as 'GBP' | 'EUR' | 'USD'), image: p.coverImage || screenshots.products, href: `/products/${p.id}`, badge: p.reviews > 0 ? t('liveMarketplace.badges.trustScore', {score: p.rating.toFixed(1)}) : t('liveMarketplace.badges.verifiedListing') }))
-    if (productCards.length >= 8) return productCards
-    return [...productCards, ...[
-      ...productFallbacks.map(item => ({...item, type: 'product', image: screenshots.products, href: '/products'})),
-    ]].slice(0, 8)
-  }, [featuredProducts, format, productFallbacks, t])
 
   const jobPreviewCards = useMemo(() => (homeJobs ?? []).slice(0, 6).map(job => {
     const location = job.location_type === 'remote' ? t('liveMarketplace.fallbacks.remote') : [job.city, job.country].filter(Boolean).join(', ') || t('liveMarketplace.fallbacks.onSite')
@@ -798,7 +774,6 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           <div className="ft-market-tabs" style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 28, fontWeight: 850, color: '#cbd5e1', flexWrap: 'wrap' }}>
             {[
               ['services', t('liveMarketplace.tabs.services')],
-              ['products', t('liveMarketplace.tabs.products')],
               ['jobs', t('liveMarketplace.tabs.jobs')],
               ['events', t('liveMarketplace.tabs.events')],
             ].map(([key, label]) => {
@@ -808,7 +783,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
                   key={key}
                   type="button"
                   className="ft-market-tab"
-                  onClick={() => setMarketplaceTab(key as 'services' | 'products' | 'jobs' | 'events')}
+                  onClick={() => setMarketplaceTab(key as 'services' | 'jobs' | 'events')}
                   style={{
                     color: active ? '#041018' : '#cbd5e1',
                     background: active ? TEAL : 'rgba(15,23,42,.74)',
@@ -840,28 +815,6 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 16 }}>
                       <span style={{ color: '#fff', fontWeight: 950, fontSize: 18 }}>{card.price}</span>
                       <span style={{ color: TEAL, fontWeight: 900, fontSize: 13 }}>{t('liveMarketplace.cta.open')}</span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-
-          {marketplaceTab === 'products' && (
-            <div className="ft-market-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 18 }}>
-              {productSlides.map(card => (
-                <Link className="ft-market-product-card ft-card-hover" key={`${card.type}-${card.title}`} href={card.href} style={{ minWidth: 0, textDecoration: 'none', background: 'linear-gradient(180deg,rgba(17,24,39,.96),rgba(8,16,32,.96))', border: '1px solid #1e293b', borderRadius: 24, overflow: 'hidden', color: '#fff', boxShadow: '0 22px 70px rgba(0,0,0,.22)' }}>
-                  <div style={{ height: 210, position: 'relative', background: 'linear-gradient(135deg,#0e7490,#1e293b 55%,#111827)', overflow: 'hidden' }}>
-                    {card.image && <img src={card.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transform: 'scale(1.02)' }} />}
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(5,10,20,.02),rgba(5,10,20,.72))' }} />
-                    <span style={{ position: 'absolute', left: 14, top: 14, display: 'inline-flex', padding: '7px 10px', borderRadius: 999, background: 'rgba(4,16,24,.72)', color: '#aafaff', fontSize: 12, fontWeight: 900, border: '1px solid rgba(127,247,255,.22)', backdropFilter: 'blur(10px)' }}>{card.badge}</span>
-                    <strong style={{ position: 'absolute', left: 14, right: 14, bottom: 14, fontSize: 20, lineHeight: 1.12, letterSpacing: '-0.03em' }}>{card.title}</strong>
-                  </div>
-                  <div style={{ padding: 18 }}>
-                    <p style={{ color: SLATE, fontSize: 13, minHeight: 36, margin: 0, lineHeight: 1.45 }}>{card.subtitle}</p>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 16 }}>
-                      <span style={{ color: '#fff', fontWeight: 950, fontSize: 18 }}>{card.price}</span>
-                      <span style={{ color: TEAL, fontWeight: 900, fontSize: 13 }}>{t('liveMarketplace.cta.view')}</span>
                     </div>
                   </div>
                 </Link>

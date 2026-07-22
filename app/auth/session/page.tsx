@@ -30,6 +30,7 @@ function AuthSessionInner() {
 
     async function finish() {
       try {
+        const isBusinessDestination = next.startsWith('/organisations/new')
         const hash = getHashParams()
         const accessToken = hash.get('access_token')
         const refreshToken = hash.get('refresh_token')
@@ -66,9 +67,9 @@ function AuthSessionInner() {
           const res = await fetch('/api/profile', { cache: 'no-store' })
           if (res.ok) {
             const data = await res.json() as { profile?: Record<string, unknown> | null }
-            if (firstSignupBonusIssued && isProfileIncomplete(data.profile)) destination = '/onboarding?welcome=1'
+            if (!isBusinessDestination && firstSignupBonusIssued && isProfileIncomplete(data.profile)) destination = '/onboarding?welcome=1'
           } else if (res.status === 404) {
-            if (firstSignupBonusIssued) destination = '/onboarding?welcome=1'
+            if (!isBusinessDestination && firstSignupBonusIssued) destination = '/onboarding?welcome=1'
           }
         } catch {
           // Non-fatal — if the profile check fails, continue to the intended route.

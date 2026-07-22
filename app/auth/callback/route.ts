@@ -51,6 +51,12 @@ export async function GET(request: NextRequest) {
           const admin = createAdminClient()
 
           const meta = user.user_metadata ?? {}
+          const signupIntent = cookieStore.get('ft_signup_intent')?.value === 'business' || meta.account_type === 'business'
+            ? 'business'
+            : 'individual'
+          const postSignupDestination = signupIntent === 'business'
+            ? '/organisations/new?welcome=1'
+            : '/onboarding?welcome=1'
           const fullName = typeof (meta.full_name ?? meta.name) === 'string'
             ? String(meta.full_name ?? meta.name).trim()
             : ''
@@ -100,6 +106,13 @@ export async function GET(request: NextRequest) {
               if (Object.keys(profileUpdates).length > 1) {
                 await admin.from('profiles').update(profileUpdates).eq('id', user.id)
               }
+            }
+            if (signupIntent === 'business') {
+              const { error: accountTypeError } = await admin
+                .from('profiles')
+                .update({ account_type: 'business' })
+                .eq('id', user.id)
+              if (accountTypeError) console.error('[auth/callback] business account_type sync error:', accountTypeError.message)
             }
           } catch (err) {
             console.error('[auth/callback] Profile upsert/sync error:', err)
@@ -247,9 +260,8 @@ export async function GET(request: NextRequest) {
               console.error('[auth/callback] Failed to send welcome email:', err)
             }
 
-            // New members should always see the same profile/hobbies setup flow,
-            // regardless of whether they joined by email, Google, or Apple.
-            return NextResponse.redirect(`${origin}/onboarding?welcome=1`)
+            cookieStore.set('ft_signup_intent', '', { maxAge: 0, path: '/' })
+            return NextResponse.redirect(`${origin}${postSignupDestination}`)
           }
 
           // Do not force existing users back through onboarding during login.
@@ -260,6 +272,7 @@ export async function GET(request: NextRequest) {
         console.error('[auth/callback] Post-auth processing error:', err)
       }
 
+      cookieStore.set('ft_signup_intent', '', { maxAge: 0, path: '/' })
       return NextResponse.redirect(`${origin}${next}`)
     }
     console.error('[auth/callback] exchangeCodeForSession error:', error)

@@ -53,6 +53,7 @@ const VISIBLE_OAUTH_PROVIDERS = OAUTH_PROVIDERS.filter(({ enabled = true }) => e
 export default function RegisterPage() {
   const router = useRouter()
   const supabase = createClient()
+  const [signupIntent, setSignupIntent] = useState<'individual' | 'business'>('individual')
 
   // Re-stamp the ft_ref cookie from the ?ref= URL param if it's present.
   // This recovers referral attribution when the user opens the confirmation
@@ -61,6 +62,12 @@ export default function RegisterPage() {
     try {
       const params = new URLSearchParams(window.location.search)
       const ref = params.get('ref')
+      const intent = (params.get('type') || params.get('account_type') || params.get('intent') || '').toLowerCase()
+      if (intent === 'business' || intent === 'organisation' || intent === 'organization') {
+        setSignupIntent('business')
+        localStorage.setItem('ft_signup_intent', 'business')
+        document.cookie = `ft_signup_intent=business; max-age=${30 * 60}; path=/; samesite=lax${window.location.protocol === 'https:' ? '; secure' : ''}`
+      }
       if (ref) {
         const code = ref.toUpperCase().trim()
         // Cookie — 30 days, read by auth/callback server-side
@@ -72,6 +79,26 @@ export default function RegisterPage() {
       // Non-fatal — cookie/localStorage may be blocked (e.g. private browsing)
     }
   }, [])
+
+  const setIntent = (intent: 'individual' | 'business') => {
+    setSignupIntent(intent)
+    try {
+      if (intent === 'business') {
+        localStorage.setItem('ft_signup_intent', 'business')
+        document.cookie = `ft_signup_intent=business; max-age=${30 * 60}; path=/; samesite=lax${window.location.protocol === 'https:' ? '; secure' : ''}`
+      } else {
+        localStorage.removeItem('ft_signup_intent')
+        document.cookie = `ft_signup_intent=; max-age=0; path=/; samesite=lax${window.location.protocol === 'https:' ? '; secure' : ''}`
+      }
+    } catch {
+      // Non-fatal: auth metadata and the callback next URL still carry intent.
+    }
+  }
+
+  const onboardingDestination = signupIntent === 'business'
+    ? '/organisations/new?welcome=1'
+    : '/onboarding?welcome=1'
+  const encodedOnboardingDestination = encodeURIComponent(onboardingDestination)
 
   const [form, setForm] = useState({ first_name: '', last_name: '', email: '', password: '', confirm: '', website_url: '' })
   const [agreeHuman, setAgreeHuman] = useState(false)
@@ -95,9 +122,9 @@ export default function RegisterPage() {
   // the confirmation UI instead.
   useEffect(() => {
     if (!success || needsConfirmation) return
-    const t = setTimeout(() => router.push('/onboarding?welcome=1'), 1500)
+    const t = setTimeout(() => router.push(onboardingDestination), 1500)
     return () => clearTimeout(t)
-  }, [success, needsConfirmation, router])
+  }, [success, needsConfirmation, router, onboardingDestination])
 
   // Password strength
   const pwStrength = (() => {
@@ -183,9 +210,11 @@ export default function RegisterPage() {
         email: form.email,
         password: form.password,
         options: {
-          // handle_new_user() reads all three from raw_user_meta_data
-          data: { first_name: firstName, last_name: lastName, full_name: fullName },
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding%3Fwelcome%3D1`,
+          // handle_new_user() reads the name fields from raw_user_meta_data.
+          // account_type preserves whether this signup should continue into
+          // member-profile onboarding or organisation creation.
+          data: { first_name: firstName, last_name: lastName, full_name: fullName, account_type: signupIntent },
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodedOnboardingDestination}`,
         },
       })
       if (error) {
@@ -273,7 +302,7 @@ export default function RegisterPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/onboarding%3Fwelcome%3D1`,
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodedOnboardingDestination}`,
           ...(queryParams ? { queryParams } : {}),
           // Explicit default — Supabase performs the window.location.href
           // navigation internally. We could set this to true to get the
@@ -520,6 +549,12 @@ export default function RegisterPage() {
         .human-checkbox-row input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; accent-color: #38bdf8; width: 15px; height: 15px; cursor: pointer; }
         .human-checkbox-label { font-size: 12px; color: #94a3b8; line-height: 1.5; user-select: none; }
 
+        .intent-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 18px; }
+        .intent-btn { border: 1px solid rgba(148,163,184,0.18); background: rgba(15,23,42,0.55); color: #94a3b8; border-radius: 12px; padding: 10px 11px; text-align: left; cursor: pointer; font-family: inherit; }
+        .intent-btn strong { display: block; color: #e2e8f0; font-size: 13px; margin-bottom: 3px; }
+        .intent-btn span { display: block; font-size: 11px; line-height: 1.35; }
+        .intent-btn.active { border-color: rgba(56,189,248,0.5); background: rgba(56,189,248,0.1); box-shadow: 0 0 0 1px rgba(56,189,248,0.08); }
+
         .success-box { text-align: center; padding: 8px 0; }
         .success-icon {
           width: 64px; height: 64px;
@@ -536,6 +571,7 @@ export default function RegisterPage() {
         @media (max-width: 420px) {
           .auth-card { padding: 22px 16px; border-radius: 16px; }
           .auth-heading { font-size: 20px; }
+          .intent-switch { grid-template-columns: 1fr; }
           .perks-strip { gap: 8px; padding: 8px 10px; }
           .perk { font-size: 11px; }
           .btn-oauth { font-size: 14px; }
@@ -599,7 +635,7 @@ export default function RegisterPage() {
               }}>
                 <strong style={{ color: '#38bdf8' }}>Next step:</strong> click the link in that email
                 to activate your account. You&rsquo;ll then get <strong style={{ color: '#38bdf8' }}>₮200 Trust</strong>
-                {' '}as a founding member bonus and be redirected to the feed.
+                {' '}as a founding member bonus and be redirected to {signupIntent === 'business' ? 'organisation setup' : 'profile setup'}.
               </div>
               <p style={{ fontSize: 12, color: '#64748b', textAlign: 'center', margin: 0 }}>
                 Can&rsquo;t find it? Check your spam folder or{' '}
@@ -612,7 +648,7 @@ export default function RegisterPage() {
               <div className="success-icon">🎉</div>
               <div className="success-heading">You&apos;re in!</div>
               <p className="success-sub">
-                Account created. Taking you to set up your profile…
+                Account created. Taking you to {signupIntent === 'business' ? 'set up your organisation' : 'set up your profile'}…
               </p>
               <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
                 <span className="spinner" style={{ width: '24px', height: '24px', borderWidth: '3px' }} />
@@ -632,6 +668,17 @@ export default function RegisterPage() {
               <div className="real-person-banner">
                 <span style={{ fontSize: '16px' }}>🛡️</span>
                 <span>No bots. No fake profiles. <strong>Real trust.</strong> FreeTrust is a human-only platform.</span>
+              </div>
+
+              <div className="intent-switch" aria-label="Choose signup type">
+                <button type="button" className={`intent-btn${signupIntent === 'individual' ? ' active' : ''}`} onClick={() => setIntent('individual')}>
+                  <strong>Sign up as a person</strong>
+                  <span>Set up your member profile.</span>
+                </button>
+                <button type="button" className={`intent-btn${signupIntent === 'business' ? ' active' : ''}`} onClick={() => setIntent('business')}>
+                  <strong>Sign up as a business</strong>
+                  <span>Create an organisation page after signup.</span>
+                </button>
               </div>
 
               <div style={{

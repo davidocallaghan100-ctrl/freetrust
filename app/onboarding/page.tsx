@@ -167,6 +167,14 @@ export default function OnboardingPage() {
   const TOTAL_STEPS = 6
   const next = () => setStep(s => Math.min(s + 1, TOTAL_STEPS))
   const back = () => setStep(s => Math.max(s - 1, 1))
+  const continueFromAccountType = () => {
+    if (accountType === 'business') {
+      try { window.localStorage.removeItem('ft_signup_intent') } catch { /* ignore */ }
+      router.replace('/organisations/new?welcome=1')
+      return
+    }
+    next()
+  }
 
   const handlePhotoUpload = async (rawFile: File) => {
     setPhotoUploading(true)
@@ -360,7 +368,7 @@ export default function OnboardingPage() {
                 <div style={{ fontSize: '0.78rem', color: '#64748b' }}>Company, agency, organisation</div>
               </button>
             </div>
-            <button className="ob-btn-primary" onClick={next}>Continue →</button>
+            <button className="ob-btn-primary" onClick={continueFromAccountType}>Continue →</button>
           </div>
         )}
 
