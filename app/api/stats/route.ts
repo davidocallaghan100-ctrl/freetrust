@@ -17,6 +17,7 @@ export async function GET() {
       profilesRes,
       profilesWeekRes,
       profilesMonthRes,
+      activeProfilesRes,
       listingsServicesRes,
       listingsProductsRes,
       eventsRes,
@@ -38,6 +39,8 @@ export async function GET() {
       supabase.from('profiles').select('id', { count: 'exact', head: true }).is('deleted_at', null).gte('created_at', weekAgo),
       // Members this month
       supabase.from('profiles').select('id', { count: 'exact', head: true }).is('deleted_at', null).gte('created_at', monthAgo),
+      // Active profiles for filtering public trust economy totals
+      supabase.from('profiles').select('id').is('deleted_at', null),
       // Services listed (from listings table)
       supabase.from('listings').select('id', { count: 'exact', head: true }).eq('product_type', 'service').eq('status', 'active'),
       // Products listed (from listings table) — physical/digital/everything non-service
@@ -49,13 +52,13 @@ export async function GET() {
       // Communities
       supabase.from('communities').select('id', { count: 'exact', head: true }),
       // Total trust issued (sum lifetime balances across all users)
-      supabase.from('trust_balances').select('lifetime'),
+      supabase.from('trust_balances').select('user_id, lifetime'),
       // Trust this week — use balances updated this week as proxy
-      supabase.from('trust_balances').select('lifetime').gte('updated_at', weekAgo),
+      supabase.from('trust_balances').select('user_id, lifetime').gte('updated_at', weekAgo),
       // Total trust in circulation (sum of current balances)
-      supabase.from('trust_balances').select('balance'),
+      supabase.from('trust_balances').select('user_id, balance'),
       // Members holding trust (balance > 0)
-      supabase.from('trust_balances').select('user_id', { count: 'exact', head: true }).gt('balance', 0),
+      supabase.from('trust_balances').select('user_id, balance').gt('balance', 0),
       // Recent member joins (for ticker)
       supabase.from('profiles').select('id, full_name, location, created_at').is('deleted_at', null).order('created_at', { ascending: false }).limit(10),
       // Recent trust events — pull from trust_balances (fallback: no ledger table)
@@ -83,19 +86,25 @@ export async function GET() {
     const articlesPublished = getCount(articlesRes)
     const communitiesCount = getCount(communitiesRes)
 
-    // Sum trust from lifetime balances
-    const trustRows = getData<{ lifetime: number }>(trustSumRes)
-    const totalTrust = trustRows.reduce((sum, r) => sum + (r.lifetime ?? 0), 0)
+    const activeProfileRows = getData<{ id: string }>(activeProfilesRes)
+    const activeProfileIds = new Set(activeProfileRows.map((p) => p.id))
+    const hasActiveProfileFilter = activeProfilesRes.status === 'fulfilled'
+    const isActiveProfile = (userId: string) => !hasActiveProfileFilter || activeProfileIds.has(userId)
 
-    const trustWeekRows = getData<{ lifetime: number }>(trustWeekRes)
-    const trustThisWeek = trustWeekRows.reduce((sum, r) => sum + (r.lifetime ?? 0), 0)
+    // Sum trust from lifetime balances
+    const trustRows = getData<{ user_id: string; lifetime: number }>(trustSumRes)
+    const totalTrust = trustRows.reduce((sum, r) => sum + (isActiveProfile(r.user_id) ? (r.lifetime ?? 0) : 0), 0)
+
+    const trustWeekRows = getData<{ user_id: string; lifetime: number }>(trustWeekRes)
+    const trustThisWeek = trustWeekRows.reduce((sum, r) => sum + (isActiveProfile(r.user_id) ? (r.lifetime ?? 0) : 0), 0)
 
     // Trust in circulation (sum of current balance held by all users)
-    const circulationRows = getData<{ balance: number }>(trustCirculationRes)
-    const trustInCirculation = circulationRows.reduce((sum, r) => sum + (r.balance ?? 0), 0)
+    const circulationRows = getData<{ user_id: string; balance: number }>(trustCirculationRes)
+    const trustInCirculation = circulationRows.reduce((sum, r) => sum + (isActiveProfile(r.user_id) ? (r.balance ?? 0) : 0), 0)
 
     // Members currently holding trust (balance > 0)
-    const membersHoldingTrust = trustHoldersRes.status === 'fulfilled' ? (trustHoldersRes.value.count ?? 0) : 0
+    const trustHolderRows = getData<{ user_id: string; balance: number }>(trustHoldersRes)
+    const membersHoldingTrust = trustHolderRows.filter((r) => isActiveProfile(r.user_id) && (r.balance ?? 0) > 0).length
 
     // Ticker feed — mix of recent joins, trust events, articles
     type TickerItem = {
@@ -115,6 +124,7 @@ export async function GET() {
 
     const recentTrust = getData<{ user_id: string; lifetime: number; updated_at: string }>(recentTrustRes)
     for (const t of recentTrust) {
+      if (!isActiveProfile(t.user_id)) continue
       ticker.push({ id: t.user_id, type: 'trust', text: `₮${t.lifetime} Trust earned by a member`, time: t.updated_at })
     }
 
