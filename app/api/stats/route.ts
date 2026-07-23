@@ -20,6 +20,8 @@ export async function GET() {
       activeProfilesRes,
       listingsServicesRes,
       listingsProductsRes,
+      externalServicesRes,
+      externalProductsRes,
       eventsRes,
       articlesRes,
       communitiesRes,
@@ -45,6 +47,10 @@ export async function GET() {
       supabase.from('listings').select('id', { count: 'exact', head: true }).eq('product_type', 'service').eq('status', 'active'),
       // Products listed (from listings table) — physical/digital/everything non-service
       supabase.from('listings').select('id', { count: 'exact', head: true }).neq('product_type', 'service').eq('status', 'active'),
+      // External service providers available in the Services Marketplace
+      supabase.from('external_service_listings').select('id', { count: 'exact', head: true }),
+      // External retailer products available in the Product Marketplace
+      supabase.from('external_product_listings').select('id', { count: 'exact', head: true }),
       // Upcoming events
       supabase.from('community_events').select('id', { count: 'exact', head: true }).gte('starts_at', now),
       // Published articles
@@ -80,8 +86,8 @@ export async function GET() {
     const totalMembers = getCount(profilesRes)
     const membersThisWeek = getCount(profilesWeekRes)
     const membersThisMonth = getCount(profilesMonthRes)
-    const servicesListed = getCount(listingsServicesRes)
-    const productsListed = getCount(listingsProductsRes)
+    const servicesListed = getCount(listingsServicesRes) + getCount(externalServicesRes)
+    const productsListed = getCount(listingsProductsRes) + getCount(externalProductsRes)
     const upcomingEvents = getCount(eventsRes)
     const articlesPublished = getCount(articlesRes)
     const communitiesCount = getCount(communitiesRes)

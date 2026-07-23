@@ -56,14 +56,24 @@ async function getLandingCounts() {
   const fallback = { members: 0, listings: 0, communities: 0 }
   try {
     const supabase = await createClient()
-    const [profilesRes, listingsRes, communitiesRes] = await Promise.all([
+    const [
+      profilesRes,
+      communityServicesRes,
+      communityProductsRes,
+      externalServicesRes,
+      externalProductsRes,
+      communitiesRes,
+    ] = await Promise.all([
       supabase.from('profiles').select('id', { count: 'exact', head: true }).is('deleted_at', null),
-      supabase.from('listings').select('id', { count: 'exact', head: true }),
+      supabase.from('listings').select('id', { count: 'exact', head: true }).eq('product_type', 'service').eq('status', 'active'),
+      supabase.from('listings').select('id', { count: 'exact', head: true }).neq('product_type', 'service').eq('status', 'active'),
+      supabase.from('external_service_listings').select('id', { count: 'exact', head: true }),
+      supabase.from('external_product_listings').select('id', { count: 'exact', head: true }),
       supabase.from('communities').select('id', { count: 'exact', head: true }),
     ])
     return {
       members:     profilesRes.count    ?? 0,
-      listings:    listingsRes.count    ?? 0,
+      listings:    (communityServicesRes.count ?? 0) + (communityProductsRes.count ?? 0) + (externalServicesRes.count ?? 0) + (externalProductsRes.count ?? 0),
       communities: communitiesRes.count ?? 0,
     }
   } catch (err) {
