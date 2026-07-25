@@ -313,9 +313,16 @@ export default function TravelPage() {
     if (!res.ok) throw new Error(payload?.error || t('errors.destinationSearchFailed', { status: res.status }))
     const first = payload?.destinations?.[0]
     if (!first) throw new Error(t('errors.destinationNotFound', { city }))
-    return kind === 'flight'
-      ? pickString(first, ['id', 'code', 'dest_id', 'city_ufi', 'ufi'], city)
-      : pickString(first, ['dest_id', 'id', 'city_ufi', 'ufi'], city)
+    if (kind === 'flight') {
+      return { id: pickString(first, ['id', 'code', 'dest_id', 'city_ufi', 'ufi'], city), searchType: '' }
+    }
+    const id = pickString(first, ['dest_id', 'id', 'city_ufi', 'ufi'], city)
+    // The travel partner only indexes some destinations at hotel/district/region level
+    // rather than city level (e.g. small towns like Costa de Caparica). Passing the
+    // wrong search_type to the hotel search returns zero results even though real
+    // hotels exist, so we must forward the actual match type instead of assuming CITY.
+    const rawType = pickString(first, ['search_type', 'dest_type'], 'city').toUpperCase()
+    return { id, searchType: rawType }
   }
 
   async function saveSearch(uid: string, overrides: TravelSearchOverrides = {}) {
@@ -359,13 +366,14 @@ export default function TravelPage() {
     setFlights([])
     try {
       const searchId = await saveSearch(user.id, overrides)
-      const destinationId = needsAccommodationValue ? await findDestinationId(destinationCityValue, 'hotel') : await findDestinationId(destinationCityValue, 'flight')
+      const destination = needsAccommodationValue ? await findDestinationId(destinationCityValue, 'hotel') : await findDestinationId(destinationCityValue, 'flight')
+      const destinationId = destination.id
       const requests: Promise<void>[] = []
 
       if (needsAccommodationValue) {
         const params = new URLSearchParams({
           dest_id: destinationId,
-          search_type: 'CITY',
+          search_type: destination.searchType || 'CITY',
           arrival_date: checkIn || new Date(Date.now() + 86400000 * 14).toISOString().slice(0, 10),
           departure_date: checkOut || new Date(Date.now() + 86400000 * 17).toISOString().slice(0, 10),
           adults: String(adults),
@@ -382,9 +390,9 @@ export default function TravelPage() {
       if (needsFlightsValue) {
         let fromId = departureCity
         let toId = destinationId
-        try { fromId = await findDestinationId(departureCity, 'flight') } catch { /* keep typed city as fallback */ }
+        try { fromId = (await findDestinationId(departureCity, 'flight')).id } catch { /* keep typed city as fallback */ }
         if (needsAccommodationValue) {
-          try { toId = await findDestinationId(destinationCityValue, 'flight') } catch { /* keep hotel destination id as fallback */ }
+          try { toId = (await findDestinationId(destinationCityValue, 'flight')).id } catch { /* keep hotel destination id as fallback */ }
         }
         const params = new URLSearchParams({
           fromId,
