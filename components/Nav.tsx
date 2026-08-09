@@ -77,6 +77,12 @@ const DRAWER_SECTIONS = [
     ],
   },
   {
+    label: 'BUILD',
+    links: [
+      { href: '/build', label: 'Build', icon: '🏗️' },
+    ],
+  },
+  {
     label: 'EXPERIENCE',
     links: [
       { href: '/travel', label: 'Travel', icon: '✈️' },
