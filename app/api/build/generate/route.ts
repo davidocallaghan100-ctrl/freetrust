@@ -77,12 +77,19 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Load prior turns for context ───────────────────────────────────
+    // design_spec is selected (not just role/content) so we can tell
+    // whether this conversation has ever produced a real design yet —
+    // that distinction drives the no-charge/refund logic below.
     const { data: priorMessages } = await admin
       .from('build_messages')
-      .select('role, content')
+      .select('role, content, design_spec')
       .eq('conversation_id', conversationId)
       .order('created_at', { ascending: true })
       .limit(40)
+
+    const hasPriorDesign = (priorMessages ?? []).some(
+      m => m.role === 'assistant' && m.design_spec != null
+    )
 
     // ── Resolve reference images (if any) into Anthropic image blocks ───
     // Ownership-checked inside downloadBuildImagesAsBase64 — paths not
@@ -130,8 +137,55 @@ export async function POST(req: NextRequest) {
     }
 
     const designSpec = extractDesignSpec(rawReply)
-    const conversationalReply = stripDesignSpecFence(rawReply) ||
-      (designSpec ? 'Design updated — see the viewer above.' : "Design could not be rendered — try rephrasing.")
+    // Did Claude even attempt a ```json fence? If not, this is a genuine
+    // conversational turn (e.g. a greeting or a clarifying follow-up) —
+    // not a technical failure — regardless of whether a design already
+    // exists in this conversation. Only a present-but-unparseable fence
+    // counts as a real render error worth warning the user about.
+    const hasFence = /```/.test(rawReply)
+    const isGenuineFailure = !designSpec && hasFence
+    // Never charge for the very first design-less turn(s) of a brand-new
+    // conversation — if nothing has ever been designed yet and this turn
+    // didn't produce one either (conversational or malformed), refund the
+    // Generate charge. Once a design exists, later no-spec turns (follow-up
+    // questions, clarifications) are refinement turns on an existing paid
+    // design and are charged normally — see lib/build/prompts.ts + bug
+    // writeup in .memory/capabilities/freetrust-build-studio.md.
+    const shouldRefund = !designSpec && !hasPriorDesign
+
+    let refunded = false
+    let newBalance = spend.newBalance
+    if (shouldRefund) {
+      const { error: refundErr } = await admin.rpc('issue_trust', {
+        p_user_id: user.id,
+        p_amount: GENERATE_COST,
+        p_type: 'refund_build_generate',
+        p_ref: null,
+        p_desc: 'Build: no design produced yet — refund',
+      })
+      if (refundErr) {
+        console.error('[POST /api/build/generate] refund failed', refundErr)
+      } else {
+        refunded = true
+        const { data: bal } = await admin
+          .from('trust_balances')
+          .select('balance')
+          .eq('user_id', user.id)
+          .maybeSingle()
+        if (bal && typeof bal.balance === 'number') newBalance = bal.balance
+      }
+    }
+
+    // The user-visible "warning" state (both the chat-bubble ⚠️ line and
+    // the 3D viewer's overlay banner) is reserved for genuine parse
+    // failures — a fence Claude attempted but that didn't parse. A
+    // fenceless conversational reply (greeting, clarifying question) is
+    // just... a reply, and should read like one.
+    const conversationalReply = designSpec
+      ? (stripDesignSpecFence(rawReply) || 'Design updated — see the viewer above.')
+      : isGenuineFailure
+        ? (stripDesignSpecFence(rawReply) || "Design could not be rendered — try rephrasing.")
+        : rawReply.trim()
 
     const { data: savedMessage, error: saveErr } = await admin
       .from('build_messages')
@@ -151,27 +205,34 @@ export async function POST(req: NextRequest) {
 
     // Upsert the three core sections from the conversational reply so the
     // tab UI / PDF export has structured content without re-parsing chat.
-    const sectionExtract = (label: string) => {
-      const re = new RegExp(`\\*\\*${label}\\*\\*([\\s\\S]*?)(?=\\n\\*\\*[A-Z]|$)`, 'i')
-      const m = conversationalReply.match(re)
-      return m ? m[1].trim() : conversationalReply
-    }
+    // Only do this when a design was actually produced this turn — a
+    // conversational reply (greeting, clarifying question) has no
+    // meaningful "Brief & Vision"/"Design"/"Build Sequence" content and
+    // upserting it would overwrite good section content from an earlier
+    // turn with junk.
+    if (designSpec) {
+      const sectionExtract = (label: string) => {
+        const re = new RegExp(`\\*\\*${label}\\*\\*([\\s\\S]*?)(?=\\n\\*\\*[A-Z]|$)`, 'i')
+        const m = conversationalReply.match(re)
+        return m ? m[1].trim() : conversationalReply
+      }
 
-    const coreSections = [
-      { section_key: 'brief', content: sectionExtract('Brief & Vision') },
-      { section_key: 'design', content: sectionExtract('Design') },
-      { section_key: 'build_sequence', content: sectionExtract('Build Sequence') },
-    ]
+      const coreSections = [
+        { section_key: 'brief', content: sectionExtract('Brief & Vision') },
+        { section_key: 'design', content: sectionExtract('Design') },
+        { section_key: 'build_sequence', content: sectionExtract('Build Sequence') },
+      ]
 
-    for (const s of coreSections) {
-      await admin.from('build_sections').upsert({
-        conversation_id: conversationId,
-        user_id: user.id,
-        section_key: s.section_key,
-        content: s.content,
-        cost_spent: 0,
-        generated_at: new Date().toISOString(),
-      }, { onConflict: 'conversation_id,section_key' })
+      for (const s of coreSections) {
+        await admin.from('build_sections').upsert({
+          conversation_id: conversationId,
+          user_id: user.id,
+          section_key: s.section_key,
+          content: s.content,
+          cost_spent: 0,
+          generated_at: new Date().toISOString(),
+        }, { onConflict: 'conversation_id,section_key' })
+      }
     }
 
     // Keep conversation title fresh on first generate + bump updated_at.
@@ -184,8 +245,9 @@ export async function POST(req: NextRequest) {
       messageId: savedMessage?.id ?? null,
       reply: conversationalReply,
       designSpec,
-      renderError: !designSpec,
-      newBalance: spend.newBalance,
+      renderError: isGenuineFailure,
+      refunded,
+      newBalance,
       cost: GENERATE_COST,
     })
   } catch (err) {

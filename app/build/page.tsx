@@ -117,7 +117,15 @@ export default function BuildPage() {
         id: m.id, role: m.role, content: m.content, imageUrls: m.image_urls,
       })))
       setDesignSpec(data.latestDesignSpec ?? null)
-      setRenderError(!data.latestDesignSpec && (data.messages ?? []).some((m: { role: string }) => m.role === 'assistant'))
+      // Don't show the viewer's "could not be rendered" warning just
+      // because a conversation hasn't produced a design yet (e.g. it
+      // started with a greeting and is still mid-clarification) — that's
+      // not a failure. History doesn't retain enough signal to tell a
+      // genuine past parse failure apart from an ordinary conversational
+      // turn, so default to no warning on reload; the placeholder model
+      // shown when designSpec is null already communicates "nothing here
+      // yet" without alarming language.
+      setRenderError(false)
       setSections(data.sections ?? [])
       setActiveSectionKey('brief')
     } finally {
@@ -197,9 +205,16 @@ export default function BuildPage() {
       if (data.designSpec) {
         setDesignSpec(data.designSpec)
         setRenderError(false)
-      } else {
+      } else if (data.renderError) {
+        // Genuine parse failure — keep showing the last valid design
+        // underneath (designSpec state is untouched), just surface the
+        // viewer's warning overlay on top of it.
         setRenderError(true)
       }
+      // else: a conversational turn (greeting, clarifying question) with
+      // no design produced — leave designSpec/renderError exactly as they
+      // were; there's nothing to warn about, Trust Coins were refunded
+      // server-side if no design existed yet (data.refunded).
       if (typeof data.newBalance === 'number') setBalance(data.newBalance)
 
       // Refresh sections (core sections were upserted server-side).
