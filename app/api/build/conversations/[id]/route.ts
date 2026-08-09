@@ -36,7 +36,7 @@ export async function GET(
     const [messagesRes, sectionsRes] = await Promise.all([
       supabase
         .from('build_messages')
-        .select('id, role, content, design_spec, created_at')
+        .select('id, role, content, design_spec, image_urls, created_at')
         .eq('conversation_id', id)
         .order('created_at', { ascending: true }),
       supabase

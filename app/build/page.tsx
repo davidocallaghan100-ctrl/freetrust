@@ -5,7 +5,9 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import type { DesignSpec, SectionKey } from '@/lib/build/spec'
 import { GENERATE_COST, PDF_COST, DISCLAIMER_TEXT } from '@/lib/build/spec'
-import BuildChat, { type ChatMessage } from '@/components/build/BuildChat'
+import { createClient } from '@/lib/supabase/client'
+import { uploadBuildImages, validateBuildImageFiles, MAX_BUILD_IMAGES_PER_MESSAGE } from '@/lib/build/attachments'
+import BuildChat, { type ChatMessage, type PendingImage } from '@/components/build/BuildChat'
 import BuildSections, { type SectionRecord } from '@/components/build/BuildSections'
 
 const BuildViewer = dynamic(() => import('@/components/build/BuildViewer'), { ssr: false })
@@ -24,6 +26,7 @@ interface InsufficientFundsInfo {
 
 export default function BuildPage() {
   const [balance, setBalance] = useState<number | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -37,6 +40,46 @@ export default function BuildPage() {
   const [downloading, setDownloading] = useState(false)
   const [insufficientFunds, setInsufficientFunds] = useState<InsufficientFundsInfo | null>(null)
   const [loadingConvo, setLoadingConvo] = useState(false)
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([])
+  const [imageError, setImageError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => setUserId(user?.id ?? null))
+  }, [])
+
+  // Revoke blob: preview URLs when they're no longer needed to avoid
+  // leaking memory across a long Build session.
+  useEffect(() => {
+    return () => {
+      pendingImages.forEach(img => URL.revokeObjectURL(img.previewUrl))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handlePickImages = (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    const arr = Array.from(files)
+    const validationError = validateBuildImageFiles(arr, pendingImages.length)
+    if (validationError) {
+      setImageError(validationError)
+      return
+    }
+    setImageError(null)
+    setPendingImages(prev => [
+      ...prev,
+      ...arr.map(file => ({ file, previewUrl: URL.createObjectURL(file) })),
+    ])
+  }
+
+  const handleRemoveImage = (index: number) => {
+    setPendingImages(prev => {
+      const target = prev[index]
+      if (target) URL.revokeObjectURL(target.previewUrl)
+      return prev.filter((_, i) => i !== index)
+    })
+    setImageError(null)
+  }
 
   const refreshBalance = useCallback(async () => {
     try {
@@ -70,8 +113,8 @@ export default function BuildPage() {
       if (!res.ok) return
       const data = await res.json()
       setActiveConversationId(id)
-      setMessages((data.messages ?? []).map((m: { id: string; role: string; content: string }) => ({
-        id: m.id, role: m.role, content: m.content,
+      setMessages((data.messages ?? []).map((m: { id: string; role: string; content: string; image_urls?: string[] }) => ({
+        id: m.id, role: m.role, content: m.content, imageUrls: m.image_urls,
       })))
       setDesignSpec(data.latestDesignSpec ?? null)
       setRenderError(!data.latestDesignSpec && (data.messages ?? []).some((m: { role: string }) => m.role === 'assistant'))
@@ -90,23 +133,47 @@ export default function BuildPage() {
     setSections([])
     setActiveSectionKey('brief')
     setInsufficientFunds(null)
+    pendingImages.forEach(img => URL.revokeObjectURL(img.previewUrl))
+    setPendingImages([])
+    setImageError(null)
   }
 
   const handleSend = async () => {
     const message = input.trim()
-    if (!message || sending) return
+    const imagesToSend = pendingImages
+    if ((!message && imagesToSend.length === 0) || sending || !userId) return
     setInput('')
     setSending(true)
     setInsufficientFunds(null)
+    setImageError(null)
 
     const tempUserId = `tmp-${Date.now()}`
-    setMessages(prev => [...prev, { id: tempUserId, role: 'user', content: message }])
+    const localPreviewUrls = imagesToSend.map(img => img.previewUrl)
+    setMessages(prev => [...prev, { id: tempUserId, role: 'user', content: message, localPreviewUrls }])
 
     try {
+      // Upload images first (free — no Trust Coin cost). Only the
+      // subsequent /api/build/generate call charges GENERATE_COST.
+      let imagePaths: string[] = []
+      if (imagesToSend.length > 0) {
+        try {
+          imagePaths = await uploadBuildImages(createClient(), imagesToSend.map(i => i.file), { userId })
+        } catch (uploadErr) {
+          const msg = uploadErr instanceof Error ? uploadErr.message : 'Could not upload reference photos.'
+          setImageError(msg)
+          setMessages(prev => prev.filter(m => m.id !== tempUserId))
+          setInput(message)
+          return
+        }
+      }
+      // Clear the composer's pending images only after a successful upload —
+      // keeps them visible (and retryable) if the upload step failed above.
+      setPendingImages([])
+
       const res = await fetch('/api/build/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationId: activeConversationId, message }),
+        body: JSON.stringify({ conversationId: activeConversationId, message, imageUrls: imagePaths }),
       })
       const data = await res.json()
 
@@ -307,6 +374,11 @@ export default function BuildPage() {
         onSend={handleSend}
         sending={sending}
         generateCost={GENERATE_COST}
+        pendingImages={pendingImages}
+        onPickImages={handlePickImages}
+        onRemoveImage={handleRemoveImage}
+        imageError={imageError}
+        maxImages={MAX_BUILD_IMAGES_PER_MESSAGE}
       />
 
       {/* Action row */}

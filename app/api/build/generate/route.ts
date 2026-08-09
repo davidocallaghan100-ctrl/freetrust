@@ -3,18 +3,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { spendTrustCoins } from '@/lib/build/spend'
-import { callClaude, type ClaudeMessage } from '@/lib/build/claude'
+import { callClaude, type ClaudeMessage, type ClaudeContentBlock } from '@/lib/build/claude'
 import { MAIN_SYSTEM_PROMPT } from '@/lib/build/prompts'
 import { extractDesignSpec, stripDesignSpecFence, GENERATE_COST } from '@/lib/build/spec'
+import { normalizeBuildImageUrls, MAX_BUILD_IMAGES_PER_MESSAGE } from '@/lib/build/attachments'
+import { downloadBuildImagesAsBase64 } from '@/lib/build/attachments.server'
 
 // POST /api/build/generate
-// body: { conversationId?: string, message: string }
+// body: { conversationId?: string, message: string, imageUrls?: string[] }
 // Charges GENERATE_COST (7 TC) via spend_trust BEFORE calling Claude.
 // Creates the conversation if conversationId is omitted. Stores the
 // user turn + assistant turn (with parsed design_spec, if any) and
 // upserts the three core sections (brief/design/build_sequence) so the
 // "Documents & Downloads" PDF and tab UI can read them without
 // re-parsing the chat transcript.
+//
+// imageUrls are Storage PATHS (not public URLs — the bucket is private)
+// in build-attachments, already uploaded client-side before this call.
+// Uploading images itself is free; they only ever ride along with a
+// Generate call, so no separate charge path exists for them.
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient()
@@ -23,11 +30,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await req.json().catch(() => null) as { conversationId?: string; message?: string } | null
+    const body = await req.json().catch(() => null) as { conversationId?: string; message?: string; imageUrls?: string[] } | null
     const message = body?.message?.trim()
     if (!message) {
       return NextResponse.json({ error: 'message is required' }, { status: 400 })
     }
+    const imageUrls = normalizeBuildImageUrls(body?.imageUrls).slice(0, MAX_BUILD_IMAGES_PER_MESSAGE)
 
     const admin = createAdminClient()
 
@@ -76,18 +84,35 @@ export async function POST(req: NextRequest) {
       .order('created_at', { ascending: true })
       .limit(40)
 
+    // ── Resolve reference images (if any) into Anthropic image blocks ───
+    // Ownership-checked inside downloadBuildImagesAsBase64 — paths not
+    // owned by this user are silently dropped rather than downloaded.
+    const imageBlocks = imageUrls.length > 0
+      ? await downloadBuildImagesAsBase64(admin, user.id, imageUrls)
+      : []
+
+    const currentTurnContent: string | ClaudeContentBlock[] = imageBlocks.length > 0
+      ? [
+          ...imageBlocks.map(b => ({ type: 'image' as const, source: { type: 'base64' as const, media_type: b.media_type, data: b.data } })),
+          { type: 'text' as const, text: message },
+        ]
+      : message
+
     const claudeMessages: ClaudeMessage[] = [
       ...((priorMessages ?? []).map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))),
-      { role: 'user', content: message },
+      { role: 'user', content: currentTurnContent },
     ]
 
     // Record the user's turn immediately (even if the AI call later fails,
     // we don't want to lose the coins-charged prompt from the transcript).
+    // image_urls stores the Storage PATHS (not base64) so the chat thread
+    // can re-render thumbnails later via signed URLs without re-uploading.
     await admin.from('build_messages').insert({
       conversation_id: conversationId,
       user_id: user.id,
       role: 'user',
       content: message,
+      image_urls: imageUrls,
     })
 
     let rawReply: string

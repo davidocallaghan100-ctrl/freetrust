@@ -3,9 +3,22 @@
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
 export const BUILD_MODEL = 'claude-sonnet-4-6'
 
+// Anthropic message content can be a plain string (existing behaviour,
+// used for all prior-turn history) or an array of content blocks — used
+// for the current turn when the user has attached reference images.
+export interface ClaudeImageBlock {
+  type: 'image'
+  source: { type: 'base64'; media_type: string; data: string }
+}
+export interface ClaudeTextBlock {
+  type: 'text'
+  text: string
+}
+export type ClaudeContentBlock = ClaudeImageBlock | ClaudeTextBlock
+
 export interface ClaudeMessage {
   role: 'user' | 'assistant'
-  content: string
+  content: string | ClaudeContentBlock[]
 }
 
 export async function callClaude(
