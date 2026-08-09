@@ -20,7 +20,12 @@ const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'imag
 const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v', 'video/3gpp']
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024   //  10 MB
-const MAX_VIDEO_BYTES = 100 * 1024 * 1024  // 100 MB
+// Raised from 100 MB → 300 MB on 2026-07-25 to match the Supabase project's
+// global Storage file-size limit and app/create/page.tsx's client-side
+// check. This route is only a legacy fallback (primary path is the direct
+// client-to-Supabase upload), so this mainly keeps the fallback's own size
+// error message consistent with the real limit.
+const MAX_VIDEO_BYTES = 300 * 1024 * 1024  // 300 MB
 
 export async function POST(req: NextRequest) {
   const startedAt = Date.now()

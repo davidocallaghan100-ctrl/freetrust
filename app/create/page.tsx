@@ -66,7 +66,23 @@ const POST_TYPES: { type: PostType; icon: string; label: string; desc: string }[
 ]
 
 const PHOTO_UPLOAD_TIMEOUT_MS = 45_000
-const VIDEO_UPLOAD_TIMEOUT_MS = 120_000
+
+// Videos can range from a few MB to hundreds of MB. A fixed timeout either
+// times out large-but-legitimate uploads on slower connections or leaves
+// tiny uploads waiting needlessly long to detect a genuinely stalled
+// connection. Scale the timeout with file size instead: a floor for small
+// clips, roughly 3s of budget per MB (≈333 KB/s sustained — a safe floor
+// for mobile networks), capped so a truly stalled upload still fails fast
+// enough for the user to retry.
+const VIDEO_UPLOAD_TIMEOUT_FLOOR_MS = 120_000   // 2 min minimum
+const VIDEO_UPLOAD_TIMEOUT_CAP_MS = 900_000     // 15 min maximum
+const VIDEO_UPLOAD_MS_PER_MB = 3_000            // ≈333 KB/s sustained-throughput budget
+
+function getVideoUploadTimeoutMs(fileSizeBytes: number) {
+  const sizeMb = fileSizeBytes / (1024 * 1024)
+  const scaled = VIDEO_UPLOAD_TIMEOUT_FLOOR_MS + sizeMb * VIDEO_UPLOAD_MS_PER_MB
+  return Math.min(VIDEO_UPLOAD_TIMEOUT_CAP_MS, Math.max(VIDEO_UPLOAD_TIMEOUT_FLOOR_MS, scaled))
+}
 
 const TEXT_OVERLAY_OPTIONS: TextOverlayOption[] = [
   {
@@ -619,9 +635,17 @@ export default function CreatePage() {
       }
 
       // ── 2. Size limit ───────────────────────────────────────────────────
+      // Raised from 100 MB → 300 MB on 2026-07-25 to match the Supabase
+      // project's global Storage file-size limit (previously capped at the
+      // Storage-wide default of 50 MB, which silently rejected any video
+      // between 50-100 MB even though this client-side check let it
+      // through — the actual cause of "file too large" on shorter but
+      // higher-bitrate clips). Keep this in sync with MAX_VIDEO_BYTES in
+      // app/api/upload/media/route.ts and the Supabase project Storage
+      // config (Management API config/storage.fileSizeLimit).
       step = 'size-check'
       const MAX_IMAGE = 10 * 1024 * 1024   //  10 MB
-      const MAX_VIDEO = 100 * 1024 * 1024  // 100 MB
+      const MAX_VIDEO = 300 * 1024 * 1024  // 300 MB
       const sizeLimit = isVideo ? MAX_VIDEO : MAX_IMAGE
       if (file.size > sizeLimit) {
         const mb = Math.round(sizeLimit / 1024 / 1024)
@@ -701,7 +725,7 @@ export default function CreatePage() {
           file,
           contentType: fileType,
           accessToken,
-          timeoutMs: isVideo ? VIDEO_UPLOAD_TIMEOUT_MS : PHOTO_UPLOAD_TIMEOUT_MS,
+          timeoutMs: isVideo ? getVideoUploadTimeoutMs(file.size) : PHOTO_UPLOAD_TIMEOUT_MS,
         })
         publicUrl = uploaded.publicUrl
       } catch (thrown) {
