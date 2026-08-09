@@ -9,6 +9,6 @@ node_modules
 .turbo
 coverage
 dist
-build
+/build
 core.*
 *.tsbuildinfo
