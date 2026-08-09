@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
 
     let rawReply: string
     try {
-      rawReply = await callClaude(MAIN_SYSTEM_PROMPT, claudeMessages, 2500)
+      rawReply = await callClaude(MAIN_SYSTEM_PROMPT, claudeMessages, 4096)
     } catch (err) {
       console.error('[POST /api/build/generate] Claude call failed', err)
       const fallback = "Sorry — I couldn't generate a design just now. Your Trust Coins were already spent for this attempt; please try rephrasing your request and I'll try again."
