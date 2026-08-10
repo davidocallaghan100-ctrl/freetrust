@@ -8,6 +8,7 @@ import { trackEvent, trackEventOnce } from '@/lib/analytics'
 import GifPicker from '@/components/gifs/GifPicker'
 import GifContent from '@/components/gifs/GifContent'
 import { appendGifMarker, type GifResult } from '@/lib/gifs'
+import { FEED_AUDIO_PLAY_EVENT, announceFeedAudioPlayback, generateFeedPlayerId } from '@/lib/feed/audioCoordinator'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -726,8 +727,6 @@ function TextMediaOverlay({ overlay, compact = false }: { overlay: TextOverlayDa
 
 // ── Photo Carousel ────────────────────────────────────────────────────────────
 
-const FEED_SOUNDTRACK_PLAY_EVENT = 'freetrust:feed-soundtrack-play'
-
 function PhotoCarousel({ urls, alt, soundtrack, textOverlay, imageHref, imageBadge }: { urls: string[]; alt: string; soundtrack?: SpotifyTrackData | null; textOverlay?: TextOverlayData | null; imageHref?: string | null; imageBadge?: { label: string; href: string; ariaLabel: string } | null }) {
   const [index, setIndex] = useState(0)
   const [soundtrackEnabled, setSoundtrackEnabled] = useState(true)
@@ -737,7 +736,7 @@ function PhotoCarousel({ urls, alt, soundtrack, textOverlay, imageHref, imageBad
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const soundtrackEnabledRef = useRef(true)
   const soundtrackVisibleRef = useRef(false)
-  const playerIdRef = useRef(`ft-soundtrack-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`)
+  const playerIdRef = useRef(generateFeedPlayerId('ft-soundtrack'))
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartX = useRef<number | null>(null)
   const count = urls.length
@@ -773,12 +772,12 @@ function PhotoCarousel({ urls, alt, soundtrack, textOverlay, imageHref, imageBad
       audio.currentTime = 0
       setSoundtrackPlaying(false)
     }
-    window.addEventListener(FEED_SOUNDTRACK_PLAY_EVENT, stopForAnotherPost)
-    return () => window.removeEventListener(FEED_SOUNDTRACK_PLAY_EVENT, stopForAnotherPost)
+    window.addEventListener(FEED_AUDIO_PLAY_EVENT, stopForAnotherPost)
+    return () => window.removeEventListener(FEED_AUDIO_PLAY_EVENT, stopForAnotherPost)
   }, [])
 
   const announceSoundtrackPlayback = () => {
-    window.dispatchEvent(new CustomEvent(FEED_SOUNDTRACK_PLAY_EVENT, { detail: { playerId: playerIdRef.current } }))
+    announceFeedAudioPlayback(playerIdRef.current)
   }
 
   const showSoundtrackNotice = (message: string) => {
@@ -1080,6 +1079,7 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
   const userPausedRef = useRef(false)
   const audioEnabledRef = useRef(true)
   const posterCapturedRef = useRef(false)
+  const playerIdRef = useRef(generateFeedPlayerId('ft-video'))
   const [playing, setPlaying] = useState(false)
   const [duration, setDuration] = useState<number | null>(null)
   const [muted, setMuted] = useState(false)
@@ -1120,6 +1120,25 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
     setDuration(null)
   }, [src])
 
+  // Yield to whichever feed post (video or photo-carousel soundtrack) most
+  // recently announced itself as audible — keeps sound to a single source
+  // across the whole feed. Muting (rather than pausing) keeps this video's
+  // own playback/looping unaffected, matching what happens when a user
+  // manually mutes via the speaker toggle below.
+  useEffect(() => {
+    const yieldToAnotherPlayer = (event: Event) => {
+      const detail = (event as CustomEvent<{ playerId?: string }>).detail
+      if (detail?.playerId === playerIdRef.current) return
+      const el = videoRef.current
+      if (!el || el.muted) return
+      el.muted = true
+      audioEnabledRef.current = false
+      setMuted(true)
+    }
+    window.addEventListener(FEED_AUDIO_PLAY_EVENT, yieldToAnotherPlayer)
+    return () => window.removeEventListener(FEED_AUDIO_PLAY_EVENT, yieldToAnotherPlayer)
+  }, [])
+
   // Auto-play video when it is visibly in the feed. Sound is enabled by
   // default so users hear feed videos without manually unmuting. Browser
   // autoplay policies can still block sound before a user gesture, so we
@@ -1130,6 +1149,7 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
 
     const tryAutoplay = () => {
       const shouldMute = !audioEnabledRef.current
+      if (!shouldMute) announceFeedAudioPlayback(playerIdRef.current)
       el.muted = shouldMute
       setMuted(shouldMute)
       el.play()
@@ -1212,6 +1232,7 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
     const visiblePx = Math.max(0, visibleBottom - visibleTop)
     if (visiblePx < Math.min(240, rect.height * 0.3)) return
     const shouldMute = !audioEnabledRef.current
+    if (!shouldMute) announceFeedAudioPlayback(playerIdRef.current)
     el.muted = shouldMute
     setMuted(shouldMute)
     el.play()
@@ -1239,6 +1260,7 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
     const nextMuted = !muted
     audioEnabledRef.current = !nextMuted
     if (el) {
+      if (!nextMuted) announceFeedAudioPlayback(playerIdRef.current)
       el.muted = nextMuted
       if (!nextMuted && el.paused) {
         el.play().then(() => setPlaying(true)).catch(() => {})
