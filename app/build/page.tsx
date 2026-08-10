@@ -7,8 +7,9 @@ import type { DesignSpec, SectionKey } from '@/lib/build/spec'
 import { GENERATE_COST, PDF_COST, DISCLAIMER_TEXT } from '@/lib/build/spec'
 import { createClient } from '@/lib/supabase/client'
 import { uploadBuildImages, validateBuildImageFiles, MAX_BUILD_IMAGES_PER_MESSAGE } from '@/lib/build/attachments'
-import BuildChat, { type ChatMessage, type PendingImage } from '@/components/build/BuildChat'
+import BuildChat, { type ChatMessage, type PendingImage, type SendStage } from '@/components/build/BuildChat'
 import BuildSections, { type SectionRecord } from '@/components/build/BuildSections'
+import BuildLoadingDots from '@/components/build/LoadingDots'
 
 const BuildViewer = dynamic(() => import('@/components/build/BuildViewer'), { ssr: false })
 
@@ -36,6 +37,7 @@ export default function BuildPage() {
   const [activeSectionKey, setActiveSectionKey] = useState<SectionKey>('brief')
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
+  const [sendStage, setSendStage] = useState<SendStage>(null)
   const [generatingSection, setGeneratingSection] = useState<SectionKey | null>(null)
   const [downloading, setDownloading] = useState(false)
   const [insufficientFunds, setInsufficientFunds] = useState<InsufficientFundsInfo | null>(null)
@@ -152,6 +154,11 @@ export default function BuildPage() {
     if ((!message && imagesToSend.length === 0) || sending || !userId) return
     setInput('')
     setSending(true)
+    // Best-effort, client-side-only stage label for the "thinking"
+    // placeholder — no real server progress events, just an honest
+    // description of what this client is doing right now (uploading vs.
+    // waiting on the AI vs. the brief pause before the viewer updates).
+    setSendStage(imagesToSend.length > 0 ? 'uploading' : 'thinking')
     setInsufficientFunds(null)
     setImageError(null)
 
@@ -177,6 +184,7 @@ export default function BuildPage() {
       // Clear the composer's pending images only after a successful upload —
       // keeps them visible (and retryable) if the upload step failed above.
       setPendingImages([])
+      setSendStage('thinking')
 
       const res = await fetch('/api/build/generate', {
         method: 'POST',
@@ -195,6 +203,12 @@ export default function BuildPage() {
         setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', content: data.error || 'Something went wrong — please try again.' }])
         return
       }
+
+      // Response has landed — hold the placeholder for one more brief beat
+      // with a "rendering" label before swapping in the real message and
+      // updating the 3D viewer, so the transition doesn't feel abrupt.
+      setSendStage('rendering')
+      await new Promise(resolve => setTimeout(resolve, 350))
 
       if (!activeConversationId && data.conversationId) {
         setActiveConversationId(data.conversationId)
@@ -231,6 +245,7 @@ export default function BuildPage() {
       setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'assistant', content: 'Network error — please try again.' }])
     } finally {
       setSending(false)
+      setSendStage(null)
     }
   }
 
@@ -388,6 +403,7 @@ export default function BuildPage() {
         onInputChange={setInput}
         onSend={handleSend}
         sending={sending}
+        sendStage={sendStage}
         generateCost={GENERATE_COST}
         pendingImages={pendingImages}
         onPickImages={handlePickImages}
@@ -412,9 +428,10 @@ export default function BuildPage() {
             color: '#f4c451', background: 'rgba(244,196,81,0.08)',
             cursor: !activeConversationId || downloading ? 'default' : 'pointer',
             opacity: !activeConversationId ? 0.5 : 1,
+            display: 'flex', alignItems: 'center', gap: 8,
           }}
         >
-          {downloading ? 'Preparing PDF…' : `⬇ Download Steps — ${PDF_COST} TC`}
+          {downloading ? (<><BuildLoadingDots color="#f4c451" size={4} /> Preparing PDF…</>) : `⬇ Download Steps — ${PDF_COST} TC`}
         </button>
       </div>
 

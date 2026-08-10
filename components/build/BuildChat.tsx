@@ -2,6 +2,15 @@
 
 import { useRef, useEffect } from 'react'
 import BuildMessageImages from './BuildMessageImages'
+import BuildLoadingDots from './LoadingDots'
+
+export type SendStage = 'uploading' | 'thinking' | 'rendering' | null
+
+const STAGE_LABEL: Record<Exclude<SendStage, null>, string> = {
+  uploading: 'Uploading reference photos…',
+  thinking: 'Consulting the AI architect…',
+  rendering: 'Rendering your design…',
+}
 
 export interface ChatMessage {
   id: string
@@ -26,6 +35,8 @@ interface BuildChatProps {
   onInputChange: (v: string) => void
   onSend: () => void
   sending: boolean
+  /** Best-effort client-side stage label shown inside the "thinking" placeholder while sending is true. */
+  sendStage?: SendStage
   generateCost: number
   pendingImages: PendingImage[]
   onPickImages: (files: FileList | null) => void
@@ -35,15 +46,18 @@ interface BuildChatProps {
 }
 
 export default function BuildChat({
-  messages, input, onInputChange, onSend, sending, generateCost,
+  messages, input, onInputChange, onSend, sending, sendStage, generateCost,
   pendingImages, onPickImages, onRemoveImage, imageError, maxImages,
 }: BuildChatProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Re-run on sending toggling too (not just message count) so the
+  // "thinking" placeholder appearing/disappearing also scrolls into view,
+  // not just real new messages landing.
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [messages.length])
+  }, [messages.length, sending])
 
   const canSend = (input.trim().length > 0 || pendingImages.length > 0) && !sending
 
@@ -87,6 +101,27 @@ export default function BuildChat({
             )}
           </div>
         ))}
+        {sending && (
+          <div
+            style={{
+              maxWidth: '88%',
+              alignSelf: 'flex-start',
+              background: '#0e1f2e',
+              border: '1px solid #1c3548',
+              borderRadius: 14,
+              borderBottomLeftRadius: 4,
+              padding: '10px 13px',
+              fontSize: 13,
+              color: '#8ca7b5',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 9,
+            }}
+          >
+            <BuildLoadingDots />
+            <span>{STAGE_LABEL[sendStage ?? 'thinking']}</span>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
 
@@ -160,6 +195,9 @@ export default function BuildChat({
             style={{
               flex: 1, background: '#0e1f2e', border: '1px solid #1c3548', borderRadius: 999,
               padding: '11px 16px', color: '#e6f1f5', fontSize: 13.5, outline: 'none', minWidth: 0,
+              opacity: sending ? 0.55 : 1,
+              cursor: sending ? 'not-allowed' : 'text',
+              transition: 'opacity 0.15s ease',
             }}
           />
           <button
@@ -171,7 +209,7 @@ export default function BuildChat({
               flexShrink: 0, border: 'none', cursor: canSend ? 'pointer' : 'default',
             }}
           >
-            {sending ? '…' : '➤'}
+            {sending ? <BuildLoadingDots color="#8ca7b5" size={4} /> : '➤'}
           </button>
         </div>
       </div>

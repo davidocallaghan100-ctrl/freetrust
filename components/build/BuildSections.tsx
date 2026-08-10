@@ -1,6 +1,7 @@
 'use client'
 
 import { BUILD_SECTIONS, ON_DEMAND_SECTION_COST, type SectionKey } from '@/lib/build/spec'
+import BuildLoadingDots from './LoadingDots'
 
 export interface SectionRecord {
   section_key: string
@@ -60,9 +61,10 @@ export default function BuildSections({ sections, activeKey, onSelect, onGenerat
                   marginTop: 10, fontSize: 11, fontWeight: 600, borderRadius: 8, padding: '6px 11px',
                   border: '1px solid #1c3548', background: '#0e1f2e', color: '#8ca7b5',
                   cursor: disabled ? 'default' : 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
                 }}
               >
-                {generatingKey === active.key ? 'Regenerating…' : `↻ Regenerate — ${ON_DEMAND_SECTION_COST} TC`}
+                {generatingKey === active.key ? (<><BuildLoadingDots color="#8ca7b5" size={4} /> Regenerating…</>) : `↻ Regenerate — ${ON_DEMAND_SECTION_COST} TC`}
               </button>
             )}
           </div>
@@ -80,9 +82,10 @@ export default function BuildSections({ sections, activeKey, onSelect, onGenerat
                 fontSize: 12, fontWeight: 600, borderRadius: 10, padding: '9px 14px',
                 border: '1px solid #f4c451', background: 'rgba(244,196,81,0.08)', color: '#f4c451',
                 cursor: disabled ? 'default' : 'pointer',
+                display: 'inline-flex', alignItems: 'center', gap: 8,
               }}
             >
-              {generatingKey === active.key ? 'Generating…' : `✨ Generate — ${ON_DEMAND_SECTION_COST} TC`}
+              {generatingKey === active.key ? (<><BuildLoadingDots color="#f4c451" size={4} /> Generating…</>) : `✨ Generate — ${ON_DEMAND_SECTION_COST} TC`}
             </button>
           </div>
         )}
