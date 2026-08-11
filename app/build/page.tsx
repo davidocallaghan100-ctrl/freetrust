@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
@@ -33,6 +33,7 @@ export default function BuildPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
+  const activeConversationIdRef = useRef<string | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [designSpec, setDesignSpec] = useState<DesignSpec | null>(null)
   const [renderError, setRenderError] = useState(false)
@@ -52,6 +53,14 @@ export default function BuildPage() {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => setUserId(user?.id ?? null))
   }, [])
+
+  // Kept in sync so the mount-time auto-load effect below can check the
+  // LATEST activeConversationId without depending on a stale closure value
+  // (the effect only runs once, so a state variable read inside its async
+  // .then() would otherwise always see the value from mount time).
+  useEffect(() => {
+    activeConversationIdRef.current = activeConversationId
+  }, [activeConversationId])
 
   // Revoke blob: preview URLs when they're no longer needed to avoid
   // leaking memory across a long Build session.
@@ -101,15 +110,17 @@ export default function BuildPage() {
       const res = await fetch('/api/build/conversations')
       if (res.ok) {
         const data = await res.json()
-        setConversations(data.conversations ?? [])
+        const list = data.conversations ?? []
+        setConversations(list)
+        return list as ConversationSummary[]
       }
     } catch { /* non-fatal */ }
+    return [] as ConversationSummary[]
   }, [])
 
   useEffect(() => {
     refreshBalance()
-    refreshConversations()
-  }, [refreshBalance, refreshConversations])
+  }, [refreshBalance])
 
   const loadConversation = useCallback(async (id: string) => {
     setLoadingConvo(true)
@@ -136,6 +147,27 @@ export default function BuildPage() {
     } finally {
       setLoadingConvo(false)
     }
+  }, [])
+
+  // On first mount, auto-select the most-recently-updated saved design (if
+  // any) so the 3D model + 12-section tabs are visible immediately on page
+  // load/refresh, instead of requiring an explicit tap into "Saved Designs"
+  // every time. /api/build/conversations already returns conversations
+  // ordered newest-updated-first, so the first item is the right pick. A
+  // brand-new user with zero saved designs still gets the current
+  // empty-state experience (blank composer, empty "Saved Designs" list) —
+  // nothing to auto-select, no-op.
+  useEffect(() => {
+    let cancelled = false
+    refreshConversations().then(list => {
+      if (cancelled) return
+      if (list.length > 0 && !activeConversationIdRef.current) {
+        loadConversation(list[0].id)
+      }
+    })
+    return () => { cancelled = true }
+    // Intentionally run once on mount only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const startNewConversation = () => {

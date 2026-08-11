@@ -22,8 +22,17 @@ function colorFor(materialsPalette: DesignSpec['materials_palette'], material: s
   }
 }
 
-/** Builds a THREE.Group procedurally from a parsed design spec. */
-function buildModel(spec: DesignSpec): THREE.Group {
+/**
+ * Builds a THREE.Group procedurally from a parsed design spec.
+ * Returns the full group (content + ground grid) alongside `contentSize` —
+ * the bounding-box size of the BUILDING CONTENT ONLY (before the ground
+ * grid is added). Camera framing must use `contentSize`, never a Box3 of
+ * the full group, because the ground grid is sized `maxFootprintDim * 3`
+ * and for large campus-scale designs would otherwise dominate the
+ * bounding box and produce a wildly incorrect framing distance (see
+ * `.memory/capabilities/freetrust-build-studio.md`).
+ */
+function buildModel(spec: DesignSpec): { group: THREE.Group; contentSize: THREE.Vector3 } {
   const group = new THREE.Group()
   const { footprint, storeys, storey_height_m, roof, elements, materials_palette } = spec
 
@@ -110,6 +119,11 @@ function buildModel(spec: DesignSpec): THREE.Group {
     group.add(mesh)
   }
 
+  // Compute the content-only bounding box BEFORE the ground grid is added
+  // — this is what camera framing must use.
+  const contentBox = new THREE.Box3().setFromObject(group)
+  const contentSize = contentBox.getSize(new THREE.Vector3())
+
   // Ground grid
   const grid = new THREE.GridHelper(Math.max(footprint.width_m, footprint.depth_m) * 3, 20, 0x1c3548, 0x152a38)
   group.add(grid)
@@ -118,10 +132,10 @@ function buildModel(spec: DesignSpec): THREE.Group {
   const center = new THREE.Vector3(footprint.width_m / 2, totalHeight / 2, footprint.depth_m / 2)
   group.position.sub(center)
 
-  return group
+  return { group, contentSize }
 }
 
-function buildPlaceholder(): THREE.Group {
+function buildPlaceholder(): { group: THREE.Group; contentSize: THREE.Vector3 } {
   const group = new THREE.Group()
   const geo = new THREE.BoxGeometry(4, 2.4, 4)
   const mat = new THREE.MeshStandardMaterial({ color: 0x2dd4bf, transparent: true, opacity: 0.25, wireframe: false })
@@ -129,10 +143,11 @@ function buildPlaceholder(): THREE.Group {
   group.add(box)
   const edges = new THREE.EdgesGeometry(geo)
   group.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x2dd4bf })))
+  const contentSize = new THREE.Box3().setFromObject(group).getSize(new THREE.Vector3())
   const grid = new THREE.GridHelper(12, 12, 0x1c3548, 0x152a38)
   group.add(grid)
   group.position.set(0, -1.2, 0)
-  return group
+  return { group, contentSize }
 }
 
 export default function BuildViewer({ designSpec, renderError }: BuildViewerProps) {
@@ -154,7 +169,7 @@ export default function BuildViewer({ designSpec, renderError }: BuildViewerProp
     const scene = new THREE.Scene()
     scene.background = new THREE.Color(0x0a1420)
 
-    const camera = new THREE.PerspectiveCamera(45, mount.clientWidth / mount.clientHeight, 0.1, 500)
+    const camera = new THREE.PerspectiveCamera(45, mount.clientWidth / mount.clientHeight, 0.1, 5000)
     camera.position.set(8, 6, 8)
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false })
@@ -166,7 +181,13 @@ export default function BuildViewer({ designSpec, renderError }: BuildViewerProp
     controls.enableDamping = true
     controls.dampingFactor = 0.08
     controls.minDistance = 2
-    controls.maxDistance = 60
+    // Generous ceiling so campus-scale designs (contentSize up to
+    // hundreds of metres) can be framed and manually zoomed out further
+    // if desired — OrbitControls.update() clamps camera distance to this
+    // range every frame, so a low ceiling here would silently undo any
+    // large initial framing distance set below, regardless of the grid
+    // fix. Kept comfortably inside the camera's far clip plane (5000).
+    controls.maxDistance = 3000
     controls.target.set(0, 0, 0)
     // Mobile-friendly: one-finger rotate, two-finger pinch to zoom (defaults),
     // and disable page scroll hijack while interacting with the canvas.
@@ -231,23 +252,29 @@ export default function BuildViewer({ designSpec, renderError }: BuildViewerProp
     }
 
     let group: THREE.Group
+    let contentSize: THREE.Vector3
     try {
-      group = designSpec ? buildModel(designSpec) : buildPlaceholder()
+      const built = designSpec ? buildModel(designSpec) : buildPlaceholder()
+      group = built.group
+      contentSize = built.contentSize
     } catch (err) {
       console.error('[BuildViewer] model build failed', err)
-      group = buildPlaceholder()
+      const built = buildPlaceholder()
+      group = built.group
+      contentSize = built.contentSize
     }
 
     state.scene.add(group)
     state.modelGroup = group
 
-    // Frame the camera to the model's bounding box.
-    const box = new THREE.Box3().setFromObject(group)
-    const size = box.getSize(new THREE.Vector3())
-    const maxDim = Math.max(size.x, size.y, size.z, 3)
+    // Frame the camera to the CONTENT bounding box only (never the full
+    // group, which also includes the ground grid — see buildModel's
+    // doc comment). This is what actually fixes the "zoomed-in/broken"
+    // framing for large campus-scale designs.
+    const maxDim = Math.max(contentSize.x, contentSize.y, contentSize.z, 3)
     const dist = maxDim * 1.6
     state.camera.position.set(dist * 0.8, dist * 0.65, dist * 0.8)
-    state.controls.target.set(0, size.y * 0.15, 0)
+    state.controls.target.set(0, contentSize.y * 0.15, 0)
     state.controls.update()
   }, [designSpec])
 
@@ -258,7 +285,8 @@ export default function BuildViewer({ designSpec, renderError }: BuildViewerProp
         style={{
           position: 'absolute', top: 10, left: 12, fontSize: 10.5, color: '#8ca7b5',
           background: 'rgba(0,0,0,0.35)', padding: '4px 9px', borderRadius: 999,
-          border: '1px solid #1c3548', pointerEvents: 'none',
+          border: '1px solid #1c3548', pointerEvents: 'none', maxWidth: '42%', minWidth: 0,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}
       >
         ↔ drag to rotate · pinch/scroll to zoom
@@ -268,7 +296,7 @@ export default function BuildViewer({ designSpec, renderError }: BuildViewerProp
           style={{
             position: 'absolute', top: 10, right: 12, fontSize: 11, fontWeight: 600, color: '#2dd4bf',
             background: 'rgba(0,0,0,0.35)', padding: '4px 11px', borderRadius: 999,
-            border: '1px solid #1c3548', pointerEvents: 'none', maxWidth: '55%',
+            border: '1px solid #1c3548', pointerEvents: 'none', maxWidth: '42%', minWidth: 0,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}
         >
