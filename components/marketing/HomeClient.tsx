@@ -525,7 +525,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
   }), [homeEvents, t])
 
   return (
-      <main style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', color: '#fff', fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden' }}>
+      <main style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
         @keyframes ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
