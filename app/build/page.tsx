@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
+import { formatDistanceToNow } from 'date-fns'
 import type { DesignSpec, SectionKey } from '@/lib/build/spec'
 import { GENERATE_COST, PDF_COST, DISCLAIMER_TEXT } from '@/lib/build/spec'
 import { createClient } from '@/lib/supabase/client'
@@ -16,7 +17,9 @@ const BuildViewer = dynamic(() => import('@/components/build/BuildViewer'), { ss
 interface ConversationSummary {
   id: string
   title: string
+  created_at: string
   updated_at: string
+  preview: { footprint_m: string; roof: string; swatch: string | null } | null
 }
 
 interface InsufficientFundsInfo {
@@ -446,6 +449,67 @@ export default function BuildPage() {
           disabled={!!generatingSection}
         />
       )}
+
+      {/* Saved Designs — full list/gallery of past conversations. The top
+          chip row stays as the quick-switch/"+ New design" affordance;
+          this section is the more visible, browsable version David asked
+          for, reusing the same loadConversation logic (no duplication). */}
+      <div style={{ padding: '20px 16px 32px', borderTop: '1px solid #1c3548' }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#e6f1f5', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+          📁 Saved Designs
+        </div>
+        {conversations.length === 0 ? (
+          <div style={{
+            fontSize: 12.5, color: '#8ca7b5', textAlign: 'center', padding: '18px 12px',
+            border: '1px dashed #1c3548', borderRadius: 12, background: '#0c1a27',
+          }}>
+            No saved designs yet — start a conversation above and your designs will show up here.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {conversations.map(c => {
+              const isActive = c.id === activeConversationId
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => loadConversation(c.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', width: '100%',
+                    padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
+                    border: `1px solid ${isActive ? '#2dd4bf' : '#1c3548'}`,
+                    background: isActive ? '#134e4a' : '#0e1f2e',
+                  }}
+                >
+                  <div style={{
+                    flexShrink: 0, width: 34, height: 34, borderRadius: 9,
+                    background: c.preview?.swatch ?? '#1c3548',
+                    border: '1px solid rgba(230,241,245,0.15)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15,
+                  }}>
+                    {!c.preview?.swatch && '🏗️'}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: 13, fontWeight: 600, color: isActive ? '#2dd4bf' : '#e6f1f5',
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    }}>
+                      {c.title || 'Untitled design'}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#8ca7b5', marginTop: 2 }}>
+                      {(() => {
+                        try { return formatDistanceToNow(new Date(c.updated_at), { addSuffix: true }) } catch { return '' }
+                      })()}
+                      {c.preview?.footprint_m ? ` · ${c.preview.footprint_m}` : ''}
+                      {c.preview?.roof ? ` · ${c.preview.roof} roof` : ''}
+                    </div>
+                  </div>
+                  <div style={{ flexShrink: 0, fontSize: 13, color: '#8ca7b5' }}>›</div>
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
