@@ -20,7 +20,7 @@ interface Listing {
 }
 
 const GRADIENTS = [
-  'linear-gradient(135deg,#38bdf8,#0284c7)',
+  'linear-gradient(135deg,var(--ft-accent),#0284c7)',
   'linear-gradient(135deg,#f472b6,#db2777)',
   'linear-gradient(135deg,#34d399,#059669)',
   'linear-gradient(135deg,#a78bfa,#7c3aed)',
@@ -39,8 +39,8 @@ function initials(name: string | null) {
 function trustBadge(score: number) {
   if (score >= 500) return { label: 'Top Trusted', color: '#fbbf24', bg: 'rgba(251,191,36,0.1)' }
   if (score >= 200) return { label: 'Verified',    color: '#34d399', bg: 'rgba(52,211,153,0.1)'  }
-  if (score >= 50)  return { label: 'Active',      color: '#38bdf8', bg: 'rgba(56,189,248,0.1)'  }
-  return              { label: 'New',          color: '#94a3b8', bg: 'rgba(148,163,184,0.1)' }
+  if (score >= 50)  return { label: 'Active',      color: 'var(--ft-accent)', bg: 'rgba(56,189,248,0.1)'  }
+  return              { label: 'New',          color: 'var(--ft-text-secondary)', bg: 'rgba(148,163,184,0.1)' }
 }
 function getTrustBalance(tb: Listing['trust_balances']): number {
   if (!tb) return 0
@@ -91,7 +91,7 @@ function MarketplaceContent() {
   const resetFilters = () => { setSearch(''); setMinTrust(0); setMinPrice(0); setMaxPrice(5000); setPage(1) }
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 104px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', paddingTop: 64 }}>
+    <div style={{ minHeight: 'calc(100vh - 104px)', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui, sans-serif', paddingTop: 64 }}>
       <style>{`
         /* ── Hero ── */
         .mk-hero { background: linear-gradient(180deg,rgba(56,189,248,0.07) 0%,transparent 100%); padding: 24px 20px 18px; border-bottom: 1px solid rgba(56,189,248,0.08); }
@@ -107,36 +107,36 @@ function MarketplaceContent() {
         .mk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
 
         /* ── Card ── */
-        .mk-card { background: #1e293b; border: 1px solid rgba(56,189,248,0.08); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; text-decoration: none; transition: border-color 0.15s, transform 0.15s; }
+        .mk-card { background: var(--ft-surface); border: 1px solid rgba(56,189,248,0.08); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; text-decoration: none; transition: border-color 0.15s, transform 0.15s; }
         .mk-card:hover { border-color: rgba(56,189,248,0.28); transform: translateY(-2px); }
         .mk-card:active { transform: scale(0.99); }
         .mk-card-img { height: 130px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; position: relative; overflow: hidden; }
         .mk-card-body { padding: 12px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
-        .mk-card-title { font-size: 14px; font-weight: 700; color: #f1f5f9; line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-        .mk-card-desc { font-size: 12px; color: #64748b; line-height: 1.5; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; margin: 0; flex: 1; }
+        .mk-card-title { font-size: 14px; font-weight: 700; color: var(--ft-text); line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        .mk-card-desc { font-size: 12px; color: var(--ft-text-tertiary); line-height: 1.5; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; margin: 0; flex: 1; }
         .mk-card-footer { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-top: 1px solid rgba(56,189,248,0.06); gap: 8px; }
-        .mk-card-price { font-size: 18px; font-weight: 800; color: #38bdf8; }
-        .mk-card-cta { background: #38bdf8; color: #0f172a; border-radius: 7px; padding: 5px 13px; font-size: 12px; font-weight: 700; flex-shrink: 0; }
-        .mk-card-seller { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #64748b; padding: 0 12px 10px; }
+        .mk-card-price { font-size: 18px; font-weight: 800; color: var(--ft-accent); }
+        .mk-card-cta { background: var(--ft-accent); color: var(--ft-bg); border-radius: 7px; padding: 5px 13px; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+        .mk-card-seller { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ft-text-tertiary); padding: 0 12px 10px; }
         .mk-card-avatar { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-        .mk-card-avatar-fallback { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 700; color: #0f172a; flex-shrink: 0; }
+        .mk-card-avatar-fallback { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 700; color: var(--ft-bg); flex-shrink: 0; }
 
         /* ── Skeleton ── */
-        .mk-skeleton { background: #1e293b; border-radius: 14px; border: 1px solid #334155; }
+        .mk-skeleton { background: var(--ft-surface); border-radius: 14px; border: 1px solid var(--ft-border-strong); }
         @keyframes pulse { 0%,100%{opacity:0.6} 50%{opacity:0.3} }
 
         /* ── Sidebar ── */
-        .mk-filter-box { background: #1e293b; border: 1px solid rgba(56,189,248,0.1); border-radius: 12px; padding: 16px; }
-        .mk-filter-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; display: block; }
-        .mk-filter-input { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 8px 10px; color: #f1f5f9; font-size: 13px; outline: none; box-sizing: border-box; font-family: inherit; }
+        .mk-filter-box { background: var(--ft-surface); border: 1px solid rgba(56,189,248,0.1); border-radius: 12px; padding: 16px; }
+        .mk-filter-label { font-size: 11px; font-weight: 700; color: var(--ft-text-tertiary); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; display: block; }
+        .mk-filter-input { width: 100%; background: var(--ft-bg); border: 1px solid var(--ft-border-strong); border-radius: 8px; padding: 8px 10px; color: var(--ft-text); font-size: 13px; outline: none; box-sizing: border-box; font-family: inherit; }
         .mk-filter-input:focus { border-color: rgba(56,189,248,0.4); }
-        input[type=range] { width: 100%; accent-color: #38bdf8; }
+        input[type=range] { width: 100%; accent-color: var(--ft-accent); }
 
         /* ── Mobile filters toggle ── */
         .mk-filters-toggle { display: none; }
 
         /* ── List a product btn ── */
-        .mk-list-btn { display: inline-flex; align-items: center; gap: 6px; background: #38bdf8; color: #0f172a; border-radius: 10px; padding: 10px 18px; font-weight: 700; font-size: 14px; text-decoration: none; white-space: nowrap; min-height: 44px; }
+        .mk-list-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--ft-accent); color: var(--ft-bg); border-radius: 10px; padding: 10px 18px; font-weight: 700; font-size: 14px; text-decoration: none; white-space: nowrap; min-height: 44px; }
 
         /* ── Mobile ── */
         @media (max-width: 768px) {
@@ -145,7 +145,7 @@ function MarketplaceContent() {
           .mk-sidebar { display: none; width: 100%; margin-bottom: 14px; }
           .mk-sidebar.open { display: block; }
           .mk-sidebar-sticky { position: static; }
-          .mk-filters-toggle { display: flex; align-items: center; gap: 8px; background: #1e293b; border: 1px solid rgba(56,189,248,0.2); border-radius: 9px; padding: 9px 14px; font-size: 13px; color: #94a3b8; cursor: pointer; font-family: inherit; margin-bottom: 14px; min-height: 44px; width: 100%; }
+          .mk-filters-toggle { display: flex; align-items: center; gap: 8px; background: var(--ft-surface); border: 1px solid rgba(56,189,248,0.2); border-radius: 9px; padding: 9px 14px; font-size: 13px; color: var(--ft-text-secondary); cursor: pointer; font-family: inherit; margin-bottom: 14px; min-height: 44px; width: 100%; }
           .mk-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
           .mk-card-img { height: 110px; }
           .mk-card-body { padding: 10px; }
@@ -166,13 +166,13 @@ function MarketplaceContent() {
       <div className="mk-hero">
         <div className="mk-hero-inner">
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: 12, color: '#64748b' }}>
-              <Link href="/collab" style={{ color: '#64748b', textDecoration: 'none' }}>Collab</Link>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: 12, color: 'var(--ft-text-tertiary)' }}>
+              <Link href="/collab" style={{ color: 'var(--ft-text-tertiary)', textDecoration: 'none' }}>Collab</Link>
               <span>›</span>
-              <span style={{ color: '#94a3b8' }}>Marketplace</span>
+              <span style={{ color: 'var(--ft-text-secondary)' }}>Marketplace</span>
             </div>
             <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>🛒 Marketplace</h1>
-            <p style={{ color: '#64748b', margin: '4px 0 0', fontSize: 13 }}>Products from trusted community members</p>
+            <p style={{ color: 'var(--ft-text-tertiary)', margin: '4px 0 0', fontSize: 13 }}>Products from trusted community members</p>
           </div>
           <Link href="/seller/gigs/create" className="mk-list-btn">+ List a Product</Link>
         </div>
@@ -184,7 +184,7 @@ function MarketplaceContent() {
           <span>⚙️</span>
           <span>Filters</span>
           {(search || minTrust > 0 || minPrice > 0 || maxPrice < 5000) && (
-            <span style={{ marginLeft: 'auto', background: '#38bdf8', color: '#0f172a', borderRadius: 999, padding: '1px 7px', fontSize: 11, fontWeight: 700 }}>Active</span>
+            <span style={{ marginLeft: 'auto', background: 'var(--ft-accent)', color: 'var(--ft-bg)', borderRadius: 999, padding: '1px 7px', fontSize: 11, fontWeight: 700 }}>Active</span>
           )}
           <span style={{ marginLeft: filtersOpen ? 0 : 'auto', fontSize: 11 }}>{filtersOpen ? '▲' : '▼'}</span>
         </button>
@@ -193,7 +193,7 @@ function MarketplaceContent() {
         <aside className={`mk-sidebar${filtersOpen ? ' open' : ''}`}>
           <div className="mk-sidebar-sticky">
             <div className="mk-filter-box">
-              <h3 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>Filters</h3>
+              <h3 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700, color: 'var(--ft-text)' }}>Filters</h3>
 
               {/* Search */}
               <div style={{ marginBottom: 16 }}>
@@ -208,7 +208,7 @@ function MarketplaceContent() {
                 <label className="mk-filter-label">Min Trust Score: ₮{minTrust}</label>
                 <input type="range" min={0} max={1000} step={50} value={minTrust}
                   onChange={e => { setMinTrust(parseInt(e.target.value)); setPage(1) }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#475569', marginTop: 2 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--ft-text-faint)', marginTop: 2 }}>
                   <span>₮0</span><span>₮1000</span>
                 </div>
               </div>
@@ -227,7 +227,7 @@ function MarketplaceContent() {
               </div>
 
               <button onClick={resetFilters}
-                style={{ width: '100%', padding: '9px', background: 'transparent', border: '1px solid #334155', borderRadius: 8, color: '#64748b', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', minHeight: 44 }}>
+                style={{ width: '100%', padding: '9px', background: 'transparent', border: '1px solid var(--ft-border-strong)', borderRadius: 8, color: 'var(--ft-text-tertiary)', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', minHeight: 44 }}>
                 Reset Filters
               </button>
             </div>
@@ -236,8 +236,8 @@ function MarketplaceContent() {
 
         {/* ── Main ── */}
         <div className="mk-main">
-          <div style={{ fontSize: 13, color: '#64748b', marginBottom: 14 }}>
-            {loading ? 'Loading…' : <><strong style={{ color: '#f1f5f9' }}>{total}</strong> products</>}
+          <div style={{ fontSize: 13, color: 'var(--ft-text-tertiary)', marginBottom: 14 }}>
+            {loading ? 'Loading…' : <><strong style={{ color: 'var(--ft-text)' }}>{total}</strong> products</>}
           </div>
 
           {loading ? (
@@ -276,7 +276,7 @@ function MarketplaceContent() {
                         {tags.length > 0 && (
                           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                             {tags.map(t => (
-                              <span key={t} style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '1px 7px', fontSize: 10, color: '#94a3b8' }}>{t}</span>
+                              <span key={t} style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '1px 7px', fontSize: 10, color: 'var(--ft-text-secondary)' }}>{t}</span>
                             ))}
                           </div>
                         )}
@@ -289,7 +289,7 @@ function MarketplaceContent() {
                           : <div className="mk-card-avatar-fallback" style={{ background: grad(seller?.id ?? l.id) }}>{initials(seller?.full_name ?? null)}</div>
                         }
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{seller?.full_name ?? 'Community Member'}</span>
-                        {l.location && <span style={{ marginLeft: 'auto', color: '#475569', flexShrink: 0 }}>📍 {l.location.split(',')[0]}</span>}
+                        {l.location && <span style={{ marginLeft: 'auto', color: 'var(--ft-text-faint)', flexShrink: 0 }}>📍 {l.location.split(',')[0]}</span>}
                       </div>
 
                       {/* Footer */}
@@ -306,12 +306,12 @@ function MarketplaceContent() {
               {total > 20 && (
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 28 }}>
                   <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-                    style={{ padding: '9px 18px', background: page === 1 ? '#1e293b' : '#334155', border: 'none', borderRadius: 8, color: '#f1f5f9', cursor: page === 1 ? 'default' : 'pointer', opacity: page === 1 ? 0.4 : 1, fontSize: 13, minHeight: 44 }}>
+                    style={{ padding: '9px 18px', background: page === 1 ? 'var(--ft-surface)' : 'var(--ft-border-strong)', border: 'none', borderRadius: 8, color: 'var(--ft-text)', cursor: page === 1 ? 'default' : 'pointer', opacity: page === 1 ? 0.4 : 1, fontSize: 13, minHeight: 44 }}>
                     ← Prev
                   </button>
-                  <span style={{ padding: '9px 14px', color: '#94a3b8', fontSize: 13, alignSelf: 'center' }}>Page {page}</span>
+                  <span style={{ padding: '9px 14px', color: 'var(--ft-text-secondary)', fontSize: 13, alignSelf: 'center' }}>Page {page}</span>
                   <button onClick={() => setPage(p => p + 1)}
-                    style={{ padding: '9px 18px', background: '#334155', border: 'none', borderRadius: 8, color: '#f1f5f9', cursor: 'pointer', fontSize: 13, minHeight: 44 }}>
+                    style={{ padding: '9px 18px', background: 'var(--ft-border-strong)', border: 'none', borderRadius: 8, color: 'var(--ft-text)', cursor: 'pointer', fontSize: 13, minHeight: 44 }}>
                     Next →
                   </button>
                 </div>
@@ -327,7 +327,7 @@ function MarketplaceContent() {
 export default function MarketplacePage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ft-text-tertiary)' }}>
         Loading marketplace…
       </div>
     }>

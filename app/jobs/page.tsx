@@ -99,7 +99,7 @@ interface SupabaseJob {
 }
 
 const TYPE_LABELS: Record<string, string> = { full_time: 'Full Time', part_time: 'Part Time', contract: 'Contract', freelance: 'Freelance' }
-const TYPE_COLORS: Record<string, string> = { full_time: '#38bdf8', part_time: '#a78bfa', contract: '#fbbf24', freelance: '#34d399' }
+const TYPE_COLORS: Record<string, string> = { full_time: 'var(--ft-accent)', part_time: '#a78bfa', contract: '#fbbf24', freelance: '#34d399' }
 
 const LOC_BADGE: Record<string, { emoji: string; label: string; color: string; bg: string; border: string }> = {
   remote:  { emoji: '🌍', label: 'Remote',  color: '#34d399', bg: 'rgba(52,211,153,0.1)',  border: 'rgba(52,211,153,0.25)' },
@@ -214,7 +214,7 @@ function ApplyModal({ job, onClose }: { job: RemoteJob; onClose: () => void }) {
   }
 
   const initials = job.company_name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
-  const typeColor = TYPE_COLORS[job.job_type] ?? '#94a3b8'
+  const typeColor = TYPE_COLORS[job.job_type] ?? 'var(--ft-text-secondary)'
   const typeLabel = TYPE_LABELS[job.job_type] ?? job.job_type
   const locBadge = LOC_BADGE[job.location_type]
 
@@ -225,30 +225,30 @@ function ApplyModal({ job, onClose }: { job: RemoteJob; onClose: () => void }) {
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 600, maxHeight: '90vh', overflowY: 'auto', padding: '0 0 32px' }}
+        style={{ background: 'var(--ft-bg)', border: '1px solid var(--ft-surface)', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 600, maxHeight: '90vh', overflowY: 'auto', padding: '0 0 32px' }}
       >
         <style>{`
           .ft-job-desc ul, .ft-job-desc ol { padding-left: 1.4em; margin: 0.5em 0; }
           .ft-job-desc li { margin-bottom: 0.25em; }
           .ft-job-desc p { margin: 0 0 0.6em; }
-          .ft-job-desc strong, .ft-job-desc b { color: #cbd5e1; }
-          .ft-job-desc a { color: #38bdf8; }
+          .ft-job-desc strong, .ft-job-desc b { color: var(--ft-text-secondary); }
+          .ft-job-desc a { color: var(--ft-accent); }
           .ft-job-desc h1, .ft-job-desc h2, .ft-job-desc h3 { color: #e2e8f0; margin: 0.75em 0 0.4em; font-size: 0.95em; }
         `}</style>
         {/* Handle bar */}
         <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
-          <div style={{ width: 36, height: 4, background: '#334155', borderRadius: 2 }} />
+          <div style={{ width: 36, height: 4, background: 'var(--ft-border-strong)', borderRadius: 2 }} />
         </div>
 
         {/* Header */}
-        <div style={{ padding: '12px 20px 16px', borderBottom: '1px solid #1e293b' }}>
+        <div style={{ padding: '12px 20px 16px', borderBottom: '1px solid var(--ft-surface)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <CompanyLogo src={job.company_logo} companyName={job.company_name} size={44} borderRadius={10} isLocal={job.is_local} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9', lineHeight: 1.2 }}>{job.title}</div>
-              <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>{job.company_name}</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ft-text)', lineHeight: 1.2 }}>{job.title}</div>
+              <div style={{ fontSize: 13, color: 'var(--ft-text-tertiary)', marginTop: 2 }}>{job.company_name}</div>
             </div>
-            <button onClick={onClose} style={{ background: '#1e293b', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: '#64748b', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
+            <button onClick={onClose} style={{ background: 'var(--ft-surface)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: 'var(--ft-text-tertiary)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
           </div>
 
           {/* Badges */}
@@ -260,10 +260,10 @@ function ApplyModal({ job, onClose }: { job: RemoteJob; onClose: () => void }) {
               </span>
             )}
             {job.location && job.location !== 'Worldwide' && (
-              <span style={{ background: 'rgba(148,163,184,0.08)', color: '#94a3b8', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '2px 8px', fontSize: 11 }}>📍 {job.location}</span>
+              <span style={{ background: 'rgba(148,163,184,0.08)', color: 'var(--ft-text-secondary)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '2px 8px', fontSize: 11 }}>📍 {job.location}</span>
             )}
             {job.salary && (
-              <span style={{ background: 'rgba(56,189,248,0.08)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>💰 {job.salary}</span>
+              <span style={{ background: 'rgba(56,189,248,0.08)', color: 'var(--ft-accent)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>💰 {job.salary}</span>
             )}
           </div>
         </div>
@@ -271,20 +271,20 @@ function ApplyModal({ job, onClose }: { job: RemoteJob; onClose: () => void }) {
         {submitted ? (
           <div style={{ padding: '40px 20px', textAlign: 'center' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#f1f5f9', marginBottom: 8 }}>Application sent!</div>
-            <div style={{ fontSize: 14, color: '#64748b', marginBottom: 8, lineHeight: 1.5 }}>
-              Your interest has been recorded. {job.company_name} will reach out via <strong style={{ color: '#94a3b8' }}>{email}</strong>.
+            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--ft-text)', marginBottom: 8 }}>Application sent!</div>
+            <div style={{ fontSize: 14, color: 'var(--ft-text-tertiary)', marginBottom: 8, lineHeight: 1.5 }}>
+              Your interest has been recorded. {job.company_name} will reach out via <strong style={{ color: 'var(--ft-text-secondary)' }}>{email}</strong>.
             </div>
-            <div style={{ fontSize: 12, color: '#475569', marginBottom: 28 }}>
+            <div style={{ fontSize: 12, color: 'var(--ft-text-faint)', marginBottom: 28 }}>
               You can also view the full listing on {job.company_name}&apos;s careers page.
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
               <button onClick={onClose}
-                style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 600, color: '#94a3b8', cursor: 'pointer' }}>
+                style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 600, color: 'var(--ft-text-secondary)', cursor: 'pointer' }}>
                 Back to jobs
               </button>
               <a href={job.url} target="_blank" rel="noopener noreferrer"
-                style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 600, color: '#38bdf8', textDecoration: 'none' }}>
+                style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 600, color: 'var(--ft-accent)', textDecoration: 'none' }}>
                 View full listing ↗
               </a>
             </div>
@@ -292,12 +292,12 @@ function ApplyModal({ job, onClose }: { job: RemoteJob; onClose: () => void }) {
         ) : (
           <div style={{ padding: '20px 20px 0' }}>
             {(job.description_snippet || job.description) && (
-              <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: '12px 14px', marginBottom: 18 }}>
+              <div style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 12, padding: '12px 14px', marginBottom: 18 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>About the role</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--ft-text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>About the role</div>
                   <button
                     onClick={() => setDescExpanded(v => !v)}
-                    style={{ background: 'transparent', border: 'none', color: '#38bdf8', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: '2px 0', fontFamily: 'inherit' }}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--ft-accent)', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: '2px 0', fontFamily: 'inherit' }}
                   >
                     {descExpanded ? 'Show less ↑' : 'Read more ↓'}
                   </button>
@@ -305,45 +305,45 @@ function ApplyModal({ job, onClose }: { job: RemoteJob; onClose: () => void }) {
                 {descExpanded && job.description ? (
                   <div
                     className="ft-job-desc"
-                    style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}
+                    style={{ fontSize: 13, color: 'var(--ft-text-secondary)', lineHeight: 1.6 }}
                     dangerouslySetInnerHTML={{ __html: job.description }}
                   />
                 ) : (
-                  <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6, margin: 0 }}>{job.description_snippet}</p>
+                  <p style={{ fontSize: 13, color: 'var(--ft-text-secondary)', lineHeight: 1.6, margin: 0 }}>{job.description_snippet}</p>
                 )}
               </div>
             )}
             {job.tags.length > 0 && (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18 }}>
                 {job.tags.slice(0, 6).map(t => (
-                  <span key={t} style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '3px 8px', fontSize: 11, color: '#64748b' }}>{t}</span>
+                  <span key={t} style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '3px 8px', fontSize: 11, color: 'var(--ft-text-tertiary)' }}>{t}</span>
                 ))}
               </div>
             )}
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', marginBottom: 14 }}>Your details</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ft-text)', marginBottom: 14 }}>Your details</div>
             <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Full Name *</label>
+              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ft-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Full Name *</label>
               <input value={name} onChange={e => setName(e.target.value)} placeholder="Your full name"
-                style={{ width: '100%', boxSizing: 'border-box', background: '#1e293b', border: '1px solid #334155', borderRadius: 10, padding: '10px 14px', fontSize: 16, color: '#f1f5f9', outline: 'none' }} />
+                style={{ width: '100%', boxSizing: 'border-box', background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 10, padding: '10px 14px', fontSize: 16, color: 'var(--ft-text)', outline: 'none' }} />
             </div>
             <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Email Address *</label>
+              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ft-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Email Address *</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com"
-                style={{ width: '100%', boxSizing: 'border-box', background: '#1e293b', border: '1px solid #334155', borderRadius: 10, padding: '10px 14px', fontSize: 16, color: '#f1f5f9', outline: 'none' }} />
+                style={{ width: '100%', boxSizing: 'border-box', background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 10, padding: '10px 14px', fontSize: 16, color: 'var(--ft-text)', outline: 'none' }} />
             </div>
             <div style={{ marginBottom: 20 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Cover Note <span style={{ color: '#334155', fontWeight: 400, textTransform: 'none' }}>(optional)</span></label>
+              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ft-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Cover Note <span style={{ color: 'var(--ft-border-strong)', fontWeight: 400, textTransform: 'none' }}>(optional)</span></label>
               <textarea value={coverNote} onChange={e => setCoverNote(e.target.value)}
                 placeholder={`Briefly introduce yourself and why you're a great fit for ${job.company_name}…`}
-                rows={4} style={{ width: '100%', boxSizing: 'border-box', background: '#1e293b', border: '1px solid #334155', borderRadius: 10, padding: '10px 14px', fontSize: 16, color: '#f1f5f9', resize: 'none', outline: 'none' }} />
+                rows={4} style={{ width: '100%', boxSizing: 'border-box', background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 10, padding: '10px 14px', fontSize: 16, color: 'var(--ft-text)', resize: 'none', outline: 'none' }} />
             </div>
             <button onClick={handleSubmit} disabled={submitting || !name.trim() || !email.trim()}
-              style={{ width: '100%', background: !name.trim() || !email.trim() ? '#1e293b' : 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 12, padding: '13px 0', fontSize: 15, fontWeight: 700, color: !name.trim() || !email.trim() ? '#475569' : '#0f172a', cursor: !name.trim() || !email.trim() ? 'not-allowed' : 'pointer', marginBottom: 10 }}>
+              style={{ width: '100%', background: !name.trim() || !email.trim() ? 'var(--ft-surface)' : 'linear-gradient(135deg,var(--ft-accent),#0284c7)', border: 'none', borderRadius: 12, padding: '13px 0', fontSize: 15, fontWeight: 700, color: !name.trim() || !email.trim() ? 'var(--ft-text-faint)' : 'var(--ft-bg)', cursor: !name.trim() || !email.trim() ? 'not-allowed' : 'pointer', marginBottom: 10 }}>
               {submitting ? 'Sending…' : `Apply to ${job.company_name}`}
             </button>
-            <p style={{ fontSize: 11, color: '#334155', textAlign: 'center', lineHeight: 1.5, margin: 0 }}>
+            <p style={{ fontSize: 11, color: 'var(--ft-border-strong)', textAlign: 'center', lineHeight: 1.5, margin: 0 }}>
               Your application will be forwarded to the employer. You can also{' '}
-              <a href={job.url} target="_blank" rel="noopener noreferrer" style={{ color: '#475569', textDecoration: 'underline' }}>apply directly on their site ↗</a>
+              <a href={job.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ft-text-faint)', textDecoration: 'underline' }}>apply directly on their site ↗</a>
             </p>
           </div>
         )}
@@ -483,26 +483,26 @@ export default function JobsPage() {
 
   const btnBase: React.CSSProperties = {
     padding: '0.35rem 0.9rem', borderRadius: 999, fontSize: '0.8rem', cursor: 'pointer',
-    border: '1px solid rgba(148,163,184,0.2)', background: 'transparent', color: '#94a3b8',
+    border: '1px solid rgba(148,163,184,0.2)', background: 'transparent', color: 'var(--ft-text-secondary)',
     fontWeight: 500, transition: 'all 0.15s', fontFamily: 'inherit',
   }
   const btnActive: React.CSSProperties = {
     background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)',
-    color: '#38bdf8', fontWeight: 700,
+    color: 'var(--ft-accent)', fontWeight: 700,
   }
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64 }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui', paddingTop: 64 }}>
       <style>{`
         .jobs-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
         .jobs-filters { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem; align-items: center; }
-        .jobs-filter-label { font-size: 0.75rem; color: #64748b; font-weight: 600; margin-right: 0.25rem; white-space: nowrap; }
-        .job-card { background: #1e293b; border: 1px solid rgba(56,189,248,0.08); border-radius: 14px; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.85rem; transition: border-color 0.15s, transform 0.15s; color: inherit; cursor: pointer; }
+        .jobs-filter-label { font-size: 0.75rem; color: var(--ft-text-tertiary); font-weight: 600; margin-right: 0.25rem; white-space: nowrap; }
+        .job-card { background: var(--ft-surface); border: 1px solid rgba(56,189,248,0.08); border-radius: 14px; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.85rem; transition: border-color 0.15s, transform 0.15s; color: inherit; cursor: pointer; }
         .job-card:hover { border-color: rgba(56,189,248,0.3); transform: translateY(-2px); }
         .job-card:active { transform: scale(0.99); }
         .job-card-local { border-color: rgba(251,146,60,0.12) !important; }
         .job-card-local:hover { border-color: rgba(251,146,60,0.35) !important; }
-        .spinner { display: inline-block; width: 28px; height: 28px; border: 3px solid rgba(56,189,248,0.2); border-top-color: #38bdf8; border-radius: 50%; animation: spin 0.7s linear infinite; }
+        .spinner { display: inline-block; width: 28px; height: 28px; border: 3px solid rgba(56,189,248,0.2); border-top-color: var(--ft-accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         @media (max-width: 768px) {
           .jobs-grid { grid-template-columns: 1fr; }
@@ -521,11 +521,11 @@ export default function JobsPage() {
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
               <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.4rem' }}>Jobs</h1>
-              <p style={{ color: '#64748b', margin: 0 }}>Remote, hybrid, and on-site opportunities worldwide</p>
+              <p style={{ color: 'var(--ft-text-tertiary)', margin: 0 }}>Remote, hybrid, and on-site opportunities worldwide</p>
             </div>
             <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
               {currentUser && (
-                <Link href="/jobs/manage" style={{ background: 'transparent', color: '#94a3b8', border: '1px solid rgba(148,163,184,0.3)', borderRadius: 8, padding: '0.6rem 1.3rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap', display: 'inline-block' }}>
+                <Link href="/jobs/manage" style={{ background: 'transparent', color: 'var(--ft-text-secondary)', border: '1px solid rgba(148,163,184,0.3)', borderRadius: 8, padding: '0.6rem 1.3rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap', display: 'inline-block' }}>
                   📋 My Jobs
                 </Link>
               )}
@@ -534,22 +534,22 @@ export default function JobsPage() {
                   📨 Applications
                 </Link>
               )}
-              <Link href="/jobs/new" style={{ background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 8, padding: '0.6rem 1.3rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap', display: 'inline-block' }}>
+              <Link href="/jobs/new" style={{ background: 'var(--ft-accent)', color: 'var(--ft-bg)', border: 'none', borderRadius: 8, padding: '0.6rem 1.3rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap', display: 'inline-block' }}>
                 + Post a Job
               </Link>
             </div>
           </div>
           <div className="jobs-hero-inner" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <div style={{ position: 'relative', flex: 1, maxWidth: 480 }}>
-              <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#475569', pointerEvents: 'none' }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--ft-text-faint)', pointerEvents: 'none' }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search by title, company, or skill..."
-                style={{ width: '100%', background: '#1e293b', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, padding: '0.65rem 1rem 0.65rem 2.25rem', color: '#f1f5f9', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, padding: '0.65rem 1rem 0.65rem 2.25rem', color: 'var(--ft-text)', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
-            <span style={{ fontSize: '0.85rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--ft-text-tertiary)', whiteSpace: 'nowrap' }}>
               {loading ? 'Loading…' : `${filtered.length} jobs`}
             </span>
           </div>
@@ -558,7 +558,7 @@ export default function JobsPage() {
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '1.5rem 1.5rem 3rem' }}>
         {/* Filters */}
-        <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1rem 1.25rem', marginBottom: '1.5rem' }}>
+        <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1rem 1.25rem', marginBottom: '1.5rem' }}>
           {/* Globalisation — location filter */}
           <div style={{ marginBottom: '0.85rem' }}>
             <LocationFilter
@@ -600,29 +600,29 @@ export default function JobsPage() {
 
         {/* Content */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '5rem 1rem', color: '#64748b' }}>
+          <div style={{ textAlign: 'center', padding: '5rem 1rem', color: 'var(--ft-text-tertiary)' }}>
             <div className="spinner" style={{ margin: '0 auto 1rem' }} />
             <div style={{ fontSize: '0.9rem' }}>Loading jobs…</div>
           </div>
         ) : error ? (
-          <div style={{ textAlign: 'center', padding: '4rem 1rem', color: '#64748b' }}>
+          <div style={{ textAlign: 'center', padding: '4rem 1rem', color: 'var(--ft-text-tertiary)' }}>
             <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⚠️</div>
-            <div style={{ color: '#f87171', marginBottom: '1rem' }}>{error}</div>
-            <button onClick={fetchJobs} style={{ background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 8, padding: '0.6rem 1.5rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <div style={{ color: 'var(--ft-danger)', marginBottom: '1rem' }}>{error}</div>
+            <button onClick={fetchJobs} style={{ background: 'var(--ft-accent)', color: 'var(--ft-bg)', border: 'none', borderRadius: 8, padding: '0.6rem 1.5rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               Try again
             </button>
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '4rem 1rem', color: '#64748b' }}>
+          <div style={{ textAlign: 'center', padding: '4rem 1rem', color: 'var(--ft-text-tertiary)' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem', color: '#94a3b8' }}>No jobs match your filters</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--ft-text-secondary)' }}>No jobs match your filters</div>
             <div>Try a different category, location type, or search term</div>
           </div>
         ) : (
           <div className="jobs-grid">
             {filtered.map(job => {
               const initials = job.company_name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
-              const typeColor = TYPE_COLORS[job.job_type] ?? '#94a3b8'
+              const typeColor = TYPE_COLORS[job.job_type] ?? 'var(--ft-text-secondary)'
               const typeLabel = TYPE_LABELS[job.job_type] ?? job.job_type
               return (
                 <div key={job.id} className={`job-card${job.is_local ? ' job-card-local' : ''}`} onClick={() => setApplyJob(job)}>
@@ -631,7 +631,7 @@ export default function JobsPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                       <CompanyLogo src={job.company_logo} companyName={job.company_name} size={36} borderRadius={8} isLocal={job.is_local} />
                       <div>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#94a3b8' }}>{job.company_name}</span>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ft-text-secondary)' }}>{job.company_name}</span>
                         {/* Poster social links — max 3, prioritised order
                             from SocialLinks (LinkedIn → website → Instagram).
                             Stop propagation so the icon click doesn't open
@@ -653,7 +653,7 @@ export default function JobsPage() {
 
                   {/* Title + badges */}
                   <div>
-                    <h3 style={{ fontSize: '1.02rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem', lineHeight: 1.3 }}>{job.title}</h3>
+                    <h3 style={{ fontSize: '1.02rem', fontWeight: 700, color: 'var(--ft-text)', marginBottom: '0.5rem', lineHeight: 1.3 }}>{job.title}</h3>
                     <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
                       <span style={{ background: `${typeColor}18`, color: typeColor, border: `1px solid ${typeColor}30`, borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.72rem', fontWeight: 600 }}>
                         {typeLabel}
@@ -673,7 +673,7 @@ export default function JobsPage() {
 
                   {/* Description snippet */}
                   {job.description_snippet && (
-                    <p style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: 1.55, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.55, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                       {job.description_snippet}
                     </p>
                   )}
@@ -682,7 +682,7 @@ export default function JobsPage() {
                   {job.tags.length > 0 && (
                     <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
                       {job.tags.slice(0, 4).map(t => (
-                        <span key={t} style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '0.12rem 0.5rem', fontSize: '0.72rem', color: '#94a3b8' }}>{t}</span>
+                        <span key={t} style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '0.12rem 0.5rem', fontSize: '0.72rem', color: 'var(--ft-text-secondary)' }}>{t}</span>
                       ))}
                     </div>
                   )}
@@ -700,7 +700,7 @@ export default function JobsPage() {
                         const sourceCode = (job.salary_currency ?? 'EUR') as CurrencyCode
                         return (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                            <span style={{ fontSize: '0.7rem', color: '#475569' }}>💰</span>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--ft-text-faint)' }}>💰</span>
                             <PriceDisplay
                               amountEur={eurMin ?? eurMax ?? 0}
                               sourceCode={sourceCode}
@@ -710,7 +710,7 @@ export default function JobsPage() {
                             />
                             {eurMin != null && eurMax != null && eurMin !== eurMax && (
                               <>
-                                <span style={{ fontSize: '0.7rem', color: '#475569' }}>–</span>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--ft-text-faint)' }}>–</span>
                                 <PriceDisplay
                                   amountEur={eurMax}
                                   sourceCode={sourceCode}
@@ -724,12 +724,12 @@ export default function JobsPage() {
                         )
                       }
                       return (
-                        <span style={{ fontSize: '0.82rem', color: job.salary ? '#38bdf8' : '#475569', fontWeight: job.salary ? 600 : 400 }}>
+                        <span style={{ fontSize: '0.82rem', color: job.salary ? 'var(--ft-accent)' : 'var(--ft-text-faint)', fontWeight: job.salary ? 600 : 400 }}>
                           {job.salary ? `💰 ${job.salary}` : 'Salary not listed'}
                         </span>
                       )
                     })()}
-                    <span style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#0f172a', borderRadius: 7, padding: '0.4rem 1rem', fontSize: '0.82rem', fontWeight: 700, flexShrink: 0 }}>
+                    <span style={{ background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', color: 'var(--ft-bg)', borderRadius: 7, padding: '0.4rem 1rem', fontSize: '0.82rem', fontWeight: 700, flexShrink: 0 }}>
                       Apply →
                     </span>
                   </div>
@@ -741,8 +741,8 @@ export default function JobsPage() {
 
         {/* Post a job CTA */}
         {!loading && filtered.length > 0 && (
-          <div style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.75rem', color: '#334155' }}>
-            <Link href="/jobs/new" style={{ color: '#475569', textDecoration: 'none' }}>Post your own job on FreeTrust →</Link>
+          <div style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.75rem', color: 'var(--ft-border-strong)' }}>
+            <Link href="/jobs/new" style={{ color: 'var(--ft-text-faint)', textDecoration: 'none' }}>Post your own job on FreeTrust →</Link>
           </div>
         )}
       </div>

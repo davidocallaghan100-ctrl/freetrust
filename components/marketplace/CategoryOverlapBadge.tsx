@@ -29,7 +29,7 @@ interface Props {
 export default function CategoryOverlapBadge({ link, flavor }: Props) {
   if (!link) return null
 
-  const accent = flavor === 'grassroots' ? '#22c55e' : '#38bdf8'
+  const accent = flavor === 'grassroots' ? '#22c55e' : 'var(--ft-accent)'
 
   return (
     <Link

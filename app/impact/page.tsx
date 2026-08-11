@@ -137,7 +137,7 @@ function StatCounter({ value, label, icon }: { value: number; label: string; ico
     <div ref={ref} style={{ background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.15)', borderRadius: 14, padding: '1.25rem', textAlign: 'center', flex: 1, minWidth: 140 }}>
       <div style={{ fontSize: '1.75rem', marginBottom: '0.35rem' }}>{icon}</div>
       <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#34d399' }}>{count.toLocaleString()}</div>
-      <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.25rem' }}>{label}</div>
+      <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', marginTop: '0.25rem' }}>{label}</div>
     </div>
   )
 }
@@ -146,11 +146,11 @@ function StatCounter({ value, label, icon }: { value: number; label: string; ico
 
 function UserAvatar({ url, name, size = 36 }: { url: string | null; name: string; size?: number }) {
   const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
-  const colors = ['#34d399', '#38bdf8', '#a78bfa', '#f472b6', '#fb923c', '#fbbf24']
+  const colors = ['#34d399', 'var(--ft-accent)', '#a78bfa', '#f472b6', '#fb923c', '#fbbf24']
   const bg = colors[(name.charCodeAt(0) ?? 0) % colors.length]
   if (url) return <img src={url} alt={name} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
   return (
-    <div style={{ width: size, height: size, borderRadius: '50%', background: `linear-gradient(135deg,${bg},${bg}99)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.32, fontWeight: 800, color: '#0f172a', flexShrink: 0 }}>
+    <div style={{ width: size, height: size, borderRadius: '50%', background: `linear-gradient(135deg,${bg},${bg}99)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.32, fontWeight: 800, color: 'var(--ft-bg)', flexShrink: 0 }}>
       {initials}
     </div>
   )
@@ -200,20 +200,20 @@ function SuggestACauseForm() {
   }
 
   return (
-    <div style={{ background: '#1e293b', border: '1px solid rgba(52,211,153,0.18)', borderRadius: 16, padding: '1.75rem' }}>
+    <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(52,211,153,0.18)', borderRadius: 16, padding: '1.75rem' }}>
       <div style={{ display: 'inline-block', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', borderRadius: 999, padding: '0.25rem 0.75rem', fontSize: '0.7rem', color: '#34d399', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.8rem' }}>
         ✦ Suggest a cause
       </div>
-      <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f1f5f9', margin: '0 0 0.5rem' }}>
+      <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--ft-text)', margin: '0 0 0.5rem' }}>
         Know a cause that deserves support?
       </h3>
-      <p style={{ fontSize: '0.88rem', color: '#94a3b8', margin: '0 0 1.25rem', lineHeight: 1.6 }}>
+      <p style={{ fontSize: '0.88rem', color: 'var(--ft-text-secondary)', margin: '0 0 1.25rem', lineHeight: 1.6 }}>
         Suggest it and our community will vote on it. Successful suggestions are added to the fund next quarter.
       </p>
 
       <form onSubmit={submit} style={{ display: 'grid', gap: '0.75rem' }}>
         <div>
-          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '0.3rem' }}>
+          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.3rem' }}>
             Cause name <span style={{ color: '#ef4444' }}>*</span>
           </label>
           <input
@@ -224,18 +224,18 @@ function SuggestACauseForm() {
             required
             minLength={3}
             maxLength={120}
-            style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.6rem 0.85rem', color: '#f1f5f9', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
+            style={{ width: '100%', boxSizing: 'border-box', background: 'var(--ft-bg)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.6rem 0.85rem', color: 'var(--ft-text)', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
           />
         </div>
 
         <div>
-          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '0.3rem' }}>
+          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.3rem' }}>
             Category
           </label>
           <select
             value={category}
             onChange={e => setCategory(e.target.value)}
-            style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.6rem 0.85rem', color: '#f1f5f9', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
+            style={{ width: '100%', boxSizing: 'border-box', background: 'var(--ft-bg)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.6rem 0.85rem', color: 'var(--ft-text)', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
           >
             <option value="">Choose a category…</option>
             <option value="Housing">Housing</option>
@@ -257,7 +257,7 @@ function SuggestACauseForm() {
         </div>
 
         <div>
-          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '0.3rem' }}>
+          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.3rem' }}>
             Description <span style={{ color: '#ef4444' }}>*</span>
           </label>
           <textarea
@@ -268,23 +268,23 @@ function SuggestACauseForm() {
             minLength={20}
             maxLength={1000}
             rows={4}
-            style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.6rem 0.85rem', color: '#f1f5f9', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit', resize: 'vertical' }}
+            style={{ width: '100%', boxSizing: 'border-box', background: 'var(--ft-bg)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.6rem 0.85rem', color: 'var(--ft-text)', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit', resize: 'vertical' }}
           />
-          <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.2rem', textAlign: 'right' }}>
+          <div style={{ fontSize: '0.7rem', color: 'var(--ft-text-tertiary)', marginTop: '0.2rem', textAlign: 'right' }}>
             {description.length}/1000
           </div>
         </div>
 
         <div>
-          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '0.3rem' }}>
-            Your email <span style={{ color: '#64748b', fontWeight: 400 }}>(optional — we'll follow up if your cause is selected)</span>
+          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.3rem' }}>
+            Your email <span style={{ color: 'var(--ft-text-tertiary)', fontWeight: 400 }}>(optional — we'll follow up if your cause is selected)</span>
           </label>
           <input
             type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
             placeholder="you@example.com"
-            style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.6rem 0.85rem', color: '#f1f5f9', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
+            style={{ width: '100%', boxSizing: 'border-box', background: 'var(--ft-bg)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.6rem 0.85rem', color: 'var(--ft-text)', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
           />
         </div>
 
@@ -303,7 +303,7 @@ function SuggestACauseForm() {
           <button
             type="submit"
             disabled={submitting}
-            style={{ background: '#34d399', border: 'none', borderRadius: 8, padding: '0.7rem 1.6rem', fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', cursor: submitting ? 'default' : 'pointer', opacity: submitting ? 0.65 : 1, fontFamily: 'inherit' }}
+            style={{ background: '#34d399', border: 'none', borderRadius: 8, padding: '0.7rem 1.6rem', fontSize: '0.9rem', fontWeight: 800, color: 'var(--ft-bg)', cursor: submitting ? 'default' : 'pointer', opacity: submitting ? 0.65 : 1, fontFamily: 'inherit' }}
           >
             {submitting ? 'Submitting…' : 'Submit Suggestion'}
           </button>
@@ -506,7 +506,7 @@ export default function ImpactPage() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', background: '#0f172a' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', background: 'var(--ft-bg)' }}>
         <div style={{ width: 32, height: 32, border: '3px solid rgba(52,211,153,0.2)', borderTopColor: '#34d399', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
@@ -514,7 +514,7 @@ export default function ImpactPage() {
   }
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui' }}>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         .impact-stats{display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;margin:1.5rem 0}
@@ -532,7 +532,7 @@ export default function ImpactPage() {
       {/* Donate Modal */}
       {donateTarget && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ background: '#1e293b', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 16, padding: '1.75rem', width: '100%', maxWidth: 440 }}>
+          <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 16, padding: '1.75rem', width: '100%', maxWidth: 440 }}>
             {donateSuccess ? (
               <div style={{ textAlign: 'center', padding: '1rem 0' }}>
                 <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🌱</div>
@@ -542,33 +542,33 @@ export default function ImpactPage() {
               <>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
                   <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>Donate Trust Tokens</h3>
-                  <button onClick={() => { setDonateTarget(null); setDonateError(null) }} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '1.4rem', lineHeight: 1, padding: 0 }}>×</button>
+                  <button onClick={() => { setDonateTarget(null); setDonateError(null) }} style={{ background: 'none', border: 'none', color: 'var(--ft-text-tertiary)', cursor: 'pointer', fontSize: '1.4rem', lineHeight: 1, padding: 0 }}>×</button>
                 </div>
-                <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.35rem' }}>Contributing to:</div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--ft-text-tertiary)', marginBottom: '0.35rem' }}>Contributing to:</div>
                 <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#34d399', marginBottom: '0.75rem' }}>
                   {donateTarget.kind === 'project' ? donateTarget.project.name : 'Sustainability Fund (general)'}
                 </div>
-                <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.75rem' }}>Your Trust Balance: <strong style={{ color: '#38bdf8' }}>₮{trustBalance.toLocaleString()}</strong></div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-secondary)', marginBottom: '0.75rem' }}>Your Trust Balance: <strong style={{ color: 'var(--ft-accent)' }}>₮{trustBalance.toLocaleString()}</strong></div>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
                   {[5, 10, 25, 50].map(amt => (
                     <button key={amt} onClick={() => { setDonateAmount(amt); setCustomAmount(''); setDonateError(null) }}
-                      style={{ padding: '0.5rem 1rem', borderRadius: 8, border: donateAmount === amt && !customAmount ? '1px solid #34d399' : '1px solid rgba(148,163,184,0.2)', background: donateAmount === amt && !customAmount ? 'rgba(52,211,153,0.1)' : 'transparent', color: donateAmount === amt && !customAmount ? '#34d399' : '#94a3b8', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>
+                      style={{ padding: '0.5rem 1rem', borderRadius: 8, border: donateAmount === amt && !customAmount ? '1px solid #34d399' : '1px solid rgba(148,163,184,0.2)', background: donateAmount === amt && !customAmount ? 'rgba(52,211,153,0.1)' : 'transparent', color: donateAmount === amt && !customAmount ? '#34d399' : 'var(--ft-text-secondary)', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>
                       ₮{amt}
                     </button>
                   ))}
                 </div>
                 <input type="number" min="1" max={trustBalance} placeholder="Custom ₮ amount" value={customAmount} onChange={e => { setCustomAmount(e.target.value); setDonateError(null) }}
-                  style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 8, padding: '0.65rem 1rem', color: '#f1f5f9', fontSize: '0.9rem', outline: 'none', marginBottom: '1rem' }} />
-                <div style={{ background: 'rgba(52,211,153,0.05)', border: '1px solid rgba(52,211,153,0.12)', borderRadius: 8, padding: '0.65rem', marginBottom: '1rem', fontSize: '0.8rem', color: '#64748b' }}>
+                  style={{ width: '100%', boxSizing: 'border-box', background: 'var(--ft-bg)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 8, padding: '0.65rem 1rem', color: 'var(--ft-text)', fontSize: '0.9rem', outline: 'none', marginBottom: '1rem' }} />
+                <div style={{ background: 'rgba(52,211,153,0.05)', border: '1px solid rgba(52,211,153,0.12)', borderRadius: 8, padding: '0.65rem', marginBottom: '1rem', fontSize: '0.8rem', color: 'var(--ft-text-tertiary)' }}>
                   🌳 Every ₮10 ≈ 1 tree planted (where applicable)
                 </div>
                 {donateError && (
-                  <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 8, padding: '0.65rem 0.85rem', marginBottom: '0.85rem', fontSize: '0.8rem', color: '#f87171' }}>
+                  <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 8, padding: '0.65rem 0.85rem', marginBottom: '0.85rem', fontSize: '0.8rem', color: 'var(--ft-danger)' }}>
                     {donateError}
                   </div>
                 )}
                 <button onClick={handleDonate} disabled={donating || (customAmount ? parseInt(customAmount) > trustBalance : donateAmount > trustBalance)}
-                  style={{ width: '100%', background: '#34d399', border: 'none', borderRadius: 8, padding: '0.75rem', fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', cursor: donating ? 'not-allowed' : 'pointer', opacity: donating ? 0.7 : 1 }}>
+                  style={{ width: '100%', background: '#34d399', border: 'none', borderRadius: 8, padding: '0.75rem', fontSize: '0.95rem', fontWeight: 700, color: 'var(--ft-bg)', cursor: donating ? 'not-allowed' : 'pointer', opacity: donating ? 0.7 : 1 }}>
                   {donating ? 'Processing…' : `Donate ₮${customAmount || donateAmount}`}
                 </button>
               </>
@@ -582,40 +582,40 @@ export default function ImpactPage() {
         <div style={{ maxWidth: 700, margin: '0 auto' }}>
           <div style={{ display: 'inline-block', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', borderRadius: 999, padding: '0.3rem 1rem', fontSize: '0.78rem', color: '#34d399', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '1rem' }}>🌱 SUSTAINABILITY FUND</div>
           <h1 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '0.75rem', lineHeight: 1.15 }}>Invest in a <span style={{ color: '#34d399' }}>Better World</span></h1>
-          <p style={{ color: '#64748b', fontSize: '1rem', marginBottom: '1.5rem', lineHeight: 1.6 }}>Every transaction on FreeTrust contributes 1% to our Impact Fund. Together, we are funding real-world sustainability projects across the globe.</p>
+          <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '1rem', marginBottom: '1.5rem', lineHeight: 1.6 }}>Every transaction on FreeTrust contributes 1% to our Impact Fund. Together, we are funding real-world sustainability projects across the globe.</p>
           <div style={{ background: 'linear-gradient(135deg,rgba(52,211,153,0.1),rgba(56,189,248,0.06))', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 16, padding: '1.5rem 2rem', marginBottom: '1.5rem', display: 'inline-block', minWidth: 280, textAlign: 'left' }}>
-            <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Sustainability Fund Balance</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Sustainability Fund Balance</div>
             <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#34d399', lineHeight: 1 }}>₮{(stats?.fundBalance ?? 0).toLocaleString()}</div>
-            <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Lifetime donated: <strong style={{ color: '#94a3b8' }}>₮{(stats?.fundLifetime ?? 0).toLocaleString()}</strong>
+            <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-faint)', marginTop: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Lifetime donated: <strong style={{ color: 'var(--ft-text-secondary)' }}>₮{(stats?.fundLifetime ?? 0).toLocaleString()}</strong>
             </div>
             {(stats?.fundBalance ?? 0) === 0
-              ? <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.4rem' }}>Grows with every transaction — be the first to contribute 🌱</div>
-              : <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.4rem' }}>₮{(stats?.quarterlyTotal ?? 0).toLocaleString()} donated this quarter · {stats?.quarterlyPct ?? 0}% to goal</div>
+              ? <div style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)', marginTop: '0.4rem' }}>Grows with every transaction — be the first to contribute 🌱</div>
+              : <div style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)', marginTop: '0.4rem' }}>₮{(stats?.quarterlyTotal ?? 0).toLocaleString()} donated this quarter · {stats?.quarterlyPct ?? 0}% to goal</div>
             }
             <div style={{ background: 'rgba(52,211,153,0.1)', borderRadius: 4, height: 6, marginTop: '0.75rem', overflow: 'hidden' }}>
-              <div style={{ background: 'linear-gradient(90deg,#34d399,#38bdf8)', height: '100%', width: `${Math.max(stats?.quarterlyPct ?? 0, (stats?.fundBalance ?? 0) > 0 ? 2 : 0)}%`, borderRadius: 4 }} />
+              <div style={{ background: 'linear-gradient(90deg,#34d399,var(--ft-accent))', height: '100%', width: `${Math.max(stats?.quarterlyPct ?? 0, (stats?.fundBalance ?? 0) > 0 ? 2 : 0)}%`, borderRadius: 4 }} />
             </div>
           </div>
           <div className="impact-stats">
             {[
-              { label: 'Members', icon: '🎯', val: (platformStats?.members?.total ?? stats?.memberCount ?? 0).toLocaleString(), color: '#38bdf8' },
+              { label: 'Members', icon: '🎯', val: (platformStats?.members?.total ?? stats?.memberCount ?? 0).toLocaleString(), color: 'var(--ft-accent)' },
               { label: 'Active Projects', icon: '🌱', val: (stats?.activeProjects ?? 0).toLocaleString(), color: '#34d399' },
               { label: 'Impact Fund', icon: '💚', val: `₮${(stats?.fundBalance ?? 0).toLocaleString()}`, color: '#34d399' },
               { label: '₮ in Circulation', icon: '₮', val: `₮${(platformStats?.trust?.inCirculation ?? 0).toLocaleString()}`, color: '#2dd4bf' },
-              { label: '₮ Issued (Total)', icon: '📈', val: `₮${(platformStats?.trust?.total ?? 0).toLocaleString()}`, color: '#38bdf8' },
+              { label: '₮ Issued (Total)', icon: '📈', val: `₮${(platformStats?.trust?.total ?? 0).toLocaleString()}`, color: 'var(--ft-accent)' },
               { label: 'Members Holding ₮', icon: '🤝', val: (platformStats?.trust?.membersHolding ?? 0).toLocaleString(), color: '#a78bfa' },
             ].map(s => (
               <div key={s.label} style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 12, padding: '1rem 1.25rem', textAlign: 'center', flex: 1, minWidth: 130 }}>
                 <span style={{ fontSize: '1.25rem' }}>{s.icon}</span>
                 <span style={{ display: 'block', fontSize: '1.6rem', fontWeight: 800, color: s.color }}>{s.val}</span>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>{s.label}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', marginTop: '0.2rem' }}>{s.label}</div>
               </div>
             ))}
           </div>
           <div className="impact-hero-btns" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
             <button onClick={() => { setDonateTarget({ kind: 'fund' }); setDonateAmount(10); setCustomAmount(''); setDonateError(null) }}
-              style={{ background: '#34d399', border: 'none', borderRadius: 8, padding: '0.75rem 2rem', fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer' }}>
+              style={{ background: '#34d399', border: 'none', borderRadius: 8, padding: '0.75rem 2rem', fontSize: '0.95rem', fontWeight: 700, color: 'var(--ft-bg)', cursor: 'pointer' }}>
               Donate Trust Tokens
             </button>
           </div>
@@ -626,9 +626,9 @@ export default function ImpactPage() {
       <div style={{ maxWidth: 1200, margin: '2rem auto 0', padding: '0 1.5rem' }}>
         <div style={{ background: 'linear-gradient(135deg,rgba(45,212,191,0.07),rgba(56,189,248,0.04))', border: '1px solid rgba(45,212,191,0.2)', borderRadius: 16, padding: '1.5rem 2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f1f5f9' }}>₮ Trust Economy</span>
+            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--ft-text)' }}>₮ Trust Economy</span>
             <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#2dd4bf', background: 'rgba(45,212,191,0.1)', border: '1px solid rgba(45,212,191,0.25)', borderRadius: 999, padding: '2px 8px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Live</span>
-            <span style={{ fontSize: '0.8rem', color: '#64748b', marginLeft: 'auto' }}>All figures pulled live from Supabase</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)', marginLeft: 'auto' }}>All figures pulled live from Supabase</span>
           </div>
           <div className="trust-econ-grid">
             {[
@@ -651,26 +651,26 @@ export default function ImpactPage() {
                 val: (platformStats?.trust?.membersHolding ?? 0).toLocaleString(),
                 label: 'Members Holding ₮',
                 sub: 'Members who have earned trust through activity',
-                color: '#38bdf8',
+                color: 'var(--ft-accent)',
               },
             ].map(s => (
               <div key={s.label} style={{ background: 'rgba(15,23,42,0.5)', border: `1px solid ${s.color}25`, borderRadius: 12, padding: '1.25rem 1rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '1.5rem', marginBottom: '0.35rem' }}>{s.icon}</div>
                 <div style={{ fontSize: '1.8rem', fontWeight: 900, color: s.color, letterSpacing: '-0.5px', lineHeight: 1 }}>{s.val}</div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f1f5f9', marginTop: '0.4rem' }}>{s.label}</div>
-                <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '0.2rem', lineHeight: 1.4 }}>{s.sub}</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--ft-text)', marginTop: '0.4rem' }}>{s.label}</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-faint)', marginTop: '0.2rem', lineHeight: 1.4 }}>{s.sub}</div>
               </div>
             ))}
           </div>
           {(platformStats?.trust?.total ?? 0) > 0 && (
             <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)' }}>
                 ₮{(platformStats?.trust?.inCirculation ?? 0).toLocaleString()} in active circulation
                 out of ₮{(platformStats?.trust?.total ?? 0).toLocaleString()} ever issued
               </span>
               <div style={{ flex: 1, background: 'rgba(45,212,191,0.1)', borderRadius: 4, height: 6, minWidth: 100, overflow: 'hidden' }}>
                 <div style={{
-                  background: 'linear-gradient(90deg,#2dd4bf,#38bdf8)',
+                  background: 'linear-gradient(90deg,#2dd4bf,var(--ft-accent))',
                   height: '100%',
                   borderRadius: 4,
                   width: `${(platformStats?.trust?.total ?? 0) > 0 ? Math.round(((platformStats?.trust?.inCirculation ?? 0) / (platformStats?.trust?.total ?? 1)) * 100) : 0}%`,
@@ -689,7 +689,7 @@ export default function ImpactPage() {
       {/* How the fund works */}
       <div style={{ maxWidth: 1200, margin: '2rem auto 0', padding: '0 1.5rem' }}>
         <div style={{ background: 'rgba(52,211,153,0.05)', border: '1px solid rgba(52,211,153,0.15)', borderRadius: 16, padding: '1.75rem 2rem' }}>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.75rem', color: '#f1f5f9' }}>How the Sustainability Fund works</h2>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.75rem', color: 'var(--ft-text)' }}>How the Sustainability Fund works</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
             {[
               { icon: '🛒', title: '1% per transaction', desc: 'Every sale on FreeTrust automatically contributes 1% of the transaction value to this fund.' },
@@ -699,8 +699,8 @@ export default function ImpactPage() {
               <div key={item.title} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
                 <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>{item.icon}</span>
                 <div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.2rem' }}>{item.title}</div>
-                  <div style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>{item.desc}</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ft-text)', marginBottom: '0.2rem' }}>{item.title}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.5 }}>{item.desc}</div>
                 </div>
               </div>
             ))}
@@ -716,11 +716,11 @@ export default function ImpactPage() {
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(129,140,248,0.12)', border: '1px solid rgba(129,140,248,0.3)', borderRadius: 999, padding: '0.25rem 0.75rem', fontSize: '0.72rem', color: '#818cf8', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
                 🏛️ SPECULATIVE RESERVE FUND
               </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f1f5f9', margin: '0 0 0.4rem' }}>Trust Sustainability Reserve</h3>
-              <p style={{ fontSize: '0.83rem', color: '#64748b', lineHeight: 1.65, margin: '0 0 1rem', maxWidth: 480 }}>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--ft-text)', margin: '0 0 0.4rem' }}>Trust Sustainability Reserve</h3>
+              <p style={{ fontSize: '0.83rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.65, margin: '0 0 1rem', maxWidth: 480 }}>
                 FreeTrust reserves <strong style={{ color: '#a5b4fc' }}>5% of all Trust ever issued</strong> as a Sustainability Reserve — a speculative fund held on behalf of the community for future high-impact projects that are not yet live. This reserve grows every time a member earns Trust, ensuring the platform always has capital ready to back transformational ideas.
               </p>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', fontSize: '0.78rem', color: '#64748b' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', fontSize: '0.78rem', color: 'var(--ft-text-tertiary)' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ color: '#34d399' }}>✓</span> Grows with the Trust economy</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ color: '#34d399' }}>✓</span> Community-governed deployment</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ color: '#34d399' }}>✓</span> Never spent without a vote</span>
@@ -728,15 +728,15 @@ export default function ImpactPage() {
             </div>
             <div style={{ textAlign: 'center', flexShrink: 0 }}>
               <div style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(129,140,248,0.25)', borderRadius: 14, padding: '1.25rem 1.75rem' }}>
-                <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>Reserve Balance</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>Reserve Balance</div>
                 <div style={{ fontSize: '2.2rem', fontWeight: 900, color: '#818cf8', lineHeight: 1 }}>
                   ₮{Math.round((platformStats?.trust?.total ?? stats?.totalRaised ?? 0) * 0.05).toLocaleString()}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '0.35rem' }}>5% of ₮{(platformStats?.trust?.total ?? stats?.totalRaised ?? 0).toLocaleString()} lifetime issued</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-faint)', marginTop: '0.35rem' }}>5% of ₮{(platformStats?.trust?.total ?? stats?.totalRaised ?? 0).toLocaleString()} lifetime issued</div>
                 <div style={{ background: 'rgba(129,140,248,0.08)', borderRadius: 4, height: 5, marginTop: '0.75rem', overflow: 'hidden' }}>
                   <div style={{ background: 'linear-gradient(90deg,#818cf8,#a78bfa)', height: '100%', width: '5%', borderRadius: 4 }} />
                 </div>
-                <div style={{ fontSize: '0.68rem', color: '#475569', marginTop: '0.4rem' }}>grows automatically as Trust is earned</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--ft-text-faint)', marginTop: '0.4rem' }}>grows automatically as Trust is earned</div>
               </div>
             </div>
           </div>
@@ -746,8 +746,8 @@ export default function ImpactPage() {
       {/* FreeTrust Vision */}
       <div style={{ maxWidth: 1200, margin: '1.5rem auto', padding: '0 1.5rem' }}>
         <div style={{ background: 'linear-gradient(135deg,rgba(56,189,248,0.06),rgba(52,211,153,0.04))', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 16, padding: '2rem' }}>
-          <div style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 999, padding: '0.25rem 0.75rem', fontSize: '0.72rem', color: '#38bdf8', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '0.75rem' }}>🔭 THE FREETRUST VISION</div>
-          <h2 style={{ fontSize: '1.7rem', fontWeight: 900, color: '#f1f5f9', margin: '0 0 1.25rem', lineHeight: 1.2 }}>Our <span style={{ color: '#38bdf8' }}>Vision</span></h2>
+          <div style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 999, padding: '0.25rem 0.75rem', fontSize: '0.72rem', color: 'var(--ft-accent)', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '0.75rem' }}>🔭 THE FREETRUST VISION</div>
+          <h2 style={{ fontSize: '1.7rem', fontWeight: 900, color: 'var(--ft-text)', margin: '0 0 1.25rem', lineHeight: 1.2 }}>Our <span style={{ color: 'var(--ft-accent)' }}>Vision</span></h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: '1.25rem' }}>
             {[
               { icon: '🌐', title: 'A Commerce System That Cares', desc: 'We are building a world where every transaction has a second purpose — funding the reforestation projects, ocean clean-ups, and communities that need it most.' },
@@ -758,15 +758,15 @@ export default function ImpactPage() {
               <div key={v.title} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
                 <div style={{ fontSize: '1.5rem', flexShrink: 0, marginTop: '0.1rem' }}>{v.icon}</div>
                 <div>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.35rem' }}>{v.title}</div>
-                  <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.65, margin: 0 }}>{v.desc}</p>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--ft-text)', marginBottom: '0.35rem' }}>{v.title}</div>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.65, margin: 0 }}>{v.desc}</p>
                 </div>
               </div>
             ))}
           </div>
-          <div style={{ marginTop: '1.5rem', padding: '1rem 1.25rem', background: 'rgba(52,211,153,0.04)', border: '1px solid rgba(52,211,153,0.12)', borderRadius: 10, fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.6, fontStyle: 'italic', textAlign: 'center' }}>
+          <div style={{ marginTop: '1.5rem', padding: '1rem 1.25rem', background: 'rgba(52,211,153,0.04)', border: '1px solid rgba(52,211,153,0.12)', borderRadius: 10, fontSize: '0.85rem', color: 'var(--ft-text-secondary)', lineHeight: 1.6, fontStyle: 'italic', textAlign: 'center' }}>
             &ldquo;We are not just building a marketplace. We are proving that trust-based commerce and planetary responsibility can coexist — and that together, they are more powerful than either alone.&rdquo;
-            <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: '#475569', fontStyle: 'normal' }}>— FreeTrust Founding Principle</div>
+            <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: 'var(--ft-text-faint)', fontStyle: 'normal' }}>— FreeTrust Founding Principle</div>
           </div>
         </div>
       </div>
@@ -775,32 +775,32 @@ export default function ImpactPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
           <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Community Voted Causes</h2>
-          <span style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.25rem 0.75rem', fontSize: '0.78rem', color: '#38bdf8' }}>⏳ Vote closes in {daysLeft} days</span>
+          <span style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.25rem 0.75rem', fontSize: '0.78rem', color: 'var(--ft-accent)' }}>⏳ Vote closes in {daysLeft} days</span>
         </div>
-        <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1.25rem' }}>Vote once per quarter to decide where the Sustainability Fund goes next.</p>
+        <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>Vote once per quarter to decide where the Sustainability Fund goes next.</p>
         <div className="impact-causes-grid">
           {VOTABLE_CAUSES.map(cause => {
             const votes = voteTallies[cause.id] ?? 0
             const pct = Math.round((votes / totalVotes) * 100)
             const isVoted = myVote === cause.id
             return (
-              <div key={cause.id} style={{ background: '#1e293b', border: `1px solid ${isVoted ? 'rgba(52,211,153,0.3)' : 'rgba(56,189,248,0.1)'}`, borderRadius: 12, padding: '1.25rem' }}>
+              <div key={cause.id} style={{ background: 'var(--ft-surface)', border: `1px solid ${isVoted ? 'rgba(52,211,153,0.3)' : 'rgba(56,189,248,0.1)'}`, borderRadius: 12, padding: '1.25rem' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                   <div>
                     <div style={{ fontSize: '1.25rem', marginBottom: '0.35rem' }}>{cause.icon}</div>
-                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f1f5f9' }}>{cause.name}</div>
-                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.2rem' }}>{cause.desc}</div>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--ft-text)' }}>{cause.name}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', marginTop: '0.2rem' }}>{cause.desc}</div>
                   </div>
                   <button onClick={() => handleVote(cause.id)} disabled={!!myVote || voting}
-                    style={{ marginLeft: '0.75rem', flexShrink: 0, padding: '0.4rem 0.85rem', borderRadius: 7, border: isVoted ? '1px solid rgba(52,211,153,0.4)' : '1px solid rgba(56,189,248,0.25)', background: isVoted ? 'rgba(52,211,153,0.1)' : 'transparent', color: isVoted ? '#34d399' : '#38bdf8', fontSize: '0.78rem', fontWeight: 700, cursor: myVote ? 'not-allowed' : 'pointer', opacity: myVote && !isVoted ? 0.5 : 1 }}>
+                    style={{ marginLeft: '0.75rem', flexShrink: 0, padding: '0.4rem 0.85rem', borderRadius: 7, border: isVoted ? '1px solid rgba(52,211,153,0.4)' : '1px solid rgba(56,189,248,0.25)', background: isVoted ? 'rgba(52,211,153,0.1)' : 'transparent', color: isVoted ? '#34d399' : 'var(--ft-accent)', fontSize: '0.78rem', fontWeight: 700, cursor: myVote ? 'not-allowed' : 'pointer', opacity: myVote && !isVoted ? 0.5 : 1 }}>
                     {isVoted ? '✓ Voted' : 'Vote'}
                   </button>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <div style={{ flex: 1, background: 'rgba(56,189,248,0.08)', borderRadius: 3, height: 5, overflow: 'hidden' }}>
-                    <div style={{ background: isVoted ? '#34d399' : '#38bdf8', height: '100%', width: `${pct}%`, transition: 'width 0.5s ease', borderRadius: 3 }} />
+                    <div style={{ background: isVoted ? '#34d399' : 'var(--ft-accent)', height: '100%', width: `${pct}%`, transition: 'width 0.5s ease', borderRadius: 3 }} />
                   </div>
-                  <span style={{ fontSize: '0.78rem', color: '#64748b', minWidth: 40, textAlign: 'right' }}>{votes.toLocaleString()} votes</span>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', minWidth: 40, textAlign: 'right' }}>{votes.toLocaleString()} votes</span>
                 </div>
               </div>
             )
@@ -813,7 +813,7 @@ export default function ImpactPage() {
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', padding: '0 1.5rem', marginBottom: '0.5rem' }}>
           {CATEGORIES.map(c => (
             <button key={c} onClick={() => setActiveCat(c)}
-              style={{ padding: '0.35rem 0.9rem', borderRadius: 999, fontSize: '0.82rem', cursor: 'pointer', border: activeCat === c ? '1px solid rgba(52,211,153,0.3)' : '1px solid rgba(148,163,184,0.2)', background: activeCat === c ? 'rgba(52,211,153,0.1)' : 'transparent', color: activeCat === c ? '#34d399' : '#94a3b8', fontWeight: activeCat === c ? 700 : 500 }}>
+              style={{ padding: '0.35rem 0.9rem', borderRadius: 999, fontSize: '0.82rem', cursor: 'pointer', border: activeCat === c ? '1px solid rgba(52,211,153,0.3)' : '1px solid rgba(148,163,184,0.2)', background: activeCat === c ? 'rgba(52,211,153,0.1)' : 'transparent', color: activeCat === c ? '#34d399' : 'var(--ft-text-secondary)', fontWeight: activeCat === c ? 700 : 500 }}>
               {c}
             </button>
           ))}
@@ -834,7 +834,7 @@ export default function ImpactPage() {
         const renderCard = (proj: ImpactProject) => {
           const pct = Math.min(Math.round((proj.raised / (proj.goal || 1)) * 100), 100)
           return (
-            <div key={proj.id} style={{ background: '#1e293b', border: proj.featured ? '1px solid rgba(248,113,113,0.25)' : '1px solid rgba(56,189,248,0.1)', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+            <div key={proj.id} style={{ background: 'var(--ft-surface)', border: proj.featured ? '1px solid rgba(248,113,113,0.25)' : '1px solid rgba(56,189,248,0.1)', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
               {proj.featured && (
                 <span style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.45)', color: '#fca5a5', fontSize: '0.64rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', borderRadius: 999, padding: '2px 8px', zIndex: 1 }}>
                   ⭐ Most needed
@@ -845,40 +845,40 @@ export default function ImpactPage() {
                   {/* Avatar tile. Prefer `emoji` when present (new
                       Irish causes), fall back to avatar_initials
                       (existing global projects with letter avatars). */}
-                  <div style={{ width: 48, height: 48, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: proj.emoji ? '1.6rem' : '0.85rem', color: '#0f172a', flexShrink: 0, background: proj.avatar_gradient || 'linear-gradient(135deg,#34d399,#059669)' }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: proj.emoji ? '1.6rem' : '0.85rem', color: 'var(--ft-bg)', flexShrink: 0, background: proj.avatar_gradient || 'linear-gradient(135deg,#34d399,#059669)' }}>
                     {proj.emoji || proj.avatar_initials}
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f1f5f9', lineHeight: 1.25, paddingRight: proj.featured ? 90 : 0 }}>{proj.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>📍 {proj.location} · {proj.category}</div>
+                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--ft-text)', lineHeight: 1.25, paddingRight: proj.featured ? 90 : 0 }}>{proj.name}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', marginTop: '0.2rem' }}>📍 {proj.location} · {proj.category}</div>
                   </div>
                 </div>
                 <div style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.82rem', fontWeight: 700, color: '#34d399', marginBottom: '0.5rem' }}>{proj.impact_headline}</div>
-                {proj.source && <div style={{ fontSize: '0.68rem', color: '#475569', marginBottom: '0.75rem' }}>📊 Source: {proj.source}</div>}
-                <p style={{ fontSize: '0.83rem', color: '#94a3b8', lineHeight: 1.6, marginBottom: '0.75rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>{proj.description}</p>
+                {proj.source && <div style={{ fontSize: '0.68rem', color: 'var(--ft-text-faint)', marginBottom: '0.75rem' }}>📊 Source: {proj.source}</div>}
+                <p style={{ fontSize: '0.83rem', color: 'var(--ft-text-secondary)', lineHeight: 1.6, marginBottom: '0.75rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>{proj.description}</p>
                 {(proj.sdgs ?? []).length > 0 && (
                   <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-                    {(proj.sdgs ?? []).map(n => <span key={n} style={{ borderRadius: 4, padding: '0.15rem 0.5rem', fontSize: '0.68rem', fontWeight: 700, color: '#fff', background: SDG_COLORS[n] ?? '#475569' }}>SDG {n}</span>)}
+                    {(proj.sdgs ?? []).map(n => <span key={n} style={{ borderRadius: 4, padding: '0.15rem 0.5rem', fontSize: '0.68rem', fontWeight: 700, color: '#fff', background: SDG_COLORS[n] ?? 'var(--ft-text-faint)' }}>SDG {n}</span>)}
                   </div>
                 )}
                 {(proj.tags ?? []).length > 0 && (
                   <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                    {(proj.tags ?? []).map(t => <span key={t} style={{ background: 'rgba(148,163,184,0.08)', borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.72rem', color: '#94a3b8' }}>{t}</span>)}
+                    {(proj.tags ?? []).map(t => <span key={t} style={{ background: 'rgba(148,163,184,0.08)', borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.72rem', color: 'var(--ft-text-secondary)' }}>{t}</span>)}
                   </div>
                 )}
               </div>
               <div style={{ background: 'rgba(15,23,42,0.5)', borderTop: '1px solid rgba(56,189,248,0.06)', padding: '1rem 1.25rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.4rem' }}>
-                  <span style={{ fontWeight: 700, color: '#38bdf8' }}>{proj.currency}{Number(proj.raised).toLocaleString()} raised</span>
-                  <span style={{ color: '#475569' }}>of {proj.currency}{Number(proj.goal).toLocaleString()} · {pct}%</span>
+                  <span style={{ fontWeight: 700, color: 'var(--ft-accent)' }}>{proj.currency}{Number(proj.raised).toLocaleString()} raised</span>
+                  <span style={{ color: 'var(--ft-text-faint)' }}>of {proj.currency}{Number(proj.goal).toLocaleString()} · {pct}%</span>
                 </div>
                 <div style={{ height: 6, background: 'rgba(56,189,248,0.1)', borderRadius: 3, overflow: 'hidden', marginBottom: '0.75rem' }}>
-                  <div style={{ height: '100%', background: proj.featured ? 'linear-gradient(90deg,#f87171,#fbbf24)' : 'linear-gradient(90deg,#34d399,#38bdf8)', borderRadius: 3, width: `${pct}%`, transition: 'width 0.4s ease' }} />
+                  <div style={{ height: '100%', background: proj.featured ? 'linear-gradient(90deg,var(--ft-danger),#fbbf24)' : 'linear-gradient(90deg,#34d399,var(--ft-accent))', borderRadius: 3, width: `${pct}%`, transition: 'width 0.4s ease' }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.78rem', color: '#475569' }}>👥 {Number(proj.backers).toLocaleString()} backers</span>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--ft-text-faint)' }}>👥 {Number(proj.backers).toLocaleString()} backers</span>
                   <button onClick={() => { setDonateTarget({ kind: 'project', project: proj }); setDonateAmount(10); setCustomAmount(''); setDonateError(null) }}
-                    style={{ background: '#34d399', border: 'none', borderRadius: 7, padding: '0.45rem 1rem', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer' }}>
+                    style={{ background: '#34d399', border: 'none', borderRadius: 7, padding: '0.45rem 1rem', fontSize: '0.82rem', fontWeight: 700, color: 'var(--ft-bg)', cursor: 'pointer' }}>
                     Donate ₮
                   </button>
                 </div>
@@ -891,7 +891,7 @@ export default function ImpactPage() {
         if (filtered.length === 0) {
           return (
             <div className="impact-grid">
-              <div style={{ gridColumn: '1/-1', textAlign: 'center', color: '#64748b', padding: '3rem' }}>
+              <div style={{ gridColumn: '1/-1', textAlign: 'center', color: 'var(--ft-text-tertiary)', padding: '3rem' }}>
                 No projects in this category yet.
               </div>
             </div>
@@ -915,10 +915,10 @@ export default function ImpactPage() {
           <>
             {groupedByCategory.map(({ category, items }) => (
               <section key={category} style={{ maxWidth: 1200, margin: '0 auto', padding: '0.25rem 1.5rem 0.5rem' }}>
-                <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem', fontWeight: 800, color: '#f1f5f9', margin: '1.25rem 0 0.5rem', letterSpacing: '-0.25px' }}>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem', fontWeight: 800, color: 'var(--ft-text)', margin: '1.25rem 0 0.5rem', letterSpacing: '-0.25px' }}>
                   <span style={{ width: 4, height: 18, background: '#34d399', borderRadius: 2 }} />
                   {category}
-                  <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 500 }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', fontWeight: 500 }}>
                     · {items.length} {items.length === 1 ? 'cause' : 'causes'}
                   </span>
                 </h3>
@@ -940,20 +940,20 @@ export default function ImpactPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '1.5rem' }}>
         <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem' }}>🏆 Member Impact Leaderboard — Q2 2026</h2>
         {leaderboard.length === 0 ? (
-          <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
+          <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '2rem', textAlign: 'center', color: 'var(--ft-text-tertiary)', fontSize: '0.9rem' }}>
             No donations yet — be the first to donate to an impact project! 🌱
           </div>
         ) : (
-          <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, overflow: 'hidden' }}>
+          <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, overflow: 'hidden' }}>
             {leaderboard.map((member, i) => (
               <div key={member.user_id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.85rem 1.25rem', borderBottom: i < leaderboard.length - 1 ? '1px solid rgba(56,189,248,0.06)' : 'none', background: i === 0 ? 'rgba(52,211,153,0.06)' : 'transparent' }}>
-                <span style={{ fontSize: i < 3 ? '1.25rem' : '0.9rem', fontWeight: 800, color: i === 0 ? '#fbbf24' : i === 1 ? '#94a3b8' : i === 2 ? '#fb923c' : '#475569', minWidth: 28, textAlign: 'center' }}>
+                <span style={{ fontSize: i < 3 ? '1.25rem' : '0.9rem', fontWeight: 800, color: i === 0 ? '#fbbf24' : i === 1 ? 'var(--ft-text-secondary)' : i === 2 ? '#fb923c' : 'var(--ft-text-faint)', minWidth: 28, textAlign: 'center' }}>
                   {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${member.rank}`}
                 </span>
                 <UserAvatar url={member.avatar_url} name={member.full_name} size={36} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f1f5f9' }}>{member.full_name}</span>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ft-text)' }}>{member.full_name}</span>
                     {member.is_founder && (
                       <span style={{ background: 'rgba(52,211,153,0.15)', border: '1px solid rgba(52,211,153,0.35)', borderRadius: 999, padding: '0.1rem 0.45rem', fontSize: '0.6rem', color: '#34d399', fontWeight: 700, letterSpacing: '0.04em' }}>FOUNDER</span>
                     )}
@@ -961,7 +961,7 @@ export default function ImpactPage() {
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#34d399' }}>₮{member.donated.toLocaleString()}</div>
-                  <div style={{ fontSize: '0.72rem', color: '#475569' }}>donated</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-faint)' }}>donated</div>
                 </div>
               </div>
             ))}
@@ -973,8 +973,8 @@ export default function ImpactPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '1.5rem' }}>
         <div style={{ background: 'linear-gradient(135deg,rgba(52,211,153,0.06),rgba(56,189,248,0.06))', border: '1px solid rgba(52,211,153,0.15)', borderRadius: 16, padding: '3rem', textAlign: 'center' }}>
           <h2 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '0.75rem' }}>Every purchase drives change</h2>
-          <p style={{ color: '#64748b', marginBottom: '1.5rem', maxWidth: 500, margin: '0 auto 1.5rem' }}>1% of every FreeTrust transaction is automatically allocated to impact projects you believe in.</p>
-          <button style={{ background: 'linear-gradient(135deg,#34d399,#38bdf8)', border: 'none', borderRadius: 8, padding: '0.8rem 2rem', fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer' }}>Start Shopping with Purpose</button>
+          <p style={{ color: 'var(--ft-text-tertiary)', marginBottom: '1.5rem', maxWidth: 500, margin: '0 auto 1.5rem' }}>1% of every FreeTrust transaction is automatically allocated to impact projects you believe in.</p>
+          <button style={{ background: 'linear-gradient(135deg,#34d399,var(--ft-accent))', border: 'none', borderRadius: 8, padding: '0.8rem 2rem', fontSize: '0.95rem', fontWeight: 700, color: 'var(--ft-bg)', cursor: 'pointer' }}>Start Shopping with Purpose</button>
         </div>
       </div>
     </div>

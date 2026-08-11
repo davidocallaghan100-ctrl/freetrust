@@ -85,7 +85,7 @@ export default function GifPicker({ selectedGif, onSelect, disabled = false, com
         style={{
           border: selectedGif ? '1px solid rgba(52,211,153,0.45)' : '1px solid rgba(148,163,184,0.2)',
           background: selectedGif ? 'rgba(52,211,153,0.14)' : 'rgba(15,23,42,0.75)',
-          color: selectedGif ? '#86efac' : '#cbd5e1',
+          color: selectedGif ? '#86efac' : 'var(--ft-text-secondary)',
           borderRadius: 999,
           minWidth: compact ? 34 : 40,
           height: compact ? 30 : 36,
@@ -111,7 +111,7 @@ export default function GifPicker({ selectedGif, onSelect, disabled = false, com
             borderRadius: '50%',
             border: '1px solid rgba(148,163,184,0.22)',
             background: 'rgba(15,23,42,0.85)',
-            color: '#cbd5e1',
+            color: 'var(--ft-text-secondary)',
             cursor: 'pointer',
             fontWeight: 900,
           }}
@@ -156,7 +156,7 @@ export default function GifPicker({ selectedGif, onSelect, disabled = false, com
                 fontSize: 16,
               }}
             />
-            <button type="button" onClick={() => setOpen(false)} style={{ border: 'none', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+            <button type="button" onClick={() => setOpen(false)} style={{ border: 'none', background: 'transparent', color: 'var(--ft-text-secondary)', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, maxHeight: compact ? 'min(36vh, 250px)' : 'min(44vh, 320px)', overflowY: 'auto' }}>
             {gifs.map(gif => (
@@ -181,10 +181,10 @@ export default function GifPicker({ selectedGif, onSelect, disabled = false, com
               </button>
             ))}
             {!loading && gifs.length === 0 && (
-              <div style={{ gridColumn: '1 / -1', color: '#94a3b8', fontSize: 12, textAlign: 'center', padding: '1rem 0' }}>No GIFs found.</div>
+              <div style={{ gridColumn: '1 / -1', color: 'var(--ft-text-secondary)', fontSize: 12, textAlign: 'center', padding: '1rem 0' }}>No GIFs found.</div>
             )}
           </div>
-          <div style={{ marginTop: 8, color: '#64748b', fontSize: 10, textAlign: 'center' }}>
+          <div style={{ marginTop: 8, color: 'var(--ft-text-tertiary)', fontSize: 10, textAlign: 'center' }}>
             {loading ? 'Searching…' : 'Tap a GIF to attach it'}
           </div>
         </div>

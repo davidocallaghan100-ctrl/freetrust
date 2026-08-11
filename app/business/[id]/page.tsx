@@ -36,7 +36,7 @@ interface Business {
 }
 
 function getGrad(str: string) {
-  const grads = ['linear-gradient(135deg,#38bdf8,#0284c7)','linear-gradient(135deg,#a78bfa,#7c3aed)','linear-gradient(135deg,#34d399,#059669)','linear-gradient(135deg,#fb923c,#ea580c)']
+  const grads = ['linear-gradient(135deg,var(--ft-accent),#0284c7)','linear-gradient(135deg,#a78bfa,#7c3aed)','linear-gradient(135deg,#34d399,#059669)','linear-gradient(135deg,#fb923c,#ea580c)']
   return grads[(str.charCodeAt(0) ?? 0) % grads.length]
 }
 function initials(name: string) { return name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase() }
@@ -102,12 +102,12 @@ export default function BusinessProfilePage() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 64, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 64, background: 'var(--ft-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ft-text-tertiary)' }}>
       Loading…
     </div>
   )
   if (!business) return (
-    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 64, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 64, background: 'var(--ft-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ft-text-tertiary)' }}>
       Business not found
     </div>
   )
@@ -119,20 +119,20 @@ export default function BusinessProfilePage() {
   const TABS = ['about', 'services', 'team', 'reviews']
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 64, background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: 'calc(100vh - 104px)', paddingTop: 64, background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui' }}>
       <style>{`
-        .biz-tab { padding: 0.6rem 1.1rem; border-radius: 8px; background: transparent; border: none; cursor: pointer; font-size: 0.85rem; color: #64748b; transition: all 0.12s; }
-        .biz-tab.active { background: rgba(56,189,248,0.1); color: #38bdf8; font-weight: 600; }
-        .biz-tab:hover { color: #f1f5f9; }
+        .biz-tab { padding: 0.6rem 1.1rem; border-radius: 8px; background: transparent; border: none; cursor: pointer; font-size: 0.85rem; color: var(--ft-text-tertiary); transition: all 0.12s; }
+        .biz-tab.active { background: rgba(56,189,248,0.1); color: var(--ft-accent); font-weight: 600; }
+        .biz-tab:hover { color: var(--ft-text); }
         .biz-stat { text-align: center; }
-        .biz-stat-val { font-size: 1.3rem; font-weight: 800; color: #f1f5f9; }
-        .biz-stat-lbl { font-size: 0.72rem; color: #64748b; margin-top: 2px; }
+        .biz-stat-val { font-size: 1.3rem; font-weight: 800; color: var(--ft-text); }
+        .biz-stat-lbl { font-size: 0.72rem; color: var(--ft-text-tertiary); margin-top: 2px; }
       `}</style>
 
       {/* Cover */}
       <div style={{ height: 180, background: business.cover_url ? `url(${business.cover_url}) center/cover` : 'linear-gradient(135deg,rgba(56,189,248,0.12),rgba(129,140,248,0.08))', position: 'relative', borderBottom: '1px solid rgba(56,189,248,0.08)' }}>
         {isOwner && (
-          <Link href={`/dashboard/business?id=${id}`} style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(15,23,42,0.85)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.4rem 0.85rem', fontSize: '0.8rem', color: '#38bdf8', textDecoration: 'none' }}>
+          <Link href={`/dashboard/business?id=${id}`} style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(15,23,42,0.85)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.4rem 0.85rem', fontSize: '0.8rem', color: 'var(--ft-accent)', textDecoration: 'none' }}>
             ✏️ Edit
           </Link>
         )}
@@ -141,31 +141,31 @@ export default function BusinessProfilePage() {
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 1rem' }}>
         {/* Logo + header */}
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1.25rem', marginTop: -40, marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-          <div style={{ width: 80, height: 80, borderRadius: 16, border: '3px solid #0f172a', overflow: 'hidden', background: business.logo_url ? `url(${business.logo_url}) center/cover` : getGrad(business.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', flexShrink: 0 }}>
+          <div style={{ width: 80, height: 80, borderRadius: 16, border: '3px solid var(--ft-bg)', overflow: 'hidden', background: business.logo_url ? `url(${business.logo_url}) center/cover` : getGrad(business.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', fontWeight: 800, color: 'var(--ft-bg)', flexShrink: 0 }}>
             {!business.logo_url && initials(business.name)}
           </div>
           <div style={{ flex: 1, paddingBottom: '0.25rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>{business.name}</h1>
               {business.verified && (
-                <span style={{ background: 'rgba(56,189,248,0.15)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.72rem', fontWeight: 700 }}>
+                <span style={{ background: 'rgba(56,189,248,0.15)', color: 'var(--ft-accent)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.72rem', fontWeight: 700 }}>
                   ✓ Verified
                 </span>
               )}
             </div>
             {business.tagline && (
-              <p style={{ fontSize: '0.9rem', color: '#94a3b8', margin: '0.25rem 0 0', fontStyle: 'italic' }}>{business.tagline}</p>
+              <p style={{ fontSize: '0.9rem', color: 'var(--ft-text-secondary)', margin: '0.25rem 0 0', fontStyle: 'italic' }}>{business.tagline}</p>
             )}
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.3rem' }}>
-              <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{business.business_type}</span>
-              {business.industry && <span style={{ fontSize: '0.8rem', color: '#64748b' }}>· {business.industry}</span>}
-              {business.location && <span style={{ fontSize: '0.8rem', color: '#64748b' }}>· 📍 {business.location}</span>}
-              {business.size && <span style={{ fontSize: '0.8rem', color: '#64748b' }}>· {business.size}</span>}
+              <span style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)' }}>{business.business_type}</span>
+              {business.industry && <span style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)' }}>· {business.industry}</span>}
+              {business.location && <span style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)' }}>· 📍 {business.location}</span>}
+              {business.size && <span style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)' }}>· {business.size}</span>}
             </div>
             {business.tags && business.tags.length > 0 && (
               <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
                 {business.tags.map(tag => (
-                  <span key={tag} style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.7rem', color: '#7dd3fc' }}>
+                  <span key={tag} style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.7rem', color: 'var(--ft-accent)' }}>
                     {tag}
                   </span>
                 ))}
@@ -174,15 +174,15 @@ export default function BusinessProfilePage() {
           </div>
           {/* Actions */}
           <div style={{ display: 'flex', gap: '0.5rem', paddingBottom: '0.25rem' }}>
-            <button onClick={handleFollow} style={{ background: following ? 'rgba(56,189,248,0.1)' : 'linear-gradient(135deg,#38bdf8,#0284c7)', border: following ? '1px solid rgba(56,189,248,0.3)' : 'none', borderRadius: 8, padding: '0.55rem 1.1rem', fontSize: '0.85rem', fontWeight: 700, color: following ? '#38bdf8' : '#0f172a', cursor: 'pointer' }}>
+            <button onClick={handleFollow} style={{ background: following ? 'rgba(56,189,248,0.1)' : 'linear-gradient(135deg,var(--ft-accent),#0284c7)', border: following ? '1px solid rgba(56,189,248,0.3)' : 'none', borderRadius: 8, padding: '0.55rem 1.1rem', fontSize: '0.85rem', fontWeight: 700, color: following ? 'var(--ft-accent)' : 'var(--ft-bg)', cursor: 'pointer' }}>
               {following ? '✓ Following' : '+ Follow'}
             </button>
             {business.contact_email && (
-              <a href={`mailto:${business.contact_email}`} style={{ background: 'rgba(148,163,184,0.1)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 8, padding: '0.55rem 1.1rem', fontSize: '0.85rem', color: '#94a3b8', textDecoration: 'none', fontWeight: 600 }}>
+              <a href={`mailto:${business.contact_email}`} style={{ background: 'rgba(148,163,184,0.1)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 8, padding: '0.55rem 1.1rem', fontSize: '0.85rem', color: 'var(--ft-text-secondary)', textDecoration: 'none', fontWeight: 600 }}>
                 ✉️ Contact
               </a>
             )}
-            <button onClick={copyProfileLink} style={{ background: 'rgba(148,163,184,0.1)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 8, padding: '0.55rem 0.9rem', fontSize: '0.85rem', color: '#94a3b8', cursor: 'pointer' }}>
+            <button onClick={copyProfileLink} style={{ background: 'rgba(148,163,184,0.1)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 8, padding: '0.55rem 0.9rem', fontSize: '0.85rem', color: 'var(--ft-text-secondary)', cursor: 'pointer' }}>
               🔗
             </button>
           </div>
@@ -202,7 +202,7 @@ export default function BusinessProfilePage() {
           {TABS.map(t => (
             <button key={t} className={`biz-tab${activeTab === t ? ' active' : ''}`} onClick={() => setActiveTab(t)} style={{ textTransform: 'capitalize' }}>
               {t}
-              {t === 'reviews' && business.reviews.length > 0 && <span style={{ marginLeft: 5, background: 'rgba(56,189,248,0.12)', borderRadius: 999, padding: '0.05rem 0.45rem', fontSize: '0.7rem', color: '#38bdf8' }}>{business.reviews.length}</span>}
+              {t === 'reviews' && business.reviews.length > 0 && <span style={{ marginLeft: 5, background: 'rgba(56,189,248,0.12)', borderRadius: 999, padding: '0.05rem 0.45rem', fontSize: '0.7rem', color: 'var(--ft-accent)' }}>{business.reviews.length}</span>}
             </button>
           ))}
         </div>
@@ -212,21 +212,21 @@ export default function BusinessProfilePage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '3rem' }}>
             {business.description && (
               <div>
-                <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.6rem', color: '#94a3b8' }}>About</h3>
-                <p style={{ color: '#cbd5e1', lineHeight: 1.7, margin: 0, fontSize: '0.92rem' }}>{business.description}</p>
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.6rem', color: 'var(--ft-text-secondary)' }}>About</h3>
+                <p style={{ color: 'var(--ft-text-secondary)', lineHeight: 1.7, margin: 0, fontSize: '0.92rem' }}>{business.description}</p>
               </div>
             )}
             {business.mission && (
               <div style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1.1rem' }}>
-                <h3 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#38bdf8', marginBottom: '0.5rem' }}>Our Mission</h3>
-                <p style={{ color: '#cbd5e1', lineHeight: 1.7, margin: 0, fontSize: '0.9rem', fontStyle: 'italic' }}>"{business.mission}"</p>
+                <h3 style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--ft-accent)', marginBottom: '0.5rem' }}>Our Mission</h3>
+                <p style={{ color: 'var(--ft-text-secondary)', lineHeight: 1.7, margin: 0, fontSize: '0.9rem', fontStyle: 'italic' }}>"{business.mission}"</p>
               </div>
             )}
             {/* Links */}
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              {business.website && <a href={business.website} target="_blank" rel="noopener noreferrer" style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 8, padding: '0.45rem 0.9rem', fontSize: '0.8rem', color: '#94a3b8', textDecoration: 'none' }}>🌐 Website</a>}
+              {business.website && <a href={business.website} target="_blank" rel="noopener noreferrer" style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 8, padding: '0.45rem 0.9rem', fontSize: '0.8rem', color: 'var(--ft-text-secondary)', textDecoration: 'none' }}>🌐 Website</a>}
               {Object.entries(business.social_links ?? {}).filter(([, v]) => v).map(([k, v]) => (
-                <a key={k} href={v.startsWith('http') ? v : `https://${v}`} target="_blank" rel="noopener noreferrer" style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 8, padding: '0.45rem 0.9rem', fontSize: '0.8rem', color: '#94a3b8', textDecoration: 'none', textTransform: 'capitalize' }}>{k}</a>
+                <a key={k} href={v.startsWith('http') ? v : `https://${v}`} target="_blank" rel="noopener noreferrer" style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 8, padding: '0.45rem 0.9rem', fontSize: '0.8rem', color: 'var(--ft-text-secondary)', textDecoration: 'none', textTransform: 'capitalize' }}>{k}</a>
               ))}
             </div>
           </div>
@@ -238,18 +238,18 @@ export default function BusinessProfilePage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
                 {listings.map(l => (
                   <Link key={l.id} href={`/services/${l.id}`} style={{ textDecoration: 'none' }}>
-                    <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1rem', transition: 'border-color 0.15s' }}>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f1f5f9', marginBottom: '0.5rem' }}>{l.title}</div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#38bdf8' }}>{l.currency}{l.price}</div>
+                    <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1rem', transition: 'border-color 0.15s' }}>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ft-text)', marginBottom: '0.5rem' }}>{l.title}</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--ft-accent)' }}>{l.currency}{l.price}</div>
                     </div>
                   </Link>
                 ))}
               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+              <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ft-text-tertiary)' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>📋</div>
                 <p>No services listed yet</p>
-                {isOwner && <Link href="/seller/gigs/create" style={{ color: '#38bdf8', fontSize: '0.88rem' }}>Add your first service →</Link>}
+                {isOwner && <Link href="/seller/gigs/create" style={{ color: 'var(--ft-accent)', fontSize: '0.88rem' }}>Add your first service →</Link>}
               </div>
             )}
           </div>
@@ -261,20 +261,20 @@ export default function BusinessProfilePage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
                 {business.members.map(m => (
                   <Link key={m.id} href={`/profile?id=${m.user.id}`} style={{ textDecoration: 'none' }}>
-                    <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1.1rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: m.user.avatar_url ? `url(${m.user.avatar_url}) center/cover` : getGrad(m.user.full_name ?? ''), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: '#0f172a', flexShrink: 0 }}>
+                    <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1.1rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: m.user.avatar_url ? `url(${m.user.avatar_url}) center/cover` : getGrad(m.user.full_name ?? ''), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'var(--ft-bg)', flexShrink: 0 }}>
                         {!m.user.avatar_url && initials(m.user.full_name ?? '?')}
                       </div>
                       <div>
-                        <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#f1f5f9' }}>{m.user.full_name}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{m.title || m.role}</div>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--ft-text)' }}>{m.user.full_name}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)' }}>{m.title || m.role}</div>
                       </div>
                     </div>
                   </Link>
                 ))}
               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+              <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ft-text-tertiary)' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>👥</div>
                 <p>No team members added yet</p>
               </div>
@@ -287,23 +287,23 @@ export default function BusinessProfilePage() {
             {business.reviews.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {business.reviews.map(r => (
-                  <div key={r.id} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1.1rem' }}>
+                  <div key={r.id} style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1.1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.6rem' }}>
-                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: getGrad(r.reviewer.full_name ?? ''), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700, color: '#0f172a', flexShrink: 0 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: getGrad(r.reviewer.full_name ?? ''), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700, color: 'var(--ft-bg)', flexShrink: 0 }}>
                         {initials(r.reviewer.full_name ?? '?')}
                       </div>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f1f5f9' }}>{r.reviewer.full_name}</div>
-                        <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{new Date(r.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ft-text)' }}>{r.reviewer.full_name}</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)' }}>{new Date(r.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                       </div>
                       <div style={{ fontSize: '1rem', color: '#fbbf24' }}>{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</div>
                     </div>
-                    {r.content && <p style={{ color: '#cbd5e1', fontSize: '0.88rem', lineHeight: 1.6, margin: 0 }}>{r.content}</p>}
+                    {r.content && <p style={{ color: 'var(--ft-text-secondary)', fontSize: '0.88rem', lineHeight: 1.6, margin: 0 }}>{r.content}</p>}
                   </div>
                 ))}
               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+              <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ft-text-tertiary)' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>⭐</div>
                 <p>No reviews yet</p>
               </div>

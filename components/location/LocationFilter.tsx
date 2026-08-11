@@ -175,7 +175,7 @@ export default function LocationFilter({
       <div style={{ position: 'relative', flex: compact ? '1 1 200px' : '1 1 240px', minWidth: 180 }}>
         <span style={{
           position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
-          color: '#64748b', fontSize: 14, pointerEvents: 'none',
+          color: 'var(--ft-text-tertiary)', fontSize: 14, pointerEvents: 'none',
         }}>🌍</span>
         <input
           type="text"
@@ -184,9 +184,9 @@ export default function LocationFilter({
           onFocus={() => query && setOpen(true)}
           placeholder="Filter by city or country…"
           style={{
-            width: '100%', padding: '9px 12px 9px 34px', background: '#0f172a',
-            border: '1.5px solid #334155', borderRadius: 10, fontSize: 13,
-            color: '#f1f5f9', outline: 'none', boxSizing: 'border-box',
+            width: '100%', padding: '9px 12px 9px 34px', background: 'var(--ft-bg)',
+            border: '1.5px solid var(--ft-border-strong)', borderRadius: 10, fontSize: 13,
+            color: 'var(--ft-text)', outline: 'none', boxSizing: 'border-box',
             fontFamily: 'inherit',
           }}
         />
@@ -197,7 +197,7 @@ export default function LocationFilter({
             aria-label="Clear"
             style={{
               position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-              background: 'transparent', border: 'none', color: '#64748b',
+              background: 'transparent', border: 'none', color: 'var(--ft-text-tertiary)',
               fontSize: 16, cursor: 'pointer',
             }}
           >×</button>
@@ -206,12 +206,12 @@ export default function LocationFilter({
         {open && (loading || results.length > 0) && (
           <div style={{
             position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-            background: '#1e293b', border: '1px solid rgba(56,189,248,0.2)',
+            background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.2)',
             borderRadius: 10, overflow: 'hidden', zIndex: 50,
             boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
           }}>
             {loading && (
-              <div style={{ padding: '10px 14px', color: '#64748b', fontSize: 12 }}>Searching…</div>
+              <div style={{ padding: '10px 14px', color: 'var(--ft-text-tertiary)', fontSize: 12 }}>Searching…</div>
             )}
             {!loading && results.map(r => (
               <button
@@ -221,7 +221,7 @@ export default function LocationFilter({
                 style={{
                   display: 'block', width: '100%', padding: '10px 14px',
                   textAlign: 'left', background: 'transparent', border: 'none',
-                  color: '#f1f5f9', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                  color: 'var(--ft-text)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
                 }}
                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(56,189,248,0.08)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -240,7 +240,7 @@ export default function LocationFilter({
         style={{
           padding: '9px 12px', background: 'rgba(56,189,248,0.1)',
           border: '1px solid rgba(56,189,248,0.25)', borderRadius: 10,
-          color: '#38bdf8', fontSize: 12, fontWeight: 700,
+          color: 'var(--ft-accent)', fontSize: 12, fontWeight: 700,
           cursor: locating ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
           whiteSpace: 'nowrap', opacity: locating ? 0.5 : 1,
         }}
@@ -249,7 +249,7 @@ export default function LocationFilter({
       </button>
 
       {geoError && (
-        <span style={{ fontSize: 11, color: '#f87171', whiteSpace: 'nowrap' }}>{geoError}</span>
+        <span style={{ fontSize: 11, color: 'var(--ft-danger)', whiteSpace: 'nowrap' }}>{geoError}</span>
       )}
 
       {location.latitude ? (
@@ -257,8 +257,8 @@ export default function LocationFilter({
           value={radiusKm}
           onChange={e => onRadiusChange(Number(e.target.value) as RadiusValue)}
           style={{
-            padding: '9px 12px', background: '#0f172a',
-            border: '1.5px solid #334155', borderRadius: 10, color: '#f1f5f9',
+            padding: '9px 12px', background: 'var(--ft-bg)',
+            border: '1.5px solid var(--ft-border-strong)', borderRadius: 10, color: 'var(--ft-text)',
             fontSize: 12, fontFamily: 'inherit', cursor: 'pointer',
           }}
         >
@@ -271,8 +271,8 @@ export default function LocationFilter({
           aria-label="Worldwide — enter a location or tap Near Me to choose a distance radius"
           title="Worldwide — enter a location or tap Near Me to choose a distance radius"
           style={{
-            padding: '9px 12px', background: '#0f172a',
-            border: '1.5px solid #334155', borderRadius: 10, color: '#64748b',
+            padding: '9px 12px', background: 'var(--ft-bg)',
+            border: '1.5px solid var(--ft-border-strong)', borderRadius: 10, color: 'var(--ft-text-tertiary)',
             fontSize: 12, fontFamily: 'inherit', whiteSpace: 'nowrap',
           }}
         >
@@ -285,8 +285,8 @@ export default function LocationFilter({
           value={country ?? ''}
           onChange={e => onCountryChange(e.target.value || null)}
           style={{
-            padding: '9px 12px', background: '#0f172a',
-            border: '1.5px solid #334155', borderRadius: 10, color: '#f1f5f9',
+            padding: '9px 12px', background: 'var(--ft-bg)',
+            border: '1.5px solid var(--ft-border-strong)', borderRadius: 10, color: 'var(--ft-text)',
             fontSize: 12, fontFamily: 'inherit', cursor: 'pointer',
             maxWidth: 220,
           }}
@@ -327,10 +327,10 @@ export default function LocationFilter({
       {(showRemote || onRemoteChange) && (
         <label style={{
           display: 'flex', alignItems: 'center', gap: 6, padding: '9px 12px',
-          background: remote ? 'rgba(52,211,153,0.1)' : '#0f172a',
-          border: `1.5px solid ${remote ? 'rgba(52,211,153,0.3)' : '#334155'}`,
+          background: remote ? 'rgba(52,211,153,0.1)' : 'var(--ft-bg)',
+          border: `1.5px solid ${remote ? 'rgba(52,211,153,0.3)' : 'var(--ft-border-strong)'}`,
           borderRadius: 10, fontSize: 12, fontWeight: 600,
-          color: remote ? '#34d399' : '#94a3b8', cursor: 'pointer',
+          color: remote ? '#34d399' : 'var(--ft-text-secondary)', cursor: 'pointer',
           fontFamily: 'inherit', whiteSpace: 'nowrap',
         }}>
           <input

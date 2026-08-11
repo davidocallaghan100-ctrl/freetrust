@@ -62,7 +62,7 @@ export default function NotificationDropdown({
           right: 12px;
           width: 360px;
           max-width: calc(100vw - 24px);
-          background: #1e293b;
+          background: var(--ft-surface);
           border: 1px solid rgba(56,189,248,0.15);
           border-radius: 12px;
           box-shadow: 0 20px 60px rgba(0,0,0,0.5);
@@ -92,14 +92,14 @@ export default function NotificationDropdown({
         .notif-title {
           font-size: 0.95rem;
           font-weight: 700;
-          color: #f1f5f9;
+          color: var(--ft-text);
           display: flex;
           align-items: center;
           gap: 0.5rem;
         }
         .notif-badge {
           background: rgba(56,189,248,0.15);
-          color: #38bdf8;
+          color: var(--ft-accent);
           border-radius: 999px;
           padding: 0.1rem 0.4rem;
           font-size: 0.7rem;
@@ -109,7 +109,7 @@ export default function NotificationDropdown({
           background: none;
           border: none;
           cursor: pointer;
-          color: #38bdf8;
+          color: var(--ft-accent);
           font-size: 0.75rem;
           font-weight: 600;
           padding: 0.2rem 0.5rem;
@@ -130,7 +130,7 @@ export default function NotificationDropdown({
           background: none;
           border: 1px solid transparent;
           cursor: pointer;
-          color: #64748b;
+          color: var(--ft-text-tertiary);
           font-size: 0.72rem;
           font-weight: 600;
           padding: 0.22rem 0.6rem;
@@ -138,9 +138,9 @@ export default function NotificationDropdown({
           white-space: nowrap;
           transition: all 0.15s;
         }
-        .notif-filter-btn:hover { color: #94a3b8; border-color: rgba(148,163,184,0.2); }
+        .notif-filter-btn:hover { color: var(--ft-text-secondary); border-color: rgba(148,163,184,0.2); }
         .notif-filter-btn.active {
-          color: #38bdf8;
+          color: var(--ft-accent);
           background: rgba(56,189,248,0.1);
           border-color: rgba(56,189,248,0.3);
         }
@@ -159,7 +159,7 @@ export default function NotificationDropdown({
           justify-content: center;
           padding: 2.5rem 1rem;
           gap: 0.5rem;
-          color: #64748b;
+          color: var(--ft-text-tertiary);
           font-size: 0.85rem;
           text-align: center;
         }
@@ -169,7 +169,7 @@ export default function NotificationDropdown({
           align-items: center;
           justify-content: center;
           padding: 2.5rem 1rem;
-          color: #64748b;
+          color: var(--ft-text-tertiary);
           font-size: 0.85rem;
         }
         .notif-footer {
@@ -185,7 +185,7 @@ export default function NotificationDropdown({
           gap: 0.35rem;
           font-size: 0.8rem;
           font-weight: 600;
-          color: #38bdf8;
+          color: var(--ft-accent);
           text-decoration: none;
           transition: opacity 0.15s;
         }
@@ -195,11 +195,11 @@ export default function NotificationDropdown({
           align-items: center;
           gap: 0.3rem;
           font-size: 0.75rem;
-          color: #64748b;
+          color: var(--ft-text-tertiary);
           text-decoration: none;
           transition: color 0.15s;
         }
-        .notif-prefs-link:hover { color: #94a3b8; }
+        .notif-prefs-link:hover { color: var(--ft-text-secondary); }
       `}</style>
 
       <div className="notif-dropdown" role="dialog" aria-label="Notifications">
@@ -240,7 +240,7 @@ export default function NotificationDropdown({
           ) : filtered.length === 0 ? (
             <div className="notif-empty">
               <span className="notif-empty-icon">🔔</span>
-              <span style={{ color: '#94a3b8', fontWeight: 600 }}>No notifications</span>
+              <span style={{ color: 'var(--ft-text-secondary)', fontWeight: 600 }}>No notifications</span>
               <span>You&apos;re all caught up!</span>
             </div>
           ) : (

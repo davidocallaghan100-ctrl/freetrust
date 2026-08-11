@@ -199,7 +199,7 @@ export default function SearchFilters({
           </div>
           <div className="search-filters__trust-tiers">
             {[
-              { label: "Any", min: 0, color: "#94a3b8" },
+              { label: "Any", min: 0, color: "var(--ft-text-secondary)" },
               { label: "Fair", min: 40, color: "#f59e0b" },
               { label: "Good", min: 60, color: "#3b82f6" },
               { label: "High", min: 80, color: "#22c55e" },

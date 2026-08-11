@@ -161,38 +161,38 @@ function NewArticleInner() {
   const readTime = estimateReadTime(wordCount)
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui' }}>
       <style>{`
-        .editor-toolbar button { background: transparent; border: 1px solid rgba(148,163,184,0.15); border-radius: 5px; color: #94a3b8; padding: 0.3rem 0.55rem; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; font-family: inherit; }
-        .editor-toolbar button:hover { background: rgba(56,189,248,0.1); color: #38bdf8; border-color: rgba(56,189,248,0.3); }
+        .editor-toolbar button { background: transparent; border: 1px solid rgba(148,163,184,0.15); border-radius: 5px; color: var(--ft-text-secondary); padding: 0.3rem 0.55rem; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+        .editor-toolbar button:hover { background: rgba(56,189,248,0.1); color: var(--ft-accent); border-color: rgba(56,189,248,0.3); }
         .editor-area { outline: none; min-height: 320px; font-size: 1rem; line-height: 1.8; color: #e2e8f0; }
-        .editor-area h2 { font-size: 1.5rem; font-weight: 700; margin: 1.25rem 0 0.5rem; color: #f1f5f9; }
-        .editor-area h3 { font-size: 1.2rem; font-weight: 600; margin: 1rem 0 0.4rem; color: #f1f5f9; }
-        .editor-area blockquote { border-left: 3px solid #38bdf8; padding-left: 1rem; margin: 1rem 0; color: #94a3b8; font-style: italic; }
+        .editor-area h2 { font-size: 1.5rem; font-weight: 700; margin: 1.25rem 0 0.5rem; color: var(--ft-text); }
+        .editor-area h3 { font-size: 1.2rem; font-weight: 600; margin: 1rem 0 0.4rem; color: var(--ft-text); }
+        .editor-area blockquote { border-left: 3px solid var(--ft-accent); padding-left: 1rem; margin: 1rem 0; color: var(--ft-text-secondary); font-style: italic; }
         .editor-area ul, .editor-area ol { padding-left: 1.5rem; margin: 0.75rem 0; }
         .editor-area li { margin-bottom: 0.3rem; }
-        .editor-area pre, .editor-area code { background: #0f172a; border: 1px solid rgba(56,189,248,0.15); border-radius: 6px; padding: 0.8rem 1rem; font-family: monospace; font-size: 0.88rem; color: #7dd3fc; display: block; margin: 0.75rem 0; white-space: pre-wrap; }
-        .editor-area a { color: #38bdf8; text-decoration: underline; }
-        .editor-area:empty:before { content: attr(data-placeholder); color: #475569; pointer-events: none; }
-        .tag-pill { display: inline-flex; align-items: center; gap: 0.3rem; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.25); border-radius: 999px; padding: 0.2rem 0.7rem; font-size: 0.8rem; color: #38bdf8; }
-        .tag-pill button { background: none; border: none; cursor: pointer; color: #64748b; font-size: 0.9rem; padding: 0; line-height: 1; }
+        .editor-area pre, .editor-area code { background: var(--ft-bg); border: 1px solid rgba(56,189,248,0.15); border-radius: 6px; padding: 0.8rem 1rem; font-family: monospace; font-size: 0.88rem; color: var(--ft-accent); display: block; margin: 0.75rem 0; white-space: pre-wrap; }
+        .editor-area a { color: var(--ft-accent); text-decoration: underline; }
+        .editor-area:empty:before { content: attr(data-placeholder); color: var(--ft-text-faint); pointer-events: none; }
+        .tag-pill { display: inline-flex; align-items: center; gap: 0.3rem; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.25); border-radius: 999px; padding: 0.2rem 0.7rem; font-size: 0.8rem; color: var(--ft-accent); }
+        .tag-pill button { background: none; border: none; cursor: pointer; color: var(--ft-text-tertiary); font-size: 0.9rem; padding: 0; line-height: 1; }
         .tag-pill button:hover { color: #ef4444; }
-        .new-art-input { background: #1e293b; border: 1px solid rgba(56,189,248,0.15); border-radius: 8px; color: #f1f5f9; font-family: inherit; transition: border-color 0.15s; width: 100%; box-sizing: border-box; }
+        .new-art-input { background: var(--ft-surface); border: 1px solid rgba(56,189,248,0.15); border-radius: 8px; color: var(--ft-text); font-family: inherit; transition: border-color 0.15s; width: 100%; box-sizing: border-box; }
         .new-art-input:focus { outline: none; border-color: rgba(56,189,248,0.4); }
-        .new-art-select { background: #1e293b; border: 1px solid rgba(56,189,248,0.15); border-radius: 8px; color: #f1f5f9; font-family: inherit; padding: 0.55rem 0.85rem; font-size: 0.9rem; cursor: pointer; }
+        .new-art-select { background: var(--ft-surface); border: 1px solid rgba(56,189,248,0.15); border-radius: 8px; color: var(--ft-text); font-family: inherit; padding: 0.55rem 0.85rem; font-size: 0.9rem; cursor: pointer; }
         .new-art-select:focus { outline: none; border-color: rgba(56,189,248,0.4); }
-        .pub-btn { background: #38bdf8; border: none; border-radius: 8px; padding: 0.65rem 1.5rem; font-size: 0.9rem; font-weight: 700; color: #0f172a; cursor: pointer; transition: opacity 0.15s; }
+        .pub-btn { background: var(--ft-accent); border: none; border-radius: 8px; padding: 0.65rem 1.5rem; font-size: 0.9rem; font-weight: 700; color: var(--ft-bg); cursor: pointer; transition: opacity 0.15s; }
         .pub-btn:hover { opacity: 0.88; }
         .pub-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .draft-btn { background: transparent; border: 1px solid rgba(148,163,184,0.2); border-radius: 8px; padding: 0.65rem 1.2rem; font-size: 0.9rem; font-weight: 600; color: #94a3b8; cursor: pointer; transition: all 0.15s; }
-        .draft-btn:hover { border-color: rgba(56,189,248,0.3); color: #38bdf8; }
+        .draft-btn { background: transparent; border: 1px solid rgba(148,163,184,0.2); border-radius: 8px; padding: 0.65rem 1.2rem; font-size: 0.9rem; font-weight: 600; color: var(--ft-text-secondary); cursor: pointer; transition: all 0.15s; }
+        .draft-btn:hover { border-color: rgba(56,189,248,0.3); color: var(--ft-accent); }
         .draft-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
       `}</style>
 
       {/* Toast */}
       {toast && (
-        <div style={{ position: 'fixed', top: 76, left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: toast.type === 'success' ? '#0f2a1a' : '#2a0f0f', border: `1px solid ${toast.type === 'success' ? 'rgba(52,211,153,0.4)' : 'rgba(239,68,68,0.4)'}`, borderRadius: 10, padding: '0.75rem 1.5rem', color: toast.type === 'success' ? '#34d399' : '#f87171', fontWeight: 600, fontSize: '0.9rem', animation: 'slideIn 0.2s ease', whiteSpace: 'nowrap' }}>
+        <div style={{ position: 'fixed', top: 76, left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: toast.type === 'success' ? '#0f2a1a' : '#2a0f0f', border: `1px solid ${toast.type === 'success' ? 'rgba(52,211,153,0.4)' : 'rgba(239,68,68,0.4)'}`, borderRadius: 10, padding: '0.75rem 1.5rem', color: toast.type === 'success' ? '#34d399' : 'var(--ft-danger)', fontWeight: 600, fontSize: '0.9rem', animation: 'slideIn 0.2s ease', whiteSpace: 'nowrap' }}>
           {toast.msg}
         </div>
       )}
@@ -202,7 +202,7 @@ function NewArticleInner() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '0.75rem' }}>
           <div>
             <h1 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.15rem' }}>{draftId ? 'Edit Draft' : 'Write Article'}</h1>
-            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)' }}>
               {wordCount} words · {readTime} min read
             </div>
           </div>
@@ -219,7 +219,7 @@ function NewArticleInner() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {/* Title */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Title *</label>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Title *</label>
             <input
               className="new-art-input"
               value={title}
@@ -231,7 +231,7 @@ function NewArticleInner() {
 
           {/* Excerpt */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Excerpt</label>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Excerpt</label>
             <textarea
               className="new-art-input"
               value={excerpt}
@@ -245,14 +245,14 @@ function NewArticleInner() {
           {/* Category + Tags row */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Category</label>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Category</label>
               <select className="new-art-select" value={category} onChange={e => setCategory(e.target.value)} style={{ width: '100%' }}>
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tags (max 10)</label>
-              <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, padding: '0.45rem 0.7rem', display: 'flex', flexWrap: 'wrap', gap: '0.35rem', alignItems: 'center', minHeight: 42 }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tags (max 10)</label>
+              <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, padding: '0.45rem 0.7rem', display: 'flex', flexWrap: 'wrap', gap: '0.35rem', alignItems: 'center', minHeight: 42 }}>
                 {tags.map(t => (
                   <span key={t} className="tag-pill">
                     #{t}
@@ -266,7 +266,7 @@ function NewArticleInner() {
                     onKeyDown={handleTagKeyDown}
                     onBlur={() => tagInput && addTag(tagInput)}
                     placeholder={tags.length === 0 ? 'Add tags (Enter or comma)' : '+'}
-                    style={{ background: 'transparent', border: 'none', outline: 'none', color: '#f1f5f9', fontSize: '0.82rem', minWidth: 80, flex: 1 }}
+                    style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--ft-text)', fontSize: '0.82rem', minWidth: 80, flex: 1 }}
                   />
                 )}
               </div>
@@ -275,7 +275,7 @@ function NewArticleInner() {
 
           {/* Featured image */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Featured Image URL</label>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Featured Image URL</label>
             <input
               className="new-art-input"
               value={featuredImage}
@@ -293,8 +293,8 @@ function NewArticleInner() {
 
           {/* Rich text editor */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Content *</label>
-            <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 10, overflow: 'hidden' }}>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Content *</label>
+            <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 10, overflow: 'hidden' }}>
               {/* Toolbar */}
               <div className="editor-toolbar" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', padding: '0.65rem 0.85rem', borderBottom: '1px solid rgba(56,189,248,0.1)', background: 'rgba(15,23,42,0.5)' }}>
                 <button onMouseDown={e => { e.preventDefault(); execCmd('bold') }} title="Bold"><b>B</b></button>
@@ -323,7 +323,7 @@ function NewArticleInner() {
                 style={{ padding: '1.25rem 1.25rem 1.5rem', minHeight: 320 }}
               />
             </div>
-            <div style={{ textAlign: 'right', fontSize: '0.75rem', color: '#475569', marginTop: '0.4rem' }}>
+            <div style={{ textAlign: 'right', fontSize: '0.75rem', color: 'var(--ft-text-faint)', marginTop: '0.4rem' }}>
               {wordCount} words · ~{readTime} min read
             </div>
           </div>
@@ -332,8 +332,8 @@ function NewArticleInner() {
           <div style={{ background: 'rgba(56,189,248,0.04)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 10, padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <span style={{ fontSize: '1.25rem' }}>₮</span>
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#38bdf8' }}>Earn ₮20 Trust when you publish</div>
-              <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Publishing articles builds your reputation and rewards you with Trust tokens.</div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--ft-accent)' }}>Earn ₮20 Trust when you publish</div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)' }}>Publishing articles builds your reputation and rewards you with Trust tokens.</div>
             </div>
           </div>
 
@@ -355,7 +355,7 @@ function NewArticleInner() {
 export default function NewArticlePage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+      <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ft-text-tertiary)' }}>
         Loading editor…
       </div>
     }>

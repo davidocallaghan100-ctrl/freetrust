@@ -42,7 +42,7 @@ function UnsubscribeForm() {
 
   return (
     <div style={{
-      background: "#1e293b",
+      background: "var(--ft-surface)",
       border: "1px solid rgba(56,189,248,0.15)",
       borderRadius: "16px",
       padding: "40px 32px",
@@ -52,9 +52,9 @@ function UnsubscribeForm() {
     }}>
       {/* Logo */}
       <div style={{ marginBottom: "24px" }}>
-        <span style={{ fontSize: "22px", fontWeight: 800, color: "#38bdf8" }}>Free</span>
-        <span style={{ fontSize: "22px", fontWeight: 800, color: "#f1f5f9" }}>Trust</span>
-        <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+        <span style={{ fontSize: "22px", fontWeight: 800, color: "var(--ft-accent)" }}>Free</span>
+        <span style={{ fontSize: "22px", fontWeight: 800, color: "var(--ft-text)" }}>Trust</span>
+        <div style={{ fontSize: "11px", color: "var(--ft-text-tertiary)", marginTop: "2px", letterSpacing: "0.08em", textTransform: "uppercase" }}>
           Trust-Based Social Commerce
         </div>
       </div>
@@ -62,21 +62,21 @@ function UnsubscribeForm() {
       {status === "loading" && (
         <>
           <div style={{ fontSize: "36px", marginBottom: "16px" }}>⏳</div>
-          <h1 style={{ color: "#f1f5f9", fontSize: "20px", fontWeight: 700, marginBottom: "8px" }}>
+          <h1 style={{ color: "var(--ft-text)", fontSize: "20px", fontWeight: 700, marginBottom: "8px" }}>
             Processing...
           </h1>
-          <p style={{ color: "#94a3b8", fontSize: "14px" }}>Removing you from our list.</p>
+          <p style={{ color: "var(--ft-text-secondary)", fontSize: "14px" }}>Removing you from our list.</p>
         </>
       )}
 
       {status === "success" && (
         <>
           <div style={{ fontSize: "36px", marginBottom: "16px" }}>✅</div>
-          <h1 style={{ color: "#f1f5f9", fontSize: "20px", fontWeight: 700, marginBottom: "8px" }}>
+          <h1 style={{ color: "var(--ft-text)", fontSize: "20px", fontWeight: 700, marginBottom: "8px" }}>
             You&apos;ve been unsubscribed
           </h1>
-          <p style={{ color: "#94a3b8", fontSize: "14px", marginBottom: "24px" }}>
-            {inputEmail && <><strong style={{ color: "#cbd5e1" }}>{inputEmail}</strong><br /></>}
+          <p style={{ color: "var(--ft-text-secondary)", fontSize: "14px", marginBottom: "24px" }}>
+            {inputEmail && <><strong style={{ color: "var(--ft-text-secondary)" }}>{inputEmail}</strong><br /></>}
             You won&apos;t receive any more emails from FreeTrust. Sorry to see you go.
           </p>
           <a
@@ -85,7 +85,7 @@ function UnsubscribeForm() {
               display: "inline-block",
               background: "rgba(56,189,248,0.1)",
               border: "1px solid rgba(56,189,248,0.2)",
-              color: "#38bdf8",
+              color: "var(--ft-accent)",
               padding: "10px 24px",
               borderRadius: "50px",
               textDecoration: "none",
@@ -101,13 +101,13 @@ function UnsubscribeForm() {
       {status === "error" && (
         <>
           <div style={{ fontSize: "36px", marginBottom: "16px" }}>❌</div>
-          <h1 style={{ color: "#f1f5f9", fontSize: "20px", fontWeight: 700, marginBottom: "8px" }}>
+          <h1 style={{ color: "var(--ft-text)", fontSize: "20px", fontWeight: 700, marginBottom: "8px" }}>
             Something went wrong
           </h1>
-          <p style={{ color: "#94a3b8", fontSize: "14px", marginBottom: "16px" }}>{message}</p>
-          <p style={{ color: "#64748b", fontSize: "13px" }}>
+          <p style={{ color: "var(--ft-text-secondary)", fontSize: "14px", marginBottom: "16px" }}>{message}</p>
+          <p style={{ color: "var(--ft-text-tertiary)", fontSize: "13px" }}>
             Email us at{" "}
-            <a href="mailto:hello@freetrust.co" style={{ color: "#38bdf8" }}>
+            <a href="mailto:hello@freetrust.co" style={{ color: "var(--ft-accent)" }}>
               hello@freetrust.co
             </a>{" "}
             and we&apos;ll remove you manually.
@@ -117,10 +117,10 @@ function UnsubscribeForm() {
 
       {status === "idle" && !email && (
         <>
-          <h1 style={{ color: "#f1f5f9", fontSize: "20px", fontWeight: 700, marginBottom: "8px" }}>
+          <h1 style={{ color: "var(--ft-text)", fontSize: "20px", fontWeight: 700, marginBottom: "8px" }}>
             Unsubscribe from FreeTrust emails
           </h1>
-          <p style={{ color: "#94a3b8", fontSize: "14px", marginBottom: "24px" }}>
+          <p style={{ color: "var(--ft-text-secondary)", fontSize: "14px", marginBottom: "24px" }}>
             We&apos;re sorry to see you go. Enter your email below and you&apos;ll be removed from all future outreach.
           </p>
           <input
@@ -134,7 +134,7 @@ function UnsubscribeForm() {
               background: "rgba(255,255,255,0.05)",
               border: "1px solid rgba(56,189,248,0.2)",
               borderRadius: "10px",
-              color: "#f1f5f9",
+              color: "var(--ft-text)",
               fontSize: "15px",
               marginBottom: "16px",
               boxSizing: "border-box",
@@ -146,7 +146,7 @@ function UnsubscribeForm() {
             disabled={!inputEmail}
             style={{
               display: "inline-block",
-              background: inputEmail ? "linear-gradient(135deg,#0ea5e9,#38bdf8)" : "rgba(56,189,248,0.2)",
+              background: inputEmail ? "linear-gradient(135deg,#0ea5e9,var(--ft-accent))" : "rgba(56,189,248,0.2)",
               color: "#fff",
               padding: "12px 32px",
               borderRadius: "50px",
@@ -170,7 +170,7 @@ export default function UnsubscribePage() {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "#0f172a",
+      background: "var(--ft-bg)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -179,17 +179,17 @@ export default function UnsubscribePage() {
     }}>
       <Suspense fallback={
         <div style={{
-          background: "#1e293b",
+          background: "var(--ft-surface)",
           border: "1px solid rgba(56,189,248,0.15)",
           borderRadius: "16px",
           padding: "40px 32px",
           maxWidth: "480px",
           width: "100%",
           textAlign: "center",
-          color: "#94a3b8",
+          color: "var(--ft-text-secondary)",
         }}>
-          <span style={{ fontSize: "22px", fontWeight: 800, color: "#38bdf8" }}>Free</span>
-          <span style={{ fontSize: "22px", fontWeight: 800, color: "#f1f5f9" }}>Trust</span>
+          <span style={{ fontSize: "22px", fontWeight: 800, color: "var(--ft-accent)" }}>Free</span>
+          <span style={{ fontSize: "22px", fontWeight: 800, color: "var(--ft-text)" }}>Trust</span>
           <p style={{ marginTop: "24px" }}>Loading...</p>
         </div>
       }>

@@ -42,7 +42,7 @@ export default function InvestmentSection({ investmentIntent, isOwner }: Props) 
           <div style={{ fontSize: 13, fontWeight: 600, color: "#a78bfa" }}>
             Enable &quot;Seeking Investment&quot;
           </div>
-          <div style={{ fontSize: 12, color: "#475569", marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: "var(--ft-text-faint)", marginTop: 2 }}>
             Let investors know you&apos;re raising — edit your org profile to set this up.
           </div>
         </div>
@@ -97,7 +97,7 @@ export default function InvestmentSection({ investmentIntent, isOwner }: Props) 
                 background: esg
                   ? "rgba(16,185,129,0.15)"
                   : "rgba(100,116,139,0.15)",
-                color: esg ? "#34d399" : "#64748b",
+                color: esg ? "#34d399" : "var(--ft-text-tertiary)",
                 border: `1px solid ${
                   esg ? "rgba(16,185,129,0.3)" : "rgba(100,116,139,0.2)"
                 }`,
@@ -116,7 +116,7 @@ export default function InvestmentSection({ investmentIntent, isOwner }: Props) 
                 vis === "public"
                   ? "rgba(56,189,248,0.1)"
                   : "rgba(100,116,139,0.1)",
-              color: vis === "public" ? "#7dd3fc" : "#64748b",
+              color: vis === "public" ? "var(--ft-accent)" : "var(--ft-text-tertiary)",
               border: `1px solid ${
                 vis === "public"
                   ? "rgba(56,189,248,0.2)"
@@ -143,13 +143,13 @@ export default function InvestmentSection({ investmentIntent, isOwner }: Props) 
           {d.fundingStage && (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <ChartBarIcon
-                style={{ width: 14, height: 14, color: "#475569", flexShrink: 0 }}
+                style={{ width: 14, height: 14, color: "var(--ft-text-faint)", flexShrink: 0 }}
               />
               <div>
                 <div
                   style={{
                     fontSize: 10,
-                    color: "#475569",
+                    color: "var(--ft-text-faint)",
                     textTransform: "uppercase",
                     letterSpacing: "0.06em",
                     fontWeight: 600,
@@ -157,7 +157,7 @@ export default function InvestmentSection({ investmentIntent, isOwner }: Props) 
                 >
                   Stage
                 </div>
-                <div style={{ fontSize: 13, color: "#cbd5e1" }}>
+                <div style={{ fontSize: 13, color: "var(--ft-text-secondary)" }}>
                   {d.fundingStage}
                 </div>
               </div>
@@ -167,13 +167,13 @@ export default function InvestmentSection({ investmentIntent, isOwner }: Props) 
           {d.amountRaising != null && (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <BanknotesIcon
-                style={{ width: 14, height: 14, color: "#475569", flexShrink: 0 }}
+                style={{ width: 14, height: 14, color: "var(--ft-text-faint)", flexShrink: 0 }}
               />
               <div>
                 <div
                   style={{
                     fontSize: 10,
-                    color: "#475569",
+                    color: "var(--ft-text-faint)",
                     textTransform: "uppercase",
                     letterSpacing: "0.06em",
                     fontWeight: 600,
@@ -181,7 +181,7 @@ export default function InvestmentSection({ investmentIntent, isOwner }: Props) 
                 >
                   Raising
                 </div>
-                <div style={{ fontSize: 13, color: "#cbd5e1" }}>
+                <div style={{ fontSize: 13, color: "var(--ft-text-secondary)" }}>
                   {d.currency ?? ""}
                   {d.amountRaising?.toLocaleString()}
                 </div>
@@ -194,7 +194,7 @@ export default function InvestmentSection({ investmentIntent, isOwner }: Props) 
               <div
                 style={{
                   fontSize: 10,
-                  color: "#475569",
+                  color: "var(--ft-text-faint)",
                   textTransform: "uppercase",
                   letterSpacing: "0.06em",
                   fontWeight: 600,
@@ -203,7 +203,7 @@ export default function InvestmentSection({ investmentIntent, isOwner }: Props) 
               >
                 Use of Funds
               </div>
-              <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.55 }}>
+              <div style={{ fontSize: 13, color: "var(--ft-text-secondary)", lineHeight: 1.55 }}>
                 {d.useOfFunds}
               </div>
             </div>
@@ -214,7 +214,7 @@ export default function InvestmentSection({ investmentIntent, isOwner }: Props) 
               <div
                 style={{
                   fontSize: 10,
-                  color: "#475569",
+                  color: "var(--ft-text-faint)",
                   textTransform: "uppercase",
                   letterSpacing: "0.06em",
                   fontWeight: 600,
@@ -223,7 +223,7 @@ export default function InvestmentSection({ investmentIntent, isOwner }: Props) 
               >
                 Traction
               </div>
-              <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.55 }}>
+              <div style={{ fontSize: 13, color: "var(--ft-text-secondary)", lineHeight: 1.55 }}>
                 {d.currentTraction}
               </div>
             </div>
@@ -232,13 +232,13 @@ export default function InvestmentSection({ investmentIntent, isOwner }: Props) 
           {d.existingInvestors && (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <UserGroupIcon
-                style={{ width: 14, height: 14, color: "#475569", flexShrink: 0 }}
+                style={{ width: 14, height: 14, color: "var(--ft-text-faint)", flexShrink: 0 }}
               />
               <div>
                 <div
                   style={{
                     fontSize: 10,
-                    color: "#475569",
+                    color: "var(--ft-text-faint)",
                     textTransform: "uppercase",
                     letterSpacing: "0.06em",
                     fontWeight: 600,
@@ -246,7 +246,7 @@ export default function InvestmentSection({ investmentIntent, isOwner }: Props) 
                 >
                   Existing Investors
                 </div>
-                <div style={{ fontSize: 13, color: "#cbd5e1" }}>
+                <div style={{ fontSize: 13, color: "var(--ft-text-secondary)" }}>
                   {d.existingInvestors}
                 </div>
               </div>
@@ -256,13 +256,13 @@ export default function InvestmentSection({ investmentIntent, isOwner }: Props) 
           {d.expectedCloseDate && (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <CalendarDaysIcon
-                style={{ width: 14, height: 14, color: "#475569", flexShrink: 0 }}
+                style={{ width: 14, height: 14, color: "var(--ft-text-faint)", flexShrink: 0 }}
               />
               <div>
                 <div
                   style={{
                     fontSize: 10,
-                    color: "#475569",
+                    color: "var(--ft-text-faint)",
                     textTransform: "uppercase",
                     letterSpacing: "0.06em",
                     fontWeight: 600,
@@ -270,7 +270,7 @@ export default function InvestmentSection({ investmentIntent, isOwner }: Props) 
                 >
                   Expected Close
                 </div>
-                <div style={{ fontSize: 13, color: "#cbd5e1" }}>
+                <div style={{ fontSize: 13, color: "var(--ft-text-secondary)" }}>
                   {new Date(d.expectedCloseDate).toLocaleDateString("en", {
                     day: "numeric",
                     month: "short",
@@ -312,7 +312,7 @@ export default function InvestmentSection({ investmentIntent, isOwner }: Props) 
         <div
           style={{
             fontSize: 12,
-            color: "#475569",
+            color: "var(--ft-text-faint)",
             marginTop: 8,
             display: "flex",
             alignItems: "center",

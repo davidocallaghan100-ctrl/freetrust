@@ -120,10 +120,10 @@ export default function AccountingPage() {
   if (authed === null) {
     return (
       <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', color: '#64748b' }}>
+        <div style={{ textAlign: 'center', color: 'var(--ft-text-tertiary)' }}>
           <div style={{
             display: 'inline-block', width: 32, height: 32,
-            border: '3px solid rgba(56,189,248,0.2)', borderTopColor: '#38bdf8',
+            border: '3px solid rgba(56,189,248,0.2)', borderTopColor: 'var(--ft-accent)',
             borderRadius: '50%', animation: 'spin 0.7s linear infinite', marginBottom: 12,
           }} />
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -140,16 +140,16 @@ export default function AccountingPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.5rem' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: '#f1f5f9' }}>📊 My Accounting</h1>
-          <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#64748b' }}>Sales records, invoices and CSV exports for your records</p>
+          <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: 'var(--ft-text)' }}>📊 My Accounting</h1>
+          <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--ft-text-tertiary)' }}>Sales records, invoices and CSV exports for your records</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <select
             value={year}
             onChange={e => setYear(Number(e.target.value))}
             style={{
-              background: '#1e293b', border: '1px solid rgba(148,163,184,0.2)',
-              color: '#f1f5f9', borderRadius: 8, padding: '0.5rem 0.75rem',
+              background: 'var(--ft-surface)', border: '1px solid rgba(148,163,184,0.2)',
+              color: 'var(--ft-text)', borderRadius: 8, padding: '0.5rem 0.75rem',
               fontSize: '0.9rem', cursor: 'pointer',
             }}
           >
@@ -158,7 +158,7 @@ export default function AccountingPage() {
           <button
             onClick={() => exportCSV()}
             style={{
-              padding: '0.5rem 1rem', background: '#10b981', color: '#0f172a',
+              padding: '0.5rem 1rem', background: '#10b981', color: 'var(--ft-bg)',
               border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: '0.875rem',
             }}
           >
@@ -168,10 +168,10 @@ export default function AccountingPage() {
       </div>
 
       {loading && (
-        <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ft-text-tertiary)' }}>
           <div style={{
             display: 'inline-block', width: 28, height: 28,
-            border: '3px solid rgba(56,189,248,0.2)', borderTopColor: '#38bdf8',
+            border: '3px solid rgba(56,189,248,0.2)', borderTopColor: 'var(--ft-accent)',
             borderRadius: '50%', animation: 'spin 0.7s linear infinite', marginBottom: 10,
           }} />
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -191,17 +191,17 @@ export default function AccountingPage() {
 
       {!loading && !error && summary && summary.totals.orders === 0 && (
         <div style={{
-          background: '#1e293b', border: '1px solid rgba(148,163,184,0.1)',
+          background: 'var(--ft-surface)', border: '1px solid rgba(148,163,184,0.1)',
           borderRadius: 14, padding: '3rem 2rem', textAlign: 'center',
         }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9', marginBottom: 8 }}>No sales in {year}</div>
-          <p style={{ fontSize: 14, color: '#64748b', marginBottom: 20 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ft-text)', marginBottom: 8 }}>No sales in {year}</div>
+          <p style={{ fontSize: 14, color: 'var(--ft-text-tertiary)', marginBottom: 20 }}>
             Completed orders will appear here once you make your first sale.
           </p>
           <Link href="/browse" style={{
             display: 'inline-block', padding: '0.6rem 1.25rem',
-            background: '#10b981', color: '#0f172a', borderRadius: 8,
+            background: '#10b981', color: 'var(--ft-bg)', borderRadius: 8,
             fontWeight: 700, fontSize: 14, textDecoration: 'none',
           }}>
             Browse listings →
@@ -214,33 +214,33 @@ export default function AccountingPage() {
           {/* Summary cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
             {[
-              { label: 'Gross Sales', value: euro(summary.totals.grossCents), color: '#38bdf8', icon: '💰' },
-              { label: 'Platform Fees', value: euro(summary.totals.feeCents), color: '#f87171', icon: '🏷' },
+              { label: 'Gross Sales', value: euro(summary.totals.grossCents), color: 'var(--ft-accent)', icon: '💰' },
+              { label: 'Platform Fees', value: euro(summary.totals.feeCents), color: 'var(--ft-danger)', icon: '🏷' },
               { label: 'Net Earnings', value: euro(summary.totals.netCents), color: '#10b981', icon: '✅' },
               { label: 'Orders', value: String(summary.totals.orders), color: '#a78bfa', icon: '📦' },
             ].map(card => (
               <div key={card.label} style={{
-                background: '#1e293b', borderRadius: 12, padding: '1rem',
+                background: 'var(--ft-surface)', borderRadius: 12, padding: '1rem',
                 border: '1px solid rgba(148,163,184,0.1)',
               }}>
                 <div style={{ fontSize: '1.1rem', marginBottom: '0.3rem' }}>{card.icon}</div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{card.label}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{card.label}</div>
                 <div style={{ fontSize: '1.3rem', fontWeight: 800, color: card.color }}>{card.value}</div>
               </div>
             ))}
           </div>
 
           {/* Monthly breakdown */}
-          <div style={{ background: '#1e293b', borderRadius: 14, border: '1px solid rgba(148,163,184,0.1)', marginBottom: '1.5rem', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--ft-surface)', borderRadius: 14, border: '1px solid rgba(148,163,184,0.1)', marginBottom: '1.5rem', overflow: 'hidden' }}>
             <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(148,163,184,0.08)' }}>
-              <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#f1f5f9' }}>Monthly Breakdown — {year}</h2>
+              <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--ft-text)' }}>Monthly Breakdown — {year}</h2>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid rgba(148,163,184,0.08)' }}>
                     {['Month', 'Orders', 'Gross', 'Fees', 'Net', 'Export'].map(h => (
-                      <th key={h} style={{ padding: '0.75rem 1rem', textAlign: h === 'Export' ? 'center' : 'left', color: '#64748b', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                      <th key={h} style={{ padding: '0.75rem 1rem', textAlign: h === 'Export' ? 'center' : 'left', color: 'var(--ft-text-tertiary)', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -255,13 +255,13 @@ export default function AccountingPage() {
                           background: isCurrent ? 'rgba(16,185,129,0.05)' : 'transparent',
                         }}
                       >
-                        <td style={{ padding: '0.65rem 1rem', color: isCurrent ? '#10b981' : '#f1f5f9', fontWeight: isCurrent ? 700 : 400 }}>
+                        <td style={{ padding: '0.65rem 1rem', color: isCurrent ? '#10b981' : 'var(--ft-text)', fontWeight: isCurrent ? 700 : 400 }}>
                           {row.monthName} {isCurrent ? '← current' : ''}
                         </td>
-                        <td style={{ padding: '0.65rem 1rem', color: row.orders > 0 ? '#f1f5f9' : '#334155' }}>{row.orders}</td>
-                        <td style={{ padding: '0.65rem 1rem', color: row.grossCents > 0 ? '#38bdf8' : '#334155' }}>{row.grossCents > 0 ? euro(row.grossCents) : '—'}</td>
-                        <td style={{ padding: '0.65rem 1rem', color: row.feeCents > 0 ? '#f87171' : '#334155' }}>{row.feeCents > 0 ? euro(row.feeCents) : '—'}</td>
-                        <td style={{ padding: '0.65rem 1rem', color: row.netCents > 0 ? '#10b981' : '#334155', fontWeight: row.netCents > 0 ? 700 : 400 }}>{row.netCents > 0 ? euro(row.netCents) : '—'}</td>
+                        <td style={{ padding: '0.65rem 1rem', color: row.orders > 0 ? 'var(--ft-text)' : 'var(--ft-border-strong)' }}>{row.orders}</td>
+                        <td style={{ padding: '0.65rem 1rem', color: row.grossCents > 0 ? 'var(--ft-accent)' : 'var(--ft-border-strong)' }}>{row.grossCents > 0 ? euro(row.grossCents) : '—'}</td>
+                        <td style={{ padding: '0.65rem 1rem', color: row.feeCents > 0 ? 'var(--ft-danger)' : 'var(--ft-border-strong)' }}>{row.feeCents > 0 ? euro(row.feeCents) : '—'}</td>
+                        <td style={{ padding: '0.65rem 1rem', color: row.netCents > 0 ? '#10b981' : 'var(--ft-border-strong)', fontWeight: row.netCents > 0 ? 700 : 400 }}>{row.netCents > 0 ? euro(row.netCents) : '—'}</td>
                         <td style={{ padding: '0.65rem 1rem', textAlign: 'center' }}>
                           {row.orders > 0 ? (
                             <button
@@ -274,7 +274,7 @@ export default function AccountingPage() {
                             >
                               📥 CSV
                             </button>
-                          ) : <span style={{ color: '#334155' }}>—</span>}
+                          ) : <span style={{ color: 'var(--ft-border-strong)' }}>—</span>}
                         </td>
                       </tr>
                     )
@@ -285,12 +285,12 @@ export default function AccountingPage() {
           </div>
 
           {/* Recent invoices */}
-          <div style={{ background: '#1e293b', borderRadius: 14, border: '1px solid rgba(148,163,184,0.1)', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--ft-surface)', borderRadius: 14, border: '1px solid rgba(148,163,184,0.1)', overflow: 'hidden' }}>
             <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(148,163,184,0.08)' }}>
-              <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#f1f5f9' }}>Recent Invoices</h2>
+              <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--ft-text)' }}>Recent Invoices</h2>
             </div>
             {summary.recentInvoices.length === 0 ? (
-              <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--ft-text-tertiary)' }}>
                 No completed orders in {year} yet.{' '}
                 <Link href="/browse" style={{ color: '#10b981' }}>Browse listings →</Link>
               </div>
@@ -300,7 +300,7 @@ export default function AccountingPage() {
                   <thead>
                     <tr style={{ borderBottom: '1px solid rgba(148,163,184,0.08)' }}>
                       {['Invoice #', 'Date', 'Item', 'Buyer', 'Net', 'PDF'].map(h => (
-                        <th key={h} style={{ padding: '0.75rem 1rem', textAlign: h === 'PDF' ? 'center' : 'left', color: '#64748b', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                        <th key={h} style={{ padding: '0.75rem 1rem', textAlign: h === 'PDF' ? 'center' : 'left', color: 'var(--ft-text-tertiary)', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -308,16 +308,16 @@ export default function AccountingPage() {
                     {summary.recentInvoices.map(inv => (
                       <tr key={inv.id} style={{ borderBottom: '1px solid rgba(148,163,184,0.05)' }}>
                         <td style={{ padding: '0.65rem 1rem', color: '#a78bfa', fontWeight: 600 }}>{inv.invoiceNumber ?? inv.id.slice(0, 8).toUpperCase()}</td>
-                        <td style={{ padding: '0.65rem 1rem', color: '#94a3b8' }}>{formatDate(inv.date)}</td>
-                        <td style={{ padding: '0.65rem 1rem', color: '#f1f5f9', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.itemTitle as string}</td>
-                        <td style={{ padding: '0.65rem 1rem', color: '#94a3b8' }}>{inv.buyerName}</td>
+                        <td style={{ padding: '0.65rem 1rem', color: 'var(--ft-text-secondary)' }}>{formatDate(inv.date)}</td>
+                        <td style={{ padding: '0.65rem 1rem', color: 'var(--ft-text)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.itemTitle as string}</td>
+                        <td style={{ padding: '0.65rem 1rem', color: 'var(--ft-text-secondary)' }}>{inv.buyerName}</td>
                         <td style={{ padding: '0.65rem 1rem', color: '#10b981', fontWeight: 700 }}>{euro(inv.netCents)}</td>
                         <td style={{ padding: '0.65rem 1rem', textAlign: 'center' }}>
                           <button
                             onClick={() => downloadInvoice(inv.id)}
                             style={{
                               padding: '0.3rem 0.6rem', background: 'rgba(56,189,248,0.1)',
-                              color: '#38bdf8', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 6,
+                              color: 'var(--ft-accent)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 6,
                               fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600,
                             }}
                           >

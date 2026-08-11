@@ -87,12 +87,12 @@ function getTypeColor(type: string): { bg: string; color: string } {
     case 'transfer_sent':           return { bg: 'rgba(245,158,11,0.15)',  color: '#fbbf24' }
     // Reviews — sky blue
     case 'review':
-    case 'review_received':         return { bg: 'rgba(56,189,248,0.15)',  color: '#38bdf8' }
+    case 'review_received':         return { bg: 'rgba(56,189,248,0.15)',  color: 'var(--ft-accent)' }
     // Social likes — red/pink
     case 'gig_liked':
     case 'post_like':
     case 'comment_like':
-    case 'listing_liked':           return { bg: 'rgba(239,68,68,0.15)',   color: '#f87171' }
+    case 'listing_liked':           return { bg: 'rgba(239,68,68,0.15)',   color: 'var(--ft-danger)' }
     // Followers / connections — blue
     case 'new_follower':            return { bg: 'rgba(99,102,241,0.15)',  color: '#818cf8' }
     case 'connection_request':
@@ -114,8 +114,8 @@ function getTypeColor(type: string): { bg: string; color: string } {
     case 'founder_investment':
     case 'badge':                   return { bg: 'rgba(234,179,8,0.15)',   color: '#eab308' }
     // System — grey/blue
-    case 'system':                  return { bg: 'rgba(100,116,139,0.15)', color: '#94a3b8' }
-    default:                        return { bg: 'rgba(56,189,248,0.15)',  color: '#38bdf8' }
+    case 'system':                  return { bg: 'rgba(100,116,139,0.15)', color: 'var(--ft-text-secondary)' }
+    default:                        return { bg: 'rgba(56,189,248,0.15)',  color: 'var(--ft-accent)' }
   }
 }
 
@@ -152,7 +152,7 @@ export default function NotificationItem({ notification, onClose, onMarkRead, on
     alignItems: 'flex-start',
     gap: '0.75rem',
     padding: '0.75rem 1.1rem',
-    borderLeft: notification.read ? '3px solid transparent' : '3px solid #38bdf8',
+    borderLeft: notification.read ? '3px solid transparent' : '3px solid var(--ft-accent)',
     background: notification.read ? 'transparent' : 'rgba(56,189,248,0.04)',
     borderBottom: '1px solid rgba(56,189,248,0.06)',
     transition: 'background 0.15s',
@@ -188,7 +188,7 @@ export default function NotificationItem({ notification, onClose, onMarkRead, on
           margin: 0,
           fontSize: '0.82rem',
           fontWeight: notification.read ? 500 : 700,
-          color: notification.read ? '#94a3b8' : '#f1f5f9',
+          color: notification.read ? 'var(--ft-text-secondary)' : 'var(--ft-text)',
           lineHeight: 1.4,
           overflow: 'hidden',
           textOverflow: 'ellipsis',
@@ -200,7 +200,7 @@ export default function NotificationItem({ notification, onClose, onMarkRead, on
           <p style={{
             margin: '0.15rem 0 0',
             fontSize: '0.75rem',
-            color: '#64748b',
+            color: 'var(--ft-text-tertiary)',
             lineHeight: 1.45,
             display: '-webkit-box',
             WebkitLineClamp: 2,
@@ -210,7 +210,7 @@ export default function NotificationItem({ notification, onClose, onMarkRead, on
             {notification.body}
           </p>
         )}
-        <p style={{ margin: '0.25rem 0 0', fontSize: '0.7rem', color: '#475569' }}>
+        <p style={{ margin: '0.25rem 0 0', fontSize: '0.7rem', color: 'var(--ft-text-faint)' }}>
           {formatRelativeTime(notification.created_at)}
         </p>
       </div>
@@ -226,7 +226,7 @@ export default function NotificationItem({ notification, onClose, onMarkRead, on
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              color: '#38bdf8',
+              color: 'var(--ft-accent)',
               padding: '0.2rem',
               borderRadius: 4,
               display: 'flex',
@@ -247,7 +247,7 @@ export default function NotificationItem({ notification, onClose, onMarkRead, on
             background: 'none',
             border: 'none',
             cursor: 'pointer',
-            color: '#64748b',
+            color: 'var(--ft-text-tertiary)',
             padding: '0.2rem',
             borderRadius: 4,
             display: 'flex',

@@ -121,7 +121,7 @@ export default function EventsMap({ events, height = 420, center }: EventsMapPro
       if (typeof e.latitude !== 'number' || typeof e.longitude !== 'number') continue
       const icon = window.L.divIcon({
         className: 'ft-event-marker',
-        html: '<div style="background:#38bdf8;color:#0f172a;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,0.4);border:2px solid #0f172a">📅</div>',
+        html: '<div style="background:var(--ft-accent);color:var(--ft-bg);width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,0.4);border:2px solid var(--ft-bg)">📅</div>',
         iconSize: [32, 32],
         iconAnchor: [16, 16],
       })
@@ -130,9 +130,9 @@ export default function EventsMap({ events, height = 420, center }: EventsMapPro
       const city = e.location_label ?? e.city ?? ''
       marker.bindPopup(
         `<div style="font-family:system-ui;min-width:180px">
-          <div style="font-weight:700;color:#0f172a;font-size:13px;margin-bottom:4px">${escapeHtml(e.title)}</div>
-          ${dateStr ? `<div style="font-size:11px;color:#475569;margin-bottom:2px">🗓 ${escapeHtml(dateStr)}</div>` : ''}
-          ${city ? `<div style="font-size:11px;color:#475569;margin-bottom:6px">📍 ${escapeHtml(city)}</div>` : ''}
+          <div style="font-weight:700;color:var(--ft-bg);font-size:13px;margin-bottom:4px">${escapeHtml(e.title)}</div>
+          ${dateStr ? `<div style="font-size:11px;color:var(--ft-text-faint);margin-bottom:2px">🗓 ${escapeHtml(dateStr)}</div>` : ''}
+          ${city ? `<div style="font-size:11px;color:var(--ft-text-faint);margin-bottom:6px">📍 ${escapeHtml(city)}</div>` : ''}
           <a href="/events/${encodeURIComponent(e.id)}" style="color:#0284c7;font-size:12px;font-weight:600;text-decoration:none">View event →</a>
         </div>`
       )
@@ -167,11 +167,11 @@ export default function EventsMap({ events, height = 420, center }: EventsMapPro
       {/* If there are no geo events, surface a helpful message on top */}
       {events.every(e => typeof e.latitude !== 'number' || typeof e.longitude !== 'number') && (
         <div style={{
-          marginTop: 8, fontSize: 12, color: '#64748b', textAlign: 'center',
+          marginTop: 8, fontSize: 12, color: 'var(--ft-text-tertiary)', textAlign: 'center',
         }}>
           No events have map coordinates yet — browse by list view or
           create an event with a location to pin it here.{' '}
-          <Link href="/create?type=event" style={{ color: '#38bdf8' }}>Create event</Link>
+          <Link href="/create?type=event" style={{ color: 'var(--ft-accent)' }}>Create event</Link>
         </div>
       )}
     </>

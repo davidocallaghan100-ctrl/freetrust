@@ -110,7 +110,7 @@ function Stars({ rating, size = '0.85rem' }: { rating: number; size?: string }) 
   return (
     <span style={{ display: 'inline-flex', gap: 2 }}>
       {[1, 2, 3, 4, 5].map(i => (
-        <span key={i} style={{ color: i <= Math.round(rating) ? '#fbbf24' : '#334155', fontSize: size }}>★</span>
+        <span key={i} style={{ color: i <= Math.round(rating) ? '#fbbf24' : 'var(--ft-border-strong)', fontSize: size }}>★</span>
       ))}
     </span>
   )
@@ -283,9 +283,9 @@ export default function ProductDetailPage() {
   const card = '#111827'
   const border = 'rgba(139,92,246,0.15)'
   const accent = '#8b5cf6'
-  const accentSky = '#38bdf8'
-  const text = '#f1f5f9'
-  const muted = '#64748b'
+  const accentSky = 'var(--ft-accent)'
+  const text = 'var(--ft-text)'
+  const muted = 'var(--ft-text-tertiary)'
   const subtle = '#1f2937'
 
   // ─── Loading state ──────────────────────────────────────────────────────────
@@ -368,14 +368,14 @@ export default function ProductDetailPage() {
     <main className="ft-page-content" style={{ minHeight: '100vh', background: bg, color: text, fontFamily: 'system-ui, sans-serif', paddingBottom: 80 }}>
       {showDeleteModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
-          <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: 14, padding: '1.5rem', maxWidth: 420, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
-            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem' }}>Delete product?</div>
-            <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
+          <div style={{ background: 'var(--ft-surface)', border: '1px solid #ef4444', borderRadius: 14, padding: '1.5rem', maxWidth: 420, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--ft-text)', marginBottom: '0.5rem' }}>Delete product?</div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--ft-text-secondary)', marginBottom: '1.25rem' }}>
               &ldquo;{listing?.title}&rdquo; will be permanently deleted and cannot be recovered.
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
               <button onClick={() => setShowDeleteModal(false)} disabled={deleting}
-                style={{ padding: '0.5rem 1rem', borderRadius: 8, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>
+                style={{ padding: '0.5rem 1rem', borderRadius: 8, border: '1px solid var(--ft-border-strong)', background: 'transparent', color: 'var(--ft-text-secondary)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>
                 Cancel
               </button>
               <button onClick={handleDelete} disabled={deleting}
@@ -402,7 +402,7 @@ export default function ProductDetailPage() {
           .pd-reviews-grid { grid-template-columns: 1fr !important; }
         }
         .pd-thumb:hover { border-color: ${accent} !important; }
-        .pd-tab:hover { color: #94a3b8 !important; }
+        .pd-tab:hover { color: var(--ft-text-secondary) !important; }
         .pd-tag:hover { background: rgba(139,92,246,0.12) !important; color: ${accent} !important; }
         .pd-btn-pri:hover { filter: brightness(1.1); }
         .pd-btn-sec:hover { background: rgba(139,92,246,0.08) !important; border-color: ${accent} !important; }
@@ -421,7 +421,7 @@ export default function ProductDetailPage() {
           <span style={{ color: subtle }}>/</span>
           <Link href="/products" style={{ color: muted, textDecoration: 'none' }}>Products</Link>
           <span style={{ color: subtle }}>/</span>
-          <span style={{ color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 260 }}>{listing.title}</span>
+          <span style={{ color: 'var(--ft-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 260 }}>{listing.title}</span>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
             {isOwner && (
               <>
@@ -502,14 +502,14 @@ export default function ProductDetailPage() {
                 <span style={{ background: 'rgba(139,92,246,0.1)', border: `1px solid rgba(139,92,246,0.25)`, color: accent, fontSize: '0.7rem', fontWeight: 700, padding: '3px 10px', borderRadius: 999 }}>
                   {listing.product_type.charAt(0).toUpperCase() + listing.product_type.slice(1)}
                 </span>
-                <span style={{ background: 'rgba(100,116,139,0.15)', color: '#94a3b8', fontSize: '0.7rem', fontWeight: 600, padding: '3px 10px', borderRadius: 999 }}>{conditionLabel}</span>
+                <span style={{ background: 'rgba(100,116,139,0.15)', color: 'var(--ft-text-secondary)', fontSize: '0.7rem', fontWeight: 600, padding: '3px 10px', borderRadius: 999 }}>{conditionLabel}</span>
                 {stockWarning && (
                   <span style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)', color: '#fbbf24', fontSize: '0.7rem', fontWeight: 700, padding: '3px 10px', borderRadius: 999 }}>
                     Only {listing.stock_qty} left
                   </span>
                 )}
                 {outOfStock && (
-                  <span style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', fontSize: '0.7rem', fontWeight: 700, padding: '3px 10px', borderRadius: 999 }}>
+                  <span style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: 'var(--ft-danger)', fontSize: '0.7rem', fontWeight: 700, padding: '3px 10px', borderRadius: 999 }}>
                     Out of Stock
                   </span>
                 )}
@@ -564,7 +564,7 @@ export default function ProductDetailPage() {
             {/* Quantity (physical only) */}
             {isPhysical && !outOfStock && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#94a3b8' }}>Qty</span>
+                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ft-text-secondary)' }}>Qty</span>
                 <div style={{ display: 'flex', alignItems: 'center', border: `1px solid ${border}`, borderRadius: 10, overflow: 'hidden', background: card }}>
                   <button onClick={() => setQty(q => Math.max(1, q - 1))} disabled={qty <= 1} style={{ width: 36, height: 36, background: 'none', border: 'none', color: text, cursor: qty <= 1 ? 'not-allowed' : 'pointer', opacity: qty <= 1 ? 0.4 : 1, fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
                   <span style={{ width: 36, textAlign: 'center', fontWeight: 700, fontSize: '0.9rem' }}>{qty}</span>
@@ -608,7 +608,7 @@ export default function ProductDetailPage() {
                   onError={(msg) => setPayError(msg)}
                 />
                 {payError && (
-                  <div style={{ color: '#f87171', fontSize: '0.78rem', marginTop: -4 }}>{payError}</div>
+                  <div style={{ color: 'var(--ft-danger)', fontSize: '0.78rem', marginTop: -4 }}>{payError}</div>
                 )}
               </>
             )}
@@ -792,7 +792,7 @@ export default function ProductDetailPage() {
             {tab === 'description' && (
               <div style={{ maxWidth: 700 }}>
                 {listing.description ? (
-                  <div style={{ fontSize: '0.95rem', color: '#94a3b8', lineHeight: 1.8, whiteSpace: 'pre-line' }}>{listing.description}</div>
+                  <div style={{ fontSize: '0.95rem', color: 'var(--ft-text-secondary)', lineHeight: 1.8, whiteSpace: 'pre-line' }}>{listing.description}</div>
                 ) : (
                   <p style={{ color: muted, fontSize: '0.9rem' }}>No description provided.</p>
                 )}

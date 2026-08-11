@@ -71,7 +71,7 @@ export default function Navbar() {
     <header
       className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
         scrolled
-          ? "bg-[#0f172a]/90 backdrop-blur-xl border-b border-white/10 shadow-lg shadow-black/20"
+          ? "bg-[var(--ft-bg)]/90 backdrop-blur-xl border-b border-white/10 shadow-lg shadow-black/20"
           : "bg-transparent"
       }`}
     >
@@ -126,7 +126,7 @@ export default function Navbar() {
                           : "opacity-0 -translate-y-1 pointer-events-none"
                       }`}
                     >
-                      <div className="bg-[#0f172a]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-xl shadow-black/40 p-2 min-w-[220px]">
+                      <div className="bg-[var(--ft-bg)]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-xl shadow-black/40 p-2 min-w-[220px]">
                         {item.children.map((child) => (
                           <Link
                             key={child.href}
@@ -220,7 +220,7 @@ export default function Navbar() {
           mobileOpen ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
         }`}
       >
-        <div className="bg-[#0f172a]/98 backdrop-blur-xl border-t border-white/10 px-4 py-4 space-y-1">
+        <div className="bg-[var(--ft-bg)]/98 backdrop-blur-xl border-t border-white/10 px-4 py-4 space-y-1">
           {NAV_ITEMS.map((item) => {
             if (item.children) {
               return (

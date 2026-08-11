@@ -41,12 +41,12 @@ interface OutboundStatus {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  new: '#64748b',
-  enrolled: '#38bdf8',
+  new: 'var(--ft-text-tertiary)',
+  enrolled: 'var(--ft-accent)',
   contacted: '#a78bfa',
   replied: '#34d399',
   booked: '#fbbf24',
-  unsubscribed: '#f87171',
+  unsubscribed: 'var(--ft-danger)',
 }
 
 const STEP_LABELS = ['—', 'Email 1 sent', 'Email 2 sent', 'Sequence complete']
@@ -159,8 +159,8 @@ export default function OutboundPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: '#64748b', fontSize: '0.9rem' }}>Loading…</div>
+      <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.9rem' }}>Loading…</div>
       </div>
     )
   }
@@ -175,21 +175,21 @@ export default function OutboundPage() {
   const bookedCount = statusBreakdown['booked'] ?? 0
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui' }}>
       <style>{`
-        .ob-tab { background:transparent;border:1px solid transparent;border-radius:7px;padding:0.4rem 0.9rem;font-size:0.82rem;font-weight:500;color:#64748b;cursor:pointer;transition:all 0.15s;font-family:inherit; }
-        .ob-tab:hover { color:#94a3b8;background:rgba(148,163,184,0.06); }
-        .ob-tab.active { background:rgba(56,189,248,0.1);border-color:rgba(56,189,248,0.25);color:#38bdf8;font-weight:700; }
+        .ob-tab { background:transparent;border:1px solid transparent;border-radius:7px;padding:0.4rem 0.9rem;font-size:0.82rem;font-weight:500;color:var(--ft-text-tertiary);cursor:pointer;transition:all 0.15s;font-family:inherit; }
+        .ob-tab:hover { color:var(--ft-text-secondary);background:rgba(148,163,184,0.06); }
+        .ob-tab.active { background:rgba(56,189,248,0.1);border-color:rgba(56,189,248,0.25);color:var(--ft-accent);font-weight:700; }
         .ob-table { width:100%;border-collapse:collapse; }
-        .ob-table th { text-align:left;font-size:0.73rem;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;padding:0.6rem 0.9rem;border-bottom:1px solid rgba(56,189,248,0.08); }
-        .ob-table td { padding:0.7rem 0.9rem;border-bottom:1px solid rgba(56,189,248,0.04);font-size:0.83rem;color:#cbd5e1; }
+        .ob-table th { text-align:left;font-size:0.73rem;font-weight:600;color:var(--ft-text-tertiary);text-transform:uppercase;letter-spacing:0.05em;padding:0.6rem 0.9rem;border-bottom:1px solid rgba(56,189,248,0.08); }
+        .ob-table td { padding:0.7rem 0.9rem;border-bottom:1px solid rgba(56,189,248,0.04);font-size:0.83rem;color:var(--ft-text-secondary); }
         .ob-table tr:hover td { background:rgba(56,189,248,0.025); }
-        .ob-btn { background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.25);border-radius:7px;padding:0.45rem 1rem;font-size:0.82rem;font-weight:600;color:#38bdf8;cursor:pointer;font-family:inherit;transition:all 0.15s; }
+        .ob-btn { background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.25);border-radius:7px;padding:0.45rem 1rem;font-size:0.82rem;font-weight:600;color:var(--ft-accent);cursor:pointer;font-family:inherit;transition:all 0.15s; }
         .ob-btn:hover { background:rgba(56,189,248,0.18); }
         .ob-btn:disabled { opacity:0.5;cursor:not-allowed; }
         .ob-btn-green { background:rgba(52,211,153,0.1);border-color:rgba(52,211,153,0.25);color:#34d399; }
         .ob-btn-green:hover { background:rgba(52,211,153,0.18); }
-        select.ob-select { background:#1e293b;border:1px solid rgba(56,189,248,0.15);border-radius:7px;color:#f1f5f9;padding:0.4rem 0.7rem;font-size:0.82rem;outline:none;font-family:inherit;cursor:pointer; }
+        select.ob-select { background:var(--ft-surface);border:1px solid rgba(56,189,248,0.15);border-radius:7px;color:var(--ft-text);padding:0.4rem 0.7rem;font-size:0.82rem;outline:none;font-family:inherit;cursor:pointer; }
       `}</style>
 
       {/* Header */}
@@ -198,13 +198,13 @@ export default function OutboundPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.2rem' }}>
-                <span style={{ background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 6, padding: '0.12rem 0.55rem', fontSize: '0.7rem', fontWeight: 700, color: '#38bdf8' }}>ADMIN</span>
+                <span style={{ background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 6, padding: '0.12rem 0.55rem', fontSize: '0.7rem', fontWeight: 700, color: 'var(--ft-accent)' }}>ADMIN</span>
                 <h1 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0 }}>Outbound Sales</h1>
               </div>
-              <p style={{ color: '#64748b', fontSize: '0.82rem', margin: 0 }}>FreeTrust cold outreach — 26 ICP sequences targeting Irish service providers</p>
+              <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.82rem', margin: 0 }}>FreeTrust cold outreach — 26 ICP sequences targeting Irish service providers</p>
             </div>
             <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              <a href="/admin" style={{ fontSize: '0.8rem', color: '#64748b', textDecoration: 'none' }}>← Admin</a>
+              <a href="/admin" style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)', textDecoration: 'none' }}>← Admin</a>
               <button className="ob-btn ob-btn-green" onClick={handleEnrollAll} disabled={enrollingAll}>
                 {enrollingAll ? 'Enrolling…' : '⚡ Enroll All New Leads'}
               </button>
@@ -235,25 +235,25 @@ export default function OutboundPage() {
             {/* Summary stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '1rem', marginBottom: '2rem' }}>
               {[
-                { label: 'Total Leads', value: totalLeads, color: '#38bdf8', icon: '👥' },
+                { label: 'Total Leads', value: totalLeads, color: 'var(--ft-accent)', icon: '👥' },
                 { label: 'Emails Sent', value: emailsSent, color: '#a78bfa', icon: '📧' },
-                { label: 'Enrolled', value: statusBreakdown['enrolled'] ?? 0, color: '#38bdf8', icon: '✅' },
+                { label: 'Enrolled', value: statusBreakdown['enrolled'] ?? 0, color: 'var(--ft-accent)', icon: '✅' },
                 { label: 'Contacted', value: statusBreakdown['contacted'] ?? 0, color: '#818cf8', icon: '📬' },
                 { label: 'Replied', value: repliedCount, color: '#34d399', icon: '💬' },
                 { label: 'Booked', value: bookedCount, color: '#fbbf24', icon: '🎯' },
               ].map(s => (
-                <div key={s.label} style={{ background: '#1e293b', border: `1px solid ${s.color}20`, borderRadius: 12, padding: '1rem' }}>
+                <div key={s.label} style={{ background: 'var(--ft-surface)', border: `1px solid ${s.color}20`, borderRadius: 12, padding: '1rem' }}>
                   <div style={{ fontSize: '1.4rem', marginBottom: '0.35rem' }}>{s.icon}</div>
                   <div style={{ fontSize: '1.6rem', fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value.toLocaleString()}</div>
-                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.25rem' }}>{s.label}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', marginTop: '0.25rem' }}>{s.label}</div>
                 </div>
               ))}
             </div>
 
             {/* Per-ICP table */}
-            <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden' }}>
+            <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden' }}>
               <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(56,189,248,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#f1f5f9' }}>Per-ICP Breakdown</h2>
+                <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--ft-text)' }}>Per-ICP Breakdown</h2>
                 <button className="ob-btn" onClick={loadStats} style={{ fontSize: '0.75rem', padding: '0.3rem 0.7rem' }}>↻ Refresh</button>
               </div>
               <div style={{ overflowX: 'auto' }}>
@@ -275,14 +275,14 @@ export default function OutboundPage() {
                       const s = byIcp[cat] ?? { total: 0, enrolled: 0, step1_sent: 0, step2_sent: 0, step3_sent: 0, replied: 0, booked: 0 }
                       return (
                         <tr key={cat}>
-                          <td style={{ fontWeight: 600, color: '#f1f5f9' }}>{cat}</td>
-                          <td style={{ color: s.total > 0 ? '#38bdf8' : '#475569', fontWeight: s.total > 0 ? 700 : 400 }}>{s.total}</td>
+                          <td style={{ fontWeight: 600, color: 'var(--ft-text)' }}>{cat}</td>
+                          <td style={{ color: s.total > 0 ? 'var(--ft-accent)' : 'var(--ft-text-faint)', fontWeight: s.total > 0 ? 700 : 400 }}>{s.total}</td>
                           <td>{s.enrolled}</td>
-                          <td style={{ color: s.step1_sent > 0 ? '#a78bfa' : '#475569' }}>{s.step1_sent}</td>
-                          <td style={{ color: s.step2_sent > 0 ? '#818cf8' : '#475569' }}>{s.step2_sent}</td>
-                          <td style={{ color: s.step3_sent > 0 ? '#34d399' : '#475569' }}>{s.step3_sent}</td>
-                          <td style={{ color: s.replied > 0 ? '#34d399' : '#475569', fontWeight: s.replied > 0 ? 700 : 400 }}>{s.replied}</td>
-                          <td style={{ color: s.booked > 0 ? '#fbbf24' : '#475569', fontWeight: s.booked > 0 ? 700 : 400 }}>{s.booked}</td>
+                          <td style={{ color: s.step1_sent > 0 ? '#a78bfa' : 'var(--ft-text-faint)' }}>{s.step1_sent}</td>
+                          <td style={{ color: s.step2_sent > 0 ? '#818cf8' : 'var(--ft-text-faint)' }}>{s.step2_sent}</td>
+                          <td style={{ color: s.step3_sent > 0 ? '#34d399' : 'var(--ft-text-faint)' }}>{s.step3_sent}</td>
+                          <td style={{ color: s.replied > 0 ? '#34d399' : 'var(--ft-text-faint)', fontWeight: s.replied > 0 ? 700 : 400 }}>{s.replied}</td>
+                          <td style={{ color: s.booked > 0 ? '#fbbf24' : 'var(--ft-text-faint)', fontWeight: s.booked > 0 ? 700 : 400 }}>{s.booked}</td>
                         </tr>
                       )
                     })}
@@ -293,12 +293,12 @@ export default function OutboundPage() {
 
             {/* How to use */}
             <div style={{ background: 'rgba(56,189,248,0.04)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1.25rem 1.5rem', marginTop: '1.5rem' }}>
-              <h3 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#38bdf8', margin: '0 0 0.75rem' }}>📋 How to populate leads</h3>
-              <div style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.8 }}>
-                <p style={{ margin: '0 0 0.5rem' }}><strong style={{ color: '#f1f5f9' }}>1. Run scrapers</strong> from <code style={{ background: '#0f172a', borderRadius: 4, padding: '0.1rem 0.4rem', color: '#38bdf8' }}>/home/computer/freetrust-outbound/scripts/</code></p>
-                <p style={{ margin: '0 0 0.5rem' }}>Run Wave 1 first: <code style={{ background: '#0f172a', borderRadius: 4, padding: '0.1rem 0.4rem', color: '#38bdf8' }}>APIFY_API_TOKEN=xxx node run-wave1.js</code></p>
-                <p style={{ margin: '0 0 0.5rem' }}><strong style={{ color: '#f1f5f9' }}>2. Sync to Supabase</strong>: <code style={{ background: '#0f172a', borderRadius: 4, padding: '0.1rem 0.4rem', color: '#38bdf8' }}>SUPABASE_KEY=xxx node sync-to-supabase.js</code></p>
-                <p style={{ margin: 0 }}><strong style={{ color: '#f1f5f9' }}>3. Click "Enroll All New Leads"</strong> above — the hourly cron will then send emails automatically.</p>
+              <h3 style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--ft-accent)', margin: '0 0 0.75rem' }}>📋 How to populate leads</h3>
+              <div style={{ fontSize: '0.82rem', color: 'var(--ft-text-secondary)', lineHeight: 1.8 }}>
+                <p style={{ margin: '0 0 0.5rem' }}><strong style={{ color: 'var(--ft-text)' }}>1. Run scrapers</strong> from <code style={{ background: 'var(--ft-bg)', borderRadius: 4, padding: '0.1rem 0.4rem', color: 'var(--ft-accent)' }}>/home/computer/freetrust-outbound/scripts/</code></p>
+                <p style={{ margin: '0 0 0.5rem' }}>Run Wave 1 first: <code style={{ background: 'var(--ft-bg)', borderRadius: 4, padding: '0.1rem 0.4rem', color: 'var(--ft-accent)' }}>APIFY_API_TOKEN=xxx node run-wave1.js</code></p>
+                <p style={{ margin: '0 0 0.5rem' }}><strong style={{ color: 'var(--ft-text)' }}>2. Sync to Supabase</strong>: <code style={{ background: 'var(--ft-bg)', borderRadius: 4, padding: '0.1rem 0.4rem', color: 'var(--ft-accent)' }}>SUPABASE_KEY=xxx node sync-to-supabase.js</code></p>
+                <p style={{ margin: 0 }}><strong style={{ color: 'var(--ft-text)' }}>3. Click "Enroll All New Leads"</strong> above — the hourly cron will then send emails automatically.</p>
               </div>
             </div>
           </>
@@ -333,12 +333,12 @@ export default function OutboundPage() {
                 ))}
               </select>
               <button className="ob-btn" onClick={loadLeads} style={{ fontSize: '0.78rem' }}>↻ Refresh</button>
-              <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{leads.length} leads shown</span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)' }}>{leads.length} leads shown</span>
             </div>
 
-            <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden' }}>
+            <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden' }}>
               {leadsLoading ? (
-                <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>Loading leads…</div>
+                <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--ft-text-tertiary)' }}>Loading leads…</div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
                   <table className="ob-table">
@@ -359,34 +359,34 @@ export default function OutboundPage() {
                       {leads.map(lead => (
                         <tr key={lead.id}>
                           <td>
-                            <div style={{ fontWeight: 600, color: '#f1f5f9', fontSize: '0.83rem' }}>
+                            <div style={{ fontWeight: 600, color: 'var(--ft-text)', fontSize: '0.83rem' }}>
                               {[lead.first_name, lead.last_name].filter(Boolean).join(' ') || '—'}
                             </div>
-                            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{lead.email || '—'}</div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)' }}>{lead.email || '—'}</div>
                           </td>
                           <td style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {lead.business_name || '—'}
                           </td>
-                          <td style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.78rem', color: '#94a3b8' }}>
+                          <td style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.78rem', color: 'var(--ft-text-secondary)' }}>
                             {lead.icp_category || '—'}
                           </td>
                           <td>
-                            <span style={{ fontSize: '0.72rem', background: lead.source === 'linkedin' ? 'rgba(56,189,248,0.1)' : 'rgba(52,211,153,0.1)', color: lead.source === 'linkedin' ? '#38bdf8' : '#34d399', border: `1px solid ${lead.source === 'linkedin' ? 'rgba(56,189,248,0.2)' : 'rgba(52,211,153,0.2)'}`, borderRadius: 999, padding: '0.1rem 0.45rem' }}>
+                            <span style={{ fontSize: '0.72rem', background: lead.source === 'linkedin' ? 'rgba(56,189,248,0.1)' : 'rgba(52,211,153,0.1)', color: lead.source === 'linkedin' ? 'var(--ft-accent)' : '#34d399', border: `1px solid ${lead.source === 'linkedin' ? 'rgba(56,189,248,0.2)' : 'rgba(52,211,153,0.2)'}`, borderRadius: 999, padding: '0.1rem 0.45rem' }}>
                               {lead.source || 'manual'}
                             </span>
                           </td>
                           <td>
-                            <span style={{ fontSize: '0.72rem', background: `${STATUS_COLORS[lead.status] || '#64748b'}15`, color: STATUS_COLORS[lead.status] || '#64748b', border: `1px solid ${STATUS_COLORS[lead.status] || '#64748b'}30`, borderRadius: 999, padding: '0.1rem 0.45rem', fontWeight: 700 }}>
+                            <span style={{ fontSize: '0.72rem', background: `${STATUS_COLORS[lead.status] || 'var(--ft-text-tertiary)'}15`, color: STATUS_COLORS[lead.status] || 'var(--ft-text-tertiary)', border: `1px solid ${STATUS_COLORS[lead.status] || 'var(--ft-text-tertiary)'}30`, borderRadius: 999, padding: '0.1rem 0.45rem', fontWeight: 700 }}>
                               {lead.status}
                             </span>
                           </td>
-                          <td style={{ fontSize: '0.78rem', color: (lead.sequence_step ?? 0) > 0 ? '#a78bfa' : '#475569' }}>
+                          <td style={{ fontSize: '0.78rem', color: (lead.sequence_step ?? 0) > 0 ? '#a78bfa' : 'var(--ft-text-faint)' }}>
                             {STEP_LABELS[lead.sequence_step ?? 0]}
                           </td>
-                          <td style={{ fontSize: '0.75rem', color: '#475569', whiteSpace: 'nowrap' }}>
+                          <td style={{ fontSize: '0.75rem', color: 'var(--ft-text-faint)', whiteSpace: 'nowrap' }}>
                             {lead.last_sent_at ? new Date(lead.last_sent_at).toLocaleDateString('en-IE') : '—'}
                           </td>
-                          <td style={{ fontSize: '0.75rem', color: '#475569', whiteSpace: 'nowrap' }}>
+                          <td style={{ fontSize: '0.75rem', color: 'var(--ft-text-faint)', whiteSpace: 'nowrap' }}>
                             {new Date(lead.enrolled_at).toLocaleDateString('en-IE')}
                           </td>
                           <td>
@@ -413,7 +413,7 @@ export default function OutboundPage() {
                       ))}
                       {leads.length === 0 && (
                         <tr>
-                          <td colSpan={9} style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                          <td colSpan={9} style={{ textAlign: 'center', padding: '3rem', color: 'var(--ft-text-tertiary)' }}>
                             No leads yet. Run the scrapers to populate leads.
                           </td>
                         </tr>

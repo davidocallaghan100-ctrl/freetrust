@@ -79,24 +79,24 @@ export default function OpenInBrowserModal({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: 'linear-gradient(180deg, #0f172a 0%, #0a1628 100%)',
+          background: 'linear-gradient(180deg, var(--ft-bg) 0%, #0a1628 100%)',
           border: '1px solid rgba(0,180,216,0.3)',
           borderRadius: '20px 20px 12px 12px',
           padding: '28px 24px',
           width: '100%',
           maxWidth: 440,
           boxShadow: '0 -20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(0,180,216,0.1)',
-          color: '#f1f5f9',
+          color: 'var(--ft-text)',
         }}
       >
         <div style={{ textAlign: 'center', fontSize: 44, marginBottom: 10 }}>🌐</div>
-        <h2 style={{ fontSize: 20, fontWeight: 800, textAlign: 'center', margin: '0 0 8px', color: '#f1f5f9' }}>
+        <h2 style={{ fontSize: 20, fontWeight: 800, textAlign: 'center', margin: '0 0 8px', color: 'var(--ft-text)' }}>
           Open in your default browser
         </h2>
-        <p style={{ fontSize: 14, color: '#94a3b8', textAlign: 'center', margin: '0 0 20px', lineHeight: 1.55 }}>
+        <p style={{ fontSize: 14, color: 'var(--ft-text-secondary)', textAlign: 'center', margin: '0 0 20px', lineHeight: 1.55 }}>
           To sign in with Google, please open FreeTrust in your default browser.
           {info.browserName ? (
-            <><br /><span style={{ fontSize: 12, color: '#64748b' }}>Detected: {browserLabel}</span></>
+            <><br /><span style={{ fontSize: 12, color: 'var(--ft-text-tertiary)' }}>Detected: {browserLabel}</span></>
           ) : null}
         </p>
 
@@ -111,11 +111,11 @@ export default function OpenInBrowserModal({
               flex: 1,
               minWidth: 0,
               background: '#020617',
-              border: '1px solid #1e293b',
+              border: '1px solid var(--ft-surface)',
               borderRadius: 10,
               padding: '10px 12px',
               fontSize: 12,
-              color: '#cbd5e1',
+              color: 'var(--ft-text-secondary)',
               fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
               outline: 'none',
             }}
@@ -171,22 +171,22 @@ export default function OpenInBrowserModal({
             borderRadius: 10,
             padding: '12px 14px',
             fontSize: 12,
-            color: '#94a3b8',
+            color: 'var(--ft-text-secondary)',
             lineHeight: 1.6,
             marginBottom: 20,
           }}
         >
-          <strong style={{ color: '#cbd5e1' }}>Or manually:</strong> tap the{' '}
-          <strong style={{ color: '#cbd5e1' }}>⋯ menu</strong> in the corner and choose{' '}
-          <strong style={{ color: '#cbd5e1' }}>&quot;Open in {targetBrowser}&quot;</strong>,
+          <strong style={{ color: 'var(--ft-text-secondary)' }}>Or manually:</strong> tap the{' '}
+          <strong style={{ color: 'var(--ft-text-secondary)' }}>⋯ menu</strong> in the corner and choose{' '}
+          <strong style={{ color: 'var(--ft-text-secondary)' }}>&quot;Open in {targetBrowser}&quot;</strong>,
           then sign in with Google from there.
         </div>
 
         {/* or divider */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 16px' }}>
-          <div style={{ flex: 1, height: 1, background: '#1e293b' }} />
-          <span style={{ fontSize: 11, color: '#475569', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>or</span>
-          <div style={{ flex: 1, height: 1, background: '#1e293b' }} />
+          <div style={{ flex: 1, height: 1, background: 'var(--ft-surface)' }} />
+          <span style={{ fontSize: 11, color: 'var(--ft-text-faint)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>or</span>
+          <div style={{ flex: 1, height: 1, background: 'var(--ft-surface)' }} />
         </div>
 
         <button
@@ -195,7 +195,7 @@ export default function OpenInBrowserModal({
           style={{
             width: '100%',
             background: 'rgba(56,189,248,0.1)',
-            color: '#38bdf8',
+            color: 'var(--ft-accent)',
             border: '1px solid rgba(56,189,248,0.3)',
             borderRadius: 12,
             padding: '14px',

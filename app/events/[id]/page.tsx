@@ -67,9 +67,9 @@ const CAT_GRADIENTS: Record<string, string> = {
 }
 
 const CAT_COLORS: Record<string, string> = {
-  Community: '#38bdf8', Business: '#a78bfa', Technology: '#34d399',
+  Community: 'var(--ft-accent)', Business: '#a78bfa', Technology: '#34d399',
   Design: '#f472b6', Finance: '#fbbf24', Sustainability: '#4ade80',
-  AI: '#e879f9', Startup: '#38bdf8', Marketing: '#fb923c',
+  AI: '#e879f9', Startup: 'var(--ft-accent)', Marketing: '#fb923c',
   Web3: '#818cf8', 'E-commerce': '#f59e0b', Health: '#fb923c', Education: '#a78bfa',
 }
 
@@ -110,10 +110,10 @@ function eventSourceLabel(source?: string | null) {
 
 function Spinner() {
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 64 }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 64 }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ width: 40, height: 40, border: '3px solid rgba(56,189,248,0.2)', borderTopColor: '#38bdf8', borderRadius: '50%', margin: '0 auto 12px', animation: 'spin 0.7s linear infinite' }} />
-        <p style={{ color: '#64748b', fontSize: 14, margin: 0 }}>Loading event…</p>
+        <div style={{ width: 40, height: 40, border: '3px solid rgba(56,189,248,0.2)', borderTopColor: 'var(--ft-accent)', borderRadius: '50%', margin: '0 auto 12px', animation: 'spin 0.7s linear infinite' }} />
+        <p style={{ color: 'var(--ft-text-tertiary)', fontSize: 14, margin: 0 }}>Loading event…</p>
         <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
       </div>
     </div>
@@ -217,11 +217,11 @@ export default function EventDetailPage() {
 
   if (notFound || !event) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: 64, gap: 16 }}>
+      <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: 64, gap: 16 }}>
         <div style={{ fontSize: '3rem' }}>📅</div>
-        <h1 style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '1.4rem', margin: 0 }}>Event not found</h1>
-        <p style={{ color: '#64748b', margin: 0 }}>This event may have been removed or the link is invalid.</p>
-        <Link href="/events" style={{ background: '#38bdf8', color: '#0f172a', fontWeight: 700, padding: '0.6rem 1.5rem', borderRadius: 10, textDecoration: 'none', marginTop: 8 }}>
+        <h1 style={{ color: 'var(--ft-text)', fontWeight: 800, fontSize: '1.4rem', margin: 0 }}>Event not found</h1>
+        <p style={{ color: 'var(--ft-text-tertiary)', margin: 0 }}>This event may have been removed or the link is invalid.</p>
+        <Link href="/events" style={{ background: 'var(--ft-accent)', color: 'var(--ft-bg)', fontWeight: 700, padding: '0.6rem 1.5rem', borderRadius: 10, textDecoration: 'none', marginTop: 8 }}>
           Browse Events
         </Link>
       </div>
@@ -234,17 +234,17 @@ export default function EventDetailPage() {
   const isToday = new Date(event.starts_at).toDateString() === new Date().toDateString()
   const duration = formatDuration(event.starts_at, event.ends_at)
   const gradient = (event.category && CAT_GRADIENTS[event.category]) ?? hashGradient(event.title)
-  const catColor = (event.category && CAT_COLORS[event.category]) ?? '#38bdf8'
+  const catColor = (event.category && CAT_COLORS[event.category]) ?? 'var(--ft-accent)'
   const heroImage = isUsableEventImage(event.cover_image_url)
     ? event.cover_image_url
     : eventPosterDataUri({ title: event.title, category: event.category, startsAt: event.starts_at, location: event.location_label ?? event.venue_name ?? event.country })
   const cleanDescription = stripEventSourceAttribution(event.description)
   const outboundUrl = event.external_url ?? event.meeting_url ?? null
   const attendanceCopy = event.attendee_count > 0
-    ? { color: '#94a3b8', text: `👥 ${event.attendee_count.toLocaleString()} attending` }
+    ? { color: 'var(--ft-text-secondary)', text: `👥 ${event.attendee_count.toLocaleString()} attending` }
     : event.external_source
-      ? { color: '#94a3b8', text: `🎟 Attendance tracked on ${eventSourceLabel(event.external_source)}` }
-      : { color: '#38bdf8', text: '✨ Be the first to attend!' }
+      ? { color: 'var(--ft-text-secondary)', text: `🎟 Attendance tracked on ${eventSourceLabel(event.external_source)}` }
+      : { color: 'var(--ft-accent)', text: '✨ Be the first to attend!' }
 
   const attendeePct = (event.max_attendees && event.max_attendees > 0)
     ? Math.min(100, Math.round((event.attendee_count / event.max_attendees) * 100))
@@ -263,7 +263,7 @@ export default function EventDetailPage() {
   } : null
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 58, paddingBottom: 80 }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui', paddingTop: 58, paddingBottom: 80 }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg) } }
         .ev-detail-grid { display: grid; grid-template-columns: 1fr 340px; gap: 1.5rem; align-items: start; }
@@ -293,14 +293,14 @@ export default function EventDetailPage() {
 
         {/* Top-right badges */}
         <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-          <span style={{ background: event.is_online ? 'rgba(56,189,248,0.92)' : 'rgba(148,163,184,0.92)', color: '#0f172a', fontSize: '0.65rem', fontWeight: 800, padding: '3px 10px', borderRadius: 999 }}>
+          <span style={{ background: event.is_online ? 'rgba(56,189,248,0.92)' : 'rgba(148,163,184,0.92)', color: 'var(--ft-bg)', fontSize: '0.65rem', fontWeight: 800, padding: '3px 10px', borderRadius: 999 }}>
             {event.is_online ? '💻 ONLINE' : '📍 IN-PERSON'}
           </span>
           {event.is_paid && event.ticket_price && event.ticket_price > 0
-            ? <span style={{ background: 'rgba(245,158,11,0.92)', color: '#0f172a', fontSize: '0.65rem', fontWeight: 800, padding: '3px 10px', borderRadius: 999 }}>PAID</span>
-            : <span style={{ background: 'rgba(52,211,153,0.92)', color: '#0f172a', fontSize: '0.65rem', fontWeight: 800, padding: '3px 10px', borderRadius: 999 }}>FREE</span>
+            ? <span style={{ background: 'rgba(245,158,11,0.92)', color: 'var(--ft-bg)', fontSize: '0.65rem', fontWeight: 800, padding: '3px 10px', borderRadius: 999 }}>PAID</span>
+            : <span style={{ background: 'rgba(52,211,153,0.92)', color: 'var(--ft-bg)', fontSize: '0.65rem', fontWeight: 800, padding: '3px 10px', borderRadius: 999 }}>FREE</span>
           }
-          {isToday && <span style={{ background: 'rgba(251,191,36,0.92)', color: '#0f172a', fontSize: '0.65rem', fontWeight: 800, padding: '3px 10px', borderRadius: 999 }}>TODAY</span>}
+          {isToday && <span style={{ background: 'rgba(251,191,36,0.92)', color: 'var(--ft-bg)', fontSize: '0.65rem', fontWeight: 800, padding: '3px 10px', borderRadius: 999 }}>TODAY</span>}
           {isPast && <span style={{ background: 'rgba(100,116,139,0.85)', color: '#fff', fontSize: '0.65rem', fontWeight: 800, padding: '3px 10px', borderRadius: 999 }}>PAST</span>}
         </div>
 
@@ -340,9 +340,9 @@ export default function EventDetailPage() {
 
             {/* Description */}
             {cleanDescription && (
-              <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, padding: '1.5rem' }}>
-                <h2 style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9', margin: '0 0 12px' }}>About this event</h2>
-                <p style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.75, margin: 0, whiteSpace: 'pre-wrap' }}>{cleanDescription}</p>
+              <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, padding: '1.5rem' }}>
+                <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--ft-text)', margin: '0 0 12px' }}>About this event</h2>
+                <p style={{ fontSize: 14, color: 'var(--ft-text-secondary)', lineHeight: 1.75, margin: 0, whiteSpace: 'pre-wrap' }}>{cleanDescription}</p>
               </div>
             )}
 
@@ -350,7 +350,7 @@ export default function EventDetailPage() {
             {event.tags && event.tags.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {event.tags.map(tag => (
-                  <span key={tag} style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', color: '#38bdf8', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 999 }}>
+                  <span key={tag} style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', color: 'var(--ft-accent)', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 999 }}>
                     #{tag}
                   </span>
                 ))}
@@ -365,20 +365,20 @@ export default function EventDetailPage() {
                 </div>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 800, color: '#a78bfa', marginBottom: 2 }}>Curated by FreeTrust</div>
-                  <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5 }}>This event was verified and added by the FreeTrust platform team. All details are sourced from official event websites.</div>
+                  <div style={{ fontSize: 13, color: 'var(--ft-text-secondary)', lineHeight: 1.5 }}>This event was verified and added by the FreeTrust platform team. All details are sourced from official event websites.</div>
                 </div>
               </div>
             ) : event.organiser_name ? (
-              <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, padding: '1.5rem' }}>
-                <h2 style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9', margin: '0 0 14px' }}>Organiser</h2>
+              <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, padding: '1.5rem' }}>
+                <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--ft-text)', margin: '0 0 14px' }}>Organiser</h2>
                 <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
                   <div style={{ width: 48, height: 48, borderRadius: '50%', background: gradient, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, color: '#fff' }}>
                     {event.organiser_name.charAt(0).toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9', marginBottom: 4 }}>{event.organiser_name}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--ft-text)', marginBottom: 4 }}>{event.organiser_name}</div>
                     {event.organiser_bio && (
-                      <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.65, margin: 0 }}>{event.organiser_bio}</p>
+                      <p style={{ fontSize: 13, color: 'var(--ft-text-secondary)', lineHeight: 1.65, margin: 0 }}>{event.organiser_bio}</p>
                     )}
                   </div>
                 </div>
@@ -389,11 +389,11 @@ export default function EventDetailPage() {
             {event.is_online && event.meeting_url && !isPast && (
               <div style={{ background: 'rgba(56,189,248,0.07)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 14, padding: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#38bdf8', marginBottom: 4 }}>🔗 Online Join Link</div>
-                  <div style={{ fontSize: 12, color: '#64748b', wordBreak: 'break-all' }}>{event.meeting_url}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ft-accent)', marginBottom: 4 }}>🔗 Online Join Link</div>
+                  <div style={{ fontSize: 12, color: 'var(--ft-text-tertiary)', wordBreak: 'break-all' }}>{event.meeting_url}</div>
                 </div>
                 <button type="button" onClick={() => { void openExternalEventUrl(event.meeting_url as string) }}
-                  style={{ background: '#38bdf8', color: '#0f172a', fontWeight: 700, fontSize: 13, padding: '0.5rem 1.25rem', borderRadius: 9, textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  style={{ background: 'var(--ft-accent)', color: 'var(--ft-bg)', fontWeight: 700, fontSize: 13, padding: '0.5rem 1.25rem', borderRadius: 9, textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   Join Event →
                 </button>
               </div>
@@ -401,10 +401,10 @@ export default function EventDetailPage() {
 
             {/* Venue details (in-person) */}
             {!event.is_online && (event.venue_name || event.venue_address) && (
-              <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, padding: '1.25rem' }}>
-                <h2 style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9', margin: '0 0 10px' }}>📍 Venue</h2>
-                {event.venue_name && <div style={{ fontSize: 14, fontWeight: 600, color: '#f1f5f9', marginBottom: 4 }}>{event.venue_name}</div>}
-                {event.venue_address && <div style={{ fontSize: 13, color: '#94a3b8' }}>{event.venue_address}</div>}
+              <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, padding: '1.25rem' }}>
+                <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--ft-text)', margin: '0 0 10px' }}>📍 Venue</h2>
+                {event.venue_name && <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ft-text)', marginBottom: 4 }}>{event.venue_name}</div>}
+                {event.venue_address && <div style={{ fontSize: 13, color: 'var(--ft-text-secondary)' }}>{event.venue_address}</div>}
                 <div style={{ marginTop: 10 }}>
                   <LocationBadge
                     label={event.location_label ?? event.venue_name ?? null}
@@ -420,7 +420,7 @@ export default function EventDetailPage() {
 
           {/* ── RIGHT: sidebar ── */}
           <div className="ev-sidebar-sticky">
-            <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 18, padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 18, padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
               {/* Price */}
               <div>
@@ -432,7 +432,7 @@ export default function EventDetailPage() {
                       <button
                         type="button"
                         onClick={() => { void openExternalEventUrl(event.external_url as string) }}
-                        style={{ fontSize: 13, color: '#38bdf8', textDecoration: 'none', fontWeight: 600, background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit' }}
+                        style={{ fontSize: 13, color: 'var(--ft-accent)', textDecoration: 'none', fontWeight: 600, background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit' }}
                       >
                         🎟 Official tickets &amp; info ↗
                       </button>
@@ -440,7 +440,7 @@ export default function EventDetailPage() {
                   </div>
                 ) : event.is_paid && event.ticket_price && event.ticket_price > 0 ? (
                   <>
-                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Ticket Price</div>
+                    <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Ticket Price</div>
                     <PriceDisplay
                       amountEur={event.ticket_price_eur ?? event.ticket_price}
                       sourceCode={(event.currency_code ?? 'EUR') as CurrencyCode}
@@ -456,19 +456,19 @@ export default function EventDetailPage() {
 
               {/* Date */}
               <div style={{ borderTop: '1px solid rgba(56,189,248,0.08)', paddingTop: '0.875rem' }}>
-                <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Date & Time</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>{formatDate(event.starts_at)}</div>
-                <div style={{ fontSize: 13, color: '#38bdf8', fontWeight: 600, marginTop: 2 }}>
+                <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Date & Time</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ft-text)' }}>{formatDate(event.starts_at)}</div>
+                <div style={{ fontSize: 13, color: 'var(--ft-accent)', fontWeight: 600, marginTop: 2 }}>
                   {formatTime(event.starts_at)}
                   {event.ends_at ? ` – ${formatTime(event.ends_at)}` : ''}
-                  {duration ? <span style={{ color: '#64748b', fontWeight: 400 }}> ({duration})</span> : null}
+                  {duration ? <span style={{ color: 'var(--ft-text-tertiary)', fontWeight: 400 }}> ({duration})</span> : null}
                 </div>
-                {event.timezone && <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>{event.timezone}</div>}
+                {event.timezone && <div style={{ fontSize: 11, color: 'var(--ft-text-faint)', marginTop: 2 }}>{event.timezone}</div>}
               </div>
 
               {/* Location */}
               <div style={{ borderTop: '1px solid rgba(56,189,248,0.08)', paddingTop: '0.875rem' }}>
-                <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Location</div>
+                <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Location</div>
                 <LocationBadge
                   label={event.location_label ?? event.venue_name ?? (event.is_online ? 'Online' : null)}
                   remote={event.is_online}
@@ -482,7 +482,7 @@ export default function EventDetailPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <span style={{ fontSize: 13, color: attendanceCopy.color }}>{attendanceCopy.text}</span>
                   {event.max_attendees && event.attendee_count > 0 && (
-                    <span style={{ fontSize: 12, color: '#64748b' }}>of {event.max_attendees.toLocaleString()}</span>
+                    <span style={{ fontSize: 12, color: 'var(--ft-text-tertiary)' }}>of {event.max_attendees.toLocaleString()}</span>
                   )}
                 </div>
                 {attendeePct !== null && (
@@ -493,12 +493,12 @@ export default function EventDetailPage() {
                         width: `${attendeePct}%`,
                         background: attendeePct > 85
                           ? 'linear-gradient(90deg,#f59e0b,#ef4444)'
-                          : 'linear-gradient(90deg,#38bdf8,#0284c7)',
+                          : 'linear-gradient(90deg,var(--ft-accent),#0284c7)',
                         borderRadius: 999,
                         transition: 'width 0.5s ease',
                       }} />
                     </div>
-                    <div style={{ fontSize: 11, color: attendeePct > 85 ? '#f59e0b' : '#64748b', marginTop: 4, fontWeight: 600 }}>
+                    <div style={{ fontSize: 11, color: attendeePct > 85 ? '#f59e0b' : 'var(--ft-text-tertiary)', marginTop: 4, fontWeight: 600 }}>
                       {attendeePct > 85 ? `🔥 ${attendeePct}% full — filling up!` : `${attendeePct}% capacity`}
                     </div>
                   </>
@@ -524,7 +524,7 @@ export default function EventDetailPage() {
                         onError={(msg) => setPayError(msg)}
                       />
                       {payError && (
-                        <div style={{ color: '#f87171', fontSize: 12, marginTop: 2 }}>{payError}</div>
+                        <div style={{ color: 'var(--ft-danger)', fontSize: 12, marginTop: 2 }}>{payError}</div>
                       )}
                     </>
                   )}
@@ -553,7 +553,7 @@ export default function EventDetailPage() {
                     <button
                       type="button"
                       onClick={() => { void openExternalEventUrl(outboundUrl) }}
-                      style={{ display: 'block', width: '100%', textAlign: 'center', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', fontWeight: 800, fontSize: 15, padding: '0.875rem', borderRadius: 12, textDecoration: 'none', letterSpacing: '0.01em', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                      style={{ display: 'block', width: '100%', textAlign: 'center', background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', color: '#fff', fontWeight: 800, fontSize: 15, padding: '0.875rem', borderRadius: 12, textDecoration: 'none', letterSpacing: '0.01em', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
                     >
                       {event.is_paid ? '🎟 Get Tickets →' : '✅ Register Free →'}
                     </button>
@@ -561,19 +561,19 @@ export default function EventDetailPage() {
                     <button
                       onClick={handleRsvp}
                       disabled={rsvpBusy}
-                      style={{ background: rsvped ? '#34d399' : 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 12, padding: '0.875rem', fontSize: 15, fontWeight: 800, color: rsvped ? '#0f172a' : '#fff', cursor: rsvpBusy ? 'wait' : 'pointer', transition: 'all 0.2s', letterSpacing: '0.01em' }}
+                      style={{ background: rsvped ? '#34d399' : 'linear-gradient(135deg,var(--ft-accent),#0284c7)', border: 'none', borderRadius: 12, padding: '0.875rem', fontSize: 15, fontWeight: 800, color: rsvped ? 'var(--ft-bg)' : '#fff', cursor: rsvpBusy ? 'wait' : 'pointer', transition: 'all 0.2s', letterSpacing: '0.01em' }}
                     >
                       {rsvpBusy ? 'Saving…' : rsvped ? "✓ You're going!" : event.is_paid ? '🎟 Buy Ticket' : '✅ RSVP Free'}
                     </button>
                   )}
 
                   {payError && (
-                    <div style={{ color: '#f87171', fontSize: 12, marginTop: 2 }}>{payError}</div>
+                    <div style={{ color: 'var(--ft-danger)', fontSize: 12, marginTop: 2 }}>{payError}</div>
                   )}
 
                   <button
                     onClick={copyLink}
-                    style={{ background: 'rgba(56,189,248,0.07)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 12, padding: '0.65rem', fontSize: 13, fontWeight: 600, color: copied ? '#34d399' : '#38bdf8', cursor: 'pointer', transition: 'all 0.2s' }}
+                    style={{ background: 'rgba(56,189,248,0.07)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 12, padding: '0.65rem', fontSize: 13, fontWeight: 600, color: copied ? '#34d399' : 'var(--ft-accent)', cursor: 'pointer', transition: 'all 0.2s' }}
                   >
                     {copied ? '✓ Link copied!' : '↗ Share event'}
                   </button>
@@ -581,7 +581,7 @@ export default function EventDetailPage() {
               )}
 
               {isPast && (
-                <div style={{ textAlign: 'center', padding: '0.75rem', background: 'rgba(100,116,139,0.1)', borderRadius: 10, fontSize: 13, color: '#64748b', fontWeight: 600 }}>
+                <div style={{ textAlign: 'center', padding: '0.75rem', background: 'rgba(100,116,139,0.1)', borderRadius: 10, fontSize: 13, color: 'var(--ft-text-tertiary)', fontWeight: 600 }}>
                   This event has ended
                 </div>
               )}
@@ -591,7 +591,7 @@ export default function EventDetailPage() {
                 <span style={{ fontSize: '1.25rem', flexShrink: 0 }}>🛡</span>
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: '#a78bfa' }}>Earn ₮15 Trust tokens</div>
-                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Awarded when you attend this event.</div>
+                  <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', marginTop: 2 }}>Awarded when you attend this event.</div>
                 </div>
               </div>
 
@@ -602,7 +602,7 @@ export default function EventDetailPage() {
         {/* ── Map ── */}
         {hasMap && mapEvent && (
           <div style={{ marginTop: '1.75rem' }}>
-            <h2 style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9', margin: '0 0 12px' }}>📍 Event Location</h2>
+            <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--ft-text)', margin: '0 0 12px' }}>📍 Event Location</h2>
             <div style={{ borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.1)' }}>
               <EventsMap
                 events={[mapEvent]}
@@ -611,7 +611,7 @@ export default function EventDetailPage() {
               />
             </div>
             {event.venue_address && (
-              <div style={{ marginTop: 8, fontSize: 13, color: '#64748b', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ marginTop: 8, fontSize: 13, color: 'var(--ft-text-tertiary)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span>📌</span>
                 <span>{event.venue_address}</span>
               </div>
@@ -621,7 +621,7 @@ export default function EventDetailPage() {
 
         {/* ── Back link ── */}
         <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(56,189,248,0.07)' }}>
-          <Link href="/events" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#64748b', textDecoration: 'none', fontWeight: 600 }}>
+          <Link href="/events" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ft-text-tertiary)', textDecoration: 'none', fontWeight: 600 }}>
             ← Back to all events
           </Link>
         </div>

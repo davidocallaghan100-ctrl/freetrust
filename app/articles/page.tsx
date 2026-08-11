@@ -9,13 +9,13 @@ const CATEGORIES = ['All', 'Business', 'Technology', 'Sustainability', 'Design',
 
 const AVATAR_GRAD: Record<string, string> = {
   AD: 'linear-gradient(135deg,#f472b6,#db2777)', TW: 'linear-gradient(135deg,#fb923c,#ea580c)',
-  PN: 'linear-gradient(135deg,#a78bfa,#7c3aed)', SC: 'linear-gradient(135deg,#38bdf8,#0284c7)',
+  PN: 'linear-gradient(135deg,#a78bfa,#7c3aed)', SC: 'linear-gradient(135deg,var(--ft-accent),#0284c7)',
   JO: 'linear-gradient(135deg,#34d399,#059669)', LF: 'linear-gradient(135deg,#fbbf24,#d97706)',
 }
 
 
 const CAT_COLOR: Record<string, string> = {
-  Business: '#38bdf8', Technology: '#a78bfa', Sustainability: '#34d399',
+  Business: 'var(--ft-accent)', Technology: '#a78bfa', Sustainability: '#34d399',
   Design: '#f472b6', Finance: '#fbbf24', Community: '#fb923c',
 }
 
@@ -25,7 +25,7 @@ function getInitials(name: string | null | undefined): string {
 }
 
 function getAvatarGrad(initials: string): string {
-  return AVATAR_GRAD[initials] ?? 'linear-gradient(135deg,#38bdf8,#0284c7)'
+  return AVATAR_GRAD[initials] ?? 'linear-gradient(135deg,var(--ft-accent),#0284c7)'
 }
 
 function formatDate(iso: string) {
@@ -99,16 +99,16 @@ export default function ArticlesPage() {
   const featInitials = getInitials(featured?.author?.full_name)
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui' }}>
       <style>{`
         .art-featcard { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center; }
         .art-layout { display: grid; grid-template-columns: 1fr 280px; gap: 2rem; max-width: 1200px; margin: 0 auto; padding: 0 1.5rem 3rem; align-items: start; }
         .art-sidebar { display: flex; flex-direction: column; gap: 1.25rem; position: sticky; top: 78px; }
         .art-card-link { text-decoration: none; color: inherit; display: block; }
-        .art-card-inner { background: #1e293b; border: 1px solid rgba(56,189,248,0.08); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; transition: border-color 0.2s, transform 0.15s; }
+        .art-card-inner { background: var(--ft-surface); border: 1px solid rgba(56,189,248,0.08); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; transition: border-color 0.2s, transform 0.15s; }
         .art-card-link:hover .art-card-inner { border-color: rgba(56,189,248,0.28); transform: translateY(-1px); }
         .art-feat-wrap { padding: 2rem 1.5rem 0; max-width: 1200px; margin: 0 auto; }
-        .art-feat-card { background: #1e293b; border: 1px solid rgba(56,189,248,0.15); border-radius: 16px; padding: 2rem; transition: border-color 0.2s; }
+        .art-feat-card { background: var(--ft-surface); border: 1px solid rgba(56,189,248,0.15); border-radius: 16px; padding: 2rem; transition: border-color 0.2s; }
         .art-feat-link { text-decoration: none; color: inherit; display: block; }
         .art-feat-link:hover .art-feat-card { border-color: rgba(56,189,248,0.35); }
         @media (max-width: 768px) {
@@ -124,7 +124,7 @@ export default function ArticlesPage() {
       <div style={{ background: 'linear-gradient(180deg,rgba(56,189,248,0.07) 0%,transparent 100%)', padding: '2.5rem 1.5rem 2rem', borderBottom: '1px solid rgba(56,189,248,0.08)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.5rem' }}>Articles</h1>
-          <p style={{ color: '#64748b' }}>Insights, guides and stories from the FreeTrust community</p>
+          <p style={{ color: 'var(--ft-text-tertiary)' }}>Insights, guides and stories from the FreeTrust community</p>
         </div>
       </div>
 
@@ -134,18 +134,18 @@ export default function ArticlesPage() {
           <Link href={`/articles/${featured.slug}`} className="art-feat-link">
             <div className="art-feat-card art-featcard">
               <div>
-                <span style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 999, padding: '0.2rem 0.7rem', fontSize: '0.72rem', color: '#38bdf8', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '0.75rem' }}>EDITOR&apos;S PICK</span>
-                <h2 style={{ fontSize: '1.6rem', fontWeight: 800, lineHeight: 1.25, marginBottom: '0.75rem', color: '#f1f5f9' }}>{featured.title}</h2>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: '#94a3b8', marginBottom: '1rem' }}>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.72rem', color: '#0f172a', background: getAvatarGrad(featInitials), flexShrink: 0 }}>{featInitials}</div>
+                <span style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 999, padding: '0.2rem 0.7rem', fontSize: '0.72rem', color: 'var(--ft-accent)', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '0.75rem' }}>EDITOR&apos;S PICK</span>
+                <h2 style={{ fontSize: '1.6rem', fontWeight: 800, lineHeight: 1.25, marginBottom: '0.75rem', color: 'var(--ft-text)' }}>{featured.title}</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: 'var(--ft-text-secondary)', marginBottom: '1rem' }}>
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.72rem', color: 'var(--ft-bg)', background: getAvatarGrad(featInitials), flexShrink: 0 }}>{featInitials}</div>
                   <span>{featured.author?.full_name ?? 'FreeTrust Editor'}</span>
                   <span>·</span>
                   <span>{formatDate(featured.published_at ?? '')}</span>
                   <span>·</span>
                   <span>{featured.read_time_minutes} min read</span>
                 </div>
-                <p style={{ fontSize: '0.88rem', color: '#64748b', lineHeight: 1.7, marginBottom: '1.25rem' }}>{featured.excerpt}</p>
-                <span style={{ background: '#38bdf8', border: 'none', borderRadius: 8, padding: '0.65rem 1.5rem', fontSize: '0.88rem', fontWeight: 700, color: '#0f172a', display: 'inline-block' }}>Read Article →</span>
+                <p style={{ fontSize: '0.88rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.7, marginBottom: '1.25rem' }}>{featured.excerpt}</p>
+                <span style={{ background: 'var(--ft-accent)', border: 'none', borderRadius: 8, padding: '0.65rem 1.5rem', fontSize: '0.88rem', fontWeight: 700, color: 'var(--ft-bg)', display: 'inline-block' }}>Read Article →</span>
               </div>
               <div className="art-feat-img" style={{ background: 'linear-gradient(135deg,rgba(56,189,248,0.1),rgba(148,163,184,0.05))', borderRadius: 12, height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '4rem' }}>📝</div>
             </div>
@@ -159,39 +159,39 @@ export default function ArticlesPage() {
           {/* Category filter */}
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
             {CATEGORIES.map(c => (
-              <button key={c} onClick={() => setActiveCat(c)} style={{ padding: '0.35rem 0.9rem', borderRadius: 999, fontSize: '0.82rem', cursor: 'pointer', border: activeCat === c ? '1px solid rgba(56,189,248,0.3)' : '1px solid rgba(148,163,184,0.2)', background: activeCat === c ? 'rgba(56,189,248,0.1)' : 'transparent', color: activeCat === c ? '#38bdf8' : '#94a3b8', fontWeight: activeCat === c ? 700 : 400 }}>{c}</button>
+              <button key={c} onClick={() => setActiveCat(c)} style={{ padding: '0.35rem 0.9rem', borderRadius: 999, fontSize: '0.82rem', cursor: 'pointer', border: activeCat === c ? '1px solid rgba(56,189,248,0.3)' : '1px solid rgba(148,163,184,0.2)', background: activeCat === c ? 'rgba(56,189,248,0.1)' : 'transparent', color: activeCat === c ? 'var(--ft-accent)' : 'var(--ft-text-secondary)', fontWeight: activeCat === c ? 700 : 400 }}>{c}</button>
             ))}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <span style={{ fontSize: '0.88rem', color: '#64748b' }}>{loading ? '…' : `${filtered.length} articles`}</span>
-            <Link href="/articles/new" style={{ background: '#38bdf8', border: 'none', borderRadius: 7, padding: '0.4rem 1rem', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>+ Write Article</Link>
+            <span style={{ fontSize: '0.88rem', color: 'var(--ft-text-tertiary)' }}>{loading ? '…' : `${filtered.length} articles`}</span>
+            <Link href="/articles/new" style={{ background: 'var(--ft-accent)', border: 'none', borderRadius: 7, padding: '0.4rem 1rem', fontSize: '0.82rem', fontWeight: 700, color: 'var(--ft-bg)', cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>+ Write Article</Link>
           </div>
 
           {loading
             ? Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} style={{ background: '#1e293b', borderRadius: 12, padding: '1.25rem', marginBottom: '1rem', opacity: 0.5 }}>
-                <div style={{ height: 12, background: '#334155', borderRadius: 6, marginBottom: '0.75rem', width: '40%' }} />
-                <div style={{ height: 20, background: '#334155', borderRadius: 6, marginBottom: '0.5rem' }} />
-                <div style={{ height: 14, background: '#334155', borderRadius: 6, width: '75%' }} />
+              <div key={i} style={{ background: 'var(--ft-surface)', borderRadius: 12, padding: '1.25rem', marginBottom: '1rem', opacity: 0.5 }}>
+                <div style={{ height: 12, background: 'var(--ft-border-strong)', borderRadius: 6, marginBottom: '0.75rem', width: '40%' }} />
+                <div style={{ height: 20, background: 'var(--ft-border-strong)', borderRadius: 6, marginBottom: '0.5rem' }} />
+                <div style={{ height: 14, background: 'var(--ft-border-strong)', borderRadius: 6, width: '75%' }} />
               </div>
             ))
             : filtered.map(a => {
               const initials = getInitials(a.author?.full_name)
               const cat = a.category ?? 'General'
-              const catCol = CAT_COLOR[cat] ?? '#38bdf8'
+              const catCol = CAT_COLOR[cat] ?? 'var(--ft-accent)'
               return (
                 <Link key={a.id} href={`/articles/${a.slug}`} className="art-card-link">
                   <div className="art-card-inner">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
                       <span style={{ borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.72rem', fontWeight: 600, background: `${catCol}15`, color: catCol, border: `1px solid ${catCol}30` }}>{cat}</span>
-                      <span style={{ fontSize: '0.75rem', color: '#475569' }}>{formatDate(a.published_at ?? '')}</span>
-                      <span style={{ fontSize: '0.75rem', color: '#475569' }}>· {a.read_time_minutes} min read</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--ft-text-faint)' }}>{formatDate(a.published_at ?? '')}</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--ft-text-faint)' }}>· {a.read_time_minutes} min read</span>
                     </div>
-                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f1f5f9', lineHeight: 1.3, marginBottom: '0.5rem' }}>{a.title}</div>
-                    <p style={{ fontSize: '0.83rem', color: '#64748b', lineHeight: 1.6, marginBottom: '0.75rem' }}>{a.excerpt}</p>
-                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.78rem', color: '#475569' }}>
-                       <div style={{ width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.65rem', color: '#0f172a', background: getAvatarGrad(initials), flexShrink: 0 }}>{initials}</div>
+                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--ft-text)', lineHeight: 1.3, marginBottom: '0.5rem' }}>{a.title}</div>
+                    <p style={{ fontSize: '0.83rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.6, marginBottom: '0.75rem' }}>{a.excerpt}</p>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.78rem', color: 'var(--ft-text-faint)' }}>
+                       <div style={{ width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.65rem', color: 'var(--ft-bg)', background: getAvatarGrad(initials), flexShrink: 0 }}>{initials}</div>
                       <span>{a.author?.full_name ?? 'Author'}</span>
                       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                         <span>👏 {a.clap_count.toLocaleString()}</span>
@@ -208,8 +208,8 @@ export default function ArticlesPage() {
         {/* Sidebar */}
         <aside className="art-sidebar">
           {allArticles.length > 0 && (
-            <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1.25rem' }}>
-              <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem', color: '#f1f5f9' }}>Authors</div>
+            <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1.25rem' }}>
+              <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--ft-text)' }}>Authors</div>
               {Array.from(
                 allArticles.reduce((acc, a) => {
                   const name = a.author?.full_name ?? 'Unknown'
@@ -220,10 +220,10 @@ export default function ArticlesPage() {
                 const ini = getInitials(name)
                 return (
                   <div key={name} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                    <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.72rem', color: '#0f172a', background: getAvatarGrad(ini), flexShrink: 0 }}>{ini}</div>
+                    <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.72rem', color: 'var(--ft-bg)', background: getAvatarGrad(ini), flexShrink: 0 }}>{ini}</div>
                     <div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f1f5f9' }}>{name}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{count} article{count !== 1 ? 's' : ''}</div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ft-text)' }}>{name}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)' }}>{count} article{count !== 1 ? 's' : ''}</div>
                     </div>
                   </div>
                 )
@@ -248,11 +248,11 @@ export default function ArticlesPage() {
 
             if (topTags.length === 0) return null
             return (
-              <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1.25rem' }}>
-                <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem', color: '#f1f5f9' }}>Popular Tags</div>
+              <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1.25rem' }}>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--ft-text)' }}>Popular Tags</div>
                 <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                   {topTags.map(t => (
-                    <span key={t} style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.2rem 0.6rem', fontSize: '0.75rem', color: '#38bdf8', cursor: 'pointer' }}>#{t}</span>
+                    <span key={t} style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.2rem 0.6rem', fontSize: '0.75rem', color: 'var(--ft-accent)', cursor: 'pointer' }}>#{t}</span>
                   ))}
                 </div>
               </div>
@@ -260,15 +260,15 @@ export default function ArticlesPage() {
           })()}
 
           <div style={{ background: 'rgba(56,189,248,0.04)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 12, padding: '1.25rem' }}>
-            <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.5rem', color: '#f1f5f9' }}>Write for FreeTrust</div>
-            <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.5, marginBottom: '0.75rem' }}>Share your expertise with the FreeTrust community. Build your reputation and earn ₮20 Trust per article published.</p>
-            <Link href="/articles/new" style={{ display: 'block', textAlign: 'center', background: '#38bdf8', borderRadius: 8, padding: '0.6rem', fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', textDecoration: 'none' }}>Start Writing</Link>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--ft-text)' }}>Write for FreeTrust</div>
+            <p style={{ fontSize: '0.82rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.5, marginBottom: '0.75rem' }}>Share your expertise with the FreeTrust community. Build your reputation and earn ₮20 Trust per article published.</p>
+            <Link href="/articles/new" style={{ display: 'block', textAlign: 'center', background: 'var(--ft-accent)', borderRadius: 8, padding: '0.6rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--ft-bg)', textDecoration: 'none' }}>Start Writing</Link>
           </div>
 
-          <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1.25rem' }}>
-            <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.5rem', color: '#f1f5f9' }}>My Drafts</div>
-            <p style={{ fontSize: '0.8rem', color: '#64748b', lineHeight: 1.5, marginBottom: '0.75rem' }}>Continue working on your saved drafts.</p>
-            <Link href="/articles/drafts" style={{ display: 'block', textAlign: 'center', padding: '0.5rem', borderRadius: 7, border: '1px solid rgba(56,189,248,0.2)', color: '#38bdf8', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none' }}>View Drafts</Link>
+          <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, padding: '1.25rem' }}>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--ft-text)' }}>My Drafts</div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.5, marginBottom: '0.75rem' }}>Continue working on your saved drafts.</p>
+            <Link href="/articles/drafts" style={{ display: 'block', textAlign: 'center', padding: '0.5rem', borderRadius: 7, border: '1px solid rgba(56,189,248,0.2)', color: 'var(--ft-accent)', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none' }}>View Drafts</Link>
           </div>
         </aside>
       </div>

@@ -89,9 +89,9 @@ function AuthSessionInner() {
   return (
     <div style={{ minHeight: '100vh', background: '#0a0f1e', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'system-ui, sans-serif' }}>
       <div style={{ width: '100%', maxWidth: 420, background: 'rgba(15,23,42,0.92)', border: '1px solid rgba(0,194,203,0.22)', borderRadius: 22, padding: 28, textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,0.45)' }}>
-        <div style={{ width: 44, height: 44, borderRadius: 14, margin: '0 auto 18px', background: 'linear-gradient(135deg,#00c2cb,#38bdf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a0f1e', fontWeight: 900 }}>FT</div>
+        <div style={{ width: 44, height: 44, borderRadius: 14, margin: '0 auto 18px', background: 'linear-gradient(135deg,#00c2cb,var(--ft-accent))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a0f1e', fontWeight: 900 }}>FT</div>
         <h1 style={{ margin: '0 0 8px', color: '#fff', fontSize: 22, fontWeight: 850 }}>Signing you in</h1>
-        <p style={{ margin: 0, color: '#94a3b8', fontSize: 15, lineHeight: 1.55 }}>{message}</p>
+        <p style={{ margin: 0, color: 'var(--ft-text-secondary)', fontSize: 15, lineHeight: 1.55 }}>{message}</p>
       </div>
     </div>
   )
@@ -100,7 +100,7 @@ function AuthSessionInner() {
 export default function AuthSessionPage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', background: '#0a0f1e', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui, sans-serif' }}>
+      <div style={{ minHeight: '100vh', background: '#0a0f1e', color: 'var(--ft-text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui, sans-serif' }}>
         Securing your FreeTrust session…
       </div>
     }>

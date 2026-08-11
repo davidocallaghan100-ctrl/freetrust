@@ -216,7 +216,7 @@ export default function DisputePage() {
 
   // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) return (
-    <div style={{ minHeight:'calc(100vh - 104px)', paddingTop:64, background:'#0f172a', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b' }}>
+    <div style={{ minHeight:'calc(100vh - 104px)', paddingTop:64, background:'var(--ft-bg)', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--ft-text-tertiary)' }}>
       Loading…
     </div>
   )
@@ -227,15 +227,15 @@ export default function DisputePage() {
 
   // ── Success screen ────────────────────────────────────────────────────────
   if (success && !dispute) return (
-    <div style={{ minHeight:'calc(100vh - 104px)', paddingTop:64, background:'#0f172a', color:'#f1f5f9', fontFamily:'system-ui' }}>
+    <div style={{ minHeight:'calc(100vh - 104px)', paddingTop:64, background:'var(--ft-bg)', color:'var(--ft-text)', fontFamily:'system-ui' }}>
       <div style={{ maxWidth:600, margin:'0 auto', padding:'2rem 1rem', textAlign:'center' }}>
         <div style={{ background:'rgba(52,211,153,0.08)', border:'1px solid rgba(52,211,153,0.2)', borderRadius:16, padding:'2rem' }}>
           <div style={{ fontSize:'3rem', marginBottom:'1rem' }}>✅</div>
           <h2 style={{ fontWeight:800, color:'#34d399', marginBottom:'0.5rem' }}>Dispute Raised</h2>
-          <p style={{ color:'#94a3b8', fontSize:'0.9rem', marginBottom:'1.5rem' }}>
+          <p style={{ color:'var(--ft-text-secondary)', fontSize:'0.9rem', marginBottom:'1.5rem' }}>
             Your dispute has been submitted. The seller has 72 hours to respond before it escalates to the FreeTrust team.
           </p>
-          <button onClick={() => router.push(`/orders/${orderId}`)} style={{ background:'linear-gradient(135deg,#38bdf8,#0284c7)', border:'none', borderRadius:10, padding:'0.75rem 1.75rem', fontWeight:700, color:'#0f172a', cursor:'pointer', fontSize:'0.9rem' }}>
+          <button onClick={() => router.push(`/orders/${orderId}`)} style={{ background:'linear-gradient(135deg,var(--ft-accent),#0284c7)', border:'none', borderRadius:10, padding:'0.75rem 1.75rem', fontWeight:700, color:'var(--ft-bg)', cursor:'pointer', fontSize:'0.9rem' }}>
             View Order
           </button>
         </div>
@@ -244,7 +244,7 @@ export default function DisputePage() {
   )
 
   return (
-    <div style={{ minHeight:'calc(100vh - 104px)', paddingTop:64, background:'#0f172a', color:'#f1f5f9', fontFamily:'system-ui' }}>
+    <div style={{ minHeight:'calc(100vh - 104px)', paddingTop:64, background:'var(--ft-bg)', color:'var(--ft-text)', fontFamily:'system-ui' }}>
       <div style={{ maxWidth:620, margin:'0 auto', padding:'2rem 1rem' }}>
 
         {/* Header */}
@@ -255,7 +255,7 @@ export default function DisputePage() {
             </h1>
             {dispute && <StatusPill dispute={dispute} />}
           </div>
-          <p style={{ color:'#64748b', fontSize:'0.85rem', margin:0 }}>
+          <p style={{ color:'var(--ft-text-tertiary)', fontSize:'0.85rem', margin:0 }}>
             {view === 'raise'
               ? 'Our team will review your case within 48 hours'
               : 'Track the resolution thread below. Both parties can respond.'}
@@ -264,10 +264,10 @@ export default function DisputePage() {
 
         {/* Order info card */}
         {order && (
-          <div style={{ background:'#1e293b', border:'1px solid rgba(56,189,248,0.1)', borderRadius:12, padding:'1rem 1.25rem', marginBottom:'1.25rem' }}>
-            <div style={{ fontSize:'0.75rem', color:'#64748b', marginBottom:'0.25rem' }}>ORDER</div>
-            <div style={{ fontSize:'0.95rem', fontWeight:700, color:'#f1f5f9', marginBottom:'0.25rem' }}>{order.title ?? `Order #${order.id.slice(0, 8)}`}</div>
-            <div style={{ display:'flex', gap:'1rem', flexWrap:'wrap', fontSize:'0.82rem', color:'#64748b' }}>
+          <div style={{ background:'var(--ft-surface)', border:'1px solid rgba(56,189,248,0.1)', borderRadius:12, padding:'1rem 1.25rem', marginBottom:'1.25rem' }}>
+            <div style={{ fontSize:'0.75rem', color:'var(--ft-text-tertiary)', marginBottom:'0.25rem' }}>ORDER</div>
+            <div style={{ fontSize:'0.95rem', fontWeight:700, color:'var(--ft-text)', marginBottom:'0.25rem' }}>{order.title ?? `Order #${order.id.slice(0, 8)}`}</div>
+            <div style={{ display:'flex', gap:'1rem', flexWrap:'wrap', fontSize:'0.82rem', color:'var(--ft-text-tertiary)' }}>
               <span>€{(order.amount / 100).toFixed(2)}</span>
               <span style={{ textTransform:'capitalize' }}>Status: {order.status}</span>
               {daysLeft !== null && daysLeft > 0 && (
@@ -288,13 +288,13 @@ export default function DisputePage() {
               <strong style={{ color:'#fbbf24' }}>Dispute windows:</strong> Services: 72 hours · Physical goods: 7 days after delivery
             </div>
 
-            <div style={{ background:'#1e293b', border:'1px solid rgba(56,189,248,0.1)', borderRadius:16, padding:'1.5rem', display:'flex', flexDirection:'column', gap:'1.25rem' }}>
+            <div style={{ background:'var(--ft-surface)', border:'1px solid rgba(56,189,248,0.1)', borderRadius:16, padding:'1.5rem', display:'flex', flexDirection:'column', gap:'1.25rem' }}>
               {/* Reason chips */}
               <div>
-                <label style={{ fontSize:'0.78rem', fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.06em', display:'block', marginBottom:'0.5rem' }}>Reason *</label>
+                <label style={{ fontSize:'0.78rem', fontWeight:700, color:'var(--ft-text-tertiary)', textTransform:'uppercase', letterSpacing:'0.06em', display:'block', marginBottom:'0.5rem' }}>Reason *</label>
                 <div style={{ display:'flex', flexWrap:'wrap', gap:'0.4rem' }}>
                   {REASONS.map(r => (
-                    <button key={r} onClick={() => setReason(r)} style={{ padding:'0.45rem 0.85rem', borderRadius:999, fontSize:'0.8rem', cursor:'pointer', border: reason === r ? '1px solid rgba(56,189,248,0.4)' : '1px solid rgba(148,163,184,0.2)', background: reason === r ? 'rgba(56,189,248,0.1)' : 'transparent', color: reason === r ? '#38bdf8' : '#94a3b8', fontWeight: reason === r ? 600 : 400, transition:'all 0.12s' }}>
+                    <button key={r} onClick={() => setReason(r)} style={{ padding:'0.45rem 0.85rem', borderRadius:999, fontSize:'0.8rem', cursor:'pointer', border: reason === r ? '1px solid rgba(56,189,248,0.4)' : '1px solid rgba(148,163,184,0.2)', background: reason === r ? 'rgba(56,189,248,0.1)' : 'transparent', color: reason === r ? 'var(--ft-accent)' : 'var(--ft-text-secondary)', fontWeight: reason === r ? 600 : 400, transition:'all 0.12s' }}>
                       {r}
                     </button>
                   ))}
@@ -303,13 +303,13 @@ export default function DisputePage() {
 
               {/* Details */}
               <div>
-                <label style={{ fontSize:'0.78rem', fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.06em', display:'block', marginBottom:'0.35rem' }}>Details</label>
-                <textarea value={details} onChange={e => setDetails(e.target.value)} placeholder="Describe the issue — what happened, when, and what resolution you expect…" rows={5} maxLength={2000} style={{ width:'100%', background:'#0f172a', border:'1px solid rgba(56,189,248,0.15)', borderRadius:10, padding:'0.75rem 1rem', fontSize:'0.88rem', color:'#f1f5f9', outline:'none', resize:'vertical', fontFamily:'inherit', boxSizing:'border-box' }} />
-                <div style={{ fontSize:'0.72rem', color:'#475569', textAlign:'right' }}>{details.length}/2000</div>
+                <label style={{ fontSize:'0.78rem', fontWeight:700, color:'var(--ft-text-tertiary)', textTransform:'uppercase', letterSpacing:'0.06em', display:'block', marginBottom:'0.35rem' }}>Details</label>
+                <textarea value={details} onChange={e => setDetails(e.target.value)} placeholder="Describe the issue — what happened, when, and what resolution you expect…" rows={5} maxLength={2000} style={{ width:'100%', background:'var(--ft-bg)', border:'1px solid rgba(56,189,248,0.15)', borderRadius:10, padding:'0.75rem 1rem', fontSize:'0.88rem', color:'var(--ft-text)', outline:'none', resize:'vertical', fontFamily:'inherit', boxSizing:'border-box' }} />
+                <div style={{ fontSize:'0.72rem', color:'var(--ft-text-faint)', textAlign:'right' }}>{details.length}/2000</div>
               </div>
 
               {/* Evidence note */}
-              <div style={{ background:'rgba(56,189,248,0.05)', border:'1px solid rgba(56,189,248,0.1)', borderRadius:8, padding:'0.65rem 0.9rem', fontSize:'0.8rem', color:'#64748b' }}>
+              <div style={{ background:'rgba(56,189,248,0.05)', border:'1px solid rgba(56,189,248,0.1)', borderRadius:8, padding:'0.65rem 0.9rem', fontSize:'0.8rem', color:'var(--ft-text-tertiary)' }}>
                 💡 After raising, you can add evidence screenshots or links in the response thread
               </div>
 
@@ -317,7 +317,7 @@ export default function DisputePage() {
                 <div style={{ background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:8, padding:'0.65rem 1rem', fontSize:'0.85rem', color:'#fca5a5' }}>{error}</div>
               )}
 
-              <button onClick={submitDispute} disabled={submitting || !reason} style={{ background: submitting || !reason ? 'rgba(56,189,248,0.3)' : 'linear-gradient(135deg,#38bdf8,#0284c7)', border:'none', borderRadius:10, padding:'0.85rem', fontWeight:700, fontSize:'0.92rem', color:'#0f172a', cursor: submitting || !reason ? 'not-allowed' : 'pointer' }}>
+              <button onClick={submitDispute} disabled={submitting || !reason} style={{ background: submitting || !reason ? 'rgba(56,189,248,0.3)' : 'linear-gradient(135deg,var(--ft-accent),#0284c7)', border:'none', borderRadius:10, padding:'0.85rem', fontWeight:700, fontSize:'0.92rem', color:'var(--ft-bg)', cursor: submitting || !reason ? 'not-allowed' : 'pointer' }}>
                 {submitting ? 'Submitting…' : '🚨 Submit Dispute'}
               </button>
             </div>
@@ -337,18 +337,18 @@ export default function DisputePage() {
             )}
 
             {/* Original dispute */}
-            <div style={{ background:'#1e293b', border:'1px solid rgba(56,189,248,0.1)', borderRadius:12, padding:'1rem 1.25rem', marginBottom:12 }}>
+            <div style={{ background:'var(--ft-surface)', border:'1px solid rgba(56,189,248,0.1)', borderRadius:12, padding:'1rem 1.25rem', marginBottom:12 }}>
               <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
                 <span style={{ fontSize:16 }}>🚨</span>
-                <span style={{ fontWeight:700, color:'#f1f5f9', fontSize:14 }}>Dispute raised</span>
-                <span style={{ fontSize:11, color:'#64748b', marginLeft:'auto' }}>{formatTime(dispute.created_at)}</span>
+                <span style={{ fontWeight:700, color:'var(--ft-text)', fontSize:14 }}>Dispute raised</span>
+                <span style={{ fontSize:11, color:'var(--ft-text-tertiary)', marginLeft:'auto' }}>{formatTime(dispute.created_at)}</span>
               </div>
               <div style={{ fontSize:13, color:'#fbbf24', fontWeight:600, marginBottom:4 }}>Reason: {dispute.reason}</div>
-              {dispute.details && <p style={{ fontSize:13, color:'#94a3b8', margin:0, lineHeight:1.5 }}>{dispute.details}</p>}
+              {dispute.details && <p style={{ fontSize:13, color:'var(--ft-text-secondary)', margin:0, lineHeight:1.5 }}>{dispute.details}</p>}
               {dispute.evidence_urls?.length > 0 && (
                 <div style={{ marginTop:8, display:'flex', flexWrap:'wrap', gap:6 }}>
                   {dispute.evidence_urls.map((url, i) => (
-                    <a key={i} href={url} target="_blank" rel="noreferrer" style={{ fontSize:11, color:'#38bdf8', textDecoration:'none', background:'rgba(56,189,248,0.08)', padding:'2px 8px', borderRadius:6 }}>
+                    <a key={i} href={url} target="_blank" rel="noreferrer" style={{ fontSize:11, color:'var(--ft-accent)', textDecoration:'none', background:'rgba(56,189,248,0.08)', padding:'2px 8px', borderRadius:6 }}>
                       📎 Evidence {i + 1}
                     </a>
                   ))}
@@ -359,25 +359,25 @@ export default function DisputePage() {
             {/* Resolution thread */}
             {dispute.resolution_steps?.length > 0 && (
               <div style={{ marginBottom:12 }}>
-                <div style={{ fontSize:11, color:'#64748b', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:10 }}>Response thread</div>
+                <div style={{ fontSize:11, color:'var(--ft-text-tertiary)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:10 }}>Response thread</div>
                 <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                   {dispute.resolution_steps.map((step, i) => {
                     const isMe = step.actor_id === currentUser
-                    const roleColor = step.actor_role === 'buyer' ? '#60a5fa' : step.actor_role === 'seller' ? '#34d399' : '#64748b'
+                    const roleColor = step.actor_role === 'buyer' ? '#60a5fa' : step.actor_role === 'seller' ? '#34d399' : 'var(--ft-text-tertiary)'
                     return (
-                      <div key={i} style={{ background: isMe ? 'rgba(16,185,129,0.06)' : '#1e293b', border:`1px solid ${isMe ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)'}`, borderRadius:10, padding:'0.85rem 1rem' }}>
+                      <div key={i} style={{ background: isMe ? 'rgba(16,185,129,0.06)' : 'var(--ft-surface)', border:`1px solid ${isMe ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)'}`, borderRadius:10, padding:'0.85rem 1rem' }}>
                         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
                           <span style={{ fontSize:13 }}>{step.actor_role === 'buyer' ? '🛒' : '🏪'}</span>
                           <span style={{ fontSize:12, fontWeight:700, color:roleColor }}>
                             {isMe ? 'You' : step.actor_role === 'buyer' ? 'Buyer' : 'Seller'}
                           </span>
-                          <span style={{ fontSize:11, color:'#475569', marginLeft:'auto' }}>{formatTime(step.timestamp)}</span>
+                          <span style={{ fontSize:11, color:'var(--ft-text-faint)', marginLeft:'auto' }}>{formatTime(step.timestamp)}</span>
                         </div>
-                        <p style={{ fontSize:13, color:'#cbd5e1', margin:0, lineHeight:1.55 }}>{step.message}</p>
+                        <p style={{ fontSize:13, color:'var(--ft-text-secondary)', margin:0, lineHeight:1.55 }}>{step.message}</p>
                         {step.evidence_urls?.length > 0 && (
                           <div style={{ marginTop:6, display:'flex', flexWrap:'wrap', gap:4 }}>
                             {step.evidence_urls.map((url, j) => (
-                              <a key={j} href={url} target="_blank" rel="noreferrer" style={{ fontSize:11, color:'#38bdf8', background:'rgba(56,189,248,0.08)', padding:'2px 8px', borderRadius:6, textDecoration:'none' }}>
+                              <a key={j} href={url} target="_blank" rel="noreferrer" style={{ fontSize:11, color:'var(--ft-accent)', background:'rgba(56,189,248,0.08)', padding:'2px 8px', borderRadius:6, textDecoration:'none' }}>
                                 📎 {j + 1}
                               </a>
                             ))}
@@ -398,15 +398,15 @@ export default function DisputePage() {
                    dispute.resolved_in_favour_of === 'seller' ? '🏪 Resolved in favour of seller — payment released' :
                    '⚖️ Resolved with split outcome'}
                 </div>
-                {dispute.admin_notes && <p style={{ fontSize:13, color:'#94a3b8', margin:0 }}>{dispute.admin_notes}</p>}
-                {dispute.closed_at && <div style={{ fontSize:11, color:'#64748b', marginTop:4 }}>Closed {formatTime(dispute.closed_at)}</div>}
+                {dispute.admin_notes && <p style={{ fontSize:13, color:'var(--ft-text-secondary)', margin:0 }}>{dispute.admin_notes}</p>}
+                {dispute.closed_at && <div style={{ fontSize:11, color:'var(--ft-text-tertiary)', marginTop:4 }}>Closed {formatTime(dispute.closed_at)}</div>}
               </div>
             )}
 
             {/* Add response form */}
             {!isClosed && (isBuyer || isSeller) && (
-              <div style={{ background:'#1e293b', border:'1px solid rgba(56,189,248,0.1)', borderRadius:12, padding:'1rem 1.25rem', marginBottom:12 }}>
-                <div style={{ fontSize:12, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8 }}>
+              <div style={{ background:'var(--ft-surface)', border:'1px solid rgba(56,189,248,0.1)', borderRadius:12, padding:'1rem 1.25rem', marginBottom:12 }}>
+                <div style={{ fontSize:12, fontWeight:700, color:'var(--ft-text-tertiary)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8 }}>
                   {isBuyer ? '🛒 Add your response' : '🏪 Add your response'}
                 </div>
                 <textarea
@@ -415,10 +415,10 @@ export default function DisputePage() {
                   placeholder="Describe your position, add evidence URLs, or propose a resolution…"
                   rows={4}
                   maxLength={2000}
-                  style={{ width:'100%', background:'#0f172a', border:'1px solid rgba(56,189,248,0.15)', borderRadius:8, padding:'0.7rem 0.9rem', fontSize:'0.87rem', color:'#f1f5f9', outline:'none', resize:'vertical', fontFamily:'inherit', boxSizing:'border-box', marginBottom:8 }}
+                  style={{ width:'100%', background:'var(--ft-bg)', border:'1px solid rgba(56,189,248,0.15)', borderRadius:8, padding:'0.7rem 0.9rem', fontSize:'0.87rem', color:'var(--ft-text)', outline:'none', resize:'vertical', fontFamily:'inherit', boxSizing:'border-box', marginBottom:8 }}
                 />
                 {replyError && <div style={{ fontSize:12, color:'#fca5a5', marginBottom:8 }}>{replyError}</div>}
-                <button onClick={submitReply} disabled={replying || !replyMsg.trim()} style={{ background: replying || !replyMsg.trim() ? 'rgba(56,189,248,0.3)' : 'rgba(56,189,248,0.15)', border:'1px solid rgba(56,189,248,0.3)', borderRadius:8, padding:'0.6rem 1.25rem', fontWeight:700, fontSize:'0.85rem', color: replying || !replyMsg.trim() ? '#64748b' : '#38bdf8', cursor: replying || !replyMsg.trim() ? 'not-allowed' : 'pointer' }}>
+                <button onClick={submitReply} disabled={replying || !replyMsg.trim()} style={{ background: replying || !replyMsg.trim() ? 'rgba(56,189,248,0.3)' : 'rgba(56,189,248,0.15)', border:'1px solid rgba(56,189,248,0.3)', borderRadius:8, padding:'0.6rem 1.25rem', fontWeight:700, fontSize:'0.85rem', color: replying || !replyMsg.trim() ? 'var(--ft-text-tertiary)' : 'var(--ft-accent)', cursor: replying || !replyMsg.trim() ? 'not-allowed' : 'pointer' }}>
                   {replying ? 'Sending…' : 'Send Response'}
                 </button>
               </div>
@@ -436,7 +436,7 @@ export default function DisputePage() {
                     <div style={{ fontSize:13, fontWeight:700, color:'#34d399', marginBottom:12 }}>⚖️ Propose resolution outcome</div>
                     <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap:'wrap' }}>
                       {(['buyer', 'seller', 'split'] as const).map(opt => (
-                        <button key={opt} onClick={() => setResolveFor(opt)} style={{ padding:'0.5rem 1rem', borderRadius:20, fontSize:13, fontWeight:600, cursor:'pointer', border: resolveFor === opt ? '1px solid rgba(16,185,129,0.5)' : '1px solid rgba(255,255,255,0.08)', background: resolveFor === opt ? 'rgba(16,185,129,0.15)' : 'transparent', color: resolveFor === opt ? '#34d399' : '#64748b' }}>
+                        <button key={opt} onClick={() => setResolveFor(opt)} style={{ padding:'0.5rem 1rem', borderRadius:20, fontSize:13, fontWeight:600, cursor:'pointer', border: resolveFor === opt ? '1px solid rgba(16,185,129,0.5)' : '1px solid rgba(255,255,255,0.08)', background: resolveFor === opt ? 'rgba(16,185,129,0.15)' : 'transparent', color: resolveFor === opt ? '#34d399' : 'var(--ft-text-tertiary)' }}>
                           {opt === 'buyer' ? '🛒 Buyer wins' : opt === 'seller' ? '🏪 Seller wins' : '⚖️ Split'}
                         </button>
                       ))}
@@ -446,7 +446,7 @@ export default function DisputePage() {
                       <button onClick={submitResolve} disabled={resolving} style={{ background:'linear-gradient(135deg,#10b981,#059669)', border:'none', borderRadius:8, padding:'0.65rem 1.25rem', fontWeight:700, fontSize:'0.85rem', color:'#fff', cursor: resolving ? 'not-allowed' : 'pointer' }}>
                         {resolving ? 'Resolving…' : 'Confirm Resolution'}
                       </button>
-                      <button onClick={() => setShowResolve(false)} style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.08)', borderRadius:8, padding:'0.65rem 1rem', fontWeight:600, fontSize:'0.85rem', color:'#64748b', cursor:'pointer' }}>
+                      <button onClick={() => setShowResolve(false)} style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.08)', borderRadius:8, padding:'0.65rem 1rem', fontWeight:600, fontSize:'0.85rem', color:'var(--ft-text-tertiary)', cursor:'pointer' }}>
                         Cancel
                       </button>
                     </div>
@@ -457,7 +457,7 @@ export default function DisputePage() {
 
             {/* Back to order */}
             <div style={{ marginTop:20, textAlign:'center' }}>
-              <button onClick={() => router.push(`/orders/${orderId}`)} style={{ background:'transparent', border:'none', color:'#64748b', fontSize:13, cursor:'pointer', textDecoration:'underline' }}>
+              <button onClick={() => router.push(`/orders/${orderId}`)} style={{ background:'transparent', border:'none', color:'var(--ft-text-tertiary)', fontSize:13, cursor:'pointer', textDecoration:'underline' }}>
                 ← Back to order
               </button>
             </div>

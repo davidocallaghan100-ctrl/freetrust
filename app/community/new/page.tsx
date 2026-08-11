@@ -6,7 +6,7 @@ import { useCurrency } from '@/context/CurrencyContext'
 const CATEGORIES = ['Business', 'Technology', 'Sustainability', 'Creative', 'Finance', 'Health', 'Education', 'General']
 
 const GRADIENTS = [
-  { label: 'Sky', value: 'linear-gradient(135deg,#38bdf8,#0284c7)' },
+  { label: 'Sky', value: 'linear-gradient(135deg,var(--ft-accent),#0284c7)' },
   { label: 'Purple', value: 'linear-gradient(135deg,#a78bfa,#7c3aed)' },
   { label: 'Green', value: 'linear-gradient(135deg,#34d399,#059669)' },
   { label: 'Pink', value: 'linear-gradient(135deg,#f472b6,#db2777)' },
@@ -23,15 +23,15 @@ function getInitials(name: string) {
 }
 
 const S: Record<string, React.CSSProperties> = {
-  page: { minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', padding: '2.5rem 1.5rem 4rem' },
+  page: { minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui', padding: '2.5rem 1.5rem 4rem' },
   inner: { maxWidth: 680, margin: '0 auto' },
-  label: { display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.4rem' },
-  input: { width: '100%', background: '#1e293b', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, padding: '0.65rem 0.85rem', fontSize: '0.9rem', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box' },
-  textarea: { width: '100%', background: '#1e293b', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, padding: '0.65rem 0.85rem', fontSize: '0.9rem', color: '#f1f5f9', outline: 'none', resize: 'vertical', minHeight: 100, boxSizing: 'border-box', fontFamily: 'system-ui' },
-  select: { width: '100%', background: '#1e293b', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, padding: '0.65rem 0.85rem', fontSize: '0.9rem', color: '#f1f5f9', outline: 'none', appearance: 'none', cursor: 'pointer' },
+  label: { display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.4rem' },
+  input: { width: '100%', background: 'var(--ft-surface)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, padding: '0.65rem 0.85rem', fontSize: '0.9rem', color: 'var(--ft-text)', outline: 'none', boxSizing: 'border-box' },
+  textarea: { width: '100%', background: 'var(--ft-surface)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, padding: '0.65rem 0.85rem', fontSize: '0.9rem', color: 'var(--ft-text)', outline: 'none', resize: 'vertical', minHeight: 100, boxSizing: 'border-box', fontFamily: 'system-ui' },
+  select: { width: '100%', background: 'var(--ft-surface)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, padding: '0.65rem 0.85rem', fontSize: '0.9rem', color: 'var(--ft-text)', outline: 'none', appearance: 'none', cursor: 'pointer' },
   field: { marginBottom: '1.5rem' },
-  card: { background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '2rem', marginBottom: '1.5rem' },
-  sectionTitle: { fontSize: '1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '1.25rem' },
+  card: { background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '2rem', marginBottom: '1.5rem' },
+  sectionTitle: { fontSize: '1rem', fontWeight: 700, color: 'var(--ft-text)', marginBottom: '1.25rem' },
 }
 
 export default function NewCommunityPage() {
@@ -115,7 +115,7 @@ export default function NewCommunityPage() {
       <div className="nc-page" style={S.inner}>
         <div style={{ marginBottom: '2rem' }}>
           <h1 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '0.4rem' }}>Create a Group</h1>
-          <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Build your own space for members to learn, connect, and grow together.</p>
+          <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.9rem' }}>Build your own space for members to learn, connect, and grow together.</p>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -127,8 +127,8 @@ export default function NewCommunityPage() {
               <label style={S.label}>Group Name *</label>
               <input className="nc-input" style={S.input} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. SaaS Builders Circle" maxLength={60} />
               {name && (
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.35rem' }}>
-                  URL: <span style={{ color: '#38bdf8' }}>freetrust.com/community/{slug}</span>
+                <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', marginTop: '0.35rem' }}>
+                  URL: <span style={{ color: 'var(--ft-accent)' }}>freetrust.com/community/{slug}</span>
                 </div>
               )}
             </div>
@@ -136,7 +136,7 @@ export default function NewCommunityPage() {
             <div style={S.field}>
               <label style={S.label}>Description *</label>
               <textarea className="nc-input" style={S.textarea} value={description} onChange={e => setDescription(e.target.value)} placeholder="What is this community about? Who should join?" maxLength={500} />
-              <div style={{ fontSize: '0.72rem', color: '#475569', textAlign: 'right', marginTop: '0.25rem' }}>{description.length}/500</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-faint)', textAlign: 'right', marginTop: '0.25rem' }}>{description.length}/500</div>
             </div>
 
             <div style={S.field}>
@@ -147,13 +147,13 @@ export default function NewCommunityPage() {
             </div>
 
             <div style={S.field}>
-              <label style={S.label}>Tags <span style={{ color: '#475569', fontWeight: 400 }}>(up to 8, press Enter or comma)</span></label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', background: '#1e293b', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, padding: '0.5rem 0.75rem', cursor: 'text' }}
+              <label style={S.label}>Tags <span style={{ color: 'var(--ft-text-faint)', fontWeight: 400 }}>(up to 8, press Enter or comma)</span></label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', background: 'var(--ft-surface)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, padding: '0.5rem 0.75rem', cursor: 'text' }}
                 onClick={() => document.getElementById('tag-input')?.focus()}>
                 {tags.map(t => (
-                  <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 999, padding: '0.15rem 0.5rem 0.15rem 0.6rem', fontSize: '0.8rem', color: '#38bdf8' }}>
+                  <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 999, padding: '0.15rem 0.5rem 0.15rem 0.6rem', fontSize: '0.8rem', color: 'var(--ft-accent)' }}>
                     #{t}
-                    <button type="button" onClick={() => setTags(p => p.filter(x => x !== t))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '0.9rem', padding: 0, lineHeight: 1 }}>×</button>
+                    <button type="button" onClick={() => setTags(p => p.filter(x => x !== t))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ft-text-tertiary)', fontSize: '0.9rem', padding: 0, lineHeight: 1 }}>×</button>
                   </span>
                 ))}
                 {tags.length < 8 && (
@@ -164,7 +164,7 @@ export default function NewCommunityPage() {
                     onKeyDown={handleTagKey}
                     onBlur={() => tagInput && addTag(tagInput)}
                     placeholder={tags.length === 0 ? 'startup, saas, design...' : ''}
-                    style={{ background: 'none', border: 'none', outline: 'none', color: '#f1f5f9', fontSize: '0.88rem', minWidth: 80, flex: 1 }}
+                    style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--ft-text)', fontSize: '0.88rem', minWidth: 80, flex: 1 }}
                   />
                 )}
               </div>
@@ -175,7 +175,7 @@ export default function NewCommunityPage() {
           <div style={S.card}>
             <div style={S.sectionTitle}>Appearance</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
-              <div style={{ background: gradient, width: 72, height: 72, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.2rem', color: '#0f172a', flexShrink: 0 }}>
+              <div style={{ background: gradient, width: 72, height: 72, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.2rem', color: 'var(--ft-bg)', flexShrink: 0 }}>
                 {initials}
               </div>
               <div>
@@ -193,9 +193,9 @@ export default function NewCommunityPage() {
                         width: 32,
                         height: 32,
                         borderRadius: 8,
-                        border: gradient === g.value ? '2px solid #f1f5f9' : '2px solid transparent',
+                        border: gradient === g.value ? '2px solid var(--ft-text)' : '2px solid transparent',
                         cursor: 'pointer',
-                        outline: gradient === g.value ? '2px solid #38bdf8' : 'none',
+                        outline: gradient === g.value ? '2px solid var(--ft-accent)' : 'none',
                         outlineOffset: 2,
                       }}
                     />
@@ -219,9 +219,9 @@ export default function NewCommunityPage() {
                     flex: 1,
                     padding: '0.75rem',
                     borderRadius: 10,
-                    border: (opt === 'Paid') === isPaid ? '2px solid #38bdf8' : '2px solid rgba(148,163,184,0.2)',
+                    border: (opt === 'Paid') === isPaid ? '2px solid var(--ft-accent)' : '2px solid rgba(148,163,184,0.2)',
                     background: (opt === 'Paid') === isPaid ? 'rgba(56,189,248,0.08)' : 'transparent',
-                    color: (opt === 'Paid') === isPaid ? '#38bdf8' : '#94a3b8',
+                    color: (opt === 'Paid') === isPaid ? 'var(--ft-accent)' : 'var(--ft-text-secondary)',
                     fontWeight: 700,
                     fontSize: '0.9rem',
                     cursor: 'pointer',
@@ -247,8 +247,8 @@ export default function NewCommunityPage() {
                     onChange={e => setPrice(e.target.value)}
                   />
                 </div>
-                <div style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, padding: '0.75rem 1rem', fontSize: '0.83rem', color: '#94a3b8' }}>
-                  <span style={{ color: '#38bdf8', fontWeight: 700 }}>FreeTrust fee: 5%</span>
+                <div style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, padding: '0.75rem 1rem', fontSize: '0.83rem', color: 'var(--ft-text-secondary)' }}>
+                  <span style={{ color: 'var(--ft-accent)', fontWeight: 700 }}>FreeTrust fee: 5%</span>
                   {' '}— You receive{' '}
                   <span style={{ color: '#34d399', fontWeight: 700 }}>{currency.symbol}{paidNet}/member/month</span>
                   {' '}after the platform fee of{' '}
@@ -258,7 +258,7 @@ export default function NewCommunityPage() {
             )}
 
             {!isPaid && (
-              <p style={{ fontSize: '0.83rem', color: '#64748b' }}>Free communities have no membership fee. All members join instantly.</p>
+              <p style={{ fontSize: '0.83rem', color: 'var(--ft-text-tertiary)' }}>Free communities have no membership fee. All members join instantly.</p>
             )}
           </div>
 
@@ -271,7 +271,7 @@ export default function NewCommunityPage() {
           <button
             type="submit"
             disabled={loading}
-            style={{ width: '100%', background: loading ? 'rgba(56,189,248,0.5)' : '#38bdf8', border: 'none', borderRadius: 10, padding: '0.9rem', fontSize: '1rem', fontWeight: 800, color: '#0f172a', cursor: loading ? 'not-allowed' : 'pointer' }}
+            style={{ width: '100%', background: loading ? 'rgba(56,189,248,0.5)' : 'var(--ft-accent)', border: 'none', borderRadius: 10, padding: '0.9rem', fontSize: '1rem', fontWeight: 800, color: 'var(--ft-bg)', cursor: loading ? 'not-allowed' : 'pointer' }}
           >
             {loading ? 'Creating...' : '🚀 Create Group'}
           </button>

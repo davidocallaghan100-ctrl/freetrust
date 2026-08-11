@@ -21,24 +21,24 @@ function orgInitials(name: string) {
 }
 
 const S: Record<string, React.CSSProperties> = {
-  page: { minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', padding: '2.5rem 1.5rem 4rem', paddingTop: 124 },
+  page: { minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui', padding: '2.5rem 1.5rem 4rem', paddingTop: 124 },
   inner: { maxWidth: 720, margin: '0 auto' },
   heading: { fontSize: '1.85rem', fontWeight: 800, marginBottom: '0.4rem' },
-  sub: { color: '#64748b', fontSize: '0.95rem', marginBottom: '2rem' },
-  card: { background: '#1e293b', border: '1px solid rgba(56,189,248,0.12)', borderRadius: 16, padding: '2rem', marginBottom: '1.5rem' },
-  sectionTitle: { fontSize: '1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '1.25rem' },
-  label: { display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: '0.4rem' },
-  input: { width: '100%', background: '#0f172a', border: '1px solid rgba(56,189,248,0.18)', borderRadius: 8, padding: '0.65rem 0.9rem', fontSize: '0.9rem', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box' as const },
-  textarea: { width: '100%', background: '#0f172a', border: '1px solid rgba(56,189,248,0.18)', borderRadius: 8, padding: '0.65rem 0.9rem', fontSize: '0.9rem', color: '#f1f5f9', outline: 'none', minHeight: 110, resize: 'vertical' as const, boxSizing: 'border-box' as const, fontFamily: 'system-ui' },
-  select: { width: '100%', background: '#0f172a', border: '1px solid rgba(56,189,248,0.18)', borderRadius: 8, padding: '0.65rem 0.9rem', fontSize: '0.9rem', color: '#f1f5f9', outline: 'none', cursor: 'pointer' },
+  sub: { color: 'var(--ft-text-tertiary)', fontSize: '0.95rem', marginBottom: '2rem' },
+  card: { background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.12)', borderRadius: 16, padding: '2rem', marginBottom: '1.5rem' },
+  sectionTitle: { fontSize: '1rem', fontWeight: 700, color: 'var(--ft-text)', marginBottom: '1.25rem' },
+  label: { display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--ft-text-secondary)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: '0.4rem' },
+  input: { width: '100%', background: 'var(--ft-bg)', border: '1px solid rgba(56,189,248,0.18)', borderRadius: 8, padding: '0.65rem 0.9rem', fontSize: '0.9rem', color: 'var(--ft-text)', outline: 'none', boxSizing: 'border-box' as const },
+  textarea: { width: '100%', background: 'var(--ft-bg)', border: '1px solid rgba(56,189,248,0.18)', borderRadius: 8, padding: '0.65rem 0.9rem', fontSize: '0.9rem', color: 'var(--ft-text)', outline: 'none', minHeight: 110, resize: 'vertical' as const, boxSizing: 'border-box' as const, fontFamily: 'system-ui' },
+  select: { width: '100%', background: 'var(--ft-bg)', border: '1px solid rgba(56,189,248,0.18)', borderRadius: 8, padding: '0.65rem 0.9rem', fontSize: '0.9rem', color: 'var(--ft-text)', outline: 'none', cursor: 'pointer' },
   fieldRow: { marginBottom: '1.25rem' },
   grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' },
   typeGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '0.6rem', marginTop: '0.5rem' },
-  typeBtn: { padding: '0.55rem 0.75rem', borderRadius: 8, border: '1px solid rgba(148,163,184,0.15)', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 500, textAlign: 'left' as const },
-  typeBtnActive: { border: '1px solid rgba(56,189,248,0.4)', background: 'rgba(56,189,248,0.08)', color: '#38bdf8', fontWeight: 600 },
-  submitBtn: { width: '100%', background: '#38bdf8', color: '#0f172a', fontWeight: 700, fontSize: '1rem', padding: '0.85rem', border: 'none', borderRadius: 10, cursor: 'pointer', marginTop: '0.5rem' },
-  hint: { fontSize: '0.75rem', color: '#475569', marginTop: '0.3rem' },
-  errorText: { color: '#f87171', fontSize: '0.82rem', marginTop: '0.4rem' },
+  typeBtn: { padding: '0.55rem 0.75rem', borderRadius: 8, border: '1px solid rgba(148,163,184,0.15)', background: 'transparent', color: 'var(--ft-text-secondary)', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 500, textAlign: 'left' as const },
+  typeBtnActive: { border: '1px solid rgba(56,189,248,0.4)', background: 'rgba(56,189,248,0.08)', color: 'var(--ft-accent)', fontWeight: 600 },
+  submitBtn: { width: '100%', background: 'var(--ft-accent)', color: 'var(--ft-bg)', fontWeight: 700, fontSize: '1rem', padding: '0.85rem', border: 'none', borderRadius: 10, cursor: 'pointer', marginTop: '0.5rem' },
+  hint: { fontSize: '0.75rem', color: 'var(--ft-text-faint)', marginTop: '0.3rem' },
+  errorText: { color: 'var(--ft-danger)', fontSize: '0.82rem', marginTop: '0.4rem' },
 }
 
 export default function CreateOrganisationPage() {
@@ -151,7 +151,7 @@ export default function CreateOrganisationPage() {
         <div style={{ textAlign: 'center', maxWidth: 400 }}>
           <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>🎉</div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>Organisation Created!</h2>
-          <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Redirecting to your organisation page…</p>
+          <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.9rem' }}>Redirecting to your organisation page…</p>
         </div>
       </div>
     )
@@ -164,7 +164,7 @@ export default function CreateOrganisationPage() {
         @media (max-width: 600px) { .org-grid2 { grid-template-columns: 1fr !important; } }
       `}</style>
       <div style={S.inner}>
-        <button style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '0.85rem', cursor: 'pointer', marginBottom: '1.5rem', padding: 0 }} onClick={() => router.push('/organisations')}>
+        <button style={{ background: 'none', border: 'none', color: 'var(--ft-text-tertiary)', fontSize: '0.85rem', cursor: 'pointer', marginBottom: '1.5rem', padding: 0 }} onClick={() => router.push('/organisations')}>
           ← Back to Directory
         </button>
         <h1 style={S.heading}>Create an Organisation</h1>
@@ -177,7 +177,7 @@ export default function CreateOrganisationPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
               {/* Preview */}
               <div
-                style={{ width: 80, height: 80, borderRadius: 16, background: logoPreview ? 'transparent' : 'linear-gradient(135deg,#38bdf8,#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.1rem', color: '#0f172a', flexShrink: 0, overflow: 'hidden', border: '2px solid rgba(56,189,248,0.2)', cursor: 'pointer' }}
+                style={{ width: 80, height: 80, borderRadius: 16, background: logoPreview ? 'transparent' : 'linear-gradient(135deg,var(--ft-accent),#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.1rem', color: 'var(--ft-bg)', flexShrink: 0, overflow: 'hidden', border: '2px solid rgba(56,189,248,0.2)', cursor: 'pointer' }}
                 onClick={() => fileInputRef.current?.click()}
               >
                 {logoPreview ? (
@@ -192,12 +192,12 @@ export default function CreateOrganisationPage() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={logoUploading}
-                  style={{ background: logoUploading ? 'rgba(56,189,248,0.3)' : 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 8, padding: '0.55rem 1.1rem', fontSize: '0.85rem', fontWeight: 600, color: '#38bdf8', cursor: logoUploading ? 'wait' : 'pointer' }}
+                  style={{ background: logoUploading ? 'rgba(56,189,248,0.3)' : 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 8, padding: '0.55rem 1.1rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--ft-accent)', cursor: logoUploading ? 'wait' : 'pointer' }}
                 >
                   {logoUploading ? '⏳ Uploading…' : logoPreview ? '📷 Change Logo' : '📷 Upload Logo'}
                 </button>
                 {logoPreview && (
-                  <button type="button" onClick={() => { setLogoPreview(''); setLogoUrl('') }} style={{ marginLeft: '0.5rem', background: 'none', border: 'none', color: '#64748b', fontSize: '0.82rem', cursor: 'pointer' }}>Remove</button>
+                  <button type="button" onClick={() => { setLogoPreview(''); setLogoUrl('') }} style={{ marginLeft: '0.5rem', background: 'none', border: 'none', color: 'var(--ft-text-tertiary)', fontSize: '0.82rem', cursor: 'pointer' }}>Remove</button>
                 )}
                 <p style={{ ...S.hint, marginTop: '0.5rem' }}>JPG, PNG, WebP or SVG · max 3MB</p>
               </div>
@@ -209,13 +209,13 @@ export default function CreateOrganisationPage() {
             <div style={S.sectionTitle}>Basic Information</div>
 
             <div style={S.fieldRow}>
-              <label style={S.label}>Organisation Name <span style={{ color: '#f87171' }}>*</span></label>
+              <label style={S.label}>Organisation Name <span style={{ color: 'var(--ft-danger)' }}>*</span></label>
               <input className="nc-input" style={S.input} placeholder="e.g. GreenPath Labs" value={name} onChange={e => setName(e.target.value)} maxLength={120} required />
-              {name && <p style={S.hint}>URL: <span style={{ color: '#38bdf8' }}>freetrust.co/organisation/{slugify(name)}</span></p>}
+              {name && <p style={S.hint}>URL: <span style={{ color: 'var(--ft-accent)' }}>freetrust.co/organisation/{slugify(name)}</span></p>}
             </div>
 
             <div style={S.fieldRow}>
-              <label style={S.label}>Organisation Type <span style={{ color: '#f87171' }}>*</span></label>
+              <label style={S.label}>Organisation Type <span style={{ color: 'var(--ft-danger)' }}>*</span></label>
               <div style={S.typeGrid}>
                 {ORG_TYPES.map(t => (
                   <button key={t} type="button" style={{ ...S.typeBtn, ...(type === t ? S.typeBtnActive : {}) }} onClick={() => setType(t)}>{t}</button>
@@ -224,7 +224,7 @@ export default function CreateOrganisationPage() {
             </div>
 
             <div style={S.fieldRow}>
-              <label style={S.label}>Description <span style={{ color: '#f87171' }}>*</span></label>
+              <label style={S.label}>Description <span style={{ color: 'var(--ft-danger)' }}>*</span></label>
               <textarea className="nc-input" style={S.textarea} placeholder="What does your organisation do? What's your mission and impact?" value={description} onChange={e => setDescription(e.target.value)} maxLength={1000} required />
               <p style={S.hint}>{description.length}/1000 characters (min 20)</p>
             </div>
@@ -247,7 +247,7 @@ export default function CreateOrganisationPage() {
               <label style={S.label}>Website</label>
               <input className="nc-input" style={S.input} placeholder="e.g. www.yourorg.com or https://yourorg.com" value={website} onChange={e => setWebsite(e.target.value)} maxLength={300} inputMode="url" autoCapitalize="none" autoCorrect="off" />
               {website.trim() && !/^https?:\/\//i.test(website.trim()) && (
-                <p style={{ ...S.hint, color: '#38bdf8' }}>Will be saved as: https://{website.trim()}</p>
+                <p style={{ ...S.hint, color: 'var(--ft-accent)' }}>Will be saved as: https://{website.trim()}</p>
               )}
             </div>
 

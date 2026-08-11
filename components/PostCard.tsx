@@ -101,7 +101,7 @@ type TextOverlayData = {
 }
 
 export const REACTIONS: { type: ReactionType; emoji: string; label: string; color: string }[] = [
-  { type: 'trust',      emoji: '👍', label: 'Trust',      color: '#38bdf8' },
+  { type: 'trust',      emoji: '👍', label: 'Trust',      color: 'var(--ft-accent)' },
   { type: 'love',       emoji: '❤️', label: 'Love',       color: '#f472b6' },
   { type: 'insightful', emoji: '💡', label: 'Insightful', color: '#fbbf24' },
   { type: 'collab',     emoji: '🤝', label: 'Collab',     color: '#34d399' },
@@ -406,11 +406,11 @@ export function formatTime(ts: string) {
 }
 
 export const TYPE_META: Record<string, { label: string; color: string; bg: string }> = {
-  text:      { label: '✏️ Post',      color: '#94a3b8', bg: 'rgba(148,163,184,0.1)' },
+  text:      { label: '✏️ Post',      color: 'var(--ft-text-secondary)', bg: 'rgba(148,163,184,0.1)' },
   video:     { label: '🎬 Video',     color: '#f472b6', bg: 'rgba(244,114,182,0.1)' },
   short:     { label: '📱 Short',     color: '#f472b6', bg: 'rgba(244,114,182,0.1)' },
   photo:     { label: '📷 Photo',     color: '#34d399', bg: 'rgba(52,211,153,0.1)'  },
-  article:   { label: '📰 Article',   color: '#38bdf8', bg: 'rgba(56,189,248,0.1)'  },
+  article:   { label: '📰 Article',   color: 'var(--ft-accent)', bg: 'rgba(56,189,248,0.1)'  },
   listing:   { label: '🛍️ Listing',  color: '#34d399', bg: 'rgba(52,211,153,0.1)'  },
   service:   { label: '🛠 Service',   color: '#34d399', bg: 'rgba(52,211,153,0.1)'  },
   product:   { label: '📦 Product',   color: '#34d399', bg: 'rgba(52,211,153,0.1)'  },
@@ -418,7 +418,7 @@ export const TYPE_META: Record<string, { label: string; color: string; bg: strin
   event:     { label: '📅 Event',     color: '#fb923c', bg: 'rgba(251,146,60,0.1)'  },
   activity:  { label: '🏃 Activity',  color: '#0ea5e9', bg: 'rgba(14,165,233,0.1)'  },
   poll:      { label: '📊 Poll',      color: '#fbbf24', bg: 'rgba(251,191,36,0.1)'  },
-  link:      { label: '🔗 Link',      color: '#38bdf8', bg: 'rgba(56,189,248,0.1)'  },
+  link:      { label: '🔗 Link',      color: 'var(--ft-accent)', bg: 'rgba(56,189,248,0.1)'  },
   milestone: { label: '🏆 Milestone', color: '#fbbf24', bg: 'rgba(251,191,36,0.1)'  },
 }
 
@@ -563,7 +563,7 @@ function ContentWithLinks({ text, expanded, canonicalUrl }: { text: string; expa
       {parts.map((part, i) => {
         if (/^https?:\/\//i.test(part)) {
           const href = part.replace(/[),.;!?]+$/, '')
-          return <a key={`${part}-${i}`} href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8', textDecoration: 'none' }}>{part}</a>
+          return <a key={`${part}-${i}`} href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ft-accent)', textDecoration: 'none' }}>{part}</a>
         }
         if (/^@[a-zA-Z0-9][a-zA-Z0-9._-]{1,80}$/.test(part)) {
           const slug = part.slice(1)
@@ -571,7 +571,7 @@ function ContentWithLinks({ text, expanded, canonicalUrl }: { text: string; expa
         }
         return <span key={`${part}-${i}`}>{part}</span>
       })}
-      {!expanded && text.length > 280 ? <Link href={canonicalUrl} style={{ color: '#38bdf8', textDecoration: 'none' }}> …more</Link> : null}
+      {!expanded && text.length > 280 ? <Link href={canonicalUrl} style={{ color: 'var(--ft-accent)', textDecoration: 'none' }}> …more</Link> : null}
     </>
   )
 }
@@ -581,7 +581,7 @@ function SpotifyEmbed({ url }: { url: string }) {
   if (!embed) return null
   const isTrack = embed.includes('/track/') || embed.includes('/episode/')
   return (
-    <div style={{ margin: '0 16px 12px', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(30,215,96,0.35)', background: '#0f172a', boxShadow: '0 10px 30px rgba(30,215,96,0.08)' }}>
+    <div style={{ margin: '0 16px 12px', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(30,215,96,0.35)', background: 'var(--ft-bg)', boxShadow: '0 10px 30px rgba(30,215,96,0.08)' }}>
       <iframe
         src={embed}
         width="100%"
@@ -615,7 +615,7 @@ function LinkPreviewCard({ url }: { url: string }) {
 
   if (isInternalUrl) {
     return (
-      <Link href={url} style={{ display: 'block', margin: '0 16px 12px', border: '1px solid #334155', borderRadius: '10px', padding: '12px 14px', color: '#38bdf8', textDecoration: 'none', fontSize: '13px', overflowWrap: 'anywhere', background: '#0f172a' }}>
+      <Link href={url} style={{ display: 'block', margin: '0 16px 12px', border: '1px solid var(--ft-border-strong)', borderRadius: '10px', padding: '12px 14px', color: 'var(--ft-accent)', textDecoration: 'none', fontSize: '13px', overflowWrap: 'anywhere', background: 'var(--ft-bg)' }}>
         🔗 {url}
       </Link>
     )
@@ -624,7 +624,7 @@ function LinkPreviewCard({ url }: { url: string }) {
   if (getSpotifyEmbedUrl(url)) return <SpotifyEmbed url={url} />
   if (failed) {
     return (
-      <a href={url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', margin: '0 16px 12px', border: '1px solid #334155', borderRadius: '10px', padding: '12px 14px', color: '#38bdf8', textDecoration: 'none', fontSize: '13px', overflowWrap: 'anywhere' }}>
+      <a href={url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', margin: '0 16px 12px', border: '1px solid var(--ft-border-strong)', borderRadius: '10px', padding: '12px 14px', color: 'var(--ft-accent)', textDecoration: 'none', fontSize: '13px', overflowWrap: 'anywhere' }}>
         🔗 {url.replace(/^https?:\/\//, '')}
       </a>
     )
@@ -641,11 +641,11 @@ function LinkPreviewCard({ url }: { url: string }) {
         gap: 0,
         margin: '0 16px 12px',
         minHeight: 82,
-        border: '1px solid #334155',
+        border: '1px solid var(--ft-border-strong)',
         borderRadius: '12px',
         overflow: 'hidden',
         textDecoration: 'none',
-        background: '#0f172a',
+        background: 'var(--ft-bg)',
       }}
     >
       {preview.image ? (
@@ -664,9 +664,9 @@ function LinkPreviewCard({ url }: { url: string }) {
         />
       ) : null}
       <div style={{ padding: '10px 12px', minWidth: 0, flex: 1 }}>
-        <div style={{ fontSize: '10px', color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 800, marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{preview.siteName ?? preview.hostname}</div>
-        {preview.title ? <div style={{ fontSize: '13px', fontWeight: 800, color: '#f1f5f9', marginBottom: preview.description ? '4px' : 0, lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{preview.title}</div> : null}
-        {preview.description ? <div style={{ fontSize: '11px', color: '#94a3b8', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{preview.description}</div> : null}
+        <div style={{ fontSize: '10px', color: 'var(--ft-accent)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 800, marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{preview.siteName ?? preview.hostname}</div>
+        {preview.title ? <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--ft-text)', marginBottom: preview.description ? '4px' : 0, lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{preview.title}</div> : null}
+        {preview.description ? <div style={{ fontSize: '11px', color: 'var(--ft-text-secondary)', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{preview.description}</div> : null}
       </div>
     </a>
   )
@@ -674,7 +674,7 @@ function LinkPreviewCard({ url }: { url: string }) {
 
 function textOverlayVisualStyle(style: TextOverlayData['style']): CSSProperties {
   if (style === 'story') {
-    return { color: '#0f172a', background: 'rgba(255,255,255,0.92)', borderRadius: 999, padding: '0.28em 0.72em', boxShadow: '0 14px 34px rgba(0,0,0,0.28)', fontWeight: 850 }
+    return { color: 'var(--ft-bg)', background: 'rgba(255,255,255,0.92)', borderRadius: 999, padding: '0.28em 0.72em', boxShadow: '0 14px 34px rgba(0,0,0,0.28)', fontWeight: 850 }
   }
   if (style === 'neon') {
     return { color: '#bbf7d0', fontWeight: 900, textShadow: '0 0 8px rgba(34,197,94,0.95), 0 0 24px rgba(56,189,248,0.55)' }
@@ -951,7 +951,7 @@ function PhotoCarousel({ urls, alt, soundtrack, textOverlay, imageHref, imageBad
               WebkitBackdropFilter: 'blur(10px)',
             }}
           >
-            <span aria-hidden="true" style={{ color: '#38bdf8', fontSize: 13 }}>🛠</span>
+            <span aria-hidden="true" style={{ color: 'var(--ft-accent)', fontSize: 13 }}>🛠</span>
             {imageBadge.label}
           </Link>
         ) : null}
@@ -1062,7 +1062,7 @@ function PhotoCarousel({ urls, alt, soundtrack, textOverlay, imageHref, imageBad
               type="button"
               onClick={() => goTo(i)}
               aria-label={`Show photo ${i + 1}`}
-              style={{ width: i === index ? 18 : 7, height: 7, borderRadius: 999, border: 'none', padding: 0, background: i === index ? '#38bdf8' : '#475569', cursor: 'pointer', transition: 'all 160ms ease' }}
+              style={{ width: i === index ? 18 : 7, height: 7, borderRadius: 999, border: 'none', padding: 0, background: i === index ? 'var(--ft-accent)' : 'var(--ft-text-faint)', cursor: 'pointer', transition: 'all 160ms ease' }}
             />
           ))}
         </div>
@@ -1292,8 +1292,8 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
   return (
     <div style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', background: '#000', marginBottom: '12px', cursor: 'pointer', width: '100%', ...frameStyle }} onClick={togglePlay}>
       {!previewReady && !playing && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none', background: posterUrl ? `center / cover no-repeat url(${posterUrl})` : 'linear-gradient(135deg, #020617, #0f172a 45%, #020617)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ color: '#64748b', fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Loading preview…</span>
+        <div style={{ position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none', background: posterUrl ? `center / cover no-repeat url(${posterUrl})` : 'linear-gradient(135deg, #020617, var(--ft-bg) 45%, #020617)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ color: 'var(--ft-text-tertiary)', fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Loading preview…</span>
         </div>
       )}
       {needsLetterbox && posterUrl && (
@@ -1380,23 +1380,23 @@ function ShareSheet({ postId, canonicalPath, text, onClose }: { postId: string; 
   ]
 
   return (
-    <div style={{ marginTop: '12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '12px', overflow: 'hidden' }}>
-      <div style={{ padding: '10px 14px', borderBottom: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9' }}>Share post</span>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '16px', cursor: 'pointer', lineHeight: 1 }}>✕</button>
+    <div style={{ marginTop: '12px', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: '12px', overflow: 'hidden' }}>
+      <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--ft-surface)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--ft-text)' }}>Share post</span>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--ft-text-tertiary)', fontSize: '16px', cursor: 'pointer', lineHeight: 1 }}>✕</button>
       </div>
       {options.map(opt => (
         <button
           key={opt.label}
           onClick={opt.action}
-          style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '11px 14px', background: 'none', border: 'none', borderBottom: '1px solid #1e293b', color: '#cbd5e1', fontSize: '13px', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', transition: 'background 0.1s' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '11px 14px', background: 'none', border: 'none', borderBottom: '1px solid var(--ft-surface)', color: 'var(--ft-text-secondary)', fontSize: '13px', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', transition: 'background 0.1s' }}
           onMouseEnter={e => (e.currentTarget.style.background = 'rgba(56,189,248,0.06)')}
           onMouseLeave={e => (e.currentTarget.style.background = 'none')}
         >
           <span style={{ fontSize: '18px', width: '24px', textAlign: 'center', flexShrink: 0 }}>{opt.icon}</span>
           <span>{opt.label}</span>
           {opt.label === 'Copy link' && (
-            <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>
+            <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--ft-text-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>
               /feed/{postId.slice(0, 8)}…
             </span>
           )}
@@ -2081,7 +2081,7 @@ export default function PostCard({
   if (deleted) return null
 
   return (
-    <article ref={cardRef} className={`ft-post-card${expanded ? ' ft-post-card--expanded' : ''}`} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', marginBottom: '12px', overflow: 'hidden', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+    <article ref={cardRef} className={`ft-post-card${expanded ? ' ft-post-card--expanded' : ''}`} style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '14px', marginBottom: '12px', overflow: 'hidden', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
 
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '14px 12px 10px 16px', minWidth: 0, overflow: 'visible', position: 'relative', zIndex: showMenu ? 200 : 2 }}>
@@ -2090,7 +2090,7 @@ export default function PostCard({
         </Link>
         <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
-            <Link href={authorLinkHref} style={{ fontWeight: 700, fontSize: '14px', color: '#f1f5f9', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}>{name}</Link>
+            <Link href={authorLinkHref} style={{ fontWeight: 700, fontSize: '14px', color: 'var(--ft-text)', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}>{name}</Link>
             {!postedAsOrg && humanVerified && <InlineVerifiedBadge />}
             {postedAsOrg && (
               // Small chip marking this as an org byline so readers
@@ -2099,7 +2099,7 @@ export default function PostCard({
               <span style={{ fontSize: '10px', color: '#c4b5fd', background: 'rgba(139,92,246,0.18)', border: '1px solid rgba(139,92,246,0.35)', padding: '1px 7px', borderRadius: '20px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Org</span>
             )}
             {trust !== null && trust > 0 && (
-              <span style={{ fontSize: '11px', color: '#38bdf8', background: 'rgba(56,189,248,0.12)', padding: '1px 7px', borderRadius: '20px', fontWeight: 600 }}>₮{Math.round(trust)}</span>
+              <span style={{ fontSize: '11px', color: 'var(--ft-accent)', background: 'rgba(56,189,248,0.12)', padding: '1px 7px', borderRadius: '20px', fontWeight: 600 }}>₮{Math.round(trust)}</span>
             )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '1px' }}>
@@ -2110,21 +2110,21 @@ export default function PostCard({
               humanId ? (
                 <Link
                   href={`/profile?id=${humanId}`}
-                  style={{ fontSize: '12px', color: '#64748b', textDecoration: 'none' }}
+                  style={{ fontSize: '12px', color: 'var(--ft-text-tertiary)', textDecoration: 'none' }}
                 >
                   via {humanName}{humanVerified ? ' ✓' : ''}
                 </Link>
               ) : (
-                <span style={{ fontSize: '12px', color: '#64748b' }}>via {humanName}{humanVerified ? ' ✓' : ''}</span>
+                <span style={{ fontSize: '12px', color: 'var(--ft-text-tertiary)' }}>via {humanName}{humanVerified ? ' ✓' : ''}</span>
               )
             ) : authorDisplayOverride?.subtitle ? (
-              <span style={{ fontSize: '12px', color: '#475569' }}>{authorDisplayOverride.subtitle}</span>
+              <span style={{ fontSize: '12px', color: 'var(--ft-text-faint)' }}>{authorDisplayOverride.subtitle}</span>
             ) : (
-              !authorDisplayOverride?.hidePersonalByline && post.profiles?.username && <span style={{ fontSize: '12px', color: '#475569' }}>@{post.profiles.username}</span>
+              !authorDisplayOverride?.hidePersonalByline && post.profiles?.username && <span style={{ fontSize: '12px', color: 'var(--ft-text-faint)' }}>@{post.profiles.username}</span>
             )}
-            <span style={{ fontSize: '11px', color: '#334155' }}>·</span>
-            <span style={{ fontSize: '12px', color: '#475569' }}>{formatTime(post.created_at)}</span>
-            {postUpdatedAt && postUpdatedAt !== post.created_at && <span style={{ fontSize: '12px', color: '#64748b' }}>edited</span>}
+            <span style={{ fontSize: '11px', color: 'var(--ft-border-strong)' }}>·</span>
+            <span style={{ fontSize: '12px', color: 'var(--ft-text-faint)' }}>{formatTime(post.created_at)}</span>
+            {postUpdatedAt && postUpdatedAt !== post.created_at && <span style={{ fontSize: '12px', color: 'var(--ft-text-tertiary)' }}>edited</span>}
           </div>
         </div>
         {/* Type badge */}
@@ -2140,15 +2140,15 @@ export default function PostCard({
               onClick={() => setShowMenu(v => !v)}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(148,163,184,0.18)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'rgba(148,163,184,0.08)')}
-              style={{ background: 'rgba(148,163,184,0.08)', border: 'none', color: '#94a3b8', fontSize: '20px', cursor: 'pointer', padding: '6px 10px', borderRadius: '8px', lineHeight: 1, minWidth: '32px', minHeight: '32px' }}
+              style={{ background: 'rgba(148,163,184,0.08)', border: 'none', color: 'var(--ft-text-secondary)', fontSize: '20px', cursor: 'pointer', padding: '6px 10px', borderRadius: '8px', lineHeight: 1, minWidth: '32px', minHeight: '32px' }}
               aria-label="Post options"
             >⋯</button>
             {showMenu && (
-              <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', overflow: 'hidden', zIndex: 10000, minWidth: '158px', boxShadow: '0 14px 34px rgba(0,0,0,0.55)' }}>
+              <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '10px', overflow: 'hidden', zIndex: 10000, minWidth: '158px', boxShadow: '0 14px 34px rgba(0,0,0,0.55)' }}>
                 {post.type !== 'poll' && (
                   <button
                     onClick={startEditing}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '11px 14px', background: 'none', border: 'none', color: '#38bdf8', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '11px 14px', background: 'none', border: 'none', color: 'var(--ft-accent)', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'rgba(56,189,248,0.08)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                   >
@@ -2159,7 +2159,7 @@ export default function PostCard({
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '11px 14px', background: 'none', border: 'none', color: '#f87171', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '11px 14px', background: 'none', border: 'none', color: 'var(--ft-danger)', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.08)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                 >
@@ -2181,7 +2181,7 @@ export default function PostCard({
                 value={editedTitle}
                 onChange={e => setEditedTitle(e.target.value)}
                 maxLength={200}
-                style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '10px', padding: '10px 12px', color: '#f1f5f9', fontSize: '16px', fontWeight: 700, fontFamily: 'inherit', marginBottom: '10px', boxSizing: 'border-box' }}
+                style={{ width: '100%', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: '10px', padding: '10px 12px', color: 'var(--ft-text)', fontSize: '16px', fontWeight: 700, fontFamily: 'inherit', marginBottom: '10px', boxSizing: 'border-box' }}
               />
             ) : null}
             <textarea
@@ -2189,14 +2189,14 @@ export default function PostCard({
               onChange={e => setEditedContent(e.target.value)}
               rows={8}
               maxLength={5000}
-              style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '10px', padding: '10px 12px', color: '#cbd5e1', fontSize: '14px', lineHeight: 1.65, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', marginBottom: '10px' }}
+              style={{ width: '100%', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: '10px', padding: '10px 12px', color: 'var(--ft-text-secondary)', fontSize: '14px', lineHeight: 1.65, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', marginBottom: '10px' }}
             />
             {post.type === 'photo' ? (
               <div style={{ border: '1px solid rgba(56,189,248,0.24)', borderRadius: 12, background: 'linear-gradient(135deg, rgba(56,189,248,0.08), rgba(15,23,42,0.96))', padding: 12, marginBottom: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', marginBottom: 10 }}>
                   <div>
                     <div style={{ color: '#bae6fd', fontSize: 12, fontWeight: 900, letterSpacing: '0.04em', textTransform: 'uppercase' }}>📷 Edit photos</div>
-                    <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 3 }}>{editedPhotoUrls.length}/10 photos · first photo is the cover</div>
+                    <div style={{ color: 'var(--ft-text-secondary)', fontSize: 12, marginTop: 3 }}>{editedPhotoUrls.length}/10 photos · first photo is the cover</div>
                   </div>
                   <label style={{ border: '1px solid rgba(56,189,248,0.42)', background: 'rgba(8,47,73,0.46)', color: '#bae6fd', borderRadius: 9, padding: '8px 10px', fontSize: 12, cursor: editPhotoUploading || editedPhotoUrls.length >= 10 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontWeight: 800, opacity: editPhotoUploading || editedPhotoUrls.length >= 10 ? 0.55 : 1, whiteSpace: 'nowrap' }}>
                     Add photos
@@ -2213,14 +2213,14 @@ export default function PostCard({
                 {editedPhotoUrls.length > 0 ? (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(112px, 1fr))', gap: 10 }}>
                     {editedPhotoUrls.map((url, index) => (
-                      <div key={`${url}-${index}`} style={{ border: index === 0 ? '1px solid rgba(56,189,248,0.72)' : '1px solid #334155', borderRadius: 12, background: '#020617', overflow: 'hidden' }}>
-                        <div style={{ position: 'relative', aspectRatio: '1 / 1', background: '#0f172a' }}>
+                      <div key={`${url}-${index}`} style={{ border: index === 0 ? '1px solid rgba(56,189,248,0.72)' : '1px solid var(--ft-border-strong)', borderRadius: 12, background: '#020617', overflow: 'hidden' }}>
+                        <div style={{ position: 'relative', aspectRatio: '1 / 1', background: 'var(--ft-bg)' }}>
                           <img src={url} alt={`Photo ${index + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                           <span style={{ position: 'absolute', top: 7, left: 7, borderRadius: 999, padding: '3px 7px', background: index === 0 ? 'rgba(56,189,248,0.92)' : 'rgba(2,6,23,0.78)', color: index === 0 ? '#082f49' : '#e2e8f0', fontSize: 11, fontWeight: 900 }}>{index === 0 ? 'Cover' : index + 1}</span>
                         </div>
                         <div style={{ padding: 7, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                          <button type="button" onClick={() => moveEditedPhoto(index, -1)} disabled={index === 0 || editPhotoUploading} style={{ border: '1px solid #334155', background: '#0f172a', color: '#cbd5e1', borderRadius: 7, padding: '6px 4px', fontSize: 12, cursor: index === 0 || editPhotoUploading ? 'not-allowed' : 'pointer', opacity: index === 0 || editPhotoUploading ? 0.45 : 1 }}>↑</button>
-                          <button type="button" onClick={() => moveEditedPhoto(index, 1)} disabled={index === editedPhotoUrls.length - 1 || editPhotoUploading} style={{ border: '1px solid #334155', background: '#0f172a', color: '#cbd5e1', borderRadius: 7, padding: '6px 4px', fontSize: 12, cursor: index === editedPhotoUrls.length - 1 || editPhotoUploading ? 'not-allowed' : 'pointer', opacity: index === editedPhotoUrls.length - 1 || editPhotoUploading ? 0.45 : 1 }}>↓</button>
+                          <button type="button" onClick={() => moveEditedPhoto(index, -1)} disabled={index === 0 || editPhotoUploading} style={{ border: '1px solid var(--ft-border-strong)', background: 'var(--ft-bg)', color: 'var(--ft-text-secondary)', borderRadius: 7, padding: '6px 4px', fontSize: 12, cursor: index === 0 || editPhotoUploading ? 'not-allowed' : 'pointer', opacity: index === 0 || editPhotoUploading ? 0.45 : 1 }}>↑</button>
+                          <button type="button" onClick={() => moveEditedPhoto(index, 1)} disabled={index === editedPhotoUrls.length - 1 || editPhotoUploading} style={{ border: '1px solid var(--ft-border-strong)', background: 'var(--ft-bg)', color: 'var(--ft-text-secondary)', borderRadius: 7, padding: '6px 4px', fontSize: 12, cursor: index === editedPhotoUrls.length - 1 || editPhotoUploading ? 'not-allowed' : 'pointer', opacity: index === editedPhotoUrls.length - 1 || editPhotoUploading ? 0.45 : 1 }}>↓</button>
                           <label style={{ border: '1px solid rgba(56,189,248,0.35)', background: 'rgba(14,116,144,0.18)', color: '#bae6fd', borderRadius: 7, padding: '6px 4px', fontSize: 12, cursor: editPhotoUploading ? 'not-allowed' : 'pointer', textAlign: 'center', opacity: editPhotoUploading ? 0.5 : 1 }}>
                             Replace
                             <input
@@ -2237,7 +2237,7 @@ export default function PostCard({
                     ))}
                   </div>
                 ) : (
-                  <div style={{ border: '1px dashed #334155', borderRadius: 10, padding: 12, color: '#94a3b8', fontSize: 13, lineHeight: 1.45 }}>No photos selected. Add a photo, or save with no photo to remove media from this post.</div>
+                  <div style={{ border: '1px dashed var(--ft-border-strong)', borderRadius: 10, padding: 12, color: 'var(--ft-text-secondary)', fontSize: 13, lineHeight: 1.45 }}>No photos selected. Add a photo, or save with no photo to remove media from this post.</div>
                 )}
                 {editPhotoProgress ? <div style={{ marginTop: 9, color: editPhotoProgress.startsWith('Upload failed') ? '#fca5a5' : '#93c5fd', fontSize: 12, lineHeight: 1.35 }}>{editPhotoProgress}</div> : null}
               </div>
@@ -2249,25 +2249,25 @@ export default function PostCard({
                   value={editSpotifyQuery}
                   onChange={e => searchEditSpotify(e.target.value)}
                   placeholder="Search Spotify tracks…"
-                  style={{ width: '100%', background: '#020617', border: '1px solid #334155', borderRadius: 9, padding: '9px 10px', color: '#f1f5f9', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }}
+                  style={{ width: '100%', background: '#020617', border: '1px solid var(--ft-border-strong)', borderRadius: 9, padding: '9px 10px', color: 'var(--ft-text)', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }}
                 />
                 {!editSpotifyConfigured ? (
                   <div style={{ marginTop: 7, color: '#fbbf24', fontSize: 12, lineHeight: 1.35 }}>Spotify search is not configured. Paste a Spotify track URL below.</div>
                 ) : null}
-                {editSpotifyLoading ? <div style={{ marginTop: 7, color: '#94a3b8', fontSize: 12 }}>Searching Spotify…</div> : null}
+                {editSpotifyLoading ? <div style={{ marginTop: 7, color: 'var(--ft-text-secondary)', fontSize: 12 }}>Searching Spotify…</div> : null}
                 {editSpotifyResults.length > 0 ? (
-                  <div style={{ marginTop: 8, border: '1px solid #334155', borderRadius: 10, overflow: 'hidden', background: '#020617' }}>
+                  <div style={{ marginTop: 8, border: '1px solid var(--ft-border-strong)', borderRadius: 10, overflow: 'hidden', background: '#020617' }}>
                     {editSpotifyResults.slice(0, 6).map(track => (
                       <button
                         key={track.id ?? track.url}
                         type="button"
                         onClick={() => selectEditSpotifyTrack(track)}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid #1e293b', padding: '9px 10px', color: '#f1f5f9', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--ft-surface)', padding: '9px 10px', color: 'var(--ft-text)', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }}
                       >
-                        {track.image ? <img src={track.image} alt="" style={{ width: 38, height: 38, borderRadius: 7, objectFit: 'cover', flexShrink: 0 }} /> : <span style={{ width: 38, height: 38, borderRadius: 7, background: '#1e293b', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>♪</span>}
+                        {track.image ? <img src={track.image} alt="" style={{ width: 38, height: 38, borderRadius: 7, objectFit: 'cover', flexShrink: 0 }} /> : <span style={{ width: 38, height: 38, borderRadius: 7, background: 'var(--ft-surface)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>♪</span>}
                         <span style={{ minWidth: 0 }}>
                           <strong style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 13 }}>{track.name}</strong>
-                          {track.artists ? <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#94a3b8', fontSize: 12 }}>{track.artists}</span> : null}
+                          {track.artists ? <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--ft-text-secondary)', fontSize: 12 }}>{track.artists}</span> : null}
                           <span style={{ display: 'block', color: track.previewUrl ? '#86efac' : '#fbbf24', fontSize: 11, marginTop: 2 }}>{track.previewUrl ? (track.previewSource === 'itunes' ? 'Apple preview available' : 'Preview available') : 'Preview unavailable'}</span>
                         </span>
                       </button>
@@ -2293,7 +2293,7 @@ export default function PostCard({
                   value={editedSpotifyUrl}
                   onChange={e => { setEditedSpotifyUrl(e.target.value); setEditedSpotifyTrack(null) }}
                   placeholder="Or paste Spotify track URL…"
-                  style={{ width: '100%', marginTop: 10, background: '#020617', border: '1px solid #334155', borderRadius: 9, padding: '9px 10px', color: '#f1f5f9', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }}
+                  style={{ width: '100%', marginTop: 10, background: '#020617', border: '1px solid var(--ft-border-strong)', borderRadius: 9, padding: '9px 10px', color: 'var(--ft-text)', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }}
                 />
               </div>
             ) : null}
@@ -2301,24 +2301,24 @@ export default function PostCard({
               <button
                 onClick={cancelEditing}
                 disabled={savingEdit || editPhotoUploading}
-                style={{ background: 'transparent', border: '1px solid #334155', borderRadius: '8px', padding: '8px 12px', color: '#94a3b8', cursor: savingEdit || editPhotoUploading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: '13px', opacity: savingEdit || editPhotoUploading ? 0.6 : 1 }}
+                style={{ background: 'transparent', border: '1px solid var(--ft-border-strong)', borderRadius: '8px', padding: '8px 12px', color: 'var(--ft-text-secondary)', cursor: savingEdit || editPhotoUploading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: '13px', opacity: savingEdit || editPhotoUploading ? 0.6 : 1 }}
               >Cancel</button>
               <button
                 onClick={handleSaveEdit}
                 disabled={savingEdit || editPhotoUploading}
-                style={{ background: '#38bdf8', border: 'none', borderRadius: '8px', padding: '8px 12px', color: '#0f172a', cursor: savingEdit || editPhotoUploading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: '13px', fontWeight: 700, opacity: savingEdit || editPhotoUploading ? 0.72 : 1 }}
+                style={{ background: 'var(--ft-accent)', border: 'none', borderRadius: '8px', padding: '8px 12px', color: 'var(--ft-bg)', cursor: savingEdit || editPhotoUploading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: '13px', fontWeight: 700, opacity: savingEdit || editPhotoUploading ? 0.72 : 1 }}
               >{editPhotoUploading ? 'Uploading…' : savingEdit ? 'Saving…' : 'Save'}</button>
             </div>
           </div>
         ) : (
           <>
             {postTitle ? (
-              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f1f5f9', margin: '0 0 8px', lineHeight: 1.4, wordBreak: 'break-word' }}>{String(postTitle)}</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--ft-text)', margin: '0 0 8px', lineHeight: 1.4, wordBreak: 'break-word' }}>{String(postTitle)}</h3>
             ) : null}
             {/* For polls, content is stored as JSON — don't render it as body text;
                 the poll UI block below handles rendering. */}
             {displayContent && post.type !== 'poll' ? (
-              <p style={{ fontSize: '14px', lineHeight: 1.65, color: '#cbd5e1', margin: '0 0 12px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+              <p style={{ fontSize: '14px', lineHeight: 1.65, color: 'var(--ft-text-secondary)', margin: '0 0 12px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                 <ContentWithLinks text={displayContent} expanded={expanded} canonicalUrl={canonicalUrl} />
               </p>
             ) : null}
@@ -2434,7 +2434,7 @@ export default function PostCard({
                     display: 'block', width: '100%', textAlign: 'left',
                     position: 'relative', overflow: 'hidden',
                     background: isChosen ? 'rgba(56,189,248,0.1)' : 'rgba(15,23,42,0.6)',
-                    border: isChosen ? '1px solid rgba(56,189,248,0.5)' : '1px solid #334155',
+                    border: isChosen ? '1px solid rgba(56,189,248,0.5)' : '1px solid var(--ft-border-strong)',
                     borderRadius: '10px', padding: '10px 14px', marginBottom: '8px',
                     cursor: isPollExpired ? 'not-allowed' : 'pointer',
                     fontFamily: 'inherit', transition: 'border-color 0.15s',
@@ -2455,14 +2455,14 @@ export default function PostCard({
                   <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                     <span style={{
                       fontSize: '13px',
-                      color: isChosen ? '#38bdf8' : '#cbd5e1',
+                      color: isChosen ? 'var(--ft-accent)' : 'var(--ft-text-secondary)',
                       fontWeight: isChosen ? 600 : 400,
                       lineHeight: 1.4,
                     }}>
                       {isChosen && <span style={{ marginRight: '4px' }}>✓</span>}{opt}
                     </span>
                     {hasVoted && (
-                      <span style={{ fontSize: '12px', color: '#64748b', flexShrink: 0, fontWeight: 500 }}>
+                      <span style={{ fontSize: '12px', color: 'var(--ft-text-tertiary)', flexShrink: 0, fontWeight: 500 }}>
                         {pct}%
                       </span>
                     )}
@@ -2471,8 +2471,8 @@ export default function PostCard({
               )
             })}
             <div style={{ fontSize: '11px', marginTop: '2px', display: 'flex', gap: '8px' }}>
-              <span style={{ color: '#64748b' }}>{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</span>
-              <span style={{ color: isPollExpired ? '#fbbf24' : '#64748b' }}>
+              <span style={{ color: 'var(--ft-text-tertiary)' }}>{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</span>
+              <span style={{ color: isPollExpired ? '#fbbf24' : 'var(--ft-text-tertiary)' }}>
                 {isPollExpired ? '🔒 Poll ended' : `⏱ ${timeRemaining}`}
               </span>
             </div>
@@ -2486,10 +2486,10 @@ export default function PostCard({
           href={canonicalUrl}
           style={{ display: 'block', margin: '8px 16px 0', padding: '8px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(51,65,85,0.6)', borderRadius: 10, textDecoration: 'none' }}
         >
-          <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, marginBottom: 2 }}>
+          <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', fontWeight: 600, marginBottom: 2 }}>
             {post.top_comment.author_name ?? 'A member'}
           </div>
-          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          <div style={{ fontSize: 13, color: 'var(--ft-text-secondary)', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
             {post.top_comment.content}
           </div>
         </Link>
@@ -2528,7 +2528,7 @@ export default function PostCard({
                   borderRadius: 999,
                   border: isActive ? `1px solid ${r.color}88` : '1px solid rgba(51,65,85,0.86)',
                   background: isActive ? `${r.color}1f` : 'rgba(15,23,42,0.52)',
-                  color: count > 0 || isActive ? '#cbd5e1' : '#475569',
+                  color: count > 0 || isActive ? 'var(--ft-text-secondary)' : 'var(--ft-text-faint)',
                   opacity: count > 0 || isActive ? 1 : 0.55,
                   cursor: 'pointer',
                   fontFamily: 'inherit',
@@ -2536,7 +2536,7 @@ export default function PostCard({
                 }}
               >
                 <span style={{ fontSize: 13, lineHeight: 1 }}>{r.emoji}</span>
-                <span style={{ fontSize: 11, lineHeight: 1, fontWeight: isActive ? 900 : 700, color: count > 0 || isActive ? '#e2e8f0' : '#64748b', fontVariantNumeric: 'tabular-nums' }}>{count}</span>
+                <span style={{ fontSize: 11, lineHeight: 1, fontWeight: isActive ? 900 : 700, color: count > 0 || isActive ? '#e2e8f0' : 'var(--ft-text-tertiary)', fontVariantNumeric: 'tabular-nums' }}>{count}</span>
               </button>
             )
           })}
@@ -2567,7 +2567,7 @@ export default function PostCard({
           {showReactionPicker && pickerPos && (
             <div
               ref={reactionPickerRef}
-              style={{ position: 'fixed', top: pickerPos.top, left: pickerPos.left, marginBottom: 6, background: '#0f172a', border: '1px solid #334155', borderRadius: 999, padding: '6px 8px', display: 'flex', gap: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 9999 }}>
+              style={{ position: 'fixed', top: pickerPos.top, left: pickerPos.left, marginBottom: 6, background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: 999, padding: '6px 8px', display: 'flex', gap: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 9999 }}>
               {REACTIONS.map(r => {
                 const isActive = userReaction === r.type
                 const count = reactionCounts[r.type] ?? 0
@@ -2591,7 +2591,7 @@ export default function PostCard({
                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
                   >
                     <span style={{ lineHeight: 1 }}>{r.emoji}</span>
-                    <span style={{ fontSize: 9, lineHeight: 1, fontWeight: 900, color: count > 0 || isActive ? r.color : '#475569', fontVariantNumeric: 'tabular-nums' }}>{count}</span>
+                    <span style={{ fontSize: 9, lineHeight: 1, fontWeight: 900, color: count > 0 || isActive ? r.color : 'var(--ft-text-faint)', fontVariantNumeric: 'tabular-nums' }}>{count}</span>
                   </button>
                 )
               })}
@@ -2652,7 +2652,7 @@ export default function PostCard({
               }}
               aria-label="Choose reaction and comment identity"
             >
-              <div style={{ color: '#94a3b8', fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '7px 8px 8px' }}>
+              <div style={{ color: 'var(--ft-text-secondary)', fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '7px 8px 8px' }}>
                 React/comment as
               </div>
               {(displayedIdentityOptions.personal ?? (feedIdentity?.type === 'personal' ? feedIdentity : null)) ? (
@@ -2678,15 +2678,15 @@ export default function PostCard({
                   <Avatar url={(displayedIdentityOptions.personal ?? feedIdentity as Extract<FeedIdentity, { type: 'personal' }>).avatar_url} name={(displayedIdentityOptions.personal ?? feedIdentity as Extract<FeedIdentity, { type: 'personal' }>).name} size={34} />
                   <span style={{ minWidth: 0, flex: 1 }}>
                     <span style={{ display: 'block', fontSize: 13, fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(displayedIdentityOptions.personal ?? feedIdentity as Extract<FeedIdentity, { type: 'personal' }>).name}</span>
-                    <span style={{ display: 'block', color: '#94a3b8', fontSize: 11 }}>Personal profile</span>
+                    <span style={{ display: 'block', color: 'var(--ft-text-secondary)', fontSize: 11 }}>Personal profile</span>
                   </span>
-                  {feedIdentity?.type === 'personal' ? <span style={{ color: '#38bdf8', fontSize: 14 }}>✓</span> : null}
+                  {feedIdentity?.type === 'personal' ? <span style={{ color: 'var(--ft-accent)', fontSize: 14 }}>✓</span> : null}
                 </button>
               ) : null}
               {displayedIdentityOptions.pages.length > 0 || identityLoading ? <div style={{ height: 1, background: 'rgba(51,65,85,0.8)', margin: '6px 4px' }} /> : null}
-              {identityLoading && displayedIdentityOptions.pages.length === 0 ? <div style={{ color: '#94a3b8', fontSize: 12, padding: '9px 10px' }}>Loading your pages…</div> : null}
-              {!identityLoading && displayedIdentityOptions.pages.length === 0 ? <div style={{ color: '#64748b', fontSize: 12, padding: '9px 10px' }}>No admin pages found.</div> : null}
-              {identityLoading && displayedIdentityOptions.pages.length > 0 ? <div style={{ color: '#64748b', fontSize: 11, padding: '3px 10px 7px' }}>Refreshing page list…</div> : null}
+              {identityLoading && displayedIdentityOptions.pages.length === 0 ? <div style={{ color: 'var(--ft-text-secondary)', fontSize: 12, padding: '9px 10px' }}>Loading your pages…</div> : null}
+              {!identityLoading && displayedIdentityOptions.pages.length === 0 ? <div style={{ color: 'var(--ft-text-tertiary)', fontSize: 12, padding: '9px 10px' }}>No admin pages found.</div> : null}
+              {identityLoading && displayedIdentityOptions.pages.length > 0 ? <div style={{ color: 'var(--ft-text-tertiary)', fontSize: 11, padding: '3px 10px 7px' }}>Refreshing page list…</div> : null}
               {displayedIdentityOptions.pages.map(page => {
                 const selected = feedIdentity?.type === 'org' && feedIdentity.id === page.id
                 return (
@@ -2733,7 +2733,7 @@ export default function PostCard({
               padding: '4px 4px 4px 8px',
               border: 'none',
               background: 'transparent',
-              color: feedIdentity?.type === 'org' ? '#86efac' : '#94a3b8',
+              color: feedIdentity?.type === 'org' ? '#86efac' : 'var(--ft-text-secondary)',
               fontSize: 11,
               fontWeight: 700,
               minWidth: 0,
@@ -2748,7 +2748,7 @@ export default function PostCard({
                 name={feedIdentity?.name ?? humanName}
                 size={28}
               />
-              <span style={{ position: 'absolute', right: -5, bottom: -3, width: 13, height: 13, borderRadius: '50%', background: '#0f172a', border: '1px solid #334155', color: '#38bdf8', fontSize: 9, lineHeight: '11px', fontWeight: 900 }}>⌄</span>
+              <span style={{ position: 'absolute', right: -5, bottom: -3, width: 13, height: 13, borderRadius: '50%', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', color: 'var(--ft-accent)', fontSize: 9, lineHeight: '11px', fontWeight: 900 }}>⌄</span>
             </span>
           </button>
         </div> : null}
@@ -2763,10 +2763,10 @@ export default function PostCard({
 
       {/* ── Comments ── */}
       {showComments && (
-        <div style={{ padding: '0 16px 14px', borderTop: '1px solid #1e293b' }}>
+        <div style={{ padding: '0 16px 14px', borderTop: '1px solid var(--ft-surface)' }}>
           <div style={{ paddingTop: '12px' }}>
             {comments.length === 0 && (
-              <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 10px' }}>No comments yet — be first!</p>
+              <p style={{ fontSize: '13px', color: 'var(--ft-text-tertiary)', margin: '0 0 10px' }}>No comments yet — be first!</p>
             )}
             {comments.map(c => (
               <CommentRow
@@ -2784,7 +2784,7 @@ export default function PostCard({
             {/* Comment composer */}
             <div style={{ marginTop: '8px' }}>
               {feedIdentity ? (
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginBottom: 8, padding: '5px 9px', borderRadius: 999, border: '1px solid rgba(56,189,248,0.18)', background: 'rgba(15,23,42,0.45)', color: feedIdentity.type === 'org' ? '#86efac' : '#94a3b8', fontSize: 11, fontWeight: 700 }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginBottom: 8, padding: '5px 9px', borderRadius: 999, border: '1px solid rgba(56,189,248,0.18)', background: 'rgba(15,23,42,0.45)', color: feedIdentity.type === 'org' ? '#86efac' : 'var(--ft-text-secondary)', fontSize: 11, fontWeight: 700 }}>
                   <Avatar url={feedIdentity.type === 'org' ? feedIdentity.logo_url : feedIdentity.avatar_url} name={feedIdentity.name} size={20} />
                   <span>Commenting as {feedIdentity.name}</span>
                 </div>
@@ -2801,7 +2801,7 @@ export default function PostCard({
                     border: '1px solid rgba(56,189,248,0.15)',
                     borderRadius: '12px',
                     padding: '10px 40px 10px 12px',
-                    color: '#f1f5f9',
+                    color: 'var(--ft-text)',
                     fontSize: '13px',
                     outline: 'none',
                     fontFamily: 'inherit',
@@ -2847,7 +2847,7 @@ export default function PostCard({
                     justifyContent: 'center',
                     cursor: 'pointer',
                     fontSize: '12px',
-                    color: '#38bdf8',
+                    color: 'var(--ft-accent)',
                     lineHeight: 1,
                     padding: 0,
                   }}
@@ -2860,7 +2860,7 @@ export default function PostCard({
                 <div style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 8, padding: 6, borderRadius: 14, border: '1px solid rgba(52,211,153,0.24)', background: 'rgba(15,23,42,0.72)' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={selectedCommentGif.previewUrl} alt={selectedCommentGif.title} style={{ width: 96, height: 72, borderRadius: 10, objectFit: 'cover', display: 'block' }} />
-                  <span style={{ maxWidth: 160, color: '#cbd5e1', fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedCommentGif.title || 'GIF'}</span>
+                  <span style={{ maxWidth: 160, color: 'var(--ft-text-secondary)', fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedCommentGif.title || 'GIF'}</span>
                 </div>
               )}
 
@@ -2870,7 +2870,7 @@ export default function PostCard({
                   <GifPicker selectedGif={selectedCommentGif} onSelect={setSelectedCommentGif} disabled={submitting} compact />
                   <span style={{
                     fontSize: '11px',
-                    color: newComment.length > 450 ? '#f87171' : '#475569',
+                    color: newComment.length > 450 ? 'var(--ft-danger)' : 'var(--ft-text-faint)',
                     opacity: newComment.length > 0 ? 1 : 0,
                     transition: 'opacity 0.15s',
                   }}>
@@ -2881,13 +2881,13 @@ export default function PostCard({
                   onClick={submitComment}
                   disabled={submitting || (!newComment.trim() && !selectedCommentGif)}
                   style={{
-                    background: '#38bdf8',
+                    background: 'var(--ft-accent)',
                     border: 'none',
                     borderRadius: '10px',
                     padding: '8px 20px',
                     fontSize: '13px',
                     fontWeight: 700,
-                    color: '#0f172a',
+                    color: 'var(--ft-bg)',
                     cursor: submitting || (!newComment.trim() && !selectedCommentGif) ? 'not-allowed' : 'pointer',
                     fontFamily: 'inherit',
                     opacity: (submitting || (!newComment.trim() && !selectedCommentGif)) ? 0.5 : 1,
@@ -2953,11 +2953,11 @@ function CommentRow({
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: '10px', padding: '8px 12px' }}>
           {profileHref ? (
-            <Link href={profileHref} style={{ fontSize: '12px', fontWeight: 600, color: org ? '#86efac' : '#94a3b8', marginBottom: '2px', display: 'block', textDecoration: 'none' }}>{cName}{org ? <span style={{ marginLeft: 6, color: '#c4b5fd', fontSize: 10, textTransform: 'uppercase' }}>Page</span> : null}</Link>
+            <Link href={profileHref} style={{ fontSize: '12px', fontWeight: 600, color: org ? '#86efac' : 'var(--ft-text-secondary)', marginBottom: '2px', display: 'block', textDecoration: 'none' }}>{cName}{org ? <span style={{ marginLeft: 6, color: '#c4b5fd', fontSize: 10, textTransform: 'uppercase' }}>Page</span> : null}</Link>
           ) : (
-            <div style={{ fontSize: '12px', fontWeight: 600, color: org ? '#86efac' : '#94a3b8', marginBottom: '2px' }}>{cName}{org ? <span style={{ marginLeft: 6, color: '#c4b5fd', fontSize: 10, textTransform: 'uppercase' }}>Page</span> : null}</div>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: org ? '#86efac' : 'var(--ft-text-secondary)', marginBottom: '2px' }}>{cName}{org ? <span style={{ marginLeft: 6, color: '#c4b5fd', fontSize: 10, textTransform: 'uppercase' }}>Page</span> : null}</div>
           )}
-          <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5, wordBreak: 'break-word' }}>
+          <div style={{ fontSize: '13px', color: 'var(--ft-text-secondary)', lineHeight: 1.5, wordBreak: 'break-word' }}>
             <GifContent content={comment.content} gifStyle={{ width: 'min(100%, 220px)', maxHeight: 220 }} />
           </div>
         </div>
@@ -2972,11 +2972,11 @@ function CommentRow({
               border: liked ? '1px solid rgba(248,113,113,0.25)' : '1px solid transparent',
               borderRadius: '20px', padding: '2px 8px',
               fontSize: '11px', fontWeight: 600,
-              color: liked ? '#f87171' : '#64748b',
+              color: liked ? 'var(--ft-danger)' : 'var(--ft-text-tertiary)',
               cursor: 'pointer', transition: 'all 0.15s',
             }}
-            onMouseEnter={e => { if (!liked) (e.currentTarget as HTMLButtonElement).style.color = '#f87171' }}
-            onMouseLeave={e => { if (!liked) (e.currentTarget as HTMLButtonElement).style.color = '#64748b' }}
+            onMouseEnter={e => { if (!liked) (e.currentTarget as HTMLButtonElement).style.color = 'var(--ft-danger)' }}
+            onMouseLeave={e => { if (!liked) (e.currentTarget as HTMLButtonElement).style.color = 'var(--ft-text-tertiary)' }}
           >
             <span style={{ fontSize: '12px' }}>{liked ? '❤️' : '🤍'}</span>
             {likeCount > 0 && <span>{likeCount}</span>}
@@ -3003,12 +3003,12 @@ function ActionBtn({ icon, label, active, onClick }: { icon: string; label: stri
           display: 'flex', alignItems: 'center', gap: '3px', padding: '6px 8px',
           background: active ? 'rgba(56,189,248,0.1)' : 'none',
           border: 'none', borderRadius: '8px', cursor: 'pointer',
-          fontSize: '13px', color: active ? '#38bdf8' : '#64748b',
+          fontSize: '13px', color: active ? 'var(--ft-accent)' : 'var(--ft-text-tertiary)',
           fontFamily: 'inherit', transition: 'all 0.15s', fontWeight: active ? 600 : 400,
           flexShrink: 0,
         }}
-        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#38bdf8' }}
-        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = active ? '#38bdf8' : '#64748b' }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--ft-accent)' }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = active ? 'var(--ft-accent)' : 'var(--ft-text-tertiary)' }}
       >
         <span style={{ fontSize: '15px', lineHeight: 1 }}>{icon}</span>
         <span className="action-btn-label">{label}</span>

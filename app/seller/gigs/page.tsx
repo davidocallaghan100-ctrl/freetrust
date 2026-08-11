@@ -31,8 +31,8 @@ export default function SellerGigsPage() {
     <div
       style={{
         minHeight: 'calc(100vh - 58px)',
-        background: '#0f172a',
-        color: '#f1f5f9',
+        background: 'var(--ft-bg)',
+        color: 'var(--ft-text)',
         fontFamily: 'system-ui, sans-serif',
         paddingTop: 104,
         paddingBottom: 80,
@@ -52,7 +52,7 @@ export default function SellerGigsPage() {
         </h1>
         <p
           style={{
-            color: '#94a3b8',
+            color: 'var(--ft-text-secondary)',
             fontSize: '1rem',
             lineHeight: 1.6,
             margin: '0 0 2rem',
@@ -66,7 +66,7 @@ export default function SellerGigsPage() {
         {/* Coming-soon card */}
         <div
           style={{
-            background: '#1e293b',
+            background: 'var(--ft-surface)',
             border: '1px solid rgba(56,189,248,0.2)',
             borderRadius: 14,
             padding: '1.75rem',
@@ -77,7 +77,7 @@ export default function SellerGigsPage() {
             style={{
               fontSize: 11,
               fontWeight: 700,
-              color: '#64748b',
+              color: 'var(--ft-text-tertiary)',
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
               marginBottom: 10,
@@ -93,7 +93,7 @@ export default function SellerGigsPage() {
               display: 'flex',
               flexDirection: 'column',
               gap: 10,
-              color: '#cbd5e1',
+              color: 'var(--ft-text-secondary)',
               fontSize: '0.92rem',
               lineHeight: 1.55,
             }}
@@ -114,8 +114,8 @@ export default function SellerGigsPage() {
               alignItems: 'center',
               gap: 6,
               padding: '12px 22px',
-              background: '#38bdf8',
-              color: '#0f172a',
+              background: 'var(--ft-accent)',
+              color: 'var(--ft-bg)',
               borderRadius: 10,
               fontSize: 14,
               fontWeight: 800,
@@ -134,7 +134,7 @@ export default function SellerGigsPage() {
               padding: '12px 22px',
               background: 'transparent',
               border: '1px solid rgba(56,189,248,0.35)',
-              color: '#38bdf8',
+              color: 'var(--ft-accent)',
               borderRadius: 10,
               fontSize: 14,
               fontWeight: 700,

@@ -205,7 +205,7 @@ export default function NotificationBell() {
           background: open ? 'rgba(56,189,248,0.06)' : 'transparent',
           border: `1px solid ${open ? 'rgba(56,189,248,0.4)' : 'rgba(148,163,184,0.2)'}`,
           cursor: 'pointer',
-          color: open ? '#38bdf8' : '#94a3b8',
+          color: open ? 'var(--ft-accent)' : 'var(--ft-text-secondary)',
           position: 'relative',
           transition: 'all 0.15s',
           padding: 0,

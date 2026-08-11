@@ -9,7 +9,7 @@ const SECTIONS = [
     emoji: '🛒',
     title: 'Buy & Sell',
     desc: 'Browse verified products from trusted sellers. Filter by Trust score to shop with confidence.',
-    color: '#38bdf8',
+    color: 'var(--ft-accent)',
     bg: 'linear-gradient(135deg,#0ea5e9,#0284c7)',
     stats: 'Products from verified members',
   },
@@ -56,11 +56,11 @@ export default function CollabPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)' }}>
       <style>{`
         .collab-card {
-          background: #1e293b;
-          border: 1px solid #334155;
+          background: var(--ft-surface);
+          border: 1px solid var(--ft-border-strong);
           border-radius: 16px;
           padding: 32px;
           cursor: pointer;
@@ -71,7 +71,7 @@ export default function CollabPage() {
         }
         .collab-card:hover {
           transform: translateY(-4px);
-          border-color: #475569;
+          border-color: var(--ft-text-faint);
           box-shadow: 0 20px 40px rgba(0,0,0,0.3);
         }
         .modal-overlay {
@@ -85,8 +85,8 @@ export default function CollabPage() {
           backdrop-filter: blur(4px);
         }
         .modal-box {
-          background: #1e293b;
-          border: 1px solid #334155;
+          background: var(--ft-surface);
+          border: 1px solid var(--ft-border-strong);
           border-radius: 20px;
           padding: 32px;
           width: 90%;
@@ -99,15 +99,15 @@ export default function CollabPage() {
           gap: 16px;
           padding: 16px;
           border-radius: 12px;
-          border: 1px solid #334155;
+          border: 1px solid var(--ft-border-strong);
           cursor: pointer;
           transition: background 0.15s, border-color 0.15s;
           margin-bottom: 12px;
-          background: #0f172a;
+          background: var(--ft-bg);
         }
         .modal-option:hover {
           background: #1e3a5f;
-          border-color: #38bdf8;
+          border-color: var(--ft-accent);
         }
         .hero-badge {
           display: inline-flex;
@@ -118,7 +118,7 @@ export default function CollabPage() {
           border-radius: 100px;
           padding: 6px 16px;
           font-size: 13px;
-          color: #38bdf8;
+          color: var(--ft-accent);
           margin-bottom: 24px;
         }
       `}</style>
@@ -132,10 +132,10 @@ export default function CollabPage() {
               <span>✦</span>
               <span>Trust-Powered Collaboration</span>
             </div>
-            <h1 style={{ fontSize: 'clamp(28px,5vw,48px)', fontWeight: 700, color: '#f1f5f9', margin: '0 0 12px', lineHeight: 1.2 }}>
+            <h1 style={{ fontSize: 'clamp(28px,5vw,48px)', fontWeight: 700, color: 'var(--ft-text)', margin: '0 0 12px', lineHeight: 1.2 }}>
               Collab Hub
             </h1>
-            <p style={{ fontSize: 16, color: '#94a3b8', maxWidth: 520, margin: 0, lineHeight: 1.6 }}>
+            <p style={{ fontSize: 16, color: 'var(--ft-text-secondary)', maxWidth: 520, margin: 0, lineHeight: 1.6 }}>
               Buy, sell, and connect with verified community members. Every interaction is backed by real Trust scores — so you always know who you're working with.
             </p>
           </div>
@@ -145,7 +145,7 @@ export default function CollabPage() {
               display: 'flex',
               alignItems: 'center',
               gap: 8,
-              background: 'linear-gradient(135deg,#38bdf8,#0284c7)',
+              background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)',
               color: '#fff',
               border: 'none',
               borderRadius: 12,
@@ -179,8 +179,8 @@ export default function CollabPage() {
               }}>
                 {s.emoji}
               </div>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: '#f1f5f9', margin: '0 0 8px' }}>{s.title}</h2>
-              <p style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.6, margin: '0 0 20px' }}>{s.desc}</p>
+              <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--ft-text)', margin: '0 0 8px' }}>{s.title}</h2>
+              <p style={{ fontSize: 14, color: 'var(--ft-text-secondary)', lineHeight: 1.6, margin: '0 0 20px' }}>{s.desc}</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{
                   fontSize: 12,
@@ -222,15 +222,15 @@ export default function CollabPage() {
         }}>
           <div style={{ fontSize: 40 }}>₮</div>
           <div style={{ flex: 1 }}>
-            <h3 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 700, color: '#f1f5f9' }}>Filter by Trust Score</h3>
-            <p style={{ margin: 0, color: '#94a3b8', fontSize: 14, lineHeight: 1.6 }}>
+            <h3 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 700, color: 'var(--ft-text)' }}>Filter by Trust Score</h3>
+            <p style={{ margin: 0, color: 'var(--ft-text-secondary)', fontSize: 14, lineHeight: 1.6 }}>
               Every listing, service, and member in the Collab Hub can be filtered by Trust score. The higher the score, the more vouches and positive interactions that person has earned from the community.
             </p>
           </div>
           <Link href="/wallet" style={{
             background: 'rgba(56,189,248,0.1)',
             border: '1px solid rgba(56,189,248,0.3)',
-            color: '#38bdf8',
+            color: 'var(--ft-accent)',
             borderRadius: 10,
             padding: '10px 20px',
             textDecoration: 'none',
@@ -247,18 +247,18 @@ export default function CollabPage() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 700, color: '#f1f5f9' }}>List Something</h2>
-            <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: 14 }}>What do you want to offer?</p>
+            <h2 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 700, color: 'var(--ft-text)' }}>List Something</h2>
+            <p style={{ margin: '0 0 24px', color: 'var(--ft-text-tertiary)', fontSize: 14 }}>What do you want to offer?</p>
 
             <div className="modal-option" onClick={() => handleOption('product')}>
               <div style={{
                 width: 44, height: 44, borderRadius: 12,
-                background: 'linear-gradient(135deg,#38bdf8,#0284c7)',
+                background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0,
               }}>📦</div>
               <div>
-                <div style={{ fontWeight: 600, color: '#f1f5f9', marginBottom: 2 }}>List a Product</div>
-                <div style={{ fontSize: 12, color: '#64748b' }}>Sell physical or digital goods</div>
+                <div style={{ fontWeight: 600, color: 'var(--ft-text)', marginBottom: 2 }}>List a Product</div>
+                <div style={{ fontSize: 12, color: 'var(--ft-text-tertiary)' }}>Sell physical or digital goods</div>
               </div>
             </div>
 
@@ -269,8 +269,8 @@ export default function CollabPage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0,
               }}>🎯</div>
               <div>
-                <div style={{ fontWeight: 600, color: '#f1f5f9', marginBottom: 2 }}>Offer a Service</div>
-                <div style={{ fontSize: 12, color: '#64748b' }}>Freelance skills and expertise</div>
+                <div style={{ fontWeight: 600, color: 'var(--ft-text)', marginBottom: 2 }}>Offer a Service</div>
+                <div style={{ fontSize: 12, color: 'var(--ft-text-tertiary)' }}>Freelance skills and expertise</div>
               </div>
             </div>
 
@@ -281,8 +281,8 @@ export default function CollabPage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0,
               }}>📅</div>
               <div>
-                <div style={{ fontWeight: 600, color: '#f1f5f9', marginBottom: 2 }}>Host an Event</div>
-                <div style={{ fontSize: 12, color: '#64748b' }}>Online or in-person events</div>
+                <div style={{ fontWeight: 600, color: 'var(--ft-text)', marginBottom: 2 }}>Host an Event</div>
+                <div style={{ fontSize: 12, color: 'var(--ft-text-tertiary)' }}>Online or in-person events</div>
               </div>
             </div>
 
@@ -290,7 +290,7 @@ export default function CollabPage() {
               onClick={() => setShowModal(false)}
               style={{
                 width: '100%', marginTop: 8, padding: '12px', background: 'transparent',
-                border: '1px solid #334155', borderRadius: 10, color: '#64748b',
+                border: '1px solid var(--ft-border-strong)', borderRadius: 10, color: 'var(--ft-text-tertiary)',
                 cursor: 'pointer', fontSize: 14,
               }}
             >

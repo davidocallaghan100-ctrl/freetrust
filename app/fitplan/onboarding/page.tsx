@@ -4,7 +4,7 @@ import { FormEvent, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 
-const C = { bg: '#06131f', panel: '#0c1f30', card: '#10283b', line: 'rgba(148,163,184,.18)', text: '#f8fafc', muted: '#9fb2c7', green: '#10b981', gold: '#f4c96b', blue: '#38bdf8' }
+const C = { bg: '#06131f', panel: '#0c1f30', card: '#10283b', line: 'rgba(148,163,184,.18)', text: '#f8fafc', muted: '#9fb2c7', green: '#10b981', gold: '#f4c96b', blue: 'var(--ft-accent)' }
 
 const GOALS = [
   ['fat_loss', 'Fat loss'],
@@ -126,7 +126,7 @@ export default function FitPlanOnboardingPage() {
           </section>
         </div>
         {error && <div style={{ marginTop: 14, color: '#fecaca', background: 'rgba(239,68,68,.12)', border: '1px solid rgba(239,68,68,.3)', padding: 12, borderRadius: 14 }}>{error}</div>}
-        <button disabled={busy} style={{ marginTop: 18, width: '100%', minHeight: 52, border: 'none', borderRadius: 16, background: busy ? '#475569' : `linear-gradient(135deg, ${C.green}, #0ea5e9)`, color: '#fff', fontWeight: 950, fontSize: 16 }}>{busy ? 'Saving…' : 'Save and open dashboard'}</button>
+        <button disabled={busy} style={{ marginTop: 18, width: '100%', minHeight: 52, border: 'none', borderRadius: 16, background: busy ? 'var(--ft-text-faint)' : `linear-gradient(135deg, ${C.green}, #0ea5e9)`, color: '#fff', fontWeight: 950, fontSize: 16 }}>{busy ? 'Saving…' : 'Save and open dashboard'}</button>
       </form>
     </div>
   </main>

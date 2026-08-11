@@ -27,9 +27,9 @@ const CATEGORIES = ['Tech', 'Design', 'Marketing', 'Sales', 'Finance', 'Operatio
 const COMPANY_SIZES = ['1–10', '11–50', '51–200', '200–500', '500+']
 
 const TYPE_COLORS: Record<string, string> = {
-  full_time: '#38bdf8', part_time: '#a78bfa', contract: '#fbbf24', freelance: '#34d399',
+  full_time: 'var(--ft-accent)', part_time: '#a78bfa', contract: '#fbbf24', freelance: '#34d399',
 }
-const LOC_COLORS: Record<string, string> = { remote: '#34d399', hybrid: '#38bdf8', on_site: '#fb923c' }
+const LOC_COLORS: Record<string, string> = { remote: '#34d399', hybrid: 'var(--ft-accent)', on_site: '#fb923c' }
 
 export default function PostJobPage() {
   const router = useRouter()
@@ -226,12 +226,12 @@ export default function PostJobPage() {
   }
 
   const inputStyle: React.CSSProperties = {
-    width: '100%', background: '#0f172a', border: '1px solid rgba(56,189,248,0.15)',
-    borderRadius: 8, padding: '0.65rem 1rem', color: '#f1f5f9', fontSize: '0.9rem',
+    width: '100%', background: 'var(--ft-bg)', border: '1px solid rgba(56,189,248,0.15)',
+    borderRadius: 8, padding: '0.65rem 1rem', color: 'var(--ft-text)', fontSize: '0.9rem',
     outline: 'none', fontFamily: 'system-ui', boxSizing: 'border-box',
   }
   const labelStyle: React.CSSProperties = {
-    fontSize: '0.82rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.4rem', display: 'block',
+    fontSize: '0.82rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.4rem', display: 'block',
   }
   const sectionStyle: React.CSSProperties = { marginBottom: '1.5rem' }
   const selectStyle: React.CSSProperties = { ...inputStyle, cursor: 'pointer' }
@@ -239,13 +239,13 @@ export default function PostJobPage() {
   const sectionDivider = (icon: string, label: string) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', marginTop: '0.5rem' }}>
       <span style={{ fontSize: '1rem' }}>{icon}</span>
-      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</span>
+      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--ft-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</span>
       <div style={{ flex: 1, height: 1, background: 'rgba(56,189,248,0.1)' }} />
     </div>
   )
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui' }}>
       <style>{`
         .new-job-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
         .new-job-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
@@ -258,7 +258,7 @@ export default function PostJobPage() {
           background: rgba(56,189,248,0.1);
           border: 1px solid rgba(56,189,248,0.3);
           border-radius: 6px;
-          color: #38bdf8;
+          color: var(--ft-accent);
           cursor: pointer;
           font-size: 0.82rem;
           font-weight: 600;
@@ -271,8 +271,8 @@ export default function PostJobPage() {
       <div style={{ background: 'linear-gradient(180deg,rgba(56,189,248,0.07) 0%,transparent 100%)', padding: '2rem 1.5rem', borderBottom: '1px solid rgba(56,189,248,0.08)' }}>
         <div style={{ maxWidth: 860, margin: '0 auto' }}>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.4rem' }}>Post a Job</h1>
-          <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Reach thousands of trusted professionals in the FreeTrust network</p>
-          <div style={{ marginTop: '0.75rem', background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, padding: '0.6rem 1rem', fontSize: '0.82rem', color: '#38bdf8' }}>
+          <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.9rem' }}>Reach thousands of trusted professionals in the FreeTrust network</p>
+          <div style={{ marginTop: '0.75rem', background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, padding: '0.6rem 1rem', fontSize: '0.82rem', color: 'var(--ft-accent)' }}>
             ⭐ Your FreeTrust score is shown to applicants — verified employers (score &gt; 200) get priority listing
           </div>
         </div>
@@ -281,30 +281,30 @@ export default function PostJobPage() {
       <div className="new-job-inner" style={{ maxWidth: 860, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
         {/* Preview toggle */}
         <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.75rem' }}>
-          <button onClick={() => setPreview(false)} style={{ padding: '0.45rem 1.1rem', borderRadius: 8, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', background: !preview ? '#38bdf8' : 'transparent', color: !preview ? '#0f172a' : '#94a3b8', border: !preview ? 'none' : '1px solid rgba(148,163,184,0.2)' }}>
+          <button onClick={() => setPreview(false)} style={{ padding: '0.45rem 1.1rem', borderRadius: 8, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', background: !preview ? 'var(--ft-accent)' : 'transparent', color: !preview ? 'var(--ft-bg)' : 'var(--ft-text-secondary)', border: !preview ? 'none' : '1px solid rgba(148,163,184,0.2)' }}>
             ✏️ Edit
           </button>
-          <button onClick={() => setPreview(true)} style={{ padding: '0.45rem 1.1rem', borderRadius: 8, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', background: preview ? '#38bdf8' : 'transparent', color: preview ? '#0f172a' : '#94a3b8', border: preview ? 'none' : '1px solid rgba(148,163,184,0.2)' }}>
+          <button onClick={() => setPreview(true)} style={{ padding: '0.45rem 1.1rem', borderRadius: 8, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', background: preview ? 'var(--ft-accent)' : 'transparent', color: preview ? 'var(--ft-bg)' : 'var(--ft-text-secondary)', border: preview ? 'none' : '1px solid rgba(148,163,184,0.2)' }}>
             👁 Preview Card
           </button>
         </div>
 
         {preview ? (
           /* Preview Card */
-          <div style={{ background: '#1e293b', border: '2px solid rgba(56,189,248,0.2)', borderRadius: 14, padding: '1.5rem', maxWidth: 480 }}>
-            <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.75rem', fontWeight: 600 }}>PREVIEW — how your job will appear</div>
+          <div style={{ background: 'var(--ft-surface)', border: '2px solid rgba(56,189,248,0.2)', borderRadius: 14, padding: '1.5rem', maxWidth: 480 }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', marginBottom: '0.75rem', fontWeight: 600 }}>PREVIEW — how your job will appear</div>
 
             {/* Company row in preview */}
             {form.company_name && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
                 {form.company_logo_url ? (
-                  <img src={form.company_logo_url} alt={form.company_name} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(56,189,248,0.2)', background: '#0f172a' }} />
+                  <img src={form.company_logo_url} alt={form.company_name} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(56,189,248,0.2)', background: 'var(--ft-bg)' }} />
                 ) : (
                   <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>🏢</div>
                 )}
                 <div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f1f5f9' }}>{form.company_name}</div>
-                  {form.company_size && <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{form.company_size} employees</div>}
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ft-text)' }}>{form.company_name}</div>
+                  {form.company_size && <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)' }}>{form.company_size} employees</div>}
                 </div>
               </div>
             )}
@@ -318,26 +318,26 @@ export default function PostJobPage() {
               </span>}
             </div>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>{form.title || 'Job Title'}</h3>
-            <div style={{ fontSize: '0.82rem', color: '#94a3b8', marginBottom: '0.5rem' }}>
+            <div style={{ fontSize: '0.82rem', color: 'var(--ft-text-secondary)', marginBottom: '0.5rem' }}>
               {form.location_type !== 'remote' && form.location ? `📍 ${form.location}  ` : ''}
               {form.salary_min || form.salary_max ? `💰 ${form.salary_currency === 'EUR' ? '€' : form.salary_currency === 'USD' ? '$' : '£'}${form.salary_min || '?'}k – ${form.salary_currency === 'EUR' ? '€' : form.salary_currency === 'USD' ? '$' : '£'}${form.salary_max || '?'}k` : '💰 Competitive'}
             </div>
             {form.tags.length > 0 && (
               <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-                {form.tags.map(t => <span key={t} style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '0.12rem 0.5rem', fontSize: '0.72rem', color: '#94a3b8' }}>{t}</span>)}
+                {form.tags.map(t => <span key={t} style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '0.12rem 0.5rem', fontSize: '0.72rem', color: 'var(--ft-text-secondary)' }}>{t}</span>)}
               </div>
             )}
-            <button style={{ width: '100%', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 7, padding: '0.5rem', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', marginTop: '0.5rem' }}>Apply Now →</button>
+            <button style={{ width: '100%', background: 'var(--ft-accent)', color: 'var(--ft-bg)', border: 'none', borderRadius: 7, padding: '0.5rem', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', marginTop: '0.5rem' }}>Apply Now →</button>
           </div>
         ) : (
           /* Edit Form */
-          <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '2rem' }}>
+          <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '2rem' }}>
 
             {/* ── POST AS selector (LinkedIn-style org posting) ── */}
             {!loadingOrgs && myOrgs.length > 0 && (
               <div style={{ marginBottom: '1.75rem' }}>
                 {sectionDivider('🏢', 'Post As')}
-                <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.75rem' }}>
+                <p style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)', marginBottom: '0.75rem' }}>
                   Post this job on behalf of yourself or an organisation you manage
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
@@ -348,9 +348,9 @@ export default function PostJobPage() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: '0.5rem',
                       padding: '0.5rem 1rem', borderRadius: 999, cursor: 'pointer',
-                      border: selectedOrgId === null ? '2px solid #38bdf8' : '1px solid rgba(148,163,184,0.2)',
+                      border: selectedOrgId === null ? '2px solid var(--ft-accent)' : '1px solid rgba(148,163,184,0.2)',
                       background: selectedOrgId === null ? 'rgba(56,189,248,0.1)' : 'transparent',
-                      color: selectedOrgId === null ? '#38bdf8' : '#94a3b8',
+                      color: selectedOrgId === null ? 'var(--ft-accent)' : 'var(--ft-text-secondary)',
                       fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.15s',
                     }}
                   >
@@ -372,9 +372,9 @@ export default function PostJobPage() {
                       style={{
                         display: 'flex', alignItems: 'center', gap: '0.5rem',
                         padding: '0.5rem 1rem', borderRadius: 999, cursor: 'pointer',
-                        border: selectedOrgId === org.id ? '2px solid #38bdf8' : '1px solid rgba(148,163,184,0.2)',
+                        border: selectedOrgId === org.id ? '2px solid var(--ft-accent)' : '1px solid rgba(148,163,184,0.2)',
                         background: selectedOrgId === org.id ? 'rgba(56,189,248,0.1)' : 'transparent',
-                        color: selectedOrgId === org.id ? '#38bdf8' : '#94a3b8',
+                        color: selectedOrgId === org.id ? 'var(--ft-accent)' : 'var(--ft-text-secondary)',
                         fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.15s',
                       }}
                     >
@@ -412,7 +412,7 @@ export default function PostJobPage() {
                   <img
                     src={form.company_logo_url}
                     alt="Company logo"
-                    style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(56,189,248,0.3)', background: '#0f172a', flexShrink: 0 }}
+                    style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(56,189,248,0.3)', background: 'var(--ft-bg)', flexShrink: 0 }}
                   />
                 ) : (
                   <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(56,189,248,0.06)', border: '1px dashed rgba(56,189,248,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1.25rem' }}>
@@ -425,9 +425,9 @@ export default function PostJobPage() {
                     accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
                     onChange={handleLogoUpload}
                     disabled={logoUploading}
-                    style={{ ...inputStyle, padding: '0.5rem', cursor: 'pointer', fontSize: '0.82rem', color: '#94a3b8' }}
+                    style={{ ...inputStyle, padding: '0.5rem', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--ft-text-secondary)' }}
                   />
-                  <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '0.3rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-faint)', marginTop: '0.3rem' }}>
                     {logoUploading ? '⏳ Uploading...' : 'PNG, JPG, WebP or SVG · Max 2MB'}
                   </div>
                   {form.company_logo_url && (
@@ -564,14 +564,14 @@ export default function PostJobPage() {
                   placeholder="Type a skill and press Enter..."
                   style={{ ...inputStyle, flex: 1 }}
                 />
-                <button onClick={addTag} style={{ background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 8, padding: '0 1rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>Add</button>
+                <button onClick={addTag} style={{ background: 'var(--ft-accent)', color: 'var(--ft-bg)', border: 'none', borderRadius: 8, padding: '0 1rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>Add</button>
               </div>
               {form.tags.length > 0 && (
                 <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                   {form.tags.map(t => (
-                    <span key={t} style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 999, padding: '0.2rem 0.65rem', fontSize: '0.78rem', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <span key={t} style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 999, padding: '0.2rem 0.65rem', fontSize: '0.78rem', color: 'var(--ft-accent)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                       {t}
-                      <button onClick={() => removeTag(t)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 0, fontSize: '0.9rem', lineHeight: 1 }}>×</button>
+                      <button onClick={() => removeTag(t)} style={{ background: 'none', border: 'none', color: 'var(--ft-text-tertiary)', cursor: 'pointer', padding: 0, fontSize: '0.9rem', lineHeight: 1 }}>×</button>
                     </span>
                   ))}
                 </div>
@@ -589,8 +589,8 @@ export default function PostJobPage() {
               disabled={submitting}
               style={{
                 width: '100%',
-                background: submitting ? 'rgba(56,189,248,0.5)' : '#38bdf8',
-                color: '#0f172a',
+                background: submitting ? 'rgba(56,189,248,0.5)' : 'var(--ft-accent)',
+                color: 'var(--ft-bg)',
                 border: 'none',
                 borderRadius: 10,
                 padding: '0.85rem',

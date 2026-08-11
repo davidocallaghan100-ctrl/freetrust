@@ -30,7 +30,7 @@ const EVENT_ICONS: Record<string, string> = {
 const ROLE_COLORS: Record<string, string> = {
   buyer:  '#3b82f6',
   seller: '#10b981',
-  system: '#64748b',
+  system: 'var(--ft-text-tertiary)',
 }
 
 function formatTime(iso: string) {
@@ -92,7 +92,7 @@ export default function OrderActivityFeed({ orderId, currentUserId, buyerId, sel
   return (
     <div style={{ marginTop: 24 }}>
       <div style={{
-        fontSize: 12, fontWeight: 700, color: '#64748b',
+        fontSize: 12, fontWeight: 700, color: 'var(--ft-text-tertiary)',
         letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 16,
       }}>
         Order Activity
@@ -106,7 +106,7 @@ export default function OrderActivityFeed({ orderId, currentUserId, buyerId, sel
         }} />
 
         {items.map((item, i) => {
-          const roleColor = ROLE_COLORS[item.actor_role] ?? '#64748b'
+          const roleColor = ROLE_COLORS[item.actor_role] ?? 'var(--ft-text-tertiary)'
           // Show "You" when the event was performed by the current viewer
           const isCurrentUser = currentUserId && (
             (item.actor_role === 'buyer'  && currentUserId === buyerId) ||
@@ -141,7 +141,7 @@ export default function OrderActivityFeed({ orderId, currentUserId, buyerId, sel
               {/* Content */}
               <div style={{ flex: 1, paddingTop: 4, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#f1f5f9' }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ft-text)' }}>
                     {item.title}
                   </span>
                   <span style={{
@@ -155,12 +155,12 @@ export default function OrderActivityFeed({ orderId, currentUserId, buyerId, sel
                 </div>
 
                 {item.body && (
-                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 2, lineHeight: 1.4 }}>
+                  <div style={{ fontSize: 12, color: 'var(--ft-text-tertiary)', marginTop: 2, lineHeight: 1.4 }}>
                     {item.body}
                   </div>
                 )}
 
-                <div style={{ fontSize: 11, color: '#475569', marginTop: 3 }}>
+                <div style={{ fontSize: 11, color: 'var(--ft-text-faint)', marginTop: 3 }}>
                   {formatTime(item.created_at)}
                 </div>
               </div>

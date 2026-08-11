@@ -63,15 +63,15 @@ type TravelFallbackLabels = {
   destination: string
 }
 
-const ACCENT = '#38bdf8'
+const ACCENT = 'var(--ft-accent)'
 const TEAL = '#00c2cb'
-const BG = '#0f172a'
-const CARD = '#1e293b'
+const BG = 'var(--ft-bg)'
+const CARD = 'var(--ft-surface)'
 const CARD_2 = '#111827'
-const BORDER = '#334155'
-const MUTED = '#94a3b8'
-const DIM = '#64748b'
-const TEXT = '#f1f5f9'
+const BORDER = 'var(--ft-border-strong)'
+const MUTED = 'var(--ft-text-secondary)'
+const DIM = 'var(--ft-text-tertiary)'
+const TEXT = 'var(--ft-text)'
 
 const travelCategoryConfigs = [
   { key: 'cityBreaks', icon: '🏙️', city: 'Paris', countryCode: 'FR', image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80', type: 'both' as SearchType },
@@ -586,11 +586,11 @@ export default function TravelPage() {
           </div>
 
           {userId ? (
-            <button id="travel-search-button" onClick={() => void runSearch()} disabled={loading} style={{ marginTop: 12, width: '100%', minHeight: 46, border: 'none', borderRadius: 14, background: loading ? '#334155' : 'linear-gradient(135deg,#00c2cb,#38bdf8)', color: '#0f172a', fontSize: 16, fontWeight: 950, cursor: loading ? 'wait' : 'pointer', fontFamily: 'inherit', boxShadow: '0 14px 34px rgba(56,189,248,0.18)' }}>
+            <button id="travel-search-button" onClick={() => void runSearch()} disabled={loading} style={{ marginTop: 12, width: '100%', minHeight: 46, border: 'none', borderRadius: 14, background: loading ? 'var(--ft-border-strong)' : 'linear-gradient(135deg,#00c2cb,var(--ft-accent))', color: 'var(--ft-bg)', fontSize: 16, fontWeight: 950, cursor: loading ? 'wait' : 'pointer', fontFamily: 'inherit', boxShadow: '0 14px 34px rgba(56,189,248,0.18)' }}>
               {loading ? t('searching') : t('searchButton')}
             </button>
           ) : (
-            <a id="travel-search-button" href="/login?redirect=/travel" style={{ marginTop: 12, width: '100%', minHeight: 46, border: 'none', borderRadius: 14, background: 'linear-gradient(135deg,#00c2cb,#38bdf8)', color: '#0f172a', fontSize: 16, fontWeight: 950, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 14px 34px rgba(56,189,248,0.18)', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <a id="travel-search-button" href="/login?redirect=/travel" style={{ marginTop: 12, width: '100%', minHeight: 46, border: 'none', borderRadius: 14, background: 'linear-gradient(135deg,#00c2cb,var(--ft-accent))', color: 'var(--ft-bg)', fontSize: 16, fontWeight: 950, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 14px 34px rgba(56,189,248,0.18)', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {t('signInSearch')}
             </a>
           )}
@@ -635,7 +635,7 @@ export default function TravelPage() {
               <button onClick={() => void runSearch()} style={{ marginTop: 12, minHeight: 44, border: `1px solid ${BORDER}`, borderRadius: 10, background: CARD, color: TEXT, padding: '9px 14px', fontWeight: 800, fontFamily: 'inherit' }}>{t('retrySearch')}</button>
             </div>
           )}
-          {loading && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 12 }}>{[1,2,3].map(i => <div key={i} style={{ height: 260, borderRadius: 16, background: 'linear-gradient(90deg,#111827,#1e293b,#111827)', border: `1px solid ${BORDER}` }} />)}</div>}
+          {loading && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 12 }}>{[1,2,3].map(i => <div key={i} style={{ height: 260, borderRadius: 16, background: 'linear-gradient(90deg,#111827,var(--ft-surface),#111827)', border: `1px solid ${BORDER}` }} />)}</div>}
           {!showResults && <div style={{ border: `1px dashed ${BORDER}`, borderRadius: 18, padding: 22, background: CARD_2, color: MUTED, textAlign: 'center' }}>{t('results.empty')}</div>}
 
           {!loading && ((searchType !== 'flights' && activeTab === 'accommodation') || searchType === 'accommodation') && hotels.length > 0 && (

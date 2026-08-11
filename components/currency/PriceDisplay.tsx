@@ -76,11 +76,11 @@ export default function PriceDisplay({
   if (layout === 'inline') {
     return (
       <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
-        <span style={{ fontSize: SIZE_MAP[size].primary, fontWeight: 700, color: '#f1f5f9' }}>
+        <span style={{ fontSize: SIZE_MAP[size].primary, fontWeight: 700, color: 'var(--ft-text)' }}>
           {primary}
         </span>
         {showSecondary && (
-          <span style={{ fontSize: SIZE_MAP[size].secondary, color: '#64748b' }}>
+          <span style={{ fontSize: SIZE_MAP[size].secondary, color: 'var(--ft-text-tertiary)' }}>
             ≈ {secondaryText}
           </span>
         )}
@@ -91,13 +91,13 @@ export default function PriceDisplay({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
       <span style={{
-        fontSize: SIZE_MAP[size].primary, fontWeight: 700, color: '#f1f5f9',
+        fontSize: SIZE_MAP[size].primary, fontWeight: 700, color: 'var(--ft-text)',
         lineHeight: 1.15,
       }}>
         {primary}
       </span>
       {showSecondary && (
-        <span style={{ fontSize: SIZE_MAP[size].secondary, color: '#64748b', marginTop: 2 }}>
+        <span style={{ fontSize: SIZE_MAP[size].secondary, color: 'var(--ft-text-tertiary)', marginTop: 2 }}>
           ≈ {secondaryText}
         </span>
       )}

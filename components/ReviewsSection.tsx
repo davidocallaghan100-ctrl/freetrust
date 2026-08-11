@@ -55,7 +55,7 @@ function StarPicker({ value, onChange, label }: { value: number; onChange: (v: n
   const [hover, setHover] = useState(0)
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-      <span style={{ fontSize: '0.82rem', color: '#94a3b8' }}>{label}</span>
+      <span style={{ fontSize: '0.82rem', color: 'var(--ft-text-secondary)' }}>{label}</span>
       <div style={{ display: 'flex', gap: '0.1rem' }}>
         {[1, 2, 3, 4, 5].map(s => (
           <button
@@ -67,7 +67,7 @@ function StarPicker({ value, onChange, label }: { value: number; onChange: (v: n
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
               fontSize: '1.4rem', lineHeight: 1,
-              color: s <= (hover || value) ? '#00d4aa' : '#2a2a3a',
+              color: s <= (hover || value) ? '#00d4aa' : 'var(--ft-surface)',
               padding: '0 2px',
               transition: 'color 0.1s',
             }}
@@ -93,8 +93,8 @@ function ReviewerAvatar({ reviewer }: { reviewer: ReviewerProfile }) {
     )
   }
   const gradients = [
-    'linear-gradient(135deg,#00d4aa,#38bdf8)',
-    'linear-gradient(135deg,#38bdf8,#818cf8)',
+    'linear-gradient(135deg,#00d4aa,var(--ft-accent))',
+    'linear-gradient(135deg,var(--ft-accent),#818cf8)',
     'linear-gradient(135deg,#f59e0b,#ef4444)',
     'linear-gradient(135deg,#34d399,#06b6d4)',
   ]
@@ -104,7 +104,7 @@ function ReviewerAvatar({ reviewer }: { reviewer: ReviewerProfile }) {
       width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
       background: grad,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: '0.65rem', fontWeight: 800, color: '#0a0a0f',
+      fontSize: '0.65rem', fontWeight: 800, color: 'var(--ft-bg)',
     }}>
       {initials}
     </div>
@@ -219,22 +219,22 @@ export default function ReviewsSection({
       {reviews.length > 0 && (
         <div style={{
           display: 'flex', gap: '1.5rem', padding: '1.25rem',
-          background: '#13131a', border: '1px solid #2a2a3a',
+          background: 'var(--ft-surface)', border: '1px solid var(--ft-surface)',
           borderRadius: 12, marginBottom: '1.25rem', flexWrap: 'wrap', alignItems: 'center',
         }}>
           <div style={{ textAlign: 'center', flexShrink: 0 }}>
-            <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#f1f5f9', lineHeight: 1 }}>
+            <div style={{ fontSize: '2.5rem', fontWeight: 900, color: 'var(--ft-text)', lineHeight: 1 }}>
               {avgRating.toFixed(1)}
             </div>
             <Stars rating={avgRating} size={16} />
-            <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 3 }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', marginTop: 3 }}>
               {total} review{total !== 1 ? 's' : ''}
             </div>
           </div>
           <div style={{ flex: 1, minWidth: 160 }}>
             {distribution.map(d => (
               <div key={d.star} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                <span style={{ fontSize: '0.72rem', color: '#64748b', width: 10, textAlign: 'right' }}>{d.star}</span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', width: 10, textAlign: 'right' }}>{d.star}</span>
                 <span style={{ color: '#00d4aa', fontSize: '0.72rem' }}>★</span>
                 <div style={{
                   flex: 1, height: 5, background: 'rgba(42,42,58,0.9)',
@@ -242,11 +242,11 @@ export default function ReviewsSection({
                 }}>
                   <div style={{
                     width: `${d.pct}%`, height: '100%',
-                    background: 'linear-gradient(90deg,#00d4aa,#38bdf8)',
+                    background: 'linear-gradient(90deg,#00d4aa,var(--ft-accent))',
                     borderRadius: 999, transition: 'width 0.4s',
                   }} />
                 </div>
-                <span style={{ fontSize: '0.7rem', color: '#475569', width: 18 }}>{d.count}</span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--ft-text-faint)', width: 18 }}>{d.count}</span>
               </div>
             ))}
           </div>
@@ -263,7 +263,7 @@ export default function ReviewsSection({
             background: 'linear-gradient(135deg,#00d4aa,#1abfa0)',
             border: 'none', borderRadius: 10,
             padding: '0.65rem 1.4rem', fontSize: '0.88rem', fontWeight: 700,
-            color: '#0a0a0f', cursor: 'pointer',
+            color: 'var(--ft-bg)', cursor: 'pointer',
             boxShadow: '0 4px 16px rgba(0,212,170,0.3)',
           }}
         >
@@ -275,8 +275,8 @@ export default function ReviewsSection({
       {!currentUserId && canReview !== false && (
         <div style={{
           marginBottom: '1.25rem', padding: '0.85rem 1rem',
-          background: '#13131a', border: '1px solid #2a2a3a',
-          borderRadius: 10, fontSize: '0.85rem', color: '#94a3b8',
+          background: 'var(--ft-surface)', border: '1px solid var(--ft-surface)',
+          borderRadius: 10, fontSize: '0.85rem', color: 'var(--ft-text-secondary)',
         }}>
           <Link href="/login" style={{ color: '#00d4aa', fontWeight: 700, textDecoration: 'none' }}>
             Sign in
@@ -287,11 +287,11 @@ export default function ReviewsSection({
       {/* Review form */}
       {showForm && (
         <div style={{
-          background: '#13131a', border: '1px solid rgba(0,212,170,0.2)',
+          background: 'var(--ft-surface)', border: '1px solid rgba(0,212,170,0.2)',
           borderRadius: 12, padding: '1.25rem', marginBottom: '1.25rem',
           boxShadow: '0 4px 20px rgba(0,212,170,0.08)',
         }}>
-          <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', fontWeight: 700, color: '#f1f5f9' }}>
+          <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', fontWeight: 700, color: 'var(--ft-text)' }}>
             Leave a Review
           </h3>
 
@@ -304,15 +304,15 @@ export default function ReviewsSection({
             maxLength={1000}
             rows={4}
             style={{
-              width: '100%', background: '#0a0a0f',
-              border: '1px solid #2a2a3a', borderRadius: 8,
-              padding: '0.65rem', fontSize: '0.85rem', color: '#f1f5f9',
+              width: '100%', background: 'var(--ft-bg)',
+              border: '1px solid var(--ft-surface)', borderRadius: 8,
+              padding: '0.65rem', fontSize: '0.85rem', color: 'var(--ft-text)',
               outline: 'none', resize: 'vertical', fontFamily: 'inherit',
               boxSizing: 'border-box', marginTop: '0.75rem',
               lineHeight: 1.6,
             }}
           />
-          <div style={{ fontSize: '0.7rem', color: '#475569', textAlign: 'right', marginBottom: '0.75rem' }}>
+          <div style={{ fontSize: '0.7rem', color: 'var(--ft-text-faint)', textAlign: 'right', marginBottom: '0.75rem' }}>
             {comment.length}/1000
           </div>
 
@@ -334,7 +334,7 @@ export default function ReviewsSection({
                 background: 'linear-gradient(135deg,#00d4aa,#1abfa0)',
                 border: 'none', borderRadius: 8,
                 padding: '0.6rem 1.25rem', fontSize: '0.85rem', fontWeight: 700,
-                color: '#0a0a0f', cursor: submitting ? 'not-allowed' : 'pointer',
+                color: 'var(--ft-bg)', cursor: submitting ? 'not-allowed' : 'pointer',
                 opacity: submitting ? 0.7 : 1,
               }}
             >
@@ -343,9 +343,9 @@ export default function ReviewsSection({
             <button
               onClick={() => { setShowForm(false); setSubmitError(null) }}
               style={{
-                background: 'transparent', border: '1px solid #2a2a3a',
+                background: 'transparent', border: '1px solid var(--ft-surface)',
                 borderRadius: 8, padding: '0.6rem 1rem',
-                fontSize: '0.82rem', color: '#64748b', cursor: 'pointer',
+                fontSize: '0.82rem', color: 'var(--ft-text-tertiary)', cursor: 'pointer',
               }}
             >
               Cancel
@@ -356,15 +356,15 @@ export default function ReviewsSection({
 
       {/* Reviews list */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '0.88rem' }}>
+        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ft-text-tertiary)', fontSize: '0.88rem' }}>
           Loading reviews…
         </div>
       ) : reviews.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ft-text-tertiary)' }}>
           <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⭐</div>
           <p style={{ margin: 0, fontSize: '0.88rem' }}>No reviews yet</p>
           {canShowForm && !showForm && (
-            <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: '#475569' }}>
+            <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: 'var(--ft-text-faint)' }}>
               Be the first to leave a review.
             </p>
           )}
@@ -386,7 +386,7 @@ export default function ReviewsSection({
               <div
                 key={rev.id}
                 style={{
-                  background: '#13131a', border: '1px solid #2a2a3a',
+                  background: 'var(--ft-surface)', border: '1px solid var(--ft-surface)',
                   borderRadius: 12, padding: '1rem',
                 }}
               >
@@ -397,17 +397,17 @@ export default function ReviewsSection({
                       display: 'flex', alignItems: 'center',
                       justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.25rem',
                     }}>
-                      <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#f1f5f9' }}>
+                      <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--ft-text)' }}>
                         {reviewer?.full_name || reviewer?.username || 'FreeTrust Member'}
                       </span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <Stars rating={revRating} size={12} />
-                        <span style={{ fontSize: '0.7rem', color: '#475569' }}>{revDate}</span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--ft-text-faint)' }}>{revDate}</span>
                       </div>
                     </div>
                     {revComment && (
                       <p style={{
-                        color: '#94a3b8', fontSize: '0.85rem', lineHeight: 1.6,
+                        color: 'var(--ft-text-secondary)', fontSize: '0.85rem', lineHeight: 1.6,
                         margin: '0.45rem 0 0', whiteSpace: 'pre-wrap',
                       }}>
                         {revComment}

@@ -99,7 +99,7 @@ export default async function SearchResults({
 }
 
 function ResultCard({ result }: { result: SearchResult }) {
-  const catColor = CATEGORY_COLORS[result.category] ?? "#64748b"
+  const catColor = CATEGORY_COLORS[result.category] ?? "var(--ft-text-tertiary)"
   const catLabel = CATEGORY_LABELS[result.category] ?? result.category
 
   return (

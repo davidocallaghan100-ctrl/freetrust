@@ -43,9 +43,9 @@ export default function ListingDetailPage({ params }: Props) {
       <>
         <style>{`
           *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-          body { background: #0f172a; font-family: 'Segoe UI', system-ui, sans-serif; color: #f8fafc; min-height: 100vh; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; }
+          body { background: var(--ft-bg); font-family: 'Segoe UI', system-ui, sans-serif; color: #f8fafc; min-height: 100vh; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; }
           h1 { font-size: 28px; font-weight: 800; margin-bottom: 12px; }
-          p { color: #64748b; margin-bottom: 24px; }
+          p { color: var(--ft-text-tertiary); margin-bottom: 24px; }
           a { display: inline-flex; padding: 10px 20px; background: linear-gradient(135deg,#10b981,#059669); color: #fff; border-radius: 10px; text-decoration: none; font-weight: 600; }
         `}</style>
         <div>
@@ -64,14 +64,14 @@ export default function ListingDetailPage({ params }: Props) {
     <>
       <style>{`
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #0f172a; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #f8fafc; }
+        body { background: var(--ft-bg); font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #f8fafc; }
         .nav { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 16px 28px; background: rgba(15,23,42,0.92); border-bottom: 1px solid rgba(255,255,255,0.06); backdrop-filter: blur(12px); }
         .nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; }
         .nav-logo-icon { width: 30px; height: 30px; background: linear-gradient(135deg, #10b981, #3b82f6); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
         .nav-logo-text { font-size: 17px; font-weight: 700; color: #f8fafc; }
         .nav-logo-text span { color: #10b981; }
-        .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #64748b; text-decoration: none; transition: color 0.2s; padding: 6px 0; }
-        .back-link:hover { color: #94a3b8; }
+        .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ft-text-tertiary); text-decoration: none; transition: color 0.2s; padding: 6px 0; }
+        .back-link:hover { color: var(--ft-text-secondary); }
 
         .page { max-width: 1080px; margin: 0 auto; padding: 32px 24px; }
         .layout { display: grid; grid-template-columns: 1fr 320px; gap: 28px; align-items: start; }
@@ -85,9 +85,9 @@ export default function ListingDetailPage({ params }: Props) {
         .listing-title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
         .listing-name { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
         .verified { font-size: 18px; }
-        .listing-tagline { font-size: 16px; color: #94a3b8; margin-bottom: 12px; }
+        .listing-tagline { font-size: 16px; color: var(--ft-text-secondary); margin-bottom: 12px; }
         .listing-tags { display: flex; flex-wrap: wrap; gap: 8px; }
-        .tag { font-size: 12px; font-weight: 500; padding: 4px 12px; background: rgba(30,41,59,0.9); border: 1px solid rgba(100,116,139,0.2); border-radius: 20px; color: #64748b; }
+        .tag { font-size: 12px; font-weight: 500; padding: 4px 12px; background: rgba(30,41,59,0.9); border: 1px solid rgba(100,116,139,0.2); border-radius: 20px; color: var(--ft-text-tertiary); }
         .category-tag { color: #10b981; border-color: rgba(16,185,129,0.2); background: rgba(16,185,129,0.06); }
         .pricing-badge { font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 20px; border: 1px solid currentColor; }
 
@@ -96,31 +96,31 @@ export default function ListingDetailPage({ params }: Props) {
         .stats-row { display: flex; gap: 32px; flex-wrap: wrap; }
         .stat { }
         .stat-val { font-size: 22px; font-weight: 800; color: #f8fafc; }
-        .stat-label { font-size: 12px; color: #64748b; margin-top: 2px; }
+        .stat-label { font-size: 12px; color: var(--ft-text-tertiary); margin-top: 2px; }
 
         .section-title { font-size: 15px; font-weight: 700; color: #f8fafc; margin-bottom: 12px; }
-        .long-desc { font-size: 15px; color: #94a3b8; line-height: 1.75; }
+        .long-desc { font-size: 15px; color: var(--ft-text-secondary); line-height: 1.75; }
 
         .detail-card { background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 20px; margin-bottom: 14px; }
         .detail-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .detail-row:last-child { border-bottom: none; }
-        .detail-key { font-size: 13px; color: #64748b; }
+        .detail-key { font-size: 13px; color: var(--ft-text-tertiary); }
         .detail-val { font-size: 13px; color: #f8fafc; font-weight: 500; }
 
         /* Sidebar */
         .sidebar-card { background: rgba(15,23,42,0.8); border: 1px solid rgba(16,185,129,0.2); border-radius: 20px; padding: 28px; position: sticky; top: 80px; }
         .price-row { margin-bottom: 20px; }
-        .price-label { font-size: 12px; color: #64748b; margin-bottom: 4px; }
+        .price-label { font-size: 12px; color: var(--ft-text-tertiary); margin-bottom: 4px; }
         .price-value { font-size: 32px; font-weight: 900; color: #10b981; letter-spacing: -1px; }
-        .price-sub { font-size: 12px; color: #475569; margin-top: 4px; }
+        .price-sub { font-size: 12px; color: var(--ft-text-faint); margin-top: 4px; }
         .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 13px; border: none; border-radius: 11px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; transition: opacity 0.2s, transform 0.15s; text-decoration: none; margin-bottom: 10px; }
         .btn:hover { opacity: 0.9; transform: translateY(-1px); }
         .btn-green { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
-        .btn-blue { background: linear-gradient(135deg, #38bdf8, #818cf8); color: #fff; }
-        .btn-outline { background: rgba(30,41,59,0.8); border: 1px solid rgba(100,116,139,0.3); color: #cbd5e1; }
+        .btn-blue { background: linear-gradient(135deg, var(--ft-accent), #818cf8); color: #fff; }
+        .btn-outline { background: rgba(30,41,59,0.8); border: 1px solid rgba(100,116,139,0.3); color: var(--ft-text-secondary); }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
         .trust-row { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.06); }
-        .trust-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #64748b; }
+        .trust-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ft-text-tertiary); }
       `}</style>
 
       <nav className="nav">
@@ -128,7 +128,7 @@ export default function ListingDetailPage({ params }: Props) {
           <div className="nav-logo-icon">🛡</div>
           <span className="nav-logo-text">Free<span>Trust</span></span>
         </Link>
-        <Link href="/browse" style={{ fontSize: 14, color: '#94a3b8', textDecoration: 'none' }}>← Browse</Link>
+        <Link href="/browse" style={{ fontSize: 14, color: 'var(--ft-text-secondary)', textDecoration: 'none' }}>← Browse</Link>
       </nav>
 
       <div className="page">

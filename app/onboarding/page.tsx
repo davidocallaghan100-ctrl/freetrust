@@ -46,7 +46,7 @@ function ProgressBar({ step, total }: { step: number; total: number }) {
   return (
     <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '2rem' }}>
       {Array.from({ length: total }).map((_, i) => (
-        <div key={i} style={{ flex: 1, height: 3, borderRadius: 999, background: i < step ? '#38bdf8' : 'rgba(148,163,184,0.15)', transition: 'background 0.3s' }} />
+        <div key={i} style={{ flex: 1, height: 3, borderRadius: 999, background: i < step ? 'var(--ft-accent)' : 'rgba(148,163,184,0.15)', transition: 'background 0.3s' }} />
       ))}
     </div>
   )
@@ -310,8 +310,8 @@ export default function OnboardingPage() {
 
   if (loadingProfile) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem', fontFamily: 'system-ui' }}>
-        <div style={{ width: '100%', maxWidth: 420, background: '#1e293b', border: '1px solid rgba(56,189,248,0.12)', borderRadius: 20, padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem', fontFamily: 'system-ui' }}>
+        <div style={{ width: '100%', maxWidth: 420, background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.12)', borderRadius: 20, padding: '2rem', textAlign: 'center', color: 'var(--ft-text-secondary)' }}>
           Loading your FreeTrust profile…
         </div>
       </div>
@@ -319,29 +319,29 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem', fontFamily: 'system-ui' }}>
       <style>{`
-        .ob-card { background: #1e293b; border: 1px solid rgba(56,189,248,0.12); border-radius: 20px; padding: 2.5rem; width: 100%; max-width: 540px; }
-        .ob-type-btn { flex: 1; padding: 1.25rem; border-radius: 14px; border: 2px solid rgba(148,163,184,0.15); background: transparent; cursor: pointer; text-align: center; transition: all 0.15s; color: #f1f5f9; }
-        .ob-type-btn.active { border-color: #38bdf8; background: rgba(56,189,248,0.08); }
+        .ob-card { background: var(--ft-surface); border: 1px solid rgba(56,189,248,0.12); border-radius: 20px; padding: 2.5rem; width: 100%; max-width: 540px; }
+        .ob-type-btn { flex: 1; padding: 1.25rem; border-radius: 14px; border: 2px solid rgba(148,163,184,0.15); background: transparent; cursor: pointer; text-align: center; transition: all 0.15s; color: var(--ft-text); }
+        .ob-type-btn.active { border-color: var(--ft-accent); background: rgba(56,189,248,0.08); }
         .ob-type-btn:hover { border-color: rgba(56,189,248,0.4); }
-        .ob-chip { padding: 0.4rem 0.85rem; border-radius: 999px; font-size: 0.8rem; cursor: pointer; border: 1px solid rgba(148,163,184,0.2); background: transparent; color: #94a3b8; transition: all 0.12s; }
-        .ob-chip.active { background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.35); color: #38bdf8; font-weight: 600; }
-        .ob-chip:hover { border-color: rgba(56,189,248,0.3); color: #cbd5e1; }
-        .ob-input { width: 100%; background: #0f172a; border: 1px solid rgba(56,189,248,0.15); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.92rem; color: #f1f5f9; outline: none; box-sizing: border-box; font-family: inherit; }
+        .ob-chip { padding: 0.4rem 0.85rem; border-radius: 999px; font-size: 0.8rem; cursor: pointer; border: 1px solid rgba(148,163,184,0.2); background: transparent; color: var(--ft-text-secondary); transition: all 0.12s; }
+        .ob-chip.active { background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.35); color: var(--ft-accent); font-weight: 600; }
+        .ob-chip:hover { border-color: rgba(56,189,248,0.3); color: var(--ft-text-secondary); }
+        .ob-input { width: 100%; background: var(--ft-bg); border: 1px solid rgba(56,189,248,0.15); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.92rem; color: var(--ft-text); outline: none; box-sizing: border-box; font-family: inherit; }
         .ob-input:focus { border-color: rgba(56,189,248,0.4); }
-        .ob-label { font-size: 0.8rem; font-weight: 600; color: #64748b; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.06em; display: block; }
-        .ob-btn-primary { width: 100%; padding: 0.85rem; background: linear-gradient(135deg,#38bdf8,#0284c7); border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; color: #0f172a; cursor: pointer; transition: opacity 0.15s; font-family: inherit; }
+        .ob-label { font-size: 0.8rem; font-weight: 600; color: var(--ft-text-tertiary); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.06em; display: block; }
+        .ob-btn-primary { width: 100%; padding: 0.85rem; background: linear-gradient(135deg,var(--ft-accent),#0284c7); border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; color: var(--ft-bg); cursor: pointer; transition: opacity 0.15s; font-family: inherit; }
         .ob-btn-primary:hover:not(:disabled) { opacity: 0.9; }
         .ob-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-        .ob-btn-secondary { background: transparent; border: 1px solid rgba(148,163,184,0.2); border-radius: 10px; padding: 0.75rem 1.5rem; font-size: 0.88rem; color: #64748b; cursor: pointer; font-family: inherit; }
+        .ob-btn-secondary { background: transparent; border: 1px solid rgba(148,163,184,0.2); border-radius: 10px; padding: 0.75rem 1.5rem; font-size: 0.88rem; color: var(--ft-text-tertiary); cursor: pointer; font-family: inherit; }
         .ob-purpose-btn { display: flex; align-items: center; gap: 0.75rem; width: 100%; padding: 0.9rem 1rem; border-radius: 12px; border: 1px solid rgba(148,163,184,0.15); background: transparent; cursor: pointer; text-align: left; transition: all 0.12s; font-family: inherit; }
-        .ob-purpose-btn.active { border-color: #38bdf8; background: rgba(56,189,248,0.08); }
+        .ob-purpose-btn.active { border-color: var(--ft-accent); background: rgba(56,189,248,0.08); }
         .ob-purpose-btn:hover { border-color: rgba(56,189,248,0.3); }
-        .ob-action-btn { display: flex; align-items: center; gap: 0.75rem; width: 100%; padding: 0.9rem 1rem; border-radius: 12px; border: 1px solid rgba(148,163,184,0.15); background: transparent; cursor: pointer; text-align: left; transition: all 0.12s; color: #f1f5f9; font-family: inherit; }
+        .ob-action-btn { display: flex; align-items: center; gap: 0.75rem; width: 100%; padding: 0.9rem 1rem; border-radius: 12px; border: 1px solid rgba(148,163,184,0.15); background: transparent; cursor: pointer; text-align: left; transition: all 0.12s; color: var(--ft-text); font-family: inherit; }
         .ob-action-btn:hover { border-color: rgba(56,189,248,0.35); background: rgba(56,189,248,0.05); }
         .ob-avatar-ring { width: 88px; height: 88px; border-radius: 50%; border: 2px dashed rgba(56,189,248,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; position: relative; transition: border-color 0.2s; background: rgba(56,189,248,0.05); flex-shrink: 0; }
-        .ob-avatar-ring:hover { border-color: #38bdf8; }
+        .ob-avatar-ring:hover { border-color: var(--ft-accent); }
         @media (max-width: 600px) { .ob-card { padding: 1.75rem 1.25rem; } }
       `}</style>
 
@@ -353,19 +353,19 @@ export default function OnboardingPage() {
           <div>
             <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>👋</div>
-              <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#f1f5f9', margin: '0 0 0.4rem' }}>Welcome to FreeTrust</h1>
-              <p style={{ color: '#64748b', fontSize: '0.92rem', margin: 0 }}>Let&apos;s get you set up. How are you joining?</p>
+              <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--ft-text)', margin: '0 0 0.4rem' }}>Welcome to FreeTrust</h1>
+              <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.92rem', margin: 0 }}>Let&apos;s get you set up. How are you joining?</p>
             </div>
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
               <button className={`ob-type-btn${accountType === 'individual' ? ' active' : ''}`} onClick={() => setAccountType('individual')}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>👤</div>
                 <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.25rem' }}>Individual</div>
-                <div style={{ fontSize: '0.78rem', color: '#64748b' }}>Freelancer, creator, professional</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)' }}>Freelancer, creator, professional</div>
               </button>
               <button className={`ob-type-btn${accountType === 'business' ? ' active' : ''}`} onClick={() => setAccountType('business')}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🏢</div>
                 <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.25rem' }}>Business</div>
-                <div style={{ fontSize: '0.78rem', color: '#64748b' }}>Company, agency, organisation</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)' }}>Company, agency, organisation</div>
               </button>
             </div>
             <button className="ob-btn-primary" onClick={continueFromAccountType}>Continue →</button>
@@ -376,8 +376,8 @@ export default function OnboardingPage() {
         {step === 2 && (
           <div>
             <div style={{ marginBottom: '1.75rem' }}>
-              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f1f5f9', margin: '0 0 0.3rem' }}>Set up your profile</h2>
-              <p style={{ color: '#64748b', fontSize: '0.88rem', margin: 0 }}>Required before your account is visible to members — bio is optional and can be added later</p>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--ft-text)', margin: '0 0 0.3rem' }}>Set up your profile</h2>
+              <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.88rem', margin: 0 }}>Required before your account is visible to members — bio is optional and can be added later</p>
             </div>
 
             {/* Photo upload */}
@@ -399,11 +399,11 @@ export default function OnboardingPage() {
                 <button
                   type="button"
                   onClick={() => photoInputRef.current?.click()}
-                  style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.82rem', color: '#38bdf8', cursor: 'pointer', fontFamily: 'inherit', marginBottom: '0.35rem', display: 'block' }}
+                  style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.82rem', color: 'var(--ft-accent)', cursor: 'pointer', fontFamily: 'inherit', marginBottom: '0.35rem', display: 'block' }}
                 >
                   {photoUploading ? 'Uploading…' : avatarUrl ? '✓ Change photo' : 'Upload photo'}
                 </button>
-                <div style={{ fontSize: '0.72rem', color: avatarUrl ? '#34d399' : '#f87171', fontWeight: 600 }}>
+                <div style={{ fontSize: '0.72rem', color: avatarUrl ? '#34d399' : 'var(--ft-danger)', fontWeight: 600 }}>
                   {avatarUrl ? '✓ Photo set' : '* Required — must show your face'}
                 </div>
               </div>
@@ -453,20 +453,20 @@ export default function OnboardingPage() {
                       justifyContent: 'flex-end',
                       padding: '0.5rem 0.75rem',
                     }}>
-                      <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#f1f5f9' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--ft-text)' }}>
                         ✓ Change cover
                       </span>
                     </div>
                   </>
                 ) : (
-                  <div style={{ textAlign: 'center', color: '#64748b' }}>
+                  <div style={{ textAlign: 'center', color: 'var(--ft-text-tertiary)' }}>
                     <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>
                       {coverUploading ? '⏳' : '🖼️'}
                     </div>
-                    <div style={{ fontSize: '0.82rem', color: '#38bdf8', fontWeight: 600 }}>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--ft-accent)', fontWeight: 600 }}>
                       {coverUploading ? 'Uploading…' : 'Add cover photo'}
                     </div>
-                    <div style={{ fontSize: '0.7rem', color: '#475569', marginTop: '0.15rem' }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--ft-text-faint)', marginTop: '0.15rem' }}>
                       Optional — can skip and add later
                     </div>
                   </div>
@@ -569,8 +569,8 @@ export default function OnboardingPage() {
         {step === 3 && (
           <div>
             <div style={{ marginBottom: '1.75rem' }}>
-              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f1f5f9', margin: '0 0 0.3rem' }}>What are you here for?</h2>
-              <p style={{ color: '#64748b', fontSize: '0.88rem', margin: 0 }}>We&apos;ll personalise your experience based on your answers</p>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--ft-text)', margin: '0 0 0.3rem' }}>What are you here for?</h2>
+              <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.88rem', margin: 0 }}>We&apos;ll personalise your experience based on your answers</p>
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
@@ -580,10 +580,10 @@ export default function OnboardingPage() {
                   <button key={p.id} className={`ob-purpose-btn${selectedPurposes.includes(p.id) ? ' active' : ''}`} onClick={() => toggleArr(selectedPurposes, setSelectedPurposes, p.id)}>
                     <span style={{ fontSize: '1.4rem' }}>{p.icon}</span>
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#f1f5f9' }}>{p.label}</div>
-                      <div style={{ fontSize: '0.78rem', color: '#64748b' }}>{p.desc}</div>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--ft-text)' }}>{p.label}</div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)' }}>{p.desc}</div>
                     </div>
-                    {selectedPurposes.includes(p.id) && <span style={{ marginLeft: 'auto', color: '#38bdf8', fontSize: '1.1rem' }}>✓</span>}
+                    {selectedPurposes.includes(p.id) && <span style={{ marginLeft: 'auto', color: 'var(--ft-accent)', fontSize: '1.1rem' }}>✓</span>}
                   </button>
                 ))}
               </div>
@@ -609,8 +609,8 @@ export default function OnboardingPage() {
         {step === 4 && (
           <div>
             <div style={{ marginBottom: '1.75rem' }}>
-              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f1f5f9', margin: '0 0 0.3rem' }}>What are your hobbies?</h2>
-              <p style={{ color: '#64748b', fontSize: '0.88rem', margin: 0 }}>Pick at least one — this helps real members connect around shared interests.</p>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--ft-text)', margin: '0 0 0.3rem' }}>What are your hobbies?</h2>
+              <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.88rem', margin: 0 }}>Pick at least one — this helps real members connect around shared interests.</p>
             </div>
 
             {/* Preset hobby chips — tap to toggle */}
@@ -661,7 +661,7 @@ export default function OnboardingPage() {
                     padding: '0 1rem',
                     fontSize: '0.85rem',
                     fontWeight: 600,
-                    color: customHobby.trim() ? '#38bdf8' : '#475569',
+                    color: customHobby.trim() ? 'var(--ft-accent)' : 'var(--ft-text-faint)',
                     cursor: customHobby.trim() ? 'pointer' : 'not-allowed',
                     fontFamily: 'inherit',
                   }}
@@ -708,8 +708,8 @@ export default function OnboardingPage() {
         {step === 5 && (
           <div>
             <div style={{ marginBottom: '1.75rem' }}>
-              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f1f5f9', margin: '0 0 0.3rem' }}>What do you want to do first?</h2>
-              <p style={{ color: '#64748b', fontSize: '0.88rem', margin: 0 }}>Choose where to go after setup — you can change this any time</p>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--ft-text)', margin: '0 0 0.3rem' }}>What do you want to do first?</h2>
+              <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.88rem', margin: 0 }}>Choose where to go after setup — you can change this any time</p>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.75rem' }}>
@@ -722,7 +722,7 @@ export default function OnboardingPage() {
                 <button key={a.id} className="ob-action-btn" onClick={() => complete(a.href)} disabled={saving}>
                   <span style={{ fontSize: '1.5rem' }}>{a.icon}</span>
                   <span style={{ fontWeight: 600, fontSize: '0.92rem' }}>{a.label}</span>
-                  <span style={{ marginLeft: 'auto', color: '#38bdf8', fontSize: '0.8rem' }}>{saving ? '…' : '→'}</span>
+                  <span style={{ marginLeft: 'auto', color: 'var(--ft-accent)', fontSize: '0.8rem' }}>{saving ? '…' : '→'}</span>
                 </button>
               ))}
             </div>
@@ -735,14 +735,14 @@ export default function OnboardingPage() {
         {step === 6 && (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
-            <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#f1f5f9', margin: '0 0 0.5rem' }}>You&apos;re all set!</h2>
-            <p style={{ color: '#64748b', fontSize: '0.92rem', margin: '0 0 1.5rem' }}>Welcome to the FreeTrust community.</p>
+            <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--ft-text)', margin: '0 0 0.5rem' }}>You&apos;re all set!</h2>
+            <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.92rem', margin: '0 0 1.5rem' }}>Welcome to the FreeTrust community.</p>
 
             {/* Trust bonus */}
             <div style={{ background: 'linear-gradient(135deg,rgba(56,189,248,0.1),rgba(129,140,248,0.08))', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 14, padding: '1.25rem', marginBottom: '1rem' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 900, color: '#38bdf8' }}>₮{trustAwarded > 0 ? trustAwarded : 25}</div>
-              <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#f1f5f9', marginTop: '0.25rem' }}>Trust Bonus Awarded! ✅</div>
-              <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.2rem' }}>Added to your wallet as a founding member</div>
+              <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--ft-accent)' }}>₮{trustAwarded > 0 ? trustAwarded : 25}</div>
+              <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--ft-text)', marginTop: '0.25rem' }}>Trust Bonus Awarded! ✅</div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', marginTop: '0.2rem' }}>Added to your wallet as a founding member</div>
             </div>
 
             {/* Founding badge */}
@@ -760,7 +760,7 @@ export default function OnboardingPage() {
                 <button key={a.id} className="ob-action-btn" onClick={() => { window.location.href = a.href }}>
                   <span style={{ fontSize: '1.3rem' }}>{a.icon}</span>
                   <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{a.label}</span>
-                  <span style={{ marginLeft: 'auto', color: '#38bdf8', fontSize: '0.8rem' }}>→</span>
+                  <span style={{ marginLeft: 'auto', color: 'var(--ft-accent)', fontSize: '0.8rem' }}>→</span>
                 </button>
               ))}
             </div>
@@ -772,7 +772,7 @@ export default function OnboardingPage() {
               Go to my dashboard →
             </button>
 
-            <button onClick={() => router.push('/feed')} style={{ marginTop: '0.75rem', width: '100%', background: 'transparent', border: 'none', color: '#64748b', fontSize: '0.82rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button onClick={() => router.push('/feed')} style={{ marginTop: '0.75rem', width: '100%', background: 'transparent', border: 'none', color: 'var(--ft-text-tertiary)', fontSize: '0.82rem', cursor: 'pointer', fontFamily: 'inherit' }}>
               Go to feed instead
             </button>
           </div>

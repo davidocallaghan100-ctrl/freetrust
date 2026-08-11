@@ -83,6 +83,41 @@ ul, ol {
   --sidebar-w:  260px;
 
   --transition: 0.2s ease;
+
+  /* ---------- Shell theme (light/dark toggle) ----------
+     Phase 1 scope: only the global shell/chrome (Nav, BottomNav, Sidebar,
+     drawer, root layout background) reads these. Dark values below match
+     the existing production shell colors exactly, so dark mode (the
+     default) is pixel-identical to before this change. */
+  --ft-bg:            #0f172a;
+  --ft-surface:       #1e293b;
+  --ft-border:        #1e293b;
+  --ft-border-strong: #334155;
+  --ft-text:          #f1f5f9;
+  --ft-text-secondary:#94a3b8;
+  --ft-text-tertiary: #64748b;
+  --ft-text-faint:    #475569;
+  --ft-accent:        #38bdf8;
+  --ft-accent-soft:   rgba(56,189,248,0.08);
+  --ft-danger:        #f87171;
+  --ft-panel-bg:      linear-gradient(180deg, rgba(15,23,42,0.98), rgba(2,6,23,0.98));
+  --ft-panel-border:  rgba(96,165,250,0.28);
+}
+
+[data-theme="light"] {
+  --ft-bg:            #ffffff;
+  --ft-surface:       #f1f5f9;
+  --ft-border:        #e2e8f0;
+  --ft-border-strong: #cbd5e1;
+  --ft-text:          #0f172a;
+  --ft-text-secondary:#475569;
+  --ft-text-tertiary: #64748b;
+  --ft-text-faint:    #94a3b8;
+  --ft-accent:        #0284c7;
+  --ft-accent-soft:   rgba(2,132,199,0.08);
+  --ft-danger:        #dc2626;
+  --ft-panel-bg:      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98));
+  --ft-panel-border:  rgba(2,132,199,0.22);
 }
 
 /* ---------- Typography ---------- */
@@ -1672,9 +1707,9 @@ html[dir="rtl"] .ft-page-content {
 
 /* Agenda table wrapper */
 .ft-calendar-wrap .rbc-agenda-view {
-  background: #13131a !important;
-  color: #f1f5f9 !important;
-  border: 1px solid #2a2a3a !important;
+  background: var(--ft-surface) !important;
+  color: var(--ft-text) !important;
+  border: 1px solid var(--ft-border-strong) !important;
   border-radius: 12px !important;
   overflow: visible !important;
 }
@@ -1689,26 +1724,26 @@ html[dir="rtl"] .ft-page-content {
 /* Column headers (DATE / TIME / EVENT) */
 .ft-calendar-wrap .rbc-agenda-view table thead th,
 .ft-calendar-wrap .rbc-header {
-  background: #0d0d1a !important;
-  color: #94a3b8 !important;
+  background: var(--ft-bg) !important;
+  color: var(--ft-text-secondary) !important;
   font-size: 11px !important;
   font-weight: 700 !important;
   letter-spacing: 0.08em !important;
   text-transform: uppercase !important;
   padding: 10px 14px !important;
-  border-bottom: 1px solid #2a2a3a !important;
-  border-right: 1px solid #2a2a3a !important;
+  border-bottom: 1px solid var(--ft-border-strong) !important;
+  border-right: 1px solid var(--ft-border-strong) !important;
 }
 
 /* Date cell (left column) */
 .ft-calendar-wrap .rbc-agenda-date-cell {
-  background: #0d0d1a !important;
+  background: var(--ft-bg) !important;
   color: #00d4aa !important;
   font-weight: 700 !important;
   font-size: 13px !important;
   padding: 12px 14px !important;
-  border-right: 1px solid #2a2a3a !important;
-  border-bottom: 1px solid #1e1e2e !important;
+  border-right: 1px solid var(--ft-border-strong) !important;
+  border-bottom: 1px solid var(--ft-border) !important;
   white-space: nowrap !important;
   vertical-align: top !important;
   width: 90px !important;
@@ -1716,13 +1751,13 @@ html[dir="rtl"] .ft-page-content {
 
 /* Time cell (middle column) */
 .ft-calendar-wrap .rbc-agenda-time-cell {
-  background: #13131a !important;
-  color: #94a3b8 !important;
+  background: var(--ft-surface) !important;
+  color: var(--ft-text-secondary) !important;
   font-size: 12px !important;
   font-weight: 500 !important;
   padding: 12px 14px !important;
-  border-right: 1px solid #2a2a3a !important;
-  border-bottom: 1px solid #1e1e2e !important;
+  border-right: 1px solid var(--ft-border-strong) !important;
+  border-bottom: 1px solid var(--ft-border) !important;
   white-space: nowrap !important;
   vertical-align: top !important;
   width: 110px !important;
@@ -1730,12 +1765,12 @@ html[dir="rtl"] .ft-page-content {
 
 /* Event cell (right column) — kill the baby blue background */
 .ft-calendar-wrap .rbc-agenda-event-cell {
-  background: #13131a !important;
-  color: #f1f5f9 !important;
+  background: var(--ft-surface) !important;
+  color: var(--ft-text) !important;
   font-size: 14px !important;
   font-weight: 600 !important;
   padding: 12px 14px !important;
-  border-bottom: 1px solid #1e1e2e !important;
+  border-bottom: 1px solid var(--ft-border) !important;
   border-left: 3px solid #00d4aa !important;
   white-space: normal !important;
   word-break: break-word !important;
@@ -1754,7 +1789,7 @@ html[dir="rtl"] .ft-page-content {
 .ft-calendar-wrap .rbc-agenda-event-cell a,
 .ft-calendar-wrap .rbc-agenda-event-cell .rbc-event {
   background: transparent !important;
-  color: #f1f5f9 !important;
+  color: var(--ft-text) !important;
   border: none !important;
   padding: 0 !important;
   text-decoration: none !important;
@@ -1764,8 +1799,8 @@ html[dir="rtl"] .ft-page-content {
 
 /* Empty state */
 .ft-calendar-wrap .rbc-agenda-empty {
-  background: #13131a !important;
-  color: #64748b !important;
+  background: var(--ft-surface) !important;
+  color: var(--ft-text-tertiary) !important;
   padding: 40px !important;
   text-align: center !important;
   font-size: 14px !important;

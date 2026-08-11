@@ -66,26 +66,26 @@ export default function AboutPage() {
   }
 
   return (
-    <main id="main-content" style={{ minHeight: '100vh', padding: '96px 20px 48px', background: '#0f172a', color: '#f8fafc' }}>
+    <main id="main-content" style={{ minHeight: '100vh', padding: '96px 20px 48px', background: 'var(--ft-bg)', color: '#f8fafc' }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
       <section style={{ maxWidth: 980, margin: '0 auto' }}>
-        <p style={{ color: '#38bdf8', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: 12 }}>About FreeTrust</p>
+        <p style={{ color: 'var(--ft-accent)', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: 12 }}>About FreeTrust</p>
         <h1 style={{ fontSize: 'clamp(2.25rem, 7vw, 4.8rem)', lineHeight: 0.95, letterSpacing: '-0.06em', margin: '12px 0 18px' }}>
           The community economy marketplace where trust is currency.
         </h1>
-        <p style={{ maxWidth: 760, color: '#cbd5e1', fontSize: '1.08rem', lineHeight: 1.7 }}>
+        <p style={{ maxWidth: 760, color: 'var(--ft-text-secondary)', fontSize: '1.08rem', lineHeight: 1.7 }}>
           FreeTrust helps members discover trusted services, products, jobs, events, articles and communities while building reputation through TrustCoins (₮), verified profiles, protected messaging and on-platform payments.
         </p>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 26 }}>
-          <Link href="/register" style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.85rem 1.3rem', borderRadius: 12, fontWeight: 800, textDecoration: 'none' }}>Join FreeTrust</Link>
-          <Link href="/marketplace" style={{ border: '1px solid rgba(148,163,184,0.24)', color: '#cbd5e1', padding: '0.85rem 1.3rem', borderRadius: 12, fontWeight: 750, textDecoration: 'none' }}>Explore marketplace</Link>
+          <Link href="/register" style={{ background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', color: '#fff', padding: '0.85rem 1.3rem', borderRadius: 12, fontWeight: 800, textDecoration: 'none' }}>Join FreeTrust</Link>
+          <Link href="/marketplace" style={{ border: '1px solid rgba(148,163,184,0.24)', color: 'var(--ft-text-secondary)', padding: '0.85rem 1.3rem', borderRadius: 12, fontWeight: 750, textDecoration: 'none' }}>Explore marketplace</Link>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))', gap: 14, marginTop: 42 }}>
           {sections.map(([title, body]) => (
             <article key={title} style={{ background: 'rgba(15,23,42,0.72)', border: '1px solid rgba(148,163,184,0.18)', borderRadius: 18, padding: 20 }}>
               <h2 style={{ margin: '0 0 8px', fontSize: '1.05rem' }}>{title}</h2>
-              <p style={{ margin: 0, color: '#94a3b8', lineHeight: 1.6, fontSize: '0.94rem' }}>{body}</p>
+              <p style={{ margin: 0, color: 'var(--ft-text-secondary)', lineHeight: 1.6, fontSize: '0.94rem' }}>{body}</p>
             </article>
           ))}
         </div>

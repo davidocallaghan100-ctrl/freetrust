@@ -35,7 +35,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 18px 20px 14px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--ft-text);
 }
 
 .headerLeft {
@@ -47,7 +47,7 @@
 .title {
   font-size: 16px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--ft-bg);
   margin: 0;
 }
 
@@ -83,12 +83,12 @@
 }
 
 .clearBtn {
-  color: #94a3b8;
+  color: var(--ft-text-secondary);
 }
 
 .clearBtn:hover {
-  background: #f1f5f9;
-  color: #64748b;
+  background: var(--ft-text);
+  color: var(--ft-text-tertiary);
 }
 
 /* Filters */
@@ -96,7 +96,7 @@
   display: flex;
   gap: 4px;
   padding: 10px 16px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--ft-text);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -112,7 +112,7 @@
   background: transparent;
   font-size: 12px;
   font-weight: 500;
-  color: #64748b;
+  color: var(--ft-text-tertiary);
   cursor: pointer;
   border-radius: 9999px;
   transition: background 0.15s, color 0.15s;
@@ -120,8 +120,8 @@
 }
 
 .filterTab:hover {
-  background: #f1f5f9;
-  color: #334155;
+  background: var(--ft-text);
+  color: var(--ft-border-strong);
 }
 
 .filterTabActive {
@@ -169,13 +169,13 @@
 .emptyTitle {
   font-size: 15px;
   font-weight: 600;
-  color: #334155;
+  color: var(--ft-border-strong);
   margin: 0;
 }
 
 .emptySubtitle {
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--ft-text-secondary);
   margin: 0;
   text-align: center;
 }
@@ -186,7 +186,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 20px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--ft-text);
   background: #fafafa;
 }
 
@@ -211,13 +211,13 @@
   gap: 5px;
   font-size: 12px;
   font-weight: 500;
-  color: #94a3b8;
+  color: var(--ft-text-secondary);
   text-decoration: none;
   transition: color 0.15s;
 }
 
 .settingsLink:hover {
-  color: #64748b;
+  color: var(--ft-text-tertiary);
 }
 
 @media (max-width: 480px) {

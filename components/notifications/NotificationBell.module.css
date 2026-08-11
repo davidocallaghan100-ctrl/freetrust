@@ -16,13 +16,13 @@
   background: transparent;
   border-radius: 10px;
   cursor: pointer;
-  color: #64748b;
+  color: var(--ft-text-tertiary);
   transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
 .bell:hover {
-  background: #f1f5f9;
-  color: #1e293b;
+  background: var(--ft-text);
+  color: var(--ft-surface);
   transform: scale(1.05);
 }
 

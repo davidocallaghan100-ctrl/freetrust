@@ -139,13 +139,13 @@ const TYPE_COLOR: Record<DBType, { bg: string; color: string }> = {
   transfer_received:    { bg: 'rgba(245,158,11,0.15)',  color: '#fbbf24' },
   transfer_sent:        { bg: 'rgba(245,158,11,0.15)',  color: '#fbbf24' },
   // Reviews — sky blue
-  review:               { bg: 'rgba(56,189,248,0.15)',  color: '#38bdf8' },
-  review_received:      { bg: 'rgba(56,189,248,0.15)',  color: '#38bdf8' },
+  review:               { bg: 'rgba(56,189,248,0.15)',  color: 'var(--ft-accent)' },
+  review_received:      { bg: 'rgba(56,189,248,0.15)',  color: 'var(--ft-accent)' },
   // Social / likes — red/pink
-  gig_liked:            { bg: 'rgba(239,68,68,0.15)',   color: '#f87171' },
-  post_like:            { bg: 'rgba(239,68,68,0.15)',   color: '#f87171' },
-  comment_like:         { bg: 'rgba(239,68,68,0.15)',   color: '#f87171' },
-  listing_liked:        { bg: 'rgba(239,68,68,0.15)',   color: '#f87171' },
+  gig_liked:            { bg: 'rgba(239,68,68,0.15)',   color: 'var(--ft-danger)' },
+  post_like:            { bg: 'rgba(239,68,68,0.15)',   color: 'var(--ft-danger)' },
+  comment_like:         { bg: 'rgba(239,68,68,0.15)',   color: 'var(--ft-danger)' },
+  listing_liked:        { bg: 'rgba(239,68,68,0.15)',   color: 'var(--ft-danger)' },
   // Connections — teal
   new_follower:         { bg: 'rgba(0,212,170,0.15)',   color: '#00d4aa' },
   connection_request:   { bg: 'rgba(0,212,170,0.15)',   color: '#00d4aa' },
@@ -159,9 +159,9 @@ const TYPE_COLOR: Record<DBType, { bg: string; color: string }> = {
   new_job_application:  { bg: 'rgba(245,158,11,0.15)',  color: '#fbbf24' },
   job_match:            { bg: 'rgba(245,158,11,0.15)',  color: '#fbbf24' },
   // System — sky blue
-  system:               { bg: 'rgba(56,189,248,0.15)',  color: '#38bdf8' },
+  system:               { bg: 'rgba(56,189,248,0.15)',  color: 'var(--ft-accent)' },
   onboarding:           { bg: 'rgba(0,212,170,0.15)',   color: '#00d4aa' },
-  badge:                { bg: 'rgba(56,189,248,0.15)',  color: '#38bdf8' },
+  badge:                { bg: 'rgba(56,189,248,0.15)',  color: 'var(--ft-accent)' },
 }
 
 const TABS: { key: TabKey; label: string }[] = [
@@ -361,37 +361,37 @@ export default function NotificationsPage() {
   if (authed === null) return null
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
       <style>{`
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
         @keyframes np-fadein { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:none} }
         .np-tabs::-webkit-scrollbar { display:none }
         .np-notif { position:relative; display:flex; align-items:flex-start; gap:0.85rem; padding:1rem 1.1rem; border-left:3px solid transparent; border-bottom:1px solid rgba(56,189,248,0.06); transition:background 0.15s; width:100%; text-align:left; box-sizing:border-box; text-decoration:none; color:inherit; }
-        .np-notif.unread { border-left-color:#38bdf8; background:rgba(56,189,248,0.04); }
+        .np-notif.unread { border-left-color:var(--ft-accent); background:rgba(56,189,248,0.04); }
         .np-notif:hover { background:rgba(56,189,248,0.07); }
         .np-notif:last-child { border-bottom:none; }
         .np-act-btn { background:none; border:none; cursor:pointer; border-radius:5px; padding:0.25rem; display:flex; align-items:center; justify-content:center; transition:background 0.12s, color 0.12s; }
         .np-act-btn:hover { background:rgba(56,189,248,0.12); }
-        .np-del-btn:hover { background:rgba(239,68,68,0.12) !important; color:#f87171 !important; }
+        .np-del-btn:hover { background:rgba(239,68,68,0.12) !important; color:var(--ft-danger) !important; }
         .np-pref-toggle { position:relative; width:44px; height:24px; flex-shrink:0; }
         .np-pref-toggle input { opacity:0; width:0; height:0; position:absolute; }
-        .np-pref-track { position:absolute; inset:0; border-radius:12px; background:#334155; transition:background 0.2s; cursor:pointer; }
-        .np-pref-toggle input:checked + .np-pref-track { background:#38bdf8; }
+        .np-pref-track { position:absolute; inset:0; border-radius:12px; background:var(--ft-border-strong); transition:background 0.2s; cursor:pointer; }
+        .np-pref-toggle input:checked + .np-pref-track { background:var(--ft-accent); }
         .np-pref-thumb { position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff; transition:transform 0.2s; pointer-events:none; }
         .np-pref-toggle input:checked ~ .np-pref-thumb { transform:translateX(20px); }
-        .np-hdr-btn { display:flex; align-items:center; gap:0.4rem; padding:0.4rem 0.8rem; border-radius:8px; border:1px solid rgba(56,189,248,0.15); background:transparent; color:#94a3b8; font-size:0.78rem; font-weight:600; cursor:pointer; transition:all 0.15s; font-family:inherit; white-space:nowrap; }
-        .np-hdr-btn:hover { border-color:rgba(56,189,248,0.4); color:#38bdf8; background:rgba(56,189,248,0.06); }
-        .np-hdr-btn.active { background:rgba(56,189,248,0.12); border-color:#38bdf8; color:#38bdf8; }
-        .np-hdr-btn.danger:hover { border-color:rgba(239,68,68,0.35); color:#f87171; background:rgba(239,68,68,0.06); }
-        .np-tab { flex-shrink:0; display:flex; align-items:center; gap:0.3rem; padding:0.4rem 0.8rem; border-radius:999px; border:1px solid rgba(56,189,248,0.12); background:transparent; color:#64748b; font-size:0.78rem; font-weight:600; cursor:pointer; transition:all 0.15s; font-family:inherit; }
-        .np-tab:hover { border-color:rgba(56,189,248,0.3); color:#94a3b8; }
-        .np-tab.active { background:rgba(56,189,248,0.15); border-color:#38bdf8; color:#38bdf8; }
+        .np-hdr-btn { display:flex; align-items:center; gap:0.4rem; padding:0.4rem 0.8rem; border-radius:8px; border:1px solid rgba(56,189,248,0.15); background:transparent; color:var(--ft-text-secondary); font-size:0.78rem; font-weight:600; cursor:pointer; transition:all 0.15s; font-family:inherit; white-space:nowrap; }
+        .np-hdr-btn:hover { border-color:rgba(56,189,248,0.4); color:var(--ft-accent); background:rgba(56,189,248,0.06); }
+        .np-hdr-btn.active { background:rgba(56,189,248,0.12); border-color:var(--ft-accent); color:var(--ft-accent); }
+        .np-hdr-btn.danger:hover { border-color:rgba(239,68,68,0.35); color:var(--ft-danger); background:rgba(239,68,68,0.06); }
+        .np-tab { flex-shrink:0; display:flex; align-items:center; gap:0.3rem; padding:0.4rem 0.8rem; border-radius:999px; border:1px solid rgba(56,189,248,0.12); background:transparent; color:var(--ft-text-tertiary); font-size:0.78rem; font-weight:600; cursor:pointer; transition:all 0.15s; font-family:inherit; }
+        .np-tab:hover { border-color:rgba(56,189,248,0.3); color:var(--ft-text-secondary); }
+        .np-tab.active { background:rgba(56,189,248,0.15); border-color:var(--ft-accent); color:var(--ft-accent); }
         .np-badge { display:inline-flex; align-items:center; justify-content:center; min-width:17px; height:17px; border-radius:999px; padding:0 4px; font-size:0.65rem; font-weight:700; }
       `}</style>
 
       {/* Toast */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', background: '#1e293b', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 10, padding: '10px 18px', fontSize: 13, color: '#f1f5f9', zIndex: 9999, whiteSpace: 'nowrap', boxShadow: '0 8px 30px rgba(0,0,0,0.4)', animation: 'np-fadein 0.2s ease' }}>
+        <div style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 10, padding: '10px 18px', fontSize: 13, color: 'var(--ft-text)', zIndex: 9999, whiteSpace: 'nowrap', boxShadow: '0 8px 30px rgba(0,0,0,0.4)', animation: 'np-fadein 0.2s ease' }}>
           {toast}
         </div>
       )}
@@ -415,7 +415,7 @@ export default function NotificationsPage() {
             </div>
             <div>
               <h1 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, letterSpacing: '-0.3px' }}>Notifications</h1>
-              <p style={{ fontSize: '0.76rem', color: '#64748b', margin: '2px 0 0' }}>
+              <p style={{ fontSize: '0.76rem', color: 'var(--ft-text-tertiary)', margin: '2px 0 0' }}>
                 {loading
                   ? 'Loading…'
                   : unreadCount > 0
@@ -462,14 +462,14 @@ export default function NotificationsPage() {
 
         {/* ── Preferences panel ────────────────────────────────────────────────── */}
         {showPrefs && (
-          <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 14, padding: '1.25rem', marginBottom: '1.25rem', animation: 'np-fadein 0.18s ease' }}>
+          <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 14, padding: '1.25rem', marginBottom: '1.25rem', animation: 'np-fadein 0.18s ease' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <h2 style={{ fontSize: '0.88rem', fontWeight: 700, margin: 0, color: '#f1f5f9' }}>
+              <h2 style={{ fontSize: '0.88rem', fontWeight: 700, margin: 0, color: 'var(--ft-text)' }}>
                 Notification Preferences
               </h2>
               <Link
                 href="/notifications/preferences"
-                style={{ fontSize: '0.75rem', color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}
+                style={{ fontSize: '0.75rem', color: 'var(--ft-accent)', textDecoration: 'none', fontWeight: 600 }}
               >
                 Full settings →
               </Link>
@@ -483,8 +483,8 @@ export default function NotificationsPage() {
                 >
                   <span style={{ fontSize: '1rem', width: 22, textAlign: 'center', flexShrink: 0 }}>{icon}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</div>
-                    <div style={{ fontSize: '0.72rem', color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{desc}</div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ft-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{desc}</div>
                   </div>
                   <label className="np-pref-toggle" aria-label={`Toggle ${label}`}>
                     <input
@@ -506,8 +506,8 @@ export default function NotificationsPage() {
                 marginTop: '1rem',
                 width: '100%',
                 padding: '0.65rem',
-                background: prefsSaved ? '#16a34a' : '#38bdf8',
-                color: prefsSaved ? '#dcfce7' : '#0f172a',
+                background: prefsSaved ? '#16a34a' : 'var(--ft-accent)',
+                color: prefsSaved ? '#dcfce7' : 'var(--ft-bg)',
                 border: 'none',
                 borderRadius: 8,
                 fontSize: '0.85rem',
@@ -541,8 +541,8 @@ export default function NotificationsPage() {
                   <span
                     className="np-badge"
                     style={{
-                      background: activeTab === tab.key ? '#38bdf8' : 'rgba(56,189,248,0.15)',
-                      color:      activeTab === tab.key ? '#0f172a' : '#38bdf8',
+                      background: activeTab === tab.key ? 'var(--ft-accent)' : 'rgba(56,189,248,0.15)',
+                      color:      activeTab === tab.key ? 'var(--ft-bg)' : 'var(--ft-accent)',
                     }}
                   >
                     {count}
@@ -554,7 +554,7 @@ export default function NotificationsPage() {
         </div>
 
         {/* ── Notifications list ────────────────────────────────────────────────── */}
-        <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, overflow: 'hidden' }}>
           {loading ? (
             /* Skeleton */
             <div>
@@ -575,8 +575,8 @@ export default function NotificationsPage() {
             /* Empty state */
             <div style={{ textAlign: 'center', padding: '4rem 1.5rem' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🔔</div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#94a3b8' }}>No notifications here</div>
-              <div style={{ fontSize: '0.82rem', color: '#475569', marginTop: '0.35rem' }}>
+              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--ft-text-secondary)' }}>No notifications here</div>
+              <div style={{ fontSize: '0.82rem', color: 'var(--ft-text-faint)', marginTop: '0.35rem' }}>
                 You&apos;re all caught up{activeTab !== 'all' ? ' in this category' : ''}.
               </div>
             </div>
@@ -595,7 +595,7 @@ export default function NotificationsPage() {
 
         {/* Footer count */}
         {!loading && notifications.length > 0 && (
-          <p style={{ textAlign: 'center', fontSize: '0.72rem', color: '#334155', margin: '0.85rem 0 0' }}>
+          <p style={{ textAlign: 'center', fontSize: '0.72rem', color: 'var(--ft-border-strong)', margin: '0.85rem 0 0' }}>
             {notifications.length} notification{notifications.length !== 1 ? 's' : ''} total
             {unreadCount > 0 ? ` · ${unreadCount} unread` : ''}
           </p>
@@ -640,14 +640,14 @@ function NotificationRow({
         <p style={{
           margin: 0, fontSize: '0.85rem',
           fontWeight: n.read ? 500 : 700,
-          color: n.read ? '#94a3b8' : '#f1f5f9',
+          color: n.read ? 'var(--ft-text-secondary)' : 'var(--ft-text)',
           lineHeight: 1.4,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {n.title}
         </p>
         <p style={{
-          margin: '0.2rem 0 0', fontSize: '0.78rem', color: '#64748b', lineHeight: 1.45,
+          margin: '0.2rem 0 0', fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.45,
           display: '-webkit-box',
           WebkitLineClamp: 2,
           WebkitBoxOrient: 'vertical',
@@ -655,7 +655,7 @@ function NotificationRow({
         }}>
           {n.body}
         </p>
-        <p style={{ margin: '0.3rem 0 0', fontSize: '0.7rem', color: '#475569' }}>
+        <p style={{ margin: '0.3rem 0 0', fontSize: '0.7rem', color: 'var(--ft-text-faint)' }}>
           {relativeTime(n.created_at)}
         </p>
       </div>
@@ -668,7 +668,7 @@ function NotificationRow({
             onClick={handleMarkRead}
             title="Mark as read"
             aria-label="Mark as read"
-            style={{ color: '#38bdf8' }}
+            style={{ color: 'var(--ft-accent)' }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <polyline points="20 6 9 17 4 12"/>
@@ -680,7 +680,7 @@ function NotificationRow({
           onClick={handleDelete}
           title="Remove notification"
           aria-label="Remove notification"
-          style={{ color: '#475569' }}
+          style={{ color: 'var(--ft-text-faint)' }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <line x1="18" y1="6" x2="6" y2="18"/>

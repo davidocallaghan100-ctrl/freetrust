@@ -88,7 +88,7 @@ function AvatarCircle({
         width: size,
         height: size,
         borderRadius: '50%',
-        background: avatarUrl ? '#0f172a' : 'linear-gradient(135deg,#34d399,#059669)',
+        background: avatarUrl ? 'var(--ft-bg)' : 'linear-gradient(135deg,#34d399,#059669)',
         backgroundImage: avatarUrl ? cssUrl(avatarUrl) : undefined,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
@@ -97,7 +97,7 @@ function AvatarCircle({
         justifyContent: 'center',
         fontWeight: 800,
         fontSize,
-        color: '#0f172a',
+        color: 'var(--ft-bg)',
         flexShrink: 0,
       }}
     >
@@ -461,8 +461,8 @@ export default function MessageDrawer({
           top: 0; right: 0; bottom: 0;
           width: 100%;
           max-width: 440px;
-          background: #0f172a;
-          color: #f1f5f9;
+          background: var(--ft-bg);
+          color: var(--ft-text);
           box-shadow: -8px 0 32px rgba(0, 0, 0, 0.4);
           display: flex;
           flex-direction: column;
@@ -522,7 +522,7 @@ export default function MessageDrawer({
           border: 1px solid rgba(52,211,153,0.2);
           border-radius: 999px;
           background: rgba(30,41,59,0.92);
-          color: #cbd5e1;
+          color: var(--ft-text-secondary);
           padding: 0.32rem 0.45rem 0.32rem 0.6rem;
           font-size: 0.7rem;
         }
@@ -539,7 +539,7 @@ export default function MessageDrawer({
           width: 44px; height: 44px;
           border: 1px solid rgba(52,211,153,0.22);
           border-radius: 10px;
-          background: #1e293b;
+          background: var(--ft-surface);
           color: #34d399;
           display: inline-flex; align-items: center; justify-content: center;
           cursor: pointer;
@@ -548,11 +548,11 @@ export default function MessageDrawer({
         }
         .drawer-textarea {
           flex: 1;
-          background: #1e293b;
+          background: var(--ft-surface);
           border: 1px solid rgba(56,189,248,0.3);
           border-radius: 10px;
-          color: #f1f5f9;
-          -webkit-text-fill-color: #f1f5f9;
+          color: var(--ft-text);
+          -webkit-text-fill-color: var(--ft-text);
           caret-color: #34d399;
           font-family: inherit;
           font-size: 16px; /* prevents iOS auto-zoom */
@@ -569,7 +569,7 @@ export default function MessageDrawer({
         .drawer-send {
           width: 44px; height: 44px;
           border: none; border-radius: 10px;
-          background: #34d399; color: #0f172a;
+          background: #34d399; color: var(--ft-bg);
           display: inline-flex; align-items: center; justify-content: center;
           cursor: pointer;
           flex-shrink: 0;
@@ -583,19 +583,19 @@ export default function MessageDrawer({
           line-height: 1.5;
           word-break: break-word;
         }
-        .drawer-bubble.sent { background: #34d399; color: #0f172a; border-bottom-right-radius: 4px; }
-        .drawer-bubble.recv { background: #1e293b; color: #e2e8f0; border-bottom-left-radius: 4px; border: 1px solid rgba(56,189,248,0.1); }
+        .drawer-bubble.sent { background: #34d399; color: var(--ft-bg); border-bottom-right-radius: 4px; }
+        .drawer-bubble.recv { background: var(--ft-surface); color: #e2e8f0; border-bottom-left-radius: 4px; border: 1px solid rgba(56,189,248,0.1); }
         .drawer-bubble.gif-only { padding: 0; background: transparent; border: none; max-width: min(80%, 250px); }
         .drawer-bubble.pending { opacity: 0.6; }
         .drawer-message-highlight .drawer-bubble { box-shadow: 0 0 0 3px rgba(251,191,36,0.55); }
-        .drawer-reply-action { align-self: center; border: none; background: transparent; color: #64748b; cursor: pointer; font-size: 0.7rem; padding: 0.2rem 0.35rem; }
+        .drawer-reply-action { align-self: center; border: none; background: transparent; color: var(--ft-text-tertiary); cursor: pointer; font-size: 0.7rem; padding: 0.2rem 0.35rem; }
         .drawer-reply-action:hover { color: #34d399; }
         .drawer-quote { border-left: 3px solid rgba(52,211,153,0.62); border-radius: 8px; padding: 0.35rem 0.5rem; margin-bottom: 0.42rem; background: rgba(15,23,42,0.18); color: inherit; width: 100%; text-align: left; cursor: pointer; font: inherit; }
         .drawer-quote-label { display: block; font-size: 0.66rem; font-weight: 800; opacity: 0.75; margin-bottom: 0.1rem; }
         .drawer-quote-text { display: block; font-size: 0.76rem; opacity: 0.86; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .drawer-reply-preview { margin: 0.65rem 0.75rem 0; border: 1px solid rgba(52,211,153,0.22); border-radius: 12px; background: rgba(30,41,59,0.92); padding: 0.55rem 0.65rem; display: flex; gap: 0.65rem; align-items: center; }
         .drawer-reply-preview-main { flex: 1; min-width: 0; }
-        .drawer-reply-cancel { border: none; background: transparent; color: #94a3b8; font-size: 1.15rem; cursor: pointer; }
+        .drawer-reply-cancel { border: none; background: transparent; color: var(--ft-text-secondary); font-size: 1.15rem; cursor: pointer; }
       `}</style>
 
       <div className="drawer-backdrop" onClick={close} />
@@ -615,7 +615,7 @@ export default function MessageDrawer({
             <div style={{ fontWeight: 700, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {recipient?.full_name || 'Member'}
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)' }}>
               {setupLoading ? 'Opening conversation…' : 'Direct message'}
             </div>
           </div>
@@ -626,7 +626,7 @@ export default function MessageDrawer({
             style={{
               background: 'transparent',
               border: 'none',
-              color: '#94a3b8',
+              color: 'var(--ft-text-secondary)',
               cursor: 'pointer',
               fontSize: '1.6rem',
               lineHeight: 1,
@@ -658,7 +658,7 @@ export default function MessageDrawer({
                 wordBreak:     'break-word',
               }}
             >
-              <div style={{ fontWeight: 700, color: '#f87171', marginBottom: 4 }}>
+              <div style={{ fontWeight: 700, color: 'var(--ft-danger)', marginBottom: 4 }}>
                 Something went wrong
               </div>
               <div>{error}</div>
@@ -666,7 +666,7 @@ export default function MessageDrawer({
           )}
 
           {setupLoading && messages.length === 0 && (
-            <div style={{ textAlign: 'center', color: '#64748b', padding: '1.5rem 0' }}>
+            <div style={{ textAlign: 'center', color: 'var(--ft-text-tertiary)', padding: '1.5rem 0' }}>
               <div
                 aria-hidden="true"
                 style={{
@@ -683,7 +683,7 @@ export default function MessageDrawer({
           )}
 
           {!setupLoading && messages.length === 0 && !error && (
-            <div style={{ textAlign: 'center', color: '#64748b', padding: '1.5rem 0', fontSize: '0.85rem' }}>
+            <div style={{ textAlign: 'center', color: 'var(--ft-text-tertiary)', padding: '1.5rem 0', fontSize: '0.85rem' }}>
               No messages yet. Say hello! 👋
             </div>
           )}
@@ -697,7 +697,7 @@ export default function MessageDrawer({
             return (
               <div key={m.id}>
                 {showTime && (
-                  <div style={{ textAlign: 'center', fontSize: '0.7rem', color: '#475569', margin: '0.5rem 0' }}>
+                  <div style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--ft-text-faint)', margin: '0.5rem 0' }}>
                     {new Date(m.created_at).toLocaleString()}
                   </div>
                 )}
@@ -748,7 +748,7 @@ export default function MessageDrawer({
             <div className="drawer-reply-preview" role="status">
               <div className="drawer-reply-preview-main">
                 <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#34d399' }}>Replying to {replyingTo.sender_id === currentUserId ? 'your message' : (recipient?.full_name || 'member')}</div>
-                <div style={{ fontSize: '0.78rem', color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {replyingTo.content || (replyingTo.attachments?.length ? 'Attachment' : 'Message')}
                 </div>
               </div>
@@ -777,7 +777,7 @@ export default function MessageDrawer({
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: 6, borderRadius: 14, border: '1px solid rgba(52,211,153,0.24)', background: 'rgba(15,23,42,0.72)', alignSelf: 'flex-start' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={selectedGif.previewUrl} alt={selectedGif.title} style={{ width: 88, height: 66, borderRadius: 10, objectFit: 'cover', display: 'block' }} />
-              <span style={{ maxWidth: 150, color: '#cbd5e1', fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedGif.title || 'GIF'}</span>
+              <span style={{ maxWidth: 150, color: 'var(--ft-text-secondary)', fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedGif.title || 'GIF'}</span>
             </div>
           )}
           <div className="drawer-input-row">
@@ -824,7 +824,7 @@ export default function MessageDrawer({
             disabled={(!input.trim() && attachedFiles.length === 0 && !selectedGif) || !conversationId || sending || setupLoading}
             aria-label="Send message"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ft-bg)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="22" y1="2" x2="11" y2="13" />
               <polygon points="22 2 15 22 11 13 2 9 22 2" />
             </svg>

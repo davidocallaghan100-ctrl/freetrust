@@ -110,7 +110,7 @@ function renderText(text: string) {
     return (
       <span key={li}>
         {segments.map((seg, si) =>
-          si % 2 === 1 ? <strong key={si} style={{ color: '#f1f5f9' }}>{seg}</strong> : seg
+          si % 2 === 1 ? <strong key={si} style={{ color: 'var(--ft-text)' }}>{seg}</strong> : seg
         )}
         {li < parts.length - 1 && <br />}
       </span>
@@ -162,27 +162,27 @@ export default function AIPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', paddingTop: 64 }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', paddingTop: 64 }}>
       <style>{`
-        .ai-msg-user { background: linear-gradient(135deg,#38bdf8,#0284c7); color: #0f172a; border-radius: 18px 18px 4px 18px; align-self: flex-end; max-width: 78%; }
-        .ai-msg-ai { background: #1e293b; border: 1px solid #334155; border-radius: 18px 18px 18px 4px; align-self: flex-start; max-width: 88%; }
-        .ai-quick-btn { background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.2); color: #38bdf8; border-radius: 999px; padding: 6px 14px; font-size: 13px; cursor: pointer; white-space: nowrap; transition: all 0.15s; font-family: inherit; flex-shrink: 0; }
+        .ai-msg-user { background: linear-gradient(135deg,var(--ft-accent),#0284c7); color: var(--ft-bg); border-radius: 18px 18px 4px 18px; align-self: flex-end; max-width: 78%; }
+        .ai-msg-ai { background: var(--ft-surface); border: 1px solid var(--ft-border-strong); border-radius: 18px 18px 18px 4px; align-self: flex-start; max-width: 88%; }
+        .ai-quick-btn { background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.2); color: var(--ft-accent); border-radius: 999px; padding: 6px 14px; font-size: 13px; cursor: pointer; white-space: nowrap; transition: all 0.15s; font-family: inherit; flex-shrink: 0; }
         .ai-quick-btn:hover { background: rgba(56,189,248,0.18); border-color: rgba(56,189,248,0.4); }
-        .ai-link-btn { display: inline-flex; align-items: center; gap: 5px; background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.25); border-radius: 8px; padding: 5px 12px; font-size: 12px; color: #38bdf8; text-decoration: none; font-weight: 600; transition: all 0.15s; }
+        .ai-link-btn { display: inline-flex; align-items: center; gap: 5px; background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.25); border-radius: 8px; padding: 5px 12px; font-size: 12px; color: var(--ft-accent); text-decoration: none; font-weight: 600; transition: all 0.15s; }
         .ai-link-btn:hover { background: rgba(56,189,248,0.15); }
         @keyframes ai-typing { 0%,80%,100% { transform: scale(0.6); opacity:0.4; } 40% { transform: scale(1); opacity:1; } }
-        .ai-dot { width: 7px; height: 7px; border-radius: 50%; background: #38bdf8; display: inline-block; animation: ai-typing 1.2s ease-in-out infinite; }
+        .ai-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ft-accent); display: inline-block; animation: ai-typing 1.2s ease-in-out infinite; }
         .ai-dot:nth-child(2) { animation-delay: 0.2s; }
         .ai-dot:nth-child(3) { animation-delay: 0.4s; }
         @media (max-width: 640px) { .ai-msg-ai { max-width: 95%; } .ai-msg-user { max-width: 88%; } }
       `}</style>
 
       {/* Header */}
-      <div style={{ background: '#1e293b', borderBottom: '1px solid rgba(56,189,248,0.1)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, position: 'fixed', top: 104, left: 0, right: 0, zIndex: 50 }}>
-        <Link href="/" style={{ color: '#64748b', textDecoration: 'none', fontSize: 20, lineHeight: 1 }}>←</Link>
-        <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#34d399)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><span style={{ fontWeight: 900, fontSize: 20, color: '#fff', letterSpacing: '-0.5px', fontFamily: 'system-ui, sans-serif', lineHeight: 1 }}>₮</span></div>
+      <div style={{ background: 'var(--ft-surface)', borderBottom: '1px solid rgba(56,189,248,0.1)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, position: 'fixed', top: 104, left: 0, right: 0, zIndex: 50 }}>
+        <Link href="/" style={{ color: 'var(--ft-text-tertiary)', textDecoration: 'none', fontSize: 20, lineHeight: 1 }}>←</Link>
+        <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,var(--ft-accent),#34d399)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><span style={{ fontWeight: 900, fontSize: 20, color: '#fff', letterSpacing: '-0.5px', fontFamily: 'system-ui, sans-serif', lineHeight: 1 }}>₮</span></div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: 15, color: '#f1f5f9' }}>FreeTrust AI</div>
+          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--ft-text)' }}>FreeTrust AI</div>
           <div style={{ fontSize: 11, color: '#34d399', display: 'flex', alignItems: 'center', gap: 5 }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399', display: 'inline-block' }} />
             Online · Always here to help
@@ -204,11 +204,11 @@ export default function AIPage() {
           <div key={i} className={msg.role === 'user' ? 'ai-msg-user' : 'ai-msg-ai'} style={{ padding: '12px 16px', fontSize: 14, lineHeight: 1.65 }}>
             {msg.role === 'ai' && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                <span style={{ fontWeight: 900, fontSize: 14, color: '#38bdf8', fontFamily: 'system-ui, sans-serif' }}>₮</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8' }}>FreeTrust AI</span>
+                <span style={{ fontWeight: 900, fontSize: 14, color: 'var(--ft-accent)', fontFamily: 'system-ui, sans-serif' }}>₮</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ft-accent)' }}>FreeTrust AI</span>
               </div>
             )}
-            <div style={{ color: msg.role === 'user' ? '#0f172a' : '#cbd5e1' }}>
+            <div style={{ color: msg.role === 'user' ? 'var(--ft-bg)' : 'var(--ft-text-secondary)' }}>
               {renderText(msg.text)}
             </div>
             {msg.links && msg.links.length > 0 && (
@@ -234,21 +234,21 @@ export default function AIPage() {
       </div>
 
       {/* Input bar */}
-      <div style={{ position: 'fixed', bottom: 64, left: 0, right: 0, background: '#0f172a', borderTop: '1px solid rgba(56,189,248,0.1)', padding: '10px 16px', zIndex: 50 }}>
+      <div style={{ position: 'fixed', bottom: 64, left: 0, right: 0, background: 'var(--ft-bg)', borderTop: '1px solid rgba(56,189,248,0.1)', padding: '10px 16px', zIndex: 50 }}>
         <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, maxWidth: 720, margin: '0 auto' }}>
           <input
             ref={inputRef}
             value={input}
             onChange={e => setInput(e.target.value)}
             placeholder="Ask me anything about FreeTrust…"
-            style={{ flex: 1, background: '#1e293b', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 12, padding: '12px 16px', color: '#f1f5f9', fontSize: 14, outline: 'none', fontFamily: 'inherit' }}
+            style={{ flex: 1, background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 12, padding: '12px 16px', color: 'var(--ft-text)', fontSize: 14, outline: 'none', fontFamily: 'inherit' }}
             onFocus={e => (e.target.style.borderColor = 'rgba(56,189,248,0.5)')}
             onBlur={e => (e.target.style.borderColor = 'rgba(56,189,248,0.2)')}
           />
           <button
             type="submit"
             disabled={!input.trim() || typing}
-            style={{ background: input.trim() ? 'linear-gradient(135deg,#38bdf8,#0284c7)' : '#1e293b', border: 'none', borderRadius: 12, padding: '0 18px', color: input.trim() ? '#0f172a' : '#475569', fontWeight: 800, fontSize: 18, cursor: input.trim() ? 'pointer' : 'default', transition: 'all 0.15s', minWidth: 48, flexShrink: 0 }}
+            style={{ background: input.trim() ? 'linear-gradient(135deg,var(--ft-accent),#0284c7)' : 'var(--ft-surface)', border: 'none', borderRadius: 12, padding: '0 18px', color: input.trim() ? 'var(--ft-bg)' : 'var(--ft-text-faint)', fontWeight: 800, fontSize: 18, cursor: input.trim() ? 'pointer' : 'default', transition: 'all 0.15s', minWidth: 48, flexShrink: 0 }}
           >
             ↑
           </button>

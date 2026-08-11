@@ -32,16 +32,16 @@ const TYPE_META: Record<ActivityItem['type'], { icon: string; label: string; col
   job:     { icon: '💼', label: 'Job',     color: '#818cf8', bg: 'rgba(129,140,248,0.1)', border: 'rgba(129,140,248,0.2)' },
   listing: { icon: '🛍',  label: 'Listing', color: '#34d399', bg: 'rgba(52,211,153,0.1)',  border: 'rgba(52,211,153,0.2)'  },
   event:   { icon: '📅', label: 'Event',   color: '#fb923c', bg: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.2)'  },
-  article: { icon: '📰', label: 'Article', color: '#38bdf8', bg: 'rgba(56,189,248,0.1)',  border: 'rgba(56,189,248,0.2)'  },
+  article: { icon: '📰', label: 'Article', color: 'var(--ft-accent)', bg: 'rgba(56,189,248,0.1)',  border: 'rgba(56,189,248,0.2)'  },
   review:  { icon: '⭐', label: 'Review',  color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.2)'  },
 }
 
 const STATUS_BADGE: Record<string, { label: string; color: string; bg: string }> = {
   active:   { label: 'Active',   color: '#34d399', bg: 'rgba(52,211,153,0.12)' },
-  draft:    { label: 'Draft',    color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
-  closed:   { label: 'Closed',   color: '#f87171', bg: 'rgba(248,113,113,0.12)' },
-  expired:  { label: 'Expired',  color: '#f87171', bg: 'rgba(248,113,113,0.12)' },
-  inactive: { label: 'Inactive', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
+  draft:    { label: 'Draft',    color: 'var(--ft-text-secondary)', bg: 'rgba(148,163,184,0.12)' },
+  closed:   { label: 'Closed',   color: 'var(--ft-danger)', bg: 'rgba(248,113,113,0.12)' },
+  expired:  { label: 'Expired',  color: 'var(--ft-danger)', bg: 'rgba(248,113,113,0.12)' },
+  inactive: { label: 'Inactive', color: 'var(--ft-text-secondary)', bg: 'rgba(148,163,184,0.12)' },
 }
 
 function ActivityCard({ item }: { item: ActivityItem }) {
@@ -89,10 +89,10 @@ function ActivityCard({ item }: { item: ActivityItem }) {
       {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.25rem' }}>
-          <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#f1f5f9', lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+          <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--ft-text)', lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
             {item.title}
           </div>
-          <span style={{ fontSize: '0.7rem', color: '#475569', whiteSpace: 'nowrap', flexShrink: 0, marginTop: '0.1rem' }}>
+          <span style={{ fontSize: '0.7rem', color: 'var(--ft-text-faint)', whiteSpace: 'nowrap', flexShrink: 0, marginTop: '0.1rem' }}>
             {timeAgo(item.created_at)}
           </span>
         </div>
@@ -115,20 +115,20 @@ function ActivityCard({ item }: { item: ActivityItem }) {
             </span>
           )}
           {item.subtitle && (
-            <span style={{ fontSize: '0.73rem', color: '#64748b' }}>{item.subtitle}</span>
+            <span style={{ fontSize: '0.73rem', color: 'var(--ft-text-tertiary)' }}>{item.subtitle}</span>
           )}
         </div>
 
         {/* Description snippet */}
         {item.description && (
-          <p style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.5, margin: '0.35rem 0 0', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+          <p style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.5, margin: '0.35rem 0 0', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
             {item.description}
           </p>
         )}
 
         {/* Meta */}
         {item.meta && (
-          <div style={{ fontSize: '0.73rem', color: '#475569', marginTop: '0.3rem' }}>{item.meta}</div>
+          <div style={{ fontSize: '0.73rem', color: 'var(--ft-text-faint)', marginTop: '0.3rem' }}>{item.meta}</div>
         )}
       </div>
     </Link>
@@ -138,10 +138,10 @@ function ActivityCard({ item }: { item: ActivityItem }) {
 function SkeletonCard() {
   return (
     <div style={{ display: 'flex', gap: '0.85rem', padding: '0.9rem 1rem', borderRadius: 12, border: '1px solid rgba(148,163,184,0.08)', background: 'rgba(15,23,42,0.3)', animation: 'pulse 1.5s infinite' }}>
-      <div style={{ width: 44, height: 44, borderRadius: 10, background: '#1e293b', flexShrink: 0 }} />
+      <div style={{ width: 44, height: 44, borderRadius: 10, background: 'var(--ft-surface)', flexShrink: 0 }} />
       <div style={{ flex: 1 }}>
-        <div style={{ height: 14, background: '#1e293b', borderRadius: 6, marginBottom: 8, width: '70%' }} />
-        <div style={{ height: 10, background: '#1e293b', borderRadius: 6, width: '40%' }} />
+        <div style={{ height: 14, background: 'var(--ft-surface)', borderRadius: 6, marginBottom: 8, width: '70%' }} />
+        <div style={{ height: 10, background: 'var(--ft-surface)', borderRadius: 6, width: '40%' }} />
       </div>
     </div>
   )
@@ -177,12 +177,12 @@ export default function ActivityFeed({
     return (
       <div style={{ padding: '2.5rem 1rem', textAlign: 'center' }}>
         <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📭</div>
-        <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f1f5f9', marginBottom: '0.4rem' }}>{emptyTitle}</div>
-        <div style={{ fontSize: '0.78rem', color: '#64748b', maxWidth: 280, margin: '0 auto', lineHeight: 1.5 }}>{emptySubtitle}</div>
+        <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ft-text)', marginBottom: '0.4rem' }}>{emptyTitle}</div>
+        <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', maxWidth: 280, margin: '0 auto', lineHeight: 1.5 }}>{emptySubtitle}</div>
         {emptyCtaHref && emptyCtaLabel && (
           <Link
             href={emptyCtaHref}
-            style={{ display: 'inline-block', marginTop: '1rem', fontSize: '0.82rem', fontWeight: 600, color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 8, padding: '0.45rem 1rem', textDecoration: 'none' }}
+            style={{ display: 'inline-block', marginTop: '1rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--ft-accent)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 8, padding: '0.45rem 1rem', textDecoration: 'none' }}
           >
             {emptyCtaLabel}
           </Link>

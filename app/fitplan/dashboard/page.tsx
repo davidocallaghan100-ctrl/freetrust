@@ -5,7 +5,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { buildFitPlanCalendar, planCompletionValue, scheduledWorkoutDate, todayKey } from '@/lib/fitplan/calendar'
 
-const C = { bg: '#06131f', panel: '#0c1f30', card: '#10283b', card2: '#0b1a29', ink: '#050b16', line: 'rgba(148,163,184,.18)', text: '#f8fafc', muted: '#9fb2c7', green: '#10b981', gold: '#f4c96b', blue: '#38bdf8', cyan: '#67e8f9', red: '#fb7185' }
+const C = { bg: '#06131f', panel: '#0c1f30', card: '#10283b', card2: '#0b1a29', ink: '#050b16', line: 'rgba(148,163,184,.18)', text: '#f8fafc', muted: '#9fb2c7', green: '#10b981', gold: '#f4c96b', blue: 'var(--ft-accent)', cyan: '#67e8f9', red: '#fb7185' }
 type FitData = { profile: any; activePlan: any; progress: any[]; checkins: any[]; messages: any[]; completions?: any[]; calendar?: any; trustBalance: number; costs: any }
 type CompletionKind = 'workout' | 'meal'
 type PlanDuration = 'weekly' | 'monthly' | 'quarterly'

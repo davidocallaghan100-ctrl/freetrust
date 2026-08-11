@@ -92,7 +92,7 @@ interface HomeRentShare {
 const TEAL = '#00c2cb'
 const NAVY = '#0a0f1e'
 const CARD = '#111827'
-const SLATE = '#94a3b8'
+const SLATE = 'var(--ft-text-secondary)'
 
 const FEATURE_CARDS = [
   { icon: '💳', title: 'Trust Payments', desc: 'Transfer money peer-to-peer with trust verification built in. Split bills, pay for services, send to family — all protected by FreeTrust’s reputation layer.' },
@@ -157,7 +157,7 @@ const FOOTER_MISSION_COPY = {
 }
 
 const CAT_COLORS_HOME: Record<string, string> = {
-  Technology: '#34d399', Startup: '#38bdf8', AI: '#e879f9', Business: '#a78bfa', Design: '#f472b6', Marketing: '#fb923c', Web3: '#818cf8', 'E-commerce': '#f59e0b', Sustainability: '#4ade80',
+  Technology: '#34d399', Startup: 'var(--ft-accent)', AI: '#e879f9', Business: '#a78bfa', Design: '#f472b6', Marketing: '#fb923c', Web3: '#818cf8', 'E-commerce': '#f59e0b', Sustainability: '#4ade80',
 }
 
 const screenshots = {
@@ -238,8 +238,8 @@ function SectionHeader({ eyebrow, title, children, light = false }: { eyebrow: s
   return (
     <div className="ft-section-head" style={{ textAlign: 'center', maxWidth: 780, margin: '0 auto 2.75rem' }}>
       <div style={{ color: light ? '#0077b6' : '#7ff7ff', fontSize: 12, fontWeight: 900, letterSpacing: '0.11em', textTransform: 'uppercase', marginBottom: 10 }}>{eyebrow}</div>
-      <h2 className="ft-h2" style={{ fontSize: 36, lineHeight: 1.1, letterSpacing: '-0.045em', margin: '0 0 0.85rem', color: light ? '#0f172a' : '#fff', fontWeight: 800 }}>{title}</h2>
-      {children && <p style={{ margin: 0, color: light ? '#475569' : SLATE, fontSize: 16, lineHeight: 1.7 }}>{children}</p>}
+      <h2 className="ft-h2" style={{ fontSize: 36, lineHeight: 1.1, letterSpacing: '-0.045em', margin: '0 0 0.85rem', color: light ? 'var(--ft-bg)' : '#fff', fontWeight: 800 }}>{title}</h2>
+      {children && <p style={{ margin: 0, color: light ? 'var(--ft-text-faint)' : SLATE, fontSize: 16, lineHeight: 1.7 }}>{children}</p>}
     </div>
   )
 }
@@ -247,7 +247,7 @@ function SectionHeader({ eyebrow, title, children, light = false }: { eyebrow: s
 function TrustWorldMap() {
   return (
     <svg viewBox="0 0 1200 320" preserveAspectRatio="xMidYMid slice" style={{ position: 'absolute', inset: '50px 0 auto', width: '100%', height: 320, opacity: 0.35, pointerEvents: 'none' }}>
-      <path d="M80 162c128-94 206-22 324-67 97-37 157 33 250 12 131-30 222 22 307 58 74 31 129 4 190-18" fill="none" stroke="#94a3b8" strokeWidth="2" strokeDasharray="8 12" />
+      <path d="M80 162c128-94 206-22 324-67 97-37 157 33 250 12 131-30 222 22 307 58 74 31 129 4 190-18" fill="none" stroke="var(--ft-text-secondary)" strokeWidth="2" strokeDasharray="8 12" />
       {[190, 438, 640, 858, 1034].map((x, i) => <circle key={x} cx={x} cy={[132, 91, 108, 163, 145][i]} r="6" fill={TEAL} style={{ filter: 'drop-shadow(0 0 10px #00c2cb)' }} />)}
     </svg>
   )
@@ -306,30 +306,30 @@ function LegacyTopDesign({
 
             {/* Right: headline + CTAs */}
             <div className="hero-text" style={{ flex: 1, minWidth: 280, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '1.25rem', maxWidth: 560 }}>
-              <div style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 999, padding: '0.3rem 1rem', fontSize: '0.75rem', color: '#38bdf8', letterSpacing: '0.06em', fontWeight: 700 }}>
+              <div style={{ display: 'inline-block', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 999, padding: '0.3rem 1rem', fontSize: '0.75rem', color: 'var(--ft-accent)', letterSpacing: '0.06em', fontWeight: 700 }}>
                 {t('eyebrow')}
               </div>
 
               <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.8rem)', fontWeight: 900, lineHeight: 1.1, margin: 0, letterSpacing: '-1.5px' }}>
                 {t('headlineLead')}{' '}
-                <span style={{ background: 'linear-gradient(135deg, #38bdf8 0%, #818cf8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{t('headlineAccent')}</span>
+                <span style={{ background: 'linear-gradient(135deg, var(--ft-accent) 0%, #818cf8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{t('headlineAccent')}</span>
               </h1>
 
-              <p style={{ fontSize: '1.05rem', color: '#94a3b8', margin: 0, lineHeight: 1.65, maxWidth: 480 }}>
+              <p style={{ fontSize: '1.05rem', color: 'var(--ft-text-secondary)', margin: 0, lineHeight: 1.65, maxWidth: 480 }}>
                 {t('subtitle')}
               </p>
 
               <div className="hero-cta" style={{ display: 'flex', flexDirection: 'row', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <Link href="/register" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.9rem 2rem', borderRadius: 10, fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.35)' }}>
+                <Link href="/register" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', color: '#fff', padding: '0.9rem 2rem', borderRadius: 10, fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.35)' }}>
                   {t('joinFree')}
                 </Link>
-                <a href="#how-it-works" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', color: '#cbd5e1', padding: '0.9rem 1.75rem', borderRadius: 10, fontWeight: 600, fontSize: '0.95rem', textDecoration: 'none', border: '1px solid rgba(148,163,184,0.2)', scrollBehavior: 'smooth' }}>
+                <a href="#how-it-works" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', color: 'var(--ft-text-secondary)', padding: '0.9rem 1.75rem', borderRadius: 10, fontWeight: 600, fontSize: '0.95rem', textDecoration: 'none', border: '1px solid rgba(148,163,184,0.2)', scrollBehavior: 'smooth' }}>
                   {t('seeHow')}
                 </a>
               </div>
 
               {/* Trust points */}
-              <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.8rem', color: '#64748b' }}>
+              <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.8rem', color: 'var(--ft-text-tertiary)' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> {t('freeToJoin')}</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> {t('realPeople')}</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#34d399' }}>✓</span> {t('paymentsInside')}</span>
@@ -338,12 +338,12 @@ function LegacyTopDesign({
               {/* Server-rendered live stats strip — matches the summary
                   crawled by AI search engines in the JSON-LD. Re-hydrates
                   with the server-fetched counts on first paint. */}
-              <div style={{ marginTop: '0.35rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.82rem', color: '#94a3b8' }}>
-                <span><strong style={{ color: '#38bdf8' }}>{initialCounts.members.toLocaleString()}</strong> {t('members')}</span>
-                <span aria-hidden="true" style={{ color: '#334155' }}>·</span>
-                <span><strong style={{ color: '#38bdf8' }}>{initialCounts.listings.toLocaleString()}</strong> {t('listings')}</span>
-                <span aria-hidden="true" style={{ color: '#334155' }}>·</span>
-                <span><strong style={{ color: '#38bdf8' }}>{initialCounts.communities.toLocaleString()}</strong> {t('communities')}</span>
+              <div style={{ marginTop: '0.35rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.82rem', color: 'var(--ft-text-secondary)' }}>
+                <span><strong style={{ color: 'var(--ft-accent)' }}>{initialCounts.members.toLocaleString()}</strong> {t('members')}</span>
+                <span aria-hidden="true" style={{ color: 'var(--ft-border-strong)' }}>·</span>
+                <span><strong style={{ color: 'var(--ft-accent)' }}>{initialCounts.listings.toLocaleString()}</strong> {t('listings')}</span>
+                <span aria-hidden="true" style={{ color: 'var(--ft-border-strong)' }}>·</span>
+                <span><strong style={{ color: 'var(--ft-accent)' }}>{initialCounts.communities.toLocaleString()}</strong> {t('communities')}</span>
               </div>
             </div>
           </div>
@@ -353,21 +353,21 @@ function LegacyTopDesign({
       {/* ── 4. STATS BAR ── */}
       <div style={{ background: 'rgba(56,189,248,0.03)', borderBottom: '1px solid rgba(56,189,248,0.08)' }}>
         <div className="lp" style={{ padding: '1.75rem 1.25rem 1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', marginBottom: '1rem', fontSize: '0.72rem', color: '#475569' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', marginBottom: '1rem', fontSize: '0.72rem', color: 'var(--ft-text-faint)' }}>
             <span className="live-dot" /> {t('liveStats')}
           </div>
           <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.85rem', textAlign: 'center' }}>
             {[
-              { val: members, prefix: '', suffix: '', label: t('stats.membersGrowing'), sub: membersThisWeek > 0 ? t('stats.thisWeek', {count: membersThisWeek}) : t('stats.joinFree'), color: '#38bdf8' },
-              { val: services, prefix: '', suffix: '', label: t('stats.servicesAvailable'), sub: services === 0 ? t('stats.beFirst') : t('stats.browseNow'), color: '#38bdf8' },
-              { val: products, prefix: '', suffix: '', label: t('stats.productsListed'), sub: products === 0 ? t('stats.listYours') : t('stats.shopNow'), color: '#38bdf8' },
-              { val: trustIssued, prefix: '₮', suffix: '', label: t('stats.totalIssued'), sub: t('stats.sinceLaunch'), color: '#38bdf8' },
+              { val: members, prefix: '', suffix: '', label: t('stats.membersGrowing'), sub: membersThisWeek > 0 ? t('stats.thisWeek', {count: membersThisWeek}) : t('stats.joinFree'), color: 'var(--ft-accent)' },
+              { val: services, prefix: '', suffix: '', label: t('stats.servicesAvailable'), sub: services === 0 ? t('stats.beFirst') : t('stats.browseNow'), color: 'var(--ft-accent)' },
+              { val: products, prefix: '', suffix: '', label: t('stats.productsListed'), sub: products === 0 ? t('stats.listYours') : t('stats.shopNow'), color: 'var(--ft-accent)' },
+              { val: trustIssued, prefix: '₮', suffix: '', label: t('stats.totalIssued'), sub: t('stats.sinceLaunch'), color: 'var(--ft-accent)' },
             ].map(s => (
-              <div key={s.label} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1rem 0.5rem' }}>
+              <div key={s.label} style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1rem 0.5rem' }}>
                 <div className="stat-val" style={{ fontSize: '1.8rem', fontWeight: 900, color: s.color, letterSpacing: '-1px' }}>
                   <Counter target={s.val} prefix={s.prefix} suffix={s.suffix} />
                 </div>
-                <div className="stat-label" style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
+                <div className="stat-label" style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
                 <div className="stat-sub" style={{ fontSize: '0.65rem', color: s.color, marginTop: 3, fontWeight: 600 }}>{s.sub}</div>
               </div>
             ))}
@@ -383,13 +383,13 @@ function LegacyTopDesign({
               {[
                 { val: trustCirculation, prefix: '₮', label: t('trustEconomy.inCirculation'), sub: t('trustEconomy.currentBalances'), color: '#2dd4bf' },
                 { val: trustIssued, prefix: '₮', label: t('trustEconomy.issuedSinceLaunch'), sub: t('trustEconomy.totalEarned'), color: '#34d399' },
-                { val: trustHolders, prefix: '', label: t('trustEconomy.membersHolding'), sub: t('trustEconomy.activeHolders'), color: '#38bdf8' },
+                { val: trustHolders, prefix: '', label: t('trustEconomy.membersHolding'), sub: t('trustEconomy.activeHolders'), color: 'var(--ft-accent)' },
               ].map(s => (
                 <div key={s.label} style={{ background: 'rgba(15,23,42,0.5)', borderRadius: 10, padding: '0.75rem 0.5rem', border: '1px solid rgba(45,212,191,0.1)' }}>
                   <div className="trust-val" style={{ fontSize: '1.6rem', fontWeight: 900, color: s.color, letterSpacing: '-0.5px' }}>
                     <Counter target={s.val} prefix={s.prefix} />
                   </div>
-                  <div className="trust-econ-label" style={{ fontSize: '0.68rem', color: '#64748b', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
+                  <div className="trust-econ-label" style={{ fontSize: '0.68rem', color: 'var(--ft-text-tertiary)', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
                   <div className="trust-econ-sub" style={{ fontSize: '0.62rem', color: s.color, marginTop: 2, fontWeight: 600, opacity: 0.8 }}>{s.sub}</div>
                 </div>
               ))}
@@ -410,7 +410,7 @@ function LegacyTopDesign({
             {/* Live label */}
             <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0 1rem', borderRight: '1px solid rgba(56,189,248,0.12)', background: 'rgba(56,189,248,0.06)', height: '100%', zIndex: 1 }}>
               <span className="live-dot" />
-              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#38bdf8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t('stats.live')}</span>
+              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--ft-accent)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t('stats.live')}</span>
             </div>
             {/* Scrolling track — doubled for seamless loop */}
             <div style={{ flex: 1, overflow: 'hidden' }}>
@@ -418,7 +418,7 @@ function LegacyTopDesign({
                 {[...stats.ticker, ...stats.ticker].map((item, i) => {
                   const icon = item.type === 'join' ? '👋' : item.type === 'trust' ? '₮' : item.type === 'article' ? '📝' : '✨'
                   return (
-                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0 1.25rem', fontSize: '0.75rem', color: '#94a3b8', borderRight: '1px solid rgba(56,189,248,0.06)', flexShrink: 0 }}>
+                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0 1.25rem', fontSize: '0.75rem', color: 'var(--ft-text-secondary)', borderRight: '1px solid rgba(56,189,248,0.06)', flexShrink: 0 }}>
                       <span style={{ fontSize: '0.8rem' }}>{icon}</span>
                       {translateTickerText(item, t)}
                     </span>
@@ -525,7 +525,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
   }), [homeEvents, t])
 
   return (
-      <main style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#fff', fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden' }}>
+      <main style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', color: '#fff', fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
         @keyframes ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
@@ -546,9 +546,9 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
         .ft-hscroll::-webkit-scrollbar { display:none; }
         .ticker-track { display:flex; animation:ticker-scroll 42s linear infinite; white-space:nowrap; width:max-content; }
         .ticker-track:hover { animation-play-state:paused; }
-        .ft-footer-link-button { color: #cbd5e1; text-decoration: none; font-weight: 750; border: 0; background: transparent; padding: 0; text-align: left; font: inherit; cursor: pointer; }
+        .ft-footer-link-button { color: var(--ft-text-secondary); text-decoration: none; font-weight: 750; border: 0; background: transparent; padding: 0; text-align: left; font: inherit; cursor: pointer; }
         .ft-footer-link-button:hover, .ft-footer-link-button.is-active { color: #00c2cb; }
-        .ft-footer-story-body { margin-top: 24px; border: 1px solid rgba(45,212,191,.14); border-radius: 18px; background: linear-gradient(145deg, rgba(17,24,39,.94), rgba(8,16,32,.82)); padding: 22px; color: #cbd5e1; font-size: 14px; line-height: 1.72; }
+        .ft-footer-story-body { margin-top: 24px; border: 1px solid rgba(45,212,191,.14); border-radius: 18px; background: linear-gradient(145deg, rgba(17,24,39,.94), rgba(8,16,32,.82)); padding: 22px; color: var(--ft-text-secondary); font-size: 14px; line-height: 1.72; }
         .ft-footer-story-body h4 { margin: 22px 0 10px; color: #7ff7ff; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
         .ft-footer-story-body h4:first-child { margin-top: 0; }
         .ft-footer-story-body p { margin: 0 0 14px; }
@@ -645,7 +645,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
                 <Link href="/register" style={{ minHeight: 52, padding: '0 22px', borderRadius: 999, fontWeight: 850, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', background: TEAL, color: '#041018', boxShadow: '0 16px 38px rgba(0,194,203,.3)' }}>{t('premiumHero.primaryCta')}</Link>
                 <a href="#how-it-works" style={{ minHeight: 52, padding: '0 22px', borderRadius: 999, fontWeight: 850, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: '#fff', border: '1px solid rgba(255,255,255,.22)', background: 'rgba(255,255,255,.04)' }}>{t('premiumHero.secondaryCta')}</a>
               </div>
-              <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', color: '#cbd5e1', fontWeight: 750, fontSize: 14 }}>
+              <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', color: 'var(--ft-text-secondary)', fontWeight: 750, fontSize: 14 }}>
                 <span style={{ padding: '10px 13px', borderRadius: 999, background: 'rgba(17,24,39,.65)', border: '1px solid rgba(148,163,184,.16)' }}>{t('premiumHero.membersBadge', {count: tm.toLocaleString()})}</span>
                 <span style={{ padding: '10px 13px', borderRadius: 999, background: 'rgba(17,24,39,.65)', border: '1px solid rgba(148,163,184,.16)' }}>{t('premiumHero.welcomeBonus')}</span>
                 <span style={{ padding: '10px 13px', borderRadius: 999, background: 'rgba(17,24,39,.65)', border: '1px solid rgba(148,163,184,.16)' }}>{t('premiumHero.noSubscription')}</span>
@@ -668,7 +668,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           <SectionHeader eyebrow={t('features.eyebrow')} title={t('features.title')}>{t('features.description')}</SectionHeader>
           <div className="ft-feature-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
             {featureCards.map(card => (
-              <article className="ft-card-hover" key={card.title} style={{ background: 'linear-gradient(180deg,rgba(17,24,39,.96),rgba(17,24,39,.74))', border: '1px solid #1e293b', borderRadius: 16, padding: 28, minHeight: 260, boxShadow: '0 16px 50px rgba(0,0,0,.2)' }}>
+              <article className="ft-card-hover" key={card.title} style={{ background: 'linear-gradient(180deg,rgba(17,24,39,.96),rgba(17,24,39,.74))', border: '1px solid var(--ft-surface)', borderRadius: 16, padding: 28, minHeight: 260, boxShadow: '0 16px 50px rgba(0,0,0,.2)' }}>
                 <div style={{ width: 52, height: 52, borderRadius: 17, background: 'rgba(0,194,203,.13)', border: '1px solid rgba(0,194,203,.28)', display: 'grid', placeItems: 'center', fontSize: 28, marginBottom: 22 }}>{card.icon}</div>
                 <h3 style={{ fontSize: 20, margin: '0 0 11px', letterSpacing: '-0.02em' }}>{card.title}</h3>
                 <p style={{ color: SLATE, lineHeight: 1.65, margin: 0, fontSize: 15 }}>{card.desc}</p>
@@ -742,7 +742,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
             {[{ n: tm, s: '', suffix: '+', label: t('impact.stats.foundingMembers') }, { n: 200, s: '₮', suffix: '', label: t('impact.stats.welcomeBonus') }, { text: '0%', label: t('impact.stats.subscriptionFees') }, { text: '5%', label: t('impact.stats.maxPlatformFee') }].map(stat => (
               <div key={stat.label} style={{ textAlign: 'center', padding: 30, borderRadius: 20, background: 'rgba(17,24,39,.56)', border: '1px solid rgba(0,194,203,.14)', backdropFilter: 'blur(12px)' }}>
                 <div style={{ fontSize: 46, fontWeight: 850, letterSpacing: '-0.05em' }}>{stat.text ?? <Counter target={stat.n ?? 0} prefix={stat.s} suffix={stat.suffix} />}</div>
-                <div style={{ color: '#cbd5e1', fontWeight: 750, marginTop: 7 }}>{stat.label}</div>
+                <div style={{ color: 'var(--ft-text-secondary)', fontWeight: 750, marginTop: 7 }}>{stat.label}</div>
               </div>
             ))}
           </div>
@@ -771,7 +771,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
       <section className="ft-section" style={{ background: 'linear-gradient(180deg,#0a0f1e,#081020)', borderBottom: '1px solid rgba(0,194,203,.08)' }}>
         <div className="ft-container">
           <SectionHeader eyebrow={t('liveMarketplace.eyebrow')} title={t('liveMarketplace.title')}>{t('liveMarketplace.description')}</SectionHeader>
-          <div className="ft-market-tabs" style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 28, fontWeight: 850, color: '#cbd5e1', flexWrap: 'wrap' }}>
+          <div className="ft-market-tabs" style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 28, fontWeight: 850, color: 'var(--ft-text-secondary)', flexWrap: 'wrap' }}>
             {[
               ['services', t('liveMarketplace.tabs.services')],
               ['jobs', t('liveMarketplace.tabs.jobs')],
@@ -785,7 +785,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
                   className="ft-market-tab"
                   onClick={() => setMarketplaceTab(key as 'services' | 'jobs' | 'events')}
                   style={{
-                    color: active ? '#041018' : '#cbd5e1',
+                    color: active ? '#041018' : 'var(--ft-text-secondary)',
                     background: active ? TEAL : 'rgba(15,23,42,.74)',
                     border: active ? `1px solid ${TEAL}` : '1px solid rgba(148,163,184,.18)',
                     boxShadow: active ? '0 14px 34px rgba(0,194,203,.2)' : 'none',
@@ -803,8 +803,8 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           {marketplaceTab === 'services' && (
             <div className="ft-market-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 18 }}>
               {serviceSlides.map(card => (
-                <Link className="ft-market-product-card ft-card-hover" key={`${card.type}-${card.title}`} href={card.href} style={{ minWidth: 0, textDecoration: 'none', background: 'linear-gradient(180deg,rgba(17,24,39,.96),rgba(8,16,32,.96))', border: '1px solid #1e293b', borderRadius: 24, overflow: 'hidden', color: '#fff', boxShadow: '0 22px 70px rgba(0,0,0,.22)' }}>
-                  <div style={{ height: 190, position: 'relative', background: 'linear-gradient(135deg,#0e7490,#1e293b 55%,#111827)', overflow: 'hidden' }}>
+                <Link className="ft-market-product-card ft-card-hover" key={`${card.type}-${card.title}`} href={card.href} style={{ minWidth: 0, textDecoration: 'none', background: 'linear-gradient(180deg,rgba(17,24,39,.96),rgba(8,16,32,.96))', border: '1px solid var(--ft-surface)', borderRadius: 24, overflow: 'hidden', color: '#fff', boxShadow: '0 22px 70px rgba(0,0,0,.22)' }}>
+                  <div style={{ height: 190, position: 'relative', background: 'linear-gradient(135deg,#0e7490,var(--ft-surface) 55%,#111827)', overflow: 'hidden' }}>
                     {card.image && <img src={card.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transform: 'scale(1.02)' }} />}
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(5,10,20,.02),rgba(5,10,20,.72))' }} />
                     <span style={{ position: 'absolute', left: 14, top: 14, display: 'inline-flex', padding: '7px 10px', borderRadius: 999, background: 'rgba(4,16,24,.72)', color: '#aafaff', fontSize: 12, fontWeight: 900, border: '1px solid rgba(127,247,255,.22)', backdropFilter: 'blur(10px)' }}>{card.badge}</span>
@@ -824,26 +824,26 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
 
           {marketplaceTab === 'jobs' && (
             <div className="ft-market-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
-              {(jobPreviewCards.length ? jobPreviewCards : jobFallbacks).slice(0, 6).map(job => <Link key={job.id} href={job.id.startsWith('jobs') ? '/jobs' : `/jobs/${job.id}`} className="ft-card-hover" style={{ textDecoration: 'none', color: '#fff', background: 'linear-gradient(180deg,rgba(17,24,39,.96),rgba(8,16,32,.96))', border: '1px solid #1e293b', borderRadius: 20, padding: 20, minHeight: 178, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}><div><span style={{ display: 'inline-flex', padding: '7px 10px', borderRadius: 999, background: 'rgba(0,194,203,.13)', color: '#aafaff', fontSize: 12, fontWeight: 900 }}>{job.job_type ?? t('liveMarketplace.fallbacks.openRole')}</span><h4 style={{ margin: '16px 0 8px', fontSize: 20, lineHeight: 1.2, letterSpacing: '-0.03em' }}>{job.title}</h4><div style={{ color: SLATE, fontSize: 13, lineHeight: 1.5 }}>{job.company_name ?? t('liveMarketplace.fallbacks.company')} · {job.location}</div></div><div style={{ marginTop: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}><strong style={{ color: '#fff', fontSize: 14 }}>{job.salary}</strong><span style={{ color: TEAL, fontWeight: 900, fontSize: 13 }}>{t('liveMarketplace.cta.open')}</span></div></Link>)}
+              {(jobPreviewCards.length ? jobPreviewCards : jobFallbacks).slice(0, 6).map(job => <Link key={job.id} href={job.id.startsWith('jobs') ? '/jobs' : `/jobs/${job.id}`} className="ft-card-hover" style={{ textDecoration: 'none', color: '#fff', background: 'linear-gradient(180deg,rgba(17,24,39,.96),rgba(8,16,32,.96))', border: '1px solid var(--ft-surface)', borderRadius: 20, padding: 20, minHeight: 178, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}><div><span style={{ display: 'inline-flex', padding: '7px 10px', borderRadius: 999, background: 'rgba(0,194,203,.13)', color: '#aafaff', fontSize: 12, fontWeight: 900 }}>{job.job_type ?? t('liveMarketplace.fallbacks.openRole')}</span><h4 style={{ margin: '16px 0 8px', fontSize: 20, lineHeight: 1.2, letterSpacing: '-0.03em' }}>{job.title}</h4><div style={{ color: SLATE, fontSize: 13, lineHeight: 1.5 }}>{job.company_name ?? t('liveMarketplace.fallbacks.company')} · {job.location}</div></div><div style={{ marginTop: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}><strong style={{ color: '#fff', fontSize: 14 }}>{job.salary}</strong><span style={{ color: TEAL, fontWeight: 900, fontSize: 13 }}>{t('liveMarketplace.cta.open')}</span></div></Link>)}
             </div>
           )}
 
           {marketplaceTab === 'events' && (
             <div className="ft-market-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
-              {(eventPreviewCards.length ? eventPreviewCards : eventFallbacks.map(ev => ({...ev, starts_at: null, image: eventPosterDataUri({ title: ev.title, category: ev.category, startsAt: null, location: ev.location })}))).slice(0, 6).map(ev => <Link key={ev.id} href={ev.id.startsWith('events') ? '/events' : `/events/${ev.id}`} className="ft-card-hover" style={{ textDecoration: 'none', color: '#fff', background: 'linear-gradient(180deg,rgba(17,24,39,.96),rgba(8,16,32,.96))', border: '1px solid #1e293b', borderRadius: 20, overflow: 'hidden' }}><div style={{ height: 154, background: `linear-gradient(135deg, ${ev.catColor}33, rgba(15,23,42,.96))`, position: 'relative' }}><img src={ev.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /><span style={{ position: 'absolute', left: 13, top: 13, display: 'inline-flex', padding: '7px 10px', borderRadius: 999, background: 'rgba(4,16,24,.72)', color: '#fff', fontSize: 12, fontWeight: 900, border: '1px solid rgba(255,255,255,.18)', backdropFilter: 'blur(10px)' }}>{ev.category ?? t('liveMarketplace.fallbacks.event')}</span></div><div style={{ padding: 18 }}><h4 style={{ margin: '0 0 8px', fontSize: 20, lineHeight: 1.2, letterSpacing: '-0.03em' }}>{ev.title}</h4><div style={{ color: SLATE, fontSize: 13, lineHeight: 1.5 }}>{ev.location}</div><div style={{ marginTop: 16, color: TEAL, fontWeight: 900, fontSize: 13 }}>{t('liveMarketplace.cta.viewEvent')}</div></div></Link>)}
+              {(eventPreviewCards.length ? eventPreviewCards : eventFallbacks.map(ev => ({...ev, starts_at: null, image: eventPosterDataUri({ title: ev.title, category: ev.category, startsAt: null, location: ev.location })}))).slice(0, 6).map(ev => <Link key={ev.id} href={ev.id.startsWith('events') ? '/events' : `/events/${ev.id}`} className="ft-card-hover" style={{ textDecoration: 'none', color: '#fff', background: 'linear-gradient(180deg,rgba(17,24,39,.96),rgba(8,16,32,.96))', border: '1px solid var(--ft-surface)', borderRadius: 20, overflow: 'hidden' }}><div style={{ height: 154, background: `linear-gradient(135deg, ${ev.catColor}33, rgba(15,23,42,.96))`, position: 'relative' }}><img src={ev.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /><span style={{ position: 'absolute', left: 13, top: 13, display: 'inline-flex', padding: '7px 10px', borderRadius: 999, background: 'rgba(4,16,24,.72)', color: '#fff', fontSize: 12, fontWeight: 900, border: '1px solid rgba(255,255,255,.18)', backdropFilter: 'blur(10px)' }}>{ev.category ?? t('liveMarketplace.fallbacks.event')}</span></div><div style={{ padding: 18 }}><h4 style={{ margin: '0 0 8px', fontSize: 20, lineHeight: 1.2, letterSpacing: '-0.03em' }}>{ev.title}</h4><div style={{ color: SLATE, fontSize: 13, lineHeight: 1.5 }}>{ev.location}</div><div style={{ marginTop: 16, color: TEAL, fontWeight: 900, fontSize: 13 }}>{t('liveMarketplace.cta.viewEvent')}</div></div></Link>)}
             </div>
           )}
-          <p style={{ margin: '20px 0 0', color: '#64748b', textAlign: 'center', fontSize: 13 }}>{t('liveMarketplace.status.showing')}{liveListings ? t('liveMarketplace.status.loaded', {count: liveListings}) : ''}</p>
+          <p style={{ margin: '20px 0 0', color: 'var(--ft-text-tertiary)', textAlign: 'center', fontSize: 13 }}>{t('liveMarketplace.status.showing')}{liveListings ? t('liveMarketplace.status.loaded', {count: liveListings}) : ''}</p>
         </div>
       </section>
 
-      <section className="ft-section" style={{ background: '#f8fafc', color: '#0f172a', borderBottom: '1px solid #e2e8f0' }}>
+      <section className="ft-section" style={{ background: '#f8fafc', color: 'var(--ft-bg)', borderBottom: '1px solid #e2e8f0' }}>
         <div className="ft-container">
           <SectionHeader light eyebrow={t('trustScore.eyebrow')} title={t('trustScore.title')}>{t('trustScore.description')}</SectionHeader>
           <div style={{ maxWidth: 820, margin: '0 auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 28, padding: 36, boxShadow: '0 24px 70px rgba(15,23,42,.1)' }}>
             <div className="ft-score-row" style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: 34, alignItems: 'center' }}>
               <div style={{ width: 174, height: 174, borderRadius: '50%', background: `conic-gradient(${TEAL} 0 94%,#e2e8f0 94%)`, display: 'grid', placeItems: 'center', boxShadow: '0 18px 44px rgba(0,194,203,.2)' }}><div style={{ width: 128, height: 128, borderRadius: '50%', background: '#fff', display: 'grid', placeItems: 'center', textAlign: 'center' }}><div><strong style={{ fontSize: 34 }}>4.9</strong><br />/ 5.0</div></div></div>
-              <div className="ft-factor-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>{trustScoreFactors.map(f => <div key={f} style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 14, padding: 13, fontWeight: 800, color: '#334155' }}>✓ {f.replace('{balance}', tc.toLocaleString())}</div>)}</div>
+              <div className="ft-factor-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>{trustScoreFactors.map(f => <div key={f} style={{ background: 'var(--ft-text)', border: '1px solid #e2e8f0', borderRadius: 14, padding: 13, fontWeight: 800, color: 'var(--ft-border-strong)' }}>✓ {f.replace('{balance}', tc.toLocaleString())}</div>)}</div>
             </div>
             <Link href="/profile" style={{ marginTop: 24, display: 'inline-flex', borderRadius: 999, background: TEAL, padding: '14px 18px', color: '#031019', textDecoration: 'none', fontWeight: 850 }}>{t('trustScore.cta')}</Link>
           </div>
@@ -866,7 +866,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
       <section className="ft-section" style={{ background: NAVY, borderBottom: '1px solid rgba(0,194,203,.08)' }}>
         <div className="ft-container">
           <SectionHeader eyebrow={t('howItWorks.eyebrow')} title={t('howItWorks.title')}>{t('howItWorks.description')}</SectionHeader>
-          <div className="ft-feature-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>{howItWorksSteps.map(([icon, title, desc]) => <div key={title} className="ft-card-hover" style={{ background: CARD, border: '1px solid #1e293b', borderRadius: 16, padding: 22 }}><div style={{ fontSize: 28, marginBottom: 12 }}>{icon}</div><strong>{title}</strong><p style={{ color: SLATE, lineHeight: 1.65, margin: '10px 0 0', fontSize: 14 }}>{desc}</p></div>)}</div>
+          <div className="ft-feature-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>{howItWorksSteps.map(([icon, title, desc]) => <div key={title} className="ft-card-hover" style={{ background: CARD, border: '1px solid var(--ft-surface)', borderRadius: 16, padding: 22 }}><div style={{ fontSize: 28, marginBottom: 12 }}>{icon}</div><strong>{title}</strong><p style={{ color: SLATE, lineHeight: 1.65, margin: '10px 0 0', fontSize: 14 }}>{desc}</p></div>)}</div>
         </div>
       </section>
 
@@ -875,7 +875,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           <div className="ft-container">
             <SectionHeader eyebrow={t('featuredServices.eyebrow')} title={t('featuredServices.title')}>{t('featuredServices.description')}</SectionHeader>
             <div className="ft-hscroll">
-              {featuredServices.slice(0, 5).map(s => <Link key={s.id} href={`/services/${s.id}`} className="ft-card-hover" style={{ flexShrink: 0, width: 260, textDecoration: 'none', color: '#fff', background: CARD, border: '1px solid #1e293b', borderRadius: 18, overflow: 'hidden' }}><div style={{ height: 150, background: s.coverImage ? `url(${s.coverImage}) center/cover` : s.grad }} /><div style={{ padding: 16 }}><strong>{s.title}</strong><p style={{ margin: '8px 0', color: SLATE, fontSize: 13 }}>{s.provider}</p><span style={{ color: TEAL, fontWeight: 850 }}>{format(s.price, s.currency as 'GBP' | 'EUR' | 'USD')}</span></div></Link>)}
+              {featuredServices.slice(0, 5).map(s => <Link key={s.id} href={`/services/${s.id}`} className="ft-card-hover" style={{ flexShrink: 0, width: 260, textDecoration: 'none', color: '#fff', background: CARD, border: '1px solid var(--ft-surface)', borderRadius: 18, overflow: 'hidden' }}><div style={{ height: 150, background: s.coverImage ? `url(${s.coverImage}) center/cover` : s.grad }} /><div style={{ padding: 16 }}><strong>{s.title}</strong><p style={{ margin: '8px 0', color: SLATE, fontSize: 13 }}>{s.provider}</p><span style={{ color: TEAL, fontWeight: 850 }}>{format(s.price, s.currency as 'GBP' | 'EUR' | 'USD')}</span></div></Link>)}
             </div>
           </div>
         </section>
@@ -900,11 +900,11 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           <div><div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#fff', fontWeight: 900, fontSize: 24 }}><img src="/icons/freetrust-mark-perfect-transparent-20260521.png" alt="" style={{ width: 38, height: 38 }} />FreeTrust</div><p style={{ lineHeight: 1.7 }}>{t('footer.tagline')}</p><button type="button" onClick={() => setIsLegalLibraryOpen(true)} style={{ color: '#99f6e4', background: 'rgba(45,212,191,.06)', border: '1px solid rgba(45,212,191,.24)', borderRadius: 999, minHeight: 44, padding: '0.65rem 1.15rem', fontSize: 14, fontWeight: 850, font: 'inherit', cursor: 'pointer' }}>{t('footer.legal')}</button></div>
           <div>
           <div className="ft-footer-links" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12 }}>
-            {footerLinks.map(([label, href]) => <Link key={href} href={href} style={{ color: '#cbd5e1', textDecoration: 'none', fontWeight: 750 }}>{label}</Link>)}
+            {footerLinks.map(([label, href]) => <Link key={href} href={href} style={{ color: 'var(--ft-text-secondary)', textDecoration: 'none', fontWeight: 750 }}>{label}</Link>)}
             <button type="button" className={`ft-footer-link-button${footerStory === 'vision' ? ' is-active' : ''}`} onClick={() => setFooterStory(footerStory === 'vision' ? null : 'vision')} aria-expanded={footerStory === 'vision'}>{t('footer.vision.label')}</button>
             <button type="button" className={`ft-footer-link-button${footerStory === 'mission' ? ' is-active' : ''}`} onClick={() => setFooterStory(footerStory === 'mission' ? null : 'mission')} aria-expanded={footerStory === 'mission'}>{t('footer.mission.label')}</button>
             <Link href="/register" style={{ color: TEAL, textDecoration: 'none', fontWeight: 750 }}>{t('footer.joinFree')}</Link>
-            <a href={FREETRUST_SOCIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" style={{ color: '#cbd5e1', textDecoration: 'none', fontWeight: 750 }}>Instagram</a><span style={{ color: '#64748b' }}>X</span><a href={FREETRUST_SOCIAL_LINKS.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: '#cbd5e1', textDecoration: 'none', fontWeight: 750 }}>LinkedIn</a>
+            <a href={FREETRUST_SOCIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ft-text-secondary)', textDecoration: 'none', fontWeight: 750 }}>Instagram</a><span style={{ color: 'var(--ft-text-tertiary)' }}>X</span><a href={FREETRUST_SOCIAL_LINKS.linkedin} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ft-text-secondary)', textDecoration: 'none', fontWeight: 750 }}>LinkedIn</a>
           </div>
             {footerStory === 'vision' && (
               <div className="ft-footer-story-body">
@@ -939,7 +939,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
             )}
           </div>
         </div>
-        <div style={{ textAlign: 'center', color: '#475569', fontSize: 12, padding: '0 22px 24px' }}>{t('footer.copyright')}</div>
+        <div style={{ textAlign: 'center', color: 'var(--ft-text-faint)', fontSize: 12, padding: '0 22px 24px' }}>{t('footer.copyright')}</div>
       </footer>
       <LegalDocModal docs={legalDocs} isOpen={isLegalLibraryOpen} onClose={() => setIsLegalLibraryOpen(false)} />
     </main>

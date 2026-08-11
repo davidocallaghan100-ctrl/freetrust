@@ -47,7 +47,7 @@ export default function Avatar({ url, name, email, size = 40, className }: Avata
         width: size,
         height: size,
         borderRadius: '50%',
-        background: 'linear-gradient(135deg, #38bdf8, #818cf8)',
+        background: 'linear-gradient(135deg, var(--ft-accent), #818cf8)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

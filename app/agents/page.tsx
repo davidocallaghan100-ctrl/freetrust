@@ -5,20 +5,20 @@ import Link from 'next/link';
 import { AGENT_LIST, type AgentConfig } from '@/lib/agents';
 
 const COLORS = {
-  bgBase: '#0f172a',
-  card: '#1e293b',
+  bgBase: 'var(--ft-bg)',
+  card: 'var(--ft-surface)',
   cardSoft: 'rgba(30,41,59,0.72)',
   border: 'rgba(56,189,248,0.12)',
   borderStrong: 'rgba(56,189,248,0.4)',
   borderMuted: 'rgba(148,163,184,0.16)',
-  sky: '#38bdf8',
-  skyHover: '#7dd3fc',
-  text: '#f1f5f9',
-  textMuted: '#94a3b8',
-  textFaint: '#64748b',
+  sky: 'var(--ft-accent)',
+  skyHover: 'var(--ft-accent)',
+  text: 'var(--ft-text)',
+  textMuted: 'var(--ft-text-secondary)',
+  textFaint: 'var(--ft-text-tertiary)',
   success: '#34d399',
   warning: '#fbbf24',
-  danger: '#f87171',
+  danger: 'var(--ft-danger)',
   radius: 16,
 };
 
@@ -922,12 +922,12 @@ export default function AgentsPage() {
         .agent-pill img { width: 22px; height: 22px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(56,189,248,0.45)); }
         .agent-pill small { color: ${COLORS.textMuted}; font-weight: 600; }
         .agent-pill-chevron { color: rgba(226,232,240,0.78); margin-left: 2px; }
-        .send-btn { background: #f8fafc; color: #0f172a; border-color: transparent; display: grid; place-items: center; transition: width .18s ease, min-width .18s ease, min-height .18s ease, transform .18s ease, background .18s ease; }
+        .send-btn { background: #f8fafc; color: var(--ft-bg); border-color: transparent; display: grid; place-items: center; transition: width .18s ease, min-width .18s ease, min-height .18s ease, transform .18s ease, background .18s ease; }
         .send-btn-voice { width: 42px; min-width: 42px; min-height: 42px; font-size: 20px; }
         .send-btn-arrow { width: 38px; min-width: 38px; min-height: 38px; background: #e0f2fe; color: #082f49; align-self: center; }
         .send-btn svg { width: 20px; height: 20px; }
         .send-btn-arrow svg { width: 17px; height: 17px; }
-        .send-btn:disabled { opacity: 1; cursor: not-allowed; background: #f8fafc; color: #0f172a; }
+        .send-btn:disabled { opacity: 1; cursor: not-allowed; background: #f8fafc; color: var(--ft-bg); }
         .error { margin: 10px 0; border: 1px solid rgba(248,113,113,0.32); color: ${COLORS.danger}; background: rgba(248,113,113,0.08); border-radius: 14px; padding: 11px 12px; font-size: 13px; }
         .action-card { margin-top: 12px; border: 1px solid rgba(52,211,153,0.26); background: rgba(6,78,59,0.18); border-radius: 16px; padding: 12px; }
         .action-top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }

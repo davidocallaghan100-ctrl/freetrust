@@ -52,7 +52,7 @@ const TIER_CONFIG: Record<NonNullable<Tier>, { label: string; emoji: string; col
   highly_rated: {
     label: 'Highly Rated',
     emoji: '✨',
-    color: '#38bdf8',
+    color: 'var(--ft-accent)',
     bg: 'rgba(56,189,248,0.10)',
     border: 'rgba(56,189,248,0.30)',
   },
@@ -63,13 +63,13 @@ function StarRow({ rating, reviewCount }: { rating: number; reviewCount: number 
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       <span style={{ display: 'inline-flex', gap: 2 }}>
         {[1, 2, 3, 4, 5].map(i => (
-          <span key={i} style={{ color: i <= Math.round(rating) ? '#fbbf24' : '#334155', fontSize: '0.8rem' }}>★</span>
+          <span key={i} style={{ color: i <= Math.round(rating) ? '#fbbf24' : 'var(--ft-border-strong)', fontSize: '0.8rem' }}>★</span>
         ))}
       </span>
-      <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600 }}>
+      <span style={{ fontSize: '0.78rem', color: 'var(--ft-text-secondary)', fontWeight: 600 }}>
         {rating.toFixed(1)}
       </span>
-      <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+      <span style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)' }}>
         ({reviewCount} review{reviewCount !== 1 ? 's' : ''})
       </span>
     </div>

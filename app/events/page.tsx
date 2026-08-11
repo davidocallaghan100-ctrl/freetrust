@@ -125,7 +125,7 @@ function isThisMonth(date: Date) {
 
 function EventCard({ ev, onAttend }: { ev: EventItem; onAttend: (ev: EventItem) => void }) {
   const { day, num, month, year } = formatEventDate(ev.date)
-  const catColor = CAT_COLORS[ev.category] ?? '#38bdf8'
+  const catColor = CAT_COLORS[ev.category] ?? 'var(--ft-accent)'
   const gradient = CAT_GRADIENTS[ev.category] ?? ev.imageGradient ?? 'linear-gradient(135deg,#0284c7,#1e40af)'
   const { format: currencyFormat } = useCurrency()
   const imageUrl = isUsableEventImage(ev.cover_image_url)
@@ -139,7 +139,7 @@ function EventCard({ ev, onAttend }: { ev: EventItem; onAttend: (ev: EventItem) 
 
   return (
     <div onClick={() => { window.location.href = `/events/${ev.id}` }} role="link" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') window.location.href = `/events/${ev.id}` }} style={{ textDecoration: 'none', color: 'inherit', display: 'block', minWidth: 0, maxWidth: '100%' }}>
-    <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer', height: '100%', minWidth: 0, maxWidth: '100%' }}
+    <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer', height: '100%', minWidth: 0, maxWidth: '100%' }}
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 8px 32px rgba(56,189,248,0.15)' }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
 
@@ -154,21 +154,21 @@ function EventCard({ ev, onAttend }: { ev: EventItem; onAttend: (ev: EventItem) 
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(15,23,42,0.03), rgba(15,23,42,0.56))', pointerEvents: 'none' }} />
         {/* Date stamp */}
         <div style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(8px)', borderRadius: 10, padding: '6px 10px', textAlign: 'center', minWidth: 48 }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{day}</div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#f1f5f9', lineHeight: 1 }}>{num}</div>
-          <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8' }}>{month} {year}</div>
+          <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--ft-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{day}</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--ft-text)', lineHeight: 1 }}>{num}</div>
+          <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--ft-text-secondary)' }}>{month} {year}</div>
         </div>
 
         {/* Badges top right */}
         <div style={{ position: 'absolute', top: 12, right: 12, display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
           {ev.mode === 'online'
-            ? <span style={{ background: 'rgba(56,189,248,0.9)', color: '#0f172a', fontSize: '0.65rem', fontWeight: 800, padding: '2px 8px', borderRadius: 999 }}>ONLINE</span>
-            : <span style={{ background: 'rgba(148,163,184,0.9)', color: '#0f172a', fontSize: '0.65rem', fontWeight: 800, padding: '2px 8px', borderRadius: 999 }}>IN-PERSON</span>
+            ? <span style={{ background: 'rgba(56,189,248,0.9)', color: 'var(--ft-bg)', fontSize: '0.65rem', fontWeight: 800, padding: '2px 8px', borderRadius: 999 }}>ONLINE</span>
+            : <span style={{ background: 'rgba(148,163,184,0.9)', color: 'var(--ft-bg)', fontSize: '0.65rem', fontWeight: 800, padding: '2px 8px', borderRadius: 999 }}>IN-PERSON</span>
           }
           {ev.price === null || ev.price === 0
-            ? <span style={{ background: 'rgba(52,211,153,0.9)', color: '#0f172a', fontSize: '0.65rem', fontWeight: 800, padding: '2px 8px', borderRadius: 999 }}>FREE</span>
+            ? <span style={{ background: 'rgba(52,211,153,0.9)', color: 'var(--ft-bg)', fontSize: '0.65rem', fontWeight: 800, padding: '2px 8px', borderRadius: 999 }}>FREE</span>
             : (
-              <span style={{ background: 'rgba(245,158,11,0.92)', color: '#0f172a', fontSize: '0.65rem', fontWeight: 800, padding: '2px 8px', borderRadius: 999 }}>
+              <span style={{ background: 'rgba(245,158,11,0.92)', color: 'var(--ft-bg)', fontSize: '0.65rem', fontWeight: 800, padding: '2px 8px', borderRadius: 999 }}>
                 {currencyFormat(ev.price_eur ?? ev.price, (ev.currency_code ?? 'EUR') as CurrencyCode)}
               </span>
             )
@@ -183,10 +183,10 @@ function EventCard({ ev, onAttend }: { ev: EventItem; onAttend: (ev: EventItem) 
 
       {/* Card body */}
       <div style={{ padding: '1rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: 0 }}>
-        <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.3, overflowWrap: 'anywhere' }}>{ev.title}</div>
+        <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--ft-text)', lineHeight: 1.3, overflowWrap: 'anywhere' }}>{ev.title}</div>
 
         {/* Date + time row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: '#38bdf8', fontWeight: 600, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--ft-accent)', fontWeight: 600, minWidth: 0 }}>
           <span style={{ flexShrink: 0 }}>🗓</span>
           <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{formatEventDate(ev.date).full}{ev.time ? ` · ${ev.time}` : ''}</span>
         </div>
@@ -202,7 +202,7 @@ function EventCard({ ev, onAttend }: { ev: EventItem; onAttend: (ev: EventItem) 
         </div>
 
         {/* Description */}
-        <p style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.55, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{ev.description}</p>
+        <p style={{ fontSize: '0.8rem', color: 'var(--ft-text-secondary)', lineHeight: 1.55, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{ev.description}</p>
 
         {/* Organiser / Curated badge */}
         {ev.is_platform_curated ? (
@@ -213,16 +213,16 @@ function EventCard({ ev, onAttend }: { ev: EventItem; onAttend: (ev: EventItem) 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingTop: '0.25rem', borderTop: '1px solid rgba(56,189,248,0.07)', minWidth: 0 }}>
             {ev.organiserAvatar
               ? <img src={ev.organiserAvatar} alt={ev.organiser} style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-              : <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#334155', flexShrink: 0 }} />
+              : <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--ft-border-strong)', flexShrink: 0 }} />
             }
-            <span style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.organiser}</span>
-            {ev.organiserTrust && <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#38bdf8', fontWeight: 700, background: 'rgba(56,189,248,0.08)', padding: '1px 6px', borderRadius: 6 }}>₮{ev.organiserTrust.toLocaleString()}</span>}
+            <span style={{ fontSize: '0.75rem', color: 'var(--ft-text-secondary)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.organiser}</span>
+            {ev.organiserTrust && <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: 'var(--ft-accent)', fontWeight: 700, background: 'rgba(56,189,248,0.08)', padding: '1px 6px', borderRadius: 6 }}>₮{ev.organiserTrust.toLocaleString()}</span>}
           </div>
         ) : null}
 
         {/* Footer: attendees + buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem', minWidth: 0, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: attendance.muted ? '0.75rem' : '0.72rem', color: attendance.muted ? '#64748b' : '#38bdf8' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: attendance.muted ? '0.75rem' : '0.72rem', color: attendance.muted ? 'var(--ft-text-tertiary)' : 'var(--ft-accent)' }}>
             <span>{attendance.icon}</span>
             <span>{attendance.text}</span>
           </div>
@@ -241,12 +241,12 @@ function EventCard({ ev, onAttend }: { ev: EventItem; onAttend: (ev: EventItem) 
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.4rem' }}>
             <button
               onClick={e => { e.preventDefault(); e.stopPropagation(); onAttend(ev) }}
-              style={{ background: outboundUrl ? 'linear-gradient(135deg,#a78bfa,#7c3aed)' : 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.78rem', fontWeight: 700, color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 36 }}>
+              style={{ background: outboundUrl ? 'linear-gradient(135deg,#a78bfa,#7c3aed)' : 'linear-gradient(135deg,var(--ft-accent),#0284c7)', border: 'none', borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.78rem', fontWeight: 700, color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 36 }}>
               {outboundUrl ? `🎟 ${ctaLabel} ↗` : ctaLabel}
             </button>
             <button
               onClick={e => { e.preventDefault(); e.stopPropagation(); if (navigator.share) { navigator.share({ title: ev.title, url: `${window.location.origin}/events/${ev.id}` }) } else { navigator.clipboard.writeText(`${window.location.origin}/events/${ev.id}`) } }}
-              style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.45rem 0.6rem', fontSize: '0.78rem', color: '#38bdf8', cursor: 'pointer', minHeight: 36 }}
+              style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.45rem 0.6rem', fontSize: '0.78rem', color: 'var(--ft-accent)', cursor: 'pointer', minHeight: 36 }}
               title="Share event">
               ↗
             </button>
@@ -478,22 +478,22 @@ export default function EventsPage() {
     }
   }
 
-  const pillStyle = (active: boolean, color = '#38bdf8') => ({
+  const pillStyle = (active: boolean, color = 'var(--ft-accent)') => ({
     padding: '0.4rem 0.9rem', borderRadius: 999, fontSize: '0.8rem', fontWeight: active ? 700 : 500,
     cursor: 'pointer', border: `1px solid ${active ? color : 'rgba(148,163,184,0.2)'}`,
-    background: active ? `${color}18` : 'transparent', color: active ? color : '#94a3b8',
+    background: active ? `${color}18` : 'transparent', color: active ? color : 'var(--ft-text-secondary)',
     whiteSpace: 'nowrap' as const, minHeight: 36,
   })
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
       <style>{`
         .ev-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1.25rem; }
         .ev-grid > * { min-width: 0; max-width: 100%; }
         .ev-filter-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; }
         .ev-filter-row { display: flex; gap: 0.5rem; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
         .ev-filter-row::-webkit-scrollbar { display: none; }
-        .ev-create-btn { background: linear-gradient(135deg,#38bdf8,#0284c7); color: #fff; padding: 0.6rem 1.25rem; border-radius: 10px; font-weight: 700; font-size: 0.88rem; text-decoration: none; flex-shrink: 0; min-height: 44px; display: flex; align-items: center; white-space: nowrap; }
+        .ev-create-btn { background: linear-gradient(135deg,var(--ft-accent),#0284c7); color: #fff; padding: 0.6rem 1.25rem; border-radius: 10px; font-weight: 700; font-size: 0.88rem; text-decoration: none; flex-shrink: 0; min-height: 44px; display: flex; align-items: center; white-space: nowrap; }
         @media (max-width: 1024px) { .ev-grid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; } }
         @media (max-width: 640px) {
           .ev-grid { grid-template-columns: minmax(0,1fr) !important; }
@@ -507,17 +507,17 @@ export default function EventsPage() {
         <div className="ev-header-row" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.5rem' }}>
           <div>
             <h1 style={{ fontSize: 'clamp(1.6rem,4vw,2.2rem)', fontWeight: 900, margin: '0 0 0.25rem', letterSpacing: '-0.5px' }}>🌍 Events</h1>
-            <p style={{ color: '#64748b', margin: 0, fontSize: '0.9rem' }}>{sorted.length} upcoming event{sorted.length !== 1 ? 's' : ''}</p>
+            <p style={{ color: 'var(--ft-text-tertiary)', margin: 0, fontSize: '0.9rem' }}>{sorted.length} upcoming event{sorted.length !== 1 ? 's' : ''}</p>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {/* List / Map view toggle */}
-            <div style={{ display: 'flex', background: '#1e293b', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 10, overflow: 'hidden' }}>
               <button
                 onClick={() => setView('list')}
                 style={{
                   padding: '8px 14px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700,
-                  background: view === 'list' ? '#38bdf8' : 'transparent',
-                  color: view === 'list' ? '#0f172a' : '#94a3b8',
+                  background: view === 'list' ? 'var(--ft-accent)' : 'transparent',
+                  color: view === 'list' ? 'var(--ft-bg)' : 'var(--ft-text-secondary)',
                   fontFamily: 'inherit',
                 }}
               >📋 List</button>
@@ -525,8 +525,8 @@ export default function EventsPage() {
                 onClick={() => setView('map')}
                 style={{
                   padding: '8px 14px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700,
-                  background: view === 'map' ? '#38bdf8' : 'transparent',
-                  color: view === 'map' ? '#0f172a' : '#94a3b8',
+                  background: view === 'map' ? 'var(--ft-accent)' : 'transparent',
+                  color: view === 'map' ? 'var(--ft-bg)' : 'var(--ft-text-secondary)',
                   fontFamily: 'inherit',
                 }}
               >🗺 Map</button>
@@ -561,7 +561,7 @@ export default function EventsPage() {
             ))}
             <div style={{ width: 1, background: 'rgba(148,163,184,0.2)', margin: '0 4px', flexShrink: 0 }} />
             {(['all','free','paid'] as PriceFilter[]).map(f => (
-              <button key={f} onClick={() => setPriceFilter(f)} style={pillStyle(priceFilter === f, f === 'free' ? '#34d399' : f === 'paid' ? '#f59e0b' : '#38bdf8')}>
+              <button key={f} onClick={() => setPriceFilter(f)} style={pillStyle(priceFilter === f, f === 'free' ? '#34d399' : f === 'paid' ? '#f59e0b' : 'var(--ft-accent)')}>
                 {f === 'all' ? 'Any Price' : f === 'free' ? '🟢 Free' : '💳 Paid'}
               </button>
             ))}
@@ -576,7 +576,7 @@ export default function EventsPage() {
           {/* Category pills */}
           <div className="ev-filter-row">
             {CATEGORIES.map(c => (
-              <button key={c} onClick={() => setCatFilter(c)} style={pillStyle(catFilter === c, CAT_COLORS[c] ?? '#38bdf8')}>
+              <button key={c} onClick={() => setCatFilter(c)} style={pillStyle(catFilter === c, CAT_COLORS[c] ?? 'var(--ft-accent)')}>
                 {c}
               </button>
             ))}
@@ -605,7 +605,7 @@ export default function EventsPage() {
           >
             <span style={{ flexShrink: 0, fontSize: '1.1rem' }}>⚠️</span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, marginBottom: '0.2rem', color: '#f87171' }}>
+              <div style={{ fontWeight: 700, marginBottom: '0.2rem', color: 'var(--ft-danger)' }}>
                 Couldn&rsquo;t load events
               </div>
               <div style={{ wordBreak: 'break-word' }}>{loadError}</div>
@@ -617,11 +617,11 @@ export default function EventsPage() {
         {loading ? (
           <div className="ev-grid">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} style={{ background: '#1e293b', borderRadius: 16, height: 340, opacity: 0.5 }}>
-                <div style={{ height: 120, background: '#334155', borderRadius: '16px 16px 0 0' }} />
+              <div key={i} style={{ background: 'var(--ft-surface)', borderRadius: 16, height: 340, opacity: 0.5 }}>
+                <div style={{ height: 120, background: 'var(--ft-border-strong)', borderRadius: '16px 16px 0 0' }} />
                 <div style={{ padding: '1rem' }}>
-                  <div style={{ height: 14, background: '#334155', borderRadius: 6, marginBottom: 8, width: '80%' }} />
-                  <div style={{ height: 12, background: '#334155', borderRadius: 6, width: '60%' }} />
+                  <div style={{ height: 14, background: 'var(--ft-border-strong)', borderRadius: 6, marginBottom: 8, width: '80%' }} />
+                  <div style={{ height: 12, background: 'var(--ft-border-strong)', borderRadius: 6, width: '60%' }} />
                 </div>
               </div>
             ))}
@@ -629,13 +629,13 @@ export default function EventsPage() {
         ) : sorted.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
             <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>📅</div>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.5rem', color: '#f1f5f9' }}>No events found</h2>
-            <p style={{ color: '#64748b', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--ft-text)' }}>No events found</h2>
+            <p style={{ color: 'var(--ft-text-tertiary)', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
               {catFilter !== 'All' || modeFilter !== 'all' || priceFilter !== 'all' || timeFilter !== 'all' || filterLoc.latitude != null || countryFilter
                 ? 'Try adjusting your filters — or be the first to create an event in this category.'
                 : 'No upcoming events yet — why not create one?'}
             </p>
-            <Link href="/events/create" style={{ display: 'inline-block', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.75rem 1.75rem', borderRadius: 10, fontWeight: 700, textDecoration: 'none', fontSize: '0.95rem' }}>
+            <Link href="/events/create" style={{ display: 'inline-block', background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', color: '#fff', padding: '0.75rem 1.75rem', borderRadius: 10, fontWeight: 700, textDecoration: 'none', fontSize: '0.95rem' }}>
               Create an Event →
             </Link>
           </div>

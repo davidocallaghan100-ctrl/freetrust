@@ -13,7 +13,7 @@ const sections = [
     content: (
       <p>
         By accessing or using the FreeTrust platform at{' '}
-        <a href="https://freetrust.co" className="text-[#38bdf8] hover:underline">freetrust.co</a>{' '}
+        <a href="https://freetrust.co" className="text-[var(--ft-accent)] hover:underline">freetrust.co</a>{' '}
         (&ldquo;Platform&rdquo;), you agree to be bound by these Terms of Service (&ldquo;Terms&rdquo;). If you do not
         agree to these Terms, you may not access or use the Platform. These Terms constitute a legally
         binding agreement between you and FreeTrust.
@@ -28,7 +28,7 @@ const sections = [
         <p>
           FreeTrust is a trust-based community platform and registered business in Ireland. The Platform enables:
         </p>
-        <ul className="mt-3 space-y-2 list-disc list-inside text-[#94a3b8]">
+        <ul className="mt-3 space-y-2 list-disc list-inside text-[var(--ft-text-secondary)]">
           <li>Freelancers and gig workers to list and sell services and products</li>
           <li>Community members to connect, collaborate, and transact</li>
           <li>Users to create and attend events</li>
@@ -44,7 +44,7 @@ const sections = [
     content: (
       <>
         <p>To access most features of the Platform, you must create an account. You agree to:</p>
-        <ul className="mt-3 space-y-2 list-disc list-inside text-[#94a3b8]">
+        <ul className="mt-3 space-y-2 list-disc list-inside text-[var(--ft-text-secondary)]">
           <li>Provide accurate, current, and complete information during registration</li>
           <li>Maintain and promptly update your account information</li>
           <li>Keep your login credentials confidential and not share them with others</li>
@@ -68,7 +68,7 @@ const sections = [
           FreeTrust provides a marketplace for users to list and transact services, products, and gigs.
           By creating a listing, you represent and warrant that:
         </p>
-        <ul className="mt-3 space-y-2 list-disc list-inside text-[#94a3b8]">
+        <ul className="mt-3 space-y-2 list-disc list-inside text-[var(--ft-text-secondary)]">
           <li>You have the legal right to offer the service or sell the product</li>
           <li>Your listing is accurate, honest, and not misleading</li>
           <li>The offering complies with all applicable laws and regulations</li>
@@ -93,7 +93,7 @@ const sections = [
     content: (
       <>
         <p>You agree not to use the Platform to:</p>
-        <ul className="mt-3 space-y-2 list-disc list-inside text-[#94a3b8]">
+        <ul className="mt-3 space-y-2 list-disc list-inside text-[var(--ft-text-secondary)]">
           <li>Violate any applicable law or regulation</li>
           <li>Post false, misleading, or fraudulent content</li>
           <li>Harass, threaten, or harm other users</li>
@@ -168,7 +168,7 @@ const sections = [
           employees, and agents shall not be liable for any indirect, incidental, special,
           consequential, or punitive damages arising from:
         </p>
-        <ul className="mt-3 space-y-2 list-disc list-inside text-[#94a3b8]">
+        <ul className="mt-3 space-y-2 list-disc list-inside text-[var(--ft-text-secondary)]">
           <li>Your use of or inability to use the Platform</li>
           <li>Transactions between users on the Platform</li>
           <li>Unauthorised access to or alteration of your data</li>
@@ -225,7 +225,7 @@ const sections = [
           href="https://ec.europa.eu/consumers/odr"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[#38bdf8] hover:underline"
+          className="text-[var(--ft-accent)] hover:underline"
         >
           Online Dispute Resolution platform
         </a>
@@ -251,15 +251,15 @@ const sections = [
     content: (
       <>
         <p>For any questions about these Terms, please contact:</p>
-        <div className="mt-3 p-4 rounded-xl bg-[#13131a] border border-[#2a2a3a]">
+        <div className="mt-3 p-4 rounded-xl bg-[var(--ft-surface)] border border-[var(--ft-surface)]">
           <p className="text-white font-semibold">FreeTrust</p>
-          <p className="text-[#94a3b8]">Registered business in Ireland</p>
+          <p className="text-[var(--ft-text-secondary)]">Registered business in Ireland</p>
           <p className="mt-2">
-            <a href="mailto:hello@freetrust.co" className="text-[#38bdf8] hover:underline">
+            <a href="mailto:hello@freetrust.co" className="text-[var(--ft-accent)] hover:underline">
               hello@freetrust.co
             </a>
           </p>
-          <p className="text-[#94a3b8] mt-1">Republic of Ireland</p>
+          <p className="text-[var(--ft-text-secondary)] mt-1">Republic of Ireland</p>
         </div>
       </>
     ),

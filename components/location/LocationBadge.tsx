@@ -55,7 +55,7 @@ export default function LocationBadge({
       borderRadius: 6,
       fontSize: compact ? 10 : 11,
       fontWeight: 600,
-      color: '#38bdf8',
+      color: 'var(--ft-accent)',
       maxWidth: 220,
       overflow: 'hidden',
       textOverflow: 'ellipsis',
@@ -63,7 +63,7 @@ export default function LocationBadge({
     }}>
       📍 {label}
       {typeof distanceKm === 'number' && (
-        <span style={{ color: '#64748b', fontWeight: 500, marginLeft: 2 }}>
+        <span style={{ color: 'var(--ft-text-tertiary)', fontWeight: 500, marginLeft: 2 }}>
           · {distanceKm < 1 ? '<1' : Math.round(distanceKm)} km
         </span>
       )}

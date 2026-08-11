@@ -24,11 +24,11 @@ interface Application {
 type FilterTab = 'all' | 'pending' | 'shortlisted' | 'rejected' | 'hired'
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  pending:     { bg: 'rgba(148,163,184,0.15)', color: '#cbd5e1', label: 'Pending' },
-  reviewed:    { bg: 'rgba(56,189,248,0.15)',  color: '#38bdf8', label: 'Reviewed' },
+  pending:     { bg: 'rgba(148,163,184,0.15)', color: 'var(--ft-text-secondary)', label: 'Pending' },
+  reviewed:    { bg: 'rgba(56,189,248,0.15)',  color: 'var(--ft-accent)', label: 'Reviewed' },
   shortlisted: { bg: 'rgba(251,191,36,0.15)',  color: '#fbbf24', label: '⭐ Shortlisted' },
   hired:       { bg: 'rgba(52,211,153,0.15)',  color: '#34d399', label: '✅ Hired' },
-  rejected:    { bg: 'rgba(248,113,113,0.15)', color: '#f87171', label: '❌ Rejected' },
+  rejected:    { bg: 'rgba(248,113,113,0.15)', color: 'var(--ft-danger)', label: '❌ Rejected' },
 }
 
 function relativeTime(iso: string): string {
@@ -116,15 +116,15 @@ export default function ManageApplicationsPage() {
   const countFor = (tab: FilterTab) => tab === 'all' ? applications.length : applications.filter(a => a.status === tab).length
 
   return (
-    <div style={{ minHeight: '100vh', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
+    <div style={{ minHeight: '100vh', color: 'var(--ft-text)', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
       <style>{`
         .app-card { background: rgba(30,41,59,0.65); border: 1px solid rgba(148,163,184,0.12); border-radius: 14px; padding: 1.1rem; display: flex; flex-direction: column; gap: 0.75rem; transition: border-color 0.15s; }
         .app-card:hover { border-color: rgba(148,163,184,0.25); }
         .app-act-btn { border: none; border-radius: 7px; padding: 0.38rem 0.85rem; font-size: 0.75rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: opacity 0.15s; }
         .app-act-btn:hover { opacity: 0.8; }
         .app-act-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        .app-tab { background: none; border: none; padding: 0.4rem 0.9rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; cursor: pointer; font-family: inherit; color: #64748b; transition: all 0.15s; white-space: nowrap; }
-        .app-tab.active { background: rgba(56,189,248,0.12); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); }
+        .app-tab { background: none; border: none; padding: 0.4rem 0.9rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; cursor: pointer; font-family: inherit; color: var(--ft-text-tertiary); transition: all 0.15s; white-space: nowrap; }
+        .app-tab.active { background: rgba(56,189,248,0.12); color: var(--ft-accent); border: 1px solid rgba(56,189,248,0.3); }
         @media (max-width: 600px) {
           .app-act-row { flex-wrap: wrap !important; }
           .app-act-btn { flex: 1 1 40%; }
@@ -134,12 +134,12 @@ export default function ManageApplicationsPage() {
 
         {/* Header */}
         <div style={{ padding: '1.5rem 0 1.25rem' }}>
-          <Link href="/jobs/manage" style={{ color: '#64748b', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 500 }}>← My Jobs</Link>
+          <Link href="/jobs/manage" style={{ color: 'var(--ft-text-tertiary)', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 500 }}>← My Jobs</Link>
           <h1 style={{ fontSize: 'clamp(1.3rem,3vw,1.7rem)', fontWeight: 800, margin: '0.6rem 0 0.2rem', letterSpacing: '-0.3px' }}>
             {jobTitle ? `Applications: ${jobTitle}` : 'Applications'}
           </h1>
           {!loading && !error && (
-            <p style={{ color: '#64748b', margin: 0, fontSize: '0.85rem' }}>
+            <p style={{ color: 'var(--ft-text-tertiary)', margin: 0, fontSize: '0.85rem' }}>
               {applications.length} total application{applications.length !== 1 ? 's' : ''}
             </p>
           )}
@@ -162,8 +162,8 @@ export default function ManageApplicationsPage() {
 
         {/* Loading */}
         {loading && (
-          <div style={{ textAlign: 'center', padding: '4rem 1rem', color: '#64748b', fontSize: '0.9rem' }}>
-            <div style={{ width: 28, height: 28, border: '3px solid rgba(56,189,248,0.2)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 1rem' }} />
+          <div style={{ textAlign: 'center', padding: '4rem 1rem', color: 'var(--ft-text-tertiary)', fontSize: '0.9rem' }}>
+            <div style={{ width: 28, height: 28, border: '3px solid rgba(56,189,248,0.2)', borderTopColor: 'var(--ft-accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 1rem' }} />
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             Loading applications…
           </div>
@@ -172,7 +172,7 @@ export default function ManageApplicationsPage() {
         {/* Error */}
         {error && (
           <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 14, padding: '1.5rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.9rem', color: '#f87171', marginBottom: 12 }}>{error}</div>
+            <div style={{ fontSize: '0.9rem', color: 'var(--ft-danger)', marginBottom: 12 }}>{error}</div>
             <button type="button" onClick={load} style={{ background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.35)', color: '#fca5a5', borderRadius: 8, padding: '0.5rem 1.25rem', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}>Retry</button>
           </div>
         )}
@@ -181,18 +181,18 @@ export default function ManageApplicationsPage() {
         {!loading && !error && applications.length === 0 && (
           <div style={{ background: 'rgba(30,41,59,0.6)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 14, padding: '3rem 1.5rem', textAlign: 'center' }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📋</div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#94a3b8' }}>No applications yet</div>
-            <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '0.35rem' }}>Share your job to attract more candidates.</div>
-            <Link href={`/jobs/${jobId}`} style={{ display: 'inline-block', marginTop: '1rem', color: '#38bdf8', fontSize: '0.82rem', textDecoration: 'none', fontWeight: 600 }}>View job posting →</Link>
+            <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--ft-text-secondary)' }}>No applications yet</div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--ft-text-tertiary)', marginTop: '0.35rem' }}>Share your job to attract more candidates.</div>
+            <Link href={`/jobs/${jobId}`} style={{ display: 'inline-block', marginTop: '1rem', color: 'var(--ft-accent)', fontSize: '0.82rem', textDecoration: 'none', fontWeight: 600 }}>View job posting →</Link>
           </div>
         )}
 
         {/* Filtered empty */}
         {!loading && !error && applications.length > 0 && filtered.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b' }}>
+          <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--ft-text-tertiary)' }}>
             <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🔍</div>
             No {filter} applications yet.
-            <button onClick={() => setFilter('all')} style={{ display: 'block', margin: '0.75rem auto 0', color: '#38bdf8', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>Show all</button>
+            <button onClick={() => setFilter('all')} style={{ display: 'block', margin: '0.75rem auto 0', color: 'var(--ft-accent)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>Show all</button>
           </div>
         )}
 
@@ -218,15 +218,15 @@ export default function ManageApplicationsPage() {
                     {applicant?.avatar_url ? (
                       <img src={applicant.avatar_url} alt="" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                     ) : (
-                      <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: '#0f172a', flexShrink: 0 }}>
+                      <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'var(--ft-bg)', flexShrink: 0 }}>
                         {getInitials(name)}
                       </div>
                     )}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <Link href={`/profile?id=${applicant?.id ?? ''}`} style={{ color: '#f1f5f9', textDecoration: 'none', fontWeight: 700, fontSize: '0.92rem' }}>{name}</Link>
-                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Applied {relativeTime(app.created_at)}</div>
+                      <Link href={`/profile?id=${applicant?.id ?? ''}`} style={{ color: 'var(--ft-text)', textDecoration: 'none', fontWeight: 700, fontSize: '0.92rem' }}>{name}</Link>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)' }}>Applied {relativeTime(app.created_at)}</div>
                     </div>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', padding: '2px 8px', borderRadius: 999, flexShrink: 0 }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--ft-accent)', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', padding: '2px 8px', borderRadius: 999, flexShrink: 0 }}>
                       ₮{balance}
                     </span>
                     <span style={{ fontSize: '0.72rem', fontWeight: 700, color: st.color, background: st.bg, padding: '2px 10px', borderRadius: 999, flexShrink: 0 }}>
@@ -236,10 +236,10 @@ export default function ManageApplicationsPage() {
 
                   {/* Cover letter */}
                   {coverLetterPreview && (
-                    <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.1)', borderRadius: 10, padding: '0.85rem', fontSize: '0.83rem', color: '#cbd5e1', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                    <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.1)', borderRadius: 10, padding: '0.85rem', fontSize: '0.83rem', color: 'var(--ft-text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                       {coverLetterPreview}
                       {app.cover_letter && app.cover_letter.length > 220 && (
-                        <button onClick={() => setExpandedId(isExpanded ? null : app.id)} style={{ background: 'none', border: 'none', color: '#38bdf8', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 600, padding: '0 0 0 4px' }}>
+                        <button onClick={() => setExpandedId(isExpanded ? null : app.id)} style={{ background: 'none', border: 'none', color: 'var(--ft-accent)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 600, padding: '0 0 0 4px' }}>
                           {isExpanded ? 'Show less' : 'Read more'}
                         </button>
                       )}
@@ -249,10 +249,10 @@ export default function ManageApplicationsPage() {
                   {/* Links + actions */}
                   <div className="app-act-row" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     {app.cv_url && (
-                      <a href={app.cv_url} target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8', textDecoration: 'none', fontSize: '0.78rem', fontWeight: 600 }}>📄 CV →</a>
+                      <a href={app.cv_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ft-accent)', textDecoration: 'none', fontSize: '0.78rem', fontWeight: 600 }}>📄 CV →</a>
                     )}
                     {app.portfolio_url && (
-                      <a href={app.portfolio_url} target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8', textDecoration: 'none', fontSize: '0.78rem', fontWeight: 600 }}>🎨 Portfolio →</a>
+                      <a href={app.portfolio_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ft-accent)', textDecoration: 'none', fontSize: '0.78rem', fontWeight: 600 }}>🎨 Portfolio →</a>
                     )}
                     <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                       {app.status !== 'shortlisted' && app.status !== 'hired' && (
@@ -268,7 +268,7 @@ export default function ManageApplicationsPage() {
                         </button>
                       )}
                       {app.status !== 'rejected' && (
-                        <button className="app-act-btn" style={{ background: 'rgba(248,113,113,0.1)', color: '#f87171', border: '1px solid rgba(248,113,113,0.25)' }}
+                        <button className="app-act-btn" style={{ background: 'rgba(248,113,113,0.1)', color: 'var(--ft-danger)', border: '1px solid rgba(248,113,113,0.25)' }}
                           onClick={() => updateStatus(app.id, 'rejected')} disabled={isUpdating}>
                           ❌ Reject
                         </button>

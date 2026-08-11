@@ -115,12 +115,12 @@ export default function CartPage() {
   const total = afterDiscount + shipping + fee
 
   // theme
-  const bg = '#0f172a'
-  const card = '#1e293b'
+  const bg = 'var(--ft-bg)'
+  const card = 'var(--ft-surface)'
   const border = 'rgba(56,189,248,0.1)'
-  const accent = '#38bdf8'
-  const text = '#f1f5f9'
-  const muted = '#64748b'
+  const accent = 'var(--ft-accent)'
+  const text = 'var(--ft-text)'
+  const muted = 'var(--ft-text-tertiary)'
 
   if (!mounted) return (
     <main style={{ minHeight: '100vh', background: bg, paddingTop: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -133,7 +133,7 @@ export default function CartPage() {
       <div style={{ fontSize: '4rem' }}>🛒</div>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 900, margin: 0 }}>Your cart is empty</h1>
       <p style={{ color: muted, margin: 0 }}>Add some products to get started.</p>
-      <Link href="/products" style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.85rem 2rem', borderRadius: 12, fontWeight: 800, textDecoration: 'none', fontSize: '0.95rem' }}>
+      <Link href="/products" style={{ background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', color: '#fff', padding: '0.85rem 2rem', borderRadius: 12, fontWeight: 800, textDecoration: 'none', fontSize: '0.95rem' }}>
         Browse Products →
       </Link>
     </main>
@@ -185,7 +185,7 @@ export default function CartPage() {
         }
 
         /* ── Hover states ── */
-        .cart-remove:hover   { color: #f87171 !important; }
+        .cart-remove:hover   { color: var(--ft-danger) !important; }
         .cart-qty-btn:hover  { background: rgba(56,189,248,0.1) !important; }
         .cart-checkout:hover { background: #0ea5e9 !important; }
 
@@ -211,7 +211,7 @@ export default function CartPage() {
           overflow: hidden;
           flex-shrink: 0;
           border: 1px solid rgba(56,189,248,0.1);
-          background: #0f172a;
+          background: var(--ft-bg);
         }
         @media (min-width: 480px) {
           .cart-item-image { width: 84px; height: 84px; }
@@ -345,7 +345,7 @@ export default function CartPage() {
 
               {/* Free shipping nudge */}
               {shipping > 0 && (
-                <div style={{ background: 'rgba(56,189,248,0.06)', border: `1px solid rgba(56,189,248,0.15)`, borderRadius: 8, padding: '0.6rem 0.85rem', fontSize: '0.75rem', color: '#94a3b8', marginBottom: '1rem' }}>
+                <div style={{ background: 'rgba(56,189,248,0.06)', border: `1px solid rgba(56,189,248,0.15)`, borderRadius: 8, padding: '0.6rem 0.85rem', fontSize: '0.75rem', color: 'var(--ft-text-secondary)', marginBottom: '1rem' }}>
                   Add <strong style={{ color: accent }}>{fmt(FREE_SHIPPING_THRESHOLD - afterDiscount, currency)}</strong> more for free shipping
                 </div>
               )}
@@ -363,8 +363,8 @@ export default function CartPage() {
                     rows={3}
                     style={{
                       width: '100%',
-                      background: '#0f172a',
-                      border: `1px solid ${addressError ? '#f87171' : border}`,
+                      background: 'var(--ft-bg)',
+                      border: `1px solid ${addressError ? 'var(--ft-danger)' : border}`,
                       borderRadius: 8,
                       padding: '0.65rem 0.75rem',
                       color: text,
@@ -375,7 +375,7 @@ export default function CartPage() {
                       boxSizing: 'border-box',
                     }}
                   />
-                  {addressError && <div style={{ color: '#f87171', fontSize: '0.72rem', marginTop: 4 }}>{addressError}</div>}
+                  {addressError && <div style={{ color: 'var(--ft-danger)', fontSize: '0.72rem', marginTop: 4 }}>{addressError}</div>}
                   <div style={{ fontSize: '0.68rem', color: muted, marginTop: 4 }}>Required for physical items — shared with seller for delivery.</div>
                 </div>
               )}
@@ -388,13 +388,13 @@ export default function CartPage() {
                       value={promoCode}
                       onChange={e => { setPromoCode(e.target.value); setPromoError('') }}
                       placeholder="Promo code"
-                      style={{ flex: 1, minWidth: 0, background: '#0f172a', border: `1px solid ${border}`, borderRadius: 8, padding: '0.65rem 0.75rem', color: text, fontSize: '16px', outline: 'none', fontFamily: 'system-ui' }}
+                      style={{ flex: 1, minWidth: 0, background: 'var(--ft-bg)', border: `1px solid ${border}`, borderRadius: 8, padding: '0.65rem 0.75rem', color: text, fontSize: '16px', outline: 'none', fontFamily: 'system-ui' }}
                     />
                     <button type="button" onClick={applyPromo} style={{ background: 'rgba(56,189,248,0.1)', border: `1px solid ${border}`, color: accent, borderRadius: 8, padding: '0.65rem 0.9rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', minHeight: 44 }}>
                       Apply
                     </button>
                   </div>
-                  {promoError && <div style={{ color: '#f87171', fontSize: '0.72rem', marginTop: 4 }}>{promoError}</div>}
+                  {promoError && <div style={{ color: 'var(--ft-danger)', fontSize: '0.72rem', marginTop: 4 }}>{promoError}</div>}
                   <div style={{ color: muted, fontSize: '0.68rem', marginTop: 4 }}>Try: FOUNDING25 for 25% off</div>
                 </div>
               )}
@@ -424,7 +424,7 @@ export default function CartPage() {
                     style={{ marginBottom: 8 }}
                   />
                   {payError && (
-                    <div style={{ color: '#f87171', fontSize: '0.72rem', marginBottom: 8 }}>{payError}</div>
+                    <div style={{ color: 'var(--ft-danger)', fontSize: '0.72rem', marginBottom: 8 }}>{payError}</div>
                   )}
                 </>
               )}
@@ -435,7 +435,7 @@ export default function CartPage() {
                 className="cart-checkout"
                 onClick={handleCheckout}
                 disabled={checkoutLoading}
-                style={{ width: '100%', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', border: 'none', borderRadius: 12, padding: '1rem', minHeight: 52, fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 4px 20px rgba(56,189,248,0.3)', transition: 'background 0.2s' }}
+                style={{ width: '100%', background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', color: '#fff', border: 'none', borderRadius: 12, padding: '1rem', minHeight: 52, fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 4px 20px rgba(56,189,248,0.3)', transition: 'background 0.2s' }}
               >
                 {checkoutLoading ? 'Processing…' : `Checkout · ${fmt(total, currency)}`}
               </button>
@@ -476,7 +476,7 @@ export default function CartPage() {
           onClick={handleCheckout}
           disabled={checkoutLoading}
           style={{
-            background:   'linear-gradient(135deg,#38bdf8,#0284c7)',
+            background:   'linear-gradient(135deg,var(--ft-accent),#0284c7)',
             color:        '#fff',
             border:       'none',
             borderRadius: 10,

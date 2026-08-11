@@ -51,7 +51,7 @@ function TypingDots() {
     <div style={{ display: 'flex', gap: 4, alignItems: 'center', padding: '10px 14px' }}>
       {[0, 1, 2].map(i => (
         <span key={i} style={{
-          width: 7, height: 7, borderRadius: '50%', background: '#38bdf8', display: 'inline-block',
+          width: 7, height: 7, borderRadius: '50%', background: 'var(--ft-accent)', display: 'inline-block',
           animation: `ta-dot 1.2s ease-in-out ${i * 0.2}s infinite`,
         }} />
       ))}
@@ -347,7 +347,7 @@ export default function TrustAssistant() {
     })
   }
 
-  const accent = '#38bdf8'
+  const accent = 'var(--ft-accent)'
   const hasMobileServiceCheckoutBar = /^\/services\/[^/]+/.test(pathname)
   const floatingBottom = hasMobileServiceCheckoutBar ? 160 : 80
   const hintBottom = hasMobileServiceCheckoutBar ? 238 : 158
@@ -376,23 +376,23 @@ export default function TrustAssistant() {
         .ta-send:hover { background: #0ea5e9 !important; }
         .ta-quick:hover { background: rgba(56,189,248,0.15) !important; border-color: rgba(56,189,248,0.4) !important; }
         .ta-escalate:hover { background: rgba(251,191,36,0.15) !important; }
-        .ta-msg-user { background: linear-gradient(135deg,#38bdf8,#0284c7); color: #0f172a; border-radius: 16px 16px 4px 16px; }
-        .ta-msg-bot { background: #1e293b; color: #f1f5f9; border-radius: 16px 16px 16px 4px; border: 1px solid rgba(56,189,248,0.12); }
+        .ta-msg-user { background: linear-gradient(135deg,var(--ft-accent),#0284c7); color: var(--ft-bg); border-radius: 16px 16px 4px 16px; }
+        .ta-msg-bot { background: var(--ft-surface); color: var(--ft-text); border-radius: 16px 16px 16px 4px; border: 1px solid rgba(56,189,248,0.12); }
       `}</style>
 
       {/* ── Hint badge ── */}
       {showHintBadge && !open && hintShown && !dismissed && (
         <div style={{
           position: 'fixed', bottom: hintBottom, right: 20, zIndex: 9998,
-          background: '#1e293b', border: `1px solid ${accent}`, borderRadius: 12,
-          padding: '10px 14px', maxWidth: 240, fontSize: '0.8rem', color: '#f1f5f9',
+          background: 'var(--ft-surface)', border: `1px solid ${accent}`, borderRadius: 12,
+          padding: '10px 14px', maxWidth: 240, fontSize: '0.8rem', color: 'var(--ft-text)',
           boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
           animation: 'ta-hint-in 0.3s ease',
           cursor: 'pointer',
         }} onClick={handleOpen}>
           <div style={{ fontSize: '0.72rem', color: accent, fontWeight: 700, marginBottom: 3 }}>{t('title')} <span style={{ fontWeight: 900 }}>₮</span></div>
           {hintShown}
-          <div style={{ position: 'absolute', bottom: -6, right: 20, width: 12, height: 12, background: '#1e293b', border: `1px solid ${accent}`, borderTop: 'none', borderLeft: 'none', transform: 'rotate(45deg)' }} />
+          <div style={{ position: 'absolute', bottom: -6, right: 20, width: 12, height: 12, background: 'var(--ft-surface)', border: `1px solid ${accent}`, borderTop: 'none', borderLeft: 'none', transform: 'rotate(45deg)' }} />
         </div>
       )}
 
@@ -409,8 +409,8 @@ export default function TrustAssistant() {
               aria-label={t('hide')}
               style={{
                 width: 18, height: 18, borderRadius: '50%',
-                background: '#334155', border: '1px solid #475569',
-                color: '#94a3b8', fontSize: 9, fontWeight: 700,
+                background: 'var(--ft-border-strong)', border: '1px solid var(--ft-text-faint)',
+                color: 'var(--ft-text-secondary)', fontSize: 9, fontWeight: 700,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', lineHeight: 1, padding: 0,
                 alignSelf: 'flex-end', marginBottom: 2,
@@ -425,7 +425,7 @@ export default function TrustAssistant() {
             aria-label={t('title')}
             style={{
               width: 44, height: 44, borderRadius: '50%',
-              background: 'linear-gradient(135deg,#38bdf8,#0284c7)',
+              background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)',
               border: 'none', cursor: 'pointer', color: '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               animation: !open ? 'ta-pulse 2.5s ease-in-out infinite' : 'none',
@@ -455,9 +455,9 @@ export default function TrustAssistant() {
 
           {/* Header */}
           <div style={{ background: 'linear-gradient(135deg,rgba(56,189,248,0.15),rgba(2,132,199,0.1))', borderBottom: '1px solid rgba(56,189,248,0.15)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><span style={{ fontWeight: 900, fontSize: 20, color: '#fff', letterSpacing: '-0.5px', fontFamily: 'system-ui, sans-serif', lineHeight: 1 }}>₮</span></div>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><span style={{ fontWeight: 900, fontSize: 20, color: '#fff', letterSpacing: '-0.5px', fontFamily: 'system-ui, sans-serif', lineHeight: 1 }}>₮</span></div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f1f5f9' }}>{t('title')}</div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--ft-text)' }}>{t('title')}</div>
               <div style={{ fontSize: '0.7rem', color: '#34d399', display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399', display: 'inline-block' }} />
                 {t('status')}
@@ -480,7 +480,7 @@ export default function TrustAssistant() {
                 >
                   {renderContent(msg.content)}
                   {msg.creditCost && (
-                    <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: 4 }}>{t('credits.used', { count: msg.creditCost })}</div>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--ft-text-tertiary)', marginTop: 4 }}>{t('credits.used', { count: msg.creditCost })}</div>
                   )}
                 </div>
               </div>
@@ -523,16 +523,16 @@ export default function TrustAssistant() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}
               placeholder={t('input.placeholder')}
-              style={{ flex: 1, background: '#1e293b', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 10, padding: '9px 12px', fontSize: '0.85rem', color: '#f1f5f9', outline: 'none', fontFamily: 'inherit' }}
+              style={{ flex: 1, background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 10, padding: '9px 12px', fontSize: '0.85rem', color: 'var(--ft-text)', outline: 'none', fontFamily: 'inherit' }}
             />
             <button className="ta-send" onClick={() => send()} disabled={!input.trim() || loading}
               style={{ background: accent, border: 'none', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: !input.trim() || loading ? 0.5 : 1, transition: 'background 0.15s' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ft-bg)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </button>
           </div>
 
           {/* Footer */}
-          <div style={{ textAlign: 'center', padding: '4px 0 8px', fontSize: '0.62rem', color: '#334155', flexShrink: 0 }}>
+          <div style={{ textAlign: 'center', padding: '4px 0 8px', fontSize: '0.62rem', color: 'var(--ft-border-strong)', flexShrink: 0 }}>
             {t('footer')}
           </div>
         </div>

@@ -263,7 +263,7 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: 999,
     border: '1px solid rgba(27,79,138,0.12)',
     background: 'rgba(255,255,255,0.78)',
-    color: '#475569',
+    color: 'var(--ft-text-faint)',
     fontSize: 13,
     fontWeight: 800,
     whiteSpace: 'nowrap',
@@ -330,7 +330,7 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 900,
   },
   cardIntro: {
-    color: '#64748B',
+    color: 'var(--ft-text-tertiary)',
     fontSize: '0.98rem',
     lineHeight: 1.65,
     margin: '12px 0 0',
@@ -406,7 +406,7 @@ const styles: Record<string, CSSProperties> = {
     boxShadow: '0 14px 30px rgba(13,148,136,0.22)',
   },
   controlStatus: {
-    color: '#64748B',
+    color: 'var(--ft-text-tertiary)',
     fontSize: 13,
     fontWeight: 850,
     letterSpacing: '0.08em',

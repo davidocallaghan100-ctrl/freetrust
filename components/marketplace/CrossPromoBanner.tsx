@@ -11,7 +11,7 @@ import { GRASSROOTS_GREEN } from '@/lib/grassroots/categories'
 // the other. Rendered directly below the hero on each browse page.
 //
 // Visual design intentionally subtle:
-//   * Matches the dark navy #0f172a theme
+//   * Matches the dark navy var(--ft-bg) theme
 //   * Narrow border-left accent in the TARGET section's brand colour
 //     (cyan for services, earthy green for grassroots) so the user
 //     immediately associates the banner with its destination
@@ -45,7 +45,7 @@ const VARIANTS: Record<CrossPromoTarget, Variant> = {
     title:   'Browse professional Services',
     body:    'Packaged work from vetted freelancers and agencies — design, dev, marketing, consulting, and more.',
     cta:     'Browse Services',
-    accent:  '#38bdf8',            // sky-400 — matches the rest of the services UI
+    accent:  'var(--ft-accent)',            // sky-400 — matches the rest of the services UI
     tint:    'rgba(56,189,248,0.08)',
     emoji:   '🎯',
   },
@@ -71,7 +71,7 @@ export default function CrossPromoBanner({ target }: { target: CrossPromoTarget 
         display: 'block',
         textDecoration: 'none',
         color: 'inherit',
-        background: '#0f172a',
+        background: 'var(--ft-bg)',
         border: '1px solid rgba(148,163,184,0.15)',
         borderLeft: `4px solid ${v.accent}`,
         borderRadius: 12,
@@ -92,7 +92,7 @@ export default function CrossPromoBanner({ target }: { target: CrossPromoTarget 
         e.currentTarget.style.borderTopColor = 'rgba(148,163,184,0.15)'
         e.currentTarget.style.borderRightColor = 'rgba(148,163,184,0.15)'
         e.currentTarget.style.borderBottomColor = 'rgba(148,163,184,0.15)'
-        e.currentTarget.style.background = '#0f172a'
+        e.currentTarget.style.background = 'var(--ft-bg)'
         e.currentTarget.style.transform = ''
       }}
     >
@@ -136,7 +136,7 @@ export default function CrossPromoBanner({ target }: { target: CrossPromoTarget 
           <div style={{
             fontSize: 15,
             fontWeight: 800,
-            color: '#f1f5f9',
+            color: 'var(--ft-text)',
             marginBottom: 2,
             lineHeight: 1.3,
           }}>
@@ -144,7 +144,7 @@ export default function CrossPromoBanner({ target }: { target: CrossPromoTarget 
           </div>
           <div style={{
             fontSize: 12,
-            color: '#94a3b8',
+            color: 'var(--ft-text-secondary)',
             lineHeight: 1.5,
           }}>
             {v.body}

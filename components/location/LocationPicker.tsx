@@ -145,7 +145,7 @@ export default function LocationPicker({
         <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
           <span style={{
             position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
-            color: '#64748b', fontSize: 15, pointerEvents: 'none',
+            color: 'var(--ft-text-tertiary)', fontSize: 15, pointerEvents: 'none',
           }}>📍</span>
           <input
             type="text"
@@ -158,11 +158,11 @@ export default function LocationPicker({
             style={{
               width: '100%',
               padding: '10px 12px 10px 36px',
-              background: remote ? '#0b1120' : '#0f172a',
-              border: '1.5px solid #334155',
+              background: remote ? '#0b1120' : 'var(--ft-bg)',
+              border: '1.5px solid var(--ft-border-strong)',
               borderRadius: 10,
               fontSize: 14,
-              color: remote ? '#475569' : '#f1f5f9',
+              color: remote ? 'var(--ft-text-faint)' : 'var(--ft-text)',
               outline: 'none',
               boxSizing: 'border-box',
               fontFamily: 'inherit',
@@ -176,7 +176,7 @@ export default function LocationPicker({
               aria-label="Clear location"
               style={{
                 position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-                background: 'transparent', border: 'none', color: '#64748b',
+                background: 'transparent', border: 'none', color: 'var(--ft-text-tertiary)',
                 fontSize: 18, cursor: 'pointer', width: 24, height: 24, borderRadius: 4,
               }}
             >×</button>
@@ -189,7 +189,7 @@ export default function LocationPicker({
           style={{
             padding: '10px 12px', background: 'rgba(56,189,248,0.1)',
             border: '1px solid rgba(56,189,248,0.25)', borderRadius: 10,
-            color: '#38bdf8', fontSize: 13, fontWeight: 600,
+            color: 'var(--ft-accent)', fontSize: 13, fontWeight: 600,
             cursor: (locating || remote) ? 'not-allowed' : 'pointer',
             fontFamily: 'inherit', whiteSpace: 'nowrap',
             opacity: (locating || remote) ? 0.5 : 1,
@@ -202,13 +202,13 @@ export default function LocationPicker({
       {onRemoteToggle && (
         <label style={{
           display: 'flex', alignItems: 'center', gap: 8, marginTop: 8,
-          fontSize: 13, color: '#94a3b8', cursor: 'pointer',
+          fontSize: 13, color: 'var(--ft-text-secondary)', cursor: 'pointer',
         }}>
           <input
             type="checkbox"
             checked={remote}
             onChange={e => onRemoteToggle(e.target.checked)}
-            style={{ width: 16, height: 16, accentColor: '#38bdf8' }}
+            style={{ width: 16, height: 16, accentColor: 'var(--ft-accent)' }}
           />
           🌐 {remoteLabel}
         </label>
@@ -217,12 +217,12 @@ export default function LocationPicker({
       {open && !remote && (loading || results.length > 0) && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-          background: '#1e293b', border: '1px solid rgba(56,189,248,0.2)',
+          background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.2)',
           borderRadius: 10, overflow: 'hidden', zIndex: 50,
           boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
         }}>
           {loading && (
-            <div style={{ padding: '10px 14px', color: '#64748b', fontSize: 13 }}>Searching…</div>
+            <div style={{ padding: '10px 14px', color: 'var(--ft-text-tertiary)', fontSize: 13 }}>Searching…</div>
           )}
           {!loading && results.map(r => (
             <button
@@ -232,7 +232,7 @@ export default function LocationPicker({
               style={{
                 display: 'block', width: '100%', padding: '10px 14px',
                 textAlign: 'left', background: 'transparent', border: 'none',
-                color: '#f1f5f9', fontSize: 13, cursor: 'pointer',
+                color: 'var(--ft-text)', fontSize: 13, cursor: 'pointer',
                 fontFamily: 'inherit', borderBottom: '1px solid rgba(148,163,184,0.08)',
               }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(56,189,248,0.08)')}
@@ -240,7 +240,7 @@ export default function LocationPicker({
             >
               <div style={{ fontWeight: 600 }}>{r.label}</div>
               {r.full_label !== r.label && (
-                <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{r.full_label}</div>
+                <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', marginTop: 2 }}>{r.full_label}</div>
               )}
             </button>
           ))}

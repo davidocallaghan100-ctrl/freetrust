@@ -58,8 +58,8 @@ function getTrustLevel(score: number) {
   if (score >= 5000) return { label: 'FreeTrust Ambassador', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', icon: '👑', nextAt: null,  next: 'Max level reached' }
   if (score >= 1000) return { label: 'Community Leader',    color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', icon: '🏆', nextAt: 5000, next: '5000 to Ambassador' }
   if (score >= 500)  return { label: 'Active Member',       color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: '✅', nextAt: 1000, next: '1000 to Leader' }
-  if (score >= 100)  return { label: 'Trusted Member',      color: '#38bdf8', bg: 'rgba(56,189,248,0.12)',  icon: '⭐', nextAt: 500,  next: '500 to Verified' }
-  return              { label: 'New Member',              color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', icon: '🌱', nextAt: 100,  next: '100 to Trusted' }
+  if (score >= 100)  return { label: 'Trusted Member',      color: 'var(--ft-accent)', bg: 'rgba(56,189,248,0.12)',  icon: '⭐', nextAt: 500,  next: '500 to Verified' }
+  return              { label: 'New Member',              color: 'var(--ft-text-secondary)', bg: 'rgba(148,163,184,0.12)', icon: '🌱', nextAt: 100,  next: '100 to Trusted' }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -79,7 +79,7 @@ const TX_ICONS: Record<TxCategory, string> = {
   transfer_sent: '↗', transfer_received: '↙',
 }
 const TX_COLORS: Record<TxCategory, string> = {
-  earned: '#34d399', spent: '#f87171', pending: '#f59e0b', withdrawn: '#94a3b8', trust: '#38bdf8', deposit: '#a78bfa',
+  earned: '#34d399', spent: 'var(--ft-danger)', pending: '#f59e0b', withdrawn: 'var(--ft-text-secondary)', trust: 'var(--ft-accent)', deposit: '#a78bfa',
   transfer_sent: '#fb923c', transfer_received: '#34d399',
 }
 const TX_BG: Record<TxCategory, string> = {
@@ -103,12 +103,12 @@ function TrustHistoryBar({ months }: { months: { label: string; score: number }[
             width: '100%',
             height: `${Math.max((m.score / max) * 52, 3)}px`,
             background: i === months.length - 1
-              ? 'linear-gradient(to top, #38bdf8, #818cf8)'
+              ? 'linear-gradient(to top, var(--ft-accent), #818cf8)'
               : 'rgba(56,189,248,0.3)',
             borderRadius: '4px 4px 0 0',
             transition: 'height 0.5s ease',
           }} />
-          <span style={{ fontSize: '9px', color: '#475569' }}>{m.label}</span>
+          <span style={{ fontSize: '9px', color: 'var(--ft-text-faint)' }}>{m.label}</span>
         </div>
       ))}
     </div>
@@ -117,17 +117,17 @@ function TrustHistoryBar({ months }: { months: { label: string; score: number }[
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, sub, color = '#38bdf8', icon }: {
+function StatCard({ label, value, sub, color = 'var(--ft-accent)', icon }: {
   label: string; value: string; sub?: string; color?: string; icon: string
 }) {
   return (
-    <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '16px 18px' }}>
+    <div style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '14px', padding: '16px 18px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
         <span style={{ fontSize: '18px' }}>{icon}</span>
-        <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
+        <span style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
       </div>
       <div style={{ fontSize: '22px', fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: '11px', color: '#475569', marginTop: '4px' }}>{sub}</div>}
+      {sub && <div style={{ fontSize: '11px', color: 'var(--ft-text-faint)', marginTop: '4px' }}>{sub}</div>}
     </div>
   )
 }
@@ -169,13 +169,13 @@ function AddFundsModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
-      <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: '480px', boxShadow: '0 -8px 40px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: '480px', boxShadow: '0 -8px 40px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div>
-            <div style={{ fontSize: '17px', fontWeight: 800, color: '#f1f5f9' }}>➕ Add Funds</div>
-            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>Secure payment via Stripe</div>
+            <div style={{ fontSize: '17px', fontWeight: 800, color: 'var(--ft-text)' }}>➕ Add Funds</div>
+            <div style={{ fontSize: '12px', color: 'var(--ft-text-tertiary)', marginTop: '2px' }}>Secure payment via Stripe</div>
           </div>
-          <button onClick={onClose} style={{ background: '#0f172a', border: 'none', borderRadius: '50%', width: '32px', height: '32px', color: '#64748b', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          <button onClick={onClose} style={{ background: 'var(--ft-bg)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', color: 'var(--ft-text-tertiary)', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
         </div>
 
         {/* Preset amounts */}
@@ -185,9 +185,9 @@ function AddFundsModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
               key={amt}
               onClick={() => { setSelected(amt); setCustom('') }}
               style={{
-                padding: '12px 8px', borderRadius: '10px', border: `1.5px solid ${selected === amt ? '#38bdf8' : '#334155'}`,
-                background: selected === amt ? 'rgba(56,189,248,0.12)' : '#0f172a',
-                color: selected === amt ? '#38bdf8' : '#f1f5f9', fontWeight: 700, fontSize: '15px',
+                padding: '12px 8px', borderRadius: '10px', border: `1.5px solid ${selected === amt ? 'var(--ft-accent)' : 'var(--ft-border-strong)'}`,
+                background: selected === amt ? 'rgba(56,189,248,0.12)' : 'var(--ft-bg)',
+                color: selected === amt ? 'var(--ft-accent)' : 'var(--ft-text)', fontWeight: 700, fontSize: '15px',
                 cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
               }}
             >
@@ -198,9 +198,9 @@ function AddFundsModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
 
         {/* Custom amount */}
         <div style={{ marginBottom: '18px' }}>
-          <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Or enter custom amount</label>
+          <label style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)', fontWeight: 600, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Or enter custom amount</label>
           <div style={{ position: 'relative' }}>
-            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '15px', fontWeight: 600 }}>€</span>
+            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--ft-text-tertiary)', fontSize: '15px', fontWeight: 600 }}>€</span>
             <input
               type="number"
               min="1"
@@ -209,17 +209,17 @@ function AddFundsModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
               placeholder="0.00"
               value={custom}
               onChange={e => { setCustom(e.target.value); setSelected(null) }}
-              style={{ width: '100%', background: '#0f172a', border: `1.5px solid ${custom ? '#38bdf8' : '#334155'}`, borderRadius: '10px', padding: '12px 12px 12px 28px', fontSize: '15px', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+              style={{ width: '100%', background: 'var(--ft-bg)', border: `1.5px solid ${custom ? 'var(--ft-accent)' : 'var(--ft-border-strong)'}`, borderRadius: '10px', padding: '12px 12px 12px 28px', fontSize: '15px', color: 'var(--ft-text)', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
             />
           </div>
         </div>
 
-        {error && <div style={{ fontSize: '13px', color: '#f87171', marginBottom: '12px', padding: '10px 14px', background: 'rgba(248,113,113,0.08)', borderRadius: '8px' }}>{error}</div>}
+        {error && <div style={{ fontSize: '13px', color: 'var(--ft-danger)', marginBottom: '12px', padding: '10px 14px', background: 'rgba(248,113,113,0.08)', borderRadius: '8px' }}>{error}</div>}
 
         {/* Summary */}
         {amountCents && amountCents >= 100 && (
-          <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '14px', padding: '10px 14px', background: 'rgba(56,189,248,0.06)', borderRadius: '8px', border: '1px solid rgba(56,189,248,0.12)' }}>
-            Adding <span style={{ color: '#38bdf8', fontWeight: 700 }}>€{(amountCents / 100).toFixed(2)}</span> to your wallet · Secure card payment
+          <div style={{ fontSize: '13px', color: 'var(--ft-text-tertiary)', marginBottom: '14px', padding: '10px 14px', background: 'rgba(56,189,248,0.06)', borderRadius: '8px', border: '1px solid rgba(56,189,248,0.12)' }}>
+            Adding <span style={{ color: 'var(--ft-accent)', fontWeight: 700 }}>€{(amountCents / 100).toFixed(2)}</span> to your wallet · Secure card payment
           </div>
         )}
 
@@ -245,8 +245,8 @@ function AddFundsModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
           disabled={loading || !amountCents || amountCents < 100}
           style={{
             width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
-            background: (!amountCents || amountCents < 100) ? '#1e293b' : 'linear-gradient(135deg, #38bdf8, #818cf8)',
-            color: (!amountCents || amountCents < 100) ? '#475569' : '#0f172a',
+            background: (!amountCents || amountCents < 100) ? 'var(--ft-surface)' : 'linear-gradient(135deg, var(--ft-accent), #818cf8)',
+            color: (!amountCents || amountCents < 100) ? 'var(--ft-text-faint)' : 'var(--ft-bg)',
             fontSize: '15px', fontWeight: 800, cursor: (!amountCents || amountCents < 100) ? 'not-allowed' : 'pointer',
             fontFamily: 'inherit', transition: 'all 0.15s', opacity: loading ? 0.7 : 1,
           }}
@@ -254,7 +254,7 @@ function AddFundsModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
           {loading ? '⏳ Redirecting to payment…' : `💳 Pay €${amountCents && amountCents >= 100 ? (amountCents / 100).toFixed(2) : '0.00'} by card`}
         </button>
 
-        <div style={{ textAlign: 'center', fontSize: '11px', color: '#334155', marginTop: '12px' }}>
+        <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--ft-border-strong)', marginTop: '12px' }}>
           🔒 Powered by Stripe · SSL encrypted · No card data stored
         </div>
       </div>
@@ -332,62 +332,62 @@ function TransferModal({ walletData, onClose, onSuccess }: { walletData: WalletD
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
-      <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: '480px', boxShadow: '0 -8px 40px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: '480px', boxShadow: '0 -8px 40px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div>
-            <div style={{ fontSize: '17px', fontWeight: 800, color: '#f1f5f9' }}>↗ Transfer Funds</div>
-            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>Send € or ₮ to another FreeTrust member</div>
+            <div style={{ fontSize: '17px', fontWeight: 800, color: 'var(--ft-text)' }}>↗ Transfer Funds</div>
+            <div style={{ fontSize: '12px', color: 'var(--ft-text-tertiary)', marginTop: '2px' }}>Send € or ₮ to another FreeTrust member</div>
           </div>
-          <button onClick={onClose} style={{ background: '#0f172a', border: 'none', borderRadius: '50%', width: '32px', height: '32px', color: '#64748b', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          <button onClick={onClose} style={{ background: 'var(--ft-bg)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', color: 'var(--ft-text-tertiary)', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
         </div>
 
         {/* Recipient search */}
         {!selected ? (
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recipient</label>
+            <label style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)', fontWeight: 600, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recipient</label>
             <input
               type="text"
               placeholder="Search by name, username, or email..."
               value={query}
               onChange={e => setQuery(e.target.value)}
-              style={{ width: '100%', background: '#0f172a', border: '1.5px solid #334155', borderRadius: '10px', padding: '12px', fontSize: '14px', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+              style={{ width: '100%', background: 'var(--ft-bg)', border: '1.5px solid var(--ft-border-strong)', borderRadius: '10px', padding: '12px', fontSize: '14px', color: 'var(--ft-text)', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
             />
-            {searching && <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>Searching...</div>}
+            {searching && <div style={{ fontSize: '12px', color: 'var(--ft-text-tertiary)', marginTop: '6px' }}>Searching...</div>}
             {results.length > 0 && (
-              <div style={{ marginTop: '6px', background: '#0f172a', border: '1px solid #334155', borderRadius: '10px', maxHeight: '180px', overflowY: 'auto' }}>
+              <div style={{ marginTop: '6px', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: '10px', maxHeight: '180px', overflowY: 'auto' }}>
                 {results.map(u => (
                   <button
                     key={u.id}
                     onClick={() => { setSelected(u); setQuery(''); setResults([]) }}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'transparent', border: 'none', borderBottom: '1px solid #1e293b', cursor: 'pointer', textAlign: 'left' }}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--ft-surface)', cursor: 'pointer', textAlign: 'left' }}
                   >
                     {u.avatar_url
                       ? <img src={u.avatar_url} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover' }} />
-                      : <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800, color: '#0f172a' }}>{(u.full_name ?? '?')[0].toUpperCase()}</div>
+                      : <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,var(--ft-accent),#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800, color: 'var(--ft-bg)' }}>{(u.full_name ?? '?')[0].toUpperCase()}</div>
                     }
                     <div>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9' }}>{u.full_name ?? 'Unknown'}</div>
-                      {u.username && <div style={{ fontSize: '11px', color: '#64748b' }}>@{u.username}</div>}
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ft-text)' }}>{u.full_name ?? 'Unknown'}</div>
+                      {u.username && <div style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)' }}>@{u.username}</div>}
                     </div>
                   </button>
                 ))}
               </div>
             )}
             {query.length >= 2 && !searching && results.length === 0 && (
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>No users found</div>
+              <div style={{ fontSize: '12px', color: 'var(--ft-text-tertiary)', marginTop: '6px' }}>No users found</div>
             )}
           </div>
         ) : (
           <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: 'rgba(56,189,248,0.06)', borderRadius: '10px', border: '1px solid rgba(56,189,248,0.12)' }}>
             {selected.avatar_url
               ? <img src={selected.avatar_url} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
-              : <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800, color: '#0f172a' }}>{(selected.full_name ?? '?')[0].toUpperCase()}</div>
+              : <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,var(--ft-accent),#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800, color: 'var(--ft-bg)' }}>{(selected.full_name ?? '?')[0].toUpperCase()}</div>
             }
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9' }}>{selected.full_name ?? 'Unknown'}</div>
-              {selected.username && <div style={{ fontSize: '11px', color: '#64748b' }}>@{selected.username}</div>}
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ft-text)' }}>{selected.full_name ?? 'Unknown'}</div>
+              {selected.username && <div style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)' }}>@{selected.username}</div>}
             </div>
-            <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '14px' }}>✕</button>
+            <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', color: 'var(--ft-text-tertiary)', cursor: 'pointer', fontSize: '14px' }}>✕</button>
           </div>
         )}
 
@@ -399,9 +399,9 @@ function TransferModal({ walletData, onClose, onSuccess }: { walletData: WalletD
               onClick={() => setCurrency(c)}
               style={{
                 flex: 1, padding: '10px', borderRadius: '10px',
-                border: `1.5px solid ${currency === c ? (c === 'EUR' ? '#38bdf8' : '#a78bfa') : '#334155'}`,
-                background: currency === c ? (c === 'EUR' ? 'rgba(56,189,248,0.12)' : 'rgba(167,139,250,0.12)') : '#0f172a',
-                color: currency === c ? (c === 'EUR' ? '#38bdf8' : '#a78bfa') : '#64748b',
+                border: `1.5px solid ${currency === c ? (c === 'EUR' ? 'var(--ft-accent)' : '#a78bfa') : 'var(--ft-border-strong)'}`,
+                background: currency === c ? (c === 'EUR' ? 'rgba(56,189,248,0.12)' : 'rgba(167,139,250,0.12)') : 'var(--ft-bg)',
+                color: currency === c ? (c === 'EUR' ? 'var(--ft-accent)' : '#a78bfa') : 'var(--ft-text-tertiary)',
                 fontWeight: 700, fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
@@ -412,9 +412,9 @@ function TransferModal({ walletData, onClose, onSuccess }: { walletData: WalletD
 
         {/* Amount */}
         <div style={{ marginBottom: '14px' }}>
-          <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Amount</label>
+          <label style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)', fontWeight: 600, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Amount</label>
           <div style={{ position: 'relative' }}>
-            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '15px', fontWeight: 600 }}>{currency === 'EUR' ? '€' : '₮'}</span>
+            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--ft-text-tertiary)', fontSize: '15px', fontWeight: 600 }}>{currency === 'EUR' ? '€' : '₮'}</span>
             <input
               type="number"
               min={currency === 'EUR' ? '0.01' : '1'}
@@ -422,36 +422,36 @@ function TransferModal({ walletData, onClose, onSuccess }: { walletData: WalletD
               placeholder="0.00"
               value={amount}
               onChange={e => setAmount(e.target.value)}
-              style={{ width: '100%', background: '#0f172a', border: `1.5px solid ${amount ? (hasEnough ? '#334155' : '#f87171') : '#334155'}`, borderRadius: '10px', padding: '12px 12px 12px 28px', fontSize: '15px', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+              style={{ width: '100%', background: 'var(--ft-bg)', border: `1.5px solid ${amount ? (hasEnough ? 'var(--ft-border-strong)' : 'var(--ft-danger)') : 'var(--ft-border-strong)'}`, borderRadius: '10px', padding: '12px 12px 12px 28px', fontSize: '15px', color: 'var(--ft-text)', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
             />
           </div>
           {parsedAmount > 0 && !hasEnough && (
-            <div style={{ fontSize: '12px', color: '#f87171', marginTop: '4px' }}>Insufficient balance</div>
+            <div style={{ fontSize: '12px', color: 'var(--ft-danger)', marginTop: '4px' }}>Insufficient balance</div>
           )}
         </div>
 
         {/* Note */}
         <div style={{ marginBottom: '18px' }}>
-          <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Note (optional)</label>
+          <label style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)', fontWeight: 600, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Note (optional)</label>
           <input
             type="text"
             placeholder="What's this for?"
             value={note}
             onChange={e => setNote(e.target.value)}
             maxLength={500}
-            style={{ width: '100%', background: '#0f172a', border: '1.5px solid #334155', borderRadius: '10px', padding: '12px', fontSize: '14px', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+            style={{ width: '100%', background: 'var(--ft-bg)', border: '1.5px solid var(--ft-border-strong)', borderRadius: '10px', padding: '12px', fontSize: '14px', color: 'var(--ft-text)', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
           />
         </div>
 
-        {error && <div style={{ fontSize: '13px', color: '#f87171', marginBottom: '12px', padding: '10px 14px', background: 'rgba(248,113,113,0.08)', borderRadius: '8px' }}>{error}</div>}
+        {error && <div style={{ fontSize: '13px', color: 'var(--ft-danger)', marginBottom: '12px', padding: '10px 14px', background: 'rgba(248,113,113,0.08)', borderRadius: '8px' }}>{error}</div>}
 
         <button
           onClick={handleTransfer}
           disabled={!canSubmit}
           style={{
             width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
-            background: canSubmit ? 'linear-gradient(135deg, #fb923c, #f97316)' : '#1e293b',
-            color: canSubmit ? '#0f172a' : '#475569',
+            background: canSubmit ? 'linear-gradient(135deg, #fb923c, #f97316)' : 'var(--ft-surface)',
+            color: canSubmit ? 'var(--ft-bg)' : 'var(--ft-text-faint)',
             fontSize: '15px', fontWeight: 800, cursor: canSubmit ? 'pointer' : 'not-allowed',
             fontFamily: 'inherit', transition: 'all 0.15s', opacity: loading ? 0.7 : 1,
           }}
@@ -737,15 +737,15 @@ function WalletPageInner() {
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '3px solid #1e293b', borderTopColor: '#38bdf8', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
-        <div style={{ fontSize: '13px', color: '#64748b' }}>Loading wallet…</div>
+        <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '3px solid var(--ft-surface)', borderTopColor: 'var(--ft-accent)', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
+        <div style={{ fontSize: '13px', color: 'var(--ft-text-tertiary)' }}>Loading wallet…</div>
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui, sans-serif' }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg) } }
         @keyframes slideUp { from { transform: translateY(16px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
@@ -773,7 +773,7 @@ function WalletPageInner() {
 
       {/* Toast */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: '80px', left: '50%', transform: 'translateX(-50%)', background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '12px 20px', fontSize: '13px', color: '#f1f5f9', zIndex: 9999, animation: 'slideUp 0.2s ease', boxShadow: '0 8px 30px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
+        <div style={{ position: 'fixed', bottom: '80px', left: '50%', transform: 'translateX(-50%)', background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '12px', padding: '12px 20px', fontSize: '13px', color: 'var(--ft-text)', zIndex: 9999, animation: 'slideUp 0.2s ease', boxShadow: '0 8px 30px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
           {toast}
         </div>
       )}
@@ -783,11 +783,11 @@ function WalletPageInner() {
         {/* Header */}
         <div style={{ marginBottom: '20px' }}>
           <h1 style={{ fontSize: '22px', fontWeight: 800, margin: '0 0 4px' }}>My Wallet</h1>
-          <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>Manage earnings, trust, and spending</p>
+          <p style={{ fontSize: '13px', color: 'var(--ft-text-tertiary)', margin: 0 }}>Manage earnings, trust, and spending</p>
         </div>
 
         {/* Main tab bar */}
-        <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: '#1e293b', borderRadius: '12px', padding: '4px', border: '1px solid #334155' }}>
+        <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: 'var(--ft-surface)', borderRadius: '12px', padding: '4px', border: '1px solid var(--ft-border-strong)' }}>
           {MAIN_TABS.map(t => (
             <button
               key={t.id}
@@ -795,8 +795,8 @@ function WalletPageInner() {
               style={{
                 flex: 1, padding: '9px 4px', borderRadius: '9px', border: 'none', cursor: 'pointer',
                 fontSize: '13px', fontWeight: tab === t.id ? 700 : 400,
-                color: tab === t.id ? '#f1f5f9' : '#64748b',
-                background: tab === t.id ? '#0f172a' : 'transparent',
+                color: tab === t.id ? 'var(--ft-text)' : 'var(--ft-text-tertiary)',
+                background: tab === t.id ? 'var(--ft-bg)' : 'transparent',
                 transition: 'all 0.15s', fontFamily: 'inherit',
               }}
             >
@@ -810,9 +810,9 @@ function WalletPageInner() {
           <>
             {/* Hero balance card */}
             <div style={{ background: 'linear-gradient(135deg, rgba(56,189,248,0.15) 0%, rgba(129,140,248,0.1) 100%)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '18px', padding: '24px 22px', marginBottom: '16px' }}>
-              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Available Balance</div>
-              <div style={{ fontSize: '44px', fontWeight: 900, lineHeight: 1, color: '#f1f5f9', marginBottom: '4px' }}>
-                <span style={{ fontSize: '22px', color: '#64748b', fontWeight: 400 }}>{sym}</span>
+              <div style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Available Balance</div>
+              <div style={{ fontSize: '44px', fontWeight: 900, lineHeight: 1, color: 'var(--ft-text)', marginBottom: '4px' }}>
+                <span style={{ fontSize: '22px', color: 'var(--ft-text-tertiary)', fontWeight: 400 }}>{sym}</span>
                 {Math.max(data?.money.available ?? 0, 0).toFixed(2)}
               </div>
               {(data?.money.pendingPayout ?? 0) > 0 && (
@@ -820,14 +820,14 @@ function WalletPageInner() {
                   + {sym}{(data?.money.pendingPayout ?? 0).toFixed(2)} pending payout
                 </div>
               )}
-              <div style={{ fontSize: '12px', color: '#475569', marginBottom: '18px' }}>FreeTrust earnings account</div>
+              <div style={{ fontSize: '12px', color: 'var(--ft-text-faint)', marginBottom: '18px' }}>FreeTrust earnings account</div>
 
               {/* Trust balance inline */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px', padding: '10px 14px', background: 'rgba(56,189,248,0.08)', borderRadius: '10px', border: '1px solid rgba(56,189,248,0.15)' }}>
                 <span style={{ fontSize: '20px' }}>💎</span>
                 <div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>Trust Balance</div>
-                  <div style={{ fontSize: '20px', fontWeight: 800, color: '#38bdf8', lineHeight: 1 }}>₮{(data?.trust.balance ?? 0).toLocaleString()}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)' }}>Trust Balance</div>
+                  <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--ft-accent)', lineHeight: 1 }}>₮{(data?.trust.balance ?? 0).toLocaleString()}</div>
                 </div>
                 <div style={{ marginLeft: 'auto' }}>
                   <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, background: trustLevel.bg, color: trustLevel.color }}>
@@ -841,7 +841,7 @@ function WalletPageInner() {
                 <button
                   onClick={handleWithdraw}
                   disabled={withdrawing}
-                  style={{ flex: 1, minWidth: '100px', padding: '11px 14px', background: withdrawing ? '#1e293b' : '#38bdf8', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 700, color: withdrawing ? '#475569' : '#0f172a', cursor: withdrawing ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: withdrawing ? 0.7 : 1 }}
+                  style={{ flex: 1, minWidth: '100px', padding: '11px 14px', background: withdrawing ? 'var(--ft-surface)' : 'var(--ft-accent)', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 700, color: withdrawing ? 'var(--ft-text-faint)' : 'var(--ft-bg)', cursor: withdrawing ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: withdrawing ? 0.7 : 1 }}
                 >
                   {withdrawing ? '⏳ Opening…' : '💸 Withdraw'}
                 </button>
@@ -853,7 +853,7 @@ function WalletPageInner() {
                 </button>
                 <button
                   onClick={() => setShowAddFunds(true)}
-                  style={{ flex: 1, minWidth: '100px', padding: '11px 14px', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#38bdf8', cursor: 'pointer', fontFamily: 'inherit' }}
+                  style={{ flex: 1, minWidth: '100px', padding: '11px 14px', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: 'var(--ft-accent)', cursor: 'pointer', fontFamily: 'inherit' }}
                 >
                   ➕ Add Funds
                 </button>
@@ -864,26 +864,26 @@ function WalletPageInner() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
               <StatCard icon="💳" label="Deposited" value={`${sym}${(data?.money.totalDeposited ?? 0).toFixed(2)}`} color="#a78bfa" />
               <StatCard icon="⬇" label="Total Earned" value={`${sym}${(data?.money.totalEarned ?? 0).toFixed(2)}`} color="#34d399" />
-              <StatCard icon="⬆" label="Total Spent" value={`${sym}${(data?.money.totalSpent ?? 0).toFixed(2)}`} color="#f87171" />
+              <StatCard icon="⬆" label="Total Spent" value={`${sym}${(data?.money.totalSpent ?? 0).toFixed(2)}`} color="var(--ft-danger)" />
               <StatCard icon="💎" label="Trust Lifetime" value={`₮${(data?.trust.lifetime ?? 0).toLocaleString()}`} color="#818cf8" sub="All-time earned" />
             </div>
 
             {/* Transaction history */}
-            <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', overflow: 'hidden' }}>
+            <div style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '14px', overflow: 'hidden' }}>
               {/* Header */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid #334155', flexWrap: 'wrap', gap: '10px' }}>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9' }}>Transaction History</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--ft-border-strong)', flexWrap: 'wrap', gap: '10px' }}>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--ft-text)' }}>Transaction History</span>
                 <button
                   onClick={exportCSV}
                   disabled={exporting || txList.length === 0}
-                  style={{ padding: '6px 14px', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '8px', fontSize: '12px', fontWeight: 600, color: '#38bdf8', cursor: 'pointer', fontFamily: 'inherit', opacity: (exporting || txList.length === 0) ? 0.5 : 1 }}
+                  style={{ padding: '6px 14px', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '8px', fontSize: '12px', fontWeight: 600, color: 'var(--ft-accent)', cursor: 'pointer', fontFamily: 'inherit', opacity: (exporting || txList.length === 0) ? 0.5 : 1 }}
                 >
                   {exporting ? '…' : '⬇ Export CSV'}
                 </button>
               </div>
 
               {/* Filter pills */}
-              <div style={{ display: 'flex', gap: '6px', padding: '12px 16px', overflowX: 'auto', scrollbarWidth: 'none', borderBottom: '1px solid #334155' }}>
+              <div style={{ display: 'flex', gap: '6px', padding: '12px 16px', overflowX: 'auto', scrollbarWidth: 'none', borderBottom: '1px solid var(--ft-border-strong)' }}>
                 {FILTERS.map(f => (
                   <button
                     key={f}
@@ -892,7 +892,7 @@ function WalletPageInner() {
                     style={{
                       padding: '5px 12px', borderRadius: '20px', border: 'none', cursor: 'pointer',
                       fontSize: '12px', fontWeight: filter === f ? 700 : 400,
-                      color: filter === f ? '#38bdf8' : '#64748b',
+                      color: filter === f ? 'var(--ft-accent)' : 'var(--ft-text-tertiary)',
                       background: filter === f ? 'rgba(56,189,248,0.12)' : 'transparent',
                       whiteSpace: 'nowrap', flexShrink: 0, fontFamily: 'inherit',
                     }}
@@ -904,7 +904,7 @@ function WalletPageInner() {
 
               {/* Rows */}
               {filtered.length === 0 ? (
-                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--ft-text-tertiary)', fontSize: '13px' }}>
                   {txList.length === 0 ? 'No transactions yet — start selling to see earnings here' : `No ${filter.toLowerCase()} transactions`}
                 </div>
               ) : (
@@ -918,15 +918,15 @@ function WalletPageInner() {
                       {TX_ICONS[tx.category]}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 500, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.description}</div>
-                      <div style={{ fontSize: '11px', color: '#475569', marginTop: '2px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--ft-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.description}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--ft-text-faint)', marginTop: '2px' }}>
                         {fmtDate(tx.date)} · {tx.category}
                         {tx.status && tx.status !== 'completed' && (
                           <span style={{ marginLeft: '6px', padding: '1px 6px', borderRadius: '4px', background: 'rgba(245,158,11,0.15)', color: '#f59e0b', fontSize: '10px', fontWeight: 600 }}>{tx.status}</span>
                         )}
                       </div>
                     </div>
-                    <div style={{ fontSize: '15px', fontWeight: 700, flexShrink: 0, color: tx.amount >= 0 ? TX_COLORS[tx.category] : '#f87171' }}>
+                    <div style={{ fontSize: '15px', fontWeight: 700, flexShrink: 0, color: tx.amount >= 0 ? TX_COLORS[tx.category] : 'var(--ft-danger)' }}>
                       {tx.amount >= 0 ? '+' : ''}{fmt(tx.amount, tx.currency, sym)}
                     </div>
                   </div>
@@ -941,7 +941,7 @@ function WalletPageInner() {
           <>
             {/* Hero trust card */}
             <div style={{ background: 'linear-gradient(135deg, rgba(56,189,248,0.15), rgba(129,140,248,0.12))', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '18px', padding: '28px 22px', marginBottom: '16px', textAlign: 'center' }}>
-              <div style={{ fontSize: '56px', fontWeight: 900, color: '#38bdf8', lineHeight: 1 }}>
+              <div style={{ fontSize: '56px', fontWeight: 900, color: 'var(--ft-accent)', lineHeight: 1 }}>
                 ₮{(data?.trust.balance ?? 0).toLocaleString()}
               </div>
               <div style={{ marginTop: '10px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', borderRadius: '30px', background: trustLevel.bg, border: `1px solid ${trustLevel.color}40` }}>
@@ -951,12 +951,12 @@ function WalletPageInner() {
               {/* Progress to next level */}
               {nextAt && (
                 <div style={{ marginTop: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', marginBottom: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--ft-text-tertiary)', marginBottom: '6px' }}>
                     <span>{trustLevel.next}</span>
                     <span>{Math.round(levelProgress)}%</span>
                   </div>
                   <div style={{ height: '8px', background: 'rgba(56,189,248,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${levelProgress}%`, background: `linear-gradient(90deg, ${trustLevel.color}, #38bdf8)`, borderRadius: '4px', transition: 'width 0.6s ease' }} />
+                    <div style={{ height: '100%', width: `${levelProgress}%`, background: `linear-gradient(90deg, ${trustLevel.color}, var(--ft-accent))`, borderRadius: '4px', transition: 'width 0.6s ease' }} />
                   </div>
                 </div>
               )}
@@ -964,22 +964,22 @@ function WalletPageInner() {
 
             {/* Stats row */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
-              <StatCard icon="💎" label="Trust Balance" value={`₮${(data?.trust.balance ?? 0).toLocaleString()}`} color="#38bdf8" />
+              <StatCard icon="💎" label="Trust Balance" value={`₮${(data?.trust.balance ?? 0).toLocaleString()}`} color="var(--ft-accent)" />
               <StatCard icon="📈" label="Lifetime Earned" value={`₮${(data?.trust.lifetime ?? 0).toLocaleString()}`} color="#818cf8" />
             </div>
 
             {/* Trust history chart */}
-            <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#94a3b8', marginBottom: '12px' }}>Trust Score Over Time</div>
+            <div style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--ft-text-secondary)', marginBottom: '12px' }}>Trust Score Over Time</div>
               <TrustHistoryBar months={trustHistory} />
             </div>
 
             {/* Trust breakdown */}
-            <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#94a3b8', marginBottom: '14px' }}>Level Milestones</div>
+            <div style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--ft-text-secondary)', marginBottom: '14px' }}>Level Milestones</div>
               {[
-                { label: 'New Member',           at: 0,    icon: '🌱', color: '#94a3b8' },
-                { label: 'Trusted Member',       at: 100,  icon: '⭐', color: '#38bdf8' },
+                { label: 'New Member',           at: 0,    icon: '🌱', color: 'var(--ft-text-secondary)' },
+                { label: 'Trusted Member',       at: 100,  icon: '⭐', color: 'var(--ft-accent)' },
                 { label: 'Active Member',        at: 500,  icon: '✅', color: '#34d399' },
                 { label: 'Community Leader',     at: 1000, icon: '🏆', color: '#a78bfa' },
                 { label: 'FreeTrust Ambassador', at: 5000, icon: '👑', color: '#f59e0b' },
@@ -989,13 +989,13 @@ function WalletPageInner() {
                   <div key={lvl.label} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid rgba(51,65,85,0.5)' }}>
                     <span style={{ fontSize: '20px', width: '28px', textAlign: 'center' }}>{lvl.icon}</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: reached ? '#f1f5f9' : '#475569' }}>{lvl.label}</div>
-                      <div style={{ fontSize: '11px', color: '#475569' }}>₮{lvl.at.toLocaleString()}+</div>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: reached ? 'var(--ft-text)' : 'var(--ft-text-faint)' }}>{lvl.label}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--ft-text-faint)' }}>₮{lvl.at.toLocaleString()}+</div>
                     </div>
                     {reached ? (
                       <span style={{ fontSize: '11px', fontWeight: 700, color: lvl.color, background: `${lvl.color}15`, padding: '3px 10px', borderRadius: '20px' }}>✓ Reached</span>
                     ) : (
-                      <span style={{ fontSize: '11px', color: '#334155' }}>₮{(lvl.at - (data?.trust.balance ?? 0)).toLocaleString()} away</span>
+                      <span style={{ fontSize: '11px', color: 'var(--ft-border-strong)' }}>₮{(lvl.at - (data?.trust.balance ?? 0)).toLocaleString()} away</span>
                     )}
                   </div>
                 )
@@ -1003,19 +1003,19 @@ function WalletPageInner() {
             </div>
 
             {/* Actions to earn more */}
-            <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', overflow: 'hidden' }}>
-              <div style={{ padding: '14px 16px', borderBottom: '1px solid #334155' }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9' }}>Earn More Trust</div>
-                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Complete actions to grow your Trust score</div>
+            <div style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '14px', overflow: 'hidden' }}>
+              <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--ft-border-strong)' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--ft-text)' }}>Earn More Trust</div>
+                <div style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)', marginTop: '2px' }}>Complete actions to grow your Trust score</div>
               </div>
               {actions.map(action => (
                 <div key={action.key} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderBottom: '1px solid rgba(51,65,85,0.4)' }}>
                   <span style={{ fontSize: '16px', flexShrink: 0 }}>{action.done ? '✅' : action.repeatable ? '🔄' : '⭕'}</span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '13px', color: action.done ? '#64748b' : '#cbd5e1', textDecoration: action.done ? 'line-through' : 'none' }}>{action.label}</div>
-                    {action.repeatable && <div style={{ fontSize: '10px', color: '#475569', marginTop: '1px' }}>Repeatable</div>}
+                    <div style={{ fontSize: '13px', color: action.done ? 'var(--ft-text-tertiary)' : 'var(--ft-text-secondary)', textDecoration: action.done ? 'line-through' : 'none' }}>{action.label}</div>
+                    {action.repeatable && <div style={{ fontSize: '10px', color: 'var(--ft-text-faint)', marginTop: '1px' }}>Repeatable</div>}
                   </div>
-                  <span style={{ fontSize: '13px', fontWeight: 800, color: action.done ? '#475569' : '#34d399' }}>+₮{action.amount}</span>
+                  <span style={{ fontSize: '13px', fontWeight: 800, color: action.done ? 'var(--ft-text-faint)' : '#34d399' }}>+₮{action.amount}</span>
                 </div>
               ))}
             </div>
@@ -1029,8 +1029,8 @@ function WalletPageInner() {
             <div style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '14px', padding: '14px 18px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ fontSize: '24px' }}>💎</span>
               <div>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>Your Trust Balance</div>
-                <div style={{ fontSize: '24px', fontWeight: 800, color: '#38bdf8' }}>₮{(data?.trust.balance ?? 0).toLocaleString()}</div>
+                <div style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)' }}>Your Trust Balance</div>
+                <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--ft-accent)' }}>₮{(data?.trust.balance ?? 0).toLocaleString()}</div>
               </div>
             </div>
 
@@ -1050,7 +1050,7 @@ function WalletPageInner() {
                   title: 'Offset Platform Fee',
                   desc: 'Use ₮100 Trust to reduce your next transaction fee by €1',
                   cost: 100,
-                  color: '#38bdf8',
+                  color: 'var(--ft-accent)',
                 },
                 {
                   key: 'donate_impact',
@@ -1082,7 +1082,7 @@ function WalletPageInner() {
                   <div
                     key={item.key}
                     className="spend-card"
-                    style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '16px 18px', transition: 'border-color 0.15s' }}
+                    style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '14px', padding: '16px 18px', transition: 'border-color 0.15s' }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                       <div style={{ width: '44px', height: '44px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', background: `${item.color}15`, flexShrink: 0 }}>
@@ -1090,10 +1090,10 @@ function WalletPageInner() {
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
-                          <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9' }}>{item.title}</div>
+                          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--ft-text)' }}>{item.title}</div>
                           <div style={{ fontSize: '14px', fontWeight: 800, color: item.color }}>₮{item.cost}</div>
                         </div>
-                        <div style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 12px', lineHeight: 1.5 }}>{item.desc}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--ft-text-tertiary)', margin: '4px 0 12px', lineHeight: 1.5 }}>{item.desc}</div>
                         <button
                           onClick={() => spendTrust(item.key, item.cost, item.title)}
                           disabled={!canAfford || spendLoading === item.key}
@@ -1101,7 +1101,7 @@ function WalletPageInner() {
                             padding: '8px 18px', borderRadius: '8px', border: 'none', cursor: canAfford ? 'pointer' : 'not-allowed',
                             fontSize: '13px', fontWeight: 700, fontFamily: 'inherit',
                             background: canAfford ? item.color : 'rgba(100,116,139,0.2)',
-                            color: canAfford ? '#0f172a' : '#475569',
+                            color: canAfford ? 'var(--ft-bg)' : 'var(--ft-text-faint)',
                             opacity: spendLoading === item.key ? 0.7 : 1,
                             transition: 'all 0.15s',
                           }}
@@ -1117,7 +1117,7 @@ function WalletPageInner() {
 
             <div style={{ marginTop: '20px', padding: '16px', background: 'rgba(52,211,153,0.05)', border: '1px solid rgba(52,211,153,0.15)', borderRadius: '12px' }}>
               <div style={{ fontSize: '13px', fontWeight: 600, color: '#34d399', marginBottom: '6px' }}>💡 Trust Economy</div>
-              <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.6 }}>
+              <div style={{ fontSize: '12px', color: 'var(--ft-text-tertiary)', lineHeight: 1.6 }}>
                 Trust (₮) is FreeTrust&apos;s internal reputation currency. Earn it by completing transactions, getting reviews, referring members, and contributing to the community. Spend it to unlock perks and reduce fees.
               </div>
             </div>
@@ -1130,7 +1130,7 @@ function WalletPageInner() {
 
 export default function WalletPage() {
   return (
-    <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', color: '#64748b' }}>Loading wallet…</div>}>
+    <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', color: 'var(--ft-text-tertiary)' }}>Loading wallet…</div>}>
       <WalletPageInner />
     </Suspense>
   )

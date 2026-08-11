@@ -34,14 +34,14 @@ function DeleteModal({ title, onConfirm, onCancel, deleting }: {
   const t = useTranslations('productsPage')
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
-      <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: 14, padding: '1.5rem', maxWidth: 420, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
-        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem' }}>{t('delete.title')}</div>
-        <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
+      <div style={{ background: 'var(--ft-surface)', border: '1px solid #ef4444', borderRadius: 14, padding: '1.5rem', maxWidth: 420, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--ft-text)', marginBottom: '0.5rem' }}>{t('delete.title')}</div>
+        <div style={{ fontSize: '0.85rem', color: 'var(--ft-text-secondary)', marginBottom: '1.25rem' }}>
           {t('delete.body', { title })}
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
           <button onClick={onCancel} disabled={deleting}
-            style={{ padding: '0.5rem 1rem', borderRadius: 8, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>
+            style={{ padding: '0.5rem 1rem', borderRadius: 8, border: '1px solid var(--ft-border-strong)', background: 'transparent', color: 'var(--ft-text-secondary)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>
             {t('common.cancel')}
           </button>
           <button onClick={onConfirm} disabled={deleting}
@@ -119,7 +119,7 @@ const SORT_OPTIONS = ['Newest', 'Top Rated', 'Popular', 'Price: Low', 'Price: Hi
 const CAT_GRAD: Record<string, string> = {
   electronics:   'linear-gradient(135deg,#06b6d4,#0284c7)',
   'computer-accessories': 'linear-gradient(135deg,#0ea5e9,#2563eb)',
-  laptops:       'linear-gradient(135deg,#38bdf8,#1d4ed8)',
+  laptops:       'linear-gradient(135deg,var(--ft-accent),#1d4ed8)',
   tablets:       'linear-gradient(135deg,#22d3ee,#4338ca)',
   headphones:    'linear-gradient(135deg,#14b8a6,#0f766e)',
   speakers:      'linear-gradient(135deg,#0ea5e9,#7c3aed)',
@@ -127,9 +127,9 @@ const CAT_GRAD: Record<string, string> = {
   energy:        'linear-gradient(135deg,#22c55e,#0f766e)',
   'art-printed-products': 'linear-gradient(135deg,#f472b6,#db2777)',
   music:         'linear-gradient(135deg,#a78bfa,#7c3aed)',
-  'fashion-him': 'linear-gradient(135deg,#38bdf8,#4338ca)',
+  'fashion-him': 'linear-gradient(135deg,var(--ft-accent),#4338ca)',
   'fashion-her': 'linear-gradient(135deg,#f472b6,#7c3aed)',
-  appliances:    'linear-gradient(135deg,#94a3b8,#0f766e)',
+  appliances:    'linear-gradient(135deg,var(--ft-text-secondary),#0f766e)',
   'bulk-buy':    'linear-gradient(135deg,#f59e0b,#92400e)',
   cleaning:      'linear-gradient(135deg,#67e8f9,#0f766e)',
   cooking:       'linear-gradient(135deg,#fb923c,#dc2626)',
@@ -140,11 +140,11 @@ const CAT_GRAD: Record<string, string> = {
   kitchen:       'linear-gradient(135deg,#fb923c,#be123c)',
   lighting:      'linear-gradient(135deg,#fde047,#f59e0b)',
   'mobile-phone':'linear-gradient(135deg,#22d3ee,#2563eb)',
-  office:        'linear-gradient(135deg,#64748b,#1e293b)',
-  tv:            'linear-gradient(135deg,#38bdf8,#0f172a)',
+  office:        'linear-gradient(135deg,var(--ft-text-tertiary),var(--ft-surface))',
+  tv:            'linear-gradient(135deg,var(--ft-accent),var(--ft-bg))',
   shoes:         'linear-gradient(135deg,#34d399,#0891b2)',
   'shoes-her':   'linear-gradient(135deg,#f472b6,#be185d)',
-  'shoes-him':   'linear-gradient(135deg,#38bdf8,#1e40af)',
+  'shoes-him':   'linear-gradient(135deg,var(--ft-accent),#1e40af)',
   plants:        'linear-gradient(135deg,#86efac,#15803d)',
   'online-courses': 'linear-gradient(135deg,#60a5fa,#7c3aed)',
   clothing:      'linear-gradient(135deg,#fb7185,#be185d)',
@@ -160,10 +160,10 @@ const CAT_GRAD: Record<string, string> = {
   gardening:     'linear-gradient(135deg,#84cc16,#15803d)',
   pets:          'linear-gradient(135deg,#fb923c,#92400e)',
   'digital-products': 'linear-gradient(135deg,#818cf8,#4338ca)',
-  business:      'linear-gradient(135deg,#64748b,#334155)',
+  business:      'linear-gradient(135deg,var(--ft-text-tertiary),var(--ft-border-strong))',
   'hardware-tools': 'linear-gradient(135deg,#f97316,#92400e)',
   'construction-supplies': 'linear-gradient(135deg,#f59e0b,#854d0e)',
-  'travel-luggage': 'linear-gradient(135deg,#38bdf8,#0f766e)',
+  'travel-luggage': 'linear-gradient(135deg,var(--ft-accent),#0f766e)',
 }
 
 
@@ -172,7 +172,7 @@ function Stars({ rating }: { rating: number }) {
   return (
     <span>
       {[1,2,3,4,5].map(i => (
-        <span key={i} style={{ color: i <= Math.round(rating) ? '#fbbf24' : '#334155', fontSize: '0.7rem' }}>★</span>
+        <span key={i} style={{ color: i <= Math.round(rating) ? '#fbbf24' : 'var(--ft-border-strong)', fontSize: '0.7rem' }}>★</span>
       ))}
     </span>
   )
@@ -193,10 +193,10 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
 }) {
   const { format } = useCurrency()
   const t = useTranslations('productsPage')
-  const gradient = p.image ? undefined : (CAT_GRAD[p.category] ?? 'linear-gradient(135deg,#334155,#1e293b)')
+  const gradient = p.image ? undefined : (CAT_GRAD[p.category] ?? 'linear-gradient(135deg,var(--ft-border-strong),var(--ft-surface))')
 
   return (
-    <div className="ft-product-card" style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.15s, box-shadow 0.15s' }}
+    <div className="ft-product-card" style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.15s, box-shadow 0.15s' }}
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 8px 32px rgba(56,189,248,0.18)' }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
 
@@ -204,7 +204,7 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
       <Link href={`/products/${p.id}`} onClick={e => { e.preventDefault(); onOpen(p.id) }} style={{ textDecoration: 'none', display: 'block' }}>
         {/* Image / gradient */}
         <div className="ft-product-image-frame" style={{ position: 'relative', height: 160, background: p.image ? undefined : gradient, flexShrink: 0 }}>
-          {p.image && <img className="ft-product-image" src={p.image} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#0f172a' }} />}
+          {p.image && <img className="ft-product-image" src={p.image} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'contain', background: 'var(--ft-bg)' }} />}
 
           <div className="ft-product-price-badge" aria-label={t('card.productPrice')}>
             <PriceDisplay
@@ -228,8 +228,8 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
 
         {/* Title + description */}
         <div style={{ padding: '0.85rem 0.85rem 0', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-          <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.25 }}>{p.title}</div>
-          <p className="ft-product-card-description" style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.5, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.description}</p>
+          <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--ft-text)', lineHeight: 1.25 }}>{p.title}</div>
+          <p className="ft-product-card-description" style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.5, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.description}</p>
           {(p.location_label || p.distance_km != null) && (
             <div>
               <LocationBadge label={p.location_label ?? null} distanceKm={p.distance_km ?? null} compact />
@@ -244,7 +244,7 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
         <div className="ft-product-card-rating" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap' }}>
           <>
             <Stars rating={p.rating} />
-            <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{p.rating.toFixed(1)} ({p.review_count})</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--ft-text-secondary)' }}>{p.rating.toFixed(1)} ({p.review_count})</span>
           </>
           {p.quality_score != null && p.quality_score >= 40 && (
             <ListingQualityBadge qualityScore={p.quality_score} compact />
@@ -257,22 +257,22 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
             ? <Link href={`/profile?id=${p.seller_id}`} onClick={e => { e.preventDefault(); e.stopPropagation(); if (p.seller_id) onOpenSeller(p.seller_id) }} style={{ flexShrink: 0, display: 'block' }}>
                 {p.seller_avatar
                   ? <img className="ft-product-seller-avatar" src={p.seller_avatar} alt={p.seller_name} style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', display: 'block' }} />
-                  : <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#334155', display: 'block' }} />
+                  : <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--ft-border-strong)', display: 'block' }} />
                 }
               </Link>
             : p.seller_avatar
               ? <img className="ft-product-seller-avatar" src={p.seller_avatar} alt={p.seller_name} style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-              : <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#334155', flexShrink: 0 }} />
+              : <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--ft-border-strong)', flexShrink: 0 }} />
           }
           {p.seller_id
-            ? <Link href={`/profile?id=${p.seller_id}`} onClick={e => { e.preventDefault(); e.stopPropagation(); if (p.seller_id) onOpenSeller(p.seller_id) }} style={{ fontSize: '0.72rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, textDecoration: 'none' }}>{p.seller_name}</Link>
-            : <span style={{ fontSize: '0.72rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{p.seller_name}</span>
+            ? <Link href={`/profile?id=${p.seller_id}`} onClick={e => { e.preventDefault(); e.stopPropagation(); if (p.seller_id) onOpenSeller(p.seller_id) }} style={{ fontSize: '0.72rem', color: 'var(--ft-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, textDecoration: 'none' }}>{p.seller_name}</Link>
+            : <span style={{ fontSize: '0.72rem', color: 'var(--ft-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{p.seller_name}</span>
           }
-          {p.seller_verified && <span style={{ fontSize: '0.62rem', color: '#38bdf8', flexShrink: 0 }}>✓</span>}
+          {p.seller_verified && <span style={{ fontSize: '0.62rem', color: 'var(--ft-accent)', flexShrink: 0 }}>✓</span>}
         </div>
 
         {/* Delivery info */}
-        <div className="ft-product-card-delivery" style={{ fontSize: '0.7rem', color: p.type === 'digital' ? '#34d399' : '#64748b', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+        <div className="ft-product-card-delivery" style={{ fontSize: '0.7rem', color: p.type === 'digital' ? '#34d399' : 'var(--ft-text-tertiary)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
           <span>{p.type === 'digital' ? '⚡' : '📦'}</span>
           <span>{p.delivery ?? (p.type === 'digital' ? t('card.instantDownload') : t('card.standardDelivery'))}</span>
           {p.free_shipping && <span style={{ marginLeft: 2, color: '#34d399', fontWeight: 700 }}>· {t('card.freeShipping')}</span>}
@@ -294,13 +294,13 @@ function ProductCard({ p, wishlist, onWishlist, isOwner, onDelete, inBasket, add
               className="ft-product-card-view-link"
               href={`/products/${p.id}`}
               onClick={e => { e.preventDefault(); e.stopPropagation(); onOpen(p.id) }}
-              style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 8, padding: '0.45rem 0.9rem', fontSize: '0.75rem', fontWeight: 700, color: '#fff', cursor: 'pointer', minHeight: 36, display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+              style={{ background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', border: 'none', borderRadius: 8, padding: '0.45rem 0.9rem', fontSize: '0.75rem', fontWeight: 700, color: '#fff', cursor: 'pointer', minHeight: 36, display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
               {t('common.view')}
             </Link>
             <button
               className="ft-product-card-share-btn"
               onClick={e => { e.stopPropagation(); if (navigator.share) { navigator.share({ title: p.title, url: `${window.location.origin}/products/${p.id}` }) } else { navigator.clipboard.writeText(`${window.location.origin}/products/${p.id}`) } }}
-              style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.45rem 0.5rem', fontSize: '0.75rem', color: '#38bdf8', cursor: 'pointer', minHeight: 36 }}
+              style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.45rem 0.5rem', fontSize: '0.75rem', color: 'var(--ft-accent)', cursor: 'pointer', minHeight: 36 }}
               title={t('common.share')}>↗</button>
             {isOwner && onDelete && (
               <button
@@ -331,7 +331,7 @@ function ExternalProductCard({ product, onClick, inBasket, addingToBasket, onSav
       background: '#111827',
       borderRadius: '12px',
       overflow: 'hidden',
-      border: '1px solid #1e293b',
+      border: '1px solid var(--ft-surface)',
       position: 'relative',
       cursor: 'default',
       display: 'flex',
@@ -366,12 +366,12 @@ function ExternalProductCard({ product, onClick, inBasket, addingToBasket, onSav
           {product.title}
         </p>
 
-        <p style={{ color: '#64748b', fontSize: '12px', margin: '0 0 10px 0' }}>
+        <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '12px', margin: '0 0 10px 0' }}>
           {t('external.via', { retailer: product.retailer_name })}
         </p>
 
         {product.availability_label && (
-          <p style={{ color: '#38bdf8', fontSize: '11px', margin: '0 0 10px 0', fontWeight: 700 }}>
+          <p style={{ color: 'var(--ft-accent)', fontSize: '11px', margin: '0 0 10px 0', fontWeight: 700 }}>
             📍 {product.availability_label}
           </p>
         )}
@@ -382,7 +382,7 @@ function ExternalProductCard({ product, onClick, inBasket, addingToBasket, onSav
           </p>
         ) : <div style={{ height: 24 }} />}
 
-        <p style={{ color: '#475569', fontSize: '11px', margin: '0 0 10px 0' }}>
+        <p style={{ color: 'var(--ft-text-faint)', fontSize: '11px', margin: '0 0 10px 0' }}>
           ⚠ {t('external.notTrustCoinEligible')}
         </p>
 
@@ -440,18 +440,18 @@ function RetailerModal({ product, onCancel, onContinue, opening }: {
       <div style={{
         background: '#111827', borderRadius: '16px',
         padding: '28px', maxWidth: '380px', width: '100%',
-        border: '1px solid #1e293b',
+        border: '1px solid var(--ft-surface)',
       }}>
         <div style={{ fontSize: '32px', textAlign: 'center', marginBottom: '12px' }}>🏪</div>
         <h3 style={{ color: '#ffffff', textAlign: 'center', margin: '0 0 8px 0' }}>
           {t('retailerModal.title')}
         </h3>
-        <p style={{ color: '#94a3b8', textAlign: 'center', fontSize: '14px', margin: '0 0 20px 0', lineHeight: 1.5 }}>
+        <p style={{ color: 'var(--ft-text-secondary)', textAlign: 'center', fontSize: '14px', margin: '0 0 20px 0', lineHeight: 1.5 }}>
           {t('retailerModal.viewingPrefix')} <strong style={{ color: '#fff' }}>{product.title}</strong> {t('retailerModal.on')} <strong style={{ color: '#fff' }}>{product.retailer_name}</strong>. {t('retailerModal.fulfilled')}
         </p>
         <div style={{
-          background: '#1e293b', borderRadius: '10px',
-          padding: '12px', marginBottom: '20px', fontSize: '13px', color: '#64748b',
+          background: 'var(--ft-surface)', borderRadius: '10px',
+          padding: '12px', marginBottom: '20px', fontSize: '13px', color: 'var(--ft-text-tertiary)',
         }}>
           ⚠ {t('retailerModal.warning')}
         </div>
@@ -472,7 +472,7 @@ function RetailerModal({ product, onCancel, onContinue, opening }: {
           onClick={onCancel}
           style={{
             width: '100%', padding: '10px',
-            background: 'transparent', color: '#64748b',
+            background: 'transparent', color: 'var(--ft-text-tertiary)',
             border: 'none', fontSize: '14px', cursor: 'pointer',
           }}
         >
@@ -492,24 +492,24 @@ function BasketRow({ item, onQuantity, onRemove, onRetailer }: {
   const t = useTranslations('productsPage')
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '54px 1fr', gap: 10, padding: '12px 0', borderBottom: '1px solid rgba(148,163,184,0.12)' }}>
-      <div style={{ width: 54, height: 54, borderRadius: 12, overflow: 'hidden', background: '#0f172a', border: '1px solid rgba(148,163,184,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ width: 54, height: 54, borderRadius: 12, overflow: 'hidden', background: 'var(--ft-bg)', border: '1px solid rgba(148,163,184,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {item.image ? <img src={item.image} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span>{item.product_type === 'external' ? '🏪' : '📦'}</span>}
       </div>
       <div style={{ minWidth: 0 }}>
         <div style={{ color: '#f8fafc', fontSize: 13, fontWeight: 800, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
-        <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 3 }}>{item.product_type === 'external' ? t('external.via', { retailer: item.retailer_name ?? t('basket.retailer') }) : t('basket.communityListing')}</div>
+        <div style={{ color: 'var(--ft-text-secondary)', fontSize: 12, marginTop: 3 }}>{item.product_type === 'external' ? t('external.via', { retailer: item.retailer_name ?? t('basket.retailer') }) : t('basket.communityListing')}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9, flexWrap: 'wrap' }}>
           <span style={{ color: '#00c2cb', fontSize: 13, fontWeight: 900 }}>{item.price_label}</span>
           {item.product_type === 'community' ? (
             <div style={{ display: 'flex', alignItems: 'center', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 999, overflow: 'hidden' }}>
-              <button onClick={() => onQuantity(item.id, item.quantity - 1)} style={{ width: 28, height: 28, border: 'none', background: 'transparent', color: '#94a3b8', cursor: 'pointer' }}>−</button>
+              <button onClick={() => onQuantity(item.id, item.quantity - 1)} style={{ width: 28, height: 28, border: 'none', background: 'transparent', color: 'var(--ft-text-secondary)', cursor: 'pointer' }}>−</button>
               <span style={{ minWidth: 24, textAlign: 'center', color: '#f8fafc', fontSize: 12, fontWeight: 800 }}>{item.quantity}</span>
-              <button onClick={() => onQuantity(item.id, item.quantity + 1)} style={{ width: 28, height: 28, border: 'none', background: 'transparent', color: '#94a3b8', cursor: 'pointer' }}>+</button>
+              <button onClick={() => onQuantity(item.id, item.quantity + 1)} style={{ width: 28, height: 28, border: 'none', background: 'transparent', color: 'var(--ft-text-secondary)', cursor: 'pointer' }}>+</button>
             </div>
           ) : onRetailer ? (
             <button onClick={() => onRetailer(item)} style={{ border: '1px solid rgba(0,194,203,0.35)', background: 'transparent', color: '#00c2cb', borderRadius: 999, padding: '5px 9px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>{t('basket.completeOnRetailer')}</button>
           ) : null}
-          <button onClick={() => onRemove(item.id)} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: '#64748b', cursor: 'pointer', fontSize: 12 }}>{t('basket.remove')}</button>
+          <button onClick={() => onRemove(item.id)} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: 'var(--ft-text-tertiary)', cursor: 'pointer', fontSize: 12 }}>{t('basket.remove')}</button>
         </div>
       </div>
     </div>
@@ -554,7 +554,7 @@ function BasketPaymentElement({ clientSecret, totalCents, onPaid }: {
             colorPrimary: '#00c2cb',
             colorBackground: '#111827',
             colorText: '#f8fafc',
-            colorDanger: '#f87171',
+            colorDanger: 'var(--ft-danger)',
             borderRadius: '12px',
           },
         },
@@ -613,7 +613,7 @@ function BasketPaymentElement({ clientSecret, totalCents, onPaid }: {
   return (
     <div style={{ marginTop: 14, borderTop: '1px solid rgba(148,163,184,0.12)', paddingTop: 14 }}>
       <div ref={mountRef} style={{ minHeight: ready ? undefined : 120 }} />
-      {!ready && !error && <p style={{ margin: '10px 0 0', color: '#94a3b8', fontSize: 12 }}>{t('payment.loadingFields')}</p>}
+      {!ready && !error && <p style={{ margin: '10px 0 0', color: 'var(--ft-text-secondary)', fontSize: 12 }}>{t('payment.loadingFields')}</p>}
       <button
         onClick={confirmPayment}
         disabled={!ready || submitting || !!success}
@@ -621,7 +621,7 @@ function BasketPaymentElement({ clientSecret, totalCents, onPaid }: {
       >
         {submitting ? t('payment.confirming') : t('payment.paySecurely', { amount: formatEuroFromCents(totalCents) })}
       </button>
-      {error && <p style={{ margin: '10px 0 0', color: '#f87171', fontSize: 12, lineHeight: 1.45 }}>{error}</p>}
+      {error && <p style={{ margin: '10px 0 0', color: 'var(--ft-danger)', fontSize: 12, lineHeight: 1.45 }}>{error}</p>}
       {success && <p style={{ margin: '10px 0 0', color: '#34d399', fontSize: 12, lineHeight: 1.45 }}>{success}</p>}
     </div>
   )
@@ -684,14 +684,14 @@ function BasketDrawer({ open, onClose, onRetailer }: {
           <div style={{ width: 40, height: 40, borderRadius: 14, background: 'rgba(0,194,203,0.12)', color: '#00c2cb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🧺</div>
           <div style={{ flex: 1 }}>
             <div style={{ color: '#fff', fontWeight: 900, fontSize: 18 }}>{t('basket.title')}</div>
-            <div style={{ color: '#94a3b8', fontSize: 12 }}>{t('basket.savedItems', { count: basket.itemCount })}</div>
+            <div style={{ color: 'var(--ft-text-secondary)', fontSize: 12 }}>{t('basket.savedItems', { count: basket.itemCount })}</div>
           </div>
-          <button onClick={onClose} style={{ width: 36, height: 36, borderRadius: 999, border: '1px solid rgba(148,163,184,0.18)', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: 18 }}>×</button>
+          <button onClick={onClose} style={{ width: 36, height: 36, borderRadius: 999, border: '1px solid rgba(148,163,184,0.18)', background: 'transparent', color: 'var(--ft-text-secondary)', cursor: 'pointer', fontSize: 18 }}>×</button>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 18px 24px' }}>
           {!basket.userId && (
-            <div style={{ background: 'rgba(0,194,203,0.08)', border: '1px solid rgba(0,194,203,0.2)', borderRadius: 14, padding: 14, color: '#94a3b8', fontSize: 13, lineHeight: 1.5 }}>
+            <div style={{ background: 'rgba(0,194,203,0.08)', border: '1px solid rgba(0,194,203,0.2)', borderRadius: 14, padding: 14, color: 'var(--ft-text-secondary)', fontSize: 13, lineHeight: 1.5 }}>
               {t('basket.signInPersist')}
             </div>
           )}
@@ -699,10 +699,10 @@ function BasketDrawer({ open, onClose, onRetailer }: {
           <section style={{ marginTop: 4 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <h3 style={{ margin: 0, color: '#f8fafc', fontSize: 14, fontWeight: 900 }}>{t('basket.communityItems')}</h3>
-              <span style={{ color: '#64748b', fontSize: 12 }}>{basket.communityItems.length}</span>
+              <span style={{ color: 'var(--ft-text-tertiary)', fontSize: 12 }}>{basket.communityItems.length}</span>
             </div>
             {basket.communityItems.length === 0 ? (
-              <div style={{ border: '1px dashed rgba(148,163,184,0.2)', borderRadius: 14, padding: 18, color: '#64748b', fontSize: 13, textAlign: 'center' }}>{t('basket.noCommunity')}</div>
+              <div style={{ border: '1px dashed rgba(148,163,184,0.2)', borderRadius: 14, padding: 18, color: 'var(--ft-text-tertiary)', fontSize: 13, textAlign: 'center' }}>{t('basket.noCommunity')}</div>
             ) : basket.communityItems.map(item => (
               <BasketRow key={item.id} item={item} onQuantity={(id, qty) => void basket.updateQuantity(id, qty)} onRemove={(id) => void basket.removeItem(id)} />
             ))}
@@ -714,7 +714,7 @@ function BasketDrawer({ open, onClose, onRetailer }: {
                 [t('basket.subtotal'), formatEuroFromCents(basket.communitySubtotalCents)],
                 [FREETRUST_PRODUCT_FEE_LABEL, formatEuroFromCents(basket.platformFeeCents)],
               ].map(([label, value]) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: 13, padding: '5px 0' }}>
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--ft-text-secondary)', fontSize: 13, padding: '5px 0' }}>
                   <span>{label}</span><strong style={{ color: '#f8fafc' }}>{value}</strong>
                 </div>
               ))}
@@ -726,7 +726,7 @@ function BasketDrawer({ open, onClose, onRetailer }: {
                 {checkingOut ? t('checkout.creating') : checkoutIntent ? t('checkout.refresh') : t('checkout.communityItems')}
               </button>
               {checkoutMessage && <p style={{ margin: '10px 0 0', color: '#34d399', fontSize: 12, lineHeight: 1.45 }}>{checkoutMessage}</p>}
-              {checkoutError && <p style={{ margin: '10px 0 0', color: '#f87171', fontSize: 12, lineHeight: 1.45 }}>{checkoutError}</p>}
+              {checkoutError && <p style={{ margin: '10px 0 0', color: 'var(--ft-danger)', fontSize: 12, lineHeight: 1.45 }}>{checkoutError}</p>}
               {checkoutIntent && (
                 <BasketPaymentElement
                   key={checkoutIntent.client_secret}
@@ -741,11 +741,11 @@ function BasketDrawer({ open, onClose, onRetailer }: {
           <section style={{ marginTop: 24 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <h3 style={{ margin: 0, color: '#f8fafc', fontSize: 14, fontWeight: 900 }}>{t('basket.externalSaves')}</h3>
-              <span style={{ color: '#64748b', fontSize: 12 }}>{basket.externalItems.length}</span>
+              <span style={{ color: 'var(--ft-text-tertiary)', fontSize: 12 }}>{basket.externalItems.length}</span>
             </div>
-            <p style={{ color: '#64748b', fontSize: 12, lineHeight: 1.45, margin: '0 0 8px' }}>{t('basket.externalDescription')}</p>
+            <p style={{ color: 'var(--ft-text-tertiary)', fontSize: 12, lineHeight: 1.45, margin: '0 0 8px' }}>{t('basket.externalDescription')}</p>
             {basket.externalItems.length === 0 ? (
-              <div style={{ border: '1px dashed rgba(148,163,184,0.2)', borderRadius: 14, padding: 18, color: '#64748b', fontSize: 13, textAlign: 'center' }}>{t('basket.noRetailer')}</div>
+              <div style={{ border: '1px dashed rgba(148,163,184,0.2)', borderRadius: 14, padding: 18, color: 'var(--ft-text-tertiary)', fontSize: 13, textAlign: 'center' }}>{t('basket.noRetailer')}</div>
             ) : basket.externalItems.map(item => (
               <BasketRow key={item.id} item={item} onQuantity={(id, qty) => void basket.updateQuantity(id, qty)} onRemove={(id) => void basket.removeItem(id)} onRetailer={onRetailer} />
             ))}
@@ -1268,10 +1268,10 @@ function ProductsInner() {
     setOpeningRetailer(false)
   }
 
-  const pillStyle = (active: boolean, color = '#38bdf8') => ({
+  const pillStyle = (active: boolean, color = 'var(--ft-accent)') => ({
     padding: '0.4rem 0.85rem', borderRadius: 999, fontSize: '0.78rem', fontWeight: active ? 700 : 500,
     cursor: 'pointer', border: `1px solid ${active ? color : 'rgba(148,163,184,0.2)'}`,
-    background: active ? `${color}18` : 'transparent', color: active ? color : '#94a3b8',
+    background: active ? `${color}18` : 'transparent', color: active ? color : 'var(--ft-text-secondary)',
     whiteSpace: 'nowrap' as const, minHeight: 36, flexShrink: 0 as const,
   })
 
@@ -1288,7 +1288,7 @@ function ProductsInner() {
     borderRadius: 999,
     border: `1px solid ${active ? '#00c2cb' : 'rgba(148,163,184,0.24)'}`,
     background: active ? 'rgba(0,194,203,0.16)' : 'transparent',
-    color: active ? '#00c2cb' : '#94a3b8',
+    color: active ? '#00c2cb' : 'var(--ft-text-secondary)',
     fontSize: 12,
     fontWeight: 900,
     cursor: 'pointer',
@@ -1311,7 +1311,7 @@ function ProductsInner() {
   }
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
       {deleteTarget && (
         <DeleteModal
           title={deleteTarget.title}
@@ -1501,7 +1501,7 @@ function ProductsInner() {
           <div className="ft-products-title-block">
             <div style={{ minWidth: 0 }}>
               <h1 style={{ fontSize: 'clamp(1.6rem,4vw,2.2rem)', fontWeight: 900, margin: '0 0 0.25rem', letterSpacing: '-0.5px' }}>{t('title')}</h1>
-              <p style={{ color: '#64748b', margin: 0, fontSize: '0.9rem' }}>{t('foundCount', { count: activeTab === 'listings' ? mergedProducts.length : filtered.length })}</p>
+              <p style={{ color: 'var(--ft-text-tertiary)', margin: 0, fontSize: '0.9rem' }}>{t('foundCount', { count: activeTab === 'listings' ? mergedProducts.length : filtered.length })}</p>
             </div>
             {activeTab === 'listings' && <ProductBasketButton itemCount={basket.itemCount} onClick={openBasket} />}
           </div>
@@ -1509,7 +1509,7 @@ function ProductsInner() {
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value)}
-              style={{ background: '#1e293b', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: '#94a3b8', cursor: 'pointer', minHeight: 36 }}>
+              style={{ background: 'var(--ft-surface)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: 'var(--ft-text-secondary)', cursor: 'pointer', minHeight: 36 }}>
               {SORT_OPTIONS.map(s => (
                 <option key={s} value={s}>{({
                   Newest: t('sort.newest'),
@@ -1520,7 +1520,7 @@ function ProductsInner() {
                 } as Record<string, string>)[s] ?? s}</option>
               ))}
             </select>
-            <Link href="/products/new" onClick={e => { e.preventDefault(); void openCreateProduct() }} style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.5rem 1.1rem', borderRadius: 9, fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none', minHeight: 36, display: 'flex', alignItems: 'center' }}>
+            <Link href="/products/new" onClick={e => { e.preventDefault(); void openCreateProduct() }} style={{ background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', color: '#fff', padding: '0.5rem 1.1rem', borderRadius: 9, fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none', minHeight: 36, display: 'flex', alignItems: 'center' }}>
               {t('listProduct')}
             </Link>
           </div>
@@ -1532,9 +1532,9 @@ function ProductsInner() {
             style={{
               padding: '10px 20px',
               borderRadius: 8,
-              border: activeTab === 'listings' ? '2px solid #00c2cb' : '2px solid #334155',
+              border: activeTab === 'listings' ? '2px solid #00c2cb' : '2px solid var(--ft-border-strong)',
               background: activeTab === 'listings' ? '#00c2cb22' : 'transparent',
-              color: activeTab === 'listings' ? '#00c2cb' : '#94a3b8',
+              color: activeTab === 'listings' ? '#00c2cb' : 'var(--ft-text-secondary)',
               cursor: 'pointer',
               fontWeight: 600,
             }}
@@ -1546,9 +1546,9 @@ function ProductsInner() {
             style={{
               padding: '10px 20px',
               borderRadius: 8,
-              border: activeTab === 'find-online' ? '2px solid #00c2cb' : '2px solid #334155',
+              border: activeTab === 'find-online' ? '2px solid #00c2cb' : '2px solid var(--ft-border-strong)',
               background: activeTab === 'find-online' ? '#00c2cb22' : 'transparent',
-              color: activeTab === 'find-online' ? '#00c2cb' : '#94a3b8',
+              color: activeTab === 'find-online' ? '#00c2cb' : 'var(--ft-text-secondary)',
               cursor: 'pointer',
               fontWeight: 600,
             }}
@@ -1611,9 +1611,9 @@ function ProductsInner() {
                   borderRadius: '20px',
                   whiteSpace: 'nowrap',
                   flexShrink: 0,
-                  border: catFilter === c.id ? '2px solid #00c2cb' : '2px solid #334155',
+                  border: catFilter === c.id ? '2px solid #00c2cb' : '2px solid var(--ft-border-strong)',
                   background: catFilter === c.id ? '#00c2cb22' : 'transparent',
-                  color: catFilter === c.id ? '#00c2cb' : '#94a3b8',
+                  color: catFilter === c.id ? '#00c2cb' : 'var(--ft-text-secondary)',
                   cursor: 'pointer',
                   fontWeight: 600,
                   fontSize: '13px',
@@ -1627,13 +1627,13 @@ function ProductsInner() {
 
           {/* Price + rating */}
           <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', marginBottom: '1.25rem', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#64748b' }}>
-              <span>{t('filters.maxPrice')} <strong style={{ color: '#f1f5f9' }}>{format(maxPrice === 500 ? 501 : maxPrice, 'GBP')}{maxPrice === 500 ? '+' : ''}</strong></span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--ft-text-tertiary)' }}>
+              <span>{t('filters.maxPrice')} <strong style={{ color: 'var(--ft-text)' }}>{format(maxPrice === 500 ? 501 : maxPrice, 'GBP')}{maxPrice === 500 ? '+' : ''}</strong></span>
               <input type="range" min={5} max={500} step={5} value={maxPrice}
                 onChange={e => setMaxPrice(Number(e.target.value))}
-                style={{ accentColor: '#38bdf8', width: 100 }} />
+                style={{ accentColor: 'var(--ft-accent)', width: 100 }} />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#64748b' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--ft-text-tertiary)' }}>
               <span>{t('filters.minRating')}</span>
               {[0,3,4,4.5].map(r => (
                 <button key={r} onClick={() => setMinRating(r)}
@@ -1645,12 +1645,12 @@ function ProductsInner() {
           </div>
 
           <div className="ft-grid-density-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: '1rem' }}>
-            <div style={{ color: '#64748b', fontSize: 12, lineHeight: 1.4 }}>
+            <div style={{ color: 'var(--ft-text-tertiary)', fontSize: 12, lineHeight: 1.4 }}>
               {t('layout.densityHelp')}
             </div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
               <div className="ft-grid-desktop-controls" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ color: '#94a3b8', fontSize: 12, fontWeight: 800 }}>{t('layout.desktop')}</span>
+                <span style={{ color: 'var(--ft-text-secondary)', fontSize: 12, fontWeight: 800 }}>{t('layout.desktop')}</span>
                 {([1, 2, 3, 4, 5] as const).map(cols => (
                   <button key={cols} type="button" onClick={() => setDesktopColumns(cols)} style={gridOptionButtonStyle(desktopColumns === cols)} aria-label={t('layout.desktopCols', { count: cols })}>
                     {cols}
@@ -1664,8 +1664,8 @@ function ProductsInner() {
           {loading ? (
             <div className={`ft-product-grid ${mobileColumns === 1 ? 'ft-mobile-one-col' : ''}`} style={productGridStyle}>
               {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} style={{ background: '#1e293b', borderRadius: 14, height: 320, opacity: 0.5 }}>
-                  <div style={{ height: 160, background: '#334155', borderRadius: '14px 14px 0 0' }} />
+                <div key={i} style={{ background: 'var(--ft-surface)', borderRadius: 14, height: 320, opacity: 0.5 }}>
+                  <div style={{ height: 160, background: 'var(--ft-border-strong)', borderRadius: '14px 14px 0 0' }} />
                 </div>
               ))}
             </div>
@@ -1673,10 +1673,10 @@ function ProductsInner() {
             <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
               <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>📦</div>
               <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.5rem' }}>{t('empty.title')}</h2>
-              <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>
+              <p style={{ color: 'var(--ft-text-tertiary)', marginBottom: '1.5rem' }}>
                 {catFilter !== 'all' ? t('empty.category') : t('empty.filters')}
               </p>
-              <Link href="/products/new" onClick={e => { e.preventDefault(); void openCreateProduct() }} style={{ display: 'inline-block', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.75rem 1.75rem', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>
+              <Link href="/products/new" onClick={e => { e.preventDefault(); void openCreateProduct() }} style={{ display: 'inline-block', background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', color: '#fff', padding: '0.75rem 1.75rem', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>
                 {t('empty.listProduct')}
               </Link>
             </div>
@@ -1721,7 +1721,7 @@ function ProductsInner() {
                     padding: '14px',
                     border: '1px solid rgba(51,65,85,0.8)',
                     borderRadius: '12px',
-                    color: loadingMore ? '#38bdf8' : '#94a3b8',
+                    color: loadingMore ? 'var(--ft-accent)' : 'var(--ft-text-secondary)',
                     fontSize: '14px',
                     fontWeight: 600,
                     textAlign: 'center',
@@ -1737,7 +1737,7 @@ function ProductsInner() {
               {!hasMore && mergedProducts.length > PRODUCTS_INITIAL_DISPLAY && (
                 <p style={{
                   textAlign: 'center',
-                  color: '#475569',
+                  color: 'var(--ft-text-faint)',
                   fontSize: '13px',
                   padding: '24px 0',
                   margin: 0,
@@ -1758,7 +1758,7 @@ function ProductsInner() {
 export default function ProductsPage() {
   const tCommon = useTranslations('common')
   return (
-    <Suspense fallback={<div style={{ paddingTop: 64, textAlign: 'center', color: '#64748b' }}>{tCommon('loading')}</div>}>
+    <Suspense fallback={<div style={{ paddingTop: 64, textAlign: 'center', color: 'var(--ft-text-tertiary)' }}>{tCommon('loading')}</div>}>
       <ProductsInner />
     </Suspense>
   )

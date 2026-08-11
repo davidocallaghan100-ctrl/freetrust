@@ -55,8 +55,8 @@ function PushPromptBanner({ onDismiss }: { onDismiss: () => void }) {
       left: '16px',
       right: '16px',
       zIndex: 500,
-      background: '#1e293b',
-      border: '1px solid #334155',
+      background: 'var(--ft-surface)',
+      border: '1px solid var(--ft-border-strong)',
       borderRadius: '12px',
       padding: '14px 16px',
       display: 'flex',
@@ -67,12 +67,12 @@ function PushPromptBanner({ onDismiss }: { onDismiss: () => void }) {
       <span style={{ fontSize: '22px', flexShrink: 0 }}>🔔</span>
       <div style={{ flex: 1, minWidth: 0 }}>
         {isIOSNotInstalled ? (
-          <p style={{ margin: 0, fontSize: '13px', color: '#cbd5e1', lineHeight: 1.4 }}>
+          <p style={{ margin: 0, fontSize: '13px', color: 'var(--ft-text-secondary)', lineHeight: 1.4 }}>
             {t('pushHomeScreen')}
             <span style={{ marginLeft: '4px' }}>⬆️</span>
           </p>
         ) : (
-          <p style={{ margin: 0, fontSize: '13px', color: '#cbd5e1', lineHeight: 1.4 }}>
+          <p style={{ margin: 0, fontSize: '13px', color: 'var(--ft-text-secondary)', lineHeight: 1.4 }}>
             {t('pushNotify')}
           </p>
         )}
@@ -83,8 +83,8 @@ function PushPromptBanner({ onDismiss }: { onDismiss: () => void }) {
             onClick={handleEnable}
             disabled={loading}
             style={{
-              background: '#38bdf8',
-              color: '#0f172a',
+              background: 'var(--ft-accent)',
+              color: 'var(--ft-bg)',
               border: 'none',
               borderRadius: '8px',
               padding: '7px 14px',
@@ -103,7 +103,7 @@ function PushPromptBanner({ onDismiss }: { onDismiss: () => void }) {
           onClick={handleDismiss}
           style={{
             background: 'rgba(148,163,184,0.12)',
-            color: '#94a3b8',
+            color: 'var(--ft-text-secondary)',
             border: 'none',
             borderRadius: '8px',
             width: '32px',
@@ -131,25 +131,25 @@ function ProfileSetupPrompt() {
       position: 'fixed',
       inset: 0,
       zIndex: 1200,
-      background: 'rgba(2,6,23,0.84)',
+      background: 'rgba(2,6,23,0.72)',
       backdropFilter: 'blur(12px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       padding: 18,
-      color: '#fff',
+      color: 'var(--ft-text)',
     }}>
-      <div style={{ width: 'min(440px, 100%)', background: 'linear-gradient(160deg, rgba(10,15,30,0.98), rgba(15,23,42,0.98))', border: '1px solid rgba(0,194,203,0.32)', borderRadius: 22, padding: 22, boxShadow: '0 24px 70px rgba(0,0,0,0.56), 0 0 28px rgba(0,194,203,0.12)' }}>
+      <div style={{ width: 'min(440px, 100%)', background: 'var(--ft-panel-bg)', border: '1px solid var(--ft-panel-border)', borderRadius: 22, padding: 22, boxShadow: '0 24px 70px rgba(0,0,0,0.56), 0 0 28px rgba(0,194,203,0.12)' }}>
         <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
           <div style={{ width: 46, height: 46, borderRadius: 15, background: 'rgba(0,194,203,0.12)', border: '1px solid rgba(0,194,203,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 23 }}>🛡️</div>
           <div>
-            <h2 style={{ margin: '0 0 6px', color: '#fff', fontSize: 19, fontWeight: 880 }}>{t('completeSetupTitle')}</h2>
-            <p style={{ margin: 0, color: '#94a3b8', fontSize: 14, lineHeight: 1.5 }}>
+            <h2 style={{ margin: '0 0 6px', color: 'var(--ft-text)', fontSize: 19, fontWeight: 880 }}>{t('completeSetupTitle')}</h2>
+            <p style={{ margin: 0, color: 'var(--ft-text-secondary)', fontSize: 14, lineHeight: 1.5 }}>
               {t('completeSetupBody')}
             </p>
           </div>
         </div>
-        <div style={{ display: 'grid', gap: 8, marginTop: 16, color: '#cbd5e1', fontSize: 13 }}>
+        <div style={{ display: 'grid', gap: 8, marginTop: 16, color: 'var(--ft-text-secondary)', fontSize: 13 }}>
           <div>✓ {t('realName')}</div>
           <div>✓ {t('realPicture')}</div>
           <div>✓ {t('locationHobbies')}</div>
@@ -157,7 +157,7 @@ function ProfileSetupPrompt() {
         <button
           type="button"
           onClick={() => { window.location.href = '/onboarding?welcome=1' }}
-          style={{ width: '100%', marginTop: 18, border: 'none', borderRadius: 12, background: 'linear-gradient(135deg,#00c2cb,#38bdf8)', color: '#0a0f1e', fontWeight: 880, fontSize: 15, padding: '13px 14px', cursor: 'pointer', fontFamily: 'inherit' }}
+          style={{ width: '100%', marginTop: 18, border: 'none', borderRadius: 12, background: 'linear-gradient(135deg,#00c2cb,var(--ft-accent))', color: '#0a0f1e', fontWeight: 880, fontSize: 15, padding: '13px 14px', cursor: 'pointer', fontFamily: 'inherit' }}
         >{t('finishSetup')}</button>
       </div>
     </div>
@@ -253,7 +253,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   if (isAuth || isImmersive) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0f172a' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--ft-bg)' }}>
         {children}
       </div>
     )
@@ -269,11 +269,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <main className="ft-page-content">
           {children}
           <footer style={{
-            borderTop: '1px solid #1e293b',
+            borderTop: '1px solid var(--ft-border)',
             padding: '1.25rem 1.5rem',
             textAlign: 'center',
             fontSize: '0.78rem',
-            color: '#475569',
+            color: 'var(--ft-text-faint)',
             marginTop: '2rem',
           }}>
             {tCommon('copyright')}

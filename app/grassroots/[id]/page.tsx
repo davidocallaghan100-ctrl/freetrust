@@ -199,7 +199,7 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
   if (loading) {
     return (
       <div style={pageBg}>
-        <div style={{ padding: '5rem 1rem', textAlign: 'center', color: '#64748b' }}>
+        <div style={{ padding: '5rem 1rem', textAlign: 'center', color: 'var(--ft-text-tertiary)' }}>
           <div style={{
             display: 'inline-block',
             width: 32, height: 32,
@@ -220,7 +220,7 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
         <div style={{ padding: '5rem 1rem', textAlign: 'center' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🌱</div>
           <h1 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.5rem' }}>Listing not found</h1>
-          <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>{error ?? 'This listing may have been removed.'}</p>
+          <p style={{ color: 'var(--ft-text-tertiary)', marginBottom: '1.5rem' }}>{error ?? 'This listing may have been removed.'}</p>
           <Link href="/grassroots" style={backLinkStyle}>← Back to Grassroots</Link>
         </div>
       </div>
@@ -348,7 +348,7 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
                       overflow: 'hidden',
                       border: `2px solid ${i === activePhoto ? GRASSROOTS_GREEN.primary : 'transparent'}`,
                       padding: 0,
-                      background: '#0f172a',
+                      background: 'var(--ft-bg)',
                       cursor: 'pointer',
                     }}
                     aria-label={`Photo ${i + 1}`}
@@ -398,7 +398,7 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
                 <span style={{
                   background: 'rgba(56,189,248,0.1)',
                   border: '1px solid rgba(56,189,248,0.35)',
-                  color: '#38bdf8',
+                  color: 'var(--ft-accent)',
                   padding: '4px 10px',
                   borderRadius: 999,
                   fontSize: 12,
@@ -411,7 +411,7 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
 
             {/* Rate card */}
             <div style={{
-              background: '#1e293b',
+              background: 'var(--ft-surface)',
               border: `1px solid ${GRASSROOTS_GREEN.borderSoft}`,
               borderRadius: 14,
               padding: 18,
@@ -423,7 +423,7 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
               flexWrap: 'wrap',
             }}>
               <div>
-                <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, letterSpacing: '0.06em', marginBottom: 4 }}>
+                <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', fontWeight: 700, letterSpacing: '0.06em', marginBottom: 4 }}>
                   RATE
                 </div>
                 {listing.rate != null && listing.rate_type !== 'negotiable' ? (
@@ -436,7 +436,7 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
                       layout="inline"
                     />
                     {rateSuffix && (
-                      <span style={{ fontSize: 13, color: '#64748b' }}>{rateSuffix}</span>
+                      <span style={{ fontSize: 13, color: 'var(--ft-text-tertiary)' }}>{rateSuffix}</span>
                     )}
                   </div>
                 ) : (
@@ -460,7 +460,7 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
                     borderRadius: 999,
                     fontSize: 12,
                     fontWeight: 800,
-                    color: '#38bdf8',
+                    color: 'var(--ft-accent)',
                     whiteSpace: 'nowrap',
                   }}>
                     <span style={{ fontSize: 14 }}>₮</span>
@@ -472,7 +472,7 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
                 onClick={handleContact}
                 style={{
                   background: `linear-gradient(135deg, ${GRASSROOTS_GREEN.primary}, ${GRASSROOTS_GREEN.primaryDim})`,
-                  color: '#0f172a',
+                  color: 'var(--ft-bg)',
                   border: 'none',
                   borderRadius: 10,
                   padding: '12px 24px',
@@ -491,17 +491,17 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
             {/* Description */}
             {listing.description && (
               <div style={{
-                background: '#1e293b',
+                background: 'var(--ft-surface)',
                 border: '1px solid rgba(148,163,184,0.12)',
                 borderRadius: 14,
                 padding: 18,
                 marginBottom: 16,
               }}>
-                <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, letterSpacing: '0.06em', marginBottom: 8 }}>
+                <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', fontWeight: 700, letterSpacing: '0.06em', marginBottom: 8 }}>
                   DESCRIPTION
                 </div>
                 <p style={{
-                  color: '#cbd5e1',
+                  color: 'var(--ft-text-secondary)',
                   margin: 0,
                   fontSize: 14,
                   lineHeight: 1.65,
@@ -525,11 +525,11 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
                 gap: 10,
                 alignItems: 'flex-start',
                 fontSize: 13,
-                color: '#94a3b8',
+                color: 'var(--ft-text-secondary)',
               }}>
-                <span style={{ fontSize: 20, color: '#38bdf8', flexShrink: 0 }}>₮</span>
+                <span style={{ fontSize: 20, color: 'var(--ft-accent)', flexShrink: 0 }}>₮</span>
                 <span>
-                  <strong style={{ color: '#f1f5f9' }}>This worker accepts FreeTrust Trust tokens</strong>
+                  <strong style={{ color: 'var(--ft-text)' }}>This worker accepts FreeTrust Trust tokens</strong>
                   {' '}as full or partial payment. Pay from your Trust wallet to build mutual trust on the platform.
                 </span>
               </div>
@@ -539,14 +539,14 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
           {/* ── Sidebar: poster card ──────────────────────────────────────── */}
           <aside>
             <div style={{
-              background: '#1e293b',
+              background: 'var(--ft-surface)',
               border: '1px solid rgba(148,163,184,0.12)',
               borderRadius: 14,
               padding: 18,
               position: 'sticky',
               top: 120,
             }}>
-              <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, letterSpacing: '0.06em', marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', fontWeight: 700, letterSpacing: '0.06em', marginBottom: 12 }}>
                 POSTED BY
               </div>
 
@@ -563,7 +563,7 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
                     width: 48, height: 48, borderRadius: '50%',
                     background: `linear-gradient(135deg, ${GRASSROOTS_GREEN.primary}, ${GRASSROOTS_GREEN.primaryDim})`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: 800, fontSize: 16, color: '#0f172a',
+                    fontWeight: 800, fontSize: 16, color: 'var(--ft-bg)',
                     flexShrink: 0,
                   }}>
                     {posterInitials || '?'}
@@ -575,7 +575,7 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
                     style={{
                       display: 'block',
                       fontWeight: 700,
-                      color: '#f1f5f9',
+                      color: 'var(--ft-text)',
                       textDecoration: 'none',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -585,7 +585,7 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
                     {posterName}
                   </Link>
                   {memberSince && (
-                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                    <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', marginTop: 2 }}>
                       Member since {memberSince}
                     </div>
                   )}
@@ -603,10 +603,10 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
                 padding: '10px 12px',
                 marginBottom: 14,
               }}>
-                <span style={{ fontSize: 11, color: '#64748b', fontWeight: 700, letterSpacing: '0.06em' }}>
+                <span style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', fontWeight: 700, letterSpacing: '0.06em' }}>
                   TRUST SCORE
                 </span>
-                <span style={{ fontSize: 16, fontWeight: 800, color: '#38bdf8' }}>
+                <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--ft-accent)' }}>
                   ₮{trustBalance.toLocaleString()}
                 </span>
               </div>
@@ -615,7 +615,7 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
               {listing.poster?.bio && (
                 <p style={{
                   fontSize: 12,
-                  color: '#94a3b8',
+                  color: 'var(--ft-text-secondary)',
                   lineHeight: 1.55,
                   margin: '0 0 14px',
                   display: '-webkit-box',
@@ -629,7 +629,7 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
 
               {/* Poster location (separate from listing location) */}
               {listing.poster?.location && (
-                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 12 }}>
+                <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', marginBottom: 12 }}>
                   📍 {listing.poster.location}
                 </div>
               )}
@@ -665,7 +665,7 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
         {/* ── Similar listings nearby ────────────────────────────────────── */}
         {similar.length > 0 && (
           <div style={{ marginTop: 32 }}>
-            <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, letterSpacing: '0.08em', marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', fontWeight: 700, letterSpacing: '0.08em', marginBottom: 12 }}>
               SIMILAR LISTINGS NEARBY
             </div>
             <div style={{
@@ -693,7 +693,7 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
                     href={`/grassroots/${s.id}`}
                     style={{
                       display: 'block',
-                      background: '#1e293b',
+                      background: 'var(--ft-surface)',
                       border: '1px solid rgba(148,163,184,0.12)',
                       borderRadius: 12,
                       padding: 12,
@@ -708,7 +708,7 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
                       <div style={{ fontSize: 18, marginBottom: 6 }}>{simCat.emoji}</div>
                     )}
                     <div style={{
-                      fontSize: 13, fontWeight: 700, color: '#f1f5f9',
+                      fontSize: 13, fontWeight: 700, color: 'var(--ft-text)',
                       marginBottom: 6, lineHeight: 1.35,
                       display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
@@ -751,8 +751,8 @@ export default function GrassrootsDetailPage({ params }: { params: Promise<{ id:
 // ────────────────────────────────────────────────────────────────────────────
 const pageBg: React.CSSProperties = {
   minHeight: '100vh',
-  background: '#0f172a',
-  color: '#f1f5f9',
+  background: 'var(--ft-bg)',
+  color: 'var(--ft-text)',
   fontFamily: 'system-ui, sans-serif',
   paddingTop: 64,
   paddingBottom: 80,

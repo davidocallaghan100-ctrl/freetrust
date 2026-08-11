@@ -144,7 +144,7 @@ export default function DeliveryMap({ sellerLat, sellerLng, buyerLat, buyerLng, 
         </div>
       )}
       {/* Map container */}
-      <div ref={mapRef} style={{ height: 320, width: '100%', background: '#1e293b' }} />
+      <div ref={mapRef} style={{ height: 320, width: '100%', background: 'var(--ft-surface)' }} />
       {/* Leaflet CSS */}
       <style>{`
         @import url('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css');

@@ -14,25 +14,25 @@ const POST_TYPES = [
 ]
 
 const S: Record<string, React.CSSProperties> = {
-  page: { minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' },
+  page: { minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui' },
   container: { maxWidth: 680, margin: '0 auto', padding: '2rem 1.5rem' },
   heading: { fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.25rem' },
-  sub: { color: '#64748b', fontSize: '0.88rem', marginBottom: '2rem' },
-  card: { background: '#1e293b', border: '1px solid rgba(56,189,248,0.12)', borderRadius: 12, padding: '1.5rem' },
-  label: { display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' },
+  sub: { color: 'var(--ft-text-tertiary)', fontSize: '0.88rem', marginBottom: '2rem' },
+  card: { background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.12)', borderRadius: 12, padding: '1.5rem' },
+  label: { display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' },
   typeGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', marginBottom: '1.5rem' },
   typeBtn: { padding: '0.75rem', borderRadius: 8, border: '1px solid rgba(56,189,248,0.12)', background: 'rgba(56,189,248,0.03)', cursor: 'pointer', textAlign: 'left' as const, transition: 'all 0.15s' },
-  typeBtnActive: { border: '1px solid #38bdf8', background: 'rgba(56,189,248,0.1)' },
-  typeBtnLabel: { fontSize: '0.88rem', fontWeight: 600, color: '#f1f5f9', display: 'block', marginBottom: '0.15rem' },
-  typeBtnDesc: { fontSize: '0.75rem', color: '#64748b' },
-  textarea: { width: '100%', minHeight: 140, background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, padding: '0.75rem', color: '#f1f5f9', fontSize: '0.92rem', resize: 'vertical' as const, outline: 'none', fontFamily: 'system-ui', boxSizing: 'border-box' as const, marginBottom: '1rem' },
-  input: { width: '100%', background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, padding: '0.65rem 0.75rem', color: '#f1f5f9', fontSize: '0.92rem', outline: 'none', fontFamily: 'system-ui', boxSizing: 'border-box' as const, marginBottom: '1rem' },
+  typeBtnActive: { border: '1px solid var(--ft-accent)', background: 'rgba(56,189,248,0.1)' },
+  typeBtnLabel: { fontSize: '0.88rem', fontWeight: 600, color: 'var(--ft-text)', display: 'block', marginBottom: '0.15rem' },
+  typeBtnDesc: { fontSize: '0.75rem', color: 'var(--ft-text-tertiary)' },
+  textarea: { width: '100%', minHeight: 140, background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, padding: '0.75rem', color: 'var(--ft-text)', fontSize: '0.92rem', resize: 'vertical' as const, outline: 'none', fontFamily: 'system-ui', boxSizing: 'border-box' as const, marginBottom: '1rem' },
+  input: { width: '100%', background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, padding: '0.65rem 0.75rem', color: 'var(--ft-text)', fontSize: '0.92rem', outline: 'none', fontFamily: 'system-ui', boxSizing: 'border-box' as const, marginBottom: '1rem' },
   chip: { display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(139,92,246,0.16)', border: '1px solid rgba(139,92,246,0.35)', color: '#ddd6fe', borderRadius: 999, padding: '0.25rem 0.6rem', fontSize: '0.78rem', fontWeight: 700, marginRight: 6, marginBottom: 8 },
-  charCount: { fontSize: '0.75rem', color: '#64748b', textAlign: 'right' as const, marginTop: '-0.75rem', marginBottom: '1rem' },
+  charCount: { fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', textAlign: 'right' as const, marginTop: '-0.75rem', marginBottom: '1rem' },
   actions: { display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' },
-  cancelBtn: { background: 'transparent', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, padding: '0.6rem 1.25rem', color: '#94a3b8', fontSize: '0.88rem', cursor: 'pointer' },
-  submitBtn: { background: '#38bdf8', border: 'none', borderRadius: 8, padding: '0.6rem 1.5rem', color: '#0f172a', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer' },
-  error: { background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 8, padding: '0.75rem 1rem', color: '#f87171', fontSize: '0.85rem', marginBottom: '1rem' },
+  cancelBtn: { background: 'transparent', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, padding: '0.6rem 1.25rem', color: 'var(--ft-text-secondary)', fontSize: '0.88rem', cursor: 'pointer' },
+  submitBtn: { background: 'var(--ft-accent)', border: 'none', borderRadius: 8, padding: '0.6rem 1.5rem', color: 'var(--ft-bg)', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer' },
+  error: { background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 8, padding: '0.75rem 1rem', color: 'var(--ft-danger)', fontSize: '0.85rem', marginBottom: '1rem' },
 }
 
 type OrganisationOption = { id: string; name: string; slug: string | null; logo_url?: string | null }
@@ -149,7 +149,7 @@ export default function NewFeedPostPage() {
                 onClick={() => setType(pt.value)}
                 type="button"
               >
-                <span style={{ ...S.typeBtnLabel, color: type === pt.value ? '#38bdf8' : '#f1f5f9' }}>{pt.label}</span>
+                <span style={{ ...S.typeBtnLabel, color: type === pt.value ? 'var(--ft-accent)' : 'var(--ft-text)' }}>{pt.label}</span>
                 <span style={S.typeBtnDesc}>{pt.desc}</span>
               </button>
             ))}
@@ -193,11 +193,11 @@ export default function NewFeedPostPage() {
             onChange={e => setOrgQuery(e.target.value)}
           />
           {orgResults.length > 0 && (
-            <div style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, overflow: 'hidden', marginBottom: '0.75rem' }}>
+            <div style={{ background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: 8, overflow: 'hidden', marginBottom: '0.75rem' }}>
               {orgResults.map(org => (
-                <button key={org.id} type="button" onClick={() => tagOrganisation(org)} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid #1e293b', padding: '0.65rem 0.75rem', color: '#f1f5f9', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+                <button key={org.id} type="button" onClick={() => tagOrganisation(org)} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--ft-surface)', padding: '0.65rem 0.75rem', color: 'var(--ft-text)', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
                   <span style={{ width: 28, height: 28, borderRadius: 999, background: 'rgba(139,92,246,0.2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#c4b5fd', fontWeight: 800 }}>{org.logo_url ? '🏢' : org.name.slice(0, 1).toUpperCase()}</span>
-                  <span><strong>{org.name}</strong><br /><span style={{ color: '#64748b', fontSize: '0.75rem' }}>@{org.slug || slugify(org.name)}</span></span>
+                  <span><strong>{org.name}</strong><br /><span style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.75rem' }}>@{org.slug || slugify(org.name)}</span></span>
                 </button>
               ))}
             </div>

@@ -26,7 +26,7 @@ interface CollabEvent {
 
 const GRADIENTS = [
   'linear-gradient(135deg,#34d399,#059669)',
-  'linear-gradient(135deg,#38bdf8,#0284c7)',
+  'linear-gradient(135deg,var(--ft-accent),#0284c7)',
   'linear-gradient(135deg,#f472b6,#db2777)',
   'linear-gradient(135deg,#a78bfa,#7c3aed)',
   'linear-gradient(135deg,#fbbf24,#d97706)',
@@ -42,7 +42,7 @@ function formatDate(ts: string) {
 function trustBadge(score: number) {
   if (score >= 500) return { label: 'Top Host', color: '#fbbf24' }
   if (score >= 200) return { label: 'Verified Host', color: '#34d399' }
-  return { label: 'Host', color: '#38bdf8' }
+  return { label: 'Host', color: 'var(--ft-accent)' }
 }
 
 
@@ -105,9 +105,9 @@ function EventsContent() {
   })
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)' }}>
       <style>{`
-        .event-card{background:#1e293b;border:1px solid #334155;border-radius:14px;overflow:hidden;transition:transform 0.2s,box-shadow 0.2s;}
+        .event-card{background:var(--ft-surface);border:1px solid var(--ft-border-strong);border-radius:14px;overflow:hidden;transition:transform 0.2s,box-shadow 0.2s;}
         .event-card:hover{transform:translateY(-3px);box-shadow:0 16px 40px rgba(0,0,0,0.35);}
         .rsvp-btn{background:linear-gradient(135deg,#34d399,#059669);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity 0.15s;text-decoration:none;display:inline-block;}
         .rsvp-btn:hover{opacity:0.85;}
@@ -119,12 +119,12 @@ function EventsContent() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 32 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <Link href="/collab" style={{ color: '#64748b', fontSize: 14, textDecoration: 'none' }}>Collab</Link>
-              <span style={{ color: '#475569' }}>›</span>
-              <span style={{ color: '#f1f5f9', fontSize: 14 }}>Events</span>
+              <Link href="/collab" style={{ color: 'var(--ft-text-tertiary)', fontSize: 14, textDecoration: 'none' }}>Collab</Link>
+              <span style={{ color: 'var(--ft-text-faint)' }}>›</span>
+              <span style={{ color: 'var(--ft-text)', fontSize: 14 }}>Events</span>
             </div>
             <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>📅 Events</h1>
-            <p style={{ color: '#64748b', margin: '6px 0 0', fontSize: 14 }}>Workshops, meetups, and online events from the community</p>
+            <p style={{ color: 'var(--ft-text-tertiary)', margin: '6px 0 0', fontSize: 14 }}>Workshops, meetups, and online events from the community</p>
           </div>
           <Link href="/events/create" style={{
             background: 'linear-gradient(135deg,#34d399,#059669)', color: '#fff',
@@ -136,34 +136,34 @@ function EventsContent() {
 
         <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           {/* Filters */}
-          <div style={{ width: 240, flexShrink: 0, background: '#1e293b', border: '1px solid #334155', borderRadius: 14, padding: 20 }}>
-            <h3 style={{ margin: '0 0 20px', fontSize: 14, fontWeight: 600, color: '#f1f5f9' }}>Filters</h3>
+          <div style={{ width: 240, flexShrink: 0, background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 14, padding: 20 }}>
+            <h3 style={{ margin: '0 0 20px', fontSize: 14, fontWeight: 600, color: 'var(--ft-text)' }}>Filters</h3>
 
             <div style={{ marginBottom: 20 }}>
-              <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>Search</label>
+              <label style={{ fontSize: 12, color: 'var(--ft-text-tertiary)', display: 'block', marginBottom: 6 }}>Search</label>
               <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Topic, speaker..."
-                style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: 8, padding: '8px 10px', color: '#f1f5f9', fontSize: 13, boxSizing: 'border-box' }} />
+                style={{ width: '100%', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: 8, padding: '8px 10px', color: 'var(--ft-text)', fontSize: 13, boxSizing: 'border-box' }} />
             </div>
 
             <div style={{ marginBottom: 20 }}>
-              <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>Min Host Trust: ₮{minTrust}</label>
+              <label style={{ fontSize: 12, color: 'var(--ft-text-tertiary)', display: 'block', marginBottom: 6 }}>Min Host Trust: ₮{minTrust}</label>
               <input type="range" min={0} max={1000} step={50} value={minTrust} onChange={e => setMinTrust(parseInt(e.target.value))} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#475569', marginTop: 2 }}><span>₮0</span><span>₮1000</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ft-text-faint)', marginTop: 2 }}><span>₮0</span><span>₮1000</span></div>
             </div>
 
             <label className="filter-toggle">
               <input type="checkbox" checked={freeOnly} onChange={e => setFreeOnly(e.target.checked)}
                 style={{ accentColor: '#34d399' }} />
-              <span style={{ fontSize: 13, color: '#94a3b8' }}>Free events only</span>
+              <span style={{ fontSize: 13, color: 'var(--ft-text-secondary)' }}>Free events only</span>
             </label>
             <label className="filter-toggle">
               <input type="checkbox" checked={onlineOnly} onChange={e => setOnlineOnly(e.target.checked)}
                 style={{ accentColor: '#34d399' }} />
-              <span style={{ fontSize: 13, color: '#94a3b8' }}>Online only</span>
+              <span style={{ fontSize: 13, color: 'var(--ft-text-secondary)' }}>Online only</span>
             </label>
 
             <button onClick={() => { setMinTrust(0); setFreeOnly(false); setOnlineOnly(false); setSearch('') }}
-              style={{ width: '100%', marginTop: 20, padding: '8px', background: 'transparent', border: '1px solid #334155', borderRadius: 8, color: '#64748b', cursor: 'pointer', fontSize: 13 }}>
+              style={{ width: '100%', marginTop: 20, padding: '8px', background: 'transparent', border: '1px solid var(--ft-border-strong)', borderRadius: 8, color: 'var(--ft-text-tertiary)', cursor: 'pointer', fontSize: 13 }}>
               Reset
             </button>
           </div>
@@ -172,11 +172,11 @@ function EventsContent() {
           <div style={{ flex: 1, minWidth: 0 }}>
             {loading ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {[1,2,3,4].map(i => <div key={i} style={{ background: '#1e293b', borderRadius: 14, height: 140, border: '1px solid #334155', opacity: 0.5 }} />)}
+                {[1,2,3,4].map(i => <div key={i} style={{ background: 'var(--ft-surface)', borderRadius: 14, height: 140, border: '1px solid var(--ft-border-strong)', opacity: 0.5 }} />)}
               </div>
             ) : (
               <>
-                <div style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>{filtered.length} upcoming events</div>
+                <div style={{ fontSize: 13, color: 'var(--ft-text-tertiary)', marginBottom: 16 }}>{filtered.length} upcoming events</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {filtered.map(e => {
                     const badge = trustBadge(e.trust_balance ?? 0)
@@ -201,9 +201,9 @@ function EventsContent() {
                           <div style={{ flex: 1, padding: '16px 20px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
                               <div>
-                                <div style={{ fontWeight: 700, fontSize: 16, color: '#f1f5f9', marginBottom: 4 }}>{e.title}</div>
-                                <div style={{ fontSize: 13, color: '#64748b', marginBottom: 10, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{e.description}</div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 12, color: '#94a3b8' }}>
+                                <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--ft-text)', marginBottom: 4 }}>{e.title}</div>
+                                <div style={{ fontSize: 13, color: 'var(--ft-text-tertiary)', marginBottom: 10, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{e.description}</div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 12, color: 'var(--ft-text-secondary)' }}>
                                   <span>🕐 {formatDate(e.starts_at)}</span>
                                   <span>{e.is_online ? '💻 Online' : `📍 ${e.location ?? 'In-person'}`}</span>
                                   <span>👥 {e.attendee_count} attending</span>
@@ -211,7 +211,7 @@ function EventsContent() {
                                 </div>
                               </div>
                               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
-                                <span style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9' }}>
+                                <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--ft-text)' }}>
                                   {(e.price ?? 0) === 0 ? <span style={{ color: '#34d399' }}>Free</span> : `£${e.price}`}
                                 </span>
                                 <Link href={`/events/${e.id}`} className="rsvp-btn">RSVP</Link>
@@ -223,9 +223,9 @@ function EventsContent() {
                     )
                   })}
                   {filtered.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+                    <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--ft-text-tertiary)' }}>
                       <div style={{ fontSize: 40, marginBottom: 16 }}>📅</div>
-                      <div style={{ fontSize: 18, fontWeight: 600, color: '#94a3b8', marginBottom: 8 }}>No events match your filters</div>
+                      <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: 8 }}>No events match your filters</div>
                       <div style={{ fontSize: 14 }}>Try adjusting your filters or be the first to host one!</div>
                     </div>
                   )}
@@ -241,7 +241,7 @@ function EventsContent() {
 
 export default function CollabEventsPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>Loading events...</div>}>
+    <Suspense fallback={<div style={{ minHeight: '100vh', background: 'var(--ft-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ft-text-tertiary)' }}>Loading events...</div>}>
       <EventsContent />
     </Suspense>
   )

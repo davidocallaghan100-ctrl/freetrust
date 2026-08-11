@@ -33,25 +33,25 @@ function ini(name: string | null) {
   return name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('')
 }
 const TYPE_COLOR: Record<string, string> = {
-  discussion: '#38bdf8', announcement: '#f472b6', question: '#fbbf24',
+  discussion: 'var(--ft-accent)', announcement: '#f472b6', question: '#fbbf24',
 }
 const TYPE_LABEL: Record<string, string> = {
   discussion: 'Discussion', announcement: '📣 Announcement', question: '❓ Question',
 }
 const ROLE_COLOR: Record<string, string> = {
-  owner: '#f472b6', moderator: '#fbbf24', member: '#64748b',
+  owner: '#f472b6', moderator: '#fbbf24', member: 'var(--ft-text-tertiary)',
 }
 
 function Av({ url, name, size = 36 }: { url?: string | null; name: string | null; size?: number }) {
   if (url) return <img src={url} alt={name ?? ''} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-  return <div style={{ width: size, height: size, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.3, fontWeight: 800, color: '#0f172a', flexShrink: 0 }}>{ini(name)}</div>
+  return <div style={{ width: size, height: size, borderRadius: '50%', background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.3, fontWeight: 800, color: 'var(--ft-bg)', flexShrink: 0 }}>{ini(name)}</div>
 }
 
 function Empty({ icon, title, sub }: { icon: string; title: string; sub?: string }) {
   return (
-    <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b' }}>
+    <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--ft-text-tertiary)' }}>
       <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>{icon}</div>
-      <div style={{ fontWeight: 700, fontSize: '1rem', color: '#94a3b8', marginBottom: '0.35rem' }}>{title}</div>
+      <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--ft-text-secondary)', marginBottom: '0.35rem' }}>{title}</div>
       {sub && <p style={{ fontSize: '0.85rem', margin: 0 }}>{sub}</p>}
     </div>
   )
@@ -211,8 +211,8 @@ export default function CommunityDetailPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0f172a', paddingTop: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: 32, height: 32, border: '3px solid rgba(56,189,248,0.2)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+      <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', paddingTop: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 32, height: 32, border: '3px solid rgba(56,189,248,0.2)', borderTopColor: 'var(--ft-accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     )
@@ -220,11 +220,11 @@ export default function CommunityDetailPage() {
 
   if (!community) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0f172a', paddingTop: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', color: '#64748b' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', paddingTop: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', color: 'var(--ft-text-tertiary)' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👥</div>
-          <h2 style={{ color: '#f1f5f9', marginBottom: '0.75rem' }}>Group not found</h2>
-          <Link href="/community" style={{ color: '#38bdf8', fontSize: '0.9rem' }}>← Back to Groups</Link>
+          <h2 style={{ color: 'var(--ft-text)', marginBottom: '0.75rem' }}>Group not found</h2>
+          <Link href="/community" style={{ color: 'var(--ft-accent)', fontSize: '0.9rem' }}>← Back to Groups</Link>
         </div>
       </div>
     )
@@ -238,10 +238,10 @@ export default function CommunityDetailPage() {
   ] as const
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', paddingTop: 64, background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', paddingTop: 64, background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui' }}>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
-        .ct{transition:all .15s;white-space:nowrap}.ct:hover{color:#f1f5f9!important}
+        .ct{transition:all .15s;white-space:nowrap}.ct:hover{color:var(--ft-text)!important}
         .cpc{transition:border-color .15s}.cpc:hover{border-color:rgba(56,189,248,.22)!important}
         .cvb:hover{background:rgba(56,189,248,.15)!important}
         @media(max-width:768px){.chg{grid-template-columns:auto 1fr!important}.chg .cjb{grid-column:1/-1}.ctabs{overflow-x:auto}.clayout{padding:1rem!important}}
@@ -250,33 +250,33 @@ export default function CommunityDetailPage() {
       {/* Header */}
       <div style={{ background: 'linear-gradient(180deg,rgba(56,189,248,.1) 0%,transparent 100%)', borderBottom: '1px solid rgba(56,189,248,.1)', padding: '2rem 1.5rem' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <Link href="/community" style={{ fontSize: '0.8rem', color: '#475569', textDecoration: 'none', display: 'inline-block', marginBottom: '1rem' }}>← Groups</Link>
+          <Link href="/community" style={{ fontSize: '0.8rem', color: 'var(--ft-text-faint)', textDecoration: 'none', display: 'inline-block', marginBottom: '1rem' }}>← Groups</Link>
           <div className="chg" style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '1.25rem', alignItems: 'start' }}>
-            <div style={{ width: 72, height: 72, borderRadius: 16, background: community.avatar_gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.3rem', color: '#0f172a', flexShrink: 0 }}>
+            <div style={{ width: 72, height: 72, borderRadius: 16, background: community.avatar_gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.3rem', color: 'var(--ft-bg)', flexShrink: 0 }}>
               {community.avatar_initials}
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
                 <h1 style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>{community.name}</h1>
-                {community.is_featured && <span style={{ background: 'rgba(56,189,248,.1)', border: '1px solid rgba(56,189,248,.3)', borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.72rem', color: '#38bdf8', fontWeight: 700 }}>✦ Featured</span>}
+                {community.is_featured && <span style={{ background: 'rgba(56,189,248,.1)', border: '1px solid rgba(56,189,248,.3)', borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.72rem', color: 'var(--ft-accent)', fontWeight: 700 }}>✦ Featured</span>}
               </div>
-              <p style={{ color: '#64748b', fontSize: '0.88rem', margin: '0 0 0.75rem' }}>{community.description}</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', fontSize: '0.82rem', color: '#475569' }}>
+              <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.88rem', margin: '0 0 0.75rem' }}>{community.description}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', fontSize: '0.82rem', color: 'var(--ft-text-faint)' }}>
                 <span>👥 {community.member_count.toLocaleString()} members</span>
                 <span>💬 {community.post_count.toLocaleString()} posts</span>
                 <span>📁 {community.category}</span>
                 {community.is_paid && <span style={{ color: '#fbbf24' }}>🔒 £{community.price_monthly}/mo</span>}
                 {(community.tags ?? []).map(t => (
-                  <span key={t} style={{ background: 'rgba(148,163,184,.08)', border: '1px solid rgba(148,163,184,.12)', borderRadius: 999, padding: '0.1rem 0.5rem', fontSize: '0.72rem', color: '#94a3b8' }}>{t}</span>
+                  <span key={t} style={{ background: 'rgba(148,163,184,.08)', border: '1px solid rgba(148,163,184,.12)', borderRadius: 999, padding: '0.1rem 0.5rem', fontSize: '0.72rem', color: 'var(--ft-text-secondary)' }}>{t}</span>
                 ))}
               </div>
             </div>
             <div className="cjb" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
               {!joined
-                ? <button onClick={handleJoin} disabled={joinLoading} style={{ background: '#38bdf8', border: 'none', borderRadius: 8, padding: '0.55rem 1.25rem', fontSize: '0.88rem', fontWeight: 700, color: '#0f172a', cursor: joinLoading ? 'not-allowed' : 'pointer', opacity: joinLoading ? 0.7 : 1 }}>
+                ? <button onClick={handleJoin} disabled={joinLoading} style={{ background: 'var(--ft-accent)', border: 'none', borderRadius: 8, padding: '0.55rem 1.25rem', fontSize: '0.88rem', fontWeight: 700, color: 'var(--ft-bg)', cursor: joinLoading ? 'not-allowed' : 'pointer', opacity: joinLoading ? 0.7 : 1 }}>
                     {joinLoading ? 'Joining…' : community.is_paid ? `Join £${community.price_monthly}/mo` : 'Join Group'}
                   </button>
-                : <span style={{ background: 'rgba(56,189,248,.1)', border: '1px solid rgba(56,189,248,.3)', borderRadius: 8, padding: '0.55rem 1.25rem', fontSize: '0.88rem', fontWeight: 700, color: '#38bdf8' }}>✓ Joined</span>
+                : <span style={{ background: 'rgba(56,189,248,.1)', border: '1px solid rgba(56,189,248,.3)', borderRadius: 8, padding: '0.55rem 1.25rem', fontSize: '0.88rem', fontWeight: 700, color: 'var(--ft-accent)' }}>✓ Joined</span>
               }
             </div>
           </div>
@@ -288,7 +288,7 @@ export default function CommunityDetailPage() {
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', padding: '0 1.5rem' }}>
           {TABS.map(t => (
             <button key={t.id} className="ct" onClick={() => setTab(t.id as typeof tab)}
-              style={{ padding: '0.85rem 1rem', background: 'none', border: 'none', borderBottom: tab === t.id ? '2px solid #38bdf8' : '2px solid transparent', color: tab === t.id ? '#38bdf8' : '#64748b', fontWeight: tab === t.id ? 700 : 500, fontSize: '0.85rem', cursor: 'pointer' }}>
+              style={{ padding: '0.85rem 1rem', background: 'none', border: 'none', borderBottom: tab === t.id ? '2px solid var(--ft-accent)' : '2px solid transparent', color: tab === t.id ? 'var(--ft-accent)' : 'var(--ft-text-tertiary)', fontWeight: tab === t.id ? 700 : 500, fontSize: '0.85rem', cursor: 'pointer' }}>
               {t.label}
             </button>
           ))}
@@ -301,22 +301,22 @@ export default function CommunityDetailPage() {
         {/* FEED */}
         {tab === 'feed' && (
           <div>
-            <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,.1)', borderRadius: 12, padding: '1.25rem', marginBottom: '1.5rem' }}>
+            <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,.1)', borderRadius: 12, padding: '1.25rem', marginBottom: '1.5rem' }}>
               <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
                 {(['discussion', 'question', 'announcement'] as const).map(t => (
-                  <button key={t} onClick={() => setPostType(t)} style={{ padding: '0.3rem 0.8rem', borderRadius: 999, fontSize: '0.78rem', fontWeight: 600, border: postType === t ? `1px solid ${TYPE_COLOR[t]}` : '1px solid rgba(148,163,184,.15)', background: postType === t ? `${TYPE_COLOR[t]}18` : 'transparent', color: postType === t ? TYPE_COLOR[t] : '#64748b', cursor: 'pointer' }}>
+                  <button key={t} onClick={() => setPostType(t)} style={{ padding: '0.3rem 0.8rem', borderRadius: 999, fontSize: '0.78rem', fontWeight: 600, border: postType === t ? `1px solid ${TYPE_COLOR[t]}` : '1px solid rgba(148,163,184,.15)', background: postType === t ? `${TYPE_COLOR[t]}18` : 'transparent', color: postType === t ? TYPE_COLOR[t] : 'var(--ft-text-tertiary)', cursor: 'pointer' }}>
                     {TYPE_LABEL[t]}
                   </button>
                 ))}
               </div>
               <input value={postTitle} onChange={e => setPostTitle(e.target.value)} placeholder="Post title…"
-                style={{ width: '100%', background: 'rgba(15,23,42,.5)', border: '1px solid rgba(148,163,184,.15)', borderRadius: 7, padding: '0.55rem 0.8rem', fontSize: '0.9rem', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box', marginBottom: '0.5rem' }} />
+                style={{ width: '100%', background: 'rgba(15,23,42,.5)', border: '1px solid rgba(148,163,184,.15)', borderRadius: 7, padding: '0.55rem 0.8rem', fontSize: '0.9rem', color: 'var(--ft-text)', outline: 'none', boxSizing: 'border-box', marginBottom: '0.5rem' }} />
               <textarea value={postBody} onChange={e => setPostBody(e.target.value)} placeholder="Share something with the community…" rows={3}
-                style={{ width: '100%', background: 'rgba(15,23,42,.5)', border: '1px solid rgba(148,163,184,.15)', borderRadius: 7, padding: '0.55rem 0.8rem', fontSize: '0.85rem', color: '#f1f5f9', outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'system-ui', marginBottom: '0.75rem' }} />
+                style={{ width: '100%', background: 'rgba(15,23,42,.5)', border: '1px solid rgba(148,163,184,.15)', borderRadius: 7, padding: '0.55rem 0.8rem', fontSize: '0.85rem', color: 'var(--ft-text)', outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'system-ui', marginBottom: '0.75rem' }} />
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                {postError ? <span style={{ fontSize: '0.78rem', color: '#f87171' }}>⚠ {postError}</span> : <span />}
+                {postError ? <span style={{ fontSize: '0.78rem', color: 'var(--ft-danger)' }}>⚠ {postError}</span> : <span />}
                 <button onClick={handlePost} disabled={!postTitle.trim() || submitting}
-                  style={{ background: postTitle.trim() ? '#38bdf8' : 'rgba(56,189,248,.3)', border: 'none', borderRadius: 7, padding: '0.45rem 1.1rem', fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', cursor: postTitle.trim() ? 'pointer' : 'not-allowed' }}>
+                  style={{ background: postTitle.trim() ? 'var(--ft-accent)' : 'rgba(56,189,248,.3)', border: 'none', borderRadius: 7, padding: '0.45rem 1.1rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--ft-bg)', cursor: postTitle.trim() ? 'pointer' : 'not-allowed' }}>
                   {submitting ? 'Posting…' : 'Post'}
                 </button>
               </div>
@@ -325,23 +325,23 @@ export default function CommunityDetailPage() {
               ? <Empty icon="💬" title="No posts yet" sub="Be the first to start a conversation." />
               : sortedPosts.map(post => (
                 <Link key={post.id} href={`/community/${slug}/post/${post.id}`} style={{ textDecoration: 'none', display: 'block' }}>
-                  <div className="cpc" style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,.08)', borderRadius: 12, padding: '1.1rem 1.25rem', marginBottom: '0.75rem', cursor: 'pointer' }}>
+                  <div className="cpc" style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,.08)', borderRadius: 12, padding: '1.1rem 1.25rem', marginBottom: '0.75rem', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
                       {post.is_pinned && <span style={{ fontSize: '0.72rem', background: 'rgba(251,191,36,.1)', border: '1px solid rgba(251,191,36,.25)', borderRadius: 999, padding: '0.1rem 0.5rem', color: '#fbbf24', fontWeight: 700 }}>📌 Pinned</span>}
-                      <span style={{ fontSize: '0.72rem', background: `${TYPE_COLOR[post.type] ?? '#38bdf8'}18`, border: `1px solid ${TYPE_COLOR[post.type] ?? '#38bdf8'}30`, borderRadius: 999, padding: '0.1rem 0.5rem', color: TYPE_COLOR[post.type] ?? '#38bdf8', fontWeight: 600 }}>{TYPE_LABEL[post.type] ?? post.type}</span>
+                      <span style={{ fontSize: '0.72rem', background: `${TYPE_COLOR[post.type] ?? 'var(--ft-accent)'}18`, border: `1px solid ${TYPE_COLOR[post.type] ?? 'var(--ft-accent)'}30`, borderRadius: 999, padding: '0.1rem 0.5rem', color: TYPE_COLOR[post.type] ?? 'var(--ft-accent)', fontWeight: 600 }}>{TYPE_LABEL[post.type] ?? post.type}</span>
                     </div>
-                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f1f5f9', marginBottom: '0.4rem' }}>{post.title}</div>
-                    {post.body && <p style={{ fontSize: '0.83rem', color: '#64748b', margin: '0 0 0.75rem', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{post.body}</p>}
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--ft-text)', marginBottom: '0.4rem' }}>{post.title}</div>
+                    {post.body && <p style={{ fontSize: '0.83rem', color: 'var(--ft-text-tertiary)', margin: '0 0 0.75rem', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{post.body}</p>}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <Av url={post.author.avatar_url} name={post.author.full_name} size={24} />
-                      <span style={{ fontSize: '0.78rem', color: '#64748b' }}>{post.author.full_name ?? 'Unknown'}</span>
-                      <span style={{ fontSize: '0.75rem', color: '#475569' }}>· {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</span>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)' }}>{post.author.full_name ?? 'Unknown'}</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--ft-text-faint)' }}>· {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</span>
                       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         <button className="cvb" onClick={e => { e.preventDefault(); handleVote(post.id) }}
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: votedPosts.has(post.id) ? 'rgba(56,189,248,.1)' : 'transparent', border: votedPosts.has(post.id) ? '1px solid rgba(56,189,248,.3)' : '1px solid rgba(148,163,184,.15)', borderRadius: 999, padding: '0.2rem 0.6rem', fontSize: '0.78rem', color: votedPosts.has(post.id) ? '#38bdf8' : '#64748b', cursor: 'pointer' }}>
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: votedPosts.has(post.id) ? 'rgba(56,189,248,.1)' : 'transparent', border: votedPosts.has(post.id) ? '1px solid rgba(56,189,248,.3)' : '1px solid rgba(148,163,184,.15)', borderRadius: 999, padding: '0.2rem 0.6rem', fontSize: '0.78rem', color: votedPosts.has(post.id) ? 'var(--ft-accent)' : 'var(--ft-text-tertiary)', cursor: 'pointer' }}>
                           ▲ {post.upvotes}
                         </button>
-                        <span style={{ fontSize: '0.78rem', color: '#475569' }}>💬 {post.comment_count}</span>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--ft-text-faint)' }}>💬 {post.comment_count}</span>
                       </div>
                     </div>
                   </div>
@@ -361,23 +361,23 @@ export default function CommunityDetailPage() {
                 const start = new Date(ev.starts_at)
                 const rsvped = rsvpEvents.has(ev.id)
                 return (
-                  <div key={ev.id} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,.1)', borderRadius: 12, padding: '1.25rem', marginBottom: '1rem', display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
+                  <div key={ev.id} style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,.1)', borderRadius: 12, padding: '1.25rem', marginBottom: '1rem', display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
                     <div style={{ background: 'rgba(56,189,248,.08)', border: '1px solid rgba(56,189,248,.15)', borderRadius: 10, padding: '0.6rem 1rem', textAlign: 'center', flexShrink: 0, minWidth: 60 }}>
-                      <div style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: 700, textTransform: 'uppercase' }}>{start.toLocaleString('en', { month: 'short' })}</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1 }}>{start.getDate()}</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--ft-accent)', fontWeight: 700, textTransform: 'uppercase' }}>{start.toLocaleString('en', { month: 'short' })}</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--ft-text)', lineHeight: 1 }}>{start.getDate()}</div>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: '1rem', color: '#f1f5f9', marginBottom: '0.3rem' }}>{ev.title}</div>
-                      <p style={{ fontSize: '0.83rem', color: '#64748b', margin: '0 0 0.6rem' }}>{ev.description}</p>
-                      <div style={{ display: 'flex', gap: '1rem', fontSize: '0.78rem', color: '#475569', flexWrap: 'wrap' }}>
+                      <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--ft-text)', marginBottom: '0.3rem' }}>{ev.title}</div>
+                      <p style={{ fontSize: '0.83rem', color: 'var(--ft-text-tertiary)', margin: '0 0 0.6rem' }}>{ev.description}</p>
+                      <div style={{ display: 'flex', gap: '1rem', fontSize: '0.78rem', color: 'var(--ft-text-faint)', flexWrap: 'wrap' }}>
                         <span>🕐 {start.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}</span>
                         {ev.is_online && <span style={{ color: '#34d399' }}>🌐 Online</span>}
                         <span>👥 {ev.attendee_count} attending</span>
-                        {ev.meeting_url && rsvped && <a href={ev.meeting_url} target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8', textDecoration: 'none' }}>🔗 Join link</a>}
+                        {ev.meeting_url && rsvped && <a href={ev.meeting_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ft-accent)', textDecoration: 'none' }}>🔗 Join link</a>}
                       </div>
                     </div>
                     <button onClick={() => setRsvpEvents(prev => { const n = new Set(prev); n.has(ev.id) ? n.delete(ev.id) : n.add(ev.id); return n })}
-                      style={{ alignSelf: 'center', background: rsvped ? 'rgba(56,189,248,.1)' : '#38bdf8', border: rsvped ? '1px solid rgba(56,189,248,.3)' : 'none', borderRadius: 8, padding: '0.5rem 1rem', fontSize: '0.82rem', fontWeight: 700, color: rsvped ? '#38bdf8' : '#0f172a', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      style={{ alignSelf: 'center', background: rsvped ? 'rgba(56,189,248,.1)' : 'var(--ft-accent)', border: rsvped ? '1px solid rgba(56,189,248,.3)' : 'none', borderRadius: 8, padding: '0.5rem 1rem', fontSize: '0.82rem', fontWeight: 700, color: rsvped ? 'var(--ft-accent)' : 'var(--ft-bg)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                       {rsvped ? '✓ RSVPed' : 'RSVP'}
                     </button>
                   </div>
@@ -393,21 +393,21 @@ export default function CommunityDetailPage() {
             <div style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
               <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Members{members.length > 0 ? ` (${members.length})` : ''}</h2>
               <div style={{ position: 'relative', flex: '0 0 240px' }}>
-                <svg style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#475569', pointerEvents: 'none' }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <svg style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--ft-text-faint)', pointerEvents: 'none' }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <input value={memberSearch} onChange={e => setMemberSearch(e.target.value)} placeholder="Search members…"
-                  style={{ width: '100%', background: '#1e293b', border: '1px solid rgba(148,163,184,.15)', borderRadius: 7, padding: '0.42rem 0.75rem 0.42rem 1.8rem', fontSize: '0.83rem', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box' }} />
+                  style={{ width: '100%', background: 'var(--ft-surface)', border: '1px solid rgba(148,163,184,.15)', borderRadius: 7, padding: '0.42rem 0.75rem 0.42rem 1.8rem', fontSize: '0.83rem', color: 'var(--ft-text)', outline: 'none', boxSizing: 'border-box' }} />
               </div>
             </div>
             {filteredMembers.length === 0
               ? <Empty icon="👥" title={members.length === 0 ? 'No members yet' : 'No results'} sub={members.length === 0 ? 'Be the first to join.' : 'Try a different name.'} />
               : filteredMembers.map(m => (
-                <div key={m.id} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,.08)', borderRadius: 10, padding: '0.9rem 1.1rem', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                <div key={m.id} style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,.08)', borderRadius: 10, padding: '0.9rem 1.1rem', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
                   <Av url={m.profile.avatar_url} name={m.profile.full_name} size={40} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#f1f5f9' }}>{m.profile.full_name ?? 'Unknown'}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#475569' }}>Joined {formatDistanceToNow(new Date(m.joined_at), { addSuffix: true })}</div>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--ft-text)' }}>{m.profile.full_name ?? 'Unknown'}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-faint)' }}>Joined {formatDistanceToNow(new Date(m.joined_at), { addSuffix: true })}</div>
                   </div>
-                  <span style={{ fontSize: '0.72rem', background: `${ROLE_COLOR[m.role] ?? '#64748b'}18`, border: `1px solid ${ROLE_COLOR[m.role] ?? '#64748b'}35`, borderRadius: 999, padding: '0.15rem 0.55rem', color: ROLE_COLOR[m.role] ?? '#64748b', fontWeight: 700, textTransform: 'capitalize' }}>
+                  <span style={{ fontSize: '0.72rem', background: `${ROLE_COLOR[m.role] ?? 'var(--ft-text-tertiary)'}18`, border: `1px solid ${ROLE_COLOR[m.role] ?? 'var(--ft-text-tertiary)'}35`, borderRadius: 999, padding: '0.15rem 0.55rem', color: ROLE_COLOR[m.role] ?? 'var(--ft-text-tertiary)', fontWeight: 700, textTransform: 'capitalize' }}>
                     {m.role}
                   </span>
                 </div>
@@ -420,22 +420,22 @@ export default function CommunityDetailPage() {
         {tab === 'admin' && isOwner && (
           <div>
             <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.5rem' }}>Group Settings</h2>
-            <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,.1)', borderRadius: 12, padding: '1.5rem', marginBottom: '1.25rem' }}>
-              <div style={{ fontWeight: 700, marginBottom: '1rem', color: '#f1f5f9' }}>General</div>
+            <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,.1)', borderRadius: 12, padding: '1.5rem', marginBottom: '1.25rem' }}>
+              <div style={{ fontWeight: 700, marginBottom: '1rem', color: 'var(--ft-text)' }}>General</div>
               <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.35rem' }}>Group Name</label>
-                <input value={editName} onChange={e => setEditName(e.target.value)} style={{ width: '100%', background: 'rgba(15,23,42,.5)', border: '1px solid rgba(148,163,184,.2)', borderRadius: 7, padding: '0.55rem 0.75rem', fontSize: '0.88rem', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box' }} />
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.35rem' }}>Group Name</label>
+                <input value={editName} onChange={e => setEditName(e.target.value)} style={{ width: '100%', background: 'rgba(15,23,42,.5)', border: '1px solid rgba(148,163,184,.2)', borderRadius: 7, padding: '0.55rem 0.75rem', fontSize: '0.88rem', color: 'var(--ft-text)', outline: 'none', boxSizing: 'border-box' }} />
               </div>
               <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.35rem' }}>Description</label>
-                <textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} rows={3} style={{ width: '100%', background: 'rgba(15,23,42,.5)', border: '1px solid rgba(148,163,184,.2)', borderRadius: 7, padding: '0.55rem 0.75rem', fontSize: '0.85rem', color: '#f1f5f9', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'system-ui' }} />
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.35rem' }}>Description</label>
+                <textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} rows={3} style={{ width: '100%', background: 'rgba(15,23,42,.5)', border: '1px solid rgba(148,163,184,.2)', borderRadius: 7, padding: '0.55rem 0.75rem', fontSize: '0.85rem', color: 'var(--ft-text)', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'system-ui' }} />
               </div>
-              <button style={{ background: '#38bdf8', border: 'none', borderRadius: 7, padding: '0.5rem 1.25rem', fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer' }}>Save Changes</button>
+              <button style={{ background: 'var(--ft-accent)', border: 'none', borderRadius: 7, padding: '0.5rem 1.25rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--ft-bg)', cursor: 'pointer' }}>Save Changes</button>
             </div>
             <div style={{ background: 'rgba(239,68,68,.05)', border: '1px solid rgba(239,68,68,.2)', borderRadius: 12, padding: '1.5rem' }}>
               <div style={{ fontWeight: 700, marginBottom: '0.75rem', color: '#fca5a5' }}>Danger Zone</div>
-              <p style={{ fontSize: '0.83rem', color: '#64748b', marginBottom: '1rem' }}>These actions are irreversible.</p>
-              <button style={{ background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.3)', borderRadius: 7, padding: '0.5rem 1rem', fontSize: '0.83rem', color: '#f87171', cursor: 'pointer', fontWeight: 600 }}>Archive Group</button>
+              <p style={{ fontSize: '0.83rem', color: 'var(--ft-text-tertiary)', marginBottom: '1rem' }}>These actions are irreversible.</p>
+              <button style={{ background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.3)', borderRadius: 7, padding: '0.5rem 1rem', fontSize: '0.83rem', color: 'var(--ft-danger)', cursor: 'pointer', fontWeight: 600 }}>Archive Group</button>
             </div>
           </div>
         )}

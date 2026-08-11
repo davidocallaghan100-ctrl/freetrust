@@ -117,14 +117,14 @@ export default function EditEventPage() {
   const card = '#111827'
   const border = 'rgba(139,92,246,0.2)'
   const accent = '#8b5cf6'
-  const text = '#f1f5f9'
-  const muted = '#64748b'
+  const text = 'var(--ft-text)'
+  const muted = 'var(--ft-text-tertiary)'
   const inputStyle = {
     width: '100%', background: '#1f2937', border: '1px solid rgba(139,92,246,0.2)',
     borderRadius: 10, padding: '0.75rem 1rem', color: text, fontSize: '0.9rem',
     outline: 'none', boxSizing: 'border-box' as const,
   }
-  const labelStyle = { fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', marginBottom: 6, display: 'block' as const }
+  const labelStyle = { fontSize: '0.8rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: 6, display: 'block' as const }
 
   if (loading) {
     return (
@@ -163,7 +163,7 @@ export default function EditEventPage() {
         </div>
 
         {error && (
-          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '0.75rem 1rem', color: '#f87171', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '0.75rem 1rem', color: 'var(--ft-danger)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
             {error}
           </div>
         )}
@@ -199,7 +199,7 @@ export default function EditEventPage() {
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             {[{ label: '💻 Online', val: true }, { label: '📍 In Person', val: false }].map(({ label, val }) => (
               <button key={label} onClick={() => set('is_online', val)}
-                style={{ flex: 1, padding: '0.65rem', borderRadius: 10, border: `1.5px solid ${form.is_online === val ? accent : border}`, background: form.is_online === val ? 'rgba(139,92,246,0.12)' : '#1f2937', color: form.is_online === val ? accent : '#94a3b8', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
+                style={{ flex: 1, padding: '0.65rem', borderRadius: 10, border: `1.5px solid ${form.is_online === val ? accent : border}`, background: form.is_online === val ? 'rgba(139,92,246,0.12)' : '#1f2937', color: form.is_online === val ? accent : 'var(--ft-text-secondary)', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
                 {label}
               </button>
             ))}

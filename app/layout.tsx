@@ -12,6 +12,7 @@ import "./globals.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { CurrencyProvider } from "@/context/CurrencyContext";
 import { BasketProvider } from "@/context/BasketContext";
+import { ThemeProvider, THEME_INIT_SCRIPT } from "@/context/ThemeContext";
 import AppShell from "@/components/AppShell";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
 import { OrganizationSchema } from "@/components/seo/OrganizationSchema";
@@ -147,10 +148,12 @@ export default async function RootLayout({
       <head>
         <meta name="copyright" content="FreeTrust 2026" />
         <meta name="author" content="FreeTrust" />
+        {/* Apply saved theme before hydration to avoid a light/dark flash */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        style={{ background: '#0f172a', minHeight: '100vh', color: '#f1f5f9' }}
+        style={{ background: 'var(--ft-bg)', minHeight: '100vh', color: 'var(--ft-text)' }}
       >
         {/* Skip to main content — accessibility */}
         <a
@@ -165,14 +168,16 @@ export default async function RootLayout({
         <OrganizationSchema />
 
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <CurrencyProvider>
-            <BasketProvider>
-              <AppShell>
-                {children}
-              </AppShell>
-              <PWAInstallBanner />
-            </BasketProvider>
-          </CurrencyProvider>
+          <ThemeProvider>
+            <CurrencyProvider>
+              <BasketProvider>
+                <AppShell>
+                  {children}
+                </AppShell>
+                <PWAInstallBanner />
+              </BasketProvider>
+            </CurrencyProvider>
+          </ThemeProvider>
         </NextIntlClientProvider>
         <Analytics />
 

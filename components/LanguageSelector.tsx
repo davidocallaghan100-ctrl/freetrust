@@ -148,7 +148,7 @@ export default function LanguageSelector({variant = 'header'}: LanguageSelectorP
       >
         <span aria-hidden="true" style={{fontSize: floating ? 21 : undefined}}>{floating ? '🌐' : current.flag}</span>
         {!floating && <span>{current.nativeName}</span>}
-        {!floating && <span style={{color: '#64748b', fontSize: 10}}>▾</span>}
+        {!floating && <span style={{color: 'var(--ft-text-tertiary)', fontSize: 10}}>▾</span>}
       </button>
 
       {open && (
@@ -174,14 +174,14 @@ export default function LanguageSelector({variant = 'header'}: LanguageSelectorP
             width: 244,
             maxHeight: 430,
             overflowY: 'auto',
-            background: '#0f172a',
-            border: '1px solid #334155',
+            background: 'var(--ft-bg)',
+            border: '1px solid var(--ft-border-strong)',
             borderRadius: 14,
             boxShadow: '0 16px 50px rgba(0,0,0,0.48)',
             padding: 8,
           }}
         >
-          <div style={{padding: '8px 10px 10px', color: '#94a3b8', fontSize: 12, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase'}}>
+          <div style={{padding: '8px 10px 10px', color: 'var(--ft-text-secondary)', fontSize: 12, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase'}}>
             {t('currentLanguage')}: {triggerLabel}
           </div>
           <div style={{display: 'grid', gridTemplateColumns: floating ? 'repeat(2, minmax(0, 1fr))' : '1fr', gap: 6}}>
@@ -204,7 +204,7 @@ export default function LanguageSelector({variant = 'header'}: LanguageSelectorP
                     borderRadius: 12,
                     border: active ? '1px solid rgba(56,189,248,0.45)' : '1px solid transparent',
                     background: active ? 'rgba(56,189,248,0.13)' : 'transparent',
-                    color: active ? '#e0f2fe' : '#cbd5e1',
+                    color: active ? '#e0f2fe' : 'var(--ft-text-secondary)',
                     padding: '9px 10px',
                     fontFamily: 'inherit',
                     fontSize: 14,
@@ -215,7 +215,7 @@ export default function LanguageSelector({variant = 'header'}: LanguageSelectorP
                 >
                   <span style={{fontSize: 18, lineHeight: 1}}>{option.flag}</span>
                   <span style={{minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{option.nativeName}</span>
-                  {active && <span style={{color: '#38bdf8'}}>✓</span>}
+                  {active && <span style={{color: 'var(--ft-accent)'}}>✓</span>}
                 </button>
               )
             })}

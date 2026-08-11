@@ -30,12 +30,12 @@ interface Listing {
 
 const CAT_META: Record<string, { emoji: string; color: string; bg: string }> = {
   Tools:       { emoji: '🔧', color: '#fb923c', bg: 'rgba(251,146,60,0.12)' },
-  Electronics: { emoji: '📱', color: '#38bdf8', bg: 'rgba(56,189,248,0.12)' },
+  Electronics: { emoji: '📱', color: 'var(--ft-accent)', bg: 'rgba(56,189,248,0.12)' },
   Vehicles:    { emoji: '🚗', color: '#34d399', bg: 'rgba(52,211,153,0.12)' },
   Clothing:    { emoji: '👔', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)' },
   Space:       { emoji: '🏠', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)' },
   Equipment:   { emoji: '⛺', color: '#2dd4bf', bg: 'rgba(45,212,191,0.12)' },
-  Other:       { emoji: '📦', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
+  Other:       { emoji: '📦', color: 'var(--ft-text-secondary)', bg: 'rgba(148,163,184,0.12)' },
 }
 
 function catMeta(cat: string) {
@@ -135,8 +135,8 @@ export default function RentShareDetailPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 64 }}>
-        <div style={{ display: 'inline-block', width: 28, height: 28, border: '3px solid rgba(56,189,248,0.2)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+      <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 64 }}>
+        <div style={{ display: 'inline-block', width: 28, height: 28, border: '3px solid rgba(56,189,248,0.2)', borderTopColor: 'var(--ft-accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     )
@@ -144,12 +144,12 @@ export default function RentShareDetailPage() {
 
   if (notFound || !listing) {
     return (
-      <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui', paddingTop: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
           <div style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.5rem' }}>Listing not found</div>
-          <div style={{ color: '#64748b', marginBottom: '1.5rem' }}>This item may no longer be available</div>
-          <Link href="/rent-share" style={{ background: '#2dd4bf', color: '#0f172a', borderRadius: 8, padding: '0.6rem 1.3rem', fontWeight: 700, textDecoration: 'none', fontSize: '0.9rem' }}>
+          <div style={{ color: 'var(--ft-text-tertiary)', marginBottom: '1.5rem' }}>This item may no longer be available</div>
+          <Link href="/rent-share" style={{ background: '#2dd4bf', color: 'var(--ft-bg)', borderRadius: 8, padding: '0.6rem 1.3rem', fontWeight: 700, textDecoration: 'none', fontSize: '0.9rem' }}>
             Browse listings
           </Link>
         </div>
@@ -163,17 +163,17 @@ export default function RentShareDetailPage() {
   const today = new Date().toISOString().slice(0, 10)
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64 }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui', paddingTop: 64 }}>
       {showDeleteModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
-          <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: 14, padding: '1.5rem', maxWidth: 420, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
-            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem' }}>Delete listing?</div>
-            <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
+          <div style={{ background: 'var(--ft-surface)', border: '1px solid #ef4444', borderRadius: 14, padding: '1.5rem', maxWidth: 420, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--ft-text)', marginBottom: '0.5rem' }}>Delete listing?</div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--ft-text-secondary)', marginBottom: '1.25rem' }}>
               &ldquo;{listing.title}&rdquo; will be permanently deleted and cannot be recovered.
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
               <button onClick={() => setShowDeleteModal(false)} disabled={deleting}
-                style={{ padding: '0.5rem 1rem', borderRadius: 8, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>
+                style={{ padding: '0.5rem 1rem', borderRadius: 8, border: '1px solid var(--ft-border-strong)', background: 'transparent', color: 'var(--ft-text-secondary)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>
                 Cancel
               </button>
               <button onClick={handleDelete} disabled={deleting}
@@ -199,7 +199,7 @@ export default function RentShareDetailPage() {
       `}</style>
       <div className="rs-detail-wrap" style={{ maxWidth: 1000, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
         {/* Back */}
-        <Link href="/rent-share" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#64748b', textDecoration: 'none', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+        <Link href="/rent-share" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--ft-text-tertiary)', textDecoration: 'none', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
           ← Back to listings
         </Link>
 
@@ -210,7 +210,7 @@ export default function RentShareDetailPage() {
             {/* Image gallery */}
             <div className="rs-gallery" style={{
               height: 320, borderRadius: 14, overflow: 'hidden', marginBottom: '1rem',
-              background: hasImages ? '#0f172a' : `linear-gradient(135deg, ${meta.bg.replace('0.12', '0.3')}, ${meta.bg})`,
+              background: hasImages ? 'var(--ft-bg)' : `linear-gradient(135deg, ${meta.bg.replace('0.12', '0.3')}, ${meta.bg})`,
               display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative',
             }}>
               {hasImages ? (
@@ -222,7 +222,7 @@ export default function RentShareDetailPage() {
               <div style={{
                 position: 'absolute', top: 12, right: 12,
                 background: listing.status === 'active' ? 'rgba(52,211,153,0.9)' : 'rgba(248,113,113,0.9)',
-                color: listing.status === 'active' ? '#0f172a' : '#fff',
+                color: listing.status === 'active' ? 'var(--ft-bg)' : '#fff',
                 borderRadius: 999, padding: '4px 12px', fontSize: 12, fontWeight: 700,
               }}>
                 {listing.status === 'active' ? 'Available' : listing.status === 'rented' ? 'Rented' : 'Inactive'}
@@ -248,7 +248,7 @@ export default function RentShareDetailPage() {
                 </div>
                 <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: '0 0 0.4rem', lineHeight: 1.2 }}>{listing.title}</h1>
                 {listing.location && (
-                  <div style={{ color: '#64748b', fontSize: '0.9rem' }}>📍 {listing.location}</div>
+                  <div style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.9rem' }}>📍 {listing.location}</div>
                 )}
               </div>
             </div>
@@ -257,13 +257,13 @@ export default function RentShareDetailPage() {
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
               {listing.price_per_day != null && listing.price_per_day > 0 && (
                 <div style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 10, padding: '10px 16px' }}>
-                  <div style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Per Day</div>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#38bdf8' }}>€{listing.price_per_day}</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--ft-text-faint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Per Day</div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--ft-accent)' }}>€{listing.price_per_day}</div>
                 </div>
               )}
               {listing.price_per_week != null && listing.price_per_week > 0 && (
                 <div style={{ background: 'rgba(45,212,191,0.08)', border: '1px solid rgba(45,212,191,0.2)', borderRadius: 10, padding: '10px 16px' }}>
-                  <div style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Per Week</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--ft-text-faint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Per Week</div>
                   <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#2dd4bf' }}>€{listing.price_per_week}</div>
                 </div>
               )}
@@ -274,7 +274,7 @@ export default function RentShareDetailPage() {
               )}
               {listing.deposit != null && listing.deposit > 0 && (
                 <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: 10, padding: '10px 16px' }}>
-                  <div style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Deposit</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--ft-text-faint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Deposit</div>
                   <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#fbbf24' }}>€{listing.deposit}</div>
                 </div>
               )}
@@ -282,9 +282,9 @@ export default function RentShareDetailPage() {
 
             {/* Availability */}
             {(listing.available_from || listing.available_to) && (
-              <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 10, padding: '12px 16px', marginBottom: '1.5rem' }}>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Availability</div>
-                <div style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
+              <div style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 10, padding: '12px 16px', marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Availability</div>
+                <div style={{ fontSize: '0.9rem', color: 'var(--ft-text-secondary)' }}>
                   {listing.available_from && <span>From {formatDate(listing.available_from)}</span>}
                   {listing.available_from && listing.available_to && <span> — </span>}
                   {listing.available_to && <span>Until {formatDate(listing.available_to)}</span>}
@@ -294,12 +294,12 @@ export default function RentShareDetailPage() {
 
             {/* Description */}
             <div style={{ marginBottom: '1.5rem' }}>
-              <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>About this item</div>
-              <p style={{ color: '#94a3b8', lineHeight: 1.7, margin: 0, whiteSpace: 'pre-line' }}>{listing.description}</p>
+              <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>About this item</div>
+              <p style={{ color: 'var(--ft-text-secondary)', lineHeight: 1.7, margin: 0, whiteSpace: 'pre-line' }}>{listing.description}</p>
             </div>
 
             {/* Listed date */}
-            <div style={{ fontSize: '0.75rem', color: '#475569' }}>Listed {formatDate(listing.created_at)}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-faint)' }}>Listed {formatDate(listing.created_at)}</div>
           </div>
 
           {/* RIGHT: Owner + Request form */}
@@ -307,74 +307,74 @@ export default function RentShareDetailPage() {
 
             {/* Owner card */}
             {listing.owner && (
-              <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 14, padding: '1.25rem' }}>
-                <div style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>Listed by</div>
+              <div style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 14, padding: '1.25rem' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--ft-text-faint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>Listed by</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
                   {listing.owner.avatar_url ? (
                     <img src={listing.owner.avatar_url} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                   ) : (
-                    <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#0f172a', flexShrink: 0 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: 'var(--ft-bg)', flexShrink: 0 }}>
                       {ownerInitials(listing.owner.full_name)}
                     </div>
                   )}
                   <div>
-                    <div style={{ fontWeight: 700, color: '#f1f5f9' }}>{listing.owner.full_name ?? 'Anonymous'}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Member since {memberSince(listing.owner.created_at)}</div>
+                    <div style={{ fontWeight: 700, color: 'var(--ft-text)' }}>{listing.owner.full_name ?? 'Anonymous'}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)' }}>Member since {memberSince(listing.owner.created_at)}</div>
                   </div>
                 </div>
                 {listing.owner.bio && (
-                  <p style={{ fontSize: '0.8rem', color: '#64748b', lineHeight: 1.5, margin: '0 0 0.75rem', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.5, margin: '0 0 0.75rem', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
                     {listing.owner.bio}
                   </p>
                 )}
                 {listing.owner.location && (
-                  <div style={{ fontSize: '0.8rem', color: '#475569' }}>📍 {listing.owner.location}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--ft-text-faint)' }}>📍 {listing.owner.location}</div>
                 )}
               </div>
             )}
 
             {/* Request form */}
             {!isOwner && (
-              <div style={{ background: '#1e293b', border: '1px solid rgba(45,212,191,0.2)', borderRadius: 14, padding: '1.25rem' }}>
-                <div style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.85rem' }}>Request to Rent</div>
+              <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(45,212,191,0.2)', borderRadius: 14, padding: '1.25rem' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--ft-text-faint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.85rem' }}>Request to Rent</div>
 
                 {requestSuccess ? (
                   <div style={{ textAlign: 'center', padding: '1rem 0' }}>
                     <div style={{ fontSize: 36, marginBottom: 10 }}>🎉</div>
-                    <div style={{ fontWeight: 700, color: '#f1f5f9', marginBottom: 6 }}>Request sent!</div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b', lineHeight: 1.5 }}>
+                    <div style={{ fontWeight: 700, color: 'var(--ft-text)', marginBottom: 6 }}>Request sent!</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.5 }}>
                       {listing.owner?.full_name ?? 'The owner'} will review your request and get back to you.
                     </div>
                   </div>
                 ) : (
                   <form onSubmit={handleRequest} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <div>
-                      <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 5 }}>From *</label>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ft-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 5 }}>From *</label>
                       <input
                         type="date" value={fromDate} min={today}
                         onChange={e => setFromDate(e.target.value)}
-                        style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid #334155', borderRadius: 8, padding: '8px 12px', fontSize: 14, color: '#f1f5f9', outline: 'none', fontFamily: 'inherit', colorScheme: 'dark' }}
+                        style={{ width: '100%', boxSizing: 'border-box', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: 8, padding: '8px 12px', fontSize: 14, color: 'var(--ft-text)', outline: 'none', fontFamily: 'inherit', colorScheme: 'dark' }}
                       />
                     </div>
                     <div>
-                      <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 5 }}>To *</label>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ft-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 5 }}>To *</label>
                       <input
                         type="date" value={toDate} min={fromDate || today}
                         onChange={e => setToDate(e.target.value)}
-                        style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid #334155', borderRadius: 8, padding: '8px 12px', fontSize: 14, color: '#f1f5f9', outline: 'none', fontFamily: 'inherit', colorScheme: 'dark' }}
+                        style={{ width: '100%', boxSizing: 'border-box', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: 8, padding: '8px 12px', fontSize: 14, color: 'var(--ft-text)', outline: 'none', fontFamily: 'inherit', colorScheme: 'dark' }}
                       />
                     </div>
                     <div>
-                      <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 5 }}>Message <span style={{ color: '#334155', fontWeight: 400, textTransform: 'none' }}>(optional)</span></label>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ft-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 5 }}>Message <span style={{ color: 'var(--ft-border-strong)', fontWeight: 400, textTransform: 'none' }}>(optional)</span></label>
                       <textarea
                         value={message} onChange={e => setMessage(e.target.value)}
                         placeholder="Introduce yourself and explain your plans…"
                         rows={3}
-                        style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid #334155', borderRadius: 8, padding: '8px 12px', fontSize: 14, color: '#f1f5f9', resize: 'none', outline: 'none', fontFamily: 'inherit' }}
+                        style={{ width: '100%', boxSizing: 'border-box', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: 8, padding: '8px 12px', fontSize: 14, color: 'var(--ft-text)', resize: 'none', outline: 'none', fontFamily: 'inherit' }}
                       />
                     </div>
                     {requestError && (
-                      <div style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 8, padding: '8px 12px', color: '#f87171', fontSize: '0.8rem' }}>
+                      <div style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 8, padding: '8px 12px', color: 'var(--ft-danger)', fontSize: '0.8rem' }}>
                         {requestError}
                       </div>
                     )}
@@ -387,16 +387,16 @@ export default function RentShareDetailPage() {
                       type="submit"
                       disabled={requesting || listing.status !== 'active'}
                       style={{
-                        background: listing.status !== 'active' || requesting ? '#1e293b' : 'linear-gradient(135deg,#2dd4bf,#0891b2)',
+                        background: listing.status !== 'active' || requesting ? 'var(--ft-surface)' : 'linear-gradient(135deg,#2dd4bf,#0891b2)',
                         border: 'none', borderRadius: 10, padding: '11px 0', fontSize: 14, fontWeight: 700,
-                        color: listing.status !== 'active' || requesting ? '#475569' : '#0f172a',
+                        color: listing.status !== 'active' || requesting ? 'var(--ft-text-faint)' : 'var(--ft-bg)',
                         cursor: listing.status !== 'active' || requesting ? 'not-allowed' : 'pointer',
                         fontFamily: 'inherit',
                       }}>
                       {requesting ? 'Sending…' : !currentUserId ? 'Log in to Request' : '♻️ Request to Rent'}
                     </button>
                     {!currentUserId && (
-                      <div style={{ fontSize: '0.75rem', color: '#475569', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-faint)', textAlign: 'center' }}>
                         <Link href={`/login?next=/rent-share/${id}`} style={{ color: '#2dd4bf', textDecoration: 'none' }}>Log in</Link> or <Link href="/register" style={{ color: '#2dd4bf', textDecoration: 'none' }}>create an account</Link> to send a request
                       </div>
                     )}
@@ -406,14 +406,14 @@ export default function RentShareDetailPage() {
             )}
 
             {isOwner && (
-              <div style={{ background: '#1e293b', border: '1px solid rgba(45,212,191,0.2)', borderRadius: 14, padding: '1rem 1.25rem' }}>
-                <div style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.6rem' }}>Your listing</div>
+              <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(45,212,191,0.2)', borderRadius: 14, padding: '1rem 1.25rem' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-faint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.6rem' }}>Your listing</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   <Link
                     href={`/rent-share/${id}/edit`}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                      background: 'linear-gradient(135deg,#2dd4bf,#0891b2)', color: '#0f172a',
+                      background: 'linear-gradient(135deg,#2dd4bf,#0891b2)', color: 'var(--ft-bg)',
                       borderRadius: 10, padding: '10px 0', fontSize: 14, fontWeight: 700,
                       textDecoration: 'none', width: '100%',
                     }}

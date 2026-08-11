@@ -81,7 +81,7 @@ function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
   return (
     <span style={{ display: 'inline-flex', gap: '1px' }}>
       {[1, 2, 3, 4, 5].map(n => (
-        <span key={n} style={{ color: n <= Math.round(rating) ? '#fbbf24' : '#334155', fontSize: size + 'px' }}>★</span>
+        <span key={n} style={{ color: n <= Math.round(rating) ? '#fbbf24' : 'var(--ft-border-strong)', fontSize: size + 'px' }}>★</span>
       ))}
     </span>
   )
@@ -90,7 +90,7 @@ function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
 function Avatar({ url, name, size = 48 }: { url: string | null; name: string; size?: number }) {
   const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
   if (url) return <img src={url} alt={name} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, display: 'block' }} />
-  return <div style={{ width: size, height: size, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: Math.round(size * 0.33) + 'px', color: '#0f172a', flexShrink: 0 }}>{initials}</div>
+  return <div style={{ width: size, height: size, borderRadius: '50%', background: 'linear-gradient(135deg,var(--ft-accent),#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: Math.round(size * 0.33) + 'px', color: 'var(--ft-bg)', flexShrink: 0 }}>{initials}</div>
 }
 
 // ─── Book CTA Card (desktop sidebar + mobile) ─────────────────────────────────
@@ -100,23 +100,23 @@ function BookCard({ svc, mobile = false }: { svc: ServiceListing; mobile?: boole
   const currency = (svc.currency || 'GBP') as CurrencyCode
 
   return (
-    <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '16px', overflow: 'hidden' }}>
+    <div style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '16px', overflow: 'hidden' }}>
       <div style={{ padding: '20px' }}>
         {/* Price */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '6px' }}>
-          <span style={{ fontSize: '36px', fontWeight: 900, color: '#f1f5f9', letterSpacing: '-1px' }}>
+          <span style={{ fontSize: '36px', fontWeight: 900, color: 'var(--ft-text)', letterSpacing: '-1px' }}>
             {format(svc.price, currency)}
           </span>
-          <span style={{ fontSize: '13px', color: '#64748b' }}>/ project</span>
+          <span style={{ fontSize: '13px', color: 'var(--ft-text-tertiary)' }}>/ project</span>
         </div>
-        <p style={{ fontSize: '13px', color: '#94a3b8', margin: '0 0 18px', lineHeight: 1.5 }}>
+        <p style={{ fontSize: '13px', color: 'var(--ft-text-secondary)', margin: '0 0 18px', lineHeight: 1.5 }}>
           One clear price. No surprises.
         </p>
 
         {/* CTA */}
         <Link
           href={`/checkout?service=${svc.id}`}
-          style={{ display: 'block', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', borderRadius: '12px', padding: '15px', textAlign: 'center', fontWeight: 800, fontSize: '16px', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.25)', marginBottom: '10px' }}
+          style={{ display: 'block', background: 'linear-gradient(135deg,var(--ft-accent),#818cf8)', borderRadius: '12px', padding: '15px', textAlign: 'center', fontWeight: 800, fontSize: '16px', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.25)', marginBottom: '10px' }}
         >
           Book Now — {format(svc.price, currency)}
         </Link>
@@ -124,7 +124,7 @@ function BookCard({ svc, mobile = false }: { svc: ServiceListing; mobile?: boole
         {/* AI Agent link */}
         <Link
           href="/ai"
-          style={{ display: 'block', padding: '12px', textAlign: 'center', border: '1px solid #334155', borderRadius: '12px', fontSize: '13px', fontWeight: 600, color: '#94a3b8', textDecoration: 'none' }}
+          style={{ display: 'block', padding: '12px', textAlign: 'center', border: '1px solid var(--ft-border-strong)', borderRadius: '12px', fontSize: '13px', fontWeight: 600, color: 'var(--ft-text-secondary)', textDecoration: 'none' }}
         >
           🤖 Ask AI Agent
         </Link>
@@ -140,17 +140,17 @@ function MobileStickyBar({ svc }: { svc: ServiceListing }) {
   const currency = (svc.currency || 'GBP') as CurrencyCode
 
   return (
-    <div style={{ position: 'fixed', bottom: '60px', left: 0, right: 0, zIndex: 90, background: '#0f172a', borderTop: '1px solid #1e293b', padding: '10px 16px 12px', display: 'flex', gap: '10px', alignItems: 'center', boxShadow: '0 -10px 30px rgba(2,6,23,0.35)' }}>
+    <div style={{ position: 'fixed', bottom: '60px', left: 0, right: 0, zIndex: 90, background: 'var(--ft-bg)', borderTop: '1px solid var(--ft-surface)', padding: '10px 16px 12px', display: 'flex', gap: '10px', alignItems: 'center', boxShadow: '0 -10px 30px rgba(2,6,23,0.35)' }}>
       {/* Price pill */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '8px 12px', minWidth: 90 }}>
-        <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Price</span>
-        <span style={{ fontSize: '16px', fontWeight: 900, color: '#f1f5f9' }}>{format(svc.price, currency)}</span>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '12px', padding: '8px 12px', minWidth: 90 }}>
+        <span style={{ fontSize: '10px', color: 'var(--ft-text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>Price</span>
+        <span style={{ fontSize: '16px', fontWeight: 900, color: 'var(--ft-text)' }}>{format(svc.price, currency)}</span>
       </div>
 
       {/* CTA */}
       <Link
         href={`/checkout?service=${svc.id}`}
-        style={{ flex: 1, display: 'block', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', borderRadius: '12px', padding: '14px', textAlign: 'center', fontWeight: 800, fontSize: '15px', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.25)' }}
+        style={{ flex: 1, display: 'block', background: 'linear-gradient(135deg,var(--ft-accent),#818cf8)', borderRadius: '12px', padding: '14px', textAlign: 'center', fontWeight: 800, fontSize: '15px', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.25)' }}
       >
         Book Now — {format(svc.price, currency)}
       </Link>
@@ -161,9 +161,9 @@ function MobileStickyBar({ svc }: { svc: ServiceListing }) {
 // ─── Loading skeleton ─────────────────────────────────────────────────────────
 
 function LoadingSkeleton() {
-  const pulse: React.CSSProperties = { background: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite', borderRadius: '8px' }
+  const pulse: React.CSSProperties = { background: 'linear-gradient(90deg,var(--ft-surface) 25%,#273548 50%,var(--ft-surface) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite', borderRadius: '8px' }
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', paddingTop: 64 }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', paddingTop: 64 }}>
       <style>{`@keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }`}</style>
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '16px' }}>
         <div style={{ ...pulse, height: 12, width: 200, marginBottom: 24 }} />
@@ -185,11 +185,11 @@ function LoadingSkeleton() {
 
 function NotFound() {
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', paddingTop: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, padding: '104px 24px 0' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', paddingTop: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, padding: '104px 24px 0' }}>
       <div style={{ fontSize: 64 }}>🔍</div>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Service Not Found</h1>
-      <p style={{ color: '#64748b', margin: 0 }}>This listing doesn't exist or has been removed.</p>
-      <Link href="/services" style={{ background: '#38bdf8', color: '#0f172a', borderRadius: 10, padding: '10px 20px', fontWeight: 700, fontSize: '14px', textDecoration: 'none' }}>
+      <p style={{ color: 'var(--ft-text-tertiary)', margin: 0 }}>This listing doesn't exist or has been removed.</p>
+      <Link href="/services" style={{ background: 'var(--ft-accent)', color: 'var(--ft-bg)', borderRadius: 10, padding: '10px 20px', fontWeight: 700, fontSize: '14px', textDecoration: 'none' }}>
         ← Browse Services
       </Link>
     </div>
@@ -326,22 +326,22 @@ export default function ServiceDetailPage() {
   const tags = svc.tags ?? []
   const mode = svc.service_mode
 
-  const card: React.CSSProperties = { background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '20px' }
+  const card: React.CSSProperties = { background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '14px', padding: '20px' }
 
   const isOwner = svc ? (isAdmin || currentUserId === svc.seller.id) : false
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', paddingTop: 64 }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui, sans-serif', paddingTop: 64 }}>
       {showDeleteModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
-          <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: 14, padding: '1.5rem', maxWidth: 420, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
-            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem' }}>Delete service?</div>
-            <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
+          <div style={{ background: 'var(--ft-surface)', border: '1px solid #ef4444', borderRadius: 14, padding: '1.5rem', maxWidth: 420, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--ft-text)', marginBottom: '0.5rem' }}>Delete service?</div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--ft-text-secondary)', marginBottom: '1.25rem' }}>
               &ldquo;{svc?.title}&rdquo; will be permanently deleted and cannot be recovered.
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
               <button onClick={() => setShowDeleteModal(false)} disabled={deleting}
-                style={{ padding: '0.5rem 1rem', borderRadius: 8, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>
+                style={{ padding: '0.5rem 1rem', borderRadius: 8, border: '1px solid var(--ft-border-strong)', background: 'transparent', color: 'var(--ft-text-secondary)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>
                 Cancel
               </button>
               <button onClick={handleDelete} disabled={deleting}
@@ -372,11 +372,11 @@ export default function ServiceDetailPage() {
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '16px 16px 80px' }} className="sd-main">
 
         {/* Breadcrumb */}
-        <nav style={{ fontSize: '12px', color: '#475569', marginBottom: '16px', display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 0, fontSize: '12px', fontFamily: 'inherit' }}>← Back</button>
+        <nav style={{ fontSize: '12px', color: 'var(--ft-text-faint)', marginBottom: '16px', display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--ft-text-tertiary)', cursor: 'pointer', padding: 0, fontSize: '12px', fontFamily: 'inherit' }}>← Back</button>
           <span>·</span>
-          <Link href="/services" style={{ color: '#64748b', textDecoration: 'none' }}>Services</Link>
-          {catInfo && <><span>›</span><span style={{ color: '#94a3b8' }}>{catInfo.icon} {catInfo.label}</span></>}
+          <Link href="/services" style={{ color: 'var(--ft-text-tertiary)', textDecoration: 'none' }}>Services</Link>
+          {catInfo && <><span>›</span><span style={{ color: 'var(--ft-text-secondary)' }}>{catInfo.icon} {catInfo.label}</span></>}
           {isOwner && (
             <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
               <Link href={`/products/${id}/edit`} style={{ background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.35)', color: '#8b5cf6', padding: '4px 12px', borderRadius: 999, fontSize: '12px', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -404,23 +404,23 @@ export default function ServiceDetailPage() {
             <div>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
                 {catInfo && (
-                  <span style={{ fontSize: '11px', fontWeight: 700, background: 'rgba(56,189,248,0.1)', color: '#38bdf8', padding: '3px 10px', borderRadius: '20px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, background: 'rgba(56,189,248,0.1)', color: 'var(--ft-accent)', padding: '3px 10px', borderRadius: '20px' }}>
                     {catInfo.icon} {catInfo.label}
                   </span>
                 )}
                 {mode && (
-                  <span style={{ fontSize: '11px', fontWeight: 700, background: mode === 'online' ? 'rgba(56,189,248,0.08)' : 'rgba(52,211,153,0.08)', color: mode === 'online' ? '#38bdf8' : '#34d399', padding: '3px 10px', borderRadius: '20px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, background: mode === 'online' ? 'rgba(56,189,248,0.08)' : 'rgba(52,211,153,0.08)', color: mode === 'online' ? 'var(--ft-accent)' : '#34d399', padding: '3px 10px', borderRadius: '20px' }}>
                     {mode === 'online' ? '💻 Online' : mode === 'offline' ? '📍 Local' : '🌐 Online & Local'}
                   </span>
                 )}
                 {svc.location && (
-                  <span style={{ fontSize: '11px', color: '#64748b', padding: '3px 10px', borderRadius: '20px', background: '#1e293b' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)', padding: '3px 10px', borderRadius: '20px', background: 'var(--ft-surface)' }}>
                     📍 {svc.location}
                   </span>
                 )}
               </div>
               <h1 style={{ fontSize: 'clamp(17px,4vw,22px)', fontWeight: 800, lineHeight: 1.3, margin: '0 0 10px' }}>{svc.title}</h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '13px', color: '#94a3b8' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '13px', color: 'var(--ft-text-secondary)' }}>
                   <Stars rating={rating} />
                   <strong style={{ color: '#fbbf24' }}>{rating.toFixed(1)}</strong>
                   <span>({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})</span>
@@ -434,49 +434,49 @@ export default function ServiceDetailPage() {
             </div>
 
             {/* Seller mini row */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '12px', padding: '12px' }}>
               <Avatar url={svc.seller.avatar_url} name={svc.seller.full_name || 'Seller'} size={40} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                  <Link href={`/profile?id=${svc.seller.id}`} style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9', textDecoration: 'none' }}>
+                  <Link href={`/profile?id=${svc.seller.id}`} style={{ fontSize: '13px', fontWeight: 700, color: 'var(--ft-text)', textDecoration: 'none' }}>
                     {svc.seller.full_name || 'FreeTrust Member'}
                   </Link>
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#38bdf8', background: 'rgba(56,189,248,0.1)', padding: '2px 7px', borderRadius: 999 }}>Verified Seller</span>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--ft-accent)', background: 'rgba(56,189,248,0.1)', padding: '2px 7px', borderRadius: 999 }}>Verified Seller</span>
                 </div>
                 {svc.seller.location && (
-                  <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)', marginTop: '2px' }}>
                     📍 {svc.seller.location}
                   </div>
                 )}
               </div>
-              <Link href="/ai" style={{ fontSize: '12px', fontWeight: 700, color: '#38bdf8', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '8px', padding: '7px 12px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              <Link href="/ai" style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ft-accent)', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '8px', padding: '7px 12px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
                 🤖 AI Agent
               </Link>
             </div>
 
             {/* Cover image */}
             {images[0] ? (
-              <div style={{ borderRadius: '14px', overflow: 'hidden', border: '1px solid #334155', background: '#1e293b' }}>
+              <div style={{ borderRadius: '14px', overflow: 'hidden', border: '1px solid var(--ft-border-strong)', background: 'var(--ft-surface)' }}>
                 <img src={images[0]} alt={svc.title} style={{ width: '100%', maxHeight: '340px', objectFit: 'cover', display: 'block' }} />
               </div>
             ) : (
-              <div style={{ borderRadius: '14px', overflow: 'hidden', border: '1px solid #334155', background: 'linear-gradient(135deg,#1e293b,#0f172a)', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ borderRadius: '14px', overflow: 'hidden', border: '1px solid var(--ft-border-strong)', background: 'linear-gradient(135deg,var(--ft-surface),var(--ft-bg))', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ fontSize: '48px', opacity: 0.4 }}>🎯</div>
-                <div style={{ fontSize: '12px', color: '#475569' }}>No preview image yet</div>
+                <div style={{ fontSize: '12px', color: 'var(--ft-text-faint)' }}>No preview image yet</div>
               </div>
             )}
 
             {/* Description */}
             <div style={card}>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', marginBottom: '10px' }}>About This Service</div>
-              <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.75, whiteSpace: 'pre-wrap', margin: 0 }}>{svc.description}</p>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--ft-text)', marginBottom: '10px' }}>About This Service</div>
+              <p style={{ fontSize: '13px', color: 'var(--ft-text-secondary)', lineHeight: 1.75, whiteSpace: 'pre-wrap', margin: 0 }}>{svc.description}</p>
             </div>
 
             {/* Tags */}
             {tags.length > 0 && (
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 {tags.map(t => (
-                  <Link key={t} href={`/search?q=${encodeURIComponent(t)}`} style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid #334155', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', color: '#64748b', textDecoration: 'none' }}>
+                  <Link key={t} href={`/search?q=${encodeURIComponent(t)}`} style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid var(--ft-border-strong)', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', color: 'var(--ft-text-tertiary)', textDecoration: 'none' }}>
                     #{t}
                   </Link>
                 ))}
@@ -485,29 +485,29 @@ export default function ServiceDetailPage() {
 
             {/* Seller full card */}
             <div style={card}>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', marginBottom: '14px' }}>About the Seller</div>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--ft-text)', marginBottom: '14px' }}>About the Seller</div>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '12px' }}>
                 <Avatar url={svc.seller.avatar_url} name={svc.seller.full_name || 'Seller'} size={52} />
                 <div>
-                  <Link href={`/profile?id=${svc.seller.id}`} style={{ fontSize: '15px', fontWeight: 700, color: '#f1f5f9', textDecoration: 'none', display: 'block' }}>
+                  <Link href={`/profile?id=${svc.seller.id}`} style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ft-text)', textDecoration: 'none', display: 'block' }}>
                     {svc.seller.full_name || 'FreeTrust Member'}
                   </Link>
-                  <div style={{ fontSize: '11px', color: '#38bdf8', fontWeight: 600 }}>Verified Seller</div>
-                  {svc.seller.location && <div style={{ fontSize: '11px', color: '#64748b' }}>📍 {svc.seller.location}</div>}
+                  <div style={{ fontSize: '11px', color: 'var(--ft-accent)', fontWeight: 600 }}>Verified Seller</div>
+                  {svc.seller.location && <div style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)' }}>📍 {svc.seller.location}</div>}
                 </div>
               </div>
               {svc.seller.bio && (
-                <p style={{ fontSize: '12px', color: '#94a3b8', lineHeight: 1.65, margin: '0 0 14px' }}>{svc.seller.bio}</p>
+                <p style={{ fontSize: '12px', color: 'var(--ft-text-secondary)', lineHeight: 1.65, margin: '0 0 14px' }}>{svc.seller.bio}</p>
               )}
               <div style={{ display: 'flex', gap: '8px' }}>
-                <Link href={`/profile?id=${svc.seller.id}`} style={{ flex: 1, display: 'block', padding: '9px', textAlign: 'center', border: '1px solid #334155', borderRadius: '10px', fontSize: '12px', fontWeight: 600, color: '#94a3b8', textDecoration: 'none' }}>
+                <Link href={`/profile?id=${svc.seller.id}`} style={{ flex: 1, display: 'block', padding: '9px', textAlign: 'center', border: '1px solid var(--ft-border-strong)', borderRadius: '10px', fontSize: '12px', fontWeight: 600, color: 'var(--ft-text-secondary)', textDecoration: 'none' }}>
                   View Profile
                 </Link>
                 {currentUserId !== svc.seller.id && (
                   <button
                     onClick={() => messageSeller(svc.seller.id, svc.title, svc.id)}
                     disabled={msgLoading}
-                    style={{ flex: 1, padding: '9px', textAlign: 'center', border: '1px solid rgba(56,189,248,0.3)', borderRadius: '10px', fontSize: '12px', fontWeight: 700, color: '#38bdf8', background: 'rgba(56,189,248,0.07)', cursor: 'pointer', fontFamily: 'inherit', opacity: msgLoading ? 0.6 : 1 }}
+                    style={{ flex: 1, padding: '9px', textAlign: 'center', border: '1px solid rgba(56,189,248,0.3)', borderRadius: '10px', fontSize: '12px', fontWeight: 700, color: 'var(--ft-accent)', background: 'rgba(56,189,248,0.07)', cursor: 'pointer', fontFamily: 'inherit', opacity: msgLoading ? 0.6 : 1 }}
                   >
                     {msgLoading ? '...' : '💬 Message'}
                   </button>
@@ -517,7 +517,7 @@ export default function ServiceDetailPage() {
 
             {/* Reviews Section */}
             <div style={card}>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', marginBottom: '16px' }}>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--ft-text)', marginBottom: '16px' }}>
                 Reviews
               </div>
               <ReviewsSection
@@ -528,10 +528,10 @@ export default function ServiceDetailPage() {
             </div>
 
             {/* Trust guarantee */}
-            <div style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: '12px', padding: '14px', fontSize: '12px', color: '#64748b', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+            <div style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: '12px', padding: '14px', fontSize: '12px', color: 'var(--ft-text-tertiary)', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
               <span style={{ fontSize: '20px', flexShrink: 0 }}>🛡️</span>
               <div>
-                <div style={{ fontWeight: 700, color: '#38bdf8', marginBottom: '3px', fontSize: '13px' }}>FreeTrust Guarantee</div>
+                <div style={{ fontWeight: 700, color: 'var(--ft-accent)', marginBottom: '3px', fontSize: '13px' }}>FreeTrust Guarantee</div>
                 Your payment is held securely in escrow and only released when you confirm delivery. If something goes wrong, we step in and make it right.
               </div>
             </div>
@@ -543,10 +543,10 @@ export default function ServiceDetailPage() {
             <BookCard svc={svc} />
 
             {/* Trust badge desktop */}
-            <div style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: '12px', padding: '14px', fontSize: '12px', color: '#64748b', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+            <div style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: '12px', padding: '14px', fontSize: '12px', color: 'var(--ft-text-tertiary)', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
               <span style={{ fontSize: '18px', flexShrink: 0 }}>🛡️</span>
               <div>
-                <div style={{ fontWeight: 700, color: '#38bdf8', marginBottom: '2px' }}>FreeTrust Guarantee</div>
+                <div style={{ fontWeight: 700, color: 'var(--ft-accent)', marginBottom: '2px' }}>FreeTrust Guarantee</div>
                 Payment held securely. Released only on confirmed delivery.
               </div>
             </div>

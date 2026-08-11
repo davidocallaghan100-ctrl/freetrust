@@ -37,18 +37,18 @@ export default function CreateEventPage() {
   const set = (k: string, v: string | boolean) => setForm(prev => ({ ...prev, [k]: v }))
 
   const inputStyle: React.CSSProperties = {
-    width: '100%', background: '#1e293b', border: '1px solid #334155',
+    width: '100%', background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)',
     borderRadius: '10px', padding: '10px 14px', fontSize: '14px',
-    color: '#f1f5f9', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
+    color: 'var(--ft-text)', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
   }
 
   const labelStyle: React.CSSProperties = {
-    display: 'block', fontSize: '12px', fontWeight: 600, color: '#94a3b8',
+    display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--ft-text-secondary)',
     marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em',
   }
 
   const sectionStyle: React.CSSProperties = {
-    background: '#1e293b', border: '1px solid #334155', borderRadius: '14px',
+    background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '14px',
     padding: '20px', marginBottom: '16px',
   }
 
@@ -61,8 +61,8 @@ export default function CreateEventPage() {
         cursor: 'pointer', fontSize: '13px', fontWeight: active ? 700 : 400,
         fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center',
         gap: '6px', transition: 'all 0.15s',
-        background: active ? '#38bdf8' : 'rgba(56,189,248,0.06)',
-        color: active ? '#0f172a' : '#64748b',
+        background: active ? 'var(--ft-accent)' : 'rgba(56,189,248,0.06)',
+        color: active ? 'var(--ft-bg)' : 'var(--ft-text-tertiary)',
       }}
     >
       {icon} {label}
@@ -107,7 +107,7 @@ export default function CreateEventPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui, sans-serif' }}>
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: '20px 16px 80px' }}>
 
         {/* Header */}
@@ -115,13 +115,13 @@ export default function CreateEventPage() {
           <button
             type="button"
             onClick={() => router.back()}
-            style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '8px 12px', color: '#94a3b8', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}
+            style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '10px', padding: '8px 12px', color: 'var(--ft-text-secondary)', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}
           >
             ← Back
           </button>
           <div>
             <h1 style={{ fontSize: '22px', fontWeight: 800, margin: 0 }}>📅 Create Event</h1>
-            <p style={{ fontSize: '13px', color: '#64748b', margin: '2px 0 0' }}>Share what you're organising with the community</p>
+            <p style={{ fontSize: '13px', color: 'var(--ft-text-tertiary)', margin: '2px 0 0' }}>Share what you're organising with the community</p>
           </div>
         </div>
 
@@ -129,7 +129,7 @@ export default function CreateEventPage() {
 
           {/* Basic Info */}
           <div style={sectionStyle}>
-            <h2 style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '6px' }}>✏️ Event Details</h2>
+            <h2 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--ft-text)', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '6px' }}>✏️ Event Details</h2>
 
             <div style={{ marginBottom: '14px' }}>
               <label style={labelStyle}>Title *</label>
@@ -169,7 +169,7 @@ export default function CreateEventPage() {
 
           {/* Date & Time */}
           <div style={sectionStyle}>
-            <h2 style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '6px' }}>🗓 Date & Time</h2>
+            <h2 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--ft-text)', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '6px' }}>🗓 Date & Time</h2>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
               <div>
@@ -203,10 +203,10 @@ export default function CreateEventPage() {
 
           {/* Location */}
           <div style={sectionStyle}>
-            <h2 style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: '6px' }}>📍 Location</h2>
+            <h2 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--ft-text)', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: '6px' }}>📍 Location</h2>
 
             {/* Mode toggle */}
-            <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', background: 'rgba(56,189,248,0.04)', padding: '4px', borderRadius: '12px', border: '1px solid #334155' }}>
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', background: 'rgba(56,189,248,0.04)', padding: '4px', borderRadius: '12px', border: '1px solid var(--ft-border-strong)' }}>
               {toggleBtn(form.mode === 'in-person', 'In Person', '🏛', () => set('mode', 'in-person'))}
               {toggleBtn(form.mode === 'online',    'Online',    '💻', () => set('mode', 'online'))}
               {toggleBtn(form.mode === 'hybrid',    'Hybrid',    '🔀', () => set('mode', 'hybrid'))}
@@ -245,9 +245,9 @@ export default function CreateEventPage() {
 
           {/* Tickets & Capacity */}
           <div style={sectionStyle}>
-            <h2 style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: '6px' }}>🎟 Tickets & Capacity</h2>
+            <h2 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--ft-text)', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: '6px' }}>🎟 Tickets & Capacity</h2>
 
-            <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', background: 'rgba(56,189,248,0.04)', padding: '4px', borderRadius: '12px', border: '1px solid #334155' }}>
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', background: 'rgba(56,189,248,0.04)', padding: '4px', borderRadius: '12px', border: '1px solid var(--ft-border-strong)' }}>
               {toggleBtn(form.isFree,  'Free',    '🎁', () => set('isFree', true))}
               {toggleBtn(!form.isFree, 'Paid',    '💳', () => set('isFree', false))}
             </div>
@@ -282,25 +282,25 @@ export default function CreateEventPage() {
 
           {/* Visibility */}
           <div style={sectionStyle}>
-            <h2 style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: '6px' }}>👁 Visibility</h2>
-            <div style={{ display: 'flex', gap: '6px', background: 'rgba(56,189,248,0.04)', padding: '4px', borderRadius: '12px', border: '1px solid #334155' }}>
+            <h2 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--ft-text)', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: '6px' }}>👁 Visibility</h2>
+            <div style={{ display: 'flex', gap: '6px', background: 'rgba(56,189,248,0.04)', padding: '4px', borderRadius: '12px', border: '1px solid var(--ft-border-strong)' }}>
               {toggleBtn(form.visibility === 'public',  'Public',  '🌐', () => set('visibility', 'public'))}
               {toggleBtn(form.visibility === 'private', 'Private', '🔒', () => set('visibility', 'private'))}
             </div>
-            <p style={{ fontSize: '11px', color: '#475569', margin: '8px 0 0' }}>
+            <p style={{ fontSize: '11px', color: 'var(--ft-text-faint)', margin: '8px 0 0' }}>
               {form.visibility === 'public' ? 'Visible to everyone on FreeTrust' : 'Only people with the link can see this event'}
             </p>
           </div>
 
           {/* Error */}
           {error && (
-            <div style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px', color: '#f87171', fontSize: '13px' }}>
+            <div style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px', color: 'var(--ft-danger)', fontSize: '13px' }}>
               ⚠️ {error}
             </div>
           )}
 
           {/* Trust earning note */}
-          <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px', fontSize: '12px', color: '#38bdf8' }}>
+          <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px', fontSize: '12px', color: 'var(--ft-accent)' }}>
             💎 You'll earn <strong>₮15 Trust</strong> for hosting this event
           </div>
 
@@ -310,8 +310,8 @@ export default function CreateEventPage() {
             disabled={saving}
             style={{
               width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
-              background: saving ? '#334155' : 'linear-gradient(135deg, #38bdf8, #818cf8)',
-              color: saving ? '#64748b' : '#fff', fontSize: '15px', fontWeight: 700,
+              background: saving ? 'var(--ft-border-strong)' : 'linear-gradient(135deg, var(--ft-accent), #818cf8)',
+              color: saving ? 'var(--ft-text-tertiary)' : '#fff', fontSize: '15px', fontWeight: 700,
               cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
               transition: 'all 0.2s',
             }}

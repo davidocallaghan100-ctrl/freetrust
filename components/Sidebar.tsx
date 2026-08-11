@@ -180,9 +180,9 @@ export default function Sidebar() {
       <style>{`
         .ft-sidebar::-webkit-scrollbar { width: 4px; }
         .ft-sidebar::-webkit-scrollbar-track { background: transparent; }
-        .ft-sidebar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        .ft-sidebar::-webkit-scrollbar-thumb { background: var(--ft-border-strong); border-radius: 4px; }
         .ft-sidebar a:hover {
-          color: #e2e8f0 !important;
+          color: var(--ft-text) !important;
           background: rgba(255,255,255,0.04) !important;
         }
       `}</style>
@@ -195,9 +195,9 @@ export default function Sidebar() {
           right: dir === 'rtl' ? 0 : undefined,
           width: '220px',
           height: 'calc(100vh - 58px)',
-          background: '#0f172a',
-          borderRight: dir === 'rtl' ? undefined : '1px solid #1e293b',
-          borderLeft: dir === 'rtl' ? '1px solid #1e293b' : undefined,
+          background: 'var(--ft-bg)',
+          borderRight: dir === 'rtl' ? undefined : '1px solid var(--ft-border)',
+          borderLeft: dir === 'rtl' ? '1px solid var(--ft-border)' : undefined,
           zIndex: 90,
           overflowY: 'auto',
           overflowX: 'hidden',
@@ -212,7 +212,7 @@ export default function Sidebar() {
                 fontSize: '10px',
                 fontWeight: 700,
                 letterSpacing: '0.08em',
-                color: '#475569',
+                color: 'var(--ft-text-faint)',
                 userSelect: 'none',
               }}>
                 {navLabel(section.label)}
@@ -231,10 +231,10 @@ export default function Sidebar() {
                       padding: '8px 16px',
                       fontSize: '13px',
                       fontWeight: active ? 600 : 400,
-                      color: active ? '#38bdf8' : '#94a3b8',
+                      color: active ? 'var(--ft-accent)' : 'var(--ft-text-secondary)',
                       textDecoration: 'none',
-                      borderLeft: dir === 'rtl' ? undefined : (active ? '3px solid #38bdf8' : '3px solid transparent'),
-                      borderRight: dir === 'rtl' ? (active ? '3px solid #38bdf8' : '3px solid transparent') : undefined,
+                      borderLeft: dir === 'rtl' ? undefined : (active ? '3px solid var(--ft-accent)' : '3px solid transparent'),
+                      borderRight: dir === 'rtl' ? (active ? '3px solid var(--ft-accent)' : '3px solid transparent') : undefined,
                       background: active ? 'rgba(56,189,248,0.08)' : 'transparent',
                       transition: 'all 0.15s',
                     }}
@@ -264,7 +264,7 @@ export default function Sidebar() {
           ))}
 
           {userId && (
-            <div style={{ borderTop: '1px solid #1e293b', marginTop: '8px', paddingTop: '8px' }}>
+            <div style={{ borderTop: '1px solid var(--ft-border)', marginTop: '8px', paddingTop: '8px' }}>
               {[
                 {
                   href: '/wallet',
@@ -284,10 +284,10 @@ export default function Sidebar() {
                     padding: '8px 16px',
                     fontSize: '13px',
                     fontWeight: active ? 600 : 400,
-                    color: active ? '#38bdf8' : '#94a3b8',
+                    color: active ? 'var(--ft-accent)' : 'var(--ft-text-secondary)',
                     textDecoration: 'none',
-                    borderLeft: dir === 'rtl' ? undefined : (active ? '3px solid #38bdf8' : '3px solid transparent'),
-                    borderRight: dir === 'rtl' ? (active ? '3px solid #38bdf8' : '3px solid transparent') : undefined,
+                    borderLeft: dir === 'rtl' ? undefined : (active ? '3px solid var(--ft-accent)' : '3px solid transparent'),
+                    borderRight: dir === 'rtl' ? (active ? '3px solid var(--ft-accent)' : '3px solid transparent') : undefined,
                     background: active ? 'rgba(56,189,248,0.08)' : 'transparent',
                     transition: 'all 0.15s',
                   }}>

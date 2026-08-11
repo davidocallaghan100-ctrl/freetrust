@@ -20,7 +20,7 @@ interface ServiceListing {
 }
 
 const GRADIENTS = [
-  'linear-gradient(135deg,#38bdf8,#0284c7)',
+  'linear-gradient(135deg,var(--ft-accent),#0284c7)',
   'linear-gradient(135deg,#f472b6,#db2777)',
   'linear-gradient(135deg,#34d399,#059669)',
   'linear-gradient(135deg,#a78bfa,#7c3aed)',
@@ -39,8 +39,8 @@ function initials(name: string | null) {
 function trustBadge(score: number) {
   if (score >= 500) return { label: 'Top Trusted', color: '#fbbf24', bg: 'rgba(251,191,36,0.1)' }
   if (score >= 200) return { label: 'Verified',    color: '#34d399', bg: 'rgba(52,211,153,0.1)'  }
-  if (score >= 50)  return { label: 'Active',      color: '#38bdf8', bg: 'rgba(56,189,248,0.1)'  }
-  return              { label: 'New',          color: '#94a3b8', bg: 'rgba(148,163,184,0.1)' }
+  if (score >= 50)  return { label: 'Active',      color: 'var(--ft-accent)', bg: 'rgba(56,189,248,0.1)'  }
+  return              { label: 'New',          color: 'var(--ft-text-secondary)', bg: 'rgba(148,163,184,0.1)' }
 }
 function getTrustBalance(tb: ServiceListing['trust_balances']): number {
   if (!tb) return 0
@@ -95,11 +95,11 @@ function ServicesContent() {
   const hasFilters = search || minTrust > 0 || maxPrice < 5000
 
   const FilterPanel = () => (
-    <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: 18 }}>
+    <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: 18 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>Filters</h3>
+        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--ft-text)' }}>Filters</h3>
         {hasFilters && (
-          <button onClick={reset} style={{ background: 'none', border: 'none', color: '#38bdf8', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+          <button onClick={reset} style={{ background: 'none', border: 'none', color: 'var(--ft-accent)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
             Clear all
           </button>
         )}
@@ -107,53 +107,53 @@ function ServicesContent() {
 
       {/* Search */}
       <div style={{ marginBottom: 18 }}>
-        <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>Search</label>
+        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--ft-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>Search</label>
         <input
           type="text" value={search}
           onChange={e => { setSearch(e.target.value); setPage(1) }}
           placeholder="e.g. design, SEO..."
-          style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: 8, padding: '10px 12px', color: '#f1f5f9', fontSize: 14, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
+          style={{ width: '100%', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: 8, padding: '10px 12px', color: 'var(--ft-text)', fontSize: 14, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
         />
       </div>
 
       {/* Min Trust */}
       <div style={{ marginBottom: 18 }}>
-        <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
-          Min Trust Score: <span style={{ color: '#38bdf8' }}>₮{minTrust}</span>
+        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--ft-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
+          Min Trust Score: <span style={{ color: 'var(--ft-accent)' }}>₮{minTrust}</span>
         </label>
         <input type="range" min={0} max={1000} step={50} value={minTrust}
           onChange={e => { setMinTrust(parseInt(e.target.value)); setPage(1) }}
-          style={{ width: '100%', accentColor: '#38bdf8' }} />
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#475569', marginTop: 2 }}>
+          style={{ width: '100%', accentColor: 'var(--ft-accent)' }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--ft-text-faint)', marginTop: 2 }}>
           <span>₮0</span><span>₮1000</span>
         </div>
       </div>
 
       {/* Max budget */}
       <div style={{ marginBottom: 18 }}>
-        <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
+        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--ft-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
           Max Budget: <span style={{ color: '#a78bfa' }}>{currency.symbol}{maxPrice >= 5000 ? '5k+' : maxPrice}</span>
         </label>
         <input type="range" min={0} max={5000} step={50} value={maxPrice}
           onChange={e => { setMaxPrice(parseInt(e.target.value)); setPage(1) }}
           style={{ width: '100%', accentColor: '#a78bfa' }} />
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#475569', marginTop: 2 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--ft-text-faint)', marginTop: 2 }}>
           <span>{currency.symbol}0</span><span>{currency.symbol}5k+</span>
         </div>
       </div>
 
       <button onClick={reset}
-        style={{ width: '100%', padding: '11px', background: 'transparent', border: '1px solid #334155', borderRadius: 8, color: '#64748b', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', minHeight: 44 }}>
+        style={{ width: '100%', padding: '11px', background: 'transparent', border: '1px solid var(--ft-border-strong)', borderRadius: 8, color: 'var(--ft-text-tertiary)', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', minHeight: 44 }}>
         Reset Filters
       </button>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', paddingTop: 64 }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui, sans-serif', paddingTop: 64 }}>
       <style>{`
         /* Card */
-        .cs-card { background:#1e293b; border:1px solid #334155; border-radius:14px; overflow:hidden; text-decoration:none; display:flex; flex-direction:column; transition:border-color 0.15s, transform 0.15s; }
+        .cs-card { background:var(--ft-surface); border:1px solid var(--ft-border-strong); border-radius:14px; overflow:hidden; text-decoration:none; display:flex; flex-direction:column; transition:border-color 0.15s, transform 0.15s; }
         .cs-card:hover { border-color:rgba(167,139,250,0.4); transform:translateY(-2px); }
         .cs-card:active { transform:scale(0.99); }
         .cs-book { background:linear-gradient(135deg,#a78bfa,#7c3aed); color:#fff; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:700; text-decoration:none; display:inline-block; white-space:nowrap; flex-shrink:0; }
@@ -171,7 +171,7 @@ function ServicesContent() {
           .cs-sidebar { display:none; }
           .cs-sidebar.open { display:block; }
           .cs-sidebar-sticky { position:static; }
-          .cs-filter-toggle { display:flex; width:100%; align-items:center; gap:8px; background:#1e293b; border:1px solid rgba(167,139,250,0.2); border-radius:10px; padding:11px 14px; font-size:14px; color:#94a3b8; cursor:pointer; font-family:inherit; min-height:44px; box-sizing:border-box; }
+          .cs-filter-toggle { display:flex; width:100%; align-items:center; gap:8px; background:var(--ft-surface); border:1px solid rgba(167,139,250,0.2); border-radius:10px; padding:11px 14px; font-size:14px; color:var(--ft-text-secondary); cursor:pointer; font-family:inherit; min-height:44px; box-sizing:border-box; }
           .cs-grid { grid-template-columns:1fr !important; }
           .cs-hero-row { flex-direction:column !important; align-items:flex-start !important; gap:12px !important; }
           .cs-offer-btn { width:100% !important; justify-content:center !important; }
@@ -182,23 +182,23 @@ function ServicesContent() {
 
         /* Skeleton */
         @keyframes cs-pulse { 0%,100%{opacity:0.5} 50%{opacity:0.25} }
-        .cs-skel { background:#1e293b; border-radius:14px; border:1px solid #334155; animation:cs-pulse 1.5s ease-in-out infinite; }
+        .cs-skel { background:var(--ft-surface); border-radius:14px; border:1px solid var(--ft-border-strong); animation:cs-pulse 1.5s ease-in-out infinite; }
       `}</style>
 
       {/* ── Hero ── */}
       <div style={{ background: 'linear-gradient(180deg,rgba(167,139,250,0.07) 0%,transparent 100%)', padding: '20px 16px 16px', borderBottom: '1px solid rgba(167,139,250,0.08)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           {/* Breadcrumb */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: 12, color: '#64748b' }}>
-            <Link href="/collab" style={{ color: '#64748b', textDecoration: 'none' }}>Collab</Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: 12, color: 'var(--ft-text-tertiary)' }}>
+            <Link href="/collab" style={{ color: 'var(--ft-text-tertiary)', textDecoration: 'none' }}>Collab</Link>
             <span>›</span>
-            <span style={{ color: '#94a3b8' }}>Services</span>
+            <span style={{ color: 'var(--ft-text-secondary)' }}>Services</span>
           </div>
 
           <div className="cs-hero-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <div>
               <h1 style={{ fontSize: 'clamp(20px,5vw,26px)', fontWeight: 800, margin: '0 0 4px' }}>🎯 Services</h1>
-              <p style={{ color: '#64748b', margin: 0, fontSize: 13 }}>Skilled professionals from the FreeTrust community</p>
+              <p style={{ color: 'var(--ft-text-tertiary)', margin: 0, fontSize: 13 }}>Skilled professionals from the FreeTrust community</p>
             </div>
             <Link href="/seller/gigs/create" className="cs-offer-btn" style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -236,11 +236,11 @@ function ServicesContent() {
           {/* Main content */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
-              <span style={{ fontSize: 13, color: '#64748b' }}>
-                {loading ? 'Loading…' : <><strong style={{ color: '#f1f5f9' }}>{total}</strong> services</>}
+              <span style={{ fontSize: 13, color: 'var(--ft-text-tertiary)' }}>
+                {loading ? 'Loading…' : <><strong style={{ color: 'var(--ft-text)' }}>{total}</strong> services</>}
               </span>
               {hasFilters && (
-                <button onClick={reset} style={{ background: 'none', border: '1px solid #334155', borderRadius: 8, padding: '4px 10px', fontSize: 12, color: '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <button onClick={reset} style={{ background: 'none', border: '1px solid var(--ft-border-strong)', borderRadius: 8, padding: '4px 10px', fontSize: 12, color: 'var(--ft-text-tertiary)', cursor: 'pointer', fontFamily: 'inherit' }}>
                   ✕ Clear filters
                 </button>
               )}
@@ -251,9 +251,9 @@ function ServicesContent() {
                 {[1,2,3,4,5,6].map(i => <div key={i} className="cs-skel" style={{ height: 220 }} />)}
               </div>
             ) : services.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+              <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--ft-text-tertiary)' }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>😕</div>
-                <div style={{ fontSize: 16, fontWeight: 600, color: '#94a3b8', marginBottom: 6 }}>No services found</div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: 6 }}>No services found</div>
                 <div style={{ fontSize: 13 }}>Try adjusting your filters</div>
               </div>
             ) : (
@@ -282,7 +282,7 @@ function ServicesContent() {
                               }
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontWeight: 600, fontSize: 13, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--ft-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {seller?.full_name ?? 'Provider'}
                               </div>
                               <div style={{ fontSize: 11, color: badge.color }}>
@@ -290,19 +290,19 @@ function ServicesContent() {
                               </div>
                             </div>
                             {s.location && (
-                              <span style={{ fontSize: 10, color: '#475569', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 2 }}>
+                              <span style={{ fontSize: 10, color: 'var(--ft-text-faint)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 2 }}>
                                 📍 {s.location.split(',')[0]}
                               </span>
                             )}
                           </div>
 
                           {/* Title */}
-                          <div style={{ fontWeight: 700, fontSize: 15, color: '#f1f5f9', marginBottom: 6, lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>
+                          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--ft-text)', marginBottom: 6, lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>
                             {s.title}
                           </div>
 
                           {/* Description */}
-                          <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.55, marginBottom: 12, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>
+                          <div style={{ fontSize: 12, color: 'var(--ft-text-tertiary)', lineHeight: 1.55, marginBottom: 12, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>
                             {s.description}
                           </div>
 
@@ -310,7 +310,7 @@ function ServicesContent() {
                           {s.tags && s.tags.length > 0 && (
                             <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 12 }}>
                               {s.tags.slice(0, 3).map(t => (
-                                <span key={t} style={{ fontSize: 10, background: 'rgba(148,163,184,0.07)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '2px 8px', color: '#94a3b8' }}>{t}</span>
+                                <span key={t} style={{ fontSize: 10, background: 'rgba(148,163,184,0.07)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '2px 8px', color: 'var(--ft-text-secondary)' }}>{t}</span>
                               ))}
                             </div>
                           )}
@@ -318,7 +318,7 @@ function ServicesContent() {
 
                         {/* Footer */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px 14px', marginTop: 'auto', borderTop: '1px solid rgba(167,139,250,0.08)', gap: 8 }}>
-                          <span style={{ fontSize: 20, fontWeight: 800, color: '#f1f5f9' }}>{format(s.price, s.currency === 'GBP' ? 'GBP' : s.currency === 'USD' ? 'USD' : 'EUR')}</span>
+                          <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--ft-text)' }}>{format(s.price, s.currency === 'GBP' ? 'GBP' : s.currency === 'USD' ? 'USD' : 'EUR')}</span>
                           <span className="cs-book">Book Now</span>
                         </div>
                       </Link>
@@ -330,12 +330,12 @@ function ServicesContent() {
                 {total > 20 && (
                   <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 28 }}>
                     <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-                      style={{ padding: '10px 20px', background: page === 1 ? '#1e293b' : '#334155', border: 'none', borderRadius: 8, color: '#f1f5f9', cursor: page === 1 ? 'default' : 'pointer', opacity: page === 1 ? 0.4 : 1, fontSize: 13, minHeight: 44, fontFamily: 'inherit' }}>
+                      style={{ padding: '10px 20px', background: page === 1 ? 'var(--ft-surface)' : 'var(--ft-border-strong)', border: 'none', borderRadius: 8, color: 'var(--ft-text)', cursor: page === 1 ? 'default' : 'pointer', opacity: page === 1 ? 0.4 : 1, fontSize: 13, minHeight: 44, fontFamily: 'inherit' }}>
                       ← Prev
                     </button>
-                    <span style={{ padding: '10px 14px', color: '#94a3b8', fontSize: 13, alignSelf: 'center' }}>Page {page}</span>
+                    <span style={{ padding: '10px 14px', color: 'var(--ft-text-secondary)', fontSize: 13, alignSelf: 'center' }}>Page {page}</span>
                     <button onClick={() => setPage(p => p + 1)}
-                      style={{ padding: '10px 20px', background: '#334155', border: 'none', borderRadius: 8, color: '#f1f5f9', cursor: 'pointer', fontSize: 13, minHeight: 44, fontFamily: 'inherit' }}>
+                      style={{ padding: '10px 20px', background: 'var(--ft-border-strong)', border: 'none', borderRadius: 8, color: 'var(--ft-text)', cursor: 'pointer', fontSize: 13, minHeight: 44, fontFamily: 'inherit' }}>
                       Next →
                     </button>
                   </div>
@@ -352,7 +352,7 @@ function ServicesContent() {
 export default function CollabServicesPage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ft-text-tertiary)' }}>
         Loading services…
       </div>
     }>

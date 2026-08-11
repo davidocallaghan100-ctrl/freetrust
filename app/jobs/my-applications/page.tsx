@@ -13,8 +13,8 @@ interface Application {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  pending:     { label: 'Pending',     color: '#94a3b8', bg: 'rgba(148,163,184,0.1)' },
-  reviewed:    { label: 'Reviewed',    color: '#38bdf8', bg: 'rgba(56,189,248,0.1)'  },
+  pending:     { label: 'Pending',     color: 'var(--ft-text-secondary)', bg: 'rgba(148,163,184,0.1)' },
+  reviewed:    { label: 'Reviewed',    color: 'var(--ft-accent)', bg: 'rgba(56,189,248,0.1)'  },
   shortlisted: { label: 'Shortlisted', color: '#34d399', bg: 'rgba(52,211,153,0.1)'  },
   rejected:    { label: 'Rejected',    color: '#ef4444', bg: 'rgba(239,68,68,0.1)'   },
   hired:       { label: '🎉 Hired!',   color: '#fbbf24', bg: 'rgba(251,191,36,0.1)'  },
@@ -57,7 +57,7 @@ export default function MyApplicationsPage() {
   }, [])
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui' }}>
       <style>{`
         @media (max-width: 768px) {
           .my-apps-inner { padding: 1rem !important; }
@@ -72,9 +72,9 @@ export default function MyApplicationsPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
               <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.35rem' }}>My Applications</h1>
-              <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Track your job applications in one place</p>
+              <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.9rem' }}>Track your job applications in one place</p>
             </div>
-            <Link href="/jobs" style={{ background: 'transparent', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 8, padding: '0.55rem 1.1rem', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none' }}>
+            <Link href="/jobs" style={{ background: 'transparent', color: 'var(--ft-accent)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 8, padding: '0.55rem 1.1rem', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none' }}>
               Browse Jobs
             </Link>
           </div>
@@ -83,30 +83,30 @@ export default function MyApplicationsPage() {
 
       <div className="my-apps-inner" style={{ maxWidth: 860, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '4rem', color: '#64748b' }}>Loading applications...</div>
+          <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--ft-text-tertiary)' }}>Loading applications...</div>
         ) : apps.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '5rem 1rem' }}>
             <div style={{ fontSize: '3.5rem', marginBottom: '1.25rem' }}>📋</div>
-            <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem' }}>No applications yet</h3>
-            <p style={{ color: '#64748b', marginBottom: '1.75rem' }}>Start applying to jobs and track your progress here</p>
-            <Link href="/jobs" style={{ background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 8, padding: '0.7rem 1.5rem', fontSize: '0.9rem', fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--ft-text-secondary)', marginBottom: '0.5rem' }}>No applications yet</h3>
+            <p style={{ color: 'var(--ft-text-tertiary)', marginBottom: '1.75rem' }}>Start applying to jobs and track your progress here</p>
+            <Link href="/jobs" style={{ background: 'var(--ft-accent)', color: 'var(--ft-bg)', border: 'none', borderRadius: 8, padding: '0.7rem 1.5rem', fontSize: '0.9rem', fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>
               Browse Jobs →
             </Link>
           </div>
         ) : (
           <>
-            <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1.25rem' }}>
+            <div style={{ fontSize: '0.85rem', color: 'var(--ft-text-tertiary)', marginBottom: '1.25rem' }}>
               {apps.length} application{apps.length !== 1 ? 's' : ''} · {apps.filter(a => a.status === 'shortlisted').length} shortlisted · {apps.filter(a => a.status === 'hired').length} hired
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {apps.map(app => {
                 const st = STATUS_CONFIG[app.status] ?? STATUS_CONFIG.pending
                 return (
-                  <div key={app.id} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 14, padding: '1.5rem' }}>
+                  <div key={app.id} style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 14, padding: '1.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
                       <div style={{ flex: 1 }}>
-                        <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.3rem' }}>{app.job?.title ?? 'Job Title'}</h3>
-                        <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--ft-text)', marginBottom: '0.3rem' }}>{app.job?.title ?? 'Job Title'}</h3>
+                        <div style={{ fontSize: '0.82rem', color: 'var(--ft-text-tertiary)' }}>
                           {app.job?.poster?.full_name ?? 'Employer'}
                           {app.job?.job_type && ` · ${TYPE_LABELS[app.job.job_type]}`}
                           {app.job?.location_type && ` · ${LOC_LABELS[app.job.location_type]}`}
@@ -124,14 +124,14 @@ export default function MyApplicationsPage() {
                         const currentIdx = statuses.indexOf(app.status)
                         const isActive = i <= currentIdx && app.status !== 'rejected'
                         return (
-                          <div key={s} style={{ flex: 1, height: 3, borderRadius: 999, background: isActive ? '#38bdf8' : 'rgba(56,189,248,0.15)', transition: 'background 0.2s' }} />
+                          <div key={s} style={{ flex: 1, height: 3, borderRadius: 999, background: isActive ? 'var(--ft-accent)' : 'rgba(56,189,248,0.15)', transition: 'background 0.2s' }} />
                         )
                       })}
                     </div>
 
                     <div className="my-apps-card-footer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-                      <span style={{ fontSize: '0.78rem', color: '#475569' }}>Applied {timeAgo(app.created_at)}</span>
-                      <Link href={`/jobs/${app.job_id}`} style={{ background: 'transparent', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 7, padding: '0.4rem 0.9rem', fontSize: '0.8rem', fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--ft-text-faint)' }}>Applied {timeAgo(app.created_at)}</span>
+                      <Link href={`/jobs/${app.job_id}`} style={{ background: 'transparent', color: 'var(--ft-accent)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 7, padding: '0.4rem 0.9rem', fontSize: '0.8rem', fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}>
                         View Job →
                       </Link>
                     </div>

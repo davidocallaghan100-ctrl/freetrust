@@ -266,42 +266,42 @@ function SearchPageInner() {
       </main>
 
       <style jsx global>{`
-        .search-page { min-height: 100vh; background: #0f172a; color: #f8fafc; }
+        .search-page { min-height: 100vh; background: var(--ft-bg); color: #f8fafc; }
         .search-hero { position: sticky; top: 0; z-index: 40; background: rgba(15,23,42,.96); border-bottom: 1px solid rgba(148,163,184,.16); padding: 12px 16px 14px; backdrop-filter: blur(16px); }
-        .search-form { max-width: 700px; margin: 0 auto; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 0 0 0 14px; }
+        .search-form { max-width: 700px; margin: 0 auto; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; background: var(--ft-surface); border: 1px solid var(--ft-border-strong); border-radius: 14px; padding: 0 0 0 14px; }
         .search-form input { width: 100%; background: transparent; border: 0; color: #f8fafc; font-size: 16px; outline: none; padding: 13px 0; }
-        .search-form button { margin: 5px; border: 0; border-radius: 12px; padding: 12px 18px; color: white; font-weight: 800; background: linear-gradient(135deg, #38bdf8, #818cf8); }
+        .search-form button { margin: 5px; border: 0; border-radius: 12px; padding: 12px 18px; color: white; font-weight: 800; background: linear-gradient(135deg, var(--ft-accent), #818cf8); }
         .scope-toggle { max-width: 700px; margin: 12px auto 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; border: 1px solid #26364f; border-radius: 999px; padding: 4px; }
-        .scope-toggle button, .filter-row button { border: 0; color: #94a3b8; background: transparent; border-radius: 999px; font-weight: 800; padding: 10px 12px; white-space: nowrap; }
-        .scope-toggle button.active, .filter-row button.active { color: #06111f; background: linear-gradient(135deg, #38bdf8, #818cf8); }
+        .scope-toggle button, .filter-row button { border: 0; color: var(--ft-text-secondary); background: transparent; border-radius: 999px; font-weight: 800; padding: 10px 12px; white-space: nowrap; }
+        .scope-toggle button.active, .filter-row button.active { color: #06111f; background: linear-gradient(135deg, var(--ft-accent), #818cf8); }
         .filter-row { max-width: 700px; margin: 12px auto 0; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
         .filter-row::-webkit-scrollbar { display: none; }
-        .filter-row button { background: rgba(56,189,248,.08); color: #64748b; }
+        .filter-row button { background: rgba(56,189,248,.08); color: var(--ft-text-tertiary); }
         .filter-row button span { margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: rgba(15,23,42,.25); font-size: 11px; }
         .search-main { max-width: 700px; margin: 0 auto; padding: 22px 16px 96px; }
-        .search-meta { color: #94a3b8; font-size: 14px; margin: 0 0 18px; }
+        .search-meta { color: var(--ft-text-secondary); font-size: 14px; margin: 0 0 18px; }
         .search-page__mark { background: rgba(134,239,172,.28); color: #bbf7d0; border-radius: 6px; padding: 0 3px; font-weight: 900; }
         .search-stack { display: flex; flex-direction: column; gap: 14px; }
-        .search-card { display: block; text-decoration: none; color: inherit; background: #1e293b; border: 1px solid #334155; border-radius: 18px; overflow: hidden; box-shadow: 0 18px 50px rgba(2,6,23,.22); }
+        .search-card { display: block; text-decoration: none; color: inherit; background: var(--ft-surface); border: 1px solid var(--ft-border-strong); border-radius: 18px; overflow: hidden; box-shadow: 0 18px 50px rgba(2,6,23,.22); }
         .search-card__top { display: flex; align-items: center; gap: 12px; padding: 16px 16px 4px; }
-        .search-card__avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; background: #334155; flex: 0 0 auto; }
-        .search-card__avatar--fallback { display: inline-flex; align-items: center; justify-content: center; color: #0f172a; background: linear-gradient(135deg,#38bdf8,#22c55e); font-weight: 900; }
+        .search-card__avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; background: var(--ft-border-strong); flex: 0 0 auto; }
+        .search-card__avatar--fallback { display: inline-flex; align-items: center; justify-content: center; color: var(--ft-bg); background: linear-gradient(135deg,var(--ft-accent),#22c55e); font-weight: 900; }
         .search-card__byline { flex: 1; min-width: 0; }
         .search-card__author { color: #f8fafc; font-weight: 900; line-height: 1.25; }
-        .search-card__meta { margin-top: 4px; color: #64748b; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .search-card__badge { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; padding: 3px 8px; border-radius: 999px; color: #38bdf8; background: rgba(56,189,248,.15); font-size: 12px; }
+        .search-card__meta { margin-top: 4px; color: var(--ft-text-tertiary); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .search-card__badge { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; padding: 3px 8px; border-radius: 999px; color: var(--ft-accent); background: rgba(56,189,248,.15); font-size: 12px; }
         .search-card__badge--service { color: #34d399; background: rgba(52,211,153,.14); }
         .search-card__badge--job { color: #93c5fd; background: rgba(96,165,250,.16); }
-        .search-card__arrow { color: #38bdf8; font-size: 28px; }
+        .search-card__arrow { color: var(--ft-accent); font-size: 28px; }
         .search-card__body { padding: 12px 16px 16px; }
         .search-card__body h2 { margin: 0 0 10px; font-size: 22px; line-height: 1.2; color: #f8fafc; }
-        .search-card__body p { margin: 0; color: #cbd5e1; font-size: 16px; line-height: 1.55; }
-        .search-card__media { background: #0f172a; border-top: 1px solid rgba(148,163,184,.16); }
+        .search-card__body p { margin: 0; color: var(--ft-text-secondary); font-size: 16px; line-height: 1.55; }
+        .search-card__media { background: var(--ft-bg); border-top: 1px solid rgba(148,163,184,.16); }
         .search-card__media img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
-        .search-card__footer { display: flex; justify-content: space-between; gap: 12px; padding: 12px 16px 14px; border-top: 1px solid rgba(148,163,184,.12); color: #38bdf8; font-weight: 800; }
+        .search-card__footer { display: flex; justify-content: space-between; gap: 12px; padding: 12px 16px 14px; border-top: 1px solid rgba(148,163,184,.12); color: var(--ft-accent); font-weight: 800; }
         .search-card__footer span { min-width: 0; overflow-wrap: anywhere; }
-        .search-skeleton { min-height: 260px; border-radius: 18px; background: linear-gradient(90deg,#1e293b,#26364f,#1e293b); animation: pulse 1.3s ease-in-out infinite; }
-        .search-empty { text-align: center; padding: 72px 18px; color: #94a3b8; }
+        .search-skeleton { min-height: 260px; border-radius: 18px; background: linear-gradient(90deg,var(--ft-surface),#26364f,var(--ft-surface)); animation: pulse 1.3s ease-in-out infinite; }
+        .search-empty { text-align: center; padding: 72px 18px; color: var(--ft-text-secondary); }
         .search-empty h2 { color: #e2e8f0; margin: 0 0 8px; }
         @keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: .55 } }
         @media (max-width: 640px) {
@@ -310,7 +310,7 @@ function SearchPageInner() {
           .search-meta { padding: 0 16px; }
           .search-stack { gap: 0; }
           .search-card { border-left: 0; border-right: 0; border-radius: 0; }
-          .search-card + .search-card { border-top: 12px solid #0f172a; }
+          .search-card + .search-card { border-top: 12px solid var(--ft-bg); }
           .search-card__top, .search-card__body, .search-card__footer { padding-left: 16px; padding-right: 16px; }
           .search-card__body h2 { font-size: 23px; }
           .search-card__body p { font-size: 18px; line-height: 1.6; }
@@ -322,5 +322,5 @@ function SearchPageInner() {
 }
 
 export default function SearchPage() {
-  return <Suspense fallback={<div style={{ minHeight: '100vh', background: '#0f172a' }} />}><SearchPageInner /></Suspense>
+  return <Suspense fallback={<div style={{ minHeight: '100vh', background: 'var(--ft-bg)' }} />}><SearchPageInner /></Suspense>
 }

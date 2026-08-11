@@ -320,8 +320,8 @@ export default function BottomNav() {
         left: 0,
         right: 0,
         height: '60px',
-        background: '#0f172a',
-        borderTop: '1px solid #1e293b',
+        background: 'var(--ft-bg)',
+        borderTop: '1px solid var(--ft-border)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-around',
@@ -341,7 +341,7 @@ export default function BottomNav() {
                   width: '44px',
                   height: '44px',
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #38bdf8, #818cf8)',
+                  background: 'linear-gradient(135deg, var(--ft-accent), #818cf8)',
                   border: 'none',
                   cursor: 'pointer',
                   boxShadow: '0 4px 14px rgba(56,189,248,0.4)',
@@ -367,7 +367,7 @@ export default function BottomNav() {
                   style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', textDecoration: 'none', flex: 1, padding: '2px 0', position: 'relative' }}
                 >
                   <span style={{ ...EMOJI_STYLE, fontSize: '18px' }}>{tab.icon}</span>
-                  <span style={{ fontSize: '9px', fontWeight: 600, color: active ? '#38bdf8' : '#64748b', letterSpacing: '0.1px' }}>{tAuth('signIn')}</span>
+                  <span style={{ fontSize: '9px', fontWeight: 600, color: active ? 'var(--ft-accent)' : 'var(--ft-text-tertiary)', letterSpacing: '0.1px' }}>{tAuth('signIn')}</span>
                 </Link>
               )
             }
@@ -388,15 +388,15 @@ export default function BottomNav() {
                       maxHeight: '56vh',
                       overflowY: 'auto',
                       borderRadius: 18,
-                      border: '1px solid rgba(96,165,250,0.28)',
-                      background: 'linear-gradient(180deg, rgba(15,23,42,0.98), rgba(2,6,23,0.98))',
+                      border: '1px solid var(--ft-panel-border)',
+                      background: 'var(--ft-panel-bg)',
                       boxShadow: '0 20px 60px rgba(0,0,0,0.55), 0 0 24px rgba(56,189,248,0.12)',
                       padding: 8,
                       zIndex: 120,
                     }}
                     aria-label={tProfile('switchProfile')}
                   >
-                    <div style={{ color: '#94a3b8', fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '7px 8px 8px' }}>
+                    <div style={{ color: 'var(--ft-text-secondary)', fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '7px 8px 8px' }}>
                       {tProfile('switchProfile')}
                     </div>
                     <button
@@ -410,7 +410,7 @@ export default function BottomNav() {
                         gap: 10,
                         border: (pathname.startsWith('/profile') || feedIdentity?.type === 'personal') ? '1px solid rgba(56,189,248,0.42)' : '1px solid transparent',
                         background: (pathname.startsWith('/profile') || feedIdentity?.type === 'personal') ? 'rgba(56,189,248,0.12)' : 'transparent',
-                        color: '#f8fafc',
+                        color: 'var(--ft-text)',
                         borderRadius: 12,
                         padding: '8px 9px',
                         textAlign: 'left',
@@ -421,20 +421,20 @@ export default function BottomNav() {
                       <Avatar url={personalProfile?.avatar_url ?? null} name={personalProfile?.name ?? tNav('profile')} size={34} />
                       <span style={{ minWidth: 0, flex: 1 }}>
                         <span style={{ display: 'block', fontSize: 13, fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{personalProfile?.name ?? tProfile('myProfile')}</span>
-                        <span style={{ display: 'block', color: '#94a3b8', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{personalProfile?.username ? `@${personalProfile.username}` : tProfile('personalProfile')}</span>
+                        <span style={{ display: 'block', color: 'var(--ft-text-secondary)', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{personalProfile?.username ? `@${personalProfile.username}` : tProfile('personalProfile')}</span>
                       </span>
-                      {pathname.startsWith('/profile') || feedIdentity?.type === 'personal' ? <span style={{ color: '#38bdf8', fontSize: 14 }}>✓</span> : null}
+                      {pathname.startsWith('/profile') || feedIdentity?.type === 'personal' ? <span style={{ color: 'var(--ft-accent)', fontSize: 14 }}>✓</span> : null}
                     </button>
                     {adminPages.length > 0 || switcherLoading ? (
                       <div style={{ height: 1, background: 'rgba(51,65,85,0.8)', margin: '6px 4px' }} />
                     ) : null}
                     {switcherLoading ? (
-                      <div style={{ color: '#94a3b8', fontSize: 12, padding: '9px 10px' }}>
+                      <div style={{ color: 'var(--ft-text-secondary)', fontSize: 12, padding: '9px 10px' }}>
                         {tProfile('loadingPages')}
                       </div>
                     ) : null}
                     {!switcherLoading && adminPages.length === 0 ? (
-                      <div style={{ color: '#64748b', fontSize: 12, padding: '9px 10px' }}>
+                      <div style={{ color: 'var(--ft-text-tertiary)', fontSize: 12, padding: '9px 10px' }}>
                         {tProfile('noAdminPages')}
                       </div>
                     ) : null}
@@ -454,7 +454,7 @@ export default function BottomNav() {
                             gap: 10,
                             border: selected ? '1px solid rgba(52,211,153,0.42)' : '1px solid transparent',
                             background: selected ? 'rgba(34,197,94,0.12)' : 'transparent',
-                            color: '#f8fafc',
+                            color: 'var(--ft-text)',
                             borderRadius: 12,
                             padding: '8px 9px',
                             textAlign: 'left',
@@ -497,12 +497,12 @@ export default function BottomNav() {
                 >
                   <span style={{ position: 'relative', width: 22, height: 22, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Avatar url={activeIdentity.image} name={activeIdentity.name} size={22} />
-                    <span style={{ position: 'absolute', right: -6, bottom: -2, width: 12, height: 12, borderRadius: '50%', background: '#0f172a', border: '1px solid #334155', color: '#38bdf8', fontSize: 9, lineHeight: '10px', fontWeight: 900 }}>⌄</span>
+                    <span style={{ position: 'absolute', right: -6, bottom: -2, width: 12, height: 12, borderRadius: '50%', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', color: 'var(--ft-accent)', fontSize: 9, lineHeight: '10px', fontWeight: 900 }}>⌄</span>
                   </span>
                   <span style={{
                     fontSize: '9px',
                     fontWeight: 600,
-                    color: active ? '#38bdf8' : '#64748b',
+                    color: active ? 'var(--ft-accent)' : 'var(--ft-text-tertiary)',
                     letterSpacing: '0.1px',
                   }}>
                     {activeAdminPage || feedIdentity?.type === 'org' ? tProfile('ownerPage').replace(/^.*\s/, '') : tNav('profile')}
@@ -513,7 +513,7 @@ export default function BottomNav() {
                       bottom: 0,
                       width: '16px',
                       height: '2px',
-                      background: '#38bdf8',
+                      background: 'var(--ft-accent)',
                       borderRadius: '2px',
                     }} />
                   )}
@@ -541,7 +541,7 @@ export default function BottomNav() {
               <span style={{
                 fontSize: '9px',
                 fontWeight: 600,
-                color: active ? '#38bdf8' : '#64748b',
+                color: active ? 'var(--ft-accent)' : 'var(--ft-text-tertiary)',
                 letterSpacing: '0.1px',
               }}>
                 {tab.label === 'Home' ? tNav('home') : tab.label === 'Connect' ? tNav('connect') : tab.label === 'Map' ? tNav('map') : tab.label === 'Calendar' ? tNav('calendar') : tab.label === 'Earn' ? tNav('earn') : tab.label === 'Profile' ? tNav('profile') : tab.label}
@@ -552,7 +552,7 @@ export default function BottomNav() {
                   bottom: 0,
                   width: '16px',
                   height: '2px',
-                  background: '#38bdf8',
+                  background: 'var(--ft-accent)',
                   borderRadius: '2px',
                 }} />
               )}

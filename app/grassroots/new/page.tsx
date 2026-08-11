@@ -249,10 +249,10 @@ export default function GrassrootsNewPage() {
             alignItems: 'center',
             marginBottom: 8,
           }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ft-text-secondary)' }}>
               Step {step} of {TOTAL_STEPS}
             </div>
-            <div style={{ fontSize: 11, color: '#64748b' }}>
+            <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)' }}>
               {STEP_LABELS[step - 1]}
             </div>
           </div>
@@ -268,7 +268,7 @@ export default function GrassrootsNewPage() {
 
         {/* Step content */}
         <div style={{
-          background: '#1e293b',
+          background: 'var(--ft-surface)',
           border: '1px solid rgba(148,163,184,0.12)',
           borderRadius: 16,
           padding: '1.75rem 1.5rem',
@@ -303,7 +303,7 @@ export default function GrassrootsNewPage() {
               background: 'rgba(248,113,113,0.08)',
               border: '1px solid rgba(248,113,113,0.3)',
               borderRadius: 10,
-              color: '#f87171',
+              color: 'var(--ft-danger)',
               fontSize: 13,
             }}>
               {error}
@@ -326,9 +326,9 @@ export default function GrassrootsNewPage() {
               style={{
                 padding: '12px 22px',
                 background: 'transparent',
-                border: '1px solid #334155',
+                border: '1px solid var(--ft-border-strong)',
                 borderRadius: 10,
-                color: '#94a3b8',
+                color: 'var(--ft-text-secondary)',
                 fontSize: 14,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -348,10 +348,10 @@ export default function GrassrootsNewPage() {
                 padding: '12px 28px',
                 background: canAdvance
                   ? `linear-gradient(135deg, ${GRASSROOTS_GREEN.primary}, ${GRASSROOTS_GREEN.primaryDim})`
-                  : '#1e293b',
+                  : 'var(--ft-surface)',
                 border: 'none',
                 borderRadius: 10,
-                color: canAdvance ? '#0f172a' : '#475569',
+                color: canAdvance ? 'var(--ft-bg)' : 'var(--ft-text-faint)',
                 fontSize: 14,
                 fontWeight: 800,
                 cursor: canAdvance ? 'pointer' : 'not-allowed',
@@ -371,10 +371,10 @@ export default function GrassrootsNewPage() {
                 padding: '12px 28px',
                 background: (canAdvance && !submitting)
                   ? `linear-gradient(135deg, ${GRASSROOTS_GREEN.primary}, ${GRASSROOTS_GREEN.primaryDim})`
-                  : '#1e293b',
+                  : 'var(--ft-surface)',
                 border: 'none',
                 borderRadius: 10,
-                color: (canAdvance && !submitting) ? '#0f172a' : '#475569',
+                color: (canAdvance && !submitting) ? 'var(--ft-bg)' : 'var(--ft-text-faint)',
                 fontSize: 14,
                 fontWeight: 800,
                 cursor: (canAdvance && !submitting) ? 'pointer' : 'not-allowed',
@@ -430,12 +430,12 @@ function Step1({ form, setForm }: StepProps) {
               onClick={() => setForm(f => ({ ...f, listing_type: opt.value }))}
               style={{
                 padding: '24px 16px',
-                background: active ? GRASSROOTS_GREEN.tint : '#0f172a',
-                border: `2px solid ${active ? GRASSROOTS_GREEN.primary : '#334155'}`,
+                background: active ? GRASSROOTS_GREEN.tint : 'var(--ft-bg)',
+                border: `2px solid ${active ? GRASSROOTS_GREEN.primary : 'var(--ft-border-strong)'}`,
                 borderRadius: 14,
                 cursor: 'pointer',
                 fontFamily: 'inherit',
-                color: active ? GRASSROOTS_GREEN.primary : '#f1f5f9',
+                color: active ? GRASSROOTS_GREEN.primary : 'var(--ft-text)',
                 textAlign: 'center',
                 transition: 'all 0.15s',
               }}
@@ -445,7 +445,7 @@ function Step1({ form, setForm }: StepProps) {
                 style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}
                 dangerouslySetInnerHTML={{ __html: opt.title }}
               />
-              <div style={{ fontSize: 12, color: active ? GRASSROOTS_GREEN.primary : '#64748b', fontWeight: 500 }}>
+              <div style={{ fontSize: 12, color: active ? GRASSROOTS_GREEN.primary : 'var(--ft-text-tertiary)', fontWeight: 500 }}>
                 {opt.sub}
               </div>
             </button>
@@ -476,12 +476,12 @@ function Step2({ form, setForm }: StepProps) {
               onClick={() => setForm(f => ({ ...f, category: cat.slug }))}
               style={{
                 padding: '14px 10px',
-                background: active ? GRASSROOTS_GREEN.tint : '#0f172a',
-                border: `2px solid ${active ? GRASSROOTS_GREEN.primary : '#334155'}`,
+                background: active ? GRASSROOTS_GREEN.tint : 'var(--ft-bg)',
+                border: `2px solid ${active ? GRASSROOTS_GREEN.primary : 'var(--ft-border-strong)'}`,
                 borderRadius: 12,
                 cursor: 'pointer',
                 fontFamily: 'inherit',
-                color: active ? GRASSROOTS_GREEN.primary : '#f1f5f9',
+                color: active ? GRASSROOTS_GREEN.primary : 'var(--ft-text)',
                 textAlign: 'center',
                 fontWeight: active ? 700 : 500,
                 fontSize: 12,
@@ -492,7 +492,7 @@ function Step2({ form, setForm }: StepProps) {
             >
               <span style={{ fontSize: 26 }}>{cat.emoji}</span>
               <span style={{ lineHeight: 1.25 }}>{cat.label.split(' & ')[0]}</span>
-              <span style={{ fontSize: 10, color: active ? GRASSROOTS_GREEN.primary : '#64748b', fontWeight: 400, lineHeight: 1.3 }}>
+              <span style={{ fontSize: 10, color: active ? GRASSROOTS_GREEN.primary : 'var(--ft-text-tertiary)', fontWeight: 400, lineHeight: 1.3 }}>
                 {cat.blurb}
               </span>
             </button>
@@ -531,7 +531,7 @@ function Step3({ form, setForm, uploading, onPhotoSelect, onPhotoRemove, fileInp
         maxLength={120}
         style={inputStyle}
       />
-      <div style={{ fontSize: 11, color: '#475569', marginTop: 4, marginBottom: 16 }}>
+      <div style={{ fontSize: 11, color: 'var(--ft-text-faint)', marginTop: 4, marginBottom: 16 }}>
         {form.title.length}/120
       </div>
 
@@ -544,7 +544,7 @@ function Step3({ form, setForm, uploading, onPhotoSelect, onPhotoRemove, fileInp
         maxLength={2000}
         style={{ ...inputStyle, resize: 'vertical', minHeight: 120, fontFamily: 'inherit' }}
       />
-      <div style={{ fontSize: 11, color: '#475569', marginTop: 4, marginBottom: 16 }}>
+      <div style={{ fontSize: 11, color: 'var(--ft-text-faint)', marginTop: 4, marginBottom: 16 }}>
         {form.description.length}/2000
       </div>
 
@@ -557,7 +557,7 @@ function Step3({ form, setForm, uploading, onPhotoSelect, onPhotoRemove, fileInp
           marginBottom: 12,
         }}>
           {form.photos.map(url => (
-            <div key={url} style={{ position: 'relative', aspectRatio: '1 / 1', borderRadius: 10, overflow: 'hidden', background: '#0f172a' }}>
+            <div key={url} style={{ position: 'relative', aspectRatio: '1 / 1', borderRadius: 10, overflow: 'hidden', background: 'var(--ft-bg)' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               <button
@@ -571,7 +571,7 @@ function Step3({ form, setForm, uploading, onPhotoSelect, onPhotoRemove, fileInp
                   borderRadius: '50%',
                   background: 'rgba(15,23,42,0.85)',
                   border: '1px solid rgba(248,113,113,0.4)',
-                  color: '#f87171',
+                  color: 'var(--ft-danger)',
                   cursor: 'pointer',
                   fontSize: 12,
                   fontWeight: 700,
@@ -595,9 +595,9 @@ function Step3({ form, setForm, uploading, onPhotoSelect, onPhotoRemove, fileInp
           width: '100%',
           padding: '14px',
           background: 'transparent',
-          border: `1.5px dashed ${photosFull ? '#334155' : GRASSROOTS_GREEN.borderSoft}`,
+          border: `1.5px dashed ${photosFull ? 'var(--ft-border-strong)' : GRASSROOTS_GREEN.borderSoft}`,
           borderRadius: 10,
-          color: photosFull ? '#475569' : GRASSROOTS_GREEN.primary,
+          color: photosFull ? 'var(--ft-text-faint)' : GRASSROOTS_GREEN.primary,
           fontSize: 13,
           fontWeight: 600,
           cursor: (uploading || photosFull) ? 'not-allowed' : 'pointer',
@@ -651,10 +651,10 @@ function Step4({ form, setForm, currencyCode, setCurrencyCode }: Step4Props) {
               onClick={() => setForm(f => ({ ...f, rate_type: opt.value }))}
               style={{
                 padding: '12px 8px',
-                background: active ? GRASSROOTS_GREEN.tint : '#0f172a',
-                border: `1.5px solid ${active ? GRASSROOTS_GREEN.primary : '#334155'}`,
+                background: active ? GRASSROOTS_GREEN.tint : 'var(--ft-bg)',
+                border: `1.5px solid ${active ? GRASSROOTS_GREEN.primary : 'var(--ft-border-strong)'}`,
                 borderRadius: 10,
-                color: active ? GRASSROOTS_GREEN.primary : '#94a3b8',
+                color: active ? GRASSROOTS_GREEN.primary : 'var(--ft-text-secondary)',
                 fontWeight: active ? 700 : 500,
                 fontSize: 12,
                 cursor: 'pointer',
@@ -706,7 +706,7 @@ function Step4({ form, setForm, currencyCode, setCurrencyCode }: Step4Props) {
           Promoted above the currency picker in the visual hierarchy so
           users see ₮ first. The card has a "Recommended" pill when
           off (to nudge opt-in) and a "✓ Active" pill when on. Same
-          colour palette as the rest of the ₮ UI (#38bdf8 cyan). */}
+          colour palette as the rest of the ₮ UI (var(--ft-accent) cyan). */}
       <div style={{ marginTop: 8 }}>
         <div style={{
           display: 'flex',
@@ -717,7 +717,7 @@ function Step4({ form, setForm, currencyCode, setCurrencyCode }: Step4Props) {
           <label style={fieldLabelStyle}>Primary payment</label>
           <span style={{
             fontSize: 10,
-            color: form.trust_tokens_accepted ? '#38bdf8' : '#64748b',
+            color: form.trust_tokens_accepted ? 'var(--ft-accent)' : 'var(--ft-text-tertiary)',
             fontWeight: 700,
             letterSpacing: '0.05em',
             textTransform: 'uppercase',
@@ -731,8 +731,8 @@ function Step4({ form, setForm, currencyCode, setCurrencyCode }: Step4Props) {
             alignItems: 'flex-start',
             gap: 14,
             padding: '16px 18px',
-            background: form.trust_tokens_accepted ? 'rgba(56,189,248,0.1)' : '#0f172a',
-            border: `2px solid ${form.trust_tokens_accepted ? '#38bdf8' : 'rgba(56,189,248,0.25)'}`,
+            background: form.trust_tokens_accepted ? 'rgba(56,189,248,0.1)' : 'var(--ft-bg)',
+            border: `2px solid ${form.trust_tokens_accepted ? 'var(--ft-accent)' : 'rgba(56,189,248,0.25)'}`,
             borderRadius: 14,
             cursor: 'pointer',
             boxShadow: form.trust_tokens_accepted ? '0 0 0 3px rgba(56,189,248,0.08)' : 'none',
@@ -743,12 +743,12 @@ function Step4({ form, setForm, currencyCode, setCurrencyCode }: Step4Props) {
             type="checkbox"
             checked={form.trust_tokens_accepted}
             onChange={e => setForm(f => ({ ...f, trust_tokens_accepted: e.target.checked }))}
-            style={{ width: 20, height: 20, accentColor: '#38bdf8', marginTop: 2, flexShrink: 0 }}
+            style={{ width: 20, height: 20, accentColor: 'var(--ft-accent)', marginTop: 2, flexShrink: 0 }}
           />
           <div style={{ flex: 1 }}>
             <div style={{
               fontSize: 15, fontWeight: 800,
-              color: form.trust_tokens_accepted ? '#38bdf8' : '#f1f5f9',
+              color: form.trust_tokens_accepted ? 'var(--ft-accent)' : 'var(--ft-text)',
               marginBottom: 4,
               display: 'flex',
               alignItems: 'center',
@@ -756,7 +756,7 @@ function Step4({ form, setForm, currencyCode, setCurrencyCode }: Step4Props) {
             }}>
               <span style={{ fontSize: 18 }}>₮</span> Accept FreeTrust Trust tokens
             </div>
-            <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.55 }}>
+            <div style={{ fontSize: 12, color: 'var(--ft-text-secondary)', lineHeight: 1.55 }}>
               Trust is the primary payment rail on Grassroots — listings that
               accept ₮ get boosted in search and tagged &ldquo;Pay with Trust&rdquo;
               on every card. Clients can still pay in {currencyCode} as
@@ -799,10 +799,10 @@ function Step5({ form, setForm }: StepProps) {
               onClick={() => setForm(f => ({ ...f, availability: opt.value }))}
               style={{
                 padding: '12px 8px',
-                background: active ? opt.bg : '#0f172a',
-                border: `1.5px solid ${active ? opt.border : '#334155'}`,
+                background: active ? opt.bg : 'var(--ft-bg)',
+                border: `1.5px solid ${active ? opt.border : 'var(--ft-border-strong)'}`,
                 borderRadius: 10,
-                color: active ? opt.color : '#94a3b8',
+                color: active ? opt.color : 'var(--ft-text-secondary)',
                 fontWeight: active ? 700 : 500,
                 fontSize: 13,
                 cursor: 'pointer',
@@ -843,10 +843,10 @@ function Step6({ form, setForm }: StepProps) {
               onClick={() => setForm(f => ({ ...f, contact_preference: opt.value, contact_value: '' }))}
               style={{
                 padding: '14px 10px',
-                background: active ? GRASSROOTS_GREEN.tint : '#0f172a',
-                border: `1.5px solid ${active ? GRASSROOTS_GREEN.primary : '#334155'}`,
+                background: active ? GRASSROOTS_GREEN.tint : 'var(--ft-bg)',
+                border: `1.5px solid ${active ? GRASSROOTS_GREEN.primary : 'var(--ft-border-strong)'}`,
                 borderRadius: 10,
-                color: active ? GRASSROOTS_GREEN.primary : '#94a3b8',
+                color: active ? GRASSROOTS_GREEN.primary : 'var(--ft-text-secondary)',
                 fontWeight: active ? 700 : 500,
                 fontSize: 12,
                 cursor: 'pointer',
@@ -879,7 +879,7 @@ function Step6({ form, setForm }: StepProps) {
             style={inputStyle}
             autoComplete="off"
           />
-          <div style={{ fontSize: 11, color: '#64748b', marginTop: 6 }}>
+          <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', marginTop: 6 }}>
             {form.contact_preference === 'whatsapp' && 'Include the country code (e.g. +353). Clients tap a button to open WhatsApp.'}
             {form.contact_preference === 'phone' && 'Include the country code so people can call from anywhere.'}
             {form.contact_preference === 'email' && 'Clients tap a button to open their mail app.'}
@@ -894,7 +894,7 @@ function Step6({ form, setForm }: StepProps) {
           border: '1px solid rgba(56,189,248,0.2)',
           borderRadius: 10,
           fontSize: 13,
-          color: '#94a3b8',
+          color: 'var(--ft-text-secondary)',
           lineHeight: 1.5,
         }}>
           💬 Clients will message you through FreeTrust. You&apos;ll get notifications in your inbox.
@@ -909,8 +909,8 @@ function Step6({ form, setForm }: StepProps) {
 // ────────────────────────────────────────────────────────────────────────────
 const pageStyle: React.CSSProperties = {
   minHeight: '100vh',
-  background: '#0f172a',
-  color: '#f1f5f9',
+  background: 'var(--ft-bg)',
+  color: 'var(--ft-text)',
   fontFamily: 'system-ui, sans-serif',
   paddingTop: 64,
   paddingBottom: 80,
@@ -920,12 +920,12 @@ const stepTitleStyle: React.CSSProperties = {
   fontSize: 22,
   fontWeight: 800,
   margin: '0 0 8px',
-  color: '#f1f5f9',
+  color: 'var(--ft-text)',
 }
 
 const stepHelpStyle: React.CSSProperties = {
   fontSize: 13,
-  color: '#94a3b8',
+  color: 'var(--ft-text-secondary)',
   margin: '0 0 18px',
   lineHeight: 1.5,
 }
@@ -934,7 +934,7 @@ const fieldLabelStyle: React.CSSProperties = {
   display: 'block',
   fontSize: 11,
   fontWeight: 700,
-  color: '#94a3b8',
+  color: 'var(--ft-text-secondary)',
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
   marginBottom: 6,
@@ -942,12 +942,12 @@ const fieldLabelStyle: React.CSSProperties = {
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  background: '#0f172a',
-  border: '1.5px solid #334155',
+  background: 'var(--ft-bg)',
+  border: '1.5px solid var(--ft-border-strong)',
   borderRadius: 10,
   padding: '11px 14px',
   fontSize: 14,
-  color: '#f1f5f9',
+  color: 'var(--ft-text)',
   outline: 'none',
   boxSizing: 'border-box',
   fontFamily: 'inherit',

@@ -15,19 +15,19 @@ import {
 } from '@/lib/founder/tiers';
 
 const COLORS = {
-  bgBase: '#0f172a',
-  card: '#1e293b',
+  bgBase: 'var(--ft-bg)',
+  card: 'var(--ft-surface)',
   cardSoft: 'rgba(30,41,59,0.6)',
   border: 'rgba(56,189,248,0.12)',
   borderStrong: 'rgba(56,189,248,0.4)',
   borderMuted: 'rgba(148,163,184,0.15)',
-  sky: '#38bdf8',
-  skyHover: '#7dd3fc',
-  text: '#f1f5f9',
-  textMuted: '#94a3b8',
-  textFaint: '#64748b',
+  sky: 'var(--ft-accent)',
+  skyHover: 'var(--ft-accent)',
+  text: 'var(--ft-text)',
+  textMuted: 'var(--ft-text-secondary)',
+  textFaint: 'var(--ft-text-tertiary)',
   success: '#34d399',
-  danger: '#f87171',
+  danger: 'var(--ft-danger)',
   gold: '#fbbf24',
   radius: 14,
 };
@@ -285,7 +285,7 @@ export default function FounderPage() {
         <div className="founder-container">
           <div className="section-head">
             <div className="pretitle">✦ First 100 investors</div>
-            <h2>Invest early. <span style={{ color: '#38bdf8' }}>Get more.</span></h2>
+            <h2>Invest early. <span style={{ color: 'var(--ft-accent)' }}>Get more.</span></h2>
             <p>The first 100 FreeTrust investors — at any tier — unlock permanent benefits that new members will never get, even if they pay more later.</p>
           </div>
 
@@ -294,8 +294,8 @@ export default function FounderPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 20, alignItems: 'start' }}>
                 <div style={{ fontSize: 36, lineHeight: 1 }}>🏅</div>
                 <div>
-                  <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 6, color: '#f1f5f9' }}>Permanent &quot;Founding Investor&quot; badge</div>
-                  <div style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.6 }}>Appears on your profile forever. Unmissable social proof that you believed in FreeTrust before anyone else.</div>
+                  <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 6, color: 'var(--ft-text)' }}>Permanent &quot;Founding Investor&quot; badge</div>
+                  <div style={{ fontSize: 14, color: 'var(--ft-text-secondary)', lineHeight: 1.6 }}>Appears on your profile forever. Unmissable social proof that you believed in FreeTrust before anyone else.</div>
                 </div>
               </div>
             </div>
@@ -304,8 +304,8 @@ export default function FounderPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 20, alignItems: 'start' }}>
                 <div style={{ fontSize: 36, lineHeight: 1 }}>🔒</div>
                 <div>
-                  <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 6, color: '#f1f5f9' }}>Fee + Credit rates locked forever</div>
-                  <div style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.6 }}>If we ever restructure tiers or raise prices, your original rates stay. The first 100 are immune to tier changes.</div>
+                  <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 6, color: 'var(--ft-text)' }}>Fee + Credit rates locked forever</div>
+                  <div style={{ fontSize: 14, color: 'var(--ft-text-secondary)', lineHeight: 1.6 }}>If we ever restructure tiers or raise prices, your original rates stay. The first 100 are immune to tier changes.</div>
                 </div>
               </div>
             </div>
@@ -314,8 +314,8 @@ export default function FounderPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 20, alignItems: 'start' }}>
                 <div style={{ fontSize: 36, lineHeight: 1 }}>🚀</div>
                 <div>
-                  <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 6, color: '#f1f5f9' }}>Priority access to every new feature</div>
-                  <div style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.6 }}>New AI agents, marketplace features, organisation tools — first 100 get access weeks before anyone else. Every time.</div>
+                  <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 6, color: 'var(--ft-text)' }}>Priority access to every new feature</div>
+                  <div style={{ fontSize: 14, color: 'var(--ft-text-secondary)', lineHeight: 1.6 }}>New AI agents, marketplace features, organisation tools — first 100 get access weeks before anyone else. Every time.</div>
                 </div>
               </div>
             </div>
@@ -324,8 +324,8 @@ export default function FounderPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 20, alignItems: 'start' }}>
                 <div style={{ fontSize: 36, lineHeight: 1 }}>🗳</div>
                 <div>
-                  <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 6, color: '#f1f5f9' }}>Governance vote weight</div>
-                  <div style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.6 }}>When FreeTrust introduces member-owned governance, first-100 investors get 2× vote weight on platform decisions, for life.</div>
+                  <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 6, color: 'var(--ft-text)' }}>Governance vote weight</div>
+                  <div style={{ fontSize: 14, color: 'var(--ft-text-secondary)', lineHeight: 1.6 }}>When FreeTrust introduces member-owned governance, first-100 investors get 2× vote weight on platform decisions, for life.</div>
                 </div>
               </div>
             </div>
@@ -334,17 +334,17 @@ export default function FounderPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 20, alignItems: 'start' }}>
                 <div style={{ fontSize: 36, lineHeight: 1 }}>🎟</div>
                 <div>
-                  <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 6, color: '#f1f5f9' }}>Founding Investor annual event</div>
-                  <div style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.6 }}>Exclusive in-person gathering — Ireland, first year; rotates globally. Meet the founder, shape the roadmap, meet other founding investors.</div>
+                  <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 6, color: 'var(--ft-text)' }}>Founding Investor annual event</div>
+                  <div style={{ fontSize: 14, color: 'var(--ft-text-secondary)', lineHeight: 1.6 }}>Exclusive in-person gathering — Ireland, first year; rotates globally. Meet the founder, shape the roadmap, meet other founding investors.</div>
                 </div>
               </div>
             </div>
           </div>
 
           <div style={{ textAlign: 'center', padding: 20, background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 14 }}>
-            <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>Early-investor spots remaining</div>
-            <div style={{ fontSize: 32, fontWeight: 600, color: '#38bdf8' }}>— / 100</div>
-            <div style={{ fontSize: 12, color: '#64748b', marginTop: 6 }}>Applies at every tier from Seed (€99) to Legacy (€5,000)</div>
+            <div style={{ fontSize: 13, color: 'var(--ft-text-secondary)', marginBottom: 6 }}>Early-investor spots remaining</div>
+            <div style={{ fontSize: 32, fontWeight: 600, color: 'var(--ft-accent)' }}>— / 100</div>
+            <div style={{ fontSize: 12, color: 'var(--ft-text-tertiary)', marginTop: 6 }}>Applies at every tier from Seed (€99) to Legacy (€5,000)</div>
           </div>
         </div>
       </section>
@@ -403,11 +403,11 @@ export default function FounderPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 20, lineHeight: 1 }}>{tier.icon}</span>
                 <div>
-                  <div style={{ fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', color: '#94a3b8' }}>Calculating for</div>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: '#f1f5f9' }}>{tier.displayName} tier · €{tier.priceEur.toLocaleString()}</div>
+                  <div style={{ fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--ft-text-secondary)' }}>Calculating for</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ft-text)' }}>{tier.displayName} tier · €{tier.priceEur.toLocaleString()}</div>
                 </div>
               </div>
-              <div style={{ fontSize: 12, color: '#64748b', textAlign: 'right' }}>
+              <div style={{ fontSize: 12, color: 'var(--ft-text-tertiary)', textAlign: 'right' }}>
                 {tier.serviceFeePercent}% / {tier.productFeePercent}%<br/>fees
               </div>
             </div>

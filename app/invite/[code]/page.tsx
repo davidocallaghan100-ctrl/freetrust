@@ -23,12 +23,12 @@ export default async function InvitePage({ params }: PageProps) {
 
   if (!referrer) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui', padding: '2rem' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui', padding: '2rem' }}>
         <div style={{ textAlign: 'center', maxWidth: 420 }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔗</div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>Invalid invite link</h1>
-          <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.5rem' }}>This referral code doesn&rsquo;t exist. Ask your friend to resend their link, or sign up without a referral.</p>
-          <Link href="/register" style={{ display: 'inline-block', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#0f172a', fontWeight: 700, padding: '0.75rem 1.75rem', borderRadius: 10, textDecoration: 'none' }}>Sign up</Link>
+          <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>This referral code doesn&rsquo;t exist. Ask your friend to resend their link, or sign up without a referral.</p>
+          <Link href="/register" style={{ display: 'inline-block', background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', color: 'var(--ft-bg)', fontWeight: 700, padding: '0.75rem 1.75rem', borderRadius: 10, textDecoration: 'none' }}>Sign up</Link>
         </div>
       </div>
     )

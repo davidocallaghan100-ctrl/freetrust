@@ -70,23 +70,23 @@ export default function CreateBusinessPage() {
   }
 
   const inputStyle: React.CSSProperties = {
-    width: '100%', background: '#0f172a', border: '1px solid rgba(56,189,248,0.15)',
-    borderRadius: 10, padding: '0.75rem 1rem', fontSize: '0.9rem', color: '#f1f5f9',
+    width: '100%', background: 'var(--ft-bg)', border: '1px solid rgba(56,189,248,0.15)',
+    borderRadius: 10, padding: '0.75rem 1rem', fontSize: '0.9rem', color: 'var(--ft-text)',
     outline: 'none', boxSizing: 'border-box',
   }
   const labelStyle: React.CSSProperties = {
-    fontSize: '0.78rem', fontWeight: 700, color: '#64748b',
+    fontSize: '0.78rem', fontWeight: 700, color: 'var(--ft-text-tertiary)',
     textTransform: 'uppercase', letterSpacing: '0.06em',
     display: 'block', marginBottom: '0.35rem',
   }
   const fieldStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '0.35rem' }
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 104px)', background: '#0f172a', paddingTop: 64, fontFamily: 'system-ui', color: '#f1f5f9' }}>
+    <div style={{ minHeight: 'calc(100vh - 104px)', background: 'var(--ft-bg)', paddingTop: 64, fontFamily: 'system-ui', color: 'var(--ft-text)' }}>
       <style>{`
-        .cb-type-btn { padding: 0.7rem 1rem; border-radius: 10px; border: 1px solid rgba(148,163,184,0.2); background: transparent; cursor: pointer; font-size: 0.85rem; color: #94a3b8; transition: all 0.12s; text-align: left; }
-        .cb-type-btn.active { border-color: #38bdf8; background: rgba(56,189,248,0.1); color: #38bdf8; font-weight: 600; }
-        .cb-type-btn:hover { border-color: rgba(56,189,248,0.3); color: #f1f5f9; }
+        .cb-type-btn { padding: 0.7rem 1rem; border-radius: 10px; border: 1px solid rgba(148,163,184,0.2); background: transparent; cursor: pointer; font-size: 0.85rem; color: var(--ft-text-secondary); transition: all 0.12s; text-align: left; }
+        .cb-type-btn.active { border-color: var(--ft-accent); background: rgba(56,189,248,0.1); color: var(--ft-accent); font-weight: 600; }
+        .cb-type-btn:hover { border-color: rgba(56,189,248,0.3); color: var(--ft-text); }
         .cb-step-dot { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0; }
       `}</style>
 
@@ -94,7 +94,7 @@ export default function CreateBusinessPage() {
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.3rem' }}>Create Business Profile</h1>
-          <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Set up your business presence on FreeTrust</p>
+          <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.9rem' }}>Set up your business presence on FreeTrust</p>
         </div>
 
         {/* Steps indicator */}
@@ -107,13 +107,13 @@ export default function CreateBusinessPage() {
               <React.Fragment key={s}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <div className="cb-step-dot" style={{
-                    background: done ? '#38bdf8' : active ? 'rgba(56,189,248,0.15)' : 'rgba(148,163,184,0.1)',
-                    color: done ? '#0f172a' : active ? '#38bdf8' : '#64748b',
-                    border: active ? '2px solid #38bdf8' : done ? 'none' : '2px solid rgba(148,163,184,0.2)',
+                    background: done ? 'var(--ft-accent)' : active ? 'rgba(56,189,248,0.15)' : 'rgba(148,163,184,0.1)',
+                    color: done ? 'var(--ft-bg)' : active ? 'var(--ft-accent)' : 'var(--ft-text-tertiary)',
+                    border: active ? '2px solid var(--ft-accent)' : done ? 'none' : '2px solid rgba(148,163,184,0.2)',
                   }}>
                     {done ? '✓' : s}
                   </div>
-                  <span style={{ fontSize: '0.8rem', color: active ? '#f1f5f9' : '#64748b', fontWeight: active ? 600 : 400 }}>{label}</span>
+                  <span style={{ fontSize: '0.8rem', color: active ? 'var(--ft-text)' : 'var(--ft-text-tertiary)', fontWeight: active ? 600 : 400 }}>{label}</span>
                 </div>
                 {i < 3 && <div style={{ flex: 1, height: 1, background: 'rgba(148,163,184,0.1)', minWidth: 16 }} />}
               </React.Fragment>
@@ -122,7 +122,7 @@ export default function CreateBusinessPage() {
         </div>
 
         {/* Card */}
-        <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, padding: '2rem' }}>
+        <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 16, padding: '2rem' }}>
 
           {/* STEP 1 — Basic Info */}
           {step === 1 && (
@@ -147,7 +147,7 @@ export default function CreateBusinessPage() {
 
               <div style={fieldStyle}>
                 <label style={labelStyle}>Industry / Category *</label>
-                <select style={{ ...inputStyle, background: '#0f172a' }} value={form.industry} onChange={e => set('industry', e.target.value)}>
+                <select style={{ ...inputStyle, background: 'var(--ft-bg)' }} value={form.industry} onChange={e => set('industry', e.target.value)}>
                   <option value="">Select an industry…</option>
                   {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
                 </select>
@@ -168,13 +168,13 @@ export default function CreateBusinessPage() {
               <div style={fieldStyle}>
                 <label style={labelStyle}>Business Description *</label>
                 <textarea style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} value={form.description} onChange={e => set('description', e.target.value)} placeholder="Describe what your business does…" rows={4} maxLength={1000} />
-                <div style={{ fontSize: '0.72rem', color: '#475569', textAlign: 'right' }}>{form.description.length}/1000</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-faint)', textAlign: 'right' }}>{form.description.length}/1000</div>
               </div>
 
               <div style={fieldStyle}>
                 <label style={labelStyle}>Mission Statement</label>
                 <textarea style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} value={form.mission} onChange={e => set('mission', e.target.value)} placeholder="What is the purpose or mission of your business?" rows={3} maxLength={500} />
-                <div style={{ fontSize: '0.72rem', color: '#475569', textAlign: 'right' }}>{form.mission.length}/500</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-faint)', textAlign: 'right' }}>{form.mission.length}/500</div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -215,7 +215,7 @@ export default function CreateBusinessPage() {
                 <label style={labelStyle}>Social Media Links</label>
                 {SOCIAL_PLATFORMS.map(platform => (
                   <div key={platform} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ width: 90, fontSize: '0.8rem', color: '#64748b', textTransform: 'capitalize' }}>{platform}</span>
+                    <span style={{ width: 90, fontSize: '0.8rem', color: 'var(--ft-text-tertiary)', textTransform: 'capitalize' }}>{platform}</span>
                     <input
                       style={{ ...inputStyle, flex: 1 }}
                       value={form.social_links[platform] ?? ''}
@@ -227,7 +227,7 @@ export default function CreateBusinessPage() {
               </div>
 
               <div style={{ borderTop: '1px solid rgba(56,189,248,0.08)', paddingTop: '1.25rem' }}>
-                <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#94a3b8', margin: '0 0 1rem' }}>Registration (Optional)</h3>
+                <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--ft-text-secondary)', margin: '0 0 1rem' }}>Registration (Optional)</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div style={fieldStyle}>
                     <label style={labelStyle}>VAT Number</label>
@@ -256,15 +256,15 @@ export default function CreateBusinessPage() {
                 { label: 'Contact', value: form.contact_email || '—' },
               ].map(row => (
                 <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0', borderBottom: '1px solid rgba(56,189,248,0.06)', fontSize: '0.88rem' }}>
-                  <span style={{ color: '#64748b' }}>{row.label}</span>
-                  <span style={{ color: '#f1f5f9', fontWeight: 500 }}>{row.value}</span>
+                  <span style={{ color: 'var(--ft-text-tertiary)' }}>{row.label}</span>
+                  <span style={{ color: 'var(--ft-text)', fontWeight: 500 }}>{row.value}</span>
                 </div>
               ))}
 
               {form.description && (
                 <div style={{ marginTop: '1rem', background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 10, padding: '0.75rem 1rem' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.25rem' }}>DESCRIPTION</div>
-                  <p style={{ fontSize: '0.88rem', color: '#cbd5e1', margin: 0, lineHeight: 1.6 }}>{form.description}</p>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', marginBottom: '0.25rem' }}>DESCRIPTION</div>
+                  <p style={{ fontSize: '0.88rem', color: 'var(--ft-text-secondary)', margin: 0, lineHeight: 1.6 }}>{form.description}</p>
                 </div>
               )}
 
@@ -279,7 +279,7 @@ export default function CreateBusinessPage() {
           {/* Navigation */}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem', gap: '0.75rem' }}>
             {step > 1 ? (
-              <button onClick={() => setStep(s => s - 1)} style={{ background: 'transparent', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 10, padding: '0.75rem 1.5rem', fontSize: '0.88rem', color: '#64748b', cursor: 'pointer' }}>
+              <button onClick={() => setStep(s => s - 1)} style={{ background: 'transparent', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 10, padding: '0.75rem 1.5rem', fontSize: '0.88rem', color: 'var(--ft-text-tertiary)', cursor: 'pointer' }}>
                 ← Back
               </button>
             ) : <div />}
@@ -288,7 +288,7 @@ export default function CreateBusinessPage() {
               <button
                 onClick={() => setStep(s => s + 1)}
                 disabled={(step === 1 && (!form.name || !form.business_type || !form.industry))}
-                style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 10, padding: '0.75rem 2rem', fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer', opacity: (step === 1 && (!form.name || !form.business_type || !form.industry)) ? 0.5 : 1 }}
+                style={{ background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', border: 'none', borderRadius: 10, padding: '0.75rem 2rem', fontSize: '0.9rem', fontWeight: 700, color: 'var(--ft-bg)', cursor: 'pointer', opacity: (step === 1 && (!form.name || !form.business_type || !form.industry)) ? 0.5 : 1 }}
               >
                 Continue →
               </button>
@@ -296,7 +296,7 @@ export default function CreateBusinessPage() {
               <button
                 onClick={submit}
                 disabled={saving}
-                style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', border: 'none', borderRadius: 10, padding: '0.75rem 2rem', fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', cursor: 'pointer', opacity: saving ? 0.7 : 1 }}
+                style={{ background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', border: 'none', borderRadius: 10, padding: '0.75rem 2rem', fontSize: '0.9rem', fontWeight: 700, color: 'var(--ft-bg)', cursor: 'pointer', opacity: saving ? 0.7 : 1 }}
               >
                 {saving ? 'Creating…' : '🚀 Create Business Profile'}
               </button>

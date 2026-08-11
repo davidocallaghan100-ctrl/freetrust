@@ -34,11 +34,11 @@ const TAB_CONFIG: { key: TabKey; label: string; icon: string; createHref: string
 const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }> = {
   active:   { bg: 'rgba(52,211,153,0.2)',  color: '#34d399', label: 'Active' },
   draft:    { bg: 'rgba(251,191,36,0.2)',  color: '#fbbf24', label: 'Draft' },
-  archived: { bg: 'rgba(148,163,184,0.2)', color: '#cbd5e1', label: 'Archived' },
-  closed:   { bg: 'rgba(148,163,184,0.2)', color: '#cbd5e1', label: 'Closed' },
-  filled:   { bg: 'rgba(56,189,248,0.2)',  color: '#38bdf8', label: 'Filled' },
-  rented:   { bg: 'rgba(56,189,248,0.2)',  color: '#38bdf8', label: 'Rented' },
-  inactive: { bg: 'rgba(148,163,184,0.2)', color: '#cbd5e1', label: 'Inactive' },
+  archived: { bg: 'rgba(148,163,184,0.2)', color: 'var(--ft-text-secondary)', label: 'Archived' },
+  closed:   { bg: 'rgba(148,163,184,0.2)', color: 'var(--ft-text-secondary)', label: 'Closed' },
+  filled:   { bg: 'rgba(56,189,248,0.2)',  color: 'var(--ft-accent)', label: 'Filled' },
+  rented:   { bg: 'rgba(56,189,248,0.2)',  color: 'var(--ft-accent)', label: 'Rented' },
+  inactive: { bg: 'rgba(148,163,184,0.2)', color: 'var(--ft-text-secondary)', label: 'Inactive' },
 }
 
 function relativeTime(iso: string): string {
@@ -146,20 +146,20 @@ export default function ManageListingsPage() {
   const tabConfig = TAB_CONFIG.find(t => t.key === activeTab)!
 
   return (
-    <div style={{ minHeight: '100vh', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
+    <div style={{ minHeight: '100vh', color: 'var(--ft-text)', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
       <style>{`
         .ml-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
         .ml-tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
         .ml-tabs::-webkit-scrollbar { display: none; }
-        .ml-tab { flex-shrink: 0; padding: 8px 16px; border-radius: 999px; border: 1px solid rgba(148,163,184,0.15); background: transparent; color: #64748b; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
-        .ml-tab:hover { border-color: rgba(56,189,248,0.3); color: #94a3b8; }
-        .ml-tab-active { background: rgba(56,189,248,0.15); border-color: #38bdf8; color: #38bdf8; }
+        .ml-tab { flex-shrink: 0; padding: 8px 16px; border-radius: 999px; border: 1px solid rgba(148,163,184,0.15); background: transparent; color: var(--ft-text-tertiary); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+        .ml-tab:hover { border-color: rgba(56,189,248,0.3); color: var(--ft-text-secondary); }
+        .ml-tab-active { background: rgba(56,189,248,0.15); border-color: var(--ft-accent); color: var(--ft-accent); }
         @media (min-width: 640px) { .ml-grid { grid-template-columns: 1fr 1fr; } }
       `}</style>
 
       {/* Toast */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', background: '#1e293b', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 10, padding: '10px 18px', fontSize: 13, color: '#f1f5f9', zIndex: 9999, boxShadow: '0 8px 30px rgba(0,0,0,0.4)' }}>
+        <div style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 10, padding: '10px 18px', fontSize: 13, color: 'var(--ft-text)', zIndex: 9999, boxShadow: '0 8px 30px rgba(0,0,0,0.4)' }}>
           {toast}
         </div>
       )}
@@ -167,13 +167,13 @@ export default function ManageListingsPage() {
       {/* Delete modal */}
       {deleteTarget && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 9999 }} onClick={() => !deleting && setDeleteTarget(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#1e293b', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 16, padding: 28, maxWidth: 400, width: '100%' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--ft-surface)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 16, padding: 28, maxWidth: 400, width: '100%' }}>
             <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Delete this {typeLabel(deleteTarget)}?</div>
-            <div style={{ fontSize: 14, color: '#94a3b8', marginBottom: 6 }}>&ldquo;{deleteTarget.title}&rdquo;</div>
-            <div style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>This cannot be undone.</div>
+            <div style={{ fontSize: 14, color: 'var(--ft-text-secondary)', marginBottom: 6 }}>&ldquo;{deleteTarget.title}&rdquo;</div>
+            <div style={{ fontSize: 13, color: 'var(--ft-text-tertiary)', marginBottom: 20 }}>This cannot be undone.</div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => setDeleteTarget(null)} disabled={deleting} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(148,163,184,0.2)', background: 'transparent', color: '#94a3b8', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-              <button type="button" onClick={confirmDelete} disabled={deleting} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(248,113,113,0.35)', background: 'rgba(248,113,113,0.15)', color: '#f87171', fontSize: 13, fontWeight: 600, cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.6 : 1 }}>
+              <button type="button" onClick={() => setDeleteTarget(null)} disabled={deleting} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(148,163,184,0.2)', background: 'transparent', color: 'var(--ft-text-secondary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button type="button" onClick={confirmDelete} disabled={deleting} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(248,113,113,0.35)', background: 'rgba(248,113,113,0.15)', color: 'var(--ft-danger)', fontSize: 13, fontWeight: 600, cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.6 : 1 }}>
                 {deleting ? 'Deleting…' : 'Delete'}
               </button>
             </div>
@@ -184,9 +184,9 @@ export default function ManageListingsPage() {
       <div style={{ maxWidth: 780, margin: '0 auto', padding: '0 1rem' }}>
         {/* Header */}
         <div style={{ padding: '1.5rem 0 1rem' }}>
-          <Link href="/profile" style={{ color: '#38bdf8', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600 }}>← Back to profile</Link>
+          <Link href="/profile" style={{ color: 'var(--ft-accent)', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600 }}>← Back to profile</Link>
           <h1 style={{ fontSize: 'clamp(1.3rem,3vw,1.7rem)', fontWeight: 800, margin: '0.75rem 0 0.25rem', letterSpacing: '-0.3px' }}>My Listings</h1>
-          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>Edit, delete, or manage everything you&apos;ve posted</p>
+          <p style={{ color: 'var(--ft-text-secondary)', margin: 0, fontSize: '0.85rem' }}>Edit, delete, or manage everything you&apos;ve posted</p>
         </div>
 
         {/* Tabs */}
@@ -204,12 +204,12 @@ export default function ManageListingsPage() {
         </div>
 
         {/* Loading */}
-        {loading && <div style={{ textAlign: 'center', padding: '4rem 1rem', color: '#64748b', fontSize: '0.9rem' }}>Loading...</div>}
+        {loading && <div style={{ textAlign: 'center', padding: '4rem 1rem', color: 'var(--ft-text-tertiary)', fontSize: '0.9rem' }}>Loading...</div>}
 
         {/* Error */}
         {error && (
           <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 14, padding: '1.5rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.9rem', color: '#f87171', marginBottom: 12 }}>{error}</div>
+            <div style={{ fontSize: '0.9rem', color: 'var(--ft-danger)', marginBottom: 12 }}>{error}</div>
             <button type="button" onClick={load} style={{ background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.35)', color: '#fca5a5', borderRadius: 8, padding: '0.5rem 1.25rem', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}>Retry</button>
           </div>
         )}
@@ -218,13 +218,13 @@ export default function ManageListingsPage() {
         {!loading && !error && items.length === 0 && (
           <div style={{ background: 'rgba(30,41,59,0.6)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 14, padding: '3rem 1.5rem', textAlign: 'center' }}>
             <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{tabConfig.icon}</div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem' }}>
+            <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--ft-text-secondary)', marginBottom: '0.5rem' }}>
               {activeTab === 'services' && "You haven't posted any services yet."}
               {activeTab === 'products' && "No products yet."}
               {activeTab === 'rentShare' && "No items to rent yet."}
               {activeTab === 'jobs' && "No jobs posted yet."}
             </div>
-            <Link href={tabConfig.createHref} style={{ color: '#38bdf8', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
+            <Link href={tabConfig.createHref} style={{ color: 'var(--ft-accent)', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
               {tabConfig.createLabel}
             </Link>
           </div>
@@ -239,7 +239,7 @@ export default function ManageListingsPage() {
                 <div key={item.id} style={{ background: 'rgba(30,41,59,0.6)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   {/* Thumbnail */}
                   {item.thumbnail_url ? (
-                    <div style={{ height: 140, background: '#0f172a', overflow: 'hidden' }}>
+                    <div style={{ height: 140, background: 'var(--ft-bg)', overflow: 'hidden' }}>
                       <img src={item.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                     </div>
                   ) : (
@@ -249,23 +249,23 @@ export default function ManageListingsPage() {
                   )}
 
                   <div style={{ padding: '0.85rem 1rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <Link href={detailHref(item)} style={{ color: '#f1f5f9', textDecoration: 'none', fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.3 }}>
+                    <Link href={detailHref(item)} style={{ color: 'var(--ft-text)', textDecoration: 'none', fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.3 }}>
                       {item.title}
                     </Link>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      {item.type !== 'job' && <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#38bdf8' }}>{formatPrice(item)}</span>}
-                      {item.type === 'job' && item.job_type && <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{JOB_TYPE_LABELS[item.job_type] ?? item.job_type} · {LOC_TYPE_LABELS[item.location_type ?? ''] ?? item.location_type}</span>}
-                      {item.type === 'job' && <span style={{ fontSize: '0.72rem', color: '#64748b' }}>👥 {item.applicant_count ?? 0}</span>}
+                      {item.type !== 'job' && <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--ft-accent)' }}>{formatPrice(item)}</span>}
+                      {item.type === 'job' && item.job_type && <span style={{ fontSize: '0.72rem', color: 'var(--ft-text-secondary)' }}>{JOB_TYPE_LABELS[item.job_type] ?? item.job_type} · {LOC_TYPE_LABELS[item.location_type ?? ''] ?? item.location_type}</span>}
+                      {item.type === 'job' && <span style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)' }}>👥 {item.applicant_count ?? 0}</span>}
                       <span style={{ fontSize: '0.68rem', fontWeight: 600, color: st.color, background: st.bg, padding: '2px 8px', borderRadius: 999 }}>{st.label}</span>
-                      <span style={{ fontSize: '0.72rem', color: '#64748b', marginLeft: 'auto' }}>{relativeTime(item.created_at)}</span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', marginLeft: 'auto' }}>{relativeTime(item.created_at)}</span>
                     </div>
 
                     <div style={{ display: 'flex', gap: 8, marginTop: 'auto', paddingTop: 4 }}>
-                      <Link href={editHref(item)} style={{ flex: 1, textAlign: 'center', padding: '0.45rem 0', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, color: '#38bdf8', textDecoration: 'none', fontSize: '0.78rem', fontWeight: 600 }}>
+                      <Link href={editHref(item)} style={{ flex: 1, textAlign: 'center', padding: '0.45rem 0', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, color: 'var(--ft-accent)', textDecoration: 'none', fontSize: '0.78rem', fontWeight: 600 }}>
                         ✏️ Edit
                       </Link>
-                      <button type="button" onClick={() => setDeleteTarget(item)} style={{ flex: 1, padding: '0.45rem 0', background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 8, color: '#f87171', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+                      <button type="button" onClick={() => setDeleteTarget(item)} style={{ flex: 1, padding: '0.45rem 0', background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 8, color: 'var(--ft-danger)', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
                         🗑 Delete
                       </button>
                     </div>

@@ -163,7 +163,7 @@ function RoleBadge({ role }: { role: OrgMember["role"] }) {
   const styles: Record<OrgMember["role"], React.CSSProperties> = {
     owner: { background: "rgba(109,40,217,0.3)", color: "#c4b5fd", border: "1px solid rgba(109,40,217,0.4)" },
     admin: { background: "rgba(37,99,235,0.3)", color: "#93c5fd", border: "1px solid rgba(37,99,235,0.4)" },
-    member: { background: "rgba(30,41,59,0.8)", color: "#94a3b8", border: "1px solid #334155" },
+    member: { background: "rgba(30,41,59,0.8)", color: "var(--ft-text-secondary)", border: "1px solid var(--ft-border-strong)" },
   };
   const labels = { owner: "Owner", admin: "Admin", member: "Member" };
   return (
@@ -197,16 +197,16 @@ function MemberCard({
   const showRemove = canManage && !isCreator && !isSelf;
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 16, background: "rgba(15,23,42,0.6)", border: "1px solid #1e293b" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 16, background: "rgba(15,23,42,0.6)", border: "1px solid var(--ft-surface)" }}>
       <Link href={`/profile?id=${member.profile.id}`} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0, textDecoration: "none" }}>
-        <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "#1e293b", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "var(--ft-surface)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
           {member.profile.avatar_url
             ? <img src={member.profile.avatar_url} alt={member.profile.full_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            : <UserIcon style={{ width: 20, height: 20, color: "#475569" }} />}
+            : <UserIcon style={{ width: 20, height: 20, color: "var(--ft-text-faint)" }} />}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#f1f5f9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.profile.full_name}</div>
-          {member.title && <div style={{ fontSize: 12, color: "#64748b", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.title}</div>}
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ft-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.profile.full_name}</div>
+          {member.title && <div style={{ fontSize: 12, color: "var(--ft-text-tertiary)", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.title}</div>}
           <div style={{ fontSize: 11, color: "#818cf8", marginTop: 2, fontWeight: 500 }}>₮{(member.profile.trust_balance ?? 0).toLocaleString()}</div>
         </div>
       </Link>
@@ -245,15 +245,15 @@ function MemberCard({
 
 function FollowerCard({ follower }: { follower: FollowerProfile }) {
   return (
-    <Link href={`/profile?id=${follower.id}`} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 16, background: "rgba(15,23,42,0.6)", border: "1px solid #1e293b", textDecoration: "none" }}>
-      <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "#1e293b", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <Link href={`/profile?id=${follower.id}`} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 16, background: "rgba(15,23,42,0.6)", border: "1px solid var(--ft-surface)", textDecoration: "none" }}>
+      <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "var(--ft-surface)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
         {follower.avatar_url
           ? <img src={follower.avatar_url} alt={follower.full_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          : <UserIcon style={{ width: 20, height: 20, color: "#475569" }} />}
+          : <UserIcon style={{ width: 20, height: 20, color: "var(--ft-text-faint)" }} />}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: "#f1f5f9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{follower.full_name}</div>
-        {follower.username && <div style={{ fontSize: 12, color: "#64748b", marginTop: 1 }}>@{follower.username}</div>}
+        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ft-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{follower.full_name}</div>
+        {follower.username && <div style={{ fontSize: 12, color: "var(--ft-text-tertiary)", marginTop: 1 }}>@{follower.username}</div>}
       </div>
       <span style={{ fontSize: 12, color: "#818cf8", fontWeight: 500, flexShrink: 0 }}>₮{(follower.trust_balance ?? 0).toLocaleString()}</span>
     </Link>
@@ -263,9 +263,9 @@ function FollowerCard({ follower }: { follower: FollowerProfile }) {
 function EmptyState({ icon, title, sub }: { icon?: React.ReactNode; title: string; sub?: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 20px", textAlign: "center" }}>
-      {icon && <div style={{ borderRadius: "50%", background: "#1e293b", border: "1px solid #334155", padding: 20, marginBottom: 16 }}>{icon}</div>}
-      <div style={{ fontSize: 14, fontWeight: 600, color: "#cbd5e1" }}>{title}</div>
-      {sub && <div style={{ fontSize: 12, color: "#475569", marginTop: 6, maxWidth: 280, lineHeight: 1.5 }}>{sub}</div>}
+      {icon && <div style={{ borderRadius: "50%", background: "var(--ft-surface)", border: "1px solid var(--ft-border-strong)", padding: 20, marginBottom: 16 }}>{icon}</div>}
+      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ft-text-secondary)" }}>{title}</div>
+      {sub && <div style={{ fontSize: 12, color: "var(--ft-text-faint)", marginTop: 6, maxWidth: 280, lineHeight: 1.5 }}>{sub}</div>}
     </div>
   );
 }
@@ -273,12 +273,12 @@ function EmptyState({ icon, title, sub }: { icon?: React.ReactNode; title: strin
 function LoadingSkeleton() {
   return (
     <div style={{ minHeight: "100vh", background: "#020617" }}>
-      <div style={{ height: 200, background: "#1e293b", borderRadius: "0 0 24px 24px", animation: "pulse 1.5s infinite" }} />
+      <div style={{ height: 200, background: "var(--ft-surface)", borderRadius: "0 0 24px 24px", animation: "pulse 1.5s infinite" }} />
       <div style={{ padding: "0 16px", marginTop: -40 }}>
-        <div style={{ width: 80, height: 80, borderRadius: 20, background: "#334155", border: "4px solid #020617", marginBottom: 16 }} />
-        <div style={{ height: 28, width: "60%", background: "#1e293b", borderRadius: 8, marginBottom: 10 }} />
-        <div style={{ height: 16, width: "80%", background: "#1e293b", borderRadius: 6, marginBottom: 6 }} />
-        <div style={{ height: 16, width: "50%", background: "#1e293b", borderRadius: 6 }} />
+        <div style={{ width: 80, height: 80, borderRadius: 20, background: "var(--ft-border-strong)", border: "4px solid #020617", marginBottom: 16 }} />
+        <div style={{ height: 28, width: "60%", background: "var(--ft-surface)", borderRadius: 8, marginBottom: 10 }} />
+        <div style={{ height: 16, width: "80%", background: "var(--ft-surface)", borderRadius: 6, marginBottom: 6 }} />
+        <div style={{ height: 16, width: "50%", background: "var(--ft-surface)", borderRadius: 6 }} />
       </div>
     </div>
   );
@@ -606,11 +606,11 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
   if (notFound || !org) {
     return (
       <div style={{ minHeight: "100vh", background: "#020617", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px", textAlign: "center" }}>
-        <div style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: "50%", padding: 24, marginBottom: 20 }}>
-          <BuildingOfficeIcon style={{ width: 40, height: 40, color: "#475569" }} />
+        <div style={{ background: "var(--ft-surface)", border: "1px solid var(--ft-border-strong)", borderRadius: "50%", padding: 24, marginBottom: 20 }}>
+          <BuildingOfficeIcon style={{ width: 40, height: 40, color: "var(--ft-text-faint)" }} />
         </div>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: "#f1f5f9", margin: 0 }}>Organisation not found</h1>
-        <p style={{ fontSize: 14, color: "#475569", marginTop: 8, marginBottom: 24 }}>This organisation doesn&apos;t exist or may have been removed.</p>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--ft-text)", margin: 0 }}>Organisation not found</h1>
+        <p style={{ fontSize: 14, color: "var(--ft-text-faint)", marginTop: 8, marginBottom: 24 }}>This organisation doesn&apos;t exist or may have been removed.</p>
         <Link href="/organisations" style={{ background: "#7c3aed", color: "#fff", borderRadius: 14, padding: "10px 24px", fontSize: 14, fontWeight: 600, textDecoration: "none" }}>
           Browse organisations
         </Link>
@@ -647,7 +647,7 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
 
         {/* Back button — sits in the visible zone below the 104px nav area */}
         <button onClick={() => router.back()}
-          style={{ position: "absolute", top: 116, left: 12, display: "flex", alignItems: "center", gap: 6, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "6px 12px", color: "#f1f5f9", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+          style={{ position: "absolute", top: 116, left: 12, display: "flex", alignItems: "center", gap: 6, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "6px 12px", color: "var(--ft-text)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
           <ArrowLeftIcon style={{ width: 14, height: 14 }} />
           Back
         </button>
@@ -655,12 +655,12 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
         {/* Share + Report */}
         <div style={{ position: "absolute", top: 116, right: 12, display: "flex", gap: 8 }}>
           <button onClick={handleShare}
-            style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "6px 12px", color: "#f1f5f9", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
+            style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "6px 12px", color: "var(--ft-text)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
             <ShareIcon style={{ width: 13, height: 13 }} />
             {copied ? "Copied!" : "Share"}
           </button>
           <button
-            style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "6px 12px", color: "#94a3b8", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
+            style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "6px 12px", color: "var(--ft-text-secondary)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
             <FlagIcon style={{ width: 13, height: 13 }} />
             Report
           </button>
@@ -672,10 +672,10 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
 
         {/* Logo — overlaps cover bottom, z-index ensures it sits above the cover */}
         <div style={{ marginTop: -50, marginBottom: 12, position: "relative", zIndex: 10 }}>
-          <div style={{ width: 96, height: 96, borderRadius: 22, overflow: "hidden", background: "#0f172a", border: "4px solid #020617", boxShadow: "0 8px 40px rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 96, height: 96, borderRadius: 22, overflow: "hidden", background: "var(--ft-bg)", border: "4px solid #020617", boxShadow: "0 8px 40px rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {org.logo_url && !logoError
               ? <img src={org.logo_url} alt={org.name} onError={() => setLogoError(true)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              : <BuildingOfficeIcon style={{ width: 36, height: 36, color: "#475569" }} />}
+              : <BuildingOfficeIcon style={{ width: 36, height: 36, color: "var(--ft-text-faint)" }} />}
           </div>
         </div>
 
@@ -683,13 +683,13 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 6 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <h1 style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9", margin: 0, lineHeight: 1.2 }}>{org.name}</h1>
+              <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--ft-text)", margin: 0, lineHeight: 1.2 }}>{org.name}</h1>
               {org.is_verified && (
                 <VerifiedBadge verifiedAt={org.verified_at} compact />
               )}
             </div>
             {org.tagline && (
-              <p style={{ fontSize: 14, color: "#94a3b8", margin: "4px 0 0", lineHeight: 1.4 }}>{org.tagline}</p>
+              <p style={{ fontSize: 14, color: "var(--ft-text-secondary)", margin: "4px 0 0", lineHeight: 1.4 }}>{org.tagline}</p>
             )}
           </div>
         </div>
@@ -700,16 +700,16 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
             style={{
               display: "flex", alignItems: "center", gap: 6, borderRadius: 12, padding: "9px 18px",
               fontSize: 14, fontWeight: 600, cursor: "pointer", border: "none",
-              background: isFollowing ? "#1e293b" : "#7c3aed",
-              color: isFollowing ? "#94a3b8" : "#fff",
-              outline: isFollowing ? "1px solid #334155" : "none",
+              background: isFollowing ? "var(--ft-surface)" : "#7c3aed",
+              color: isFollowing ? "var(--ft-text-secondary)" : "#fff",
+              outline: isFollowing ? "1px solid var(--ft-border-strong)" : "none",
             }}>
             {isFollowing
               ? <><UserMinusIcon style={{ width: 16, height: 16 }} />Unfollow</>
               : <><UserPlusIcon style={{ width: 16, height: 16 }} />Follow</>}
           </button>
           <button
-            style={{ display: "flex", alignItems: "center", gap: 6, borderRadius: 12, padding: "9px 18px", fontSize: 14, fontWeight: 600, cursor: "pointer", background: "#1e293b", color: "#cbd5e1", border: "1px solid #334155" }}>
+            style={{ display: "flex", alignItems: "center", gap: 6, borderRadius: 12, padding: "9px 18px", fontSize: 14, fontWeight: 600, cursor: "pointer", background: "var(--ft-surface)", color: "var(--ft-text-secondary)", border: "1px solid var(--ft-border-strong)" }}>
             <ChatBubbleLeftRightIcon style={{ width: 16, height: 16 }} />
             Message
           </button>
@@ -721,7 +721,7 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
           )}
           {canManageOrg && (
             <button onClick={handleDeleteOrganisation} disabled={deletingOrg}
-              style={{ display: "flex", alignItems: "center", gap: 6, borderRadius: 12, padding: "9px 18px", fontSize: 14, fontWeight: 700, cursor: deletingOrg ? "wait" : "pointer", background: "rgba(248,113,113,0.12)", color: "#f87171", border: "1px solid rgba(248,113,113,0.35)", opacity: deletingOrg ? 0.7 : 1 }}>
+              style={{ display: "flex", alignItems: "center", gap: 6, borderRadius: 12, padding: "9px 18px", fontSize: 14, fontWeight: 700, cursor: deletingOrg ? "wait" : "pointer", background: "rgba(248,113,113,0.12)", color: "var(--ft-danger)", border: "1px solid rgba(248,113,113,0.35)", opacity: deletingOrg ? 0.7 : 1 }}>
               {deletingOrg ? "Deleting…" : "🗑️ Delete"}
             </button>
           )}
@@ -730,12 +730,12 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
         {/* Meta chips */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
           {org.type && (
-            <span style={{ display: "flex", alignItems: "center", gap: 5, background: "#1e293b", border: "1px solid #334155", borderRadius: 20, padding: "4px 10px", fontSize: 12, color: "#94a3b8", fontWeight: 500 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--ft-surface)", border: "1px solid var(--ft-border-strong)", borderRadius: 20, padding: "4px 10px", fontSize: 12, color: "var(--ft-text-secondary)", fontWeight: 500 }}>
               <BuildingOfficeIcon style={{ width: 13, height: 13 }} />{org.type}
             </span>
           )}
           {org.location && (
-            <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#64748b" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "var(--ft-text-tertiary)" }}>
               <MapPinIcon style={{ width: 13, height: 13 }} />{org.location}
             </span>
           )}
@@ -747,12 +747,12 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
             </a>
           )}
           {org.founded_year && (
-            <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#64748b" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "var(--ft-text-tertiary)" }}>
               <CalendarDaysIcon style={{ width: 13, height: 13 }} />Est. {org.founded_year}
             </span>
           )}
           {org.sector && (
-            <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#64748b" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "var(--ft-text-tertiary)" }}>
               <BriefcaseIcon style={{ width: 13, height: 13 }} />{org.sector}
             </span>
           )}
@@ -784,28 +784,28 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
             { value: followerCount.toLocaleString(), label: "Followers" },
             { value: org.members_count.toLocaleString(), label: "Members" },
           ].map((stat, i) => (
-            <div key={i} style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 16, padding: "14px 8px", textAlign: "center" }}>
-              <div style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9", lineHeight: 1 }}>{stat.value}</div>
-              <div style={{ fontSize: 11, color: "#475569", marginTop: 4, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{stat.label}</div>
+            <div key={i} style={{ background: "var(--ft-bg)", border: "1px solid var(--ft-surface)", borderRadius: 16, padding: "14px 8px", textAlign: "center" }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color: "var(--ft-text)", lineHeight: 1 }}>{stat.value}</div>
+              <div style={{ fontSize: 11, color: "var(--ft-text-faint)", marginTop: 4, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{stat.label}</div>
             </div>
           ))}
         </div>
 
         {/* Tabs */}
-        <div style={{ borderBottom: "1px solid #1e293b", marginBottom: 20, overflow: "hidden" }}>
+        <div style={{ borderBottom: "1px solid var(--ft-surface)", marginBottom: 20, overflow: "hidden" }}>
           <div style={{ display: "flex", overflowX: "auto", overflowY: "hidden", scrollbarWidth: "none", WebkitOverflowScrolling: "touch", touchAction: "pan-x", whiteSpace: "nowrap" }}>
             {tabs.map(t => (
               <button key={t.key} onClick={() => setActiveTab(t.key)}
                 style={{
                   flex: "0 0 auto", padding: "10px 14px", fontSize: 13, fontWeight: activeTab === t.key ? 600 : 400,
-                  color: activeTab === t.key ? "#f1f5f9" : "#475569",
+                  color: activeTab === t.key ? "var(--ft-text)" : "var(--ft-text-faint)",
                   background: "none", border: "none", cursor: "pointer",
                   borderBottom: activeTab === t.key ? "2px solid #7c3aed" : "2px solid transparent",
                   marginBottom: -1, whiteSpace: "nowrap",
                 }}>
                 {t.label}
                 {t.count !== undefined && t.count > 0 && (
-                  <span style={{ marginLeft: 5, fontSize: 10, fontWeight: 600, borderRadius: 10, padding: "1px 6px", background: activeTab === t.key ? "rgba(124,58,237,0.25)" : "#1e293b", color: activeTab === t.key ? "#a78bfa" : "#64748b" }}>
+                  <span style={{ marginLeft: 5, fontSize: 10, fontWeight: 600, borderRadius: 10, padding: "1px 6px", background: activeTab === t.key ? "rgba(124,58,237,0.25)" : "var(--ft-surface)", color: activeTab === t.key ? "#a78bfa" : "var(--ft-text-tertiary)" }}>
                     {t.count}
                   </span>
                 )}
@@ -823,15 +823,15 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {/* Verified badge (if applicable) */}
             {org.is_verified && (
-              <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 16, padding: 16 }}>
+              <div style={{ background: "var(--ft-bg)", border: "1px solid var(--ft-surface)", borderRadius: 16, padding: 16 }}>
                 <VerifiedBadge verifiedAt={org.verified_at} />
               </div>
             )}
 
             {/* About */}
-            <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 16, padding: 16 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>About</div>
-              <p style={{ fontSize: 14, color: "#94a3b8", lineHeight: 1.65, margin: 0 }}>{org.description}</p>
+            <div style={{ background: "var(--ft-bg)", border: "1px solid var(--ft-surface)", borderRadius: 16, padding: 16 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ft-text-faint)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>About</div>
+              <p style={{ fontSize: 14, color: "var(--ft-text-secondary)", lineHeight: 1.65, margin: 0 }}>{org.description}</p>
             </div>
 
             {/* Impact Statement */}
@@ -853,8 +853,8 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
 
             {/* SDGs */}
             {org.sdgs && org.sdgs.length > 0 && (
-              <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 16, padding: 16 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Sustainable Development Goals</div>
+              <div style={{ background: "var(--ft-bg)", border: "1px solid var(--ft-surface)", borderRadius: 16, padding: 16 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ft-text-faint)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Sustainable Development Goals</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {org.sdgs.map(sdg => (
                     <span key={sdg} style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 20, padding: "4px 10px", fontSize: 12, color: "#34d399", fontWeight: 500 }}>{sdg}</span>
@@ -864,8 +864,8 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
             )}
 
             {/* Details */}
-            <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 16, padding: 16 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 14 }}>Details</div>
+            <div style={{ background: "var(--ft-bg)", border: "1px solid var(--ft-surface)", borderRadius: 16, padding: 16 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ft-text-faint)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 14 }}>Details</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {([
                   org.sector && { icon: <BriefcaseIcon style={{ width: 15, height: 15 }} />, label: "Sector", value: org.sector },
@@ -879,19 +879,19 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
                     const d = item as { icon: React.ReactNode; label: string; value: string };
                     return (
                       <div key={d.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ color: "#475569", flexShrink: 0 }}>{d.icon}</span>
+                        <span style={{ color: "var(--ft-text-faint)", flexShrink: 0 }}>{d.icon}</span>
                         <div>
-                          <div style={{ fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{d.label}</div>
-                          <div style={{ fontSize: 14, color: "#cbd5e1", marginTop: 1 }}>{d.value}</div>
+                          <div style={{ fontSize: 10, color: "var(--ft-text-faint)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{d.label}</div>
+                          <div style={{ fontSize: 14, color: "var(--ft-text-secondary)", marginTop: 1 }}>{d.value}</div>
                         </div>
                       </div>
                     );
                   })}
                 {org.website && (
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <GlobeAltIcon style={{ width: 15, height: 15, color: "#475569", flexShrink: 0 }} />
+                    <GlobeAltIcon style={{ width: 15, height: 15, color: "var(--ft-text-faint)", flexShrink: 0 }} />
                     <div>
-                      <div style={{ fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>Website</div>
+                      <div style={{ fontSize: 10, color: "var(--ft-text-faint)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>Website</div>
                       <a href={org.website} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, color: "#818cf8", textDecoration: "none", marginTop: 1, display: "block" }}>
                         {org.website.replace(/^https?:\/\//, "")}
                       </a>
@@ -906,13 +906,13 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
         {/* ── SERVICES ── */}
         {activeTab === "services" && (
           <div>
-            <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 14 }}>
+            <div style={{ fontSize: 11, color: "var(--ft-text-faint)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 14 }}>
               Services offered by {org.name}
             </div>
             {canManageOrg && (
               <Link
                 href={`/seller/gigs/create?orgId=${encodeURIComponent(org.id)}`}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.25)", borderRadius: 14, padding: "12px 0", fontSize: 14, fontWeight: 600, color: "#7dd3fc", cursor: "pointer", marginBottom: 16, textDecoration: "none" }}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.25)", borderRadius: 14, padding: "12px 0", fontSize: 14, fontWeight: 600, color: "var(--ft-accent)", cursor: "pointer", marginBottom: 16, textDecoration: "none" }}
               >
                 <BriefcaseIcon style={{ width: 16, height: 16 }} />
                 Offer a Service as {org.name}
@@ -920,33 +920,33 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
             )}
             {servicesLoading ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {[1, 2, 3].map(i => <div key={i} style={{ height: 98, borderRadius: 16, background: "#0f172a", border: "1px solid #1e293b" }} />)}
+                {[1, 2, 3].map(i => <div key={i} style={{ height: 98, borderRadius: 16, background: "var(--ft-bg)", border: "1px solid var(--ft-surface)" }} />)}
               </div>
             ) : orgServices.length === 0 ? (
               <EmptyState
-                icon={<BriefcaseIcon style={{ width: 28, height: 28, color: "#475569" }} />}
+                icon={<BriefcaseIcon style={{ width: 28, height: 28, color: "var(--ft-text-faint)" }} />}
                 title="No services listed yet"
                 sub={canManageOrg ? "List the first service on behalf of this organisation." : "This organisation hasn't listed any services yet."}
               />
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {orgServices.map(service => (
-                  <Link key={service.id} href={`/services/${service.id}`} style={{ display: "flex", alignItems: "flex-start", gap: 12, background: "#0f172a", border: "1px solid #1e293b", borderRadius: 16, padding: 14, textDecoration: "none" }}>
+                  <Link key={service.id} href={`/services/${service.id}`} style={{ display: "flex", alignItems: "flex-start", gap: 12, background: "var(--ft-bg)", border: "1px solid var(--ft-surface)", borderRadius: 16, padding: 14, textDecoration: "none" }}>
                     {service.cover_image ? (
-                      <img src={service.cover_image} alt="" style={{ width: 54, height: 54, borderRadius: 12, objectFit: "cover", flexShrink: 0, background: "#1e293b" }} />
+                      <img src={service.cover_image} alt="" style={{ width: 54, height: 54, borderRadius: 12, objectFit: "cover", flexShrink: 0, background: "var(--ft-surface)" }} />
                     ) : (
-                      <div style={{ width: 54, height: 54, borderRadius: 12, background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.18)", color: "#7dd3fc", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 22 }}>🛠</div>
+                      <div style={{ width: 54, height: 54, borderRadius: 12, background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.18)", color: "var(--ft-accent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 22 }}>🛠</div>
                     )}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", lineHeight: 1.35, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{service.title}</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ft-text)", lineHeight: 1.35, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{service.title}</div>
                         <div style={{ fontSize: 14, fontWeight: 800, color: "#34d399", whiteSpace: "nowrap", flexShrink: 0 }}>
                           €{Number(service.price ?? 0).toLocaleString("en-IE", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                         </div>
                       </div>
-                      {service.description && <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5, margin: "6px 0 0", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{service.description}</p>}
+                      {service.description && <p style={{ fontSize: 12, color: "var(--ft-text-tertiary)", lineHeight: 1.5, margin: "6px 0 0", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{service.description}</p>}
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                        {service.service_mode && <span style={{ fontSize: 11, color: "#7dd3fc", background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.18)", borderRadius: 999, padding: "2px 8px" }}>{service.service_mode === "online" ? "🌐 Online" : service.service_mode === "offline" ? "📍 In person" : service.service_mode}</span>}
+                        {service.service_mode && <span style={{ fontSize: 11, color: "var(--ft-accent)", background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.18)", borderRadius: 999, padding: "2px 8px" }}>{service.service_mode === "online" ? "🌐 Online" : service.service_mode === "offline" ? "📍 In person" : service.service_mode}</span>}
                         <span style={{ fontSize: 11, color: "#fbbf24" }}>⭐ {service.avg_rating && (service.review_count ?? 0) > 0 ? Number(service.avg_rating).toFixed(1) : "New"} ({service.review_count ?? 0})</span>
                       </div>
                     </div>
@@ -960,13 +960,13 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
         {/* ── PRODUCTS ── */}
         {activeTab === "products" && (
           <div>
-            <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 14 }}>
+            <div style={{ fontSize: 11, color: "var(--ft-text-faint)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 14 }}>
               Products offered by {org.name}
             </div>
             {canManageOrg && (
               <Link
                 href={`/products/new?orgId=${encodeURIComponent(org.id)}`}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.25)", borderRadius: 14, padding: "12px 0", fontSize: 14, fontWeight: 600, color: "#7dd3fc", cursor: "pointer", marginBottom: 16, textDecoration: "none" }}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.25)", borderRadius: 14, padding: "12px 0", fontSize: 14, fontWeight: 600, color: "var(--ft-accent)", cursor: "pointer", marginBottom: 16, textDecoration: "none" }}
               >
                 <span style={{ fontSize: 16 }}>📦</span>
                 Offer a Product as {org.name}
@@ -974,11 +974,11 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
             )}
             {productsLoading ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {[1, 2, 3].map(i => <div key={i} style={{ height: 98, borderRadius: 16, background: "#0f172a", border: "1px solid #1e293b" }} />)}
+                {[1, 2, 3].map(i => <div key={i} style={{ height: 98, borderRadius: 16, background: "var(--ft-bg)", border: "1px solid var(--ft-surface)" }} />)}
               </div>
             ) : orgProducts.length === 0 ? (
               <EmptyState
-                icon={<span style={{ fontSize: 28, color: "#475569" }}>📦</span>}
+                icon={<span style={{ fontSize: 28, color: "var(--ft-text-faint)" }}>📦</span>}
                 title="No products listed yet"
                 sub={canManageOrg ? "List the first product on behalf of this organisation." : "This organisation hasn't listed any products yet."}
               />
@@ -987,23 +987,23 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
                 {orgProducts.map(product => {
                   const cover = product.cover_image ?? (Array.isArray(product.images) ? product.images[0] : null);
                   return (
-                    <Link key={product.id} href={`/products/${product.id}`} style={{ display: "flex", alignItems: "flex-start", gap: 12, background: "#0f172a", border: "1px solid #1e293b", borderRadius: 16, padding: 14, textDecoration: "none" }}>
+                    <Link key={product.id} href={`/products/${product.id}`} style={{ display: "flex", alignItems: "flex-start", gap: 12, background: "var(--ft-bg)", border: "1px solid var(--ft-surface)", borderRadius: 16, padding: 14, textDecoration: "none" }}>
                       {cover ? (
-                        <img src={cover} alt="" style={{ width: 54, height: 54, borderRadius: 12, objectFit: "cover", flexShrink: 0, background: "#1e293b" }} />
+                        <img src={cover} alt="" style={{ width: 54, height: 54, borderRadius: 12, objectFit: "cover", flexShrink: 0, background: "var(--ft-surface)" }} />
                       ) : (
-                        <div style={{ width: 54, height: 54, borderRadius: 12, background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.18)", color: "#7dd3fc", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 22 }}>📦</div>
+                        <div style={{ width: 54, height: 54, borderRadius: 12, background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.18)", color: "var(--ft-accent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 22 }}>📦</div>
                       )}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-                          <div style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", lineHeight: 1.35, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{product.title}</div>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ft-text)", lineHeight: 1.35, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{product.title}</div>
                           <div style={{ fontSize: 14, fontWeight: 800, color: "#34d399", whiteSpace: "nowrap", flexShrink: 0 }}>
                             €{Number(product.price ?? 0).toLocaleString("en-IE", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                           </div>
                         </div>
-                        {product.description && <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5, margin: "6px 0 0", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{product.description}</p>}
+                        {product.description && <p style={{ fontSize: 12, color: "var(--ft-text-tertiary)", lineHeight: 1.5, margin: "6px 0 0", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{product.description}</p>}
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                          {product.product_type && <span style={{ fontSize: 11, color: "#7dd3fc", background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.18)", borderRadius: 999, padding: "2px 8px" }}>{product.product_type === "digital" ? "💾 Digital" : "📦 Physical"}</span>}
-                          {product.product_type === "physical" && <span style={{ fontSize: 11, color: product.stock_qty == null || product.stock_qty > 0 ? "#34d399" : "#f87171" }}>{product.stock_qty == null ? "In stock" : product.stock_qty > 0 ? `${product.stock_qty} in stock` : "Out of stock"}</span>}
+                          {product.product_type && <span style={{ fontSize: 11, color: "var(--ft-accent)", background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.18)", borderRadius: 999, padding: "2px 8px" }}>{product.product_type === "digital" ? "💾 Digital" : "📦 Physical"}</span>}
+                          {product.product_type === "physical" && <span style={{ fontSize: 11, color: product.stock_qty == null || product.stock_qty > 0 ? "#34d399" : "var(--ft-danger)" }}>{product.stock_qty == null ? "In stock" : product.stock_qty > 0 ? `${product.stock_qty} in stock` : "Out of stock"}</span>}
                           <span style={{ fontSize: 11, color: "#fbbf24" }}>⭐ {product.avg_rating && (product.review_count ?? 0) > 0 ? Number(product.avg_rating).toFixed(1) : "New"} ({product.review_count ?? 0})</span>
                         </div>
                       </div>
@@ -1019,18 +1019,18 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
         {activeTab === "posts" && (
           <div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14 }}>
-              <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>
+              <div style={{ fontSize: 11, color: "var(--ft-text-faint)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>
                 Posts from {org.name}
               </div>
               {canManageOrg && (
-                <Link href={`/create?orgId=${encodeURIComponent(org.id)}`} style={{ fontSize: 12, fontWeight: 700, color: "#7dd3fc", border: "1px solid rgba(56,189,248,0.25)", borderRadius: 8, padding: "5px 10px", textDecoration: "none" }}>+ Post</Link>
+                <Link href={`/create?orgId=${encodeURIComponent(org.id)}`} style={{ fontSize: 12, fontWeight: 700, color: "var(--ft-accent)", border: "1px solid rgba(56,189,248,0.25)", borderRadius: 8, padding: "5px 10px", textDecoration: "none" }}>+ Post</Link>
               )}
             </div>
             {postsLoading ? (
-              <div style={{ color: "#64748b", fontSize: 14 }}>Loading posts…</div>
+              <div style={{ color: "var(--ft-text-tertiary)", fontSize: 14 }}>Loading posts…</div>
             ) : orgPosts.length === 0 ? (
               <EmptyState
-                icon={<BuildingOfficeIcon style={{ width: 28, height: 28, color: "#475569" }} />}
+                icon={<BuildingOfficeIcon style={{ width: 28, height: 28, color: "var(--ft-text-faint)" }} />}
                 title="No posts yet"
                 sub={canManageOrg ? "Create the first social post as this organisation." : "This organisation hasn't shared any posts yet."}
               />
@@ -1052,7 +1052,7 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
         {/* ── JOBS ── */}
         {activeTab === "jobs" && (
           <div>
-            <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 14 }}>
+            <div style={{ fontSize: 11, color: "var(--ft-text-faint)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 14 }}>
               Jobs posted by {org.name}
             </div>
             {canManageOrg && (
@@ -1066,28 +1066,28 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
             )}
             {jobsLoading ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {[1, 2, 3].map(i => <div key={i} style={{ height: 100, borderRadius: 16, background: "#0f172a", border: "1px solid #1e293b" }} />)}
+                {[1, 2, 3].map(i => <div key={i} style={{ height: 100, borderRadius: 16, background: "var(--ft-bg)", border: "1px solid var(--ft-surface)" }} />)}
               </div>
             ) : orgJobs.length === 0 ? (
               <EmptyState
-                icon={<BriefcaseIcon style={{ width: 28, height: 28, color: "#475569" }} />}
+                icon={<BriefcaseIcon style={{ width: 28, height: 28, color: "var(--ft-text-faint)" }} />}
                 title="No jobs posted yet"
                 sub={canManageOrg ? "Post your first job on behalf of this organisation." : "This organisation hasn't posted any jobs yet."}
               />
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {orgJobs.map(job => (
-                  <div key={job.id} style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 16, padding: 16 }}>
+                  <div key={job.id} style={{ background: "var(--ft-bg)", border: "1px solid var(--ft-surface)", borderRadius: 16, padding: 16 }}>
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                       {job.company_logo_url ? (
-                        <img src={job.company_logo_url} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: "cover", flexShrink: 0, background: "#1e293b" }} />
+                        <img src={job.company_logo_url} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: "cover", flexShrink: 0, background: "var(--ft-surface)" }} />
                       ) : (
-                        <div style={{ width: 44, height: 44, borderRadius: 10, background: "#1e293b", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <BriefcaseIcon style={{ width: 20, height: 20, color: "#475569" }} />
+                        <div style={{ width: 44, height: 44, borderRadius: 10, background: "var(--ft-surface)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <BriefcaseIcon style={{ width: 20, height: 20, color: "var(--ft-text-faint)" }} />
                         </div>
                       )}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 4 }}>{job.title}</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ft-text)", marginBottom: 4 }}>{job.title}</div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
                           {job.job_type && (
                             <span style={{ fontSize: 11, fontWeight: 600, background: "rgba(124,58,237,0.15)", color: "#a78bfa", border: "1px solid rgba(124,58,237,0.25)", borderRadius: 20, padding: "2px 8px" }}>
@@ -1095,16 +1095,16 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
                             </span>
                           )}
                           {job.location_type && (
-                            <span style={{ fontSize: 11, fontWeight: 600, background: "rgba(56,189,248,0.1)", color: "#7dd3fc", border: "1px solid rgba(56,189,248,0.2)", borderRadius: 20, padding: "2px 8px" }}>
+                            <span style={{ fontSize: 11, fontWeight: 600, background: "rgba(56,189,248,0.1)", color: "var(--ft-accent)", border: "1px solid rgba(56,189,248,0.2)", borderRadius: 20, padding: "2px 8px" }}>
                               {job.location_type === "remote" ? "🌐 Remote" : job.location_type === "onsite" ? "📍 On-site" : "🔄 Hybrid"}
                             </span>
                           )}
-                          <span style={{ fontSize: 11, fontWeight: 600, background: job.status === "active" ? "rgba(52,211,153,0.12)" : "rgba(100,116,139,0.15)", color: job.status === "active" ? "#34d399" : "#64748b", border: `1px solid ${job.status === "active" ? "rgba(52,211,153,0.25)" : "rgba(100,116,139,0.2)"}`, borderRadius: 20, padding: "2px 8px" }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, background: job.status === "active" ? "rgba(52,211,153,0.12)" : "rgba(100,116,139,0.15)", color: job.status === "active" ? "#34d399" : "var(--ft-text-tertiary)", border: `1px solid ${job.status === "active" ? "rgba(52,211,153,0.25)" : "rgba(100,116,139,0.2)"}`, borderRadius: 20, padding: "2px 8px" }}>
                             {job.status}
                           </span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                          <div style={{ fontSize: 12, color: "#475569" }}>
+                          <div style={{ fontSize: 12, color: "var(--ft-text-faint)" }}>
                             {job.applicant_count != null && job.applicant_count > 0 && (
                               <span style={{ marginRight: 10 }}>👥 {job.applicant_count} applicant{job.applicant_count !== 1 ? "s" : ""}</span>
                             )}
@@ -1129,16 +1129,16 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
         {/* ── ACTIVITY ── */}
         {activeTab === "activity" && (
           <div>
-            <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 14 }}>
+            <div style={{ fontSize: 11, color: "var(--ft-text-faint)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 14 }}>
               Recent Activity
             </div>
             {activityLoading ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {[1, 2, 3].map(i => <div key={i} style={{ height: 64, borderRadius: 16, background: "#0f172a", border: "1px solid #1e293b" }} />)}
+                {[1, 2, 3].map(i => <div key={i} style={{ height: 64, borderRadius: 16, background: "var(--ft-bg)", border: "1px solid var(--ft-surface)" }} />)}
               </div>
             ) : orgActivity.length === 0 ? (
               <EmptyState
-                icon={<CalendarDaysIcon style={{ width: 28, height: 28, color: "#475569" }} />}
+                icon={<CalendarDaysIcon style={{ width: 28, height: 28, color: "var(--ft-text-faint)" }} />}
                 title="No activity yet"
                 sub="Jobs posted, events created, and other activity will appear here."
               />
@@ -1148,12 +1148,12 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
                   <Link
                     key={item.id}
                     href={item.href}
-                    style={{ display: "flex", alignItems: "flex-start", gap: 12, background: "#0f172a", border: "1px solid #1e293b", borderRadius: 14, padding: "12px 16px", textDecoration: "none" }}
+                    style={{ display: "flex", alignItems: "flex-start", gap: 12, background: "var(--ft-bg)", border: "1px solid var(--ft-surface)", borderRadius: 14, padding: "12px 16px", textDecoration: "none" }}
                   >
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: "#f1f5f9", lineHeight: 1.4 }}>{item.title}</div>
-                      {item.meta && <div style={{ fontSize: 12, color: "#64748b", marginTop: 3 }}>{item.meta.replace(/_/g, " ")}</div>}
-                      <div style={{ fontSize: 11, color: "#475569", marginTop: 4 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ft-text)", lineHeight: 1.4 }}>{item.title}</div>
+                      {item.meta && <div style={{ fontSize: 12, color: "var(--ft-text-tertiary)", marginTop: 3 }}>{item.meta.replace(/_/g, " ")}</div>}
+                      <div style={{ fontSize: 11, color: "var(--ft-text-faint)", marginTop: 4 }}>
                         {new Date(item.created_at).toLocaleDateString("en", { day: "numeric", month: "short", year: "numeric" })}
                       </div>
                     </div>
@@ -1170,7 +1170,7 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
         {/* ── MEMBERS ── */}
         {activeTab === "members" && (
           <div>
-            <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 14 }}>
+            <div style={{ fontSize: 11, color: "var(--ft-text-faint)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 14 }}>
               {org.members_count} active member{org.members_count !== 1 ? "s" : ""}
             </div>
             {/* Inline error for member-management failures — any
@@ -1200,10 +1200,10 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
             )}
             {membersLoading ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {[1, 2, 3].map(i => <div key={i} style={{ height: 72, borderRadius: 16, background: "#0f172a", border: "1px solid #1e293b" }} />)}
+                {[1, 2, 3].map(i => <div key={i} style={{ height: 72, borderRadius: 16, background: "var(--ft-bg)", border: "1px solid var(--ft-surface)" }} />)}
               </div>
             ) : members.length === 0 ? (
-              <EmptyState icon={<UserGroupIcon style={{ width: 28, height: 28, color: "#475569" }} />} title="No members listed yet" sub="Members will appear here once added to the organisation." />
+              <EmptyState icon={<UserGroupIcon style={{ width: 28, height: 28, color: "var(--ft-text-faint)" }} />} title="No members listed yet" sub="Members will appear here once added to the organisation." />
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {members.map(m => (
@@ -1225,15 +1225,15 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
         {/* ── FOLLOWERS ── */}
         {activeTab === "followers" && (
           <div>
-            <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 14 }}>
+            <div style={{ fontSize: 11, color: "var(--ft-text-faint)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 14 }}>
               {followerCount} follower{followerCount !== 1 ? "s" : ""}
             </div>
             {followersLoading ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {[1, 2, 3].map(i => <div key={i} style={{ height: 72, borderRadius: 16, background: "#0f172a", border: "1px solid #1e293b" }} />)}
+                {[1, 2, 3].map(i => <div key={i} style={{ height: 72, borderRadius: 16, background: "var(--ft-bg)", border: "1px solid var(--ft-surface)" }} />)}
               </div>
             ) : followers.length === 0 ? (
-              <EmptyState icon={<UserPlusIcon style={{ width: 28, height: 28, color: "#475569" }} />} title="No followers yet" sub="Be the first to follow this organisation." />
+              <EmptyState icon={<UserPlusIcon style={{ width: 28, height: 28, color: "var(--ft-text-faint)" }} />} title="No followers yet" sub="Be the first to follow this organisation." />
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {followers.map(f => <FollowerCard key={f.id} follower={f} />)}
@@ -1247,15 +1247,15 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
           <div>
             {/* Rating summary */}
             {reviewsAvg !== null && reviews.length > 0 && (
-              <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 16, padding: 16, marginBottom: 14, display: "flex", alignItems: "center", gap: 16 }}>
+              <div style={{ background: "var(--ft-bg)", border: "1px solid var(--ft-surface)", borderRadius: 16, padding: 16, marginBottom: 14, display: "flex", alignItems: "center", gap: 16 }}>
                 <div style={{ textAlign: "center", flexShrink: 0 }}>
-                  <div style={{ fontSize: 36, fontWeight: 700, color: "#f1f5f9", lineHeight: 1 }}>{reviewsAvg.toFixed(1)}</div>
+                  <div style={{ fontSize: 36, fontWeight: 700, color: "var(--ft-text)", lineHeight: 1 }}>{reviewsAvg.toFixed(1)}</div>
                   <div style={{ display: "flex", gap: 2, justifyContent: "center", marginTop: 4 }}>
                     {[1,2,3,4,5].map(s => (
-                      <StarIcon key={s} style={{ width: 14, height: 14, color: s <= Math.round(reviewsAvg!) ? "#f59e0b" : "#1e293b", fill: s <= Math.round(reviewsAvg!) ? "#f59e0b" : "none" }} />
+                      <StarIcon key={s} style={{ width: 14, height: 14, color: s <= Math.round(reviewsAvg!) ? "#f59e0b" : "var(--ft-surface)", fill: s <= Math.round(reviewsAvg!) ? "#f59e0b" : "none" }} />
                     ))}
                   </div>
-                  <div style={{ fontSize: 11, color: "#475569", marginTop: 4 }}>{reviews.length} review{reviews.length !== 1 ? "s" : ""}</div>
+                  <div style={{ fontSize: 11, color: "var(--ft-text-faint)", marginTop: 4 }}>{reviews.length} review{reviews.length !== 1 ? "s" : ""}</div>
                 </div>
                 <div style={{ flex: 1 }}>
                   {[5,4,3,2,1].map(s => {
@@ -1263,12 +1263,12 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
                     const pct = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
                     return (
                       <div key={s} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                        <span style={{ fontSize: 11, color: "#475569", width: 8 }}>{s}</span>
+                        <span style={{ fontSize: 11, color: "var(--ft-text-faint)", width: 8 }}>{s}</span>
                         <StarIcon style={{ width: 11, height: 11, color: "#f59e0b", fill: "#f59e0b", flexShrink: 0 }} />
-                        <div style={{ flex: 1, height: 4, background: "#1e293b", borderRadius: 4, overflow: "hidden" }}>
+                        <div style={{ flex: 1, height: 4, background: "var(--ft-surface)", borderRadius: 4, overflow: "hidden" }}>
                           <div style={{ height: "100%", background: "#f59e0b", borderRadius: 4, width: `${pct}%`, transition: "width 0.5s" }} />
                         </div>
-                        <span style={{ fontSize: 11, color: "#475569", width: 14, textAlign: "right" }}>{count}</span>
+                        <span style={{ fontSize: 11, color: "var(--ft-text-faint)", width: 14, textAlign: "right" }}>{count}</span>
                       </div>
                     );
                   })}
@@ -1287,34 +1287,34 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
 
             {/* Review form */}
             {showReviewForm && (
-              <div style={{ background: "#0f172a", border: "1px solid rgba(109,40,217,0.3)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+              <div style={{ background: "var(--ft-bg)", border: "1px solid rgba(109,40,217,0.3)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9" }}>Your Review</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: "var(--ft-text)" }}>Your Review</span>
                   <button onClick={() => setShowReviewForm(false)}
-                    style={{ background: "#1e293b", border: "none", borderRadius: 8, width: 28, height: 28, cursor: "pointer", color: "#94a3b8", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                    style={{ background: "var(--ft-surface)", border: "none", borderRadius: 8, width: 28, height: 28, cursor: "pointer", color: "var(--ft-text-secondary)", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
                 </div>
                 <div style={{ display: "flex", gap: 4, marginBottom: 14 }}>
                   {[1,2,3,4,5].map(s => (
                     <button key={s} onClick={() => setReviewRating(s)} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
-                      <StarIcon style={{ width: 28, height: 28, color: s <= reviewRating ? "#f59e0b" : "#1e293b", fill: s <= reviewRating ? "#f59e0b" : "none" }} />
+                      <StarIcon style={{ width: 28, height: 28, color: s <= reviewRating ? "#f59e0b" : "var(--ft-surface)", fill: s <= reviewRating ? "#f59e0b" : "none" }} />
                     </button>
                   ))}
                 </div>
                 <input
-                  style={{ width: "100%", boxSizing: "border-box", background: "#1e293b", border: "1px solid #334155", borderRadius: 12, padding: "10px 14px", fontSize: 16, color: "#f1f5f9", marginBottom: 10, outline: "none" }}
+                  style={{ width: "100%", boxSizing: "border-box", background: "var(--ft-surface)", border: "1px solid var(--ft-border-strong)", borderRadius: 12, padding: "10px 14px", fontSize: 16, color: "var(--ft-text)", marginBottom: 10, outline: "none" }}
                   placeholder="Title (optional)"
                   value={reviewTitle}
                   onChange={e => setReviewTitle(e.target.value)}
                 />
                 <textarea
-                  style={{ width: "100%", boxSizing: "border-box", background: "#1e293b", border: "1px solid #334155", borderRadius: 12, padding: "10px 14px", fontSize: 16, color: "#f1f5f9", resize: "none", marginBottom: 12, outline: "none" }}
+                  style={{ width: "100%", boxSizing: "border-box", background: "var(--ft-surface)", border: "1px solid var(--ft-border-strong)", borderRadius: 12, padding: "10px 14px", fontSize: 16, color: "var(--ft-text)", resize: "none", marginBottom: 12, outline: "none" }}
                   placeholder="Share your experience…"
                   rows={3}
                   value={reviewContent}
                   onChange={e => setReviewContent(e.target.value)}
                 />
                 <button onClick={handleReviewSubmit} disabled={reviewSubmitting || !reviewContent.trim()}
-                  style={{ width: "100%", background: reviewSubmitting || !reviewContent.trim() ? "#334155" : "#7c3aed", border: "none", borderRadius: 12, padding: "12px 0", fontSize: 14, fontWeight: 700, color: "#fff", cursor: reviewSubmitting || !reviewContent.trim() ? "not-allowed" : "pointer" }}>
+                  style={{ width: "100%", background: reviewSubmitting || !reviewContent.trim() ? "var(--ft-border-strong)" : "#7c3aed", border: "none", borderRadius: 12, padding: "12px 0", fontSize: 14, fontWeight: 700, color: "#fff", cursor: reviewSubmitting || !reviewContent.trim() ? "not-allowed" : "pointer" }}>
                   {reviewSubmitting ? "Submitting…" : "Submit Review"}
                 </button>
               </div>
@@ -1323,36 +1323,36 @@ export default function OrgProfilePage({ orgId }: { orgId: string }) {
             {/* Reviews list */}
             {reviewsLoading ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {[1,2].map(i => <div key={i} style={{ height: 100, borderRadius: 16, background: "#0f172a", border: "1px solid #1e293b" }} />)}
+                {[1,2].map(i => <div key={i} style={{ height: 100, borderRadius: 16, background: "var(--ft-bg)", border: "1px solid var(--ft-surface)" }} />)}
               </div>
             ) : reviews.length === 0 ? (
-              <EmptyState icon={<StarIcon style={{ width: 28, height: 28, color: "#475569" }} />} title="No reviews yet" sub="Be the first to leave a review for this organisation." />
+              <EmptyState icon={<StarIcon style={{ width: 28, height: 28, color: "var(--ft-text-faint)" }} />} title="No reviews yet" sub="Be the first to leave a review for this organisation." />
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {reviews.map(r => (
-                  <div key={r.id} style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 16, padding: 16 }}>
+                  <div key={r.id} style={{ background: "var(--ft-bg)", border: "1px solid var(--ft-surface)", borderRadius: 16, padding: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                       <Link href={r.reviewer?.id ? `/profile?id=${r.reviewer.id}` : "#"}>
                         <Avatar url={r.reviewer?.avatar_url ?? null} name={r.reviewer?.full_name ?? "Member"} size={36} />
                       </Link>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                          <Link href={r.reviewer?.id ? `/profile?id=${r.reviewer.id}` : "#"} style={{ fontSize: 13, fontWeight: 600, color: "#f1f5f9", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <Link href={r.reviewer?.id ? `/profile?id=${r.reviewer.id}` : "#"} style={{ fontSize: 13, fontWeight: 600, color: "var(--ft-text)", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {r.reviewer?.full_name ?? "FreeTrust Member"}
                           </Link>
-                          <span style={{ fontSize: 11, color: "#475569", flexShrink: 0 }}>
+                          <span style={{ fontSize: 11, color: "var(--ft-text-faint)", flexShrink: 0 }}>
                             {new Date(r.created_at).toLocaleDateString("en", { day: "numeric", month: "short", year: "numeric" })}
                           </span>
                         </div>
                         <div style={{ display: "flex", gap: 2, marginTop: 3 }}>
                           {[1,2,3,4,5].map(s => (
-                            <StarIcon key={s} style={{ width: 12, height: 12, color: s <= r.rating ? "#f59e0b" : "#1e293b", fill: s <= r.rating ? "#f59e0b" : "none" }} />
+                            <StarIcon key={s} style={{ width: 12, height: 12, color: s <= r.rating ? "#f59e0b" : "var(--ft-surface)", fill: s <= r.rating ? "#f59e0b" : "none" }} />
                           ))}
                         </div>
                       </div>
                     </div>
-                    {r.title && <div style={{ fontSize: 14, fontWeight: 600, color: "#f1f5f9", marginBottom: 4 }}>{r.title}</div>}
-                    <p style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6, margin: 0 }}>{r.content}</p>
+                    {r.title && <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ft-text)", marginBottom: 4 }}>{r.title}</div>}
+                    <p style={{ fontSize: 13, color: "var(--ft-text-tertiary)", lineHeight: 1.6, margin: 0 }}>{r.content}</p>
                   </div>
                 ))}
               </div>

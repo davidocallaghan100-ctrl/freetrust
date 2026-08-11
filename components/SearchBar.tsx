@@ -97,8 +97,8 @@ export default function SearchBar() {
         top: '58px',
         left: 0,
         right: 0,
-        background: '#0a0f1e',
-        borderBottom: '1px solid #1e293b',
+        background: 'var(--ft-bg)',
+        borderBottom: '1px solid var(--ft-border)',
         zIndex: 90,
         padding: '8px 16px',
       }}
@@ -106,7 +106,7 @@ export default function SearchBar() {
       <div style={{ maxWidth: '600px', margin: '0 auto', position: 'relative' }}>
         <form onSubmit={handleSubmit}>
           <div style={{ position: 'relative' }}>
-            <span style={{ position: 'absolute', left: dir === 'rtl' ? undefined : '12px', right: dir === 'rtl' ? '12px' : undefined, top: '50%', transform: 'translateY(-50%)', fontSize: '14px', color: '#64748b', pointerEvents: 'none' }}>
+            <span style={{ position: 'absolute', left: dir === 'rtl' ? undefined : '12px', right: dir === 'rtl' ? '12px' : undefined, top: '50%', transform: 'translateY(-50%)', fontSize: '14px', color: 'var(--ft-text-tertiary)', pointerEvents: 'none' }}>
               {loading ? '⏳' : '🔍'}
             </span>
             <input
@@ -118,19 +118,19 @@ export default function SearchBar() {
               placeholder={t('placeholder')}
               autoComplete="off"
               style={{
-                width: '100%', background: '#1e293b', border: '1px solid #334155',
+                width: '100%', background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)',
                 borderRadius: open && results.length > 0 ? '10px 10px 0 0' : '10px',
-                padding: dir === 'rtl' ? '8px 36px 8px 14px' : '8px 14px 8px 36px', fontSize: '16px', color: '#f1f5f9',
+                padding: dir === 'rtl' ? '8px 36px 8px 14px' : '8px 14px 8px 36px', fontSize: '16px', color: 'var(--ft-text)',
                 outline: 'none', transition: 'border-color 0.2s', boxSizing: 'border-box',
               }}
-              onFocusCapture={e => (e.target.style.borderColor = '#38bdf8')}
-              onBlurCapture={e => (e.target.style.borderColor = '#334155')}
+              onFocusCapture={e => (e.target.style.borderColor = 'var(--ft-accent)')}
+              onBlurCapture={e => (e.target.style.borderColor = 'var(--ft-border-strong)')}
             />
             {query && (
               <button
                 type="button"
                 onClick={() => { setQuery(''); setResults([]); setOpen(false) }}
-                style={{ position: 'absolute', right: dir === 'rtl' ? undefined : '10px', left: dir === 'rtl' ? '10px' : undefined, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '16px', lineHeight: 1, padding: '2px' }}
+                style={{ position: 'absolute', right: dir === 'rtl' ? undefined : '10px', left: dir === 'rtl' ? '10px' : undefined, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ft-text-tertiary)', fontSize: '16px', lineHeight: 1, padding: '2px' }}
               >✕</button>
             )}
           </div>
@@ -140,13 +140,13 @@ export default function SearchBar() {
         {open && results.length > 0 && (
           <div style={{
             position: 'absolute', top: '100%', left: 0, right: 0,
-            background: '#1e293b', border: '1px solid #38bdf8', borderTop: 'none',
+            background: 'var(--ft-surface)', border: '1px solid var(--ft-accent)', borderTop: 'none',
             borderRadius: '0 0 12px 12px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
             zIndex: 91, maxHeight: '380px', overflowY: 'auto',
           }}>
             {Object.entries(grouped).map(([label, hits]) => (
               <div key={label}>
-                <div style={{ padding: '6px 14px 3px', fontSize: '10px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                <div style={{ padding: '6px 14px 3px', fontSize: '10px', fontWeight: 700, color: 'var(--ft-text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   {label}
                 </div>
                 {hits.map(hit => (
@@ -164,8 +164,8 @@ export default function SearchBar() {
                   >
                     <span style={{ fontSize: '16px', width: '20px', textAlign: 'center', flexShrink: 0 }}>{typeIcon(hit.type)}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hit.title}</div>
-                      {hit.subtitle && <div style={{ fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hit.subtitle}</div>}
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ft-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hit.title}</div>
+                      {hit.subtitle && <div style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hit.subtitle}</div>}
                     </div>
                   </Link>
                 ))}
@@ -173,10 +173,10 @@ export default function SearchBar() {
             ))}
 
             {/* View all */}
-            <div style={{ borderTop: '1px solid #334155', padding: '8px 14px' }}>
+            <div style={{ borderTop: '1px solid var(--ft-border-strong)', padding: '8px 14px' }}>
               <button
                 onClick={() => { setOpen(false); router.push(`/search?q=${encodeURIComponent(query)}`) }}
-                 style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', color: '#38bdf8', fontSize: '12px', fontWeight: 600, fontFamily: 'inherit', textAlign: dir === 'rtl' ? 'right' : 'left', padding: 0 }}
+                 style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ft-accent)', fontSize: '12px', fontWeight: 600, fontFamily: 'inherit', textAlign: dir === 'rtl' ? 'right' : 'left', padding: 0 }}
                >
                  🔍 {t('seeAll', { query })}
               </button>
@@ -188,9 +188,9 @@ export default function SearchBar() {
         {open && !loading && query.trim() && results.length === 0 && (
           <div style={{
             position: 'absolute', top: '100%', left: 0, right: 0,
-            background: '#1e293b', border: '1px solid #334155', borderTop: 'none',
+            background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderTop: 'none',
             borderRadius: '0 0 12px 12px', padding: '16px 14px',
-            color: '#64748b', fontSize: '13px', textAlign: 'center', zIndex: 91,
+            color: 'var(--ft-text-tertiary)', fontSize: '13px', textAlign: 'center', zIndex: 91,
           }}>
             {t('noResults', { query })}
           </div>

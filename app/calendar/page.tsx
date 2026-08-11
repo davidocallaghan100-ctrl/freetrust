@@ -54,7 +54,7 @@ function rowToRBC(row: CalendarEventRow): RBCEvent {
 function eventStyleGetter(event: RBCEvent) {
   const color = event.resource.color
     ?? SOURCE_TYPE_COLORS[event.resource.source_type]
-    ?? '#64748b'
+    ?? 'var(--ft-text-tertiary)'
   return {
     style: {
       backgroundColor: `${color}cc`,   // slightly transparent for softer look
@@ -149,7 +149,7 @@ function EventDrawer({ event, onClose, onSave, onDelete, creating, newStart }: D
   }
 
   const sourceColor = event
-    ? (event.color ?? SOURCE_TYPE_COLORS[event.source_type] ?? '#64748b')
+    ? (event.color ?? SOURCE_TYPE_COLORS[event.source_type] ?? 'var(--ft-text-tertiary)')
     : '#00d4aa'
 
   // ── Formatted date/time helpers ──────────────────────────────────────────
@@ -271,7 +271,7 @@ function EventDrawer({ event, onClose, onSave, onDelete, creating, newStart }: D
                 <h2 style={{
                   fontSize:   '1.25rem',
                   fontWeight: 800,
-                  color:      '#f1f5f9',
+                  color:      'var(--ft-text)',
                   margin:     0,
                   lineHeight: 1.3,
                   wordBreak:  'break-word',
@@ -279,7 +279,7 @@ function EventDrawer({ event, onClose, onSave, onDelete, creating, newStart }: D
                   {event.title}
                 </h2>
               ) : (
-                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#e8e8f0', margin: 0 }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--ft-text)', margin: 0 }}>
                   {creating ? 'New Event' : 'Edit Event'}
                 </h3>
               )}
@@ -295,7 +295,7 @@ function EventDrawer({ event, onClose, onSave, onDelete, creating, newStart }: D
                 borderRadius:   '50%',
                 background:     'rgba(255,255,255,0.07)',
                 border:         '1px solid rgba(255,255,255,0.1)',
-                color:          '#94a3b8',
+                color:          'var(--ft-text-secondary)',
                 display:        'flex',
                 alignItems:     'center',
                 justifyContent: 'center',
@@ -354,7 +354,7 @@ function EventDrawer({ event, onClose, onSave, onDelete, creating, newStart }: D
                     onChange={e => setAllDay(e.target.checked)}
                     style={{ width: 16, height: 16 }}
                   />
-                  <span style={{ color: '#8888aa', fontSize: '0.9rem' }}>All-day event</span>
+                  <span style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.9rem' }}>All-day event</span>
                 </label>
 
                 <div className="form-group">
@@ -402,19 +402,19 @@ function EventDrawer({ event, onClose, onSave, onDelete, creating, newStart }: D
                       <line x1="3" y1="10" x2="21" y2="10"/>
                     </svg>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ color: '#f1f5f9', fontWeight: 600, fontSize: '0.9rem' }}>
+                      <div style={{ color: 'var(--ft-text)', fontWeight: 600, fontSize: '0.9rem' }}>
                         {fmtDate(event.start_at)}
                         {' · '}
                         <span style={{ color: sourceColor }}>{fmtTime(event.start_at)}</span>
                         {event.end_at && (
                           <>
-                            <span style={{ color: '#475569', margin: '0 0.3rem' }}>→</span>
-                            <span style={{ color: '#94a3b8' }}>{fmtTime(event.end_at)}</span>
+                            <span style={{ color: 'var(--ft-text-faint)', margin: '0 0.3rem' }}>→</span>
+                            <span style={{ color: 'var(--ft-text-secondary)' }}>{fmtTime(event.end_at)}</span>
                           </>
                         )}
                       </div>
                       {event.all_day && (
-                        <div style={{ color: '#64748b', fontSize: '0.75rem', marginTop: 2 }}>All day</div>
+                        <div style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.75rem', marginTop: 2 }}>All day</div>
                       )}
                     </div>
                   </div>
@@ -432,11 +432,11 @@ function EventDrawer({ event, onClose, onSave, onDelete, creating, newStart }: D
                     border:     '1px solid rgba(255,255,255,0.07)',
                   }}>
                     {/* Pin icon */}
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ft-text-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
                       <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>
                       <circle cx="12" cy="10" r="3"/>
                     </svg>
-                    <span style={{ color: '#cbd5e1', fontSize: '0.88rem', lineHeight: 1.4 }}>
+                    <span style={{ color: 'var(--ft-text-secondary)', fontSize: '0.88rem', lineHeight: 1.4 }}>
                       {event.location}
                     </span>
                   </div>
@@ -451,7 +451,7 @@ function EventDrawer({ event, onClose, onSave, onDelete, creating, newStart }: D
                     border:       '1px solid rgba(255,255,255,0.07)',
                   }}>
                     <p style={{
-                      color:      '#94a3b8',
+                      color:      'var(--ft-text-secondary)',
                       fontSize:   '0.85rem',
                       lineHeight: 1.6,
                       margin:     0,
@@ -506,7 +506,7 @@ function EventDrawer({ event, onClose, onSave, onDelete, creating, newStart }: D
                   padding:        '0.8rem 1rem',
                   borderRadius:   14,
                   background:     `linear-gradient(135deg, ${sourceColor}, ${sourceColor}cc)`,
-                  color:          '#0f172a',
+                  color:          'var(--ft-bg)',
                   fontWeight:     700,
                   fontSize:       '0.95rem',
                   textDecoration: 'none',
@@ -571,8 +571,8 @@ function EmptyState({ onNew }: { onNew: () => void }) {
           <line x1="3" y1="10" x2="21" y2="10"/>
         </svg>
       </div>
-      <p style={{ color: '#e8e8f0', fontWeight: 600, fontSize: '1rem', margin: 0 }}>No events yet</p>
-      <p style={{ color: '#8888aa', fontSize: '0.85rem', margin: 0, maxWidth: 240 }}>
+      <p style={{ color: 'var(--ft-text)', fontWeight: 600, fontSize: '1rem', margin: 0 }}>No events yet</p>
+      <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.85rem', margin: 0, maxWidth: 240 }}>
         Your gigs, orders and events will appear here
       </p>
       <button
@@ -813,31 +813,31 @@ function CalendarPageInner() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0f', overflowX: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', overflowX: 'hidden' }}>
       {/* ── Inline calendar CSS overrides ── */}
       <style>{`
         /* Base calendar */
         .rbc-calendar {
-          background: #13131a;
-          color: #e8e8f0;
+          background: var(--ft-surface);
+          color: var(--ft-text);
           border-radius: 16px;
           overflow: hidden;
-          border: 1px solid #2a2a3d;
+          border: 1px solid var(--ft-surface);
         }
 
         /* Toolbar */
         .rbc-toolbar {
           padding: 0.875rem 1rem;
-          background: #1c1c27;
-          border-bottom: 1px solid #2a2a3d;
+          background: var(--ft-bg);
+          border-bottom: 1px solid var(--ft-surface);
           flex-wrap: wrap;
           gap: 0.5rem;
           align-items: center;
         }
         .rbc-toolbar button {
-          color: #8888aa;
+          color: var(--ft-text-tertiary);
           background: transparent;
-          border: 1px solid #2a2a3d;
+          border: 1px solid var(--ft-surface);
           border-radius: 8px;
           padding: 0.45rem 0.875rem;
           font-size: 0.82rem;
@@ -847,20 +847,20 @@ function CalendarPageInner() {
           min-height: 36px;
         }
         .rbc-toolbar button:hover {
-          background: #2a2a3d;
-          color: #e8e8f0;
-          border-color: #38bdf8;
+          background: var(--ft-surface);
+          color: var(--ft-text);
+          border-color: var(--ft-accent);
         }
         .rbc-toolbar button.rbc-active {
-          background: #38bdf8;
-          color: #0a0a0f;
-          border-color: #38bdf8;
+          background: var(--ft-accent);
+          color: var(--ft-bg);
+          border-color: var(--ft-accent);
           box-shadow: 0 0 12px rgba(56,189,248,0.35);
         }
         .rbc-toolbar-label {
           font-weight: 700;
           font-size: 1rem;
-          color: #e8e8f0;
+          color: var(--ft-text);
           flex: 1;
           text-align: center;
         }
@@ -868,19 +868,19 @@ function CalendarPageInner() {
 
         /* Headers */
         .rbc-header {
-          background: #1c1c27;
-          color: #8888aa;
+          background: var(--ft-bg);
+          color: var(--ft-text-tertiary);
           font-size: 0.73rem;
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.07em;
           padding: 0.6rem 0.4rem;
-          border-color: #2a2a3d;
+          border-color: var(--ft-surface);
         }
 
         /* Day backgrounds */
         .rbc-day-bg, .rbc-month-view, .rbc-time-view, .rbc-agenda-view {
-          background: #13131a;
+          background: var(--ft-surface);
         }
 
         /* Agenda — vertical scroll on mobile, no horizontal overflow */
@@ -913,12 +913,12 @@ function CalendarPageInner() {
         .rbc-off-range-bg { background: rgba(255,255,255,0.015); }
         .rbc-today { background: rgba(56,189,248,0.08) !important; }
         .rbc-date-cell {
-          color: #8888aa;
+          color: var(--ft-text-tertiary);
           font-size: 0.8rem;
           padding: 0.3rem 0.5rem;
         }
         .rbc-date-cell.rbc-now {
-          color: #38bdf8;
+          color: var(--ft-accent);
           font-weight: 800;
         }
         .rbc-row-segment .rbc-event { border-radius: 5px; }
@@ -931,28 +931,28 @@ function CalendarPageInner() {
 
         /* Time grid */
         .rbc-time-header, .rbc-time-gutter {
-          color: #94a3b8;
+          color: var(--ft-text-secondary);
           font-size: 0.75rem;
         }
-        .rbc-time-slot { border-color: #2a2a3d; }
-        .rbc-timeslot-group { border-color: #2a2a3d; }
-        .rbc-time-content { border-color: #2a2a3d; }
+        .rbc-time-slot { border-color: var(--ft-surface); }
+        .rbc-timeslot-group { border-color: var(--ft-surface); }
+        .rbc-time-content { border-color: var(--ft-surface); }
         .rbc-day-slot .rbc-time-slot { border-color: rgba(42,42,61,0.5); }
 
         /* Agenda view */
-        .rbc-agenda-table { color: #f1f5f9; width: 100%; }
+        .rbc-agenda-table { color: var(--ft-text); width: 100%; }
         .rbc-agenda-table thead > tr > th {
-          background: #0d0d1a;
-          color: #94a3b8;
+          background: var(--ft-bg);
+          color: var(--ft-text-secondary);
           font-size: 0.72rem;
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.08em;
           padding: 0.55rem 1rem;
-          border-bottom: 1px solid #2a2a3d;
+          border-bottom: 1px solid var(--ft-surface);
         }
         .rbc-agenda-date-cell, .rbc-agenda-time-cell {
-          color: #cbd5e1;
+          color: var(--ft-text-secondary);
           font-size: 0.78rem;
           font-weight: 500;
           padding: 0.65rem 0.5rem;
@@ -960,7 +960,7 @@ function CalendarPageInner() {
           word-break: break-word;
         }
         .rbc-agenda-event-cell {
-          color: #f1f5f9;
+          color: var(--ft-text);
           font-size: 0.85rem;
           font-weight: 600;
           padding: 0.65rem 0.5rem;
@@ -979,7 +979,7 @@ function CalendarPageInner() {
           font-size: 0.8rem;
         }
         .rbc-agenda-table .rbc-agenda-time-cell {
-          color: #cbd5e1;
+          color: var(--ft-text-secondary);
           font-weight: 500;
         }
 
@@ -1013,10 +1013,10 @@ function CalendarPageInner() {
            win over any CSS class rule (including !important). */
 
         /* Borders */
-        .rbc-month-row { border-color: #2a2a3d; }
-        .rbc-day-bg + .rbc-day-bg { border-color: #2a2a3d; }
-        .rbc-header + .rbc-header { border-color: #2a2a3d; }
-        .rbc-month-view .rbc-month-row + .rbc-month-row { border-color: #2a2a3d; }
+        .rbc-month-row { border-color: var(--ft-surface); }
+        .rbc-day-bg + .rbc-day-bg { border-color: var(--ft-surface); }
+        .rbc-header + .rbc-header { border-color: var(--ft-surface); }
+        .rbc-month-view .rbc-month-row + .rbc-month-row { border-color: var(--ft-surface); }
 
         /* Drawer animation */
         @keyframes slideInDrawer {
@@ -1026,7 +1026,7 @@ function CalendarPageInner() {
 
         /* Agenda empty */
         .rbc-agenda-empty {
-          color: #55556a;
+          color: var(--ft-text-faint);
           padding: 2rem;
           text-align: center;
           font-size: 0.9rem;
@@ -1087,7 +1087,7 @@ function CalendarPageInner() {
             <div style={{
               width: 48, height: 48,
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #38bdf8, #00d4aa)',
+              background: 'linear-gradient(135deg, var(--ft-accent), #00d4aa)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '1.45rem',
               flexShrink: 0,
@@ -1096,10 +1096,10 @@ function CalendarPageInner() {
               🗓️
             </div>
             <div>
-              <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#e8e8f0', margin: 0, lineHeight: 1.2 }}>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--ft-text)', margin: 0, lineHeight: 1.2 }}>
                 My Calendar
               </h1>
-              <p style={{ color: '#8888aa', fontSize: '0.82rem', margin: 0, marginTop: '0.1rem' }}>
+              <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.82rem', margin: 0, marginTop: '0.1rem' }}>
                 Gigs, deliveries, events &amp; reminders — all in one place
               </p>
             </div>
@@ -1122,7 +1122,7 @@ function CalendarPageInner() {
               /* Connected: compact sync status + sync button + disconnect */
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, flexWrap: 'wrap' }}>
                 <span style={{
-                  fontSize: '0.75rem', color: '#8888aa',
+                  fontSize: '0.75rem', color: 'var(--ft-text-tertiary)',
                   display: 'flex', alignItems: 'center', gap: '0.3rem',
                 }}>
                   <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#00d4aa', display: 'inline-block', boxShadow: '0 0 4px #00d4aa' }}/>
@@ -1135,9 +1135,9 @@ function CalendarPageInner() {
                     display: 'flex', alignItems: 'center', gap: '0.35rem',
                     padding: '0.4rem 0.875rem',
                     borderRadius: '9999px',
-                    border: '1px solid #2a2a3d',
-                    background: '#1c1c27',
-                    color: '#e8e8f0',
+                    border: '1px solid var(--ft-surface)',
+                    background: 'var(--ft-bg)',
+                    color: 'var(--ft-text)',
                     fontSize: '0.78rem',
                     fontWeight: 600,
                     cursor: syncing ? 'wait' : 'pointer',
@@ -1156,7 +1156,7 @@ function CalendarPageInner() {
                     borderRadius: '9999px',
                     border: '1px solid #3a2a2a',
                     background: 'transparent',
-                    color: '#8888aa',
+                    color: 'var(--ft-text-tertiary)',
                     fontSize: '0.72rem',
                     cursor: 'pointer',
                     minHeight: 32,
@@ -1175,9 +1175,9 @@ function CalendarPageInner() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
                   padding: '0.6rem 1.1rem',
                   borderRadius: '12px',
-                  border: '1.5px solid #38bdf8',
+                  border: '1.5px solid var(--ft-accent)',
                   background: 'rgba(56,189,248,0.07)',
-                  color: '#38bdf8',
+                  color: 'var(--ft-accent)',
                   fontSize: '0.85rem',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -1200,9 +1200,9 @@ function CalendarPageInner() {
               style={{
                 width: 44, height: 44,
                 borderRadius: '10px',
-                border: '1px solid #2a2a3d',
-                background: '#13131a',
-                color: '#8888aa',
+                border: '1px solid var(--ft-surface)',
+                background: 'var(--ft-surface)',
+                color: 'var(--ft-text-tertiary)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '1rem',
                 cursor: 'pointer',
@@ -1222,8 +1222,8 @@ function CalendarPageInner() {
               padding: '0.65rem 1.1rem',
               borderRadius: '12px',
               border: 'none',
-              background: 'linear-gradient(135deg, #00d4aa, #38bdf8)',
-              color: '#0a0a0f',
+              background: 'linear-gradient(135deg, #00d4aa, var(--ft-accent))',
+              color: 'var(--ft-bg)',
               fontSize: '0.9rem',
               fontWeight: 700,
               cursor: 'pointer',
@@ -1262,9 +1262,9 @@ function CalendarPageInner() {
                   gap:          '0.35rem',
                   padding:      '0.4rem 0.875rem',
                   borderRadius: '9999px',
-                  border:       `1.5px solid ${active ? color : '#2a2a3d'}`,
-                  background:   active ? `${color}1a` : '#13131a',
-                  color:        active ? color : '#55556a',
+                  border:       `1.5px solid ${active ? color : 'var(--ft-surface)'}`,
+                  background:   active ? `${color}1a` : 'var(--ft-surface)',
+                  color:        active ? color : 'var(--ft-text-faint)',
                   fontSize:     '0.75rem',
                   fontWeight:   700,
                   cursor:       'pointer',
@@ -1281,7 +1281,7 @@ function CalendarPageInner() {
                   width:        9,
                   height:       9,
                   borderRadius: '50%',
-                  background:   active ? color : '#2a2a3d',
+                  background:   active ? color : 'var(--ft-surface)',
                   display:      'inline-block',
                   flexShrink:   0,
                   boxShadow:    active ? `0 0 4px ${color}` : 'none',
@@ -1294,9 +1294,9 @@ function CalendarPageInner() {
 
         {/* ── Calendar ── */}
         <div className="ft-calendar-wrap" style={{
-          background: '#13131a',
+          background: 'var(--ft-surface)',
           borderRadius: '16px',
-          border: '1px solid #2a2a3d',
+          border: '1px solid var(--ft-surface)',
           overflow: 'visible',
         }}>
           {loading ? (
@@ -1304,12 +1304,12 @@ function CalendarPageInner() {
               display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',
               padding: '4rem 2rem', gap: '1rem',
-              color: '#8888aa',
+              color: 'var(--ft-text-tertiary)',
             }}>
               <div style={{
                 width: 36, height: 36,
-                border: '3px solid #2a2a3d',
-                borderTopColor: '#38bdf8',
+                border: '3px solid var(--ft-surface)',
+                borderTopColor: 'var(--ft-accent)',
                 borderRadius: '50%',
                 animation: 'spin 0.8s linear infinite',
               }}/>
@@ -1404,18 +1404,18 @@ export default function CalendarPage() {
     <Suspense fallback={
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        minHeight: '100vh', background: '#0a0a0f',
+        minHeight: '100vh', background: 'var(--ft-bg)',
         flexDirection: 'column', gap: '1rem',
       }}>
         <div style={{
           width: 36, height: 36,
-          border: '3px solid #2a2a3d',
-          borderTopColor: '#38bdf8',
+          border: '3px solid var(--ft-surface)',
+          borderTopColor: 'var(--ft-accent)',
           borderRadius: '50%',
           animation: 'spin 0.8s linear infinite',
         }}/>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        <span style={{ color: '#38bdf8', fontSize: '0.9rem' }}>Loading calendar…</span>
+        <span style={{ color: 'var(--ft-accent)', fontSize: '0.9rem' }}>Loading calendar…</span>
       </div>
     }>
       <CalendarPageInner />

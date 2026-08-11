@@ -35,8 +35,8 @@ interface SimilarJob {
 }
 
 const TYPE_LABELS: Record<string, string> = { full_time: 'Full Time', part_time: 'Part Time', contract: 'Contract', freelance: 'Freelance' }
-const TYPE_COLORS: Record<string, string> = { full_time: '#38bdf8', part_time: '#a78bfa', contract: '#fbbf24', freelance: '#34d399' }
-const LOC_COLORS: Record<string, string> = { remote: '#34d399', hybrid: '#38bdf8', on_site: '#fb923c' }
+const TYPE_COLORS: Record<string, string> = { full_time: 'var(--ft-accent)', part_time: '#a78bfa', contract: '#fbbf24', freelance: '#34d399' }
+const LOC_COLORS: Record<string, string> = { remote: '#34d399', hybrid: 'var(--ft-accent)', on_site: '#fb923c' }
 const LOC_LABELS: Record<string, string> = { remote: 'Remote', hybrid: 'Hybrid', on_site: 'On-Site' }
 
 
@@ -176,31 +176,31 @@ export default function JobDetailPage() {
   }
 
   const inputStyle: React.CSSProperties = {
-    width: '100%', background: '#0f172a', border: '1px solid rgba(56,189,248,0.15)',
-    borderRadius: 8, padding: '0.65rem 1rem', color: '#f1f5f9', fontSize: '0.9rem',
+    width: '100%', background: 'var(--ft-bg)', border: '1px solid rgba(56,189,248,0.15)',
+    borderRadius: 8, padding: '0.65rem 1rem', color: 'var(--ft-text)', fontSize: '0.9rem',
     outline: 'none', fontFamily: 'system-ui', boxSizing: 'border-box',
   }
 
   if (jobLoading) return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 64 }}>
-      <div style={{ color: '#38bdf8', fontSize: '1rem' }}>Loading job…</div>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 64 }}>
+      <div style={{ color: 'var(--ft-accent)', fontSize: '1rem' }}>Loading job…</div>
     </div>
   )
 
   if (!job) return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem', paddingTop: 64 }}>
-      <div style={{ color: '#94a3b8', fontSize: '1.1rem' }}>Job not found</div>
-      <Link href="/jobs" style={{ color: '#38bdf8', textDecoration: 'none' }}>← Back to Jobs</Link>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem', paddingTop: 64 }}>
+      <div style={{ color: 'var(--ft-text-secondary)', fontSize: '1.1rem' }}>Job not found</div>
+      <Link href="/jobs" style={{ color: 'var(--ft-accent)', textDecoration: 'none' }}>← Back to Jobs</Link>
     </div>
   )
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64 }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui', paddingTop: 64 }}>
       <style>{`
         .job-detail-layout { display: grid; grid-template-columns: 1fr 320px; gap: 2rem; max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; align-items: start; }
         .job-apply-sticky { position: sticky; top: 78px; }
         .job-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 1rem; }
-        .job-modal { background: #1e293b; border: 1px solid rgba(56,189,248,0.2); border-radius: 16px; padding: 2rem; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
+        .job-modal { background: var(--ft-surface); border: 1px solid rgba(56,189,248,0.2); border-radius: 16px; padding: 2rem; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
         @media (max-width: 768px) {
           .job-detail-layout { grid-template-columns: 1fr; padding: 1rem 1rem 6rem; gap: 1.5rem; }
           .job-apply-sticky { position: static; }
@@ -211,15 +211,15 @@ export default function JobDetailPage() {
       `}</style>
 
       {/* Sticky mobile CTA */}
-      <div className="job-apply-mobile-cta" style={{ display: 'none', position: 'fixed', bottom: 0, left: 0, right: 0, padding: '1rem', background: '#0f172a', borderTop: '1px solid rgba(56,189,248,0.1)', zIndex: 100 }}>
-        <button onClick={() => setShowModal(true)} style={{ width: '100%', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 10, padding: '0.85rem', fontSize: '1rem', fontWeight: 800, cursor: 'pointer' }}>
+      <div className="job-apply-mobile-cta" style={{ display: 'none', position: 'fixed', bottom: 0, left: 0, right: 0, padding: '1rem', background: 'var(--ft-bg)', borderTop: '1px solid rgba(56,189,248,0.1)', zIndex: 100 }}>
+        <button onClick={() => setShowModal(true)} style={{ width: '100%', background: 'var(--ft-accent)', color: 'var(--ft-bg)', border: 'none', borderRadius: 10, padding: '0.85rem', fontSize: '1rem', fontWeight: 800, cursor: 'pointer' }}>
           Apply Now →
         </button>
       </div>
 
       {/* Breadcrumb */}
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '1.25rem 1.5rem 0' }}>
-        <Link href="/jobs" style={{ color: '#64748b', textDecoration: 'none', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+        <Link href="/jobs" style={{ color: 'var(--ft-text-tertiary)', textDecoration: 'none', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
           ← Back to Jobs
         </Link>
       </div>
@@ -228,7 +228,7 @@ export default function JobDetailPage() {
         {/* Main content */}
         <div>
           {/* Job header */}
-          <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '2rem', marginBottom: '1.5rem' }}>
+          <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '2rem', marginBottom: '1.5rem' }}>
             {/* Company logo + name */}
             {(job.company_logo_url || job.company_name) && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
@@ -240,15 +240,15 @@ export default function JobDetailPage() {
                   {job.company_logo_url ? (
                     <img src={job.company_logo_url} alt={job.company_name ?? 'Company'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
-                    <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#38bdf8' }}>
+                    <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--ft-accent)' }}>
                       {(job.company_name ?? 'J')[0].toUpperCase()}
                     </span>
                   )}
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f1f5f9' }}>{job.company_name}</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--ft-text)' }}>{job.company_name}</div>
                   {job.company_website && (
-                    <a href={job.company_website} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: '#38bdf8', textDecoration: 'none' }}>
+                    <a href={job.company_website} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: 'var(--ft-accent)', textDecoration: 'none' }}>
                       {job.company_website.replace(/^https?:\/\//, '')}
                     </a>
                   )}
@@ -262,13 +262,13 @@ export default function JobDetailPage() {
               <span style={{ background: `${LOC_COLORS[job.location_type]}18`, color: LOC_COLORS[job.location_type], border: `1px solid ${LOC_COLORS[job.location_type]}30`, borderRadius: 999, padding: '0.2rem 0.7rem', fontSize: '0.78rem', fontWeight: 600 }}>
                 {LOC_LABELS[job.location_type]}
               </span>
-              <span style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '0.2rem 0.7rem', fontSize: '0.78rem', color: '#94a3b8' }}>
+              <span style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '0.2rem 0.7rem', fontSize: '0.78rem', color: 'var(--ft-text-secondary)' }}>
                 {job.category}
               </span>
             </div>
             <h1 style={{ fontSize: '1.75rem', fontWeight: 800, lineHeight: 1.2, marginBottom: '0.75rem' }}>{job.title}</h1>
-            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', fontSize: '0.88rem', color: '#94a3b8', marginBottom: '0.75rem' }}>
-              <span style={{ color: '#38bdf8', fontWeight: 600 }}>💰 {formatSalary(job.salary_min, job.salary_max, job.salary_currency, job.job_type)}</span>
+            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', fontSize: '0.88rem', color: 'var(--ft-text-secondary)', marginBottom: '0.75rem' }}>
+              <span style={{ color: 'var(--ft-accent)', fontWeight: 600 }}>💰 {formatSalary(job.salary_min, job.salary_max, job.salary_currency, job.job_type)}</span>
               {job.location && <span>📍 {job.location}</span>}
               <span>👥 {job.applicant_count} applicant{job.applicant_count !== 1 ? 's' : ''}</span>
               {currentUserId && job.poster?.id === currentUserId && (
@@ -277,7 +277,7 @@ export default function JobDetailPage() {
                 </Link>
               )}
               {currentUserId && job.poster?.id === currentUserId && (
-                <button type="button" onClick={() => setShowDeleteModal(true)} style={{ background: 'none', border: 'none', color: '#f87171', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                <button type="button" onClick={() => setShowDeleteModal(true)} style={{ background: 'none', border: 'none', color: 'var(--ft-danger)', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
                   🗑 Delete
                 </button>
               )}
@@ -289,7 +289,7 @@ export default function JobDetailPage() {
             </div>
             {job.tags.filter((t: string) => !t.startsWith('remotive-') && !t.startsWith('arbeitnow-')).length > 0 && (
               <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                {job.tags.filter((t: string) => !t.startsWith('remotive-') && !t.startsWith('arbeitnow-')).map(t => <span key={t} style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.75rem', color: '#38bdf8' }}>{t}</span>)}
+                {job.tags.filter((t: string) => !t.startsWith('remotive-') && !t.startsWith('arbeitnow-')).map(t => <span key={t} style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.75rem', color: 'var(--ft-accent)' }}>{t}</span>)}
               </div>
             )}
           </div>
@@ -309,8 +309,8 @@ export default function JobDetailPage() {
               gap: '0.75rem',
             }}>
               <div>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.2rem' }}>📋 You posted this job</div>
-                <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--ft-accent)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.2rem' }}>📋 You posted this job</div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--ft-text-secondary)' }}>
                   {job.applicant_count === 0
                     ? 'No applications yet — share your listing to attract candidates'
                     : `${job.applicant_count} application${job.applicant_count !== 1 ? 's' : ''} received`}
@@ -321,7 +321,7 @@ export default function JobDetailPage() {
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
                   background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.35)',
-                  color: '#38bdf8', textDecoration: 'none', fontWeight: 700, fontSize: '0.85rem',
+                  color: 'var(--ft-accent)', textDecoration: 'none', fontWeight: 700, fontSize: '0.85rem',
                   borderRadius: 10, padding: '0.55rem 1.1rem', whiteSpace: 'nowrap',
                 }}
               >
@@ -331,59 +331,59 @@ export default function JobDetailPage() {
           )}
 
           {/* Description */}
-          <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 14, padding: '1.75rem', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', color: '#f1f5f9' }}>About the Role</h2>
+          <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 14, padding: '1.75rem', marginBottom: '1.5rem' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--ft-text)' }}>About the Role</h2>
             <style>{`
               .job-desc p { margin: 0 0 0.9em; }
               .job-desc ul, .job-desc ol { margin: 0 0 0.9em; padding-left: 1.5em; }
               .job-desc li { margin-bottom: 0.3em; }
-              .job-desc strong, .job-desc b { color: #f1f5f9; }
-              .job-desc a { color: #38bdf8; }
-              .job-desc h1, .job-desc h2, .job-desc h3 { color: #f1f5f9; margin: 1em 0 0.5em; font-weight: 700; }
+              .job-desc strong, .job-desc b { color: var(--ft-text); }
+              .job-desc a { color: var(--ft-accent); }
+              .job-desc h1, .job-desc h2, .job-desc h3 { color: var(--ft-text); margin: 1em 0 0.5em; font-weight: 700; }
             `}</style>
             {job.description.includes('<') ? (
               <div
                 className="job-desc"
-                style={{ fontSize: '0.9rem', color: '#94a3b8', lineHeight: 1.85 }}
+                style={{ fontSize: '0.9rem', color: 'var(--ft-text-secondary)', lineHeight: 1.85 }}
                 dangerouslySetInnerHTML={{ __html: job.description }}
               />
             ) : (
-              <div style={{ fontSize: '0.9rem', color: '#94a3b8', lineHeight: 1.85, whiteSpace: 'pre-wrap' }}>{job.description}</div>
+              <div style={{ fontSize: '0.9rem', color: 'var(--ft-text-secondary)', lineHeight: 1.85, whiteSpace: 'pre-wrap' }}>{job.description}</div>
             )}
           </div>
 
           {/* Requirements */}
           {job.requirements && (
-            <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 14, padding: '1.75rem', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', color: '#f1f5f9' }}>Requirements</h2>
+            <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 14, padding: '1.75rem', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--ft-text)' }}>Requirements</h2>
               {job.requirements.includes('<') ? (
                 <div
                   className="job-desc"
-                  style={{ fontSize: '0.9rem', color: '#94a3b8', lineHeight: 2 }}
+                  style={{ fontSize: '0.9rem', color: 'var(--ft-text-secondary)', lineHeight: 2 }}
                   dangerouslySetInnerHTML={{ __html: job.requirements }}
                 />
               ) : (
-                <div style={{ fontSize: '0.9rem', color: '#94a3b8', lineHeight: 2, whiteSpace: 'pre-line' }}>{job.requirements}</div>
+                <div style={{ fontSize: '0.9rem', color: 'var(--ft-text-secondary)', lineHeight: 2, whiteSpace: 'pre-line' }}>{job.requirements}</div>
               )}
             </div>
           )}
 
           {/* About poster */}
           {job.poster && (
-            <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 14, padding: '1.75rem', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.25rem', color: '#f1f5f9' }}>About the Employer</h2>
+            <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 14, padding: '1.75rem', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.25rem', color: 'var(--ft-text)' }}>About the Employer</h2>
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                <div style={{ width: 52, height: 52, borderRadius: 12, background: 'linear-gradient(135deg,#38bdf8,#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem', color: '#0f172a', flexShrink: 0 }}>
+                <div style={{ width: 52, height: 52, borderRadius: 12, background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem', color: 'var(--ft-bg)', flexShrink: 0 }}>
                   {(job.poster.full_name ?? 'FT').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)}
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.25rem' }}>
                     {job.poster.full_name}
-                    {(job.poster.trust_balance ?? 0) > 200 && <span style={{ marginLeft: '0.5rem', fontSize: '0.72rem', color: '#38bdf8', fontWeight: 600, background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 999, padding: '0.1rem 0.5rem' }}>✓ Verified</span>}
+                    {(job.poster.trust_balance ?? 0) > 200 && <span style={{ marginLeft: '0.5rem', fontSize: '0.72rem', color: 'var(--ft-accent)', fontWeight: 600, background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 999, padding: '0.1rem 0.5rem' }}>✓ Verified</span>}
                   </div>
-                  {(job.poster.trust_balance ?? 0) > 0 && <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.5rem' }}>₮ Trust Balance: {job.poster.trust_balance}</div>}
-                  <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.5rem' }}>Member since {new Date(job.poster.created_at).getFullYear()}</div>
-                  {job.poster.bio && <div style={{ fontSize: '0.85rem', color: '#64748b', lineHeight: 1.6 }}>{job.poster.bio}</div>}
+                  {(job.poster.trust_balance ?? 0) > 0 && <div style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)', marginBottom: '0.5rem' }}>₮ Trust Balance: {job.poster.trust_balance}</div>}
+                  <div style={{ fontSize: '0.85rem', color: 'var(--ft-text-secondary)', marginBottom: '0.5rem' }}>Member since {new Date(job.poster.created_at).getFullYear()}</div>
+                  {job.poster.bio && <div style={{ fontSize: '0.85rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.6 }}>{job.poster.bio}</div>}
                 </div>
               </div>
             </div>
@@ -392,15 +392,15 @@ export default function JobDetailPage() {
           {/* Similar jobs */}
           {similarJobs.length > 0 && (
             <div>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', color: '#f1f5f9' }}>Similar Jobs</h2>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--ft-text)' }}>Similar Jobs</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {similarJobs.map(j => (
-                  <Link key={j.id} href={`/jobs/${j.id}`} style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 10, padding: '1rem 1.25rem', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                  <Link key={j.id} href={`/jobs/${j.id}`} style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 10, padding: '1rem 1.25rem', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
                     <div>
-                      <div style={{ fontWeight: 600, color: '#f1f5f9', fontSize: '0.92rem', marginBottom: '0.3rem' }}>{j.title}</div>
-                      <div style={{ fontSize: '0.78rem', color: '#64748b' }}>{j.poster_name} · {formatSalary(j.salary_min, j.salary_max, j.salary_currency, j.job_type)}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--ft-text)', fontSize: '0.92rem', marginBottom: '0.3rem' }}>{j.title}</div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)' }}>{j.poster_name} · {formatSalary(j.salary_min, j.salary_max, j.salary_currency, j.job_type)}</div>
                     </div>
-                    <span style={{ color: '#38bdf8', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>View →</span>
+                    <span style={{ color: 'var(--ft-accent)', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>View →</span>
                   </Link>
                 ))}
               </div>
@@ -410,18 +410,18 @@ export default function JobDetailPage() {
 
         {/* Sidebar */}
         <aside className="job-apply-sticky">
-          <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 14, padding: '1.5rem' }}>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#38bdf8', marginBottom: '0.25rem' }}>
+          <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 14, padding: '1.5rem' }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--ft-accent)', marginBottom: '0.25rem' }}>
               {formatSalary(job.salary_min, job.salary_max, job.salary_currency, job.job_type)}
             </div>
-            <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '1.25rem' }}>per year</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)', marginBottom: '1.25rem' }}>per year</div>
             <button
               onClick={() => setShowModal(true)}
-              style={{ width: '100%', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 10, padding: '0.85rem', fontSize: '1rem', fontWeight: 800, cursor: 'pointer', marginBottom: '0.75rem' }}
+              style={{ width: '100%', background: 'var(--ft-accent)', color: 'var(--ft-bg)', border: 'none', borderRadius: 10, padding: '0.85rem', fontSize: '1rem', fontWeight: 800, cursor: 'pointer', marginBottom: '0.75rem' }}
             >
               Apply Now →
             </button>
-            <div style={{ fontSize: '0.78rem', color: '#64748b', textAlign: 'center', marginBottom: '1.25rem' }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', textAlign: 'center', marginBottom: '1.25rem' }}>
               ₮5 Trust earned on application
             </div>
             <div style={{ borderTop: '1px solid rgba(56,189,248,0.08)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
@@ -432,8 +432,8 @@ export default function JobDetailPage() {
                 ...(job.application_deadline ? [{ label: 'Deadline', value: daysUntil(job.application_deadline) }] : []),
               ].map(item => (
                 <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
-                  <span style={{ color: '#64748b' }}>{item.label}</span>
-                  <span style={{ color: '#94a3b8', fontWeight: 500 }}>{item.value}</span>
+                  <span style={{ color: 'var(--ft-text-tertiary)' }}>{item.label}</span>
+                  <span style={{ color: 'var(--ft-text-secondary)', fontWeight: 500 }}>{item.value}</span>
                 </div>
               ))}
             </div>
@@ -449,11 +449,11 @@ export default function JobDetailPage() {
               <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
                 <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎉</div>
                 <h3 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '0.5rem' }}>Application Submitted!</h3>
-                <p style={{ color: '#64748b', marginBottom: '1.25rem' }}>Good luck! You'll hear back soon.</p>
+                <p style={{ color: 'var(--ft-text-tertiary)', marginBottom: '1.25rem' }}>Good luck! You'll hear back soon.</p>
                 <div style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 10, padding: '0.75rem', marginBottom: '1.5rem' }}>
-                  <span style={{ color: '#38bdf8', fontWeight: 700 }}>₮5 Trust earned</span> for applying!
+                  <span style={{ color: 'var(--ft-accent)', fontWeight: 700 }}>₮5 Trust earned</span> for applying!
                 </div>
-                <button onClick={() => { setShowModal(false); setApplied(false) }} style={{ width: '100%', background: '#1e293b', color: '#f1f5f9', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.7rem', fontWeight: 600, cursor: 'pointer' }}>
+                <button onClick={() => { setShowModal(false); setApplied(false) }} style={{ width: '100%', background: 'var(--ft-surface)', color: 'var(--ft-text)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.7rem', fontWeight: 600, cursor: 'pointer' }}>
                   Close
                 </button>
               </div>
@@ -461,19 +461,19 @@ export default function JobDetailPage() {
               <>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
                   <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>Apply for {job.title}</h3>
-                  <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '1.5rem', padding: 0, lineHeight: 1 }}>×</button>
+                  <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--ft-text-tertiary)', cursor: 'pointer', fontSize: '1.5rem', padding: 0, lineHeight: 1 }}>×</button>
                 </div>
                 <div style={{ marginBottom: '1.25rem' }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.4rem', display: 'block' }}>Cover Letter *</label>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.4rem', display: 'block' }}>Cover Letter *</label>
                   <textarea value={form.cover_letter} onChange={e => setForm(f => ({ ...f, cover_letter: e.target.value }))} placeholder="Why are you a great fit for this role?..." rows={5} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
                 </div>
                 <div style={{ marginBottom: '1.25rem' }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.5rem', display: 'block' }}>CV / Resume</label>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>CV / Resume</label>
                   {/* Toggle */}
-                  <div style={{ display: 'flex', gap: 4, background: '#0f172a', borderRadius: 8, padding: 4, marginBottom: '0.75rem' }}>
+                  <div style={{ display: 'flex', gap: 4, background: 'var(--ft-bg)', borderRadius: 8, padding: 4, marginBottom: '0.75rem' }}>
                     {(['upload', 'link'] as const).map(mode => (
                       <button key={mode} onClick={() => { setCvMode(mode); setForm(f => ({ ...f, cv_url: '' })); setCvFile(null); setCvFileName(''); setAppError('') }}
-                        style={{ flex: 1, padding: '0.4rem 0', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: cvMode === mode ? 700 : 500, fontFamily: 'inherit', background: cvMode === mode ? '#1e293b' : 'transparent', color: cvMode === mode ? '#38bdf8' : '#64748b', transition: 'all 0.15s' }}>
+                        style={{ flex: 1, padding: '0.4rem 0', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: cvMode === mode ? 700 : 500, fontFamily: 'inherit', background: cvMode === mode ? 'var(--ft-surface)' : 'transparent', color: cvMode === mode ? 'var(--ft-accent)' : 'var(--ft-text-tertiary)', transition: 'all 0.15s' }}>
                         {mode === 'upload' ? '📎 Upload File' : '🔗 Paste Link'}
                       </button>
                     ))}
@@ -484,20 +484,20 @@ export default function JobDetailPage() {
                         <input type="file" accept=".pdf,.doc,.docx" onChange={handleCvFileChange} style={{ display: 'none' }} />
                         {cvUploading ? (
                           <>
-                            <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid #1e293b', borderTopColor: '#38bdf8', animation: 'spin 0.8s linear infinite' }} />
-                            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Uploading…</span>
+                            <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid var(--ft-surface)', borderTopColor: 'var(--ft-accent)', animation: 'spin 0.8s linear infinite' }} />
+                            <span style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)' }}>Uploading…</span>
                           </>
                         ) : cvFileName ? (
                           <>
                             <span style={{ fontSize: '1.25rem' }}>✅</span>
                             <span style={{ fontSize: '0.82rem', color: '#34d399', fontWeight: 600, textAlign: 'center', wordBreak: 'break-all' }}>{cvFileName}</span>
-                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Tap to replace</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)' }}>Tap to replace</span>
                           </>
                         ) : (
                           <>
                             <span style={{ fontSize: '1.5rem' }}>📄</span>
-                            <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>Tap to upload your CV</span>
-                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>PDF or Word · max 5MB</span>
+                            <span style={{ fontSize: '0.85rem', color: 'var(--ft-text-secondary)', fontWeight: 600 }}>Tap to upload your CV</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)' }}>PDF or Word · max 5MB</span>
                           </>
                         )}
                       </label>
@@ -507,14 +507,14 @@ export default function JobDetailPage() {
                   )}
                 </div>
                 <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.4rem', display: 'block' }}>Portfolio URL (optional)</label>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.4rem', display: 'block' }}>Portfolio URL (optional)</label>
                   <input value={form.portfolio_url} onChange={e => setForm(f => ({ ...f, portfolio_url: e.target.value }))} placeholder="https://..." style={inputStyle} />
                 </div>
                 {appError && <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '0.65rem 1rem', color: '#ef4444', fontSize: '0.85rem', marginBottom: '1rem' }}>{appError}</div>}
-                <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, padding: '0.65rem 1rem', fontSize: '0.82rem', color: '#38bdf8', marginBottom: '1.25rem' }}>
+                <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8, padding: '0.65rem 1rem', fontSize: '0.82rem', color: 'var(--ft-accent)', marginBottom: '1.25rem' }}>
                   ✨ You'll earn <strong>₮5 Trust</strong> for submitting this application
                 </div>
-                <button onClick={handleApply} disabled={submitting} style={{ width: '100%', background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 10, padding: '0.85rem', fontSize: '1rem', fontWeight: 800, cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1 }}>
+                <button onClick={handleApply} disabled={submitting} style={{ width: '100%', background: 'var(--ft-accent)', color: 'var(--ft-bg)', border: 'none', borderRadius: 10, padding: '0.85rem', fontSize: '1rem', fontWeight: 800, cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1 }}>
                   {submitting ? 'Submitting...' : 'Submit Application'}
                 </button>
               </>
@@ -526,12 +526,12 @@ export default function JobDetailPage() {
       {/* Delete modal */}
       {showDeleteModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 9999 }} onClick={() => !deleteLoading && setShowDeleteModal(false)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#1e293b', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 16, padding: 28, maxWidth: 400, width: '100%' }}>
-            <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 8, color: '#f1f5f9' }}>Delete this job?</div>
-            <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>This cannot be undone. All applications for this job will also be deleted.</div>
-            <div style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>&ldquo;{job?.title}&rdquo;</div>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--ft-surface)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 16, padding: 28, maxWidth: 400, width: '100%' }}>
+            <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 8, color: 'var(--ft-text)' }}>Delete this job?</div>
+            <div style={{ fontSize: 13, color: 'var(--ft-text-secondary)', marginBottom: 6 }}>This cannot be undone. All applications for this job will also be deleted.</div>
+            <div style={{ fontSize: 13, color: 'var(--ft-text-tertiary)', marginBottom: 20 }}>&ldquo;{job?.title}&rdquo;</div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => setShowDeleteModal(false)} disabled={deleteLoading} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(148,163,184,0.2)', background: 'transparent', color: '#94a3b8', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button type="button" onClick={() => setShowDeleteModal(false)} disabled={deleteLoading} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(148,163,184,0.2)', background: 'transparent', color: 'var(--ft-text-secondary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
               <button type="button" disabled={deleteLoading} onClick={async () => {
                 setDeleteLoading(true)
                 try {
@@ -542,7 +542,7 @@ export default function JobDetailPage() {
                     setDeleteLoading(false)
                   }
                 } catch { setDeleteLoading(false) }
-              }} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(248,113,113,0.35)', background: 'rgba(248,113,113,0.15)', color: '#f87171', fontSize: 13, fontWeight: 600, cursor: deleteLoading ? 'not-allowed' : 'pointer', opacity: deleteLoading ? 0.6 : 1 }}>
+              }} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(248,113,113,0.35)', background: 'rgba(248,113,113,0.15)', color: 'var(--ft-danger)', fontSize: 13, fontWeight: 600, cursor: deleteLoading ? 'not-allowed' : 'pointer', opacity: deleteLoading ? 0.6 : 1 }}>
                 {deleteLoading ? 'Deleting…' : 'Delete'}
               </button>
             </div>

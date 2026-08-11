@@ -95,7 +95,7 @@ const TEXT_OVERLAY_OPTIONS: TextOverlayOption[] = [
     id: 'story',
     label: 'Story',
     description: 'Rounded social-story pill',
-    sampleStyle: { color: '#0f172a', background: 'rgba(255,255,255,0.92)', fontWeight: 850, borderRadius: 999, padding: '0.26rem 0.68rem', boxShadow: '0 10px 28px rgba(0,0,0,0.28)' },
+    sampleStyle: { color: 'var(--ft-bg)', background: 'rgba(255,255,255,0.92)', fontWeight: 850, borderRadius: 999, padding: '0.26rem 0.68rem', boxShadow: '0 10px 28px rgba(0,0,0,0.28)' },
   },
   {
     id: 'neon',
@@ -235,12 +235,12 @@ const COUNTRY_OPTIONS: { code: string; name: string }[] = [
 
 const s = {
   page: { minHeight: '100vh', padding: '2rem 1.5rem', maxWidth: '820px', margin: '0 auto' },
-  heading: { fontSize: '1.6rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.5rem' },
-  subtext: { fontSize: '0.9rem', color: '#64748b', marginBottom: '2rem' },
+  heading: { fontSize: '1.6rem', fontWeight: 800, color: 'var(--ft-text)', marginBottom: '0.5rem' },
+  subtext: { fontSize: '0.9rem', color: 'var(--ft-text-tertiary)', marginBottom: '2rem' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.75rem', marginBottom: '2rem' },
   typeCard: (active: boolean): React.CSSProperties => ({
-    background: active ? 'rgba(56,189,248,0.12)' : '#1e293b',
-    border: `1.5px solid ${active ? '#38bdf8' : '#334155'}`,
+    background: active ? 'rgba(56,189,248,0.12)' : 'var(--ft-surface)',
+    border: `1.5px solid ${active ? 'var(--ft-accent)' : 'var(--ft-border-strong)'}`,
     borderRadius: '12px',
     padding: '1rem',
     cursor: 'pointer',
@@ -251,16 +251,16 @@ const s = {
   typeLabel: (active: boolean): React.CSSProperties => ({
     fontSize: '0.88rem',
     fontWeight: 700,
-    color: active ? '#38bdf8' : '#f1f5f9',
+    color: active ? 'var(--ft-accent)' : 'var(--ft-text)',
     display: 'block',
   }),
-  typeDesc: { fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem', display: 'block' },
-  form: { background: '#1e293b', border: '1px solid #334155', borderRadius: '16px', padding: '1.5rem' },
-  formTitle: { fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '1.25rem' },
-  label: { display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.35rem', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
-  input: { width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', padding: '0.65rem 0.9rem', fontSize: '0.95rem', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box' as const },
-  textarea: { width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', padding: '0.65rem 0.9rem', fontSize: '0.95rem', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box' as const, resize: 'vertical' as const, minHeight: '120px', fontFamily: 'inherit' },
-  select: { width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', padding: '0.65rem 0.9rem', fontSize: '0.95rem', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box' as const },
+  typeDesc: { fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', marginTop: '0.2rem', display: 'block' },
+  form: { background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '16px', padding: '1.5rem' },
+  formTitle: { fontSize: '1.1rem', fontWeight: 700, color: 'var(--ft-text)', marginBottom: '1.25rem' },
+  label: { display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.35rem', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
+  input: { width: '100%', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: '8px', padding: '0.65rem 0.9rem', fontSize: '0.95rem', color: 'var(--ft-text)', outline: 'none', boxSizing: 'border-box' as const },
+  textarea: { width: '100%', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: '8px', padding: '0.65rem 0.9rem', fontSize: '0.95rem', color: 'var(--ft-text)', outline: 'none', boxSizing: 'border-box' as const, resize: 'vertical' as const, minHeight: '120px', fontFamily: 'inherit' },
+  select: { width: '100%', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: '8px', padding: '0.65rem 0.9rem', fontSize: '0.95rem', color: 'var(--ft-text)', outline: 'none', boxSizing: 'border-box' as const },
   fieldGroup: { marginBottom: '1rem' },
   row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' },
   visRow: { display: 'flex', gap: '0.5rem', flexWrap: 'wrap' as const, marginBottom: '1rem' },
@@ -270,35 +270,35 @@ const s = {
     fontSize: '0.82rem',
     fontWeight: 600,
     cursor: 'pointer',
-    background: active ? '#38bdf8' : '#0f172a',
-    color: active ? '#0f172a' : '#94a3b8',
-    border: `1px solid ${active ? '#38bdf8' : '#334155'}`,
+    background: active ? 'var(--ft-accent)' : 'var(--ft-bg)',
+    color: active ? 'var(--ft-bg)' : 'var(--ft-text-secondary)',
+    border: `1px solid ${active ? 'var(--ft-accent)' : 'var(--ft-border-strong)'}`,
   }),
   actions: { display: 'flex', gap: '0.75rem', marginTop: '1.5rem', flexWrap: 'wrap' as const },
-  btnPrimary: { padding: '0.65rem 1.5rem', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg, #38bdf8, #818cf8)', border: 'none', cursor: 'pointer' },
-  btnSecondary: { padding: '0.65rem 1.25rem', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 600, color: '#94a3b8', background: '#0f172a', border: '1px solid #334155', cursor: 'pointer' },
-  btnDanger: { padding: '0.65rem 1.25rem', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 600, color: '#f87171', background: 'transparent', border: '1px solid #334155', cursor: 'pointer' },
+  btnPrimary: { padding: '0.65rem 1.5rem', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg, var(--ft-accent), #818cf8)', border: 'none', cursor: 'pointer' },
+  btnSecondary: { padding: '0.65rem 1.25rem', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 600, color: 'var(--ft-text-secondary)', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', cursor: 'pointer' },
+  btnDanger: { padding: '0.65rem 1.25rem', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 600, color: 'var(--ft-danger)', background: 'transparent', border: '1px solid var(--ft-border-strong)', cursor: 'pointer' },
   toast: (show: boolean): React.CSSProperties => ({
     position: 'fixed',
     bottom: '80px',
     right: '1.5rem',
-    background: '#1e293b',
-    border: '1px solid #38bdf8',
+    background: 'var(--ft-surface)',
+    border: '1px solid var(--ft-accent)',
     borderRadius: '10px',
     padding: '0.75rem 1.25rem',
     fontSize: '0.88rem',
-    color: '#38bdf8',
+    color: 'var(--ft-accent)',
     fontWeight: 600,
     zIndex: 999,
     transition: 'opacity 0.3s',
     opacity: show ? 1 : 0,
     pointerEvents: 'none' as const,
   }),
-  previewCard: { background: '#0f172a', border: '1px solid #334155', borderRadius: '12px', padding: '1.25rem', marginTop: '1rem' },
-  linkPreviewCard: { background: '#0f172a', border: '1px solid #334155', borderRadius: '10px', overflow: 'hidden', marginTop: '0.75rem' },
+  previewCard: { background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: '12px', padding: '1.25rem', marginTop: '1rem' },
+  linkPreviewCard: { background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: '10px', overflow: 'hidden', marginTop: '0.75rem' },
   musicCard: { background: 'linear-gradient(135deg, rgba(30,215,96,0.14), rgba(15,23,42,0.98))', border: '1px solid rgba(30,215,96,0.32)', borderRadius: '12px', padding: '0.75rem', marginTop: '0.75rem' },
   pollOption: { display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' },
-  draftBadge: { display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: '#64748b', marginLeft: '0.5rem' },
+  draftBadge: { display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', marginLeft: '0.5rem' },
 }
 
 // ── Shared form fields ─────────────────────────────────────────────────────────
@@ -889,7 +889,7 @@ export default function CreatePage() {
   const renderTextOverlayEditor = (helperText: string) => (
     <div style={s.fieldGroup}>
       <label style={s.label}>Text over media</label>
-      <p style={{ color: '#64748b', fontSize: '0.82rem', marginTop: 0, marginBottom: '0.6rem', lineHeight: 1.45 }}>
+      <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.82rem', marginTop: 0, marginBottom: '0.6rem', lineHeight: 1.45 }}>
         {helperText}
       </p>
       <textarea
@@ -899,7 +899,7 @@ export default function CreatePage() {
         value={f('text_overlay_text')}
         onChange={e => setField('text_overlay_text', e.target.value)}
       />
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', marginTop: '0.35rem', color: '#64748b', fontSize: '0.74rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', marginTop: '0.35rem', color: 'var(--ft-text-tertiary)', fontSize: '0.74rem' }}>
         <span>Optional — leave blank for no overlay</span>
         <span>{f('text_overlay_text').length}/90</span>
       </div>
@@ -912,8 +912,8 @@ export default function CreatePage() {
               type="button"
               onClick={() => setField('text_overlay_style', option.id)}
               style={{
-                border: active ? '1.5px solid #38bdf8' : '1px solid #334155',
-                background: active ? 'rgba(56,189,248,0.12)' : '#0f172a',
+                border: active ? '1.5px solid var(--ft-accent)' : '1px solid var(--ft-border-strong)',
+                background: active ? 'rgba(56,189,248,0.12)' : 'var(--ft-bg)',
                 borderRadius: 12,
                 padding: '0.65rem',
                 cursor: 'pointer',
@@ -923,8 +923,8 @@ export default function CreatePage() {
               }}
             >
               <span style={{ display: 'inline-flex', fontSize: '0.9rem', lineHeight: 1, marginBottom: 7, ...option.sampleStyle }}>Aa</span>
-              <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: active ? '#38bdf8' : '#e2e8f0' }}>{option.label}</span>
-              <span style={{ display: 'block', marginTop: 2, color: '#64748b', fontSize: '0.68rem', lineHeight: 1.25 }}>{option.description}</span>
+              <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: active ? 'var(--ft-accent)' : '#e2e8f0' }}>{option.label}</span>
+              <span style={{ display: 'block', marginTop: 2, color: 'var(--ft-text-tertiary)', fontSize: '0.68rem', lineHeight: 1.25 }}>{option.description}</span>
             </button>
           )
         })}
@@ -945,7 +945,7 @@ export default function CreatePage() {
         })}
       </div>
       {textOverlayText && (
-        <div style={{ position: 'relative', marginTop: '0.75rem', borderRadius: 14, overflow: 'hidden', minHeight: 150, border: '1px solid #334155', background: 'linear-gradient(135deg, #0f172a, #0f766e 55%, #020617)' }}>
+        <div style={{ position: 'relative', marginTop: '0.75rem', borderRadius: 14, overflow: 'hidden', minHeight: 150, border: '1px solid var(--ft-border-strong)', background: 'linear-gradient(135deg, var(--ft-bg), #0f766e 55%, #020617)' }}>
           <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 72% 26%, rgba(255,255,255,0.22), transparent 23%), linear-gradient(180deg, transparent, rgba(0,0,0,0.28))' }} />
           {renderTextOverlay(true)}
         </div>
@@ -1182,7 +1182,7 @@ export default function CreatePage() {
                 to the correct author/owner field for every post type. */}
             {manageableOrgs.length > 0 && selectedType && (
               <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.5rem' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--ft-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.5rem' }}>
                   Post as
                 </label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -1198,7 +1198,7 @@ export default function CreatePage() {
                       fontFamily: 'inherit',
                       border: selectedOrgId === null ? '1.5px solid rgba(56,189,248,0.45)' : '1px solid rgba(148,163,184,0.22)',
                       background: selectedOrgId === null ? 'rgba(56,189,248,0.12)' : 'transparent',
-                      color: selectedOrgId === null ? '#38bdf8' : '#94a3b8',
+                      color: selectedOrgId === null ? 'var(--ft-accent)' : 'var(--ft-text-secondary)',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '0.35rem',
@@ -1224,7 +1224,7 @@ export default function CreatePage() {
                           fontFamily: 'inherit',
                           border: active ? '1.5px solid rgba(139,92,246,0.5)' : '1px solid rgba(148,163,184,0.22)',
                           background: active ? 'rgba(139,92,246,0.14)' : 'transparent',
-                          color: active ? '#c4b5fd' : '#94a3b8',
+                          color: active ? '#c4b5fd' : 'var(--ft-text-secondary)',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '0.45rem',
@@ -1247,7 +1247,7 @@ export default function CreatePage() {
                   })}
                 </div>
                 {selectedOrgId && (
-                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.45rem' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', marginTop: '0.45rem' }}>
                     This will appear under the organisation&rsquo;s name where that content type supports public bylines. You&rsquo;ll still be recorded as the accountable creator.
                   </div>
                 )}
@@ -1286,7 +1286,7 @@ export default function CreatePage() {
               onChange={e => setField('content', e.target.value)}
               maxLength={5000}
             />
-            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem', textAlign: 'right' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', marginTop: '0.25rem', textAlign: 'right' }}>
               {(f('content') ?? '').length}/5000
             </div>
           </div>
@@ -1315,7 +1315,7 @@ export default function CreatePage() {
           <>
             <div style={s.fieldGroup}>
               <label style={s.label}>Photos</label>
-              <p style={{ color: '#64748b', fontSize: '0.82rem', marginTop: 0, marginBottom: '0.6rem', lineHeight: 1.45 }}>
+              <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.82rem', marginTop: 0, marginBottom: '0.6rem', lineHeight: 1.45 }}>
                 Add up to 10 photos. People can swipe or tap through them in the feed.
               </p>
               {/* Explicit MIME list INCLUDING HEIC/HEIF — iOS Safari's
@@ -1329,14 +1329,14 @@ export default function CreatePage() {
                 e.currentTarget.value = ''
               }} />
               {uploadProgress && (
-                <div style={{ marginTop: '0.5rem', fontSize: '0.82rem', color: uploadProgress.startsWith('✓') ? '#34d399' : uploadProgress.startsWith('Upload') ? '#f87171' : '#64748b' }}>
+                <div style={{ marginTop: '0.5rem', fontSize: '0.82rem', color: uploadProgress.startsWith('✓') ? '#34d399' : uploadProgress.startsWith('Upload') ? 'var(--ft-danger)' : 'var(--ft-text-tertiary)' }}>
                   {uploadingMedia ? '⏳ ' : ''}{uploadProgress}
                 </div>
               )}
               {uploadedPhotoUrls.length > 0 && selectedType === 'photo' && (
                 <div style={{ marginTop: '0.75rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))', gap: '0.6rem' }}>
                   {uploadedPhotoUrls.map((url, i) => (
-                    <div key={`${url}-${i}`} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1px solid #334155', background: '#0f172a', aspectRatio: '1 / 1' }}>
+                    <div key={`${url}-${i}`} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--ft-border-strong)', background: 'var(--ft-bg)', aspectRatio: '1 / 1' }}>
                       <img src={url} alt={`Preview ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                       <span style={{ position: 'absolute', top: 6, left: 6, background: 'rgba(15,23,42,0.8)', color: '#f8fafc', borderRadius: 999, padding: '2px 7px', fontSize: '0.72rem', fontWeight: 800 }}>{i + 1}</span>
                       <button type="button" onClick={() => removeUploadedPhoto(i)} style={{ position: 'absolute', top: 5, right: 5, width: 28, height: 28, borderRadius: '50%', border: '1px solid rgba(248,113,113,0.5)', background: 'rgba(15,23,42,0.86)', color: '#fecaca', cursor: 'pointer', fontWeight: 800 }} aria-label={`Remove photo ${i + 1}`}>×</button>
@@ -1352,7 +1352,7 @@ export default function CreatePage() {
             {renderTextOverlayEditor('Pick a popular text style and position. The overlay appears on top of the photo carousel in the feed.')}
             <div style={s.fieldGroup}>
               <label style={s.label}>🎵 Add music from Spotify</label>
-              <p style={{ color: '#64748b', fontSize: '0.82rem', marginTop: 0, marginBottom: '0.6rem', lineHeight: 1.45 }}>
+              <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.82rem', marginTop: 0, marginBottom: '0.6rem', lineHeight: 1.45 }}>
                 Choose a track to sit with this photo. The speaker plays a real preview when one is available; otherwise the song still displays without fake audio.
               </p>
               <input
@@ -1366,20 +1366,20 @@ export default function CreatePage() {
                   Spotify search needs API credentials. Paste a Spotify track URL below for now.
                 </div>
               )}
-              {spotifyLoading && <div style={{ marginTop: '0.5rem', color: '#64748b', fontSize: '0.8rem' }}>Searching Spotify…</div>}
+              {spotifyLoading && <div style={{ marginTop: '0.5rem', color: 'var(--ft-text-tertiary)', fontSize: '0.8rem' }}>Searching Spotify…</div>}
               {spotifyResults.length > 0 && (
-                <div style={{ marginTop: '0.5rem', border: '1px solid #334155', borderRadius: 10, overflow: 'hidden', background: '#0f172a' }}>
+                <div style={{ marginTop: '0.5rem', border: '1px solid var(--ft-border-strong)', borderRadius: 10, overflow: 'hidden', background: 'var(--ft-bg)' }}>
                   {spotifyResults.map(track => (
                     <button
                       key={track.id}
                       type="button"
                       onClick={() => selectSpotifyTrack(track)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid #1e293b', padding: '0.65rem 0.75rem', cursor: 'pointer', color: '#f1f5f9', textAlign: 'left', fontFamily: 'inherit' }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--ft-surface)', padding: '0.65rem 0.75rem', cursor: 'pointer', color: 'var(--ft-text)', textAlign: 'left', fontFamily: 'inherit' }}
                     >
-                      {track.image ? <img src={track.image} alt="" style={{ width: 42, height: 42, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} /> : <span style={{ width: 42, height: 42, borderRadius: 6, background: '#1e293b', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>🎵</span>}
+                      {track.image ? <img src={track.image} alt="" style={{ width: 42, height: 42, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} /> : <span style={{ width: 42, height: 42, borderRadius: 6, background: 'var(--ft-surface)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>🎵</span>}
                       <span style={{ minWidth: 0, flex: 1 }}>
                         <strong style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{track.name}</strong>
-                        <span style={{ color: '#94a3b8', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{track.artists}</span>
+                        <span style={{ color: 'var(--ft-text-secondary)', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{track.artists}</span>
                       </span>
                       <span style={{ flexShrink: 0, borderRadius: 999, padding: '3px 7px', fontSize: '0.68rem', fontWeight: 800, color: track.previewUrl ? '#bbf7d0' : '#fbbf24', background: track.previewUrl ? 'rgba(22,163,74,0.18)' : 'rgba(251,191,36,0.12)', border: `1px solid ${track.previewUrl ? 'rgba(34,197,94,0.28)' : 'rgba(251,191,36,0.25)'}` }}>
                         {track.previewUrl ? (track.previewSource === 'itunes' ? 'Apple preview' : 'Preview') : 'No preview'}
@@ -1391,11 +1391,11 @@ export default function CreatePage() {
               {selectedSpotifyTrack && (
                 <div style={s.musicCard}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    {selectedSpotifyTrack.image ? <img src={selectedSpotifyTrack.image} alt="" style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover' }} /> : <span style={{ width: 56, height: 56, borderRadius: 8, background: '#0f172a', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>🎵</span>}
+                    {selectedSpotifyTrack.image ? <img src={selectedSpotifyTrack.image} alt="" style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover' }} /> : <span style={{ width: 56, height: 56, borderRadius: 8, background: 'var(--ft-bg)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>🎵</span>}
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{ color: '#bbf7d0', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Selected track</div>
-                      <div style={{ color: '#f1f5f9', fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedSpotifyTrack.name}</div>
-                      <div style={{ color: '#94a3b8', fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedSpotifyTrack.artists}</div>
+                      <div style={{ color: 'var(--ft-text)', fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedSpotifyTrack.name}</div>
+                      <div style={{ color: 'var(--ft-text-secondary)', fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedSpotifyTrack.artists}</div>
                       <div style={{ color: selectedSpotifyTrack.previewUrl ? '#86efac' : '#fbbf24', fontSize: '0.76rem', marginTop: 2 }}>
                         {selectedSpotifyTrack.previewUrl ? (selectedSpotifyTrack.previewSource === 'itunes' ? 'Speaker will play Apple/iTunes preview' : 'Speaker will play Spotify preview') : 'Preview unavailable — song title will show only'}
                       </div>
@@ -1431,7 +1431,7 @@ export default function CreatePage() {
                 }
               }} />
               {uploadProgress && (
-                <div style={{ marginTop: '0.5rem', fontSize: '0.82rem', color: uploadProgress.startsWith('✓') ? '#34d399' : uploadProgress.startsWith('Upload') ? '#f87171' : '#64748b' }}>
+                <div style={{ marginTop: '0.5rem', fontSize: '0.82rem', color: uploadProgress.startsWith('✓') ? '#34d399' : uploadProgress.startsWith('Upload') ? 'var(--ft-danger)' : 'var(--ft-text-tertiary)' }}>
                   {uploadingMedia ? '⏳ ' : ''}{uploadProgress}
                 </div>
               )}
@@ -1467,7 +1467,7 @@ export default function CreatePage() {
                 }
               }} />
               {uploadProgress && (
-                <div style={{ marginTop: '0.5rem', fontSize: '0.82rem', color: uploadProgress.startsWith('✓') ? '#34d399' : uploadProgress.startsWith('Upload') ? '#f87171' : '#64748b' }}>
+                <div style={{ marginTop: '0.5rem', fontSize: '0.82rem', color: uploadProgress.startsWith('✓') ? '#34d399' : uploadProgress.startsWith('Upload') ? 'var(--ft-danger)' : 'var(--ft-text-tertiary)' }}>
                   {uploadingMedia ? '⏳ ' : ''}{uploadProgress}
                 </div>
               )}
@@ -1479,7 +1479,7 @@ export default function CreatePage() {
               )}
             </div>
             <div style={s.fieldGroup}>
-              <label style={s.label}>Caption <span style={{ fontWeight: 400, color: '#64748b' }}>({(f('caption') ?? '').length}/100)</span></label>
+              <label style={s.label}>Caption <span style={{ fontWeight: 400, color: 'var(--ft-text-tertiary)' }}>({(f('caption') ?? '').length}/100)</span></label>
               <input style={s.input} placeholder="Add a caption…" maxLength={100} value={f('caption')} onChange={e => setField('caption', e.target.value)} />
             </div>
             <div style={s.fieldGroup}>
@@ -1502,15 +1502,15 @@ export default function CreatePage() {
                 onChange={e => { setField('url', e.target.value); setLinkPreview(null) }}
                 onBlur={e => handleLinkBlur(e.target.value)}
               />
-              {linkLoading && <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '0.4rem' }}>Loading preview…</p>}
+              {linkLoading && <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.8rem', marginTop: '0.4rem' }}>Loading preview…</p>}
             </div>
             {linkPreview && (
               <div style={s.linkPreviewCard}>
                 {linkPreview.image && <img src={linkPreview.image} alt="" style={{ width: '100%', maxHeight: '180px', objectFit: 'cover' }} />}
                 <div style={{ padding: '0.75rem' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f1f5f9' }}>{linkPreview.title ?? f('url')}</div>
-                  {linkPreview.description && <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '0.25rem' }}>{linkPreview.description}</div>}
-                  <div style={{ fontSize: '0.75rem', color: '#38bdf8', marginTop: '0.4rem' }}>{linkPreview.url}</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--ft-text)' }}>{linkPreview.title ?? f('url')}</div>
+                  {linkPreview.description && <div style={{ fontSize: '0.82rem', color: 'var(--ft-text-tertiary)', marginTop: '0.25rem' }}>{linkPreview.description}</div>}
+                  <div style={{ fontSize: '0.75rem', color: 'var(--ft-accent)', marginTop: '0.4rem' }}>{linkPreview.url}</div>
                 </div>
               </div>
             )}
@@ -1647,9 +1647,9 @@ export default function CreatePage() {
                       flex: 1,
                       padding: '0.55rem 0.5rem',
                       borderRadius: 8,
-                      border: (f('product_type') || 'physical') === pt ? '2px solid #38bdf8' : '1px solid rgba(148,163,184,0.2)',
+                      border: (f('product_type') || 'physical') === pt ? '2px solid var(--ft-accent)' : '1px solid rgba(148,163,184,0.2)',
                       background: (f('product_type') || 'physical') === pt ? 'rgba(56,189,248,0.1)' : 'transparent',
-                      color: (f('product_type') || 'physical') === pt ? '#38bdf8' : '#94a3b8',
+                      color: (f('product_type') || 'physical') === pt ? 'var(--ft-accent)' : 'var(--ft-text-secondary)',
                       fontSize: '0.78rem',
                       fontWeight: 700,
                       cursor: 'pointer',
@@ -1661,7 +1661,7 @@ export default function CreatePage() {
                   </button>
                 ))}
               </div>
-              <p style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 5 }}>
+              <p style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', marginTop: 5 }}>
                 {(f('product_type') || 'physical') === 'physical' ? 'Item ships to buyer — delivery tracking available' :
                  (f('product_type') || 'physical') === 'digital' ? 'Instant delivery via download link or message' :
                  'Custom service offering — no physical delivery'}
@@ -1715,7 +1715,7 @@ export default function CreatePage() {
 
             {/* ── Delivery Zone (physical products only) ── */}
             {(f('product_type') || 'physical') === 'physical' && (
-              <div style={{ marginTop: '24px', padding: '16px', borderRadius: '12px', border: '1px solid #374151', background: '#0f172a' }}>
+              <div style={{ marginTop: '24px', padding: '16px', borderRadius: '12px', border: '1px solid #374151', background: 'var(--ft-bg)' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px', color: '#f3f4f6', marginTop: 0 }}>
                   🚚 Delivery Zone <span style={{ color: '#ef4444', fontSize: '12px' }}>required</span>
                 </h3>
@@ -1784,7 +1784,7 @@ export default function CreatePage() {
                       overflowY: 'auto',
                       border: '1px solid #374151',
                       borderRadius: 8,
-                      background: '#0f172a',
+                      background: 'var(--ft-bg)',
                     }}>
                       {COUNTRY_OPTIONS.map((c) => {
                         const checked = deliveryCountries.includes(c.code)
@@ -1806,7 +1806,7 @@ export default function CreatePage() {
                                   checked ? prev.filter((x) => x !== c.code) : [...prev, c.code]
                                 )
                               }
-                              style={{ accentColor: '#38bdf8', width: 18, height: 18, flexShrink: 0 }}
+                              style={{ accentColor: 'var(--ft-accent)', width: 18, height: 18, flexShrink: 0 }}
                             />
                             <span style={{ fontSize: 14, color: '#e5e7eb' }}>{c.name}</span>
                           </label>
@@ -1828,7 +1828,7 @@ export default function CreatePage() {
                     rows={3}
                     style={{ ...s.textarea, minHeight: 'unset' }}
                   />
-                  <p style={{ color: '#64748b', fontSize: '12px', marginTop: '4px' }}>
+                  <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '12px', marginTop: '4px' }}>
                     {deliveryNotes.length}/200
                   </p>
                 </div>
@@ -1868,7 +1868,7 @@ export default function CreatePage() {
                         background: 'rgba(248,113,113,0.1)',
                         border: '1px solid rgba(248,113,113,0.25)',
                         borderRadius: '8px',
-                        color: '#f87171', cursor: 'pointer', fontSize: '1.1rem',
+                        color: 'var(--ft-danger)', cursor: 'pointer', fontSize: '1.1rem',
                         lineHeight: 1,
                       }}
                       onClick={() => setPollOptions(pollOptions.filter((_, j) => j !== i))}
@@ -1899,7 +1899,7 @@ export default function CreatePage() {
       case 'text':
         return (
           <div style={s.previewCard}>
-            <div style={{ fontSize: '0.95rem', color: '#cbd5e1', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+            <div style={{ fontSize: '0.95rem', color: 'var(--ft-text-secondary)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
               {f('content') || 'Your text post will appear here.'}
             </div>
           </div>
@@ -1909,21 +1909,21 @@ export default function CreatePage() {
         return (
           <div style={s.previewCard}>
             {f('cover_image_url') && <img src={f('cover_image_url')} alt="" style={{ width: '100%', maxHeight: '220px', objectFit: 'cover', borderRadius: '8px', marginBottom: '1rem' }} />}
-            <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.75rem' }}>{f('title') || 'Untitled Article'}</h1>
-            <div style={{ fontSize: '0.95rem', color: '#cbd5e1', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{f('body') || 'No content yet.'}</div>
+            <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--ft-text)', marginBottom: '0.75rem' }}>{f('title') || 'Untitled Article'}</h1>
+            <div style={{ fontSize: '0.95rem', color: 'var(--ft-text-secondary)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{f('body') || 'No content yet.'}</div>
           </div>
         )
 
       case 'poll':
         return (
           <div style={s.previewCard}>
-            <div style={{ fontWeight: 700, fontSize: '1rem', color: '#f1f5f9', marginBottom: '1rem' }}>{f('question') || 'Your question here'}</div>
+            <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--ft-text)', marginBottom: '1rem' }}>{f('question') || 'Your question here'}</div>
             {pollOptions.filter(o => o.trim()).map((opt, i) => (
-              <div key={i} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '0.65rem 1rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#cbd5e1' }}>
+              <div key={i} style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '8px', padding: '0.65rem 1rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--ft-text-secondary)' }}>
                 {opt}
               </div>
             ))}
-            <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>⏱ Ends in {f('duration') || '7d'}</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)', marginTop: '0.5rem' }}>⏱ Ends in {f('duration') || '7d'}</div>
           </div>
         )
 
@@ -1932,7 +1932,7 @@ export default function CreatePage() {
         return (
           <div style={s.previewCard}>
             {photoUrls.length > 0 ? (
-              <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', border: '1px solid #334155', background: '#020617', marginBottom: '0.9rem' }}>
+              <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--ft-border-strong)', background: '#020617', marginBottom: '0.9rem' }}>
                 <img src={photoUrls[0]} alt="Preview" style={{ width: '100%', maxHeight: '420px', objectFit: 'contain', display: 'block' }} />
                 {renderTextOverlay(false)}
                 {photoUrls.length > 1 && (
@@ -1942,14 +1942,14 @@ export default function CreatePage() {
                 )}
               </div>
             ) : (
-              <div style={{ color: '#64748b', marginBottom: '0.75rem' }}>Upload photos to preview your carousel.</div>
+              <div style={{ color: 'var(--ft-text-tertiary)', marginBottom: '0.75rem' }}>Upload photos to preview your carousel.</div>
             )}
             {photoUrls.length > 1 && (
               <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginBottom: '0.8rem' }}>
-                {photoUrls.map((_, i) => <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: i === 0 ? '#38bdf8' : '#475569' }} />)}
+                {photoUrls.map((_, i) => <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: i === 0 ? 'var(--ft-accent)' : 'var(--ft-text-faint)' }} />)}
               </div>
             )}
-            <div style={{ fontSize: '0.95rem', color: '#cbd5e1', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+            <div style={{ fontSize: '0.95rem', color: 'var(--ft-text-secondary)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
               {f('caption') || 'Your caption will appear here.'}
             </div>
           </div>
@@ -1959,10 +1959,10 @@ export default function CreatePage() {
       case 'job':
         return (
           <div style={s.previewCard}>
-            <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#f1f5f9' }}>{f('title') || 'Job Title'}</div>
-            <div style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '0.25rem' }}>{f('company')} · {f('job_type') || 'Full-time'}</div>
-            {(f('salary_min') || f('salary_max')) && <div style={{ color: '#38bdf8', fontSize: '0.85rem', marginTop: '0.25rem' }}>₮{f('salary_min')} – ₮{f('salary_max')}</div>}
-            <div style={{ color: '#94a3b8', fontSize: '0.88rem', marginTop: '0.75rem', whiteSpace: 'pre-wrap' }}>{f('description')}</div>
+            <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--ft-text)' }}>{f('title') || 'Job Title'}</div>
+            <div style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.85rem', marginTop: '0.25rem' }}>{f('company')} · {f('job_type') || 'Full-time'}</div>
+            {(f('salary_min') || f('salary_max')) && <div style={{ color: 'var(--ft-accent)', fontSize: '0.85rem', marginTop: '0.25rem' }}>₮{f('salary_min')} – ₮{f('salary_max')}</div>}
+            <div style={{ color: 'var(--ft-text-secondary)', fontSize: '0.88rem', marginTop: '0.75rem', whiteSpace: 'pre-wrap' }}>{f('description')}</div>
           </div>
         )
 
@@ -1970,10 +1970,10 @@ export default function CreatePage() {
         return (
           <div style={s.previewCard}>
             {f('cover_image_url') && <img src={f('cover_image_url')} alt="" style={{ width: '100%', maxHeight: '180px', objectFit: 'cover', borderRadius: '8px', marginBottom: '0.75rem' }} />}
-            <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#f1f5f9' }}>{f('title') || 'Event Title'}</div>
-            {f('start_date') && <div style={{ color: '#38bdf8', fontSize: '0.85rem', marginTop: '0.25rem' }}>📅 {new Date(f('start_date')).toLocaleString()}</div>}
-            {location && <div style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '0.2rem' }}>📍 {location}</div>}
-            <div style={{ color: '#94a3b8', fontSize: '0.88rem', marginTop: '0.75rem' }}>{f('description')}</div>
+            <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--ft-text)' }}>{f('title') || 'Event Title'}</div>
+            {f('start_date') && <div style={{ color: 'var(--ft-accent)', fontSize: '0.85rem', marginTop: '0.25rem' }}>📅 {new Date(f('start_date')).toLocaleString()}</div>}
+            {location && <div style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.85rem', marginTop: '0.2rem' }}>📍 {location}</div>}
+            <div style={{ color: 'var(--ft-text-secondary)', fontSize: '0.88rem', marginTop: '0.75rem' }}>{f('description')}</div>
           </div>
         )
 
@@ -1981,9 +1981,9 @@ export default function CreatePage() {
       case 'product':
         return (
           <div style={s.previewCard}>
-            <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#f1f5f9' }}>{f('title') || (selectedType === 'service' ? 'Service Title' : 'Product Title')}</div>
-            <div style={{ color: '#38bdf8', fontSize: '1rem', fontWeight: 700, marginTop: '0.25rem' }}>₮{f('price') || '0'}</div>
-            <div style={{ color: '#94a3b8', fontSize: '0.88rem', marginTop: '0.75rem' }}>{f('description')}</div>
+            <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--ft-text)' }}>{f('title') || (selectedType === 'service' ? 'Service Title' : 'Product Title')}</div>
+            <div style={{ color: 'var(--ft-accent)', fontSize: '1rem', fontWeight: 700, marginTop: '0.25rem' }}>₮{f('price') || '0'}</div>
+            <div style={{ color: 'var(--ft-text-secondary)', fontSize: '0.88rem', marginTop: '0.75rem' }}>{f('description')}</div>
           </div>
         )
 
@@ -1993,12 +1993,12 @@ export default function CreatePage() {
             {linkPreview ? (
               <>
                 {linkPreview.image && <img src={linkPreview.image} alt="" style={{ width: '100%', maxHeight: '180px', objectFit: 'cover', borderRadius: '8px', marginBottom: '0.75rem' }} />}
-                <div style={{ fontWeight: 700, color: '#f1f5f9' }}>{linkPreview.title}</div>
-                {linkPreview.description && <div style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '0.25rem' }}>{linkPreview.description}</div>}
-                <div style={{ color: '#38bdf8', fontSize: '0.8rem', marginTop: '0.4rem' }}>{f('url')}</div>
+                <div style={{ fontWeight: 700, color: 'var(--ft-text)' }}>{linkPreview.title}</div>
+                {linkPreview.description && <div style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.85rem', marginTop: '0.25rem' }}>{linkPreview.description}</div>}
+                <div style={{ color: 'var(--ft-accent)', fontSize: '0.8rem', marginTop: '0.4rem' }}>{f('url')}</div>
               </>
             ) : (
-              <div style={{ color: '#64748b' }}>Enter a URL to see preview</div>
+              <div style={{ color: 'var(--ft-text-tertiary)' }}>Enter a URL to see preview</div>
             )}
           </div>
         )
@@ -2006,7 +2006,7 @@ export default function CreatePage() {
       default:
         return (
           <div style={s.previewCard}>
-            <div style={{ color: '#64748b' }}>Preview will appear here</div>
+            <div style={{ color: 'var(--ft-text-tertiary)' }}>Preview will appear here</div>
           </div>
         )
     }

@@ -95,7 +95,7 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
         width: '52px',
         height: '52px',
         borderRadius: '50%',
-        background: 'linear-gradient(135deg, #38bdf8, #818cf8)',
+        background: 'linear-gradient(135deg, var(--ft-accent), #818cf8)',
         border: 'none',
         display: 'flex',
         alignItems: 'center',
@@ -111,7 +111,7 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
         width: '32px',
         height: '32px',
         borderRadius: '8px',
-        background: 'linear-gradient(135deg, #38bdf8, #818cf8)',
+        background: 'linear-gradient(135deg, var(--ft-accent), #818cf8)',
         border: 'none',
         display: 'flex',
         alignItems: 'center',
@@ -140,16 +140,16 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
           ...(asCenterButton
             ? { bottom: '62px', left: '50%', transform: 'translateX(-50%)' }
             : { top: '42px', right: 0 }),
-          background: '#1e293b',
-          border: '1px solid #334155',
+          background: 'var(--ft-surface)',
+          border: '1px solid var(--ft-border-strong)',
           borderRadius: '14px',
           boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
           minWidth: '240px',
           zIndex: 9999,
           overflow: 'hidden',
         }}>
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid #334155' }}>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9', letterSpacing: '-0.2px' }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--ft-border-strong)' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--ft-text)', letterSpacing: '-0.2px' }}>
               {t('title')}
             </span>
           </div>
@@ -163,8 +163,8 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
               >
                 <span style={{ fontSize: '18px' }}>📝</span>
                   <div>
-                   <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9' }}>{t('items.post.title')}</div>
-                   <div style={{ fontSize: '11px', color: '#64748b' }}>{t('items.post.subtitle')}</div>
+                   <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ft-text)' }}>{t('items.post.title')}</div>
+                   <div style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)' }}>{t('items.post.subtitle')}</div>
                 </div>
               </button>
 
@@ -172,8 +172,8 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
               <button onClick={() => navigate('/jobs/new')} style={menuItemStyle}>
                 <span style={{ fontSize: '18px' }}>💼</span>
                 <div>
-                   <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9' }}>{t('items.job.title')}</div>
-                   <div style={{ fontSize: '11px', color: '#64748b' }}>{t('items.job.subtitle')}</div>
+                   <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ft-text)' }}>{t('items.job.title')}</div>
+                   <div style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)' }}>{t('items.job.subtitle')}</div>
                 </div>
               </button>
 
@@ -181,8 +181,8 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
               <button onClick={() => navigate('/events/create')} style={menuItemStyle}>
                 <span style={{ fontSize: '18px' }}>📅</span>
                 <div>
-                   <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9' }}>{t('items.event.title')}</div>
-                   <div style={{ fontSize: '11px', color: '#64748b' }}>{t('items.event.subtitle')}</div>
+                   <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ft-text)' }}>{t('items.event.title')}</div>
+                   <div style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)' }}>{t('items.event.subtitle')}</div>
                 </div>
               </button>
 
@@ -190,8 +190,8 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
               <button onClick={() => navigate('/articles/new')} style={menuItemStyle}>
                 <span style={{ fontSize: '18px' }}>✍️</span>
                 <div>
-                   <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9' }}>{t('items.article.title')}</div>
-                   <div style={{ fontSize: '11px', color: '#64748b' }}>{t('items.article.subtitle')}</div>
+                   <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ft-text)' }}>{t('items.article.title')}</div>
+                   <div style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)' }}>{t('items.article.subtitle')}</div>
                 </div>
               </button>
             </div>
@@ -206,12 +206,12 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
                 rows={4}
                 style={{
                   width: '100%',
-                  background: '#0f172a',
-                  border: '1px solid #334155',
+                  background: 'var(--ft-bg)',
+                  border: '1px solid var(--ft-border-strong)',
                   borderRadius: '8px',
                   padding: '10px',
                   fontSize: '13px',
-                  color: '#f1f5f9',
+                  color: 'var(--ft-text)',
                   resize: 'vertical',
                   outline: 'none',
                   fontFamily: 'inherit',
@@ -224,12 +224,12 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
                   onChange={e => setPostCategory(e.target.value)}
                   style={{
                     flex: 1,
-                    background: '#0f172a',
-                    border: '1px solid #334155',
+                    background: 'var(--ft-bg)',
+                    border: '1px solid var(--ft-border-strong)',
                     borderRadius: '6px',
                     padding: '6px 8px',
                     fontSize: '12px',
-                    color: '#94a3b8',
+                    color: 'var(--ft-text-secondary)',
                     outline: 'none',
                   }}
                 >
@@ -241,8 +241,8 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
                     padding: '6px 10px',
                     borderRadius: '6px',
                     background: 'transparent',
-                    border: '1px solid #334155',
-                    color: '#64748b',
+                    border: '1px solid var(--ft-border-strong)',
+                    color: 'var(--ft-text-tertiary)',
                     fontSize: '12px',
                     cursor: 'pointer',
                   }}
@@ -255,7 +255,7 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
                   style={{
                     padding: '6px 14px',
                     borderRadius: '6px',
-                    background: success ? '#22c55e' : 'linear-gradient(135deg, #38bdf8, #818cf8)',
+                    background: success ? '#22c55e' : 'linear-gradient(135deg, var(--ft-accent), #818cf8)',
                     border: 'none',
                     color: '#fff',
                     fontSize: '12px',
@@ -268,7 +268,7 @@ export default function CreateMenu({ asCenterButton = false, onClose }: CreateMe
                 </button>
               </div>
               {error && (
-                <div style={{ marginTop: '6px', fontSize: '11px', color: '#f87171' }}>{error}</div>
+                <div style={{ marginTop: '6px', fontSize: '11px', color: 'var(--ft-danger)' }}>{error}</div>
               )}
             </div>
           )}

@@ -107,10 +107,10 @@ const GlobeIcon: React.FC<{ size: number }> = ({ size }) => (
 // show first when there isn't room for all of them.
 const PLATFORMS: PlatformConfig[] = [
   { key: 'linkedin',  field: 'linkedin_url',  label: 'LinkedIn',  brand: '#0a66c2', Icon: LinkedInIcon  },
-  { key: 'website',   field: 'website_url',   label: 'Website',   brand: '#38bdf8', Icon: GlobeIcon     },
+  { key: 'website',   field: 'website_url',   label: 'Website',   brand: 'var(--ft-accent)', Icon: GlobeIcon     },
   { key: 'instagram', field: 'instagram_url', label: 'Instagram', brand: '#e1306c', Icon: InstagramIcon },
   { key: 'twitter',   field: 'twitter_url',   label: 'X (Twitter)', brand: '#ffffff', Icon: TwitterIcon },
-  { key: 'github',    field: 'github_url',    label: 'GitHub',    brand: '#f1f5f9', Icon: GitHubIcon    },
+  { key: 'github',    field: 'github_url',    label: 'GitHub',    brand: 'var(--ft-text)', Icon: GitHubIcon    },
   { key: 'tiktok',    field: 'tiktok_url',    label: 'TikTok',    brand: '#69c9d0', Icon: TikTokIcon    },
   { key: 'youtube',   field: 'youtube_url',   label: 'YouTube',   brand: '#ff0000', Icon: YouTubeIcon   },
 ]

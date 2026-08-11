@@ -28,7 +28,7 @@ export default function PostPageClient({
         {/* Related posts */}
         {related.length > 0 && (
           <div className="ft-post-detail-related">
-            <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--ft-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>
               More from this author
             </div>
             {related.map(r => <PostCard key={r.id} post={r} currentUserId={currentUserId ?? undefined} />)}

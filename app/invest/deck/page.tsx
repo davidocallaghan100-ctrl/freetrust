@@ -4,15 +4,15 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 
 const C = {
-  bg: '#0f172a',
-  bgSoft: '#1e293b',
+  bg: 'var(--ft-bg)',
+  bgSoft: 'var(--ft-surface)',
   card: 'rgba(30,41,59,0.6)',
   border: 'rgba(148,163,184,0.15)',
   borderStrong: 'rgba(56,189,248,0.35)',
-  sky: '#38bdf8',
-  text: '#f1f5f9',
-  textMuted: '#94a3b8',
-  textFaint: '#64748b',
+  sky: 'var(--ft-accent)',
+  text: 'var(--ft-text)',
+  textMuted: 'var(--ft-text-secondary)',
+  textFaint: 'var(--ft-text-tertiary)',
 };
 
 const SLIDES = ['cover','problem','insight','product','model','moat','traction','market','gtm','roadmap','ask'] as const;
@@ -95,7 +95,7 @@ export default function InvestorDeckPage() {
         .btn { background: transparent; border: 1px solid ${C.border}; color: ${C.textMuted}; padding: 8px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; text-decoration: none; }
         .btn:hover { color: ${C.text}; border-color: ${C.borderStrong}; }
         .btn-p { background: ${C.sky}; color: ${C.bg}; border-color: ${C.sky}; font-weight: 600; }
-        .btn-p:hover { background: #7dd3fc; color: ${C.bg}; }
+        .btn-p:hover { background: var(--ft-accent); color: ${C.bg}; }
         .ct { font-size: 12px; color: ${C.textFaint}; font-family: ui-monospace, monospace; }
         .ss { min-height: calc(100vh - 120px); padding: 48px 20px 80px; display: flex; align-items: center; justify-content: center; animation: slideFade 0.28s ease-out; }
         @keyframes slideFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -156,11 +156,11 @@ export default function InvestorDeckPage() {
           .dt, .dn, .en { display: none !important; }
           body, .ss { background: white !important; color: black !important; }
           .ss { min-height: auto; page-break-after: always; padding: 40px; display: flex !important; }
-          .h { color: #0f172a !important; }
+          .h { color: var(--ft-bg) !important; }
           .h .a { color: #0284c7 !important; }
-          .sub, .body, .tile p, .ld { color: #475569 !important; }
-          .tile, .stat { background: white !important; border: 1px solid #cbd5e1 !important; }
-          .sv, .lt { color: #0f172a !important; }
+          .sub, .body, .tile p, .ld { color: var(--ft-text-faint) !important; }
+          .tile, .stat { background: white !important; border: 1px solid var(--ft-text-secondary) !important; }
+          .sv, .lt { color: var(--ft-bg) !important; }
           .pre, .ln { color: #0284c7 !important; }
         }
       `}</style>

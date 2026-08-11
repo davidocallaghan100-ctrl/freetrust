@@ -131,7 +131,7 @@ export default function MessageAttachments({ attachments, compact = false }: Mes
         .ft-message-attachment-loading {
           display: block;
           padding: 0.8rem;
-          color: #94a3b8;
+          color: var(--ft-text-secondary);
           font-size: 0.78rem;
         }
         .ft-message-file-chip {

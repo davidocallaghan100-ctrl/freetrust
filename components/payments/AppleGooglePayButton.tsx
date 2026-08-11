@@ -253,7 +253,7 @@ export default function AppleGooglePayButton({
         alignItems: 'center',
         gap: 10,
         marginBottom: 10,
-        color: '#475569',
+        color: 'var(--ft-text-faint)',
         fontSize: 11,
         fontWeight: 600,
         textTransform: 'uppercase',

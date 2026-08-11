@@ -108,7 +108,7 @@ function FreeTrustCard({ item, onOpen }: { item: InternalResult; onOpen: (id: st
   return (
     <Link href={`/products/${item.id}`} onClick={e => { e.preventDefault(); onOpen(item.id) }} style={{ textDecoration: 'none' }}>
       <div style={{ background: '#111827', border: '1px solid rgba(0,194,203,0.16)', borderRadius: 12, overflow: 'hidden', minHeight: 260 }}>
-        <div style={{ height: 134, background: item.image ? '#0f172a' : 'linear-gradient(135deg,#00c2cb,#164e63)', position: 'relative' }}>
+        <div style={{ height: 134, background: item.image ? 'var(--ft-bg)' : 'linear-gradient(135deg,#00c2cb,#164e63)', position: 'relative' }}>
           {item.image ? <img src={item.image} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
           <div style={{ position: 'absolute', top: 10, left: 10, background: '#00c2cb', color: '#ffffff', borderRadius: 999, padding: '4px 9px', fontSize: '0.7rem', fontWeight: 900 }}>
             ₮ {item.sellerTrust ?? item.qualityScore ?? 0} Trust
@@ -116,10 +116,10 @@ function FreeTrustCard({ item, onOpen }: { item: InternalResult; onOpen: (id: st
         </div>
         <div style={{ padding: 14 }}>
           <div style={{ color: '#ffffff', fontWeight: 900, fontSize: '0.95rem', lineHeight: 1.25, marginBottom: 7 }}>{item.title}</div>
-          <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.8rem', lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
+          <p style={{ margin: 0, color: 'var(--ft-text-secondary)', fontSize: '0.8rem', lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
-            {item.sellerAvatar ? <img src={item.sellerAvatar} alt={item.sellerName} style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }} /> : <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#334155' }} />}
-            <span style={{ color: '#94a3b8', fontSize: '0.78rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.sellerName}{item.sellerVerified ? ' ✓' : ''}</span>
+            {item.sellerAvatar ? <img src={item.sellerAvatar} alt={item.sellerName} style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }} /> : <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--ft-border-strong)' }} />}
+            <span style={{ color: 'var(--ft-text-secondary)', fontSize: '0.78rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.sellerName}{item.sellerVerified ? ' ✓' : ''}</span>
             <strong style={{ color: '#ffffff', fontSize: '0.92rem' }}>{formatPrice(item.price, item.currency)}</strong>
           </div>
         </div>
@@ -131,17 +131,17 @@ function FreeTrustCard({ item, onOpen }: { item: InternalResult; onOpen: (id: st
 function ExternalCard({ item, onBuy }: { item: ExternalResult; onBuy: () => void }) {
   return (
     <div style={{ background: '#111827', border: '1px solid rgba(148,163,184,0.16)', borderRadius: 12, overflow: 'hidden', minHeight: 260, position: 'relative' }}>
-      <div style={{ position: 'absolute', top: 10, right: 10, background: '#334155', color: '#cbd5e1', borderRadius: 999, padding: '3px 8px', fontSize: '0.68rem', fontWeight: 800, zIndex: 1 }}>External</div>
-      <div style={{ height: 134, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ position: 'absolute', top: 10, right: 10, background: 'var(--ft-border-strong)', color: 'var(--ft-text-secondary)', borderRadius: 999, padding: '3px 8px', fontSize: '0.68rem', fontWeight: 800, zIndex: 1 }}>External</div>
+      <div style={{ height: 134, background: 'var(--ft-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {item.thumbnail ? <img src={item.thumbnail} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#ffffff' }} /> : <span style={{ fontSize: '2rem' }}>🛍️</span>}
       </div>
       <div style={{ padding: 14 }}>
         <div style={{ color: '#ffffff', fontWeight: 900, fontSize: '0.92rem', lineHeight: 1.25, marginBottom: 7, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.title}</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', marginBottom: 8 }}>
-          <span style={{ color: '#94a3b8', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.source}</span>
+          <span style={{ color: 'var(--ft-text-secondary)', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.source}</span>
           <strong style={{ color: '#ffffff', fontSize: '0.96rem', whiteSpace: 'nowrap' }}>{item.price || 'View price'}</strong>
         </div>
-        {(item.rating || item.reviews) ? <div style={{ color: '#94a3b8', fontSize: '0.75rem', marginBottom: 12 }}>★ {item.rating ?? '—'} {item.reviews ? `(${item.reviews})` : ''}</div> : <div style={{ height: 13, marginBottom: 12 }} />}
+        {(item.rating || item.reviews) ? <div style={{ color: 'var(--ft-text-secondary)', fontSize: '0.75rem', marginBottom: 12 }}>★ {item.rating ?? '—'} {item.reviews ? `(${item.reviews})` : ''}</div> : <div style={{ height: 13, marginBottom: 12 }} />}
         <button onClick={onBuy} style={{ ...tealButtonStyle, width: '100%', padding: '0.7rem 1rem', minHeight: 40 }}>
           Buy via FreeTrust
         </button>
@@ -312,7 +312,7 @@ export default function FindOnlineTab() {
           </button>
         </div>
         {intent ? (
-          <div style={{ marginTop: 10, color: '#94a3b8', fontSize: '0.82rem' }}>
+          <div style={{ marginTop: 10, color: 'var(--ft-text-secondary)', fontSize: '0.82rem' }}>
             Searching for <strong style={{ color: '#00c2cb' }}>{intent.keywords}</strong>{intent.maxPrice ? ` under €${intent.maxPrice}` : ''}
           </div>
         ) : null}
@@ -331,7 +331,7 @@ export default function FindOnlineTab() {
             <div style={{ display: 'grid', gap: 12 }}>{[0, 1, 2].map(i => <SkeletonCard key={i} />)}</div>
           ) : internalResults.length === 0 && intent ? (
             <div style={{ background: '#111827', border: '1px solid rgba(148,163,184,0.16)', borderRadius: 12, padding: 18, textAlign: 'center' }}>
-              <p style={{ color: '#94a3b8', margin: '0 0 14px' }}>No FreeTrust sellers found for this product yet — be the first to list it!</p>
+              <p style={{ color: 'var(--ft-text-secondary)', margin: '0 0 14px' }}>No FreeTrust sellers found for this product yet — be the first to list it!</p>
               <Link href="/products/new" onClick={e => { e.preventDefault(); void openCreateProduct() }} style={{ display: 'inline-block', background: '#00c2cb', color: '#ffffff', borderRadius: 8, padding: '0.7rem 1rem', fontWeight: 800, textDecoration: 'none' }}>+ List Product</Link>
             </div>
           ) : (
@@ -348,7 +348,7 @@ export default function FindOnlineTab() {
           {loading ? (
             <div style={{ display: 'grid', gap: 12 }}>{[0, 1, 2].map(i => <SkeletonCard key={i} />)}</div>
           ) : externalResults.length === 0 && intent ? (
-            <div style={{ background: '#111827', border: '1px solid rgba(148,163,184,0.16)', borderRadius: 12, padding: 18, color: '#94a3b8', textAlign: 'center' }}>
+            <div style={{ background: '#111827', border: '1px solid rgba(148,163,184,0.16)', borderRadius: 12, padding: 18, color: 'var(--ft-text-secondary)', textAlign: 'center' }}>
               No external results found. Try different keywords.
             </div>
           ) : (
@@ -357,7 +357,7 @@ export default function FindOnlineTab() {
         </section>
       </div>
 
-      <p style={{ color: '#94a3b8', fontSize: '0.78rem', lineHeight: 1.55, margin: '22px 0 0' }}>
+      <p style={{ color: 'var(--ft-text-secondary)', fontSize: '0.78rem', lineHeight: 1.55, margin: '22px 0 0' }}>
         FreeTrust results show seller Trust Score. External prices are live retailer results and may change at checkout.
       </p>
 
@@ -365,11 +365,11 @@ export default function FindOnlineTab() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 9200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18 }}>
           <div style={{ background: '#111827', color: '#ffffff', border: '1px solid rgba(0,194,203,0.35)', borderRadius: 16, padding: 22, maxWidth: 460, width: '100%', boxShadow: '0 22px 70px rgba(0,0,0,0.5)' }}>
             <h3 style={{ margin: '0 0 10px', fontSize: '1.15rem' }}>Continue through FreeTrust</h3>
-            <p style={{ color: '#cbd5e1', lineHeight: 1.6, margin: '0 0 18px' }}>
+            <p style={{ color: 'var(--ft-text-secondary)', lineHeight: 1.6, margin: '0 0 18px' }}>
               You’re about to buy from {selected.source}. FreeTrust earns a small referral fee on this purchase at no extra cost to you.
             </p>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-              <button onClick={() => setSelected(null)} style={{ background: 'transparent', color: '#94a3b8', border: '1px solid #334155', borderRadius: 8, padding: '0.75rem 1rem', cursor: 'pointer', fontWeight: 700 }}>Cancel</button>
+              <button onClick={() => setSelected(null)} style={{ background: 'transparent', color: 'var(--ft-text-secondary)', border: '1px solid var(--ft-border-strong)', borderRadius: 8, padding: '0.75rem 1rem', cursor: 'pointer', fontWeight: 700 }}>Cancel</button>
               <button onClick={continueToRetailer} disabled={loggingClick} style={{ ...tealButtonStyle, opacity: loggingClick ? 0.7 : 1, cursor: loggingClick ? 'wait' : 'pointer' }}>
                 {loggingClick ? 'Opening…' : `Continue to ${selected.source}`}
               </button>

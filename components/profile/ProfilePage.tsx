@@ -223,8 +223,8 @@ function getTrustLevel(balance: number) {
   if (balance >= 5000) return { label: 'FreeTrust Ambassador', icon: '👑', color: '#f59e0b', nextAt: null,  next: 'Max level reached' }
   if (balance >= 1000) return { label: 'Community Leader',    icon: '🏆', color: '#a78bfa', nextAt: 5000, next: 'Ambassador at ₮5000' }
   if (balance >= 500)  return { label: 'Active Member',       icon: '✅', color: '#34d399', nextAt: 1000, next: 'Leader at ₮1000' }
-  if (balance >= 100)  return { label: 'Trusted Member',      icon: '⭐', color: '#38bdf8', nextAt: 500,  next: 'Active at ₮500' }
-  return                      { label: 'New Member',          icon: '🌱', color: '#94a3b8', nextAt: 100,  next: 'Trusted at ₮100' }
+  if (balance >= 100)  return { label: 'Trusted Member',      icon: '⭐', color: 'var(--ft-accent)', nextAt: 500,  next: 'Active at ₮500' }
+  return                      { label: 'New Member',          icon: '🌱', color: 'var(--ft-text-secondary)', nextAt: 100,  next: 'Trusted at ₮100' }
 }
 
 function isProfileVerified(profile: Profile | null | undefined) {
@@ -1354,8 +1354,8 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', background: '#0f172a' }}>
-        <div style={{ width: 32, height: 32, border: '3px solid rgba(56,189,248,0.2)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', background: 'var(--ft-bg)' }}>
+        <div style={{ width: 32, height: 32, border: '3px solid rgba(56,189,248,0.2)', borderTopColor: 'var(--ft-accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     )
@@ -1365,30 +1365,30 @@ export default function ProfilePage() {
     const maybeRestoringSession = sessionRestoreSuspected || hasSupabaseCookie()
     if (maybeRestoringSession) {
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', background: '#0f172a', color: '#f1f5f9', gap: '1rem', padding: '1.5rem', textAlign: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', gap: '1rem', padding: '1.5rem', textAlign: 'center' }}>
           <div style={{ fontSize: '3rem' }}>⏳</div>
           <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Restoring your session…</h3>
-          <p style={{ color: '#94a3b8', maxWidth: 460, margin: 0, lineHeight: 1.5 }}>
+          <p style={{ color: 'var(--ft-text-secondary)', maxWidth: 460, margin: 0, lineHeight: 1.5 }}>
             You appear to have just signed in, but your browser has not finished restoring the session yet. Try reloading once — you do not need to sign up again.
           </p>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <button onClick={() => window.location.reload()} style={{ background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 8, padding: '0.6rem 1.4rem', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit' }}>Try again</button>
-            <Link href="/login?redirect=/profile" style={{ background: 'transparent', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.35)', borderRadius: 8, padding: '0.6rem 1.4rem', fontWeight: 700, textDecoration: 'none', fontSize: '0.9rem' }}>Sign in again</Link>
+            <button onClick={() => window.location.reload()} style={{ background: 'var(--ft-accent)', color: 'var(--ft-bg)', border: 'none', borderRadius: 8, padding: '0.6rem 1.4rem', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit' }}>Try again</button>
+            <Link href="/login?redirect=/profile" style={{ background: 'transparent', color: 'var(--ft-accent)', border: '1px solid rgba(56,189,248,0.35)', borderRadius: 8, padding: '0.6rem 1.4rem', fontWeight: 700, textDecoration: 'none', fontSize: '0.9rem' }}>Sign in again</Link>
           </div>
         </div>
       )
     }
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', background: '#0f172a', color: '#f1f5f9', gap: '1rem', padding: '1.5rem', textAlign: 'center' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', gap: '1rem', padding: '1.5rem', textAlign: 'center' }}>
         <div style={{ fontSize: '3rem' }}>🔒</div>
         <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Your session expired or didn&apos;t load</h3>
-        <p style={{ color: '#94a3b8', maxWidth: 420, margin: 0, lineHeight: 1.5 }}>
+        <p style={{ color: 'var(--ft-text-secondary)', maxWidth: 420, margin: 0, lineHeight: 1.5 }}>
           Sign in again to view and edit your profile. If you just signed in, try reloading first — you do not need to create a new account.
         </p>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <button onClick={() => window.location.reload()} style={{ background: 'transparent', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.35)', borderRadius: 8, padding: '0.6rem 1.4rem', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit' }}>Try again</button>
-          <Link href="/login?redirect=/profile" style={{ background: '#38bdf8', color: '#0f172a', borderRadius: 8, padding: '0.6rem 1.4rem', fontWeight: 700, textDecoration: 'none', fontSize: '0.9rem' }}>Sign in again</Link>
+          <button onClick={() => window.location.reload()} style={{ background: 'transparent', color: 'var(--ft-accent)', border: '1px solid rgba(56,189,248,0.35)', borderRadius: 8, padding: '0.6rem 1.4rem', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit' }}>Try again</button>
+          <Link href="/login?redirect=/profile" style={{ background: 'var(--ft-accent)', color: 'var(--ft-bg)', borderRadius: 8, padding: '0.6rem 1.4rem', fontWeight: 700, textDecoration: 'none', fontSize: '0.9rem' }}>Sign in again</Link>
         </div>
       </div>
     )
@@ -1396,33 +1396,33 @@ export default function ProfilePage() {
 
   if (!isOwnProfile && !profile && !loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', background: '#0f172a', color: '#f1f5f9', gap: '1rem', padding: '1.5rem', textAlign: 'center' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', gap: '1rem', padding: '1.5rem', textAlign: 'center' }}>
         <div style={{ fontSize: '3rem' }}>{profileHiddenUntilComplete ? '🛡️' : '👤'}</div>
         <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>{profileHiddenUntilComplete ? 'Profile hidden until setup is complete' : 'Profile not found'}</h3>
         {profileHiddenUntilComplete && (
-          <p style={{ color: '#94a3b8', maxWidth: 420, margin: 0, lineHeight: 1.5 }}>
+          <p style={{ color: 'var(--ft-text-secondary)', maxWidth: 420, margin: 0, lineHeight: 1.5 }}>
             FreeTrust only displays member accounts after they have a real name, face photo, location, hobbies, and completed onboarding. Bio is optional.
           </p>
         )}
-        <Link href="/members" style={{ color: '#38bdf8', textDecoration: 'none', fontSize: '0.9rem' }}>← Back to Members</Link>
+        <Link href="/members" style={{ color: 'var(--ft-accent)', textDecoration: 'none', fontSize: '0.9rem' }}>← Back to Members</Link>
       </div>
     )
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui' }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        .profile-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 16px; padding: 1rem; margin-bottom: 0.875rem; }
+        .profile-card { background: var(--ft-bg); border: 1px solid var(--ft-surface); border-radius: 16px; padding: 1rem; margin-bottom: 0.875rem; }
         .profile-photo-grid-card { padding: 0; overflow: hidden; }
         .profile-photo-grid-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 0 0.5rem; }
         .profile-photo-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; background: #020617; }
         .profile-photo-tile { position: relative; display: block; aspect-ratio: 3 / 4; overflow: hidden; background: #020617; }
-        .profile-photo-grid-view { font-size: 12px; font-weight: 800; color: #cbd5e1; text-decoration: none; line-height: 1; }
+        .profile-photo-grid-view { font-size: 12px; font-weight: 800; color: var(--ft-text-secondary); text-decoration: none; line-height: 1; }
         .profile-photo-grid-add { width: 30px; height: 30px; min-width: 30px; min-height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; border: 1px solid rgba(248,250,252,0.18); background: rgba(248,250,252,0.10); color: #f8fafc; font-size: 18px; font-weight: 850; line-height: 1; text-decoration: none; box-shadow: 0 8px 22px rgba(2,6,23,0.28); }
-        .profile-input { width: 100%; background: rgba(15,23,42,0.7); border: 1px solid rgba(148,163,184,0.18); border-radius: 8px; padding: 10px 12px; font-size: 16px; color: #f1f5f9; outline: none; font-family: inherit; box-sizing: border-box; }
+        .profile-input { width: 100%; background: rgba(15,23,42,0.7); border: 1px solid rgba(148,163,184,0.18); border-radius: 8px; padding: 10px 12px; font-size: 16px; color: var(--ft-text); outline: none; font-family: inherit; box-sizing: border-box; }
         .profile-input:focus { border-color: rgba(56,189,248,0.4); }
-        .profile-label { font-size: 12px; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .profile-label { font-size: 12px; font-weight: 600; color: var(--ft-text-tertiary); display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
         .cover-overlay { opacity: 0; transition: opacity 0.2s; }
         .cover-wrap:hover .cover-overlay { opacity: 1; }
         .profile-tab-scroll::-webkit-scrollbar { display: none; }
@@ -1451,7 +1451,7 @@ export default function ProfilePage() {
 
       {/* Toast */}
       {toast && (
-        <div style={{ position: 'fixed', top: 70, right: 20, background: '#1e293b', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 10, padding: '12px 20px', fontSize: '0.88rem', color: '#f1f5f9', zIndex: 1000, boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+        <div style={{ position: 'fixed', top: 70, right: 20, background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 10, padding: '12px 20px', fontSize: '0.88rem', color: 'var(--ft-text)', zIndex: 1000, boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
           {toast}
         </div>
       )}
@@ -1460,11 +1460,11 @@ export default function ProfilePage() {
       {isOwnProfile && trustBalance < 10 && (
         <div style={{ background: 'linear-gradient(90deg,rgba(56,189,248,0.07),rgba(52,211,153,0.05))', borderBottom: '1px solid rgba(56,189,248,0.15)', padding: '0.6rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '1rem' }}>⚡</span>
-          <span style={{ fontSize: '0.8rem', color: '#94a3b8', flex: 1 }}>
-            Your Trust score is <strong style={{ color: '#38bdf8' }}>₮{trustBalance}</strong>. Complete your profile and make your first connection to start building trust.
+          <span style={{ fontSize: '0.8rem', color: 'var(--ft-text-secondary)', flex: 1 }}>
+            Your Trust score is <strong style={{ color: 'var(--ft-accent)' }}>₮{trustBalance}</strong>. Complete your profile and make your first connection to start building trust.
           </span>
           <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
-            <Link href="/browse" style={{ fontSize: '0.75rem', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 6, padding: '0.3rem 0.7rem', color: '#38bdf8', fontWeight: 600, textDecoration: 'none' }}>Connect →</Link>
+            <Link href="/browse" style={{ fontSize: '0.75rem', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 6, padding: '0.3rem 0.7rem', color: 'var(--ft-accent)', fontWeight: 600, textDecoration: 'none' }}>Connect →</Link>
           </div>
         </div>
       )}
@@ -1488,7 +1488,7 @@ export default function ProfilePage() {
         {profile?.cover_url ? (
           <img src={profile.cover_url} alt="cover" style={getCoverImageStyle(coverSettings)} />
         ) : (
-          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, rgba(56,189,248,0.15) 100%)' }} />
+          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, var(--ft-bg) 0%, var(--ft-surface) 50%, rgba(56,189,248,0.15) 100%)' }} />
         )}
         {/* Upload overlay — own profile only */}
         {isOwnProfile && (
@@ -1498,11 +1498,11 @@ export default function ProfilePage() {
               position: 'absolute', inset: 0,
               background: 'rgba(15,23,42,0.55)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              gap: '0.5rem', color: '#f1f5f9', fontSize: '0.9rem', fontWeight: 600,
+              gap: '0.5rem', color: 'var(--ft-text)', fontSize: '0.9rem', fontWeight: 600,
             }}
           >
             {coverUploading ? (
-              <div style={{ width: 24, height: 24, border: '2px solid rgba(56,189,248,0.3)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+              <div style={{ width: 24, height: 24, border: '2px solid rgba(56,189,248,0.3)', borderTopColor: 'var(--ft-accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
             ) : (
               <>📷 Change cover photo</>
             )}
@@ -1534,7 +1534,7 @@ export default function ProfilePage() {
               background: 'rgba(15,23,42,0.78)',
               border: '1px solid rgba(125,211,252,0.55)',
               borderRadius: 14,
-              color: '#7dd3fc',
+              color: 'var(--ft-accent)',
               fontSize: 22,
               cursor: 'pointer',
               boxShadow: '0 10px 28px rgba(2,6,23,0.45)',
@@ -1569,7 +1569,7 @@ export default function ProfilePage() {
               {/* Uploading — own profile only */}
               {isOwnProfile && avatarUploading && (
                 <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(15,23,42,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: 20, height: 20, border: '2px solid rgba(56,189,248,0.3)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                  <div style={{ width: 20, height: 20, border: '2px solid rgba(56,189,248,0.3)', borderTopColor: 'var(--ft-accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
                 </div>
               )}
               {/* Hover — own profile only */}
@@ -1592,13 +1592,13 @@ export default function ProfilePage() {
                   setSaveError(null)
                   setEditing(!editing)
                 }}
-                style={{ background: editing ? 'rgba(148,163,184,0.1)' : 'rgba(56,189,248,0.1)', border: `1px solid ${editing ? 'rgba(148,163,184,0.2)' : 'rgba(56,189,248,0.3)'}`, borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.82rem', fontWeight: 600, color: editing ? '#94a3b8' : '#38bdf8', cursor: 'pointer' }}
+                style={{ background: editing ? 'rgba(148,163,184,0.1)' : 'rgba(56,189,248,0.1)', border: `1px solid ${editing ? 'rgba(148,163,184,0.2)' : 'rgba(56,189,248,0.3)'}`, borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.82rem', fontWeight: 600, color: editing ? 'var(--ft-text-secondary)' : 'var(--ft-accent)', cursor: 'pointer' }}
               >
                 {editing ? 'Cancel' : '✏️ Edit Profile'}
               </button>
               <Link
                 href="/profile/manage"
-                style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.82rem', fontWeight: 600, color: '#38bdf8', textDecoration: 'none' }}
+                style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.45rem 1rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--ft-accent)', textDecoration: 'none' }}
               >
                 ⚙️ Manage listings
               </Link>
@@ -1615,13 +1615,13 @@ export default function ProfilePage() {
                     onClick={isFollowing ? handleUnfollow : handleFollow}
                     disabled={followLoading}
                     style={{
-                      background: isFollowing ? 'transparent' : 'linear-gradient(135deg,#38bdf8,#818cf8)',
+                      background: isFollowing ? 'transparent' : 'linear-gradient(135deg,var(--ft-accent),#818cf8)',
                       border: isFollowing ? '1px solid rgba(148,163,184,0.3)' : 'none',
                       borderRadius: 8,
                       padding: '0.45rem 1.1rem',
                       fontSize: '0.82rem',
                       fontWeight: 700,
-                      color: isFollowing ? '#94a3b8' : '#0f172a',
+                      color: isFollowing ? 'var(--ft-text-secondary)' : 'var(--ft-bg)',
                       cursor: followLoading ? 'default' : 'pointer',
                       opacity: followLoading ? 0.6 : 1,
                       transition: 'all 0.15s',
@@ -1633,13 +1633,13 @@ export default function ProfilePage() {
                   <button
                     onClick={() => router.push(`/login?redirect=${encodeURIComponent(`/profile?id=${viewingId}`)}`)}
                     style={{
-                      background: 'linear-gradient(135deg,#38bdf8,#818cf8)',
+                      background: 'linear-gradient(135deg,var(--ft-accent),#818cf8)',
                       border: 'none',
                       borderRadius: 8,
                       padding: '0.45rem 1.1rem',
                       fontSize: '0.82rem',
                       fontWeight: 700,
-                      color: '#0f172a',
+                      color: 'var(--ft-bg)',
                       cursor: 'pointer',
                       transition: 'all 0.15s',
                     }}
@@ -1670,7 +1670,7 @@ export default function ProfilePage() {
                     💬 Message
                   </button>
                 )}
-                <Link href="/members" style={{ fontSize: '0.82rem', color: '#64748b', textDecoration: 'none', border: '1px solid rgba(100,116,139,0.25)', borderRadius: 8, padding: '0.45rem 1rem' }}>
+                <Link href="/members" style={{ fontSize: '0.82rem', color: 'var(--ft-text-tertiary)', textDecoration: 'none', border: '1px solid rgba(100,116,139,0.25)', borderRadius: 8, padding: '0.45rem 1rem' }}>
                   ← Members
                 </Link>
               </div>
@@ -1684,22 +1684,22 @@ export default function ProfilePage() {
               {isProfileVerified(profile) && <VerifiedBadge />}
             </h1>
             {profile?.professional_headline && (
-              <div style={{ color: '#cbd5e1', fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.45rem' }}>
+              <div style={{ color: 'var(--ft-text-secondary)', fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.45rem' }}>
                 {profile.professional_headline}
               </div>
             )}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center', fontSize: '0.85rem', color: '#64748b', marginBottom: '0.5rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center', fontSize: '0.85rem', color: 'var(--ft-text-tertiary)', marginBottom: '0.5rem' }}>
               {profile?.location && <span>📍 {profile.location}</span>}
               {profile?.website && (
-                <a href={profile.website} target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8', textDecoration: 'none' }}>
+                <a href={profile.website} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ft-accent)', textDecoration: 'none' }}>
                   🔗 {profile.website.replace(/^https?:\/\//, '')}
                 </a>
               )}
               <span>🗓 Member since {new Date(profile?.created_at ?? user?.created_at ?? '').toLocaleDateString('en-IE', { month: 'long', year: 'numeric' })}</span>
             </div>
-            <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.6rem' }}>
-              <span><strong style={{ color: '#f1f5f9' }}>{followerCount}</strong> followers</span>
-              <span><strong style={{ color: '#f1f5f9' }}>{profile?.following_count ?? 0}</strong> following</span>
+            <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem', color: 'var(--ft-text-secondary)', marginBottom: '0.6rem' }}>
+              <span><strong style={{ color: 'var(--ft-text)' }}>{followerCount}</strong> followers</span>
+              <span><strong style={{ color: 'var(--ft-text)' }}>{profile?.following_count ?? 0}</strong> following</span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: `${trustLevel.color}18`, border: `1px solid ${trustLevel.color}40`, borderRadius: 999, padding: '0.15rem 0.65rem', fontSize: '0.78rem', fontWeight: 700, color: trustLevel.color }}>
                 {trustLevel.icon} {trustLevel.label}
               </span>
@@ -1726,14 +1726,14 @@ export default function ProfilePage() {
                 { value: (profile?.following_count ?? following.length ?? 0).toLocaleString(), label: 'Following' },
                 { value: `₮${trustBalance.toLocaleString()}`, label: 'Trust' },
               ].map(stat => (
-                <div key={stat.label} style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 16, padding: '13px 8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: '#f1f5f9', lineHeight: 1 }}>{stat.value}</div>
-                  <div style={{ fontSize: 10, color: '#475569', marginTop: 5, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>{stat.label}</div>
+                <div key={stat.label} style={{ background: 'var(--ft-bg)', border: '1px solid var(--ft-surface)', borderRadius: 16, padding: '13px 8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--ft-text)', lineHeight: 1 }}>{stat.value}</div>
+                  <div style={{ fontSize: 10, color: 'var(--ft-text-faint)', marginTop: 5, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>{stat.label}</div>
                 </div>
               ))}
             </div>
 
-            <div style={{ borderBottom: '1px solid #1e293b', marginBottom: 20, overflow: 'hidden' }}>
+            <div style={{ borderBottom: '1px solid var(--ft-surface)', marginBottom: 20, overflow: 'hidden' }}>
               <div className="profile-tab-scroll" style={{ display: 'flex', overflowX: 'auto', overflowY: 'hidden', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x', whiteSpace: 'nowrap' }}>
                 {profileTabs.map(tab => (
                   <button
@@ -1744,10 +1744,10 @@ export default function ProfilePage() {
                       padding: '10px 14px',
                       fontSize: 13,
                       fontWeight: activeTab === tab.key ? 700 : 500,
-                      color: activeTab === tab.key ? '#f1f5f9' : '#475569',
+                      color: activeTab === tab.key ? 'var(--ft-text)' : 'var(--ft-text-faint)',
                       background: 'none',
                       border: 'none',
-                      borderBottom: activeTab === tab.key ? '2px solid #38bdf8' : '2px solid transparent',
+                      borderBottom: activeTab === tab.key ? '2px solid var(--ft-accent)' : '2px solid transparent',
                       marginBottom: -1,
                       cursor: 'pointer',
                       fontFamily: 'inherit',
@@ -1755,7 +1755,7 @@ export default function ProfilePage() {
                   >
                     {tab.label}
                     {tab.count !== undefined && tab.count > 0 && (
-                      <span style={{ marginLeft: 5, fontSize: 10, fontWeight: 700, borderRadius: 10, padding: '1px 6px', background: activeTab === tab.key ? 'rgba(56,189,248,0.18)' : '#1e293b', color: activeTab === tab.key ? '#7dd3fc' : '#64748b' }}>
+                      <span style={{ marginLeft: 5, fontSize: 10, fontWeight: 700, borderRadius: 10, padding: '1px 6px', background: activeTab === tab.key ? 'rgba(56,189,248,0.18)' : 'var(--ft-surface)', color: activeTab === tab.key ? 'var(--ft-accent)' : 'var(--ft-text-tertiary)' }}>
                         {tab.count}
                       </span>
                     )}
@@ -1805,8 +1805,8 @@ export default function ProfilePage() {
             ) : isOwnProfile ? (
               <div style={{ padding: '2.25rem 1rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>📸</div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.35rem' }}>No photo posts yet</div>
-                <div style={{ fontSize: '0.78rem', color: '#64748b', maxWidth: 300, margin: '0 auto', lineHeight: 1.5 }}>Upload photo posts and they will appear here in a clean grid on your profile overview.</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--ft-text)', marginBottom: '0.35rem' }}>No photo posts yet</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', maxWidth: 300, margin: '0 auto', lineHeight: 1.5 }}>Upload photo posts and they will appear here in a clean grid on your profile overview.</div>
               </div>
             ) : null}
           </div>
@@ -1818,10 +1818,10 @@ export default function ProfilePage() {
               <span style={{ fontSize: '1.35rem' }}>{isProfileVerified(profile) ? '✅' : profile?.verification_status === 'submitted' ? '🛡️' : '🔎'}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: 3 }}>
-                  <div style={{ fontWeight: 800, color: '#f1f5f9', fontSize: '0.95rem' }}>{verificationLabel(profile)}</div>
+                  <div style={{ fontWeight: 800, color: 'var(--ft-text)', fontSize: '0.95rem' }}>{verificationLabel(profile)}</div>
                   {isProfileVerified(profile) && <VerifiedBadge compact />}
                 </div>
-                <div style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.55 }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-secondary)', lineHeight: 1.55 }}>
                   {isProfileVerified(profile)
                     ? `FreeTrust has reviewed this member's identity${profile?.profile_identity_verified_at ? ` on ${new Date(profile.profile_identity_verified_at).toLocaleDateString('en-IE')}` : ''}.`
                     : profile?.verification_status === 'submitted'
@@ -1843,7 +1843,7 @@ export default function ProfilePage() {
         {/* Dual Role Summary — own profile only, shows buying + selling counts side by side */}
         {isOwnProfile && (buyingCount !== null || sellingCount !== null) && (
           <div className="profile-card">
-            <h3 style={{ margin: '0 0 1rem', fontWeight: 700, fontSize: '0.95rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <h3 style={{ margin: '0 0 1rem', fontWeight: 700, fontSize: '0.95rem', color: 'var(--ft-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Your Activity
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
@@ -1855,7 +1855,7 @@ export default function ProfilePage() {
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#60a5fa', lineHeight: 1 }}>
                   {buyingCount ?? 0}
                 </div>
-                <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 4 }}>Orders Placed</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)', marginTop: 4 }}>Orders Placed</div>
               </div>
               <div style={{
                 background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.18)',
@@ -1865,7 +1865,7 @@ export default function ProfilePage() {
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#34d399', lineHeight: 1 }}>
                   {sellingCount ?? 0}
                 </div>
-                <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 4 }}>Orders Sold</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)', marginTop: 4 }}>Orders Sold</div>
               </div>
             </div>
           </div>
@@ -1887,8 +1887,8 @@ export default function ProfilePage() {
               <div style={{ border: '1px solid rgba(56,189,248,0.18)', borderRadius: 14, padding: '0.85rem', background: 'rgba(56,189,248,0.04)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: '0.75rem' }}>
                   <div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#f1f5f9' }}>🖼 Cover photo fit</div>
-                    <div style={{ fontSize: '0.74rem', color: '#94a3b8', lineHeight: 1.45, marginTop: 2 }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--ft-text)' }}>🖼 Cover photo fit</div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--ft-text-secondary)', lineHeight: 1.45, marginTop: 2 }}>
                       Rotate, zoom, and reposition the cover so the important part sits perfectly in the banner.
                     </div>
                   </div>
@@ -1896,7 +1896,7 @@ export default function ProfilePage() {
                     type="button"
                     onClick={() => coverInputRef.current?.click()}
                     disabled={coverUploading}
-                    style={{ flexShrink: 0, minHeight: 40, background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.28)', borderRadius: 9, padding: '0.45rem 0.7rem', fontSize: '0.76rem', fontWeight: 700, color: '#38bdf8', cursor: coverUploading ? 'default' : 'pointer', opacity: coverUploading ? 0.65 : 1, fontFamily: 'inherit' }}
+                    style={{ flexShrink: 0, minHeight: 40, background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.28)', borderRadius: 9, padding: '0.45rem 0.7rem', fontSize: '0.76rem', fontWeight: 700, color: 'var(--ft-accent)', cursor: coverUploading ? 'default' : 'pointer', opacity: coverUploading ? 0.65 : 1, fontFamily: 'inherit' }}
                   >
                     {coverUploading ? 'Uploading…' : 'Change photo'}
                   </button>
@@ -1906,7 +1906,7 @@ export default function ProfilePage() {
                   {profile?.cover_url ? (
                     <img src={profile.cover_url} alt="Cover preview" style={getCoverImageStyle(coverSettings)} />
                   ) : (
-                    <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, rgba(56,189,248,0.15) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '0.82rem' }}>
+                    <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, var(--ft-bg) 0%, var(--ft-surface) 50%, rgba(56,189,248,0.15) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ft-text-tertiary)', fontSize: '0.82rem' }}>
                       Add a cover photo first
                     </div>
                   )}
@@ -1923,9 +1923,9 @@ export default function ProfilePage() {
                       max="100"
                       value={coverSettings.positionY}
                       onChange={e => setCoverSettings(s => ({ ...s, positionY: Number(e.target.value) }))}
-                      style={{ width: '100%', accentColor: '#38bdf8' }}
+                      style={{ width: '100%', accentColor: 'var(--ft-accent)' }}
                     />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#64748b' }}><span>Top</span><span>Bottom</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--ft-text-tertiary)' }}><span>Top</span><span>Bottom</span></div>
                   </div>
                   <div>
                     <label className="profile-label" htmlFor="cover-x">Horizontal focus</label>
@@ -1936,9 +1936,9 @@ export default function ProfilePage() {
                       max="100"
                       value={coverSettings.positionX}
                       onChange={e => setCoverSettings(s => ({ ...s, positionX: Number(e.target.value) }))}
-                      style={{ width: '100%', accentColor: '#38bdf8' }}
+                      style={{ width: '100%', accentColor: 'var(--ft-accent)' }}
                     />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#64748b' }}><span>Left</span><span>Right</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--ft-text-tertiary)' }}><span>Left</span><span>Right</span></div>
                   </div>
                   <div>
                     <label className="profile-label" htmlFor="cover-scale">Zoom</label>
@@ -1947,7 +1947,7 @@ export default function ProfilePage() {
                         type="button"
                         aria-label="Zoom cover photo out"
                         onClick={() => setCoverSettings(s => ({ ...s, scale: clampNumber(s.scale - 0.1, 1, 2, 1) }))}
-                        style={{ minHeight: 42, background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.18)', borderRadius: 9, color: '#cbd5e1', fontSize: 18, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit' }}
+                        style={{ minHeight: 42, background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.18)', borderRadius: 9, color: 'var(--ft-text-secondary)', fontSize: 18, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit' }}
                       >
                         −
                       </button>
@@ -1959,31 +1959,31 @@ export default function ProfilePage() {
                         step="0.05"
                         value={coverSettings.scale}
                         onChange={e => setCoverSettings(s => ({ ...s, scale: Number(e.target.value) }))}
-                        style={{ width: '100%', accentColor: '#38bdf8' }}
+                        style={{ width: '100%', accentColor: 'var(--ft-accent)' }}
                       />
                       <button
                         type="button"
                         aria-label="Zoom cover photo in"
                         onClick={() => setCoverSettings(s => ({ ...s, scale: clampNumber(s.scale + 0.1, 1, 2, 1) }))}
-                        style={{ minHeight: 42, background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 9, color: '#7dd3fc', fontSize: 18, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit' }}
+                        style={{ minHeight: 42, background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 9, color: 'var(--ft-accent)', fontSize: 18, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit' }}
                       >
                         +
                       </button>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#64748b', marginTop: 2 }}><span>Zoom out</span><span>{Math.round(coverSettings.scale * 100)}%</span><span>Zoom in</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--ft-text-tertiary)', marginTop: 2 }}><span>Zoom out</span><span>{Math.round(coverSettings.scale * 100)}%</span><span>Zoom in</span></div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                     <button
                       type="button"
                       onClick={() => setCoverSettings(s => ({ ...s, rotation: normalizeRotation(s.rotation - 90) }))}
-                      style={{ minHeight: 42, background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.18)', borderRadius: 9, color: '#cbd5e1', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                      style={{ minHeight: 42, background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.18)', borderRadius: 9, color: 'var(--ft-text-secondary)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
                     >
                       ↶ Rotate
                     </button>
                     <button
                       type="button"
                       onClick={() => setCoverSettings(s => ({ ...s, rotation: normalizeRotation(s.rotation + 90) }))}
-                      style={{ minHeight: 42, background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.18)', borderRadius: 9, color: '#cbd5e1', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                      style={{ minHeight: 42, background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.18)', borderRadius: 9, color: 'var(--ft-text-secondary)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
                     >
                       Rotate ↷
                     </button>
@@ -1999,7 +1999,7 @@ export default function ProfilePage() {
                     type="button"
                     onClick={handleCoverSettingsSave}
                     disabled={coverSettingsSaving || !profile?.cover_url}
-                    style={{ minHeight: 44, background: 'linear-gradient(135deg,#38bdf8,#818cf8)', border: 'none', borderRadius: 10, padding: '0.65rem', fontSize: '0.86rem', fontWeight: 800, color: '#0f172a', cursor: coverSettingsSaving || !profile?.cover_url ? 'default' : 'pointer', opacity: coverSettingsSaving || !profile?.cover_url ? 0.6 : 1, fontFamily: 'inherit' }}
+                    style={{ minHeight: 44, background: 'linear-gradient(135deg,var(--ft-accent),#818cf8)', border: 'none', borderRadius: 10, padding: '0.65rem', fontSize: '0.86rem', fontWeight: 800, color: 'var(--ft-bg)', cursor: coverSettingsSaving || !profile?.cover_url ? 'default' : 'pointer', opacity: coverSettingsSaving || !profile?.cover_url ? 0.6 : 1, fontFamily: 'inherit' }}
                   >
                     {coverSettingsSaving ? 'Saving cover fit…' : 'Save cover fit'}
                   </button>
@@ -2040,16 +2040,16 @@ export default function ProfilePage() {
                     rows={5}
                     style={{ resize: 'vertical', minHeight: 120, lineHeight: 1.5 }}
                   />
-                  <div style={{ fontSize: '0.72rem', color: '#64748b', lineHeight: 1.45 }}>
-                    Example: <span style={{ color: '#94a3b8' }}>Founder @ Example Studio (2021–present) — Building trusted community products.</span>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.45 }}>
+                    Example: <span style={{ color: 'var(--ft-text-secondary)' }}>Founder @ Example Studio (2021–present) — Building trusted community products.</span>
                   </div>
                 </div>
               </div>
               <div style={{ borderTop: '1px solid rgba(148,163,184,0.12)', paddingTop: '0.85rem' }}>
                 <label className="profile-label" style={{ marginBottom: '0.75rem', display: 'block' }}>🛡️ Profile verification request</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                  <div style={{ background: isProfileVerified(profile) ? 'rgba(52,211,153,0.08)' : 'rgba(56,189,248,0.06)', border: `1px solid ${isProfileVerified(profile) ? 'rgba(52,211,153,0.22)' : 'rgba(56,189,248,0.18)'}`, borderRadius: 10, padding: '0.7rem 0.8rem', fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.5 }}>
-                    <strong style={{ color: isProfileVerified(profile) ? '#34d399' : '#38bdf8' }}>{verificationLabel(profile)}.</strong>{' '}
+                  <div style={{ background: isProfileVerified(profile) ? 'rgba(52,211,153,0.08)' : 'rgba(56,189,248,0.06)', border: `1px solid ${isProfileVerified(profile) ? 'rgba(52,211,153,0.22)' : 'rgba(56,189,248,0.18)'}`, borderRadius: 10, padding: '0.7rem 0.8rem', fontSize: '0.78rem', color: 'var(--ft-text-secondary)', lineHeight: 1.5 }}>
+                    <strong style={{ color: isProfileVerified(profile) ? '#34d399' : 'var(--ft-accent)' }}>{verificationLabel(profile)}.</strong>{' '}
                     Verified badges are granted only after FreeTrust review; saving this form cannot self-verify your profile.
                   </div>
                   <textarea
@@ -2113,7 +2113,7 @@ export default function ProfilePage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                style={{ background: '#38bdf8', border: 'none', borderRadius: 8, padding: '0.7rem', fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}
+                style={{ background: 'var(--ft-accent)', border: 'none', borderRadius: 8, padding: '0.7rem', fontSize: '0.9rem', fontWeight: 700, color: 'var(--ft-bg)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}
               >
                 {saving ? 'Saving…' : 'Save Changes'}
               </button>
@@ -2122,7 +2122,7 @@ export default function ProfilePage() {
         ) : profile?.bio ? (
           <div className="profile-card">
             <h3 style={{ marginBottom: '0.75rem', fontWeight: 700, fontSize: '1rem' }}>About</h3>
-            <p style={{ color: '#94a3b8', lineHeight: 1.7, fontSize: '0.9rem' }}>{profile.bio}</p>
+            <p style={{ color: 'var(--ft-text-secondary)', lineHeight: 1.7, fontSize: '0.9rem' }}>{profile.bio}</p>
           </div>
         ) : null}
 
@@ -2132,11 +2132,11 @@ export default function ProfilePage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
               {normaliseExperience(profile?.professional_experience).map((entry, index) => (
                 <div key={`${entry.role}-${entry.organization}-${index}`} style={{ borderLeft: '2px solid rgba(56,189,248,0.35)', paddingLeft: '0.85rem' }}>
-                  <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.35 }}>
-                    {entry.role || 'Professional role'}{entry.organization ? <span style={{ color: '#94a3b8', fontWeight: 700 }}> @ {entry.organization}</span> : null}
+                  <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--ft-text)', lineHeight: 1.35 }}>
+                    {entry.role || 'Professional role'}{entry.organization ? <span style={{ color: 'var(--ft-text-secondary)', fontWeight: 700 }}> @ {entry.organization}</span> : null}
                   </div>
-                  {entry.period && <div style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: 700, marginTop: 2 }}>{entry.period}</div>}
-                  {entry.description && <div style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.6, marginTop: 5 }}>{entry.description}</div>}
+                  {entry.period && <div style={{ fontSize: '0.75rem', color: 'var(--ft-accent)', fontWeight: 700, marginTop: 2 }}>{entry.period}</div>}
+                  {entry.description && <div style={{ fontSize: '0.82rem', color: 'var(--ft-text-secondary)', lineHeight: 1.6, marginTop: 5 }}>{entry.description}</div>}
                 </div>
               ))}
             </div>
@@ -2164,7 +2164,7 @@ export default function ProfilePage() {
                       borderRadius: 999,
                       background: 'rgba(56,189,248,0.08)',
                       border: '1px solid rgba(56,189,248,0.22)',
-                      color: '#7dd3fc',
+                      color: 'var(--ft-accent)',
                       fontSize: '0.8rem',
                       fontWeight: 600,
                       lineHeight: 1,
@@ -2188,17 +2188,17 @@ export default function ProfilePage() {
             {completeness < 100 && (
               <div className="profile-card" style={{ marginBottom: '1.25rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f1f5f9' }}>Profile completeness</span>
-                  <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#38bdf8' }}>{completeness}%</span>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--ft-text)' }}>Profile completeness</span>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--ft-accent)' }}>{completeness}%</span>
                 </div>
                 <div style={{ height: 6, background: 'rgba(56,189,248,0.1)', borderRadius: 3, marginBottom: '0.75rem', overflow: 'hidden' }}>
-                  <div style={{ width: `${completeness}%`, height: '100%', background: 'linear-gradient(90deg, #38bdf8, #818cf8)', borderRadius: 3, transition: 'width 0.5s ease' }} />
+                  <div style={{ width: `${completeness}%`, height: '100%', background: 'linear-gradient(90deg, var(--ft-accent), #818cf8)', borderRadius: 3, transition: 'width 0.5s ease' }} />
                 </div>
-                <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                  Complete your profile to earn <strong style={{ color: '#38bdf8' }}>₮10 bonus</strong>. Missing:&nbsp;
+                <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)' }}>
+                  Complete your profile to earn <strong style={{ color: 'var(--ft-accent)' }}>₮10 bonus</strong>. Missing:&nbsp;
                   {missing.map((m, i) => (
                     <span key={m}>
-                      <span style={{ color: '#94a3b8' }}>{m}</span>
+                      <span style={{ color: 'var(--ft-text-secondary)' }}>{m}</span>
                       {i < missing.length - 1 && ', '}
                     </span>
                   ))}
@@ -2210,8 +2210,8 @@ export default function ProfilePage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <span style={{ fontSize: '1.5rem' }}>✅</span>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f1f5f9' }}>Profile 100% complete!</div>
-                    <div style={{ fontSize: '0.78rem', color: '#64748b' }}>You earned ₮10 Trust for completing your profile.</div>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--ft-text)' }}>Profile 100% complete!</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)' }}>You earned ₮10 Trust for completing your profile.</div>
                   </div>
                 </div>
               </div>
@@ -2219,25 +2219,25 @@ export default function ProfilePage() {
 
             {/* Trust Economy */}
             <div className="profile-card">
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '1rem', letterSpacing: '0.06em' }}>TRUST ECONOMY</div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ft-text-tertiary)', marginBottom: '1rem', letterSpacing: '0.06em' }}>TRUST ECONOMY</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
                 <div>
-                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.25rem' }}>Balance</div>
-                  <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#38bdf8' }}>₮{trustBalance.toLocaleString()}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', marginBottom: '0.25rem' }}>Balance</div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--ft-accent)' }}>₮{trustBalance.toLocaleString()}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.25rem' }}>Level</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', marginBottom: '0.25rem' }}>Level</div>
                   <div style={{ fontSize: '1.1rem', fontWeight: 800, color: trustLevel.color }}>{trustLevel.label}</div>
-                  <div style={{ fontSize: '0.72rem', color: '#475569' }}>{trustLevel.next}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-faint)' }}>{trustLevel.next}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.4rem' }}>Progress</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', marginBottom: '0.4rem' }}>Progress</div>
                   {trustLevel.nextAt !== null && (
                     <div style={{ height: 6, background: 'rgba(56,189,248,0.1)', borderRadius: 3, overflow: 'hidden' }}>
-                      <div style={{ width: `${Math.min((trustBalance / trustLevel.nextAt) * 100, 100)}%`, height: '100%', background: `linear-gradient(90deg,#38bdf8,${trustLevel.color})`, borderRadius: 3 }} />
+                      <div style={{ width: `${Math.min((trustBalance / trustLevel.nextAt) * 100, 100)}%`, height: '100%', background: `linear-gradient(90deg,var(--ft-accent),${trustLevel.color})`, borderRadius: 3 }} />
                     </div>
                   )}
-                  <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '0.25rem' }}>{trustBalance}{trustLevel.nextAt !== null ? `/${trustLevel.nextAt}` : ' MAX'}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-faint)', marginTop: '0.25rem' }}>{trustBalance}{trustLevel.nextAt !== null ? `/${trustLevel.nextAt}` : ' MAX'}</div>
                 </div>
               </div>
             </div>
@@ -2248,9 +2248,9 @@ export default function ProfilePage() {
         {activeTab === 'services' && (
           <div className="profile-card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.06em' }}>SERVICES ({services.length})</div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ft-text-tertiary)', letterSpacing: '0.06em' }}>SERVICES ({services.length})</div>
               {isOwnProfile && (
-                <Link href="/seller/gigs/create" style={{ fontSize: '0.75rem', color: '#38bdf8', textDecoration: 'none', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 6, padding: '0.25rem 0.6rem' }}>
+                <Link href="/seller/gigs/create" style={{ fontSize: '0.75rem', color: 'var(--ft-accent)', textDecoration: 'none', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 6, padding: '0.25rem 0.6rem' }}>
                   + Add Service
                 </Link>
               )}
@@ -2258,8 +2258,8 @@ export default function ProfilePage() {
             {services.length === 0 ? (
               <div style={{ padding: '2.25rem 1rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🛠</div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.35rem' }}>No services listed yet</div>
-                <div style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>{isOwnProfile ? 'Add your first service to show it on your profile.' : 'Services from this member will appear here.'}</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--ft-text)', marginBottom: '0.35rem' }}>No services listed yet</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.5 }}>{isOwnProfile ? 'Add your first service to show it on your profile.' : 'Services from this member will appear here.'}</div>
               </div>
             ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -2270,17 +2270,17 @@ export default function ProfilePage() {
                   style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', textDecoration: 'none', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.1)', borderRadius: 10, padding: '0.85rem 1rem', transition: 'border-color 0.15s' }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: '#f1f5f9', fontWeight: 600, fontSize: '0.88rem', lineHeight: 1.4, marginBottom: '0.3rem' }}>
+                    <div style={{ color: 'var(--ft-text)', fontWeight: 600, fontSize: '0.88rem', lineHeight: 1.4, marginBottom: '0.3rem' }}>
                       {svc.title}
                     </div>
                     {svc.description && (
-                      <div style={{ color: '#64748b', fontSize: '0.75rem', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                      <div style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.75rem', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                         {svc.description}
                       </div>
                     )}
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
                       {svc.service_mode && (
-                        <span style={{ fontSize: '0.68rem', color: '#38bdf8', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 4, padding: '0.1rem 0.4rem' }}>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--ft-accent)', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 4, padding: '0.1rem 0.4rem' }}>
                           {svc.service_mode === 'online' ? '🌐 Online' : svc.service_mode === 'in-person' ? '📍 In-person' : '🔄 Hybrid'}
                         </span>
                       )}
@@ -2299,7 +2299,7 @@ export default function ProfilePage() {
             {services.length > 4 && (
               <button
                 onClick={() => setShowAllServices(s => !s)}
-                style={{ marginTop: '0.75rem', width: '100%', background: 'transparent', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.5rem', fontSize: '0.82rem', color: '#38bdf8', cursor: 'pointer' }}
+                style={{ marginTop: '0.75rem', width: '100%', background: 'transparent', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.5rem', fontSize: '0.82rem', color: 'var(--ft-accent)', cursor: 'pointer' }}
               >
                 {showAllServices ? 'Show less' : `Show all ${services.length} services`}
               </button>
@@ -2311,9 +2311,9 @@ export default function ProfilePage() {
         {activeTab === 'products' && (
           <div className="profile-card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.06em' }}>PRODUCTS ({products.length})</div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ft-text-tertiary)', letterSpacing: '0.06em' }}>PRODUCTS ({products.length})</div>
               {isOwnProfile && (
-                <Link href="/products/new" style={{ fontSize: '0.75rem', color: '#38bdf8', textDecoration: 'none', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 6, padding: '0.25rem 0.6rem' }}>
+                <Link href="/products/new" style={{ fontSize: '0.75rem', color: 'var(--ft-accent)', textDecoration: 'none', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 6, padding: '0.25rem 0.6rem' }}>
                   + Add Product
                 </Link>
               )}
@@ -2321,8 +2321,8 @@ export default function ProfilePage() {
             {products.length === 0 ? (
               <div style={{ padding: '2.25rem 1rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>📦</div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.35rem' }}>No products listed yet</div>
-                <div style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>{isOwnProfile ? 'Add your first product to show it on your profile.' : 'Products from this member will appear here.'}</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--ft-text)', marginBottom: '0.35rem' }}>No products listed yet</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.5 }}>{isOwnProfile ? 'Add your first product to show it on your profile.' : 'Products from this member will appear here.'}</div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -2335,13 +2335,13 @@ export default function ProfilePage() {
                       style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', textDecoration: 'none', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.1)', borderRadius: 10, padding: '0.85rem 1rem', transition: 'border-color 0.15s' }}
                     >
                       {cover ? (
-                        <img src={cover} alt={product.title} style={{ width: 54, height: 54, borderRadius: 12, objectFit: 'cover', flexShrink: 0, background: '#1e293b' }} />
+                        <img src={cover} alt={product.title} style={{ width: 54, height: 54, borderRadius: 12, objectFit: 'cover', flexShrink: 0, background: 'var(--ft-surface)' }} />
                       ) : (
-                        <div style={{ width: 54, height: 54, borderRadius: 12, background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.18)', color: '#7dd3fc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22 }}>📦</div>
+                        <div style={{ width: 54, height: 54, borderRadius: 12, background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.18)', color: 'var(--ft-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22 }}>📦</div>
                       )}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
-                          <div style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                          <div style={{ color: 'var(--ft-text)', fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                             {product.title}
                           </div>
                           <div style={{ flexShrink: 0, textAlign: 'right', fontSize: '1rem', fontWeight: 800, color: '#34d399', whiteSpace: 'nowrap' }}>
@@ -2349,18 +2349,18 @@ export default function ProfilePage() {
                           </div>
                         </div>
                         {product.description && (
-                          <div style={{ color: '#64748b', fontSize: '0.75rem', lineHeight: 1.5, marginTop: '0.35rem', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                          <div style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.75rem', lineHeight: 1.5, marginTop: '0.35rem', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                             {product.description}
                           </div>
                         )}
                         <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.45rem', flexWrap: 'wrap', alignItems: 'center' }}>
                           {product.product_type && (
-                            <span style={{ fontSize: '0.68rem', color: '#38bdf8', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.1rem 0.45rem' }}>
+                            <span style={{ fontSize: '0.68rem', color: 'var(--ft-accent)', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.1rem 0.45rem' }}>
                               {product.product_type === 'digital' ? '💾 Digital' : '📦 Physical'}
                             </span>
                           )}
                           {product.product_type === 'physical' && (
-                            <span style={{ fontSize: '0.68rem', color: product.stock_qty == null || product.stock_qty > 0 ? '#34d399' : '#f87171' }}>
+                            <span style={{ fontSize: '0.68rem', color: product.stock_qty == null || product.stock_qty > 0 ? '#34d399' : 'var(--ft-danger)' }}>
                               {product.stock_qty == null ? 'In stock' : product.stock_qty > 0 ? `${product.stock_qty} in stock` : 'Out of stock'}
                             </span>
                           )}
@@ -2375,7 +2375,7 @@ export default function ProfilePage() {
             {products.length > 4 && (
               <button
                 onClick={() => setShowAllProducts(s => !s)}
-                style={{ marginTop: '0.75rem', width: '100%', background: 'transparent', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.5rem', fontSize: '0.82rem', color: '#38bdf8', cursor: 'pointer', fontFamily: 'inherit' }}
+                style={{ marginTop: '0.75rem', width: '100%', background: 'transparent', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.5rem', fontSize: '0.82rem', color: 'var(--ft-accent)', cursor: 'pointer', fontFamily: 'inherit' }}
               >
                 {showAllProducts ? 'Show less' : `Show all ${products.length} products`}
               </button>
@@ -2390,7 +2390,7 @@ export default function ProfilePage() {
         {activeTab === 'grassroots' && (
           <div className="profile-card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.06em' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ft-text-tertiary)', letterSpacing: '0.06em' }}>
                 🌱 GRASSROOTS ({grassroots.length})
               </div>
               {isOwnProfile && (
@@ -2412,8 +2412,8 @@ export default function ProfilePage() {
             {grassroots.length === 0 ? (
               <div style={{ padding: '2.25rem 1rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🌱</div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.35rem' }}>No grassroots listings yet</div>
-                <div style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>{isOwnProfile ? 'Post grassroots work to show it on your profile.' : 'Grassroots listings from this member will appear here.'}</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--ft-text)', marginBottom: '0.35rem' }}>No grassroots listings yet</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.5 }}>{isOwnProfile ? 'Post grassroots work to show it on your profile.' : 'Grassroots listings from this member will appear here.'}</div>
               </div>
             ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -2464,7 +2464,7 @@ export default function ProfilePage() {
 
                     {/* Body */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ color: '#f1f5f9', fontWeight: 600, fontSize: '0.88rem', lineHeight: 1.4, marginBottom: '0.3rem' }}>
+                      <div style={{ color: 'var(--ft-text)', fontWeight: 600, fontSize: '0.88rem', lineHeight: 1.4, marginBottom: '0.3rem' }}>
                         {g.title}
                       </div>
                       <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -2495,7 +2495,7 @@ export default function ProfilePage() {
                         {g.trust_tokens_accepted && (
                           <span style={{
                             fontSize: '0.68rem',
-                            color: '#38bdf8',
+                            color: 'var(--ft-accent)',
                             background: 'rgba(56,189,248,0.08)',
                             border: '1px solid rgba(56,189,248,0.2)',
                             borderRadius: 4,
@@ -2506,7 +2506,7 @@ export default function ProfilePage() {
                           </span>
                         )}
                         {(g.location_label || g.city) && (
-                          <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                          <span style={{ fontSize: '0.68rem', color: 'var(--ft-text-tertiary)' }}>
                             📍 {g.location_label ?? g.city}
                           </span>
                         )}
@@ -2555,13 +2555,13 @@ export default function ProfilePage() {
         {/* Activity Section */}
         {activeTab === 'activity' && (
           <div className="profile-card">
-            <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: 14 }}>
+            <div style={{ fontSize: 11, color: 'var(--ft-text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: 14 }}>
               Recent activity
             </div>
               {loadingActivity ? (
-                <div style={{ color: '#64748b', fontSize: '0.88rem' }}>Loading activity…</div>
+                <div style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.88rem' }}>Loading activity…</div>
               ) : activity.length === 0 ? (
-                <div style={{ color: '#64748b', fontSize: '0.88rem', textAlign: 'center', padding: '1rem 0' }}>
+                <div style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.88rem', textAlign: 'center', padding: '1rem 0' }}>
                   No activity yet — start posting, listing services, or joining communities!
                 </div>
               ) : (
@@ -2571,15 +2571,15 @@ export default function ProfilePage() {
                       <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: '2px' }}>{activityIcon[item.type] ?? '•'}</span>
                       <div style={{ flex: 1 }}>
                         {item.href ? (
-                          <Link href={item.href} style={{ color: '#f1f5f9', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500 }}>
+                          <Link href={item.href} style={{ color: 'var(--ft-text)', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500 }}>
                             {item.title}
                           </Link>
                         ) : (
-                          <span style={{ color: '#f1f5f9', fontSize: '0.88rem', fontWeight: 500 }}>{item.title}</span>
+                          <span style={{ color: 'var(--ft-text)', fontSize: '0.88rem', fontWeight: 500 }}>{item.title}</span>
                         )}
-                        {item.subtitle && <div style={{ color: '#64748b', fontSize: '0.78rem', marginTop: '2px' }}>{item.subtitle}</div>}
+                        {item.subtitle && <div style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.78rem', marginTop: '2px' }}>{item.subtitle}</div>}
                       </div>
-                      <span style={{ color: '#475569', fontSize: '0.75rem', whiteSpace: 'nowrap', flexShrink: 0 }}>{timeAgo(item.created_at)}</span>
+                      <span style={{ color: 'var(--ft-text-faint)', fontSize: '0.75rem', whiteSpace: 'nowrap', flexShrink: 0 }}>{timeAgo(item.created_at)}</span>
                     </div>
                   ))}
                 </div>
@@ -2591,24 +2591,24 @@ export default function ProfilePage() {
         {activeTab === 'posts' && (
           <div className="profile-card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14 }}>
-              <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
+              <div style={{ fontSize: 11, color: 'var(--ft-text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
                 Posts from {profile?.full_name ?? 'this member'}
               </div>
               {isOwnProfile && (
-                <Link href="/create" style={{ fontSize: 12, fontWeight: 700, color: '#7dd3fc', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 8, padding: '5px 10px', textDecoration: 'none' }}>
+                <Link href="/create" style={{ fontSize: 12, fontWeight: 700, color: 'var(--ft-accent)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 8, padding: '5px 10px', textDecoration: 'none' }}>
                   + Post
                 </Link>
               )}
             </div>
             {profilePostsLoading ? (
-              <div style={{ color: '#64748b', fontSize: '0.88rem' }}>Loading posts…</div>
+              <div style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.88rem' }}>Loading posts…</div>
             ) : profilePosts.length === 0 ? (
               <div style={{ padding: '2.5rem 1rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📝</div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f1f5f9', marginBottom: '0.4rem' }}>No posts yet</div>
-                <div style={{ fontSize: '0.78rem', color: '#64748b', maxWidth: 280, margin: '0 auto', lineHeight: 1.5 }}>Social posts from this member will appear here.</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ft-text)', marginBottom: '0.4rem' }}>No posts yet</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', maxWidth: 280, margin: '0 auto', lineHeight: 1.5 }}>Social posts from this member will appear here.</div>
                 {isOwnProfile && (
-                  <Link href="/create" style={{ display: 'inline-block', marginTop: '1rem', fontSize: '0.82rem', fontWeight: 600, color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 8, padding: '0.45rem 1rem', textDecoration: 'none' }}>
+                  <Link href="/create" style={{ display: 'inline-block', marginTop: '1rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--ft-accent)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 8, padding: '0.45rem 1rem', textDecoration: 'none' }}>
                     Create your first post
                   </Link>
                 )}
@@ -2630,40 +2630,40 @@ export default function ProfilePage() {
 
         {(activeTab === 'followers' || activeTab === 'following') && (
           <div className="profile-card">
-            <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: 14 }}>
+            <div style={{ fontSize: 11, color: 'var(--ft-text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: 14 }}>
               {activeTab === 'followers'
                 ? `${followerCount} follower${followerCount !== 1 ? 's' : ''}`
                 : `${profile?.following_count ?? following.length} following`}
             </div>
             {connectionsLoading ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {[1, 2, 3].map(i => <div key={i} style={{ height: 72, borderRadius: 16, background: '#0f172a', border: '1px solid #1e293b' }} />)}
+                {[1, 2, 3].map(i => <div key={i} style={{ height: 72, borderRadius: 16, background: 'var(--ft-bg)', border: '1px solid var(--ft-surface)' }} />)}
               </div>
             ) : (activeTab === 'followers' ? followers : following).length === 0 ? (
               <div style={{ padding: '2.25rem 1rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>{activeTab === 'followers' ? '👥' : '➡️'}</div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.35rem' }}>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--ft-text)', marginBottom: '0.35rem' }}>
                   {activeTab === 'followers' ? 'No followers yet' : 'Not following anyone yet'}
                 </div>
-                <div style={{ fontSize: '0.78rem', color: '#64748b', maxWidth: 280, margin: '0 auto', lineHeight: 1.5 }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', maxWidth: 280, margin: '0 auto', lineHeight: 1.5 }}>
                   {activeTab === 'followers' ? 'Followers will appear here as the community grows.' : 'Members this profile follows will appear here.'}
                 </div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {(activeTab === 'followers' ? followers : following).map(person => (
-                  <Link key={person.id} href={`/profile?id=${person.id}`} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 16, background: 'rgba(15,23,42,0.6)', border: '1px solid #1e293b', textDecoration: 'none' }}>
-                    <div style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', background: '#1e293b', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Link key={person.id} href={`/profile?id=${person.id}`} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 16, background: 'rgba(15,23,42,0.6)', border: '1px solid var(--ft-surface)', textDecoration: 'none' }}>
+                    <div style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', background: 'var(--ft-surface)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {person.avatar_url
                         ? <img src={person.avatar_url} alt={person.full_name ?? 'Member'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        : <span style={{ color: '#64748b', fontWeight: 800 }}>{(person.full_name ?? 'M').slice(0, 1).toUpperCase()}</span>}
+                        : <span style={{ color: 'var(--ft-text-tertiary)', fontWeight: 800 }}>{(person.full_name ?? 'M').slice(0, 1).toUpperCase()}</span>}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{person.full_name ?? 'Member'}</div>
-                      {person.location && <div style={{ fontSize: 12, color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📍 {person.location}</div>}
-                      {person.bio && <div style={{ fontSize: 12, color: '#64748b', marginTop: 2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{person.bio}</div>}
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ft-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{person.full_name ?? 'Member'}</div>
+                      {person.location && <div style={{ fontSize: 12, color: 'var(--ft-text-tertiary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📍 {person.location}</div>}
+                      {person.bio && <div style={{ fontSize: 12, color: 'var(--ft-text-tertiary)', marginTop: 2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{person.bio}</div>}
                     </div>
-                    <span style={{ color: '#38bdf8', fontSize: 18, flexShrink: 0 }}>→</span>
+                    <span style={{ color: 'var(--ft-accent)', fontSize: 18, flexShrink: 0 }}>→</span>
                   </Link>
                 ))}
               </div>
@@ -2687,19 +2687,19 @@ export default function ProfilePage() {
             >
               <div>
                 <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#10b981' }}>📊 My Accounting</div>
-                <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: 2 }}>Sales records, invoices & CSV exports</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', marginTop: 2 }}>Sales records, invoices & CSV exports</div>
               </div>
               <span style={{ color: '#10b981', fontSize: '1rem' }}>→</span>
             </Link>
             {/* VAT settings */}
             <div style={{ borderTop: '1px solid rgba(148,163,184,0.1)', paddingTop: '1rem' }}>
-              <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tax & VAT</div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--ft-text-secondary)', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tax & VAT</div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', marginBottom: '0.75rem' }}>
                 <div
                   onClick={() => setVatRegistered(v => !v)}
                   style={{
                     width: 40, height: 22, borderRadius: 11,
-                    background: vatRegistered ? '#10b981' : '#334155',
+                    background: vatRegistered ? '#10b981' : 'var(--ft-border-strong)',
                     position: 'relative', cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0,
                   }}
                 >
@@ -2709,7 +2709,7 @@ export default function ProfilePage() {
                     transition: 'left 0.2s',
                   }} />
                 </div>
-                <span style={{ fontSize: '0.875rem', color: '#f1f5f9' }}>I am VAT registered</span>
+                <span style={{ fontSize: '0.875rem', color: 'var(--ft-text)' }}>I am VAT registered</span>
               </label>
               {vatRegistered && (
                 <input
@@ -2718,9 +2718,9 @@ export default function ProfilePage() {
                   onChange={e => setVatNumber(e.target.value)}
                   placeholder="VAT Number (e.g. IE1234567T)"
                   style={{
-                    width: '100%', padding: '0.6rem 0.75rem', background: '#0f172a',
+                    width: '100%', padding: '0.6rem 0.75rem', background: 'var(--ft-bg)',
                     border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8,
-                    color: '#f1f5f9', fontSize: '0.875rem', outline: 'none',
+                    color: 'var(--ft-text)', fontSize: '0.875rem', outline: 'none',
                     boxSizing: 'border-box', marginBottom: '0.75rem',
                   }}
                 />
@@ -2729,8 +2729,8 @@ export default function ProfilePage() {
                 onClick={handleVatSave}
                 disabled={vatSaving}
                 style={{
-                  padding: '0.5rem 1rem', background: vatSaved ? '#10b981' : '#1e293b',
-                  color: vatSaved ? '#0f172a' : '#f1f5f9',
+                  padding: '0.5rem 1rem', background: vatSaved ? '#10b981' : 'var(--ft-surface)',
+                  color: vatSaved ? 'var(--ft-bg)' : 'var(--ft-text)',
                   border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8,
                   fontWeight: 700, cursor: vatSaving ? 'not-allowed' : 'pointer',
                   fontSize: '0.825rem', transition: 'all 0.2s',
@@ -2746,16 +2746,16 @@ export default function ProfilePage() {
         {activeTab === 'overview' && isOwnProfile && user && (
           <div className="profile-card">
             <h3 style={{ marginBottom: '0.75rem', fontWeight: 700, fontSize: '1rem' }}>Account</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.88rem', color: '#64748b' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.88rem', color: 'var(--ft-text-tertiary)' }}>
               <span>📧 {user.email}</span>
               <span>🗓️ Joined {new Date(user.created_at ?? '').toLocaleDateString('en-IE', { month: 'long', year: 'numeric' })}</span>
               <span>✅ Email {user.email_confirmed_at ? 'verified' : 'not verified'}</span>
             </div>
             <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <Link href="/settings" style={{ fontSize: '0.82rem', color: '#38bdf8', textDecoration: 'none', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 6, padding: '0.35rem 0.75rem' }}>
+              <Link href="/settings" style={{ fontSize: '0.82rem', color: 'var(--ft-accent)', textDecoration: 'none', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 6, padding: '0.35rem 0.75rem' }}>
                 ⚙️ Settings
               </Link>
-              <Link href="/wallet" style={{ fontSize: '0.82rem', color: '#38bdf8', textDecoration: 'none', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 6, padding: '0.35rem 0.75rem' }}>
+              <Link href="/wallet" style={{ fontSize: '0.82rem', color: 'var(--ft-accent)', textDecoration: 'none', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 6, padding: '0.35rem 0.75rem' }}>
                 💎 Wallet
               </Link>
             </div>

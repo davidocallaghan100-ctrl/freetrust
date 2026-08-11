@@ -28,11 +28,11 @@ const SEGMENT_LABELS: Record<string, string> = {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  draft:     { label: 'Draft',     color: '#94a3b8', bg: 'rgba(148,163,184,0.1)' },
+  draft:     { label: 'Draft',     color: 'var(--ft-text-secondary)', bg: 'rgba(148,163,184,0.1)' },
   scheduled: { label: 'Scheduled', color: '#fbbf24', bg: 'rgba(251,191,36,0.1)' },
-  sending:   { label: 'Sending…',  color: '#38bdf8', bg: 'rgba(56,189,248,0.1)'  },
+  sending:   { label: 'Sending…',  color: 'var(--ft-accent)', bg: 'rgba(56,189,248,0.1)'  },
   sent:      { label: 'Sent',      color: '#34d399', bg: 'rgba(52,211,153,0.1)'  },
-  failed:    { label: 'Failed',    color: '#f87171', bg: 'rgba(248,113,113,0.1)' },
+  failed:    { label: 'Failed',    color: 'var(--ft-danger)', bg: 'rgba(248,113,113,0.1)' },
 }
 
 const EMPTY_FORM = {
@@ -182,8 +182,8 @@ export default function CampaignsPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: '#64748b' }}>Loading…</div>
+      <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: 'var(--ft-text-tertiary)' }}>Loading…</div>
       </div>
     )
   }
@@ -191,24 +191,24 @@ export default function CampaignsPage() {
   if (!authorized) return null
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui' }}>
       <style>{`
-        .camp-input { background:#1e293b; border:1px solid rgba(56,189,248,0.2); border-radius:8px; color:#f1f5f9; padding:0.6rem 0.9rem; font-size:0.9rem; outline:none; font-family:inherit; width:100%; box-sizing:border-box; }
+        .camp-input { background:var(--ft-surface); border:1px solid rgba(56,189,248,0.2); border-radius:8px; color:var(--ft-text); padding:0.6rem 0.9rem; font-size:0.9rem; outline:none; font-family:inherit; width:100%; box-sizing:border-box; }
         .camp-input:focus { border-color:rgba(56,189,248,0.5); }
         .camp-btn { border-radius:8px; padding:0.5rem 1.1rem; font-size:0.85rem; font-weight:600; cursor:pointer; font-family:inherit; border:1px solid transparent; transition:all 0.15s; }
-        .camp-btn-primary { background:linear-gradient(135deg,#38bdf8,#0284c7); color:#0f172a; border:none; }
+        .camp-btn-primary { background:linear-gradient(135deg,var(--ft-accent),#0284c7); color:var(--ft-bg); border:none; }
         .camp-btn-primary:hover { opacity:0.9; }
-        .camp-btn-ghost { background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.2); color:#38bdf8; }
+        .camp-btn-ghost { background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.2); color:var(--ft-accent); }
         .camp-btn-ghost:hover { background:rgba(56,189,248,0.14); }
-        .camp-btn-danger { background:rgba(248,113,113,0.08); border:1px solid rgba(248,113,113,0.25); color:#f87171; }
+        .camp-btn-danger { background:rgba(248,113,113,0.08); border:1px solid rgba(248,113,113,0.25); color:var(--ft-danger); }
         .camp-btn-danger:hover { background:rgba(248,113,113,0.14); }
         .camp-btn-warn { background:rgba(251,191,36,0.08); border:1px solid rgba(251,191,36,0.25); color:#fbbf24; }
         .camp-btn-warn:hover { background:rgba(251,191,36,0.14); }
         .camp-table { width:100%; border-collapse:collapse; }
-        .camp-table th { text-align:left; font-size:0.72rem; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:0.05em; padding:0.65rem 1rem; border-bottom:1px solid rgba(56,189,248,0.08); }
-        .camp-table td { padding:0.8rem 1rem; border-bottom:1px solid rgba(56,189,248,0.05); font-size:0.85rem; color:#cbd5e1; }
+        .camp-table th { text-align:left; font-size:0.72rem; font-weight:600; color:var(--ft-text-tertiary); text-transform:uppercase; letter-spacing:0.05em; padding:0.65rem 1rem; border-bottom:1px solid rgba(56,189,248,0.08); }
+        .camp-table td { padding:0.8rem 1rem; border-bottom:1px solid rgba(56,189,248,0.05); font-size:0.85rem; color:var(--ft-text-secondary); }
         .camp-table tr:hover td { background:rgba(56,189,248,0.03); }
-        .camp-label { display:block; font-size:0.78rem; color:#64748b; font-weight:600; margin-bottom:0.35rem; text-transform:uppercase; letter-spacing:0.04em; }
+        .camp-label { display:block; font-size:0.78rem; color:var(--ft-text-tertiary); font-weight:600; margin-bottom:0.35rem; text-transform:uppercase; letter-spacing:0.04em; }
       `}</style>
 
       {/* Header */}
@@ -216,12 +216,12 @@ export default function CampaignsPage() {
         <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.25rem' }}>
-              <a href="/admin" style={{ fontSize: '0.8rem', color: '#64748b', textDecoration: 'none' }}>← Admin</a>
-              <span style={{ color: '#334155' }}>/</span>
-              <span style={{ background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 6, padding: '0.15rem 0.6rem', fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8' }}>CAMPAIGNS</span>
+              <a href="/admin" style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)', textDecoration: 'none' }}>← Admin</a>
+              <span style={{ color: 'var(--ft-border-strong)' }}>/</span>
+              <span style={{ background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 6, padding: '0.15rem 0.6rem', fontSize: '0.72rem', fontWeight: 700, color: 'var(--ft-accent)' }}>CAMPAIGNS</span>
             </div>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Outbound Campaigns</h1>
-            <p style={{ color: '#64748b', fontSize: '0.85rem', margin: '0.25rem 0 0' }}>Broadcast emails to FreeTrust member segments</p>
+            <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.85rem', margin: '0.25rem 0 0' }}>Broadcast emails to FreeTrust member segments</p>
           </div>
           <button className="camp-btn camp-btn-primary" onClick={openCreate}>
             + New Campaign
@@ -235,26 +235,26 @@ export default function CampaignsPage() {
         {/* Stats row */}
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
           {[
-            { label: 'Total Campaigns', value: campaigns.length, color: '#38bdf8' },
+            { label: 'Total Campaigns', value: campaigns.length, color: 'var(--ft-accent)' },
             { label: 'Sent', value: campaigns.filter(c => c.status === 'sent').length, color: '#34d399' },
             { label: 'Scheduled', value: campaigns.filter(c => c.status === 'scheduled').length, color: '#fbbf24' },
-            { label: 'Drafts', value: campaigns.filter(c => c.status === 'draft').length, color: '#94a3b8' },
+            { label: 'Drafts', value: campaigns.filter(c => c.status === 'draft').length, color: 'var(--ft-text-secondary)' },
           ].map(s => (
-            <div key={s.label} style={{ background: '#1e293b', border: `1px solid ${s.color}20`, borderRadius: 12, padding: '1rem 1.5rem', flex: '1 1 140px' }}>
+            <div key={s.label} style={{ background: 'var(--ft-surface)', border: `1px solid ${s.color}20`, borderRadius: 12, padding: '1rem 1.5rem', flex: '1 1 140px' }}>
               <div style={{ fontSize: '1.5rem', fontWeight: 800, color: s.color }}>{s.value}</div>
-              <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 2 }}>{s.label}</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', marginTop: 2 }}>{s.label}</div>
             </div>
           ))}
         </div>
 
         {/* Campaign list */}
-        <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 12, overflow: 'hidden' }}>
           {listLoading ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>Loading campaigns…</div>
+            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--ft-text-tertiary)' }}>Loading campaigns…</div>
           ) : campaigns.length === 0 ? (
             <div style={{ padding: '4rem', textAlign: 'center' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📧</div>
-              <div style={{ color: '#64748b', fontSize: '0.95rem', marginBottom: '1.5rem' }}>No campaigns yet. Create your first broadcast.</div>
+              <div style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.95rem', marginBottom: '1.5rem' }}>No campaigns yet. Create your first broadcast.</div>
               <button className="camp-btn camp-btn-primary" onClick={openCreate}>Create Campaign</button>
             </div>
           ) : (
@@ -277,11 +277,11 @@ export default function CampaignsPage() {
                     return (
                       <tr key={c.id}>
                         <td>
-                          <div style={{ fontWeight: 600, color: '#f1f5f9' }}>{c.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 2 }}>{c.subject}</div>
+                          <div style={{ fontWeight: 600, color: 'var(--ft-text)' }}>{c.name}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', marginTop: 2 }}>{c.subject}</div>
                         </td>
                         <td>
-                          <span style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.72rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                          <span style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 999, padding: '0.15rem 0.6rem', fontSize: '0.72rem', color: 'var(--ft-text-secondary)', whiteSpace: 'nowrap' }}>
                             {SEGMENT_LABELS[c.segment] ?? c.segment}
                           </span>
                         </td>
@@ -290,14 +290,14 @@ export default function CampaignsPage() {
                             {statusCfg.label}
                           </span>
                         </td>
-                        <td style={{ color: '#94a3b8' }}>
+                        <td style={{ color: 'var(--ft-text-secondary)' }}>
                           {c.total_recipients != null ? c.total_recipients.toLocaleString() : '—'}
                         </td>
                         <td>
                           <span style={{ color: '#34d399', fontWeight: 700 }}>{c.total_sent}</span>
-                          {c.total_failed > 0 && <span style={{ color: '#f87171', marginLeft: 6 }}>/ {c.total_failed}</span>}
+                          {c.total_failed > 0 && <span style={{ color: 'var(--ft-danger)', marginLeft: 6 }}>/ {c.total_failed}</span>}
                         </td>
-                        <td style={{ fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+                        <td style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', whiteSpace: 'nowrap' }}>
                           {c.sent_at
                             ? new Date(c.sent_at).toLocaleString('en-IE')
                             : c.scheduled_at
@@ -344,16 +344,16 @@ export default function CampaignsPage() {
       {/* ── Create / Edit Modal ── */}
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem' }}>
-          <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 16, padding: '2rem', maxWidth: 600, width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 16, padding: '2rem', maxWidth: 600, width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
               <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>
                 {editingCampaign ? 'Edit Campaign' : 'New Campaign'}
               </h2>
-              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '1.2rem', cursor: 'pointer', padding: '0.2rem' }}>✕</button>
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--ft-text-tertiary)', fontSize: '1.2rem', cursor: 'pointer', padding: '0.2rem' }}>✕</button>
             </div>
 
             {error && (
-              <div style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 8, padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.85rem', color: '#f87171' }}>
+              <div style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 8, padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--ft-danger)' }}>
                 {error}
               </div>
             )}
@@ -378,7 +378,7 @@ export default function CampaignsPage() {
                   style={{ cursor: 'pointer' }}
                 >
                   {Object.entries(SEGMENT_LABELS).map(([value, label]) => (
-                    <option key={value} value={value} style={{ background: '#1e293b' }}>{label}</option>
+                    <option key={value} value={value} style={{ background: 'var(--ft-surface)' }}>{label}</option>
                   ))}
                 </select>
               </div>
@@ -393,7 +393,7 @@ export default function CampaignsPage() {
                   rows={8}
                   style={{ resize: 'vertical', lineHeight: 1.5 }}
                 />
-                <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '0.35rem' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-faint)', marginTop: '0.35rem' }}>
                   HTML is supported. The subject line will be rendered as an h1 above this body.
                 </div>
               </div>
@@ -406,7 +406,7 @@ export default function CampaignsPage() {
                   value={form.scheduled_at}
                   onChange={e => setForm(f => ({ ...f, scheduled_at: e.target.value }))}
                 />
-                <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '0.35rem' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-faint)', marginTop: '0.35rem' }}>
                   Leave empty to save as draft and send manually. Scheduled sends run every 15 minutes.
                 </div>
               </div>
@@ -425,36 +425,36 @@ export default function CampaignsPage() {
       {/* ── Detail Modal ── */}
       {detailView && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem' }}>
-          <div style={{ background: '#1e293b', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 16, padding: '2rem', maxWidth: 560, width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 16, padding: '2rem', maxWidth: 560, width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
               <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>{detailView.name}</h2>
-              <button onClick={() => setDetailView(null)} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '1.2rem', cursor: 'pointer', padding: '0.2rem' }}>✕</button>
+              <button onClick={() => setDetailView(null)} style={{ background: 'none', border: 'none', color: 'var(--ft-text-tertiary)', fontSize: '1.2rem', cursor: 'pointer', padding: '0.2rem' }}>✕</button>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
               {[
-                { label: 'Status', value: STATUS_CONFIG[detailView.status]?.label ?? detailView.status, color: STATUS_CONFIG[detailView.status]?.color ?? '#94a3b8' },
-                { label: 'Segment', value: SEGMENT_LABELS[detailView.segment] ?? detailView.segment, color: '#94a3b8' },
-                { label: 'Recipients', value: detailView.total_recipients?.toLocaleString() ?? '—', color: '#38bdf8' },
+                { label: 'Status', value: STATUS_CONFIG[detailView.status]?.label ?? detailView.status, color: STATUS_CONFIG[detailView.status]?.color ?? 'var(--ft-text-secondary)' },
+                { label: 'Segment', value: SEGMENT_LABELS[detailView.segment] ?? detailView.segment, color: 'var(--ft-text-secondary)' },
+                { label: 'Recipients', value: detailView.total_recipients?.toLocaleString() ?? '—', color: 'var(--ft-accent)' },
                 { label: 'Sent', value: detailView.total_sent.toLocaleString(), color: '#34d399' },
-                { label: 'Failed', value: detailView.total_failed.toLocaleString(), color: detailView.total_failed > 0 ? '#f87171' : '#64748b' },
-                { label: 'Created', value: new Date(detailView.created_at).toLocaleDateString('en-IE'), color: '#64748b' },
+                { label: 'Failed', value: detailView.total_failed.toLocaleString(), color: detailView.total_failed > 0 ? 'var(--ft-danger)' : 'var(--ft-text-tertiary)' },
+                { label: 'Created', value: new Date(detailView.created_at).toLocaleDateString('en-IE'), color: 'var(--ft-text-tertiary)' },
               ].map(s => (
-                <div key={s.label} style={{ background: '#0f172a', borderRadius: 10, padding: '0.85rem 1rem' }}>
-                  <div style={{ fontSize: '0.7rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>{s.label}</div>
+                <div key={s.label} style={{ background: 'var(--ft-bg)', borderRadius: 10, padding: '0.85rem 1rem' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--ft-text-faint)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>{s.label}</div>
                   <div style={{ fontWeight: 700, color: s.color }}>{s.value}</div>
                 </div>
               ))}
             </div>
 
             <div style={{ marginBottom: '1.25rem' }}>
-              <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>Subject</div>
-              <div style={{ color: '#f1f5f9', fontSize: '0.9rem' }}>{detailView.subject}</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>Subject</div>
+              <div style={{ color: 'var(--ft-text)', fontSize: '0.9rem' }}>{detailView.subject}</div>
             </div>
 
             <div>
-              <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>Email Body</div>
-              <div style={{ background: '#0f172a', borderRadius: 8, padding: '1rem', fontSize: '0.82rem', color: '#94a3b8', fontFamily: 'monospace', whiteSpace: 'pre-wrap', maxHeight: 200, overflowY: 'auto', lineHeight: 1.5 }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>Email Body</div>
+              <div style={{ background: 'var(--ft-bg)', borderRadius: 8, padding: '1rem', fontSize: '0.82rem', color: 'var(--ft-text-secondary)', fontFamily: 'monospace', whiteSpace: 'pre-wrap', maxHeight: 200, overflowY: 'auto', lineHeight: 1.5 }}>
                 {detailView.body_html}
               </div>
             </div>

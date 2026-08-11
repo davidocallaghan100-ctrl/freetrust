@@ -489,7 +489,7 @@ export default function GrassrootsBrowsePage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', paddingTop: 64, paddingBottom: 80 }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui, sans-serif', paddingTop: 64, paddingBottom: 80 }}>
       <style>{`
         .grassroots-layout { max-width: 1200px; margin: 0 auto; padding: 20px 16px 80px; display: grid; grid-template-columns: 240px 1fr; gap: 24px; align-items: start; }
         .grassroots-sidebar { position: sticky; top: 110px; }
@@ -518,13 +518,13 @@ export default function GrassrootsBrowsePage() {
               <h1 style={{ fontSize: 'clamp(1.8rem, 5vw, 2.6rem)', fontWeight: 900, margin: '0 0 0.3rem', letterSpacing: '-0.5px' }}>
                 🌱 Grassroots
               </h1>
-              <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.95rem' }}>
+              <p style={{ color: 'var(--ft-text-secondary)', margin: 0, fontSize: '0.95rem' }}>
                 Local hands-on work, casual help, and everyday community services
               </p>
             </div>
             <Link href="/grassroots/new" style={{
               background: `linear-gradient(135deg, ${GRASSROOTS_GREEN.primary}, ${GRASSROOTS_GREEN.primaryDim})`,
-              color: '#0f172a',
+              color: 'var(--ft-bg)',
               padding: '0.7rem 1.4rem',
               borderRadius: 10,
               fontSize: '0.9rem',
@@ -540,7 +540,7 @@ export default function GrassrootsBrowsePage() {
           {/* Offering / Seeking toggle */}
           <div style={{
             display: 'inline-flex',
-            background: '#1e293b',
+            background: 'var(--ft-surface)',
             border: `1px solid ${GRASSROOTS_GREEN.borderSoft}`,
             borderRadius: 12,
             padding: 4,
@@ -561,7 +561,7 @@ export default function GrassrootsBrowsePage() {
                     fontWeight: 700,
                     fontFamily: 'inherit',
                     background: active ? GRASSROOTS_GREEN.primary : 'transparent',
-                    color: active ? '#0f172a' : '#94a3b8',
+                    color: active ? 'var(--ft-bg)' : 'var(--ft-text-secondary)',
                     transition: 'all 0.15s',
                     whiteSpace: 'nowrap',
                   }}
@@ -593,7 +593,7 @@ export default function GrassrootsBrowsePage() {
             real listings exist it only shows categories available under the
             current type/location filters. */}
         <aside className="grassroots-sidebar">
-          <div className="grassroots-category-scroll" style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 14, overflowX: 'hidden' }}>
+          <div className="grassroots-category-scroll" style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 14, overflowX: 'hidden' }}>
             <button
               className="grassroots-cat-btn"
               onClick={() => setActiveCategory(null)}
@@ -601,23 +601,23 @@ export default function GrassrootsBrowsePage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
                 padding: '10px 14px', background: activeCategory === null ? GRASSROOTS_GREEN.tint : 'transparent',
                 border: 'none', borderLeft: activeCategory === null ? `3px solid ${GRASSROOTS_GREEN.primary}` : '3px solid transparent',
-                color: activeCategory === null ? GRASSROOTS_GREEN.primary : '#94a3b8', fontSize: 13,
+                color: activeCategory === null ? GRASSROOTS_GREEN.primary : 'var(--ft-text-secondary)', fontSize: 13,
                 fontWeight: activeCategory === null ? 800 : 500, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
               }}
             >
               <span>✦ All Grassroots</span>
-              <span style={{ fontSize: 11, color: '#475569' }}>{listings.length}</span>
+              <span style={{ fontSize: 11, color: 'var(--ft-text-faint)' }}>{listings.length}</span>
             </button>
             <button
               type="button"
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
-                padding: '9px 14px', background: '#0f172a', border: 'none', borderTop: '1px solid #334155',
+                padding: '9px 14px', background: 'var(--ft-bg)', border: 'none', borderTop: '1px solid var(--ft-border-strong)',
                 fontFamily: 'inherit', cursor: 'default',
               }}
             >
-              <span style={{ fontSize: 10, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>🌱 Available Categories A–Z</span>
-              <span style={{ fontSize: 10, color: '#475569', fontWeight: 800 }}>{sortedVisibleCategories.length}</span>
+              <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--ft-text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>🌱 Available Categories A–Z</span>
+              <span style={{ fontSize: 10, color: 'var(--ft-text-faint)', fontWeight: 800 }}>{sortedVisibleCategories.length}</span>
             </button>
             {sortedVisibleCategories.map(cat => {
               const active = activeCategory === cat.slug
@@ -631,7 +631,7 @@ export default function GrassrootsBrowsePage() {
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
                     padding: '8px 14px 8px 18px', background: active ? GRASSROOTS_GREEN.tint : 'transparent',
                     border: 'none', borderLeft: active ? `3px solid ${GRASSROOTS_GREEN.primary}` : '3px solid transparent',
-                    color: active ? GRASSROOTS_GREEN.primary : '#94a3b8', fontSize: 12,
+                    color: active ? GRASSROOTS_GREEN.primary : 'var(--ft-text-secondary)', fontSize: 12,
                     fontWeight: active ? 800 : 500, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s',
                   }}
                 >
@@ -639,13 +639,13 @@ export default function GrassrootsBrowsePage() {
                     <span>{cat.emoji}</span>
                     <span>{cat.label}</span>
                   </span>
-                  {count > 0 && <span style={{ fontSize: 10, color: '#475569', flexShrink: 0 }}>{count}</span>}
+                  {count > 0 && <span style={{ fontSize: 10, color: 'var(--ft-text-faint)', flexShrink: 0 }}>{count}</span>}
                 </button>
               )
             })}
           </div>
 
-          <Link href="/grassroots/new" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, padding: 12, background: `linear-gradient(135deg, ${GRASSROOTS_GREEN.primary}, ${GRASSROOTS_GREEN.primaryDim})`, borderRadius: 12, color: '#0f172a', fontWeight: 800, fontSize: 13, textDecoration: 'none' }}>
+          <Link href="/grassroots/new" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, padding: 12, background: `linear-gradient(135deg, ${GRASSROOTS_GREEN.primary}, ${GRASSROOTS_GREEN.primaryDim})`, borderRadius: 12, color: 'var(--ft-bg)', fontWeight: 800, fontSize: 13, textDecoration: 'none' }}>
             ➕ Post Grassroots Work
           </Link>
         </aside>
@@ -654,12 +654,12 @@ export default function GrassrootsBrowsePage() {
         <div className="grassroots-results">
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
             <div style={{ flex: '1 1 280px', minWidth: 220, position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: 14, pointerEvents: 'none' }}>🔍</span>
+              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--ft-text-tertiary)', fontSize: 14, pointerEvents: 'none' }}>🔍</span>
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search Grassroots listings…"
-                style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', borderRadius: 10, padding: '10px 14px 10px 36px', fontSize: 16, color: '#f1f5f9', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                style={{ width: '100%', background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 10, padding: '10px 14px 10px 36px', fontSize: 16, color: 'var(--ft-text)', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
               />
             </div>
             <select
@@ -667,8 +667,8 @@ export default function GrassrootsBrowsePage() {
               value={activeCategory ?? ''}
               onChange={e => setActiveCategory(e.target.value || null)}
               style={{
-                flex: '1 1 220px', minWidth: 210, background: '#1e293b', border: '1px solid #334155', borderRadius: 10,
-                padding: '9px 12px', fontSize: 16, color: activeCategory ? GRASSROOTS_GREEN.primary : '#94a3b8',
+                flex: '1 1 220px', minWidth: 210, background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 10,
+                padding: '9px 12px', fontSize: 16, color: activeCategory ? GRASSROOTS_GREEN.primary : 'var(--ft-text-secondary)',
                 fontFamily: 'inherit', cursor: 'pointer', fontWeight: 700,
               }}
             >
@@ -686,8 +686,8 @@ export default function GrassrootsBrowsePage() {
               value={sort}
               onChange={e => setSort(e.target.value as SortKey)}
               style={{
-                background: '#1e293b', border: '1px solid #334155', borderRadius: 10,
-                padding: '9px 12px', fontSize: 16, color: '#94a3b8', fontFamily: 'inherit', cursor: 'pointer',
+                background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 10,
+                padding: '9px 12px', fontSize: 16, color: 'var(--ft-text-secondary)', fontFamily: 'inherit', cursor: 'pointer',
               }}
             >
               <option value="nearest">Nearest first</option>
@@ -701,13 +701,13 @@ export default function GrassrootsBrowsePage() {
               onClick={() => setActiveCategory(null)}
               style={{
                 padding: '9px 16px', borderRadius: 999, whiteSpace: 'nowrap', flexShrink: 0,
-                border: activeCategory === null ? `2px solid ${GRASSROOTS_GREEN.primary}` : '2px solid #334155',
+                border: activeCategory === null ? `2px solid ${GRASSROOTS_GREEN.primary}` : '2px solid var(--ft-border-strong)',
                 background: activeCategory === null ? GRASSROOTS_GREEN.tint : '#111827',
-                color: activeCategory === null ? GRASSROOTS_GREEN.primary : '#94a3b8',
+                color: activeCategory === null ? GRASSROOTS_GREEN.primary : 'var(--ft-text-secondary)',
                 cursor: 'pointer', fontWeight: 800, fontSize: 13, fontFamily: 'inherit', minHeight: 44,
               }}
             >
-              ✦ All Grassroots <span style={{ color: '#64748b', marginLeft: 4 }}>{listings.length}</span>
+              ✦ All Grassroots <span style={{ color: 'var(--ft-text-tertiary)', marginLeft: 4 }}>{listings.length}</span>
             </button>
             {sortedVisibleCategories.map(cat => {
               const active = activeCategory === cat.slug
@@ -718,16 +718,16 @@ export default function GrassrootsBrowsePage() {
                   onClick={() => setActiveCategory(active ? null : cat.slug)}
                   style={{
                     padding: '9px 16px', borderRadius: 999, whiteSpace: 'nowrap', flexShrink: 0,
-                    border: active ? `2px solid ${GRASSROOTS_GREEN.primary}` : '2px solid #334155',
+                    border: active ? `2px solid ${GRASSROOTS_GREEN.primary}` : '2px solid var(--ft-border-strong)',
                     background: active ? GRASSROOTS_GREEN.tint : '#111827',
-                    color: active ? GRASSROOTS_GREEN.primary : '#94a3b8',
+                    color: active ? GRASSROOTS_GREEN.primary : 'var(--ft-text-secondary)',
                     cursor: 'pointer', fontWeight: active ? 800 : 700, fontSize: 13, fontFamily: 'inherit', minHeight: 44,
                     display: 'inline-flex', alignItems: 'center', gap: 7,
                   }}
                 >
                   <span>{cat.emoji}</span>
                   <span>{cat.label}</span>
-                  {count > 0 && <span style={{ color: '#64748b', fontSize: 11 }}>{count}</span>}
+                  {count > 0 && <span style={{ color: 'var(--ft-text-tertiary)', fontSize: 11 }}>{count}</span>}
                 </button>
               )
             })}
@@ -735,7 +735,7 @@ export default function GrassrootsBrowsePage() {
 
           {/* ── Results header with active filters ─────────────────────── */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: '1rem' }}>
-            <div style={{ fontSize: 13, color: '#64748b' }}>
+            <div style={{ fontSize: 13, color: 'var(--ft-text-tertiary)' }}>
               {loading
                 ? 'Loading…'
                 : sorted.length === 0
@@ -754,7 +754,7 @@ export default function GrassrootsBrowsePage() {
                   setRadiusKm(25)
                   setSearch('')
                 }}
-                style={{ background: 'none', border: '1px solid #334155', borderRadius: 8, padding: '4px 10px', fontSize: 11, color: '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}
+                style={{ background: 'none', border: '1px solid var(--ft-border-strong)', borderRadius: 8, padding: '4px 10px', fontSize: 11, color: 'var(--ft-text-tertiary)', cursor: 'pointer', fontFamily: 'inherit' }}
               >
                 ✕ Clear filters
               </button>
@@ -765,7 +765,7 @@ export default function GrassrootsBrowsePage() {
           {loading ? (
             <div className="grassroots-grid">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 14, height: 260, opacity: 0.5 }} />
+                <div key={i} style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 14, height: 260, opacity: 0.5 }} />
               ))}
             </div>
           ) : sorted.length === 0 ? (
@@ -776,15 +776,15 @@ export default function GrassrootsBrowsePage() {
               boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
             }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 74, height: 74, borderRadius: '50%', background: GRASSROOTS_GREEN.tint, border: `1px solid ${GRASSROOTS_GREEN.border}`, fontSize: '2.6rem', marginBottom: '0.9rem' }}>🌱</div>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, background: '#0f172a', border: '1px solid #334155', color: '#64748b', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', color: 'var(--ft-text-tertiary)', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
                 No matches yet
               </div>
-              <h2 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#f1f5f9', margin: '0 0 0.55rem' }}>
+              <h2 style={{ fontSize: '1.45rem', fontWeight: 900, color: 'var(--ft-text)', margin: '0 0 0.55rem' }}>
                 {activeCategory || countryFilter || filterLoc.latitude != null || search
                   ? 'No Grassroots listings match these filters yet'
                   : listingType === 'seeking' ? 'No requests posted yet' : 'No matches loaded yet'}
               </h2>
-              <p style={{ color: '#94a3b8', marginBottom: '1.4rem', fontSize: '0.93rem', lineHeight: 1.6, maxWidth: 470, margin: '0 auto 1.4rem' }}>
+              <p style={{ color: 'var(--ft-text-secondary)', marginBottom: '1.4rem', fontSize: '0.93rem', lineHeight: 1.6, maxWidth: 470, margin: '0 auto 1.4rem' }}>
                 {activeCategory || countryFilter || filterLoc.latitude != null || search
                   ? 'Clear a filter or post the first Grassroots listing for this category.'
                   : listingType === 'seeking'
@@ -794,7 +794,7 @@ export default function GrassrootsBrowsePage() {
               <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <Link href="/grassroots/new" style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, background: `linear-gradient(135deg, ${GRASSROOTS_GREEN.primary}, ${GRASSROOTS_GREEN.primaryDim})`,
-                  color: '#0f172a', padding: '0.8rem 1.35rem', borderRadius: 10, fontWeight: 900, fontSize: '0.95rem', textDecoration: 'none',
+                  color: 'var(--ft-bg)', padding: '0.8rem 1.35rem', borderRadius: 10, fontWeight: 900, fontSize: '0.95rem', textDecoration: 'none',
                   boxShadow: '0 4px 14px rgba(34,197,94,0.35)',
                 }}>
                   + Post Grassroots work
@@ -808,13 +808,13 @@ export default function GrassrootsBrowsePage() {
                       setRadiusKm(25)
                       setSearch('')
                     }}
-                    style={{ minHeight: 44, padding: '0.8rem 1.2rem', borderRadius: 10, border: '1px solid #334155', background: '#0f172a', color: '#94a3b8', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}
+                    style={{ minHeight: 44, padding: '0.8rem 1.2rem', borderRadius: 10, border: '1px solid var(--ft-border-strong)', background: 'var(--ft-bg)', color: 'var(--ft-text-secondary)', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}
                   >
                     Clear filters
                   </button>
                 )}
               </div>
-              <div style={{ marginTop: 14, fontSize: 11, color: '#475569' }}>
+              <div style={{ marginTop: 14, fontSize: 11, color: 'var(--ft-text-faint)' }}>
                 Showing real FreeTrust listings and providers only.
               </div>
             </div>
@@ -824,7 +824,7 @@ export default function GrassrootsBrowsePage() {
                 {visibleListings.map(l => <ListingCard key={l.id} listing={l} onOpen={openListing} onContact={openListingContact} />)}
               </div>
               {hasMoreListings && (
-                <div style={{ textAlign: 'center', marginTop: 24, color: '#64748b', fontSize: 13, padding: '12px 0' }}>
+                <div style={{ textAlign: 'center', marginTop: 24, color: 'var(--ft-text-tertiary)', fontSize: 13, padding: '12px 0' }}>
                   Loading more Grassroots listings…
                 </div>
               )}
@@ -891,7 +891,7 @@ function ListingCard({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        background: '#1e293b',
+        background: 'var(--ft-surface)',
         border: `1px solid ${l.trust_tokens_accepted ? 'rgba(56,189,248,0.22)' : 'rgba(148,163,184,0.12)'}`,
         borderRadius: 14,
         overflow: 'hidden',
@@ -927,7 +927,7 @@ function ListingCard({
             position: 'absolute', bottom: 10, right: 10,
             background: 'rgba(15,23,42,0.88)',
             border: '1px solid rgba(148,163,184,0.24)',
-            color: '#cbd5e1',
+            color: 'var(--ft-text-secondary)',
             borderRadius: 999,
             padding: '3px 10px',
             fontSize: 10,
@@ -974,7 +974,7 @@ function ListingCard({
             position: 'absolute', bottom: 10, left: 10,
             background: 'rgba(15,23,42,0.88)',
             border: '1px solid rgba(56,189,248,0.35)',
-            color: '#38bdf8',
+            color: 'var(--ft-accent)',
             borderRadius: 999,
             padding: '3px 10px',
             fontSize: 11,
@@ -987,12 +987,12 @@ function ListingCard({
 
       {/* Body */}
       <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: '#f1f5f9', lineHeight: 1.3 }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--ft-text)', lineHeight: 1.3 }}>
           {l.title}
         </div>
         {l.description && (
           <p style={{
-            fontSize: 12, color: '#64748b', lineHeight: 1.5, margin: 0,
+            fontSize: 12, color: 'var(--ft-text-tertiary)', lineHeight: 1.5, margin: 0,
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
           }}>
@@ -1029,13 +1029,13 @@ function ListingCard({
               width: 24, height: 24, borderRadius: '50%',
               background: `linear-gradient(135deg, ${GRASSROOTS_GREEN.primary}, ${GRASSROOTS_GREEN.primaryDim})`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 10, fontWeight: 800, color: '#0f172a',
+              fontSize: 10, fontWeight: 800, color: 'var(--ft-bg)',
               flexShrink: 0,
             }}>
               {initials || '?'}
             </div>
           )}
-          <div style={{ flex: 1, minWidth: 0, fontSize: 12, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ flex: 1, minWidth: 0, fontSize: 12, color: 'var(--ft-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {name}
           </div>
           {posterSocial && (
@@ -1069,7 +1069,7 @@ function ListingCard({
                   layout="stacked"
                 />
                 {rateLabel && (
-                  <span style={{ fontSize: 11, color: '#475569' }}>{rateLabel}</span>
+                  <span style={{ fontSize: 11, color: 'var(--ft-text-faint)' }}>{rateLabel}</span>
                 )}
               </div>
             ) : (
@@ -1081,7 +1081,7 @@ function ListingCard({
               <span style={{
                 fontSize: 10,
                 fontWeight: 700,
-                color: '#38bdf8',
+                color: 'var(--ft-accent)',
                 textTransform: 'uppercase',
                 letterSpacing: '0.04em',
                 display: 'inline-flex',
@@ -1111,7 +1111,7 @@ function ListingCard({
                   onClick={e => { e.preventDefault(); e.stopPropagation(); void onContact(l) }}
                   style={{
                     background: GRASSROOTS_GREEN.primary, border: 'none', borderRadius: 7,
-                    padding: '7px 10px', fontSize: 12, fontWeight: 900, color: '#0f172a',
+                    padding: '7px 10px', fontSize: 12, fontWeight: 900, color: 'var(--ft-bg)',
                     cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
                   }}
                 >
@@ -1126,7 +1126,7 @@ function ListingCard({
                 onClick={e => { e.preventDefault(); e.stopPropagation(); void onContact(l) }}
                 style={{
                   background: GRASSROOTS_GREEN.primary, border: 'none', borderRadius: 7,
-                  padding: '7px 10px', fontSize: 12, fontWeight: 900, color: '#0f172a',
+                  padding: '7px 10px', fontSize: 12, fontWeight: 900, color: 'var(--ft-bg)',
                   cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
                 }}
               >

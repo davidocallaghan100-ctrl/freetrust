@@ -30,7 +30,7 @@ export default function OrgTrustSummary({ orgId }: Props) {
   if (loading) return null
   if (!data || data.totalOrders < 2) return null
 
-  const otifColor = data.otif === null ? '#64748b'
+  const otifColor = data.otif === null ? 'var(--ft-text-tertiary)'
     : data.otif >= 90 ? '#10b981'
     : data.otif >= 70 ? '#f59e0b'
     : '#ef4444'
@@ -51,7 +51,7 @@ export default function OrgTrustSummary({ orgId }: Props) {
       <div style={{
         fontSize: 12,
         fontWeight: 700,
-        color: '#64748b',
+        color: 'var(--ft-text-tertiary)',
         letterSpacing: '0.08em',
         textTransform: 'uppercase',
         marginBottom: 16,
@@ -71,7 +71,7 @@ export default function OrgTrustSummary({ orgId }: Props) {
             <div style={{ fontSize: 30, fontWeight: 800, color: otifColor, lineHeight: 1 }}>
               {data.otif}%
             </div>
-            <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>On-time delivery</div>
+            <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', marginTop: 4 }}>On-time delivery</div>
             <div style={{ fontSize: 10, color: otifColor, marginTop: 2, fontWeight: 600 }}>{otifLabel}</div>
           </div>
         )}
@@ -82,7 +82,7 @@ export default function OrgTrustSummary({ orgId }: Props) {
             <div style={{ fontSize: 30, fontWeight: 800, color: '#f59e0b', lineHeight: 1 }}>
               ★ {data.avgRating.toFixed(1)}
             </div>
-            <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>Average rating</div>
+            <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', marginTop: 4 }}>Average rating</div>
           </div>
         )}
 
@@ -91,7 +91,7 @@ export default function OrgTrustSummary({ orgId }: Props) {
           <div style={{ fontSize: 30, fontWeight: 800, color: '#f8fafc', lineHeight: 1 }}>
             {data.totalOrders}
           </div>
-          <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>Orders fulfilled</div>
+          <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', marginTop: 4 }}>Orders fulfilled</div>
         </div>
       </div>
 
@@ -100,7 +100,7 @@ export default function OrgTrustSummary({ orgId }: Props) {
         paddingTop: 14,
         borderTop: '1px solid rgba(255,255,255,0.06)',
         fontSize: 12,
-        color: '#64748b',
+        color: 'var(--ft-text-tertiary)',
         display: 'flex',
         flexWrap: 'wrap',
         gap: 12,

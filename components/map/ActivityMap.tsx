@@ -34,7 +34,7 @@ const LAYER_CONFIG: Record<PinType, { label: string; color: string; glow: string
   event:   { label: 'Events',   color: '#f59e0b', glow: 'rgba(245,158,11,0.6)' },
   product: { label: 'Products', color: '#a855f7', glow: 'rgba(168,85,247,0.6)' },
   service: { label: 'Services', color: '#f97316', glow: 'rgba(249,115,22,0.6)' },
-  job:     { label: 'Jobs',     color: '#38bdf8', glow: 'rgba(56,189,248,0.6)' },
+  job:     { label: 'Jobs',     color: 'var(--ft-accent)', glow: 'rgba(56,189,248,0.6)' },
 }
 
 // ─── PinMarker — compact dot pin ─────────────────────────────────────────────
@@ -86,13 +86,13 @@ function PinPopup({ pin }: { pin: Pin }) {
   const wrapStyle: React.CSSProperties = {
     minWidth: 210, maxWidth: 270,
     fontFamily: 'system-ui, -apple-system, sans-serif',
-    fontSize: 13, lineHeight: 1.5, color: '#f1f5f9',
+    fontSize: 13, lineHeight: 1.5, color: 'var(--ft-text)',
   }
 
   const btnStyle = (color: string): React.CSSProperties => ({
     display: 'inline-flex', alignItems: 'center', gap: 4,
     padding: '7px 16px', borderRadius: 24,
-    background: color, color: '#0a0a0f',
+    background: color, color: 'var(--ft-bg)',
     fontWeight: 700, fontSize: 12, textDecoration: 'none',
     border: 'none', cursor: 'pointer',
     boxShadow: `0 2px 8px ${color}55`,
@@ -130,14 +130,14 @@ function PinPopup({ pin }: { pin: Pin }) {
           }
           <div>
             <div style={{ fontWeight: 700, fontSize: 14 }}>@{p.username || 'member'}</div>
-            {loc && <div style={{ color: '#64748b', fontSize: 11, marginTop: 1 }}>📍 {loc}</div>}
+            {loc && <div style={{ color: 'var(--ft-text-tertiary)', fontSize: 11, marginTop: 1 }}>📍 {loc}</div>}
           </div>
         </div>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 8, padding: '2px 8px', borderRadius: 12, background: 'rgba(0,212,170,0.12)', border: '1px solid rgba(0,212,170,0.3)' }}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00d4aa', display: 'inline-block' }} />
           <span style={{ fontSize: 11, color: '#00d4aa', fontWeight: 600 }}>FreeTrust Member</span>
         </div>
-        {p.bio && <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 6 }}>{p.bio.slice(0, 80)}{p.bio.length > 80 ? '…' : ''}</div>}
+        {p.bio && <div style={{ color: 'var(--ft-text-secondary)', fontSize: 12, marginTop: 6 }}>{p.bio.slice(0, 80)}{p.bio.length > 80 ? '…' : ''}</div>}
         <div style={btnRowStyle}>
           <a href={`/members/${encodeURIComponent(p.username || '')}`} style={btnStyle(cfg.color)}>View Profile →</a>
           <a href={`/messages?to=${encodeURIComponent(p.id)}`} style={outlineBtnStyle(cfg.color)}>💬 Message</a>
@@ -154,8 +154,8 @@ function PinPopup({ pin }: { pin: Pin }) {
       <div style={wrapStyle}>
         {topBar}
         <div style={{ fontWeight: 700, fontSize: 14 }}>{e.title}</div>
-        {date && <div style={{ color: '#94a3b8', marginTop: 5, fontSize: 12 }}>📅 {date}</div>}
-        {loc  && <div style={{ color: '#94a3b8', fontSize: 12 }}>📍 {loc}</div>}
+        {date && <div style={{ color: 'var(--ft-text-secondary)', marginTop: 5, fontSize: 12 }}>📅 {date}</div>}
+        {loc  && <div style={{ color: 'var(--ft-text-secondary)', fontSize: 12 }}>📍 {loc}</div>}
         <div style={{ color: cfg.color, fontWeight: 700, marginTop: 5, fontSize: 13 }}>{price}</div>
         <a href={`/events/${encodeURIComponent(e.id)}`} style={btnStyle(cfg.color)}>View Event →</a>
       </div>
@@ -179,7 +179,7 @@ function PinPopup({ pin }: { pin: Pin }) {
         )}
         <div style={{ fontWeight: 700, fontSize: 14 }}>{p.title}</div>
         {price && <div style={{ color: cfg.color, fontWeight: 700, marginTop: 4 }}>{price}</div>}
-        {loc   && <div style={{ color: '#64748b', fontSize: 11, marginTop: 2 }}>📍 {loc}</div>}
+        {loc   && <div style={{ color: 'var(--ft-text-tertiary)', fontSize: 11, marginTop: 2 }}>📍 {loc}</div>}
         <div style={btnRowStyle}>
           <a href={`/listing/${encodeURIComponent(p.id)}`} style={btnStyle(cfg.color)}>View Listing →</a>
           {msgHref && <a href={msgHref} style={outlineBtnStyle('#a855f7')}>💬 Message Seller</a>}
@@ -206,7 +206,7 @@ function PinPopup({ pin }: { pin: Pin }) {
         <div style={{ fontWeight: 700, fontSize: 14 }}>{s.title}</div>
         {s.category && <div style={{ fontSize: 11, color: cfg.color, marginTop: 2, textTransform: 'capitalize' }}>{s.category}</div>}
         <div style={{ color: cfg.color, fontWeight: 700, marginTop: 4 }}>{price}</div>
-        {loc && <div style={{ color: '#64748b', fontSize: 11, marginTop: 2 }}>📍 {loc}</div>}
+        {loc && <div style={{ color: 'var(--ft-text-tertiary)', fontSize: 11, marginTop: 2 }}>📍 {loc}</div>}
         <div style={btnRowStyle}>
           <a href={`/listing/${encodeURIComponent(s.id)}`} style={btnStyle(cfg.color)}>View Service →</a>
           {msgHref && <a href={msgHref} style={outlineBtnStyle('#f97316')}>💬 Message Seller</a>}
@@ -225,7 +225,7 @@ function PinPopup({ pin }: { pin: Pin }) {
         {topBar}
         <div style={{ fontWeight: 700, fontSize: 14 }}>{j.title}</div>
         <div style={{ color: cfg.color, fontWeight: 700, marginTop: 5 }}>💰 {salary}</div>
-        {loc && <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 2 }}>📍 {loc}</div>}
+        {loc && <div style={{ color: 'var(--ft-text-secondary)', fontSize: 12, marginTop: 2 }}>📍 {loc}</div>}
         <a href={`/jobs/${encodeURIComponent(j.id)}`} style={btnStyle(cfg.color)}>View Job →</a>
       </div>
     )
@@ -283,24 +283,24 @@ export default function ActivityMap() {
       {/* ── Global styles ── */}
       <style>{`
         .mapboxgl-popup-content {
-          background: #13131a !important;
-          border: 1px solid #2a2a3a !important;
+          background: var(--ft-surface) !important;
+          border: 1px solid var(--ft-surface) !important;
           border-radius: 12px !important;
           padding: 0 !important;
           overflow: hidden !important;
           box-shadow: 0 12px 40px rgba(0,0,0,0.7) !important;
-          color: #f1f5f9;
+          color: var(--ft-text);
         }
         .mapboxgl-popup-content > div { padding: 0 16px 16px !important; }
         .mapboxgl-popup-close-button {
-          color: #64748b !important; font-size: 20px !important;
+          color: var(--ft-text-tertiary) !important; font-size: 20px !important;
           padding: 6px 10px !important; background: transparent !important;
           right: 0; top: 0; z-index: 10; line-height: 1;
         }
-        .mapboxgl-popup-close-button:hover { color: #f1f5f9 !important; }
+        .mapboxgl-popup-close-button:hover { color: var(--ft-text) !important; }
         .mapboxgl-popup-tip {
-          border-top-color: #2a2a3a !important;
-          border-bottom-color: #2a2a3a !important;
+          border-top-color: var(--ft-surface) !important;
+          border-bottom-color: var(--ft-surface) !important;
         }
         .mapboxgl-ctrl-attrib {
           display: none !important;
@@ -331,11 +331,11 @@ export default function ActivityMap() {
         {/* All toggle */}
         <button className="ft-toggle-btn" onClick={toggleAll} style={{
           flexShrink: 0, padding: '5px 14px', borderRadius: 24,
-          border: `1.5px solid ${allOn ? '#00d4aa' : '#2a2a3a'}`,
+          border: `1.5px solid ${allOn ? '#00d4aa' : 'var(--ft-surface)'}`,
           background: allOn
             ? 'linear-gradient(135deg, rgba(0,212,170,0.2), rgba(56,189,248,0.08))'
             : 'rgba(255,255,255,0.03)',
-          color: allOn ? '#00d4aa' : '#64748b',
+          color: allOn ? '#00d4aa' : 'var(--ft-text-tertiary)',
           fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
           boxShadow: allOn ? '0 0 12px rgba(0,212,170,0.18)' : 'none',
         }}>✦ All</button>
@@ -347,11 +347,11 @@ export default function ActivityMap() {
             <button key={type} className="ft-toggle-btn" onClick={() => toggleLayer(type)} style={{
               flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
               padding: '5px 12px', borderRadius: 24,
-              border: `1.5px solid ${active ? cfg.color : '#2a2a3a'}`,
+              border: `1.5px solid ${active ? cfg.color : 'var(--ft-surface)'}`,
               background: active
                 ? `linear-gradient(135deg, ${cfg.color}25, ${cfg.color}0d)`
                 : 'rgba(255,255,255,0.03)',
-              color: active ? cfg.color : '#64748b',
+              color: active ? cfg.color : 'var(--ft-text-tertiary)',
               fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
               boxShadow: active ? `0 0 10px ${cfg.color}30` : 'none',
             }}>
@@ -365,7 +365,7 @@ export default function ActivityMap() {
                 <span style={{
                   fontSize: 10, fontWeight: 700, lineHeight: 1,
                   background: active ? `${cfg.color}28` : 'rgba(255,255,255,0.06)',
-                  color: active ? cfg.color : '#64748b',
+                  color: active ? cfg.color : 'var(--ft-text-tertiary)',
                   borderRadius: 10, padding: '1px 6px',
                   border: `1px solid ${active ? cfg.color + '38' : 'transparent'}`,
                 }}>
@@ -384,17 +384,17 @@ export default function ActivityMap() {
           <div style={{
             position: 'absolute', inset: 0, zIndex: 10,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            background: '#0a0a0f',
+            background: 'var(--ft-bg)',
           }}>
             <div style={{
               width: 56, height: 56, borderRadius: '50%',
-              border: '3px solid #1e1e2e',
+              border: '3px solid var(--ft-surface)',
               borderTop: '3px solid #00d4aa',
-              borderRight: '3px solid #38bdf8',
+              borderRight: '3px solid var(--ft-accent)',
               animation: 'ft-spin 0.9s linear infinite',
               boxShadow: '0 0 20px rgba(0,212,170,0.18)',
             }} />
-            <p style={{ color: '#64748b', marginTop: 16, fontSize: 13, fontWeight: 500 }}>
+            <p style={{ color: 'var(--ft-text-tertiary)', marginTop: 16, fontSize: 13, fontWeight: 500 }}>
               Discovering activity near you…
             </p>
           </div>
@@ -454,7 +454,7 @@ export default function ActivityMap() {
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '10px 18px', borderRadius: 24,
             background: 'linear-gradient(135deg, #00d4aa, #1abfa0)',
-            border: 'none', color: '#0a0a0f',
+            border: 'none', color: 'var(--ft-bg)',
             fontSize: 13, fontWeight: 700, cursor: 'pointer',
             boxShadow: '0 4px 16px rgba(0,212,170,0.45)',
           }}
@@ -495,13 +495,13 @@ export default function ActivityMap() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <div style={{
-              background: 'rgba(13,13,26,0.92)', border: '1px solid #2a2a3a',
+              background: 'rgba(13,13,26,0.92)', border: '1px solid var(--ft-surface)',
               borderRadius: 16, padding: '18px 28px', textAlign: 'center',
               backdropFilter: 'blur(12px)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
             }}>
               <div style={{ fontSize: 28, marginBottom: 8 }}>🗺️</div>
-              <div style={{ color: '#f1f5f9', fontWeight: 600, marginBottom: 4 }}>No layers selected</div>
-              <div style={{ color: '#64748b', fontSize: 12 }}>Toggle a layer above to see pins on the map</div>
+              <div style={{ color: 'var(--ft-text)', fontWeight: 600, marginBottom: 4 }}>No layers selected</div>
+              <div style={{ color: 'var(--ft-text-tertiary)', fontSize: 12 }}>Toggle a layer above to see pins on the map</div>
             </div>
           </div>
         )}
@@ -513,11 +513,11 @@ export default function ActivityMap() {
             zIndex: 4, pointerEvents: 'none',
           }}>
             <div style={{
-              background: 'rgba(13,13,26,0.9)', border: '1px solid #2a2a3a',
+              background: 'rgba(13,13,26,0.9)', border: '1px solid var(--ft-surface)',
               borderRadius: 14, padding: '12px 20px', textAlign: 'center',
               backdropFilter: 'blur(12px)', whiteSpace: 'nowrap',
             }}>
-              <div style={{ color: '#64748b', fontSize: 12 }}>
+              <div style={{ color: 'var(--ft-text-tertiary)', fontSize: 12 }}>
                 No activity in this area yet. Zoom out to discover more.
               </div>
             </div>

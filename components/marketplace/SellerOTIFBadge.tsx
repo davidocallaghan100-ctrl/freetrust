@@ -49,17 +49,17 @@ export default function SellerOTIFBadge({ sellerId, compact = false }: Props) {
       background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.08)',
       borderRadius: 12, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 6,
     }}>
-      <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+      <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
         Delivery Performance
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ fontSize: 28, fontWeight: 800, color, lineHeight: 1 }}>{data.otif}%</div>
         <div>
           <div style={{ fontSize: 13, fontWeight: 600, color }}>{label}</div>
-          <div style={{ fontSize: 11, color: '#64748b' }}>{data.total} deliveries tracked</div>
+          <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)' }}>{data.total} deliveries tracked</div>
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 8, fontSize: 11, color: '#64748b' }}>
+      <div style={{ display: 'flex', gap: 8, fontSize: 11, color: 'var(--ft-text-tertiary)' }}>
         <span>✅ {data.onTime} on time</span>
         <span>·</span>
         <span>⚠️ {data.late} late</span>

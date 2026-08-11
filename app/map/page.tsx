@@ -10,7 +10,7 @@ const ActivityMap = dynamic(
       <div style={{
         flex: 1,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: '#0a0a0f',
+        background: 'var(--ft-bg)',
         minHeight: '60vh',
       }}>
         <div style={{
@@ -18,11 +18,11 @@ const ActivityMap = dynamic(
         }}>
           <div style={{
             width: 44, height: 44, borderRadius: '50%',
-            border: '3px solid #1e1e2e',
+            border: '3px solid var(--ft-surface)',
             borderTop: '3px solid #00d4aa',
             animation: 'ft-spin 0.8s linear infinite',
           }} />
-          <p style={{ color: '#64748b', fontSize: 13 }}>Loading map…</p>
+          <p style={{ color: 'var(--ft-text-tertiary)', fontSize: 13 }}>Loading map…</p>
           <style>{`@keyframes ft-spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       </div>
@@ -35,7 +35,7 @@ const PIN_TYPES = [
   { color: '#f59e0b', label: 'Events' },
   { color: '#a855f7', label: 'Products' },
   { color: '#f97316', label: 'Services' },
-  { color: '#38bdf8', label: 'Jobs' },
+  { color: 'var(--ft-accent)', label: 'Jobs' },
 ]
 
 export default async function MapPage() {
@@ -47,7 +47,7 @@ export default async function MapPage() {
     return (
       <div style={{
         minHeight: 'calc(100vh - 104px)',
-        background: '#0a0a0f',
+        background: 'var(--ft-bg)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -68,13 +68,13 @@ export default async function MapPage() {
         {/* Heading */}
         <h1 style={{
           fontSize: 28, fontWeight: 800, margin: '0 0 12px',
-          background: 'linear-gradient(135deg, #f1f5f9, #00d4aa)',
+          background: 'linear-gradient(135deg, var(--ft-text), #00d4aa)',
           WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
           lineHeight: 1.2,
         }}>Discover Your Community</h1>
 
         <p style={{
-          fontSize: 15, color: '#94a3b8', margin: '0 0 8px', maxWidth: 320, lineHeight: 1.6,
+          fontSize: 15, color: 'var(--ft-text-secondary)', margin: '0 0 8px', maxWidth: 320, lineHeight: 1.6,
         }}>
           See members, events, services, products and jobs near you on the FreeTrust Activity Map.
         </p>
@@ -103,8 +103,8 @@ export default async function MapPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 320 }}>
           <a href="/login?redirect=/map" style={{
             display: 'block', padding: '14px 24px', borderRadius: 12,
-            background: 'linear-gradient(135deg, #00d4aa, #38bdf8)',
-            color: '#0a0a0f', fontWeight: 700, fontSize: 15,
+            background: 'linear-gradient(135deg, #00d4aa, var(--ft-accent))',
+            color: 'var(--ft-bg)', fontWeight: 700, fontSize: 15,
             textDecoration: 'none', textAlign: 'center',
             boxShadow: '0 4px 20px rgba(0,212,170,0.4)',
           }}>Sign in to explore the map</a>
@@ -112,13 +112,13 @@ export default async function MapPage() {
           <a href="/register" style={{
             display: 'block', padding: '14px 24px', borderRadius: 12,
             background: 'transparent',
-            border: '1.5px solid #2a2a3a',
-            color: '#f1f5f9', fontWeight: 600, fontSize: 15,
+            border: '1.5px solid var(--ft-surface)',
+            color: 'var(--ft-text)', fontWeight: 600, fontSize: 15,
             textDecoration: 'none', textAlign: 'center',
           }}>Create a free account →</a>
         </div>
 
-        <p style={{ margin: '24px 0 0', fontSize: 12, color: '#475569' }}>
+        <p style={{ margin: '24px 0 0', fontSize: 12, color: 'var(--ft-text-faint)' }}>
           Join 25+ freelancers already on FreeTrust
         </p>
       </div>
@@ -132,8 +132,8 @@ export default async function MapPage() {
       flexDirection: 'column',
       height: 'calc(100vh - 104px)',
       overflow: 'hidden',
-      background: '#0a0a0f',
-      color: '#f1f5f9',
+      background: 'var(--ft-bg)',
+      color: 'var(--ft-text)',
     }}>
       {/* ── Compact header ── */}
       <div style={{
@@ -145,17 +145,17 @@ export default async function MapPage() {
       }}>
         <div style={{
           width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-          background: 'linear-gradient(135deg, #38bdf8, #00d4aa)',
+          background: 'linear-gradient(135deg, var(--ft-accent), #00d4aa)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 16, boxShadow: '0 2px 10px rgba(56,189,248,0.3)',
         }}>🗺️</div>
         <div>
           <h1 style={{
             margin: 0, fontSize: 16, fontWeight: 700, lineHeight: 1.2,
-            background: 'linear-gradient(135deg, #f1f5f9, #94a3b8)',
+            background: 'linear-gradient(135deg, var(--ft-text), var(--ft-text-secondary))',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
           }}>Activity Map</h1>
-          <p style={{ margin: 0, fontSize: 11, color: '#64748b', lineHeight: 1.2 }}>
+          <p style={{ margin: 0, fontSize: 11, color: 'var(--ft-text-tertiary)', lineHeight: 1.2 }}>
             Members · Events · Products · Services · Jobs
           </p>
         </div>

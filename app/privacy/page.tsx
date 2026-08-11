@@ -19,7 +19,7 @@ const sections = [
         </p>
         <p className="mt-3">
           If you have any questions about this Privacy Policy, please contact us at{' '}
-          <a href="mailto:hello@freetrust.co" className="text-[#38bdf8] hover:underline">
+          <a href="mailto:hello@freetrust.co" className="text-[var(--ft-accent)] hover:underline">
             hello@freetrust.co
           </a>
           .
@@ -43,9 +43,9 @@ const sections = [
             ['Usage Data', 'Information about how you use FreeTrust, including pages visited, features used, and interactions with other users.'],
             ['Device & Technical Data', 'IP address, browser type, operating system, and device identifiers collected automatically when you access our platform.'],
           ].map(([label, desc]) => (
-            <li key={label} className="pl-4 border-l-2 border-[#38bdf8]">
+            <li key={label} className="pl-4 border-l-2 border-[var(--ft-accent)]">
               <span className="text-white font-medium">{label}:</span>{' '}
-              <span className="text-[#94a3b8]">{desc}</span>
+              <span className="text-[var(--ft-text-secondary)]">{desc}</span>
             </li>
           ))}
         </ul>
@@ -58,7 +58,7 @@ const sections = [
     content: (
       <>
         <p>We use your personal data to:</p>
-        <ul className="mt-3 space-y-2 list-disc list-inside text-[#94a3b8]">
+        <ul className="mt-3 space-y-2 list-disc list-inside text-[var(--ft-text-secondary)]">
           <li>Provide, operate, and improve the FreeTrust platform</li>
           <li>Process transactions and fulfil orders</li>
           <li>Display your profile and listings to other members</li>
@@ -84,7 +84,7 @@ const sections = [
           FreeTrust offers an optional Google Calendar integration. If you choose to connect your Google
           Calendar account, the following applies:
         </p>
-        <ul className="mt-3 space-y-2 list-disc list-inside text-[#94a3b8]">
+        <ul className="mt-3 space-y-2 list-disc list-inside text-[var(--ft-text-secondary)]">
           <li>
             We access your Google Calendar <strong className="text-white">solely</strong> to sync your
             FreeTrust gigs, events, and reminders. This allows you to see your FreeTrust activities
@@ -104,7 +104,7 @@ const sections = [
               href="https://developers.google.com/terms/api-services-user-data-policy"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#38bdf8] hover:underline"
+              className="text-[var(--ft-accent)] hover:underline"
             >
               Google API Services User Data Policy
             </a>
@@ -116,7 +116,7 @@ const sections = [
             delete your stored Google Calendar tokens immediately.
           </li>
         </ul>
-        <p className="mt-3 p-3 rounded-xl bg-[#38bdf8]/10 border border-[#38bdf8]/30 text-[#94a3b8]">
+        <p className="mt-3 p-3 rounded-xl bg-[var(--ft-accent)]/10 border border-[var(--ft-accent)]/30 text-[var(--ft-text-secondary)]">
           <strong className="text-white">In summary:</strong> We access your Google Calendar solely to
           sync your FreeTrust gigs, events, and reminders. We do not share your calendar data with third
           parties. You can disconnect at any time from Settings → Calendar.
@@ -130,7 +130,7 @@ const sections = [
     content: (
       <>
         <p>We use cookies and similar technologies to:</p>
-        <ul className="mt-3 space-y-2 list-disc list-inside text-[#94a3b8]">
+        <ul className="mt-3 space-y-2 list-disc list-inside text-[var(--ft-text-secondary)]">
           <li>Keep you logged in to your FreeTrust account (essential cookies)</li>
           <li>Remember your preferences and settings</li>
           <li>Understand how users interact with our platform (analytics)</li>
@@ -148,7 +148,7 @@ const sections = [
     content: (
       <>
         <p>We do not sell your personal data. We may share your data with:</p>
-        <ul className="mt-3 space-y-2 list-disc list-inside text-[#94a3b8]">
+        <ul className="mt-3 space-y-2 list-disc list-inside text-[var(--ft-text-secondary)]">
           <li>
             <strong className="text-white">Service providers</strong> who help us operate the platform
             (e.g. hosting, payment processing, email delivery) — under strict data processing agreements.
@@ -183,7 +183,7 @@ const sections = [
     content: (
       <>
         <p>Under applicable data protection law (including GDPR), you have the right to:</p>
-        <ul className="mt-3 space-y-2 list-disc list-inside text-[#94a3b8]">
+        <ul className="mt-3 space-y-2 list-disc list-inside text-[var(--ft-text-secondary)]">
           <li><strong className="text-white">Access</strong> — request a copy of the personal data we hold about you</li>
           <li><strong className="text-white">Rectification</strong> — request correction of inaccurate data</li>
           <li><strong className="text-white">Erasure</strong> — request deletion of your data (&ldquo;right to be forgotten&rdquo;)</li>
@@ -194,7 +194,7 @@ const sections = [
         </ul>
         <p className="mt-3">
           To exercise any of these rights, please contact us at{' '}
-          <a href="mailto:hello@freetrust.co" className="text-[#38bdf8] hover:underline">
+          <a href="mailto:hello@freetrust.co" className="text-[var(--ft-accent)] hover:underline">
             hello@freetrust.co
           </a>
           . We will respond within 30 days.
@@ -232,15 +232,15 @@ const sections = [
     content: (
       <>
         <p>If you have any questions, concerns, or requests regarding this Privacy Policy, please contact:</p>
-        <div className="mt-3 p-4 rounded-xl bg-[#13131a] border border-[#2a2a3a]">
+        <div className="mt-3 p-4 rounded-xl bg-[var(--ft-surface)] border border-[var(--ft-surface)]">
           <p className="text-white font-semibold">FreeTrust</p>
-          <p className="text-[#94a3b8]">Registered business in Ireland</p>
+          <p className="text-[var(--ft-text-secondary)]">Registered business in Ireland</p>
           <p className="mt-2">
-            <a href="mailto:hello@freetrust.co" className="text-[#38bdf8] hover:underline">
+            <a href="mailto:hello@freetrust.co" className="text-[var(--ft-accent)] hover:underline">
               hello@freetrust.co
             </a>
           </p>
-          <p className="text-[#94a3b8] mt-1">Republic of Ireland</p>
+          <p className="text-[var(--ft-text-secondary)] mt-1">Republic of Ireland</p>
         </div>
       </>
     ),

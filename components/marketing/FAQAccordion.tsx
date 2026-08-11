@@ -20,7 +20,7 @@ export default function FAQAccordion({ items }: { items: readonly FAQItem[] }) {
   return (
     <div
       style={{
-        background: '#1e293b',
+        background: 'var(--ft-surface)',
         border: '1px solid rgba(56,189,248,0.1)',
         borderRadius: 14,
         overflow: 'hidden',
@@ -54,7 +54,7 @@ export default function FAQAccordion({ items }: { items: readonly FAQItem[] }) {
                   padding:        '1rem 1.25rem',
                   background:     'transparent',
                   border:         'none',
-                  color:          '#f1f5f9',
+                  color:          'var(--ft-text)',
                   fontSize:       '0.95rem',
                   fontWeight:     700,
                   textAlign:      'left',
@@ -72,7 +72,7 @@ export default function FAQAccordion({ items }: { items: readonly FAQItem[] }) {
                     display:     'flex',
                     alignItems:  'center',
                     justifyContent: 'center',
-                    color:       '#38bdf8',
+                    color:       'var(--ft-accent)',
                     fontSize:    '1.1rem',
                     transform:   isOpen ? 'rotate(45deg)' : 'rotate(0deg)',
                     transition:  'transform 0.25s ease',
@@ -96,7 +96,7 @@ export default function FAQAccordion({ items }: { items: readonly FAQItem[] }) {
                 <div
                   style={{
                     padding:    '0 1.25rem 1.1rem',
-                    color:      '#94a3b8',
+                    color:      'var(--ft-text-secondary)',
                     fontSize:   '0.88rem',
                     lineHeight: 1.65,
                   }}

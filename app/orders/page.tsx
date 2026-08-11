@@ -28,13 +28,13 @@ interface Order {
 
 const STATUS: Record<OrderStatus, { label: string; color: string; bg: string; icon: string }> = {
   pending:     { label: 'Pending',     color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',   icon: '⏳' },
-  paid:        { label: 'Paid',        color: '#38bdf8', bg: 'rgba(56,189,248,0.12)',   icon: '💳' },
+  paid:        { label: 'Paid',        color: 'var(--ft-accent)', bg: 'rgba(56,189,248,0.12)',   icon: '💳' },
   in_progress: { label: 'In Progress', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', icon: '🔄' },
   delivered:   { label: 'Delivered',   color: '#818cf8', bg: 'rgba(129,140,248,0.12)', icon: '📦' },
   completed:   { label: 'Completed',   color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: '✅' },
-  disputed:    { label: 'Disputed',    color: '#f87171', bg: 'rgba(248,113,113,0.12)', icon: '⚠️' },
-  refunded:    { label: 'Refunded',    color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', icon: '↩️' },
-  cancelled:   { label: 'Cancelled',   color: '#475569', bg: 'rgba(71,85,105,0.12)',   icon: '✕'  },
+  disputed:    { label: 'Disputed',    color: 'var(--ft-danger)', bg: 'rgba(248,113,113,0.12)', icon: '⚠️' },
+  refunded:    { label: 'Refunded',    color: 'var(--ft-text-secondary)', bg: 'rgba(148,163,184,0.12)', icon: '↩️' },
+  cancelled:   { label: 'Cancelled',   color: 'var(--ft-text-faint)', bg: 'rgba(71,85,105,0.12)',   icon: '✕'  },
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ function Avatar({ url, name, size = 36 }: { url: string | null | undefined; name
   const initials = (name ?? '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
   if (url) return <img src={url} alt={name ?? ''} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
   return (
-    <div style={{ width: size, height: size, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: size * 0.33, color: '#0f172a', flexShrink: 0 }}>
+    <div style={{ width: size, height: size, borderRadius: '50%', background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: size * 0.33, color: 'var(--ft-bg)', flexShrink: 0 }}>
       {initials}
     </div>
   )
@@ -96,7 +96,7 @@ function OrderCard({ order, role }: { order: Order; role: 'buyer' | 'seller' }) 
 
   return (
     <Link href={`/orders/${order.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
-      <div style={{ background: '#1e293b', border: `1px solid ${order.status === 'disputed' ? 'rgba(248,113,113,0.35)' : 'rgba(56,189,248,0.1)'}`, borderRadius: 14, overflow: 'hidden', transition: 'border-color 0.15s' }}
+      <div style={{ background: 'var(--ft-surface)', border: `1px solid ${order.status === 'disputed' ? 'rgba(248,113,113,0.35)' : 'rgba(56,189,248,0.1)'}`, borderRadius: 14, overflow: 'hidden', transition: 'border-color 0.15s' }}
         onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = 'rgba(56,189,248,0.3)'}
         onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = order.status === 'disputed' ? 'rgba(248,113,113,0.35)' : 'rgba(56,189,248,0.1)'}>
 
@@ -109,7 +109,7 @@ function OrderCard({ order, role }: { order: Order; role: 'buyer' | 'seller' }) 
             <Avatar url={counterparty?.avatar_url} name={counterparty?.full_name} size={40} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--ft-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
                 <span style={{
                   fontSize: '0.65rem', fontWeight: 700, flexShrink: 0,
                   color: isBuying ? '#60a5fa' : '#34d399',
@@ -120,8 +120,8 @@ function OrderCard({ order, role }: { order: Order; role: 'buyer' | 'seller' }) 
                   {isBuying ? '🛒 Buying' : '🏪 Selling'}
                 </span>
               </div>
-              <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                {counterLabel}: <span style={{ color: '#94a3b8', fontWeight: 600 }}>{counterparty?.full_name ?? 'Unknown'}</span>
+              <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)' }}>
+                {counterLabel}: <span style={{ color: 'var(--ft-text-secondary)', fontWeight: 600 }}>{counterparty?.full_name ?? 'Unknown'}</span>
               </div>
             </div>
             {/* Status badge */}
@@ -132,16 +132,16 @@ function OrderCard({ order, role }: { order: Order; role: 'buyer' | 'seller' }) 
 
           {/* Amount + meta row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '1.2rem', fontWeight: 900, color: '#f1f5f9' }}>{fmtAmount(order.amount, order.currency)}</span>
-            <span style={{ fontSize: '0.72rem', color: '#475569', background: 'rgba(148,163,184,0.08)', padding: '2px 8px', borderRadius: 999 }}>
+            <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--ft-text)' }}>{fmtAmount(order.amount, order.currency)}</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--ft-text-faint)', background: 'rgba(148,163,184,0.08)', padding: '2px 8px', borderRadius: 999 }}>
               {order.listing?.product_type === 'digital' ? '⚡ Digital' : order.listing?.product_type === 'physical' ? '📦 Physical' : '🛠 Service'}
             </span>
-            <span style={{ fontSize: '0.72rem', color: '#475569', marginLeft: 'auto' }}>{timeAgo(order.created_at)}</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--ft-text-faint)', marginLeft: 'auto' }}>{timeAgo(order.created_at)}</span>
           </div>
 
           {/* Escrow notice for active orders */}
           {['pending', 'paid', 'in_progress', 'delivered'].includes(order.status) && !released && (
-            <div style={{ marginTop: '0.75rem', background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.12)', borderRadius: 8, padding: '8px 12px', fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ marginTop: '0.75rem', background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.12)', borderRadius: 8, padding: '8px 12px', fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', display: 'flex', alignItems: 'center', gap: 6 }}>
               <span>🔒</span>
               <span>Funds held in escrow · Ordered {fmtDate(order.created_at)}</span>
             </div>
@@ -159,7 +159,7 @@ function OrderCard({ order, role }: { order: Order; role: 'buyer' | 'seller' }) 
 
           {/* Notes */}
           {order.notes && (
-            <div style={{ marginTop: '0.6rem', fontSize: '0.78rem', color: '#64748b', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>"{order.notes}"</div>
+            <div style={{ marginTop: '0.6rem', fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>"{order.notes}"</div>
           )}
         </div>
       </div>
@@ -173,7 +173,7 @@ function Skeleton() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
       {[1, 2, 3].map(i => (
-        <div key={i} style={{ background: '#1e293b', borderRadius: 14, padding: '1rem 1.1rem', height: 110 }}>
+        <div key={i} style={{ background: 'var(--ft-surface)', borderRadius: 14, padding: '1rem 1.1rem', height: 110 }}>
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(90deg,#243047 25%,#2d3f55 50%,#243047 75%)', backgroundSize: '200%', animation: 'shimmer 1.5s infinite', flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
@@ -246,7 +246,7 @@ export default function OrdersPage() {
   void showToast
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
+    <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
       <style>{`
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
         .order-tab-btn { flex:1; padding:0.75rem 0.5rem; border:none; cursor:pointer; font-family:inherit; font-size:0.88rem; font-weight:600; transition:all 0.15s; border-bottom:2px solid transparent; background:transparent; }
@@ -254,7 +254,7 @@ export default function OrdersPage() {
 
       {/* Toast */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: '11px 20px', fontSize: 13, color: '#f1f5f9', zIndex: 9999, whiteSpace: 'nowrap', boxShadow: '0 8px 30px rgba(0,0,0,0.4)' }}>
+        <div style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 12, padding: '11px 20px', fontSize: 13, color: 'var(--ft-text)', zIndex: 9999, whiteSpace: 'nowrap', boxShadow: '0 8px 30px rgba(0,0,0,0.4)' }}>
           {toast}
         </div>
       )}
@@ -264,7 +264,7 @@ export default function OrdersPage() {
         {/* Header */}
         <div style={{ marginBottom: '1.25rem' }}>
           <h1 style={{ fontSize: 22, fontWeight: 900, margin: '0 0 4px', letterSpacing: '-0.5px' }}>Orders</h1>
-          <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>Track all your purchases and sales in one place</p>
+          <p style={{ fontSize: 13, color: 'var(--ft-text-tertiary)', margin: 0 }}>Track all your purchases and sales in one place</p>
         </div>
 
         {/* Buying / Selling tabs — visually distinct */}
@@ -272,25 +272,25 @@ export default function OrdersPage() {
           {/* Buying tab */}
           <button
             onClick={() => { setTab('buying'); setStatusFilter('all') }}
-            style={{ background: tab === 'buying' ? 'rgba(56,189,248,0.12)' : '#1e293b', border: `2px solid ${tab === 'buying' ? '#38bdf8' : 'rgba(56,189,248,0.1)'}`, borderRadius: 12, padding: '14px 12px', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', textAlign: 'left' }}>
+            style={{ background: tab === 'buying' ? 'rgba(56,189,248,0.12)' : 'var(--ft-surface)', border: `2px solid ${tab === 'buying' ? 'var(--ft-accent)' : 'rgba(56,189,248,0.1)'}`, borderRadius: 12, padding: '14px 12px', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', textAlign: 'left' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <span style={{ fontSize: 18 }}>🛒</span>
-              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: tab === 'buying' ? '#38bdf8' : '#f1f5f9' }}>Buying</span>
-              <span style={{ marginLeft: 'auto', background: tab === 'buying' ? '#38bdf8' : 'rgba(56,189,248,0.15)', color: tab === 'buying' ? '#0f172a' : '#38bdf8', borderRadius: 999, padding: '1px 8px', fontSize: '0.72rem', fontWeight: 700 }}>{buyingOrders.length}</span>
+              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: tab === 'buying' ? 'var(--ft-accent)' : 'var(--ft-text)' }}>Buying</span>
+              <span style={{ marginLeft: 'auto', background: tab === 'buying' ? 'var(--ft-accent)' : 'rgba(56,189,248,0.15)', color: tab === 'buying' ? 'var(--ft-bg)' : 'var(--ft-accent)', borderRadius: 999, padding: '1px 8px', fontSize: '0.72rem', fontWeight: 700 }}>{buyingOrders.length}</span>
             </div>
-            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Your purchases &amp; escrow</div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)' }}>Your purchases &amp; escrow</div>
           </button>
 
           {/* Selling tab */}
           <button
             onClick={() => { setTab('selling'); setStatusFilter('all') }}
-            style={{ background: tab === 'selling' ? 'rgba(52,211,153,0.1)' : '#1e293b', border: `2px solid ${tab === 'selling' ? '#34d399' : 'rgba(52,211,153,0.1)'}`, borderRadius: 12, padding: '14px 12px', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', textAlign: 'left' }}>
+            style={{ background: tab === 'selling' ? 'rgba(52,211,153,0.1)' : 'var(--ft-surface)', border: `2px solid ${tab === 'selling' ? '#34d399' : 'rgba(52,211,153,0.1)'}`, borderRadius: 12, padding: '14px 12px', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', textAlign: 'left' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <span style={{ fontSize: 18 }}>🏷️</span>
-              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: tab === 'selling' ? '#34d399' : '#f1f5f9' }}>Selling</span>
-              <span style={{ marginLeft: 'auto', background: tab === 'selling' ? '#34d399' : 'rgba(52,211,153,0.12)', color: tab === 'selling' ? '#0f172a' : '#34d399', borderRadius: 999, padding: '1px 8px', fontSize: '0.72rem', fontWeight: 700 }}>{sellingOrders.length}</span>
+              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: tab === 'selling' ? '#34d399' : 'var(--ft-text)' }}>Selling</span>
+              <span style={{ marginLeft: 'auto', background: tab === 'selling' ? '#34d399' : 'rgba(52,211,153,0.12)', color: tab === 'selling' ? 'var(--ft-bg)' : '#34d399', borderRadius: 999, padding: '1px 8px', fontSize: '0.72rem', fontWeight: 700 }}>{sellingOrders.length}</span>
             </div>
-            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Your sales &amp; earnings</div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)' }}>Your sales &amp; earnings</div>
           </button>
         </div>
 
@@ -298,12 +298,12 @@ export default function OrdersPage() {
         {orders.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.5rem', marginBottom: '1.25rem' }}>
             {[
-              { label: 'Active', value: stats.active, color: '#38bdf8' },
+              { label: 'Active', value: stats.active, color: 'var(--ft-accent)' },
               { label: 'Completed', value: stats.completed, color: '#34d399' },
               { label: 'In Escrow', value: fmtAmount(stats.escrow, stats.currency), color: '#a78bfa' },
             ].map(s => (
-              <div key={s.label} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>{s.label}</div>
+              <div key={s.label} style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.65rem', color: 'var(--ft-text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>{s.label}</div>
                 <div style={{ fontSize: '1.1rem', fontWeight: 800, color: s.color }}>{s.value}</div>
               </div>
             ))}
@@ -317,7 +317,7 @@ export default function OrdersPage() {
               const count = f.value === 'all' ? orders.length : orders.filter(o => o.status === f.value).length
               return (
                 <button key={f.value} onClick={() => setStatusFilter(f.value)}
-                  style={{ flexShrink: 0, padding: '5px 12px', borderRadius: 999, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: statusFilter === f.value ? 700 : 500, background: statusFilter === f.value ? (tab === 'buying' ? '#38bdf8' : '#34d399') : 'rgba(148,163,184,0.08)', color: statusFilter === f.value ? '#0f172a' : '#94a3b8', transition: 'all 0.15s' }}>
+                  style={{ flexShrink: 0, padding: '5px 12px', borderRadius: 999, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: statusFilter === f.value ? 700 : 500, background: statusFilter === f.value ? (tab === 'buying' ? 'var(--ft-accent)' : '#34d399') : 'rgba(148,163,184,0.08)', color: statusFilter === f.value ? 'var(--ft-bg)' : 'var(--ft-text-secondary)', transition: 'all 0.15s' }}>
                   {f.label} {count > 0 && <span style={{ opacity: 0.75 }}>({count})</span>}
                 </button>
               )
@@ -331,24 +331,24 @@ export default function OrdersPage() {
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{tab === 'buying' ? '🛒' : '🏷️'}</div>
-            <div style={{ fontSize: '1rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem' }}>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--ft-text-secondary)', marginBottom: '0.5rem' }}>
               {orders.length === 0
                 ? (tab === 'buying' ? 'No purchases yet' : 'No sales yet')
                 : `No ${statusFilter.replace('_', ' ')} orders`}
             </div>
-            <div style={{ fontSize: '0.85rem', color: '#475569', marginBottom: '1.5rem' }}>
+            <div style={{ fontSize: '0.85rem', color: 'var(--ft-text-faint)', marginBottom: '1.5rem' }}>
               {orders.length === 0
                 ? (tab === 'buying' ? 'Browse services and products to make your first purchase.' : 'List a service or product to start selling.')
                 : 'Try a different filter.'}
             </div>
             {orders.length === 0 && (
               <Link href={tab === 'buying' ? '/services' : '/listings/new'}
-                style={{ display: 'inline-block', background: tab === 'buying' ? '#38bdf8' : '#34d399', color: '#0f172a', borderRadius: 10, padding: '10px 24px', fontWeight: 800, fontSize: '0.9rem', textDecoration: 'none' }}>
+                style={{ display: 'inline-block', background: tab === 'buying' ? 'var(--ft-accent)' : '#34d399', color: 'var(--ft-bg)', borderRadius: 10, padding: '10px 24px', fontWeight: 800, fontSize: '0.9rem', textDecoration: 'none' }}>
                 {tab === 'buying' ? 'Browse Services →' : 'Create a Listing →'}
               </Link>
             )}
             {orders.length > 0 && (
-              <button onClick={() => setStatusFilter('all')} style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', color: '#38bdf8', borderRadius: 8, padding: '8px 20px', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem', fontFamily: 'inherit' }}>
+              <button onClick={() => setStatusFilter('all')} style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', color: 'var(--ft-accent)', borderRadius: 8, padding: '8px 20px', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem', fontFamily: 'inherit' }}>
                 Show all orders
               </button>
             )}

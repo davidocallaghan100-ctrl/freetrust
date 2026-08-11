@@ -60,13 +60,13 @@ type WalletTx = {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const C = {
-  bg: '#0f172a',
-  card: '#1e293b',
+  bg: 'var(--ft-bg)',
+  card: 'var(--ft-surface)',
   border: 'rgba(56,189,248,0.1)',
-  accent: '#38bdf8',
-  text: '#f1f5f9',
-  muted: '#64748b',
-  subtle: '#475569',
+  accent: 'var(--ft-accent)',
+  text: 'var(--ft-text)',
+  muted: 'var(--ft-text-tertiary)',
+  subtle: 'var(--ft-text-faint)',
 }
 
 const TABS = [
@@ -94,16 +94,16 @@ function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { bg: string; color: string; label: string }> = {
     active:    { bg: 'rgba(52,211,153,0.15)', color: '#34d399', label: 'Active' },
     paused:    { bg: 'rgba(251,191,36,0.15)', color: '#fbbf24', label: 'Paused' },
-    draft:     { bg: 'rgba(148,163,184,0.12)', color: '#94a3b8', label: 'Draft' },
+    draft:     { bg: 'rgba(148,163,184,0.12)', color: 'var(--ft-text-secondary)', label: 'Draft' },
     pending:   { bg: 'rgba(251,191,36,0.15)', color: '#fbbf24', label: 'Pending' },
     completed: { bg: 'rgba(52,211,153,0.15)', color: '#34d399', label: 'Completed' },
     disputed:  { bg: 'rgba(239,68,68,0.15)', color: '#ef4444', label: 'Disputed' },
-    cancelled: { bg: 'rgba(148,163,184,0.12)', color: '#94a3b8', label: 'Cancelled' },
+    cancelled: { bg: 'rgba(148,163,184,0.12)', color: 'var(--ft-text-secondary)', label: 'Cancelled' },
     open:      { bg: 'rgba(251,191,36,0.15)', color: '#fbbf24', label: 'Open' },
     resolved:  { bg: 'rgba(52,211,153,0.15)', color: '#34d399', label: 'Resolved' },
     escalated: { bg: 'rgba(239,68,68,0.15)', color: '#ef4444', label: 'Escalated' },
   }
-  const s = map[status] ?? { bg: 'rgba(148,163,184,0.12)', color: '#94a3b8', label: status }
+  const s = map[status] ?? { bg: 'rgba(148,163,184,0.12)', color: 'var(--ft-text-secondary)', label: status }
   return (
     <span style={{ background: s.bg, color: s.color, borderRadius: 999, padding: '2px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
       {s.label}
@@ -112,13 +112,13 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function Skeleton({ h = 16, w = '100%' }: { h?: number; w?: string | number }) {
-  return <div style={{ height: h, width: w, background: 'linear-gradient(90deg,#1e293b 25%,#273548 50%,#1e293b 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite', borderRadius: 6 }} />
+  return <div style={{ height: h, width: w, background: 'linear-gradient(90deg,var(--ft-surface) 25%,#273548 50%,var(--ft-surface) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite', borderRadius: 6 }} />
 }
 
 function Avatar({ url, name, size = 32 }: { url: string | null | undefined; name: string; size?: number }) {
   const initials = name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()
   if (url) return <img src={url} alt={name} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-  return <div style={{ width: size, height: size, borderRadius: '50%', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(size * 0.35) + 'px', fontWeight: 700, color: '#0f172a', flexShrink: 0 }}>{initials}</div>
+  return <div style={{ width: size, height: size, borderRadius: '50%', background: 'linear-gradient(135deg,var(--ft-accent),#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(size * 0.35) + 'px', fontWeight: 700, color: 'var(--ft-bg)', flexShrink: 0 }}>{initials}</div>
 }
 
 // ── Analytics Tab ─────────────────────────────────────────────────────────────
@@ -258,7 +258,7 @@ function AnalyticsTab({ userId }: { userId: string }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
             {topGigs.map((g, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ width: 22, height: 22, borderRadius: '50%', background: i === 0 ? '#fbbf24' : i === 1 ? '#94a3b8' : '#92400e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 800, color: '#0f172a', flexShrink: 0 }}>
+                <div style={{ width: 22, height: 22, borderRadius: '50%', background: i === 0 ? '#fbbf24' : i === 1 ? 'var(--ft-text-secondary)' : '#92400e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 800, color: 'var(--ft-bg)', flexShrink: 0 }}>
                   {i + 1}
                 </div>
                 <div style={{ flex: 1, fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.title}</div>
@@ -314,9 +314,9 @@ function ManagementTab({ userId }: { userId: string }) {
       )) : gigs.length === 0 ? (
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '3rem 1rem', textAlign: 'center' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🎯</div>
-          <div style={{ fontWeight: 700, color: '#94a3b8', marginBottom: '0.4rem' }}>No gigs yet</div>
+          <div style={{ fontWeight: 700, color: 'var(--ft-text-secondary)', marginBottom: '0.4rem' }}>No gigs yet</div>
           <div style={{ color: C.muted, fontSize: '0.85rem', marginBottom: '1.25rem' }}>Create your first gig to start earning</div>
-          <Link href="/seller/gigs/create" style={{ background: C.accent, color: '#0f172a', borderRadius: 8, padding: '0.65rem 1.5rem', fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none' }}>
+          <Link href="/seller/gigs/create" style={{ background: C.accent, color: 'var(--ft-bg)', borderRadius: 8, padding: '0.65rem 1.5rem', fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none' }}>
             Create First Gig
           </Link>
         </div>
@@ -378,7 +378,7 @@ function PerformanceTab({ userId }: { userId: string }) {
       {/* Filter bar */}
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         {statuses.map(s => (
-          <button key={s} onClick={() => setFilter(s)} style={{ padding: '0.35rem 0.9rem', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'inherit', background: filter === s ? C.accent : 'rgba(56,189,248,0.08)', color: filter === s ? '#0f172a' : C.muted, textTransform: 'capitalize' }}>
+          <button key={s} onClick={() => setFilter(s)} style={{ padding: '0.35rem 0.9rem', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'inherit', background: filter === s ? C.accent : 'rgba(56,189,248,0.08)', color: filter === s ? 'var(--ft-bg)' : C.muted, textTransform: 'capitalize' }}>
             {s}
           </button>
         ))}
@@ -457,7 +457,7 @@ function DisputesTab({ userId }: { userId: string }) {
       )) : disputes.length === 0 ? (
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '3rem 1rem', textAlign: 'center' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>⚖️</div>
-          <div style={{ fontWeight: 700, color: '#94a3b8', marginBottom: '0.4rem' }}>No disputes</div>
+          <div style={{ fontWeight: 700, color: 'var(--ft-text-secondary)', marginBottom: '0.4rem' }}>No disputes</div>
           <div style={{ color: C.muted, fontSize: '0.85rem' }}>You have no open or past disputes. Keep up the great work!</div>
         </div>
       ) : disputes.map(dispute => {
@@ -469,7 +469,7 @@ function DisputesTab({ userId }: { userId: string }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: '0.3rem' }}>{dispute.order?.title || 'Order Dispute'}</div>
                 <div style={{ fontSize: '0.78rem', color: C.muted, marginBottom: '0.35rem' }}>
-                  {isRaiser ? 'Against: ' : 'Raised by: '}<span style={{ color: '#94a3b8', fontWeight: 600 }}>{(otherParty as { full_name?: string | null } | null | undefined)?.full_name || 'Member'}</span>
+                  {isRaiser ? 'Against: ' : 'Raised by: '}<span style={{ color: 'var(--ft-text-secondary)', fontWeight: 600 }}>{(otherParty as { full_name?: string | null } | null | undefined)?.full_name || 'Member'}</span>
                 </div>
                 <div style={{ fontSize: '0.78rem', color: C.subtle }}>
                   <strong style={{ color: C.muted }}>Reason:</strong> {dispute.reason}
@@ -584,14 +584,14 @@ function PaymentsTab({ userId }: { userId: string }) {
           </div>
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '1.25rem' }}>
             <div style={{ fontSize: '0.72rem', color: C.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Fees Paid</div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#f87171' }}>{fmt(spent)}</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--ft-danger)' }}>{fmt(spent)}</div>
           </div>
         </div>
       )}
 
       {/* Action buttons */}
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-        <Link href="/wallet" style={{ background: C.accent, color: '#0f172a', borderRadius: 10, padding: '0.65rem 1.25rem', fontWeight: 800, fontSize: '0.85rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+        <Link href="/wallet" style={{ background: C.accent, color: 'var(--ft-bg)', borderRadius: 10, padding: '0.65rem 1.25rem', fontWeight: 800, fontSize: '0.85rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
           💳 Top Up Wallet
         </Link>
         <button
@@ -622,7 +622,7 @@ function PaymentsTab({ userId }: { userId: string }) {
                   <div style={{ fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.description}</div>
                   <div style={{ fontSize: '0.7rem', color: C.muted, marginTop: 2 }}>{timeAgo(tx.created_at)}</div>
                 </div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: tx.type === 'credit' ? '#34d399' : '#f87171', flexShrink: 0 }}>
+                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: tx.type === 'credit' ? '#34d399' : 'var(--ft-danger)', flexShrink: 0 }}>
                   {tx.type === 'credit' ? '+' : '-'}{fmt(tx.amount)}
                 </div>
               </div>
@@ -640,7 +640,7 @@ function PaymentsTab({ userId }: { userId: string }) {
               Withdrawals are processed within <strong style={{ color: C.text }}>2–3 business days</strong> via bank transfer. For assistance, contact us at{' '}
               <a href="mailto:support@freetrust.co" style={{ color: C.accent }}>support@freetrust.co</a>.
             </p>
-            <button onClick={() => setWithdrawModal(false)} style={{ width: '100%', padding: '0.75rem', borderRadius: 10, background: C.accent, border: 'none', color: '#0f172a', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button onClick={() => setWithdrawModal(false)} style={{ width: '100%', padding: '0.75rem', borderRadius: 10, background: C.accent, border: 'none', color: 'var(--ft-bg)', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit' }}>
               Got it
             </button>
           </div>

@@ -83,18 +83,18 @@ function ComposerCard() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '1rem 1.25rem', marginBottom: '0.85rem' }}>
+    <div style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '14px', padding: '1rem 1.25rem', marginBottom: '0.85rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <Avatar url={avatarUrl} name={userName} size={40} />
         <button
           onClick={() => router.push(signedIn ? '/create' : '/login?redirect=%2Fcreate')}
-          style={{ flex: 1, textAlign: 'left', background: '#0f172a', border: '1px solid #334155', borderRadius: '999px', padding: '0.65rem 1.1rem', fontSize: '0.9rem', color: '#475569', cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}
+          style={{ flex: 1, textAlign: 'left', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: '999px', padding: '0.65rem 1.1rem', fontSize: '0.9rem', color: 'var(--ft-text-faint)', cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}
         >
           {signedIn ? 'What\'s on your mind?' : 'Sign in to post on FreeTrust'}
         </button>
         <button
           onClick={() => router.push(signedIn ? '/create' : '/login?redirect=%2Fcreate')}
-          style={{ flexShrink: 0, background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 8, padding: '0.55rem 1rem', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+          style={{ flexShrink: 0, background: 'var(--ft-accent)', color: 'var(--ft-bg)', border: 'none', borderRadius: 8, padding: '0.55rem 1rem', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
           title={signedIn ? 'Create a new post' : 'Sign in to create a post'}
         >
           {signedIn ? '+ Post' : 'Sign in'}
@@ -361,7 +361,7 @@ export default function FeedPage() {
       onPointerUp={finishPenDrag}
       onPointerCancel={() => { penDragRef.current = { active: false, startY: 0, lastY: 0, total: 0 }; pullStartYRef.current = null; pullActiveRef.current = false; setPullDistance(0) }}
       className="feed-scroll-root"
-      style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', overscrollBehaviorY: 'auto', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+      style={{ minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui, sans-serif', overscrollBehaviorY: 'auto', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
     >
       <style>{`
         html, body { overscroll-behavior-y: auto; }
@@ -403,7 +403,7 @@ export default function FeedPage() {
           borderRadius: 999,
           border: '1px solid rgba(56,189,248,0.32)',
           background: 'rgba(15,23,42,0.94)',
-          color: pullDistance >= PULL_REFRESH_THRESHOLD || refreshing ? '#7dd3fc' : '#94a3b8',
+          color: pullDistance >= PULL_REFRESH_THRESHOLD || refreshing ? 'var(--ft-accent)' : 'var(--ft-text-secondary)',
           boxShadow: '0 12px 30px rgba(0,0,0,0.38), 0 0 22px rgba(56,189,248,0.16)',
           fontSize: 12,
           fontWeight: 800,
@@ -420,7 +420,7 @@ export default function FeedPage() {
           onClick={refreshFromTop}
           style={{
             position: 'fixed', top: 78, left: '50%', transform: 'translateX(-50%)', zIndex: 100,
-            background: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: 999,
+            background: 'var(--ft-accent)', color: 'var(--ft-bg)', border: 'none', borderRadius: 999,
             padding: '0.55rem 1.2rem', fontSize: '0.83rem', fontWeight: 700, cursor: 'pointer',
             boxShadow: '0 8px 24px rgba(56,189,248,0.4)', fontFamily: 'inherit',
           }}
@@ -434,7 +434,7 @@ export default function FeedPage() {
           <ComposerCard />
 
           {/* Discover / Following toggle */}
-          <div style={{ display: 'flex', gap: 4, background: '#1e293b', border: '1px solid #334155', borderRadius: 10, padding: 4, marginBottom: '0.85rem' }}>
+          <div style={{ display: 'flex', gap: 4, background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 10, padding: 4, marginBottom: '0.85rem' }}>
             {(['discover', 'following'] as const).map(s => {
               const active = scope === s
               return (
@@ -444,8 +444,8 @@ export default function FeedPage() {
                   style={{
                     flex: 1, padding: '0.55rem 1rem', borderRadius: 7, border: 'none', cursor: 'pointer',
                     fontSize: '0.85rem', fontWeight: active ? 700 : 500,
-                    background: active ? '#0f172a' : 'transparent',
-                    color: active ? '#38bdf8' : '#64748b',
+                    background: active ? 'var(--ft-bg)' : 'transparent',
+                    color: active ? 'var(--ft-accent)' : 'var(--ft-text-tertiary)',
                     fontFamily: 'inherit', transition: 'all 0.15s',
                   }}
                 >
@@ -463,7 +463,7 @@ export default function FeedPage() {
                 <button
                   key={key}
                   onClick={() => setActiveFilter(key)}
-                  style={{ padding: '0.28rem 0.85rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', background: isActive ? '#38bdf8' : 'transparent', color: isActive ? '#0f172a' : '#64748b', border: `1px solid ${isActive ? '#38bdf8' : '#334155'}`, transition: 'all 0.15s', fontFamily: 'inherit' }}
+                  style={{ padding: '0.28rem 0.85rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', background: isActive ? 'var(--ft-accent)' : 'transparent', color: isActive ? 'var(--ft-bg)' : 'var(--ft-text-tertiary)', border: `1px solid ${isActive ? 'var(--ft-accent)' : 'var(--ft-border-strong)'}`, transition: 'all 0.15s', fontFamily: 'inherit' }}
                 >
                   {label}
                 </button>
@@ -474,25 +474,25 @@ export default function FeedPage() {
           {loading ? (
             // Skeleton cards
             Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 14, padding: '14px 16px', marginBottom: 12 }}>
+              <div key={i} style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 14, padding: '14px 16px', marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                  <div style={{ width: 42, height: 42, borderRadius: '50%', background: '#334155' }} />
+                  <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--ft-border-strong)' }} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ width: '40%', height: 12, background: '#334155', borderRadius: 6, marginBottom: 6 }} />
-                    <div style={{ width: '25%', height: 10, background: '#334155', borderRadius: 6 }} />
+                    <div style={{ width: '40%', height: 12, background: 'var(--ft-border-strong)', borderRadius: 6, marginBottom: 6 }} />
+                    <div style={{ width: '25%', height: 10, background: 'var(--ft-border-strong)', borderRadius: 6 }} />
                   </div>
                 </div>
-                <div style={{ height: 14, background: '#334155', borderRadius: 6, marginBottom: 8 }} />
-                <div style={{ height: 14, background: '#334155', borderRadius: 6, width: '85%', marginBottom: 8 }} />
-                <div style={{ height: 14, background: '#334155', borderRadius: 6, width: '60%' }} />
+                <div style={{ height: 14, background: 'var(--ft-border-strong)', borderRadius: 6, marginBottom: 8 }} />
+                <div style={{ height: 14, background: 'var(--ft-border-strong)', borderRadius: 6, width: '85%', marginBottom: 8 }} />
+                <div style={{ height: 14, background: 'var(--ft-border-strong)', borderRadius: 6, width: '60%' }} />
               </div>
             ))
           ) : posts.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '4rem 2rem', color: '#64748b', background: '#1e293b', border: '1px solid #334155', borderRadius: 14 }}>
+            <div style={{ textAlign: 'center', padding: '4rem 2rem', color: 'var(--ft-text-tertiary)', background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 14 }}>
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
                 {scope === 'following' && activeFilter === 'all' ? '👥' : EMPTY_META[activeFilter].icon}
               </div>
-              <h3 style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>
+              <h3 style={{ color: 'var(--ft-text-secondary)', marginBottom: '0.5rem' }}>
                 {scope === 'following' && activeFilter === 'all'
                   ? 'No posts from people you follow yet'
                   : EMPTY_META[activeFilter].title}
@@ -505,11 +505,11 @@ export default function FeedPage() {
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
                 {scope === 'following' && activeFilter === 'all' ? (
                   <>
-                    <Link href="/collab/people" style={{ padding: '0.6rem 1.4rem', borderRadius: '8px', background: '#38bdf8', color: '#0f172a', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none' }}>Find people</Link>
-                    <button onClick={() => setScope('discover')} style={{ padding: '0.6rem 1.4rem', borderRadius: '8px', background: 'transparent', border: '1px solid rgba(56,189,248,0.3)', color: '#38bdf8', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit' }}>Browse Discover</button>
+                    <Link href="/collab/people" style={{ padding: '0.6rem 1.4rem', borderRadius: '8px', background: 'var(--ft-accent)', color: 'var(--ft-bg)', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none' }}>Find people</Link>
+                    <button onClick={() => setScope('discover')} style={{ padding: '0.6rem 1.4rem', borderRadius: '8px', background: 'transparent', border: '1px solid rgba(56,189,248,0.3)', color: 'var(--ft-accent)', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit' }}>Browse Discover</button>
                   </>
                 ) : (
-                  <Link href={signedIn ? '/create' : '/login?redirect=%2Fcreate'} style={{ padding: '0.6rem 1.4rem', borderRadius: '8px', background: '#38bdf8', color: '#0f172a', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none' }}>{signedIn ? 'Create a post' : 'Sign in to post'}</Link>
+                  <Link href={signedIn ? '/create' : '/login?redirect=%2Fcreate'} style={{ padding: '0.6rem 1.4rem', borderRadius: '8px', background: 'var(--ft-accent)', color: 'var(--ft-bg)', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none' }}>{signedIn ? 'Create a post' : 'Sign in to post'}</Link>
                 )}
               </div>
             </div>
@@ -526,26 +526,26 @@ export default function FeedPage() {
               {/* Infinite scroll sentinel */}
               <div ref={sentinelRef} style={{ height: 1 }} />
               {loadingMore && (
-                <div style={{ textAlign: 'center', padding: '1rem', color: '#64748b', fontSize: '0.85rem' }}>Loading more…</div>
+                <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--ft-text-tertiary)', fontSize: '0.85rem' }}>Loading more…</div>
               )}
               {!hasMore && posts.length > 0 && (
-                <div style={{ textAlign: 'center', padding: '1.25rem', color: '#475569', fontSize: '0.82rem' }}>You&rsquo;re all caught up ✨</div>
+                <div style={{ textAlign: 'center', padding: '1.25rem', color: 'var(--ft-text-faint)', fontSize: '0.82rem' }}>You&rsquo;re all caught up ✨</div>
               )}
             </>
           )}
         </main>
 
         <aside className="feed-sidebar-col">
-          <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '1.25rem' }}>
-            <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem', color: '#f1f5f9' }}>Trending Topics</div>
+          <div style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '12px', padding: '1.25rem' }}>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--ft-text)' }}>Trending Topics</div>
             {TRENDING_TAGS.map(tag => (
-              <Link key={tag} href={`/search?q=${encodeURIComponent(tag)}`} style={{ display: 'block', padding: '0.4rem 0', fontSize: '0.83rem', color: '#38bdf8', textDecoration: 'none', borderBottom: '1px solid rgba(56,189,248,0.06)' }}>{tag}</Link>
+              <Link key={tag} href={`/search?q=${encodeURIComponent(tag)}`} style={{ display: 'block', padding: '0.4rem 0', fontSize: '0.83rem', color: 'var(--ft-accent)', textDecoration: 'none', borderBottom: '1px solid rgba(56,189,248,0.06)' }}>{tag}</Link>
             ))}
           </div>
           <div style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: '12px', padding: '1.25rem' }}>
-            <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.5rem', color: '#f1f5f9' }}>✨ Discover</div>
-            <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.5, marginBottom: '0.75rem' }}>The Discover feed shows the latest real FreeTrust activity, including posts, hosted activities, member services, and published articles, in one continuous feed.</p>
-            <button onClick={() => { setScope('discover'); setActiveFilter('all') }} style={{ display: 'block', width: '100%', padding: '0.5rem', borderRadius: 7, border: '1px solid rgba(56,189,248,0.2)', background: 'transparent', color: '#38bdf8', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Open All</button>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--ft-text)' }}>✨ Discover</div>
+            <p style={{ fontSize: '0.82rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.5, marginBottom: '0.75rem' }}>The Discover feed shows the latest real FreeTrust activity, including posts, hosted activities, member services, and published articles, in one continuous feed.</p>
+            <button onClick={() => { setScope('discover'); setActiveFilter('all') }} style={{ display: 'block', width: '100%', padding: '0.5rem', borderRadius: 7, border: '1px solid rgba(56,189,248,0.2)', background: 'transparent', color: 'var(--ft-accent)', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Open All</button>
           </div>
         </aside>
       </div>

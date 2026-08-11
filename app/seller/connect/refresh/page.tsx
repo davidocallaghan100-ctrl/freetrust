@@ -17,8 +17,8 @@ export default function ConnectRefreshPage() {
   }, [])
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ color: '#64748b' }}>Refreshing your onboarding link…</div>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui', paddingTop: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ color: 'var(--ft-text-tertiary)' }}>Refreshing your onboarding link…</div>
     </div>
   )
 }

@@ -145,7 +145,7 @@ export default function CalendarSettingsPage() {
               <button
                 className="btn btn-outline btn-sm"
                 onClick={handleConnect}
-                style={{ borderColor: '#38bdf8', color: '#38bdf8' }}
+                style={{ borderColor: 'var(--ft-accent)', color: 'var(--ft-accent)' }}
               >
                 Connect
               </button>

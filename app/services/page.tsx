@@ -25,14 +25,14 @@ function DeleteModal({ title, onConfirm, onCancel, deleting }: {
   const t = useTranslations('servicesPage')
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
-      <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: 14, padding: '1.5rem', maxWidth: 420, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
-        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem' }}>{t('delete.title')}</div>
-        <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
+      <div style={{ background: 'var(--ft-surface)', border: '1px solid #ef4444', borderRadius: 14, padding: '1.5rem', maxWidth: 420, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--ft-text)', marginBottom: '0.5rem' }}>{t('delete.title')}</div>
+        <div style={{ fontSize: '0.85rem', color: 'var(--ft-text-secondary)', marginBottom: '1.25rem' }}>
           {t('delete.body', { title })}
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
           <button onClick={onCancel} disabled={deleting}
-            style={{ padding: '0.5rem 1rem', borderRadius: 8, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>
+            style={{ padding: '0.5rem 1rem', borderRadius: 8, border: '1px solid var(--ft-border-strong)', background: 'transparent', color: 'var(--ft-text-secondary)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>
             {t('common.cancel')}
           </button>
           <button onClick={onConfirm} disabled={deleting}
@@ -144,7 +144,7 @@ const SORT_OPTIONS = [
 
 function getGrad(str: string): string {
   const grads = [
-    'linear-gradient(135deg,#38bdf8,#0284c7)',
+    'linear-gradient(135deg,var(--ft-accent),#0284c7)',
     'linear-gradient(135deg,#a78bfa,#7c3aed)',
     'linear-gradient(135deg,#34d399,#059669)',
     'linear-gradient(135deg,#fb923c,#ea580c)',
@@ -251,9 +251,9 @@ function ServiceCard({
       onClick={e => { e.preventDefault(); onOpen(svc.id) }}
       style={{ textDecoration: 'none', display: 'block' }}
     >
-      <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0', transition: 'border-color 0.15s', height: '100%', boxSizing: 'border-box' }}
-        onMouseEnter={e => (e.currentTarget.style.borderColor = '#38bdf8')}
-        onMouseLeave={e => (e.currentTarget.style.borderColor = '#334155')}
+      <div style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '14px', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0', transition: 'border-color 0.15s', height: '100%', boxSizing: 'border-box' }}
+        onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--ft-accent)')}
+        onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--ft-border-strong)')}
       >
         {/* Cover image */}
         {svc.coverImage && (
@@ -268,17 +268,17 @@ function ServiceCard({
             ? <Link href={`/profile?id=${svc.providerId}`} onClick={e => { e.preventDefault(); e.stopPropagation(); if (svc.providerId) onOpenProfile(svc.providerId) }} style={{ flexShrink: 0, display: 'block' }}>
                 {svc.avatarImg
                   ? <img src={svc.avatarImg} alt={svc.provider} width={32} height={32} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', display: 'block' }} />
-                  : <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '11px', color: '#0f172a', background: getGrad(svc.avatar) }}>{svc.avatar}</div>
+                  : <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '11px', color: 'var(--ft-bg)', background: getGrad(svc.avatar) }}>{svc.avatar}</div>
                 }
               </Link>
             : svc.avatarImg
               ? <img src={svc.avatarImg} alt={svc.provider} width={32} height={32} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-              : <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '11px', color: '#0f172a', background: getGrad(svc.avatar), flexShrink: 0 }}>{svc.avatar}</div>
+              : <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '11px', color: 'var(--ft-bg)', background: getGrad(svc.avatar), flexShrink: 0 }}>{svc.avatar}</div>
           }
           <div style={{ flex: 1, minWidth: 0 }}>
             {svc.providerId
-              ? <Link href={`/profile?id=${svc.providerId}`} onClick={e => { e.preventDefault(); e.stopPropagation(); if (svc.providerId) onOpenProfile(svc.providerId) }} style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none' }}>{svc.provider}</Link>
-              : <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svc.provider}</div>
+              ? <Link href={`/profile?id=${svc.providerId}`} onClick={e => { e.preventDefault(); e.stopPropagation(); if (svc.providerId) onOpenProfile(svc.providerId) }} style={{ fontSize: '12px', color: 'var(--ft-text-secondary)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none' }}>{svc.provider}</Link>
+              : <div style={{ fontSize: '12px', color: 'var(--ft-text-secondary)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svc.provider}</div>
             }
             {(svc.is_remote || svc.location_label || svc.location) && (
               <div style={{ marginTop: 2 }}>
@@ -304,24 +304,24 @@ function ServiceCard({
           </div>
           {/* Mode + badge — right-aligned, shrinkable */}
           <div className="svc-card-badges">
-            <span style={{ background: svc.mode === 'online' ? 'rgba(56,189,248,0.08)' : 'rgba(52,211,153,0.08)', border: `1px solid ${svc.mode === 'online' ? 'rgba(56,189,248,0.2)' : 'rgba(52,211,153,0.2)'}`, borderRadius: 999, padding: '2px 6px', fontSize: '9px', color: svc.mode === 'online' ? '#38bdf8' : '#34d399', fontWeight: 700, whiteSpace: 'nowrap' }}>
+            <span style={{ background: svc.mode === 'online' ? 'rgba(56,189,248,0.08)' : 'rgba(52,211,153,0.08)', border: `1px solid ${svc.mode === 'online' ? 'rgba(56,189,248,0.2)' : 'rgba(52,211,153,0.2)'}`, borderRadius: 999, padding: '2px 6px', fontSize: '9px', color: svc.mode === 'online' ? 'var(--ft-accent)' : '#34d399', fontWeight: 700, whiteSpace: 'nowrap' }}>
               {svc.mode === 'online' ? `💻 ${t('card.online')}` : `📍 ${t('card.local')}`}
             </span>
-            {svc.badge && <span style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 999, padding: '2px 6px', fontSize: '9px', color: '#38bdf8', fontWeight: 700, whiteSpace: 'nowrap' }}>{svc.badge}</span>}
+            {svc.badge && <span style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 999, padding: '2px 6px', fontSize: '9px', color: 'var(--ft-accent)', fontWeight: 700, whiteSpace: 'nowrap' }}>{svc.badge}</span>}
           </div>
         </div>
 
         {/* Title */}
-        <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9', lineHeight: 1.35, wordBreak: 'break-word' }}>{svc.title}</div>
+        <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--ft-text)', lineHeight: 1.35, wordBreak: 'break-word' }}>{svc.title}</div>
 
         {/* Description */}
-        <p style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.5, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>{svc.desc}</p>
+        <p style={{ fontSize: '12px', color: 'var(--ft-text-tertiary)', lineHeight: 1.5, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>{svc.desc}</p>
 
         {/* Tags */}
         {svc.tags.length > 0 && (
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
             {svc.tags.slice(0, 3).map(t => (
-              <span key={t} style={{ background: 'rgba(148,163,184,0.07)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '2px 7px', fontSize: '10px', color: '#94a3b8', whiteSpace: 'nowrap' }}>{t}</span>
+              <span key={t} style={{ background: 'rgba(148,163,184,0.07)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: 999, padding: '2px 7px', fontSize: '10px', color: 'var(--ft-text-secondary)', whiteSpace: 'nowrap' }}>{t}</span>
             ))}
           </div>
         )}
@@ -329,20 +329,20 @@ function ServiceCard({
         {/* Rating + delivery */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
           <span style={{ color: '#fbbf24' }}>★ {svc.rating.toFixed(1)}</span>
-          <span style={{ color: '#475569' }}>({svc.reviews})</span>
-          <span style={{ color: '#475569', marginLeft: 'auto', whiteSpace: 'nowrap' }}>⏱ {svc.delivery}</span>
+          <span style={{ color: 'var(--ft-text-faint)' }}>({svc.reviews})</span>
+          <span style={{ color: 'var(--ft-text-faint)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>⏱ {svc.delivery}</span>
         </div>
 
         {/* Trust bar */}
-        <div style={{ fontSize: '11px', color: '#38bdf8' }}>
+        <div style={{ fontSize: '11px', color: 'var(--ft-accent)' }}>
           {t('card.trust', { score: svc.trust })}
           <div style={{ marginTop: '3px', height: 3, background: 'rgba(56,189,248,0.12)', borderRadius: 2 }}>
-            <div style={{ width: `${svc.trust}%`, height: '100%', background: '#38bdf8', borderRadius: 2 }} />
+            <div style={{ width: `${svc.trust}%`, height: '100%', background: 'var(--ft-accent)', borderRadius: 2 }} />
           </div>
         </div>
 
         {/* Price + CTA */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #334155', paddingTop: '10px', marginTop: 'auto', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--ft-border-strong)', paddingTop: '10px', marginTop: 'auto', gap: '8px' }}>
           <div style={{ minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 4 }}>
             <PriceDisplay
               amountEur={(svc.price_eur && svc.price_eur > 0) ? svc.price_eur : svc.price}
@@ -351,10 +351,10 @@ function ServiceCard({
               size="md"
               layout="stacked"
             />
-            <span style={{ fontSize: '11px', color: '#475569' }}>{t('card.perProject')}</span>
+            <span style={{ fontSize: '11px', color: 'var(--ft-text-faint)' }}>{t('card.perProject')}</span>
           </div>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            <span style={{ background: '#38bdf8', borderRadius: '8px', padding: '7px 16px', fontSize: '12px', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', flexShrink: 0 }}>{t('common.view')}</span>
+            <span style={{ background: 'var(--ft-accent)', borderRadius: '8px', padding: '7px 16px', fontSize: '12px', fontWeight: 700, color: 'var(--ft-bg)', whiteSpace: 'nowrap', flexShrink: 0 }}>{t('common.view')}</span>
             {isOwner && onDelete && (
               <button onClick={e => { e.preventDefault(); e.stopPropagation(); onDelete(svc.id, svc.title) }}
                 style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '7px 10px', fontSize: '12px', color: '#ef4444', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
@@ -394,7 +394,7 @@ function ExternalServiceCard({
       background: '#111827',
       borderRadius: '12px',
       overflow: 'hidden',
-      border: '1px solid #1e293b',
+      border: '1px solid var(--ft-surface)',
       position: 'relative',
       minHeight: 330,
       display: 'flex',
@@ -405,7 +405,7 @@ function ExternalServiceCard({
         {imageUrl ? (
           <img src={imageUrl} alt={item.title} style={{ width: '100%', height: '100%', objectFit: item.is_awin || !item.thumbnail ? 'contain' : 'cover', background: '#ffffff', display: 'block', padding: item.is_awin || !item.thumbnail ? 22 : 0, boxSizing: 'border-box' }} />
         ) : (
-          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg,#0f172a,#1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00c2cb', fontSize: '2rem', fontWeight: 900 }}>
+          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg,var(--ft-bg),var(--ft-surface))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00c2cb', fontSize: '2rem', fontWeight: 900 }}>
             {category?.icon ?? '🛠️'}
           </div>
         )}
@@ -425,9 +425,9 @@ function ExternalServiceCard({
 
       <div style={{
         position: 'absolute', top: '12px', right: '12px',
-        background: 'rgba(17,24,39,0.92)', color: '#cbd5e1',
+        background: 'rgba(17,24,39,0.92)', color: 'var(--ft-text-secondary)',
         fontSize: '10px', padding: '3px 8px', borderRadius: '6px',
-        border: '1px solid #1e293b', textTransform: 'capitalize',
+        border: '1px solid var(--ft-surface)', textTransform: 'capitalize',
         maxWidth: '42%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }} title={categoryLabel}>
         {category?.icon} {categoryLabel}
@@ -453,7 +453,7 @@ function ExternalServiceCard({
 
       {item.description && (
         <p style={{
-          color: '#94a3b8', fontSize: '13px',
+          color: 'var(--ft-text-secondary)', fontSize: '13px',
           margin: '0 0 10px 0', lineHeight: '1.5',
           display: '-webkit-box', WebkitLineClamp: 3,
           WebkitBoxOrient: 'vertical', overflow: 'hidden',
@@ -462,12 +462,12 @@ function ExternalServiceCard({
         </p>
       )}
 
-      <p style={{ color: '#475569', fontSize: '12px', margin: '0 0 6px 0' }}>
+      <p style={{ color: 'var(--ft-text-faint)', fontSize: '12px', margin: '0 0 6px 0' }}>
         📍 {item.location || t('external.worldwide')} · {serviceTypeLabel}
       </p>
 
       {item.price_display && (
-        <p style={{ color: '#cbd5e1', fontSize: '12px', margin: '0 0 6px 0', fontWeight: 700 }}>
+        <p style={{ color: 'var(--ft-text-secondary)', fontSize: '12px', margin: '0 0 6px 0', fontWeight: 700 }}>
           {item.price_display}
         </p>
       )}
@@ -1061,7 +1061,7 @@ export default function ServicesPage() {
   }
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 58px)', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui, sans-serif' }}>
       {/* Success toast — fires when ?published=true is in the URL.
           Fixed to the top of the viewport so it's visible regardless
           of scroll position on the services browse page. Dismisses
@@ -1075,14 +1075,14 @@ export default function ServicesPage() {
             top: 'calc(58px + 12px)',
             left: '50%',
             transform: 'translateX(-50%)',
-            background: 'linear-gradient(135deg, #0f172a, #1e293b)',
+            background: 'linear-gradient(135deg, var(--ft-bg), var(--ft-surface))',
             border: '1px solid rgba(34,197,94,0.45)',
             borderLeft: '4px solid #22c55e',
             borderRadius: 12,
             padding: '12px 20px',
             fontSize: 14,
             fontWeight: 700,
-            color: '#f1f5f9',
+            color: 'var(--ft-text)',
             boxShadow: '0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(34,197,94,0.1)',
             zIndex: 9999,
             maxWidth: 'min(92vw, 460px)',
@@ -1119,12 +1119,12 @@ export default function ServicesPage() {
           <div style={{
             background: '#111827', borderRadius: '16px',
             padding: '28px', maxWidth: '400px', width: '100%',
-            border: '1px solid #1e293b', boxSizing: 'border-box',
+            border: '1px solid var(--ft-surface)', boxSizing: 'border-box',
           }}>
             <h3 style={{ color: '#fff', margin: '0 0 6px 0' }}>
               {t('enquiry.title')}
             </h3>
-            <p style={{ color: '#94a3b8', fontSize: '14px', margin: '0 0 20px 0', lineHeight: 1.45 }}>
+            <p style={{ color: 'var(--ft-text-secondary)', fontSize: '14px', margin: '0 0 20px 0', lineHeight: 1.45 }}>
               {selectedService.title} — {selectedService.provider_name}
             </p>
 
@@ -1135,7 +1135,7 @@ export default function ServicesPage() {
               rows={4}
               style={{
                 width: '100%', padding: '12px',
-                background: '#1e293b', border: '1px solid #334155',
+                background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)',
                 borderRadius: '8px', color: '#fff',
                 fontSize: '16px', resize: 'vertical',
                 boxSizing: 'border-box', marginBottom: '16px', fontFamily: 'inherit',
@@ -1147,8 +1147,8 @@ export default function ServicesPage() {
               disabled={!enquiryMessage.trim() || enquiryLoading}
               style={{
                 width: '100%', padding: '12px', minHeight: 44,
-                background: enquiryLoading ? '#334155' : '#00c2cb',
-                color: enquiryLoading ? '#64748b' : '#000',
+                background: enquiryLoading ? 'var(--ft-border-strong)' : '#00c2cb',
+                color: enquiryLoading ? 'var(--ft-text-tertiary)' : '#000',
                 border: 'none', borderRadius: '10px',
                 fontWeight: 700, fontSize: '15px',
                 cursor: enquiryLoading ? 'default' : 'pointer',
@@ -1163,7 +1163,7 @@ export default function ServicesPage() {
               style={{
                 width: '100%', padding: '10px', minHeight: 44,
                 background: 'transparent', border: 'none',
-                color: '#64748b', fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit',
+                color: 'var(--ft-text-tertiary)', fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
               {t('common.cancel')}
@@ -1202,10 +1202,10 @@ export default function ServicesPage() {
       `}</style>
 
       {/* Hero */}
-      <div style={{ background: 'linear-gradient(180deg,rgba(56,189,248,0.06) 0%,transparent 100%)', padding: '28px 16px 20px', borderBottom: '1px solid #1e293b' }}>
+      <div style={{ background: 'linear-gradient(180deg,rgba(56,189,248,0.06) 0%,transparent 100%)', padding: '28px 16px 20px', borderBottom: '1px solid var(--ft-surface)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <h1 style={{ fontSize: '26px', fontWeight: 800, margin: '0 0 4px' }}>🎯 {t('title')}</h1>
-          <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 16px' }}>{t('subtitle')}</p>
+          <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '13px', margin: '0 0 16px' }}>{t('subtitle')}</p>
 
           <div style={{ display: 'flex', gap: 12, margin: '16px 0', flexWrap: 'wrap', alignItems: 'center' }}>
             <button
@@ -1213,9 +1213,9 @@ export default function ServicesPage() {
               style={{
                 padding: '10px 20px', minHeight: 44,
                 borderRadius: 8,
-                border: activeTab === 'freetrust' ? '2px solid #00c2cb' : '2px solid #334155',
+                border: activeTab === 'freetrust' ? '2px solid #00c2cb' : '2px solid var(--ft-border-strong)',
                 background: activeTab === 'freetrust' ? '#00c2cb22' : 'transparent',
-                color: activeTab === 'freetrust' ? '#00c2cb' : '#94a3b8',
+                color: activeTab === 'freetrust' ? '#00c2cb' : 'var(--ft-text-secondary)',
                 cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit',
               }}
             >
@@ -1226,9 +1226,9 @@ export default function ServicesPage() {
               style={{
                 padding: '10px 20px', minHeight: 44,
                 borderRadius: 8,
-                border: activeTab === 'external' ? '2px solid #00c2cb' : '2px solid #334155',
+                border: activeTab === 'external' ? '2px solid #00c2cb' : '2px solid var(--ft-border-strong)',
                 background: activeTab === 'external' ? '#00c2cb22' : 'transparent',
-                color: activeTab === 'external' ? '#00c2cb' : '#94a3b8',
+                color: activeTab === 'external' ? '#00c2cb' : 'var(--ft-text-secondary)',
                 cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit',
               }}
             >
@@ -1258,22 +1258,22 @@ export default function ServicesPage() {
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
             {/* Search */}
             <div style={{ flex: '1 1 280px', minWidth: '220px', position: 'relative' }}>
-              <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '14px', pointerEvents: 'none' }}>🔍</span>
+              <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--ft-text-tertiary)', fontSize: '14px', pointerEvents: 'none' }}>🔍</span>
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder={t('filters.searchServices')}
-                style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '10px 14px 10px 36px', fontSize: '14px', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box' }}
-                onFocus={e => (e.target.style.borderColor = '#38bdf8')}
-                onBlur={e => (e.target.style.borderColor = '#334155')}
+                style={{ width: '100%', background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '10px', padding: '10px 14px 10px 36px', fontSize: '14px', color: 'var(--ft-text)', outline: 'none', boxSizing: 'border-box' }}
+                onFocus={e => (e.target.style.borderColor = 'var(--ft-accent)')}
+                onBlur={e => (e.target.style.borderColor = 'var(--ft-border-strong)')}
               />
             </div>
 
             {/* Mode toggle */}
-            <div style={{ display: 'flex', gap: '4px', background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '3px' }}>
+            <div style={{ display: 'flex', gap: '4px', background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '10px', padding: '3px' }}>
               {([['all', `🌐 ${t('filters.all')}`], ['online', `💻 ${t('card.online')}`], ['offline', `📍 ${t('card.local')}`]] as [string, string][]).map(([val, lbl]) => (
                 <button key={val} onClick={() => setModeFilter(val as 'all'|'online'|'offline')}
-                  style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: modeFilter === val ? 700 : 400, fontFamily: 'inherit', background: modeFilter === val ? '#38bdf8' : 'transparent', color: modeFilter === val ? '#0f172a' : '#64748b', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
+                  style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: modeFilter === val ? 700 : 400, fontFamily: 'inherit', background: modeFilter === val ? 'var(--ft-accent)' : 'transparent', color: modeFilter === val ? 'var(--ft-bg)' : 'var(--ft-text-tertiary)', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
                   {lbl}
                 </button>
               ))}
@@ -1286,8 +1286,8 @@ export default function ServicesPage() {
               onChange={e => setActiveCatId(e.target.value || null)}
               style={{
                 flex: '1 1 220px', minWidth: 210, maxWidth: 360,
-                background: '#1e293b', border: '1px solid #334155', borderRadius: '10px',
-                padding: '9px 12px', fontSize: '14px', color: activeCatId ? '#38bdf8' : '#94a3b8',
+                background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '10px',
+                padding: '9px 12px', fontSize: '14px', color: activeCatId ? 'var(--ft-accent)' : 'var(--ft-text-secondary)',
                 outline: 'none', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700,
               }}
             >
@@ -1305,15 +1305,15 @@ export default function ServicesPage() {
             {/* Price filter */}
             <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
               <input value={priceMin} onChange={e => setPriceMin(e.target.value)} placeholder={t('filters.minPrice')} type="number" min="0"
-                style={{ width: '70px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '9px 8px', fontSize: '12px', color: '#f1f5f9', outline: 'none', textAlign: 'center' }} />
-              <span style={{ color: '#475569', fontSize: '12px' }}>–</span>
+                style={{ width: '70px', background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '8px', padding: '9px 8px', fontSize: '12px', color: 'var(--ft-text)', outline: 'none', textAlign: 'center' }} />
+              <span style={{ color: 'var(--ft-text-faint)', fontSize: '12px' }}>–</span>
               <input value={priceMax} onChange={e => setPriceMax(e.target.value)} placeholder={t('filters.maxPriceShort')} type="number" min="0"
-                style={{ width: '70px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '9px 8px', fontSize: '12px', color: '#f1f5f9', outline: 'none', textAlign: 'center' }} />
+                style={{ width: '70px', background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '8px', padding: '9px 8px', fontSize: '12px', color: 'var(--ft-text)', outline: 'none', textAlign: 'center' }} />
             </div>
 
             {/* Sort */}
             <select value={sort} onChange={e => setSort(e.target.value)}
-              style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '9px 12px', fontSize: '12px', color: '#94a3b8', outline: 'none', cursor: 'pointer' }}>
+              style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '10px', padding: '9px 12px', fontSize: '12px', color: 'var(--ft-text-secondary)', outline: 'none', cursor: 'pointer' }}>
               {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{({best: t('sort.best'), newest: t('sort.newest'), price_asc: t('sort.priceAsc'), price_desc: t('sort.priceDesc'), rating: t('sort.topRated')} as Record<string, string>)[o.value] ?? o.label}</option>)}
             </select>
               </div>
@@ -1326,33 +1326,33 @@ export default function ServicesPage() {
       <div className="svc-layout">
         {/* Sidebar */}
         <aside className="svc-sidebar">
-          <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '14px', overflow: 'hidden' }}>
             <button className="cat-btn" onClick={() => setActiveCatId(null)}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px', background: activeCatId === null ? 'rgba(56,189,248,0.1)' : 'transparent', border: 'none', borderLeft: activeCatId === null ? '3px solid #38bdf8' : '3px solid transparent', color: activeCatId === null ? '#38bdf8' : '#94a3b8', fontSize: '13px', fontWeight: activeCatId === null ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}>
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px', background: activeCatId === null ? 'rgba(56,189,248,0.1)' : 'transparent', border: 'none', borderLeft: activeCatId === null ? '3px solid var(--ft-accent)' : '3px solid transparent', color: activeCatId === null ? 'var(--ft-accent)' : 'var(--ft-text-secondary)', fontSize: '13px', fontWeight: activeCatId === null ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}>
               <span>✦ {t('tabs.allServices')}</span>
-              <span style={{ fontSize: '11px', color: '#475569' }}>{mixedServices.length}</span>
+              <span style={{ fontSize: '11px', color: 'var(--ft-text-faint)' }}>{mixedServices.length}</span>
             </button>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '9px 14px', background: '#0f172a', borderTop: '1px solid #334155' }}>
-              <span style={{ fontSize: '10px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('filters.categoriesAz')}</span>
-              <span style={{ fontSize: '10px', color: '#475569', fontWeight: 800 }}>{sortedServiceCats.length}</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '9px 14px', background: 'var(--ft-bg)', borderTop: '1px solid var(--ft-border-strong)' }}>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--ft-text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('filters.categoriesAz')}</span>
+              <span style={{ fontSize: '10px', color: 'var(--ft-text-faint)', fontWeight: 800 }}>{sortedServiceCats.length}</span>
             </div>
             {sortedServiceCats.map(cat => {
               const count = categoryCount(cat.id)
               return (
                 <button key={cat.id} className="cat-btn" onClick={() => setActiveCatId(activeCatId === cat.id ? null : cat.id)}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 14px 8px 18px', background: activeCatId === cat.id ? 'rgba(56,189,248,0.1)' : 'transparent', border: 'none', borderLeft: activeCatId === cat.id ? '3px solid #38bdf8' : '3px solid transparent', color: activeCatId === cat.id ? '#38bdf8' : '#94a3b8', fontSize: '12px', fontWeight: activeCatId === cat.id ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}>
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 14px 8px 18px', background: activeCatId === cat.id ? 'rgba(56,189,248,0.1)' : 'transparent', border: 'none', borderLeft: activeCatId === cat.id ? '3px solid var(--ft-accent)' : '3px solid transparent', color: activeCatId === cat.id ? 'var(--ft-accent)' : 'var(--ft-text-secondary)', fontSize: '12px', fontWeight: activeCatId === cat.id ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
                     <span>{cat.icon}</span>
                     <span>{cat.label}</span>
                   </span>
-                  {count > 0 && <span style={{ fontSize: '10px', color: '#475569', flexShrink: 0 }}>{count}</span>}
+                  {count > 0 && <span style={{ fontSize: '10px', color: 'var(--ft-text-faint)', flexShrink: 0 }}>{count}</span>}
                 </button>
               )
             })}
           </div>
 
           {/* Post a service CTA */}
-          <Link href="/seller/gigs/create" onClick={e => { e.preventDefault(); void openCreateService() }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '12px', padding: '12px', background: 'linear-gradient(135deg,#38bdf8,#818cf8)', borderRadius: '12px', color: '#fff', fontWeight: 700, fontSize: '13px', textDecoration: 'none' }}>
+          <Link href="/seller/gigs/create" onClick={e => { e.preventDefault(); void openCreateService() }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '12px', padding: '12px', background: 'linear-gradient(135deg,var(--ft-accent),#818cf8)', borderRadius: '12px', color: '#fff', fontWeight: 700, fontSize: '13px', textDecoration: 'none' }}>
             ➕ {t('listService')}
           </Link>
         </aside>
@@ -1364,17 +1364,17 @@ export default function ServicesPage() {
               onClick={() => setActiveCatId(null)}
               style={{
                 padding: '9px 16px', borderRadius: 999, whiteSpace: 'nowrap', flexShrink: 0,
-                border: activeCatId === null ? '2px solid #00c2cb' : '2px solid #334155',
+                border: activeCatId === null ? '2px solid #00c2cb' : '2px solid var(--ft-border-strong)',
                 background: activeCatId === null ? '#00c2cb22' : '#111827',
-                color: activeCatId === null ? '#00c2cb' : '#94a3b8',
+                color: activeCatId === null ? '#00c2cb' : 'var(--ft-text-secondary)',
                 cursor: 'pointer', fontWeight: 800, fontSize: 13, fontFamily: 'inherit', minHeight: 44,
               }}
             >
-              ✦ {t('tabs.allServices')} <span style={{ color: '#64748b', marginLeft: 4 }}>{mixedServices.length}</span>
+              ✦ {t('tabs.allServices')} <span style={{ color: 'var(--ft-text-tertiary)', marginLeft: 4 }}>{mixedServices.length}</span>
             </button>
             {mobileCategoryCats.map(cat => {
               const active = activeCatId === cat.id
-              const accent = '#38bdf8'
+              const accent = 'var(--ft-accent)'
               const tint = 'rgba(56,189,248,0.12)'
               const count = categoryCount(cat.id)
               return (
@@ -1383,9 +1383,9 @@ export default function ServicesPage() {
                   onClick={() => setActiveCatId(active ? null : cat.id)}
                   style={{
                     padding: '8px 14px', borderRadius: 999, whiteSpace: 'nowrap', flexShrink: 0,
-                    border: active ? `2px solid ${accent}` : '2px solid #334155',
+                    border: active ? `2px solid ${accent}` : '2px solid var(--ft-border-strong)',
                     background: active ? tint : '#111827',
-                    color: active ? accent : '#94a3b8',
+                    color: active ? accent : 'var(--ft-text-secondary)',
                     cursor: 'pointer', fontWeight: active ? 800 : 700, fontSize: 13, fontFamily: 'inherit', minHeight: 44,
                     display: 'inline-flex', alignItems: 'center', gap: 7,
                   }}
@@ -1393,7 +1393,7 @@ export default function ServicesPage() {
                 >
                   <span>{cat.icon}</span>
                   <span>{cat.label}</span>
-                  {count > 0 && <span style={{ color: '#64748b', fontSize: 11 }}>{count}</span>}
+                  {count > 0 && <span style={{ color: 'var(--ft-text-tertiary)', fontSize: 11 }}>{count}</span>}
                 </button>
               )
             })}
@@ -1401,7 +1401,7 @@ export default function ServicesPage() {
 
           {/* Active filter summary */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
-            <div style={{ fontSize: '13px', color: '#64748b' }}>
+            <div style={{ fontSize: '13px', color: 'var(--ft-text-tertiary)' }}>
               {t('summary.services', { count: mixedServices.length })}
               {filteredExternalForListings.length > 0 && ` · ${t('summary.externalProviders', { count: filteredExternalForListings.length })}`}
               {activeCatId && ` ${t('summary.in')} ${visibleCats.find(c => c.id === activeCatId)?.label}`}
@@ -1421,7 +1421,7 @@ export default function ServicesPage() {
                   setPriceMax('')
                   setSearch('')
                 }}
-                style={{ background: 'none', border: '1px solid #334155', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', color: '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}
+                style={{ background: 'none', border: '1px solid var(--ft-border-strong)', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', color: 'var(--ft-text-tertiary)', cursor: 'pointer', fontFamily: 'inherit' }}
               >
                 ✕ {t('filters.clear')}
               </button>
@@ -1429,23 +1429,23 @@ export default function ServicesPage() {
           </div>
 
           {loadingServices || loadingExternalServices ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--ft-text-tertiary)' }}>
               <div style={{ fontSize: '34px', marginBottom: '12px' }}>🛠️</div>
-              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8' }}>{t('loading.services')}</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ft-text-secondary)' }}>{t('loading.services')}</div>
             </div>
           ) : servicesError || externalServicesError ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--ft-text-tertiary)' }}>
               <div style={{ fontSize: '34px', marginBottom: '12px' }}>⚠️</div>
-              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8', marginBottom: 6 }}>{t('errors.servicesTitle')}</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: 6 }}>{t('errors.servicesTitle')}</div>
               <div style={{ fontSize: '13px', marginBottom: 20 }}>{servicesError ?? externalServicesError ?? t('errors.tryAgain')}</div>
-              <button onClick={() => window.location.reload()} style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '10px 24px', borderRadius: 10, fontWeight: 700, border: 'none', fontSize: '14px' }}>
+              <button onClick={() => window.location.reload()} style={{ background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', color: '#fff', padding: '10px 24px', borderRadius: 10, fontWeight: 700, border: 'none', fontSize: '14px' }}>
                 {t('errors.reloadServices')}
               </button>
             </div>
           ) : mixedServices.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--ft-text-tertiary)' }}>
               <div style={{ fontSize: '40px', marginBottom: '12px' }}>🛠️</div>
-              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8', marginBottom: '6px' }}>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '6px' }}>
                 {services.length === 0 && externalServices.length === 0
                   ? t('empty.noServicesLoaded')
                   : hasActiveModeMismatch && activeCategory && activeModeLabel
@@ -1460,7 +1460,7 @@ export default function ServicesPage() {
                   : t('empty.adjustFilters')}
               </div>
               {services.length === 0 && externalServices.length === 0 && (
-                <a href="/seller/gigs/create" style={{ display: 'inline-block', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '10px 24px', borderRadius: 10, fontWeight: 700, textDecoration: 'none', fontSize: '14px' }}>
+                <a href="/seller/gigs/create" style={{ display: 'inline-block', background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', color: '#fff', padding: '10px 24px', borderRadius: 10, fontWeight: 700, textDecoration: 'none', fontSize: '14px' }}>
                   + {t('listService')}
                 </a>
               )}
@@ -1490,7 +1490,7 @@ export default function ServicesPage() {
               </div>
 
               {servicesHasMore && (
-                <div style={{ textAlign: 'center', marginTop: '24px', color: '#64748b', fontSize: '13px', padding: '12px 0' }}>
+                <div style={{ textAlign: 'center', marginTop: '24px', color: 'var(--ft-text-tertiary)', fontSize: '13px', padding: '12px 0' }}>
                   {t('loading.moreServices')}
                 </div>
               )}
@@ -1503,15 +1503,15 @@ export default function ServicesPage() {
           <div style={{ marginBottom: '16px' }}>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '12px' }}>
               <div style={{ flex: '1 1 280px', minWidth: '220px', position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '14px', pointerEvents: 'none' }}>🔍</span>
+                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--ft-text-tertiary)', fontSize: '14px', pointerEvents: 'none' }}>🔍</span>
                 <input
                   value={externalSearch}
                   onChange={e => setExternalSearch(e.target.value)}
                   placeholder={t('filters.searchExternal')}
-                  style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '10px 14px 10px 36px', fontSize: '16px', color: '#f1f5f9', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                  style={{ width: '100%', background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '10px', padding: '10px 14px 10px 36px', fontSize: '16px', color: 'var(--ft-text)', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
                 />
               </div>
-              <div style={{ color: '#64748b', fontSize: '13px', lineHeight: 1.45 }}>
+              <div style={{ color: 'var(--ft-text-tertiary)', fontSize: '13px', lineHeight: 1.45 }}>
                 {t('summary.providers', { count: filteredExternalServices.length })}
                 {externalCategory !== 'all' && ` ${t('summary.in')} ${EXTERNAL_REFRESH_CATEGORIES.find(c => c.id === externalCategory)?.label ?? externalCategory}`}
               </div>
@@ -1526,9 +1526,9 @@ export default function ServicesPage() {
                 onClick={() => setExternalCategory('all')}
                 style={{
                   padding: '8px 16px', borderRadius: '20px', whiteSpace: 'nowrap', flexShrink: 0,
-                  border: externalCategory === 'all' ? '2px solid #00c2cb' : '2px solid #334155',
+                  border: externalCategory === 'all' ? '2px solid #00c2cb' : '2px solid var(--ft-border-strong)',
                   background: externalCategory === 'all' ? '#00c2cb22' : 'transparent',
-                  color: externalCategory === 'all' ? '#00c2cb' : '#94a3b8',
+                  color: externalCategory === 'all' ? '#00c2cb' : 'var(--ft-text-secondary)',
                   cursor: 'pointer', fontWeight: 600, fontSize: '13px', fontFamily: 'inherit',
                 }}
               >
@@ -1540,9 +1540,9 @@ export default function ServicesPage() {
                   onClick={() => setExternalCategory(cat.id)}
                   style={{
                     padding: '8px 16px', borderRadius: '20px', whiteSpace: 'nowrap', flexShrink: 0,
-                    border: externalCategory === cat.id ? '2px solid #00c2cb' : '2px solid #334155',
+                    border: externalCategory === cat.id ? '2px solid #00c2cb' : '2px solid var(--ft-border-strong)',
                     background: externalCategory === cat.id ? '#00c2cb22' : 'transparent',
-                    color: externalCategory === cat.id ? '#00c2cb' : '#94a3b8',
+                    color: externalCategory === cat.id ? '#00c2cb' : 'var(--ft-text-secondary)',
                     cursor: 'pointer', fontWeight: 600, fontSize: '13px', fontFamily: 'inherit',
                   }}
                 >
@@ -1553,23 +1553,23 @@ export default function ServicesPage() {
           </div>
 
           {loadingExternalServices ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--ft-text-tertiary)' }}>
               <div style={{ fontSize: '34px', marginBottom: '12px' }}>🔎</div>
-              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8' }}>{t('loading.external')}</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ft-text-secondary)' }}>{t('loading.external')}</div>
             </div>
           ) : externalServicesError ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--ft-text-tertiary)' }}>
               <div style={{ fontSize: '34px', marginBottom: '12px' }}>⚠️</div>
-              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8', marginBottom: 6 }}>{t('errors.externalTitle')}</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: 6 }}>{t('errors.externalTitle')}</div>
               <div style={{ fontSize: '13px', marginBottom: 20 }}>{externalServicesError}</div>
-              <button onClick={() => window.location.reload()} style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '10px 24px', borderRadius: 10, fontWeight: 700, border: 'none', fontSize: '14px', fontFamily: 'inherit' }}>
+              <button onClick={() => window.location.reload()} style={{ background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', color: '#fff', padding: '10px 24px', borderRadius: 10, fontWeight: 700, border: 'none', fontSize: '14px', fontFamily: 'inherit' }}>
                 {t('errors.reloadProviders')}
               </button>
             </div>
           ) : filteredExternalServices.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--ft-text-tertiary)' }}>
               <div style={{ fontSize: '40px', marginBottom: '12px' }}>🌐</div>
-              <div style={{ fontSize: '16px', fontWeight: 600, color: '#94a3b8', marginBottom: '6px' }}>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '6px' }}>
                 {externalServices.length === 0 ? t('empty.noExternalLoaded') : t('empty.noProvidersMatch')}
               </div>
               <div style={{ fontSize: '13px', marginBottom: '20px' }}>
@@ -1592,13 +1592,13 @@ export default function ServicesPage() {
               </div>
 
               {externalHasMore && (
-                <div style={{ textAlign: 'center', marginTop: '24px', color: '#64748b', fontSize: '13px', padding: '12px 0' }}>
+                <div style={{ textAlign: 'center', marginTop: '24px', color: 'var(--ft-text-tertiary)', fontSize: '13px', padding: '12px 0' }}>
                   {t('loading.moreProviders')}
                 </div>
               )}
 
               {!externalHasMore && filteredExternalServices.length > SERVICES_INITIAL_DISPLAY && (
-                <p style={{ textAlign: 'center', color: '#475569', fontSize: '13px', padding: '24px 0', margin: 0 }}>
+                <p style={{ textAlign: 'center', color: 'var(--ft-text-faint)', fontSize: '13px', padding: '24px 0', margin: 0 }}>
                   {t('loading.allProvidersLoaded', { count: filteredExternalServices.length })}
                 </p>
               )}

@@ -330,7 +330,7 @@ export default function DeliveryZoneMap({
           minHeight: `${height}px`,
           borderRadius: '12px',
           overflow: 'hidden',
-          background: '#0f172a',
+          background: 'var(--ft-bg)',
           border: '1px solid #1f2937',
         }}
       >
@@ -380,7 +380,7 @@ export default function DeliveryZoneMap({
             }}
           >
             <span>⚠️ Map couldn&apos;t load</span>
-            <span style={{ color: '#94a3b8', fontSize: 12 }}>
+            <span style={{ color: 'var(--ft-text-secondary)', fontSize: 12 }}>
               Check your connection, or use your current location below.
             </span>
           </div>

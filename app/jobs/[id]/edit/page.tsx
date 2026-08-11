@@ -49,10 +49,10 @@ const STATUSES = [
 
 const s = {
   card: { background: 'rgba(30,41,59,0.6)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 14, padding: '1.5rem' } as React.CSSProperties,
-  label: { display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#cbd5e1', marginBottom: 6 } as React.CSSProperties,
-  input: { width: '100%', boxSizing: 'border-box' as const, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 10, padding: '0.65rem 0.85rem', color: '#f1f5f9', fontSize: '16px', outline: 'none', fontFamily: 'inherit' } as React.CSSProperties,
-  textarea: { width: '100%', boxSizing: 'border-box' as const, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 10, padding: '0.65rem 0.85rem', color: '#f1f5f9', fontSize: '16px', outline: 'none', fontFamily: 'inherit', resize: 'vertical' as const, minHeight: 100 } as React.CSSProperties,
-  select: { width: '100%', boxSizing: 'border-box' as const, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 10, padding: '0.65rem 0.85rem', color: '#f1f5f9', fontSize: '16px', outline: 'none', fontFamily: 'inherit' } as React.CSSProperties,
+  label: { display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: 6 } as React.CSSProperties,
+  input: { width: '100%', boxSizing: 'border-box' as const, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 10, padding: '0.65rem 0.85rem', color: 'var(--ft-text)', fontSize: '16px', outline: 'none', fontFamily: 'inherit' } as React.CSSProperties,
+  textarea: { width: '100%', boxSizing: 'border-box' as const, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 10, padding: '0.65rem 0.85rem', color: 'var(--ft-text)', fontSize: '16px', outline: 'none', fontFamily: 'inherit', resize: 'vertical' as const, minHeight: 100 } as React.CSSProperties,
+  select: { width: '100%', boxSizing: 'border-box' as const, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 10, padding: '0.65rem 0.85rem', color: 'var(--ft-text)', fontSize: '16px', outline: 'none', fontFamily: 'inherit' } as React.CSSProperties,
   btn: { padding: '0.75rem 1.5rem', borderRadius: 10, fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', border: 'none' } as React.CSSProperties,
 }
 
@@ -187,30 +187,30 @@ export default function EditJobPage() {
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
 
-  if (loading) return <div style={{ minHeight: '100vh', paddingTop: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>Loading job...</div>
+  if (loading) return <div style={{ minHeight: '100vh', paddingTop: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ft-text-tertiary)' }}>Loading job...</div>
   if (forbidden) return (
-    <div style={{ minHeight: '100vh', paddingTop: 64, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#f87171', gap: 12 }}>
+    <div style={{ minHeight: '100vh', paddingTop: 64, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--ft-danger)', gap: 12 }}>
       <div style={{ fontSize: 18, fontWeight: 600 }}>You don&apos;t have permission to edit this job</div>
-      <Link href={`/jobs/${jobId}`} style={{ color: '#38bdf8', textDecoration: 'none', fontSize: 14 }}>← Back to job</Link>
+      <Link href={`/jobs/${jobId}`} style={{ color: 'var(--ft-accent)', textDecoration: 'none', fontSize: 14 }}>← Back to job</Link>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
+    <div style={{ minHeight: '100vh', color: 'var(--ft-text)', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 1rem' }}>
         <div style={{ padding: '1.5rem 0 1rem' }}>
-          <Link href={`/jobs/${jobId}`} style={{ color: '#38bdf8', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600 }}>← Back to job</Link>
+          <Link href={`/jobs/${jobId}`} style={{ color: 'var(--ft-accent)', textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600 }}>← Back to job</Link>
           <h1 style={{ fontSize: 'clamp(1.3rem,3vw,1.7rem)', fontWeight: 800, margin: '0.75rem 0 0.25rem' }}>Edit Job</h1>
         </div>
 
         {error && (
-          <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 10, padding: '0.75rem 1rem', marginBottom: 16, fontSize: 13, color: '#f87171' }}>{error}</div>
+          <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 10, padding: '0.75rem 1rem', marginBottom: 16, fontSize: 13, color: 'var(--ft-danger)' }}>{error}</div>
         )}
 
         <form onSubmit={handleSubmit}>
           {/* ── Logo / Company section ── */}
           <div style={{ ...s.card, display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 16 }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Company / Organisation</div>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ft-text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Company / Organisation</div>
 
             {/* Logo preview + upload */}
             <div>
@@ -245,7 +245,7 @@ export default function EditJobPage() {
                     style={{
                       padding: '0.55rem 1rem', borderRadius: 8, fontSize: '0.82rem', fontWeight: 600,
                       background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)',
-                      color: '#38bdf8', cursor: logoUploading ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+                      color: 'var(--ft-accent)', cursor: logoUploading ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
                     }}
                   >
                     {logoUploading ? 'Uploading…' : form.company_logo_url ? '🔄 Change Logo' : '📷 Upload Logo'}
@@ -254,12 +254,12 @@ export default function EditJobPage() {
                     <button
                       type="button"
                       onClick={() => setForm(f => ({ ...f, company_logo_url: '' }))}
-                      style={{ marginLeft: 8, padding: '0.55rem 0.75rem', borderRadius: 8, fontSize: '0.82rem', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', color: '#f87171', cursor: 'pointer', fontFamily: 'inherit' }}
+                      style={{ marginLeft: 8, padding: '0.55rem 0.75rem', borderRadius: 8, fontSize: '0.82rem', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', color: 'var(--ft-danger)', cursor: 'pointer', fontFamily: 'inherit' }}
                     >
                       Remove
                     </button>
                   )}
-                  <p style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 6 }}>Max 2MB · JPG, PNG, WebP</p>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', marginTop: 6 }}>Max 2MB · JPG, PNG, WebP</p>
                 </div>
               </div>
             </div>
@@ -272,7 +272,7 @@ export default function EditJobPage() {
 
           {/* ── Job details section ── */}
           <div style={{ ...s.card, display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 16 }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Job Details</div>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ft-text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Job Details</div>
 
             <div><label style={s.label}>Title *</label><input style={s.input} value={form.title} onChange={e => set('title', e.target.value)} required /></div>
             <div><label style={s.label}>Description *</label><textarea style={s.textarea} value={form.description} onChange={e => set('description', e.target.value)} required rows={5} /></div>
@@ -298,8 +298,8 @@ export default function EditJobPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-            <Link href={`/jobs/${jobId}`} style={{ ...s.btn, background: 'transparent', border: '1px solid rgba(148,163,184,0.2)', color: '#94a3b8', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Cancel</Link>
-            <button type="submit" disabled={saving || logoUploading} style={{ ...s.btn, background: '#38bdf8', color: '#0f172a', opacity: (saving || logoUploading) ? 0.6 : 1 }}>
+            <Link href={`/jobs/${jobId}`} style={{ ...s.btn, background: 'transparent', border: '1px solid rgba(148,163,184,0.2)', color: 'var(--ft-text-secondary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Cancel</Link>
+            <button type="submit" disabled={saving || logoUploading} style={{ ...s.btn, background: 'var(--ft-accent)', color: 'var(--ft-bg)', opacity: (saving || logoUploading) ? 0.6 : 1 }}>
               {saving ? 'Saving…' : 'Save changes'}
             </button>
           </div>

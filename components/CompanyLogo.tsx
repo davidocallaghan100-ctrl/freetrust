@@ -40,7 +40,7 @@ export default function CompanyLogo({ src, companyName, size = 36, borderRadius 
 
   const gradientBg = isLocal
     ? 'linear-gradient(135deg,#fb923c,#ea580c)'
-    : 'linear-gradient(135deg,#38bdf8,#0284c7)'
+    : 'linear-gradient(135deg,var(--ft-accent),#0284c7)'
 
   const containerStyle: React.CSSProperties = {
     width: size,
@@ -60,7 +60,7 @@ export default function CompanyLogo({ src, companyName, size = 36, borderRadius 
       justifyContent: 'center',
       fontWeight: 800,
       fontSize: size * 0.38,
-      color: '#0f172a',
+      color: 'var(--ft-bg)',
     }}>
       {initials}
     </div>

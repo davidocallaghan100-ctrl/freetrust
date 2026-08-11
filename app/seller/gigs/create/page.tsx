@@ -514,21 +514,21 @@ function CreateGigPageContent() {
 
         {managedOrgs.length > 0 && (
           <div style={{ marginBottom: '1rem', background: 'rgba(15,23,42,0.78)', border: '1px solid rgba(56,189,248,0.18)', borderRadius: 14, padding: '0.9rem 1rem' }}>
-            <label htmlFor="gig-org" style={{ display: 'block', fontSize: '0.76rem', fontWeight: 800, letterSpacing: '0.06em', color: '#7dd3fc', textTransform: 'uppercase', marginBottom: 6 }}>
+            <label htmlFor="gig-org" style={{ display: 'block', fontSize: '0.76rem', fontWeight: 800, letterSpacing: '0.06em', color: 'var(--ft-accent)', textTransform: 'uppercase', marginBottom: 6 }}>
               Offer this service as
             </label>
             <select
               id="gig-org"
               value={selectedOrgId}
               onChange={e => setSelectedOrgId(e.target.value)}
-              style={{ width: '100%', background: '#020617', border: '1px solid #334155', borderRadius: 10, padding: '0.7rem 0.8rem', color: '#f8fafc', fontSize: '0.92rem', fontFamily: 'inherit', outline: 'none' }}
+              style={{ width: '100%', background: '#020617', border: '1px solid var(--ft-border-strong)', borderRadius: 10, padding: '0.7rem 0.8rem', color: '#f8fafc', fontSize: '0.92rem', fontFamily: 'inherit', outline: 'none' }}
             >
               <option value="">My personal profile</option>
               {managedOrgs.map(org => (
                 <option key={org.id} value={org.id}>{org.name}</option>
               ))}
             </select>
-            <div style={{ marginTop: 7, color: '#94a3b8', fontSize: '0.78rem', lineHeight: 1.45 }}>
+            <div style={{ marginTop: 7, color: 'var(--ft-text-secondary)', fontSize: '0.78rem', lineHeight: 1.45 }}>
               Organisation services appear on that organisation profile. You remain the accountable seller for payouts and edits.
             </div>
           </div>
@@ -1150,7 +1150,7 @@ function CreateGigPageContent() {
                 >
                   <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <strong style={{ color: '#f87171', display: 'block', marginBottom: 2 }}>
+                    <strong style={{ color: 'var(--ft-danger)', display: 'block', marginBottom: 2 }}>
                       Could not publish gig
                     </strong>
                     {errors.publish}

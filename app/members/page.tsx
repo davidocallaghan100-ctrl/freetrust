@@ -12,7 +12,7 @@ function initials(name: string) {
 function hashGradient(name: string) {
   const gradients = [
     'linear-gradient(135deg,#34d399,#059669)',
-    'linear-gradient(135deg,#38bdf8,#0284c7)',
+    'linear-gradient(135deg,var(--ft-accent),#0284c7)',
     'linear-gradient(135deg,#a78bfa,#7c3aed)',
     'linear-gradient(135deg,#fbbf24,#d97706)',
     'linear-gradient(135deg,#f472b6,#db2777)',
@@ -61,7 +61,7 @@ function memberVerified(member: Member) {
 }
 
 const S: Record<string, React.CSSProperties> = {
-  page: { minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui', paddingTop: 64 },
+  page: { minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui', paddingTop: 64 },
   hero: { background: 'linear-gradient(180deg,rgba(56,189,248,0.07) 0%,transparent 100%)', padding: '2.5rem 1.5rem 2rem', borderBottom: '1px solid rgba(56,189,248,0.08)' },
   inner: { maxWidth: 1200, margin: '0 auto' },
   // minmax(min(100%, 280px), 1fr) — the inner min() allows the column to
@@ -71,7 +71,7 @@ const S: Record<string, React.CSSProperties> = {
   // container, which on mobile Safari causes horizontal scroll and can clip
   // newly-inserted rows at the top of the grid off-screen.
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '1.25rem', padding: '2rem 1.5rem', maxWidth: 1200, margin: '0 auto' },
-  card: { background: '#1e293b', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', transition: 'border-color 0.15s, transform 0.15s', cursor: 'default' },
+  card: { background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.1)', borderRadius: 14, padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', transition: 'border-color 0.15s, transform 0.15s', cursor: 'default' },
 }
 
 const PAGE_SIZE = 24
@@ -284,9 +284,9 @@ export default function MemberDirectoryPage() {
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
               <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.5rem' }}>Member Directory</h1>
-              <p style={{ color: '#64748b' }}>Connect with trusted founding members of the FreeTrust community</p>
+              <p style={{ color: 'var(--ft-text-tertiary)' }}>Connect with trusted founding members of the FreeTrust community</p>
             </div>
-            <Link href="/profile" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: '#38bdf8', color: '#0f172a', fontWeight: 700, fontSize: '0.88rem', padding: '0.6rem 1.25rem', borderRadius: 9, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+            <Link href="/profile" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'var(--ft-accent)', color: 'var(--ft-bg)', fontWeight: 700, fontSize: '0.88rem', padding: '0.6rem 1.25rem', borderRadius: 9, textDecoration: 'none', whiteSpace: 'nowrap' }}>
               👤 Your Profile
             </Link>
           </div>
@@ -295,7 +295,7 @@ export default function MemberDirectoryPage() {
               placeholder="Search members…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{ flex: 1, minWidth: 200, background: '#1e293b', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.65rem 1rem', fontSize: '0.9rem', color: '#f1f5f9', outline: 'none' }}
+              style={{ flex: 1, minWidth: 200, background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.65rem 1rem', fontSize: '0.9rem', color: 'var(--ft-text)', outline: 'none' }}
             />
             <button
               type="button"
@@ -309,7 +309,7 @@ export default function MemberDirectoryPage() {
                 borderRadius: 8,
                 padding: '0.65rem 0.85rem',
                 fontSize: '0.9rem',
-                color: '#38bdf8',
+                color: 'var(--ft-accent)',
                 cursor: (refreshing || loading) ? 'wait' : 'pointer',
                 minHeight: 44,
                 minWidth: 44,
@@ -325,7 +325,7 @@ export default function MemberDirectoryPage() {
                 ↻
               </span>
             </button>
-            <span style={{ fontSize: '0.82rem', color: '#64748b', alignSelf: 'center' }}>
+            <span style={{ fontSize: '0.82rem', color: 'var(--ft-text-tertiary)', alignSelf: 'center' }}>
               {loading
                 ? 'Loading…'
                 : lastFetchedAt
@@ -358,7 +358,7 @@ export default function MemberDirectoryPage() {
               <span style={{ flexShrink: 0 }}>⚠️</span>
               <div style={{ flex: 1, minWidth: 0, lineHeight: 1.5 }}>
                 <div style={{ fontWeight: 700, marginBottom: '0.15rem' }}>Couldn&rsquo;t load members</div>
-                <div style={{ color: '#f87171', wordBreak: 'break-word' }}>{loadError}</div>
+                <div style={{ color: 'var(--ft-danger)', wordBreak: 'break-word' }}>{loadError}</div>
               </div>
               <button
                 type="button"
@@ -389,7 +389,7 @@ export default function MemberDirectoryPage() {
                 padding: '0.35rem 0.9rem', borderRadius: 999, fontSize: '0.82rem', cursor: 'pointer', fontWeight: 500,
                 border: activeCategory === t ? '1px solid rgba(56,189,248,0.3)' : '1px solid rgba(148,163,184,0.2)',
                 background: activeCategory === t ? 'rgba(56,189,248,0.1)' : 'transparent',
-                color: activeCategory === t ? '#38bdf8' : '#94a3b8',
+                color: activeCategory === t ? 'var(--ft-accent)' : 'var(--ft-text-secondary)',
               }}>{t}</button>
             ))}
           </div>
@@ -400,14 +400,14 @@ export default function MemberDirectoryPage() {
         {!loading && filtered.length === 0 && (
           <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '4rem 1rem' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👥</div>
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem' }}>
+            <h2 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--ft-text-secondary)', marginBottom: '0.5rem' }}>
               {members.length === 0 ? 'Be the first founding member to complete your profile' : 'No members match your search'}
             </h2>
-            <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+            <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
               {members.length === 0 ? 'Complete your profile and you\'ll appear here.' : 'Try a different search or category.'}
             </p>
             {members.length === 0 && (
-              <Link href="/profile" style={{ display: 'inline-block', background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#fff', padding: '0.75rem 1.75rem', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>
+              <Link href="/profile" style={{ display: 'inline-block', background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', color: '#fff', padding: '0.75rem 1.75rem', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>
                 Complete My Profile
               </Link>
             )}
@@ -422,26 +422,26 @@ export default function MemberDirectoryPage() {
                 {member.avatar_url ? (
                   <img src={member.avatar_url} alt={name} style={{ width: 52, height: 52, borderRadius: 12, objectFit: 'cover', flexShrink: 0 }} />
                 ) : (
-                  <div style={{ width: 52, height: 52, borderRadius: 12, background: hashGradient(name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem', color: '#0f172a', flexShrink: 0 }}>
+                  <div style={{ width: 52, height: 52, borderRadius: 12, background: hashGradient(name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem', color: 'var(--ft-bg)', flexShrink: 0 }}>
                     {initials(name)}
                   </div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap', fontSize: '1rem', fontWeight: 700, color: '#f1f5f9', lineHeight: 1.2 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap', fontSize: '1rem', fontWeight: 700, color: 'var(--ft-text)', lineHeight: 1.2 }}>
                     <span>{name}</span>
                     {memberVerified(member) && (
                       <span title="Profile details verified by FreeTrust" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.35)', borderRadius: 999, padding: '1px 6px', color: '#34d399', fontSize: '0.66rem', fontWeight: 800 }}>✓</span>
                     )}
                   </div>
-                  {member.professional_headline && <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginTop: '0.22rem', fontWeight: 600 }}>{member.professional_headline}</div>}
-                  {member.location && <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>📍 {member.location}</div>}
+                  {member.professional_headline && <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-secondary)', marginTop: '0.22rem', fontWeight: 600 }}>{member.professional_headline}</div>}
+                  {member.location && <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', marginTop: '0.2rem' }}>📍 {member.location}</div>}
                 </div>
-                <div style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.2rem 0.55rem', fontSize: '0.78rem', fontWeight: 700, color: '#38bdf8', flexShrink: 0 }}>
+                <div style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 8, padding: '0.2rem 0.55rem', fontSize: '0.78rem', fontWeight: 700, color: 'var(--ft-accent)', flexShrink: 0 }}>
                   ₮{member.trust_balance}
                 </div>
               </div>
               {member.bio && (
-                <p style={{ fontSize: '0.83rem', color: '#64748b', lineHeight: 1.6, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>
+                <p style={{ fontSize: '0.83rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.6, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>
                   {member.bio}
                 </p>
               )}
@@ -455,8 +455,8 @@ export default function MemberDirectoryPage() {
                 />
               )}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(56,189,248,0.06)', paddingTop: '0.75rem', marginTop: 'auto' }}>
-                <span style={{ fontSize: '0.75rem', color: '#475569' }}>👤 Individual</span>
-                <span style={{ background: 'transparent', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 7, padding: '0.4rem 0.9rem', fontSize: '0.8rem', fontWeight: 600, color: '#38bdf8' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--ft-text-faint)' }}>👤 Individual</span>
+                <span style={{ background: 'transparent', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 7, padding: '0.4rem 0.9rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ft-accent)' }}>
                   View Profile →
                 </span>
               </div>
@@ -469,7 +469,7 @@ export default function MemberDirectoryPage() {
         <div style={{ textAlign: 'center', padding: '0 1.5rem 2rem' }}>
           <button
             onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
-            style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 10, padding: '0.75rem 2rem', color: '#38bdf8', fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', minHeight: 44, fontFamily: 'inherit' }}
+            style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 10, padding: '0.75rem 2rem', color: 'var(--ft-accent)', fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', minHeight: 44, fontFamily: 'inherit' }}
           >
             Load more ({filtered.length - visible.length} remaining)
           </button>
