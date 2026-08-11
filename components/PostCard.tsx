@@ -1085,9 +1085,29 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
   const [muted, setMuted] = useState(false)
   const [posterUrl, setPosterUrl] = useState<string | null>(null)
   const [previewReady, setPreviewReady] = useState(false)
+  const [nativeAspect, setNativeAspect] = useState<number | null>(null)
+
+  // Videos are uploaded in many native formats (portrait 9:16, square, landscape
+  // 16:9, etc). The feed frame used to force every video into a single fixed
+  // aspect ratio (9/16 for shorts, 4/5 for everything else) with `objectFit:
+  // cover`. Whenever a video's real aspect ratio didn't match that box, cover
+  // cropped its left/right (or top/bottom) edges — cutting off any burned-in
+  // captions/text near those edges. Fix: size the frame to the video's actual
+  // aspect ratio (clamped to sane feed bounds) and use `contain` so the full
+  // frame, including edge text, is always visible with no cropping.
+  const defaultRatio = isShort ? 9 / 16 : 4 / 5
+  const minRatio = isShort ? 9 / 16 : 0.5 // never narrower than a tall portrait
+  const maxRatio = isShort ? 4 / 5 : 16 / 9 // never wider than a full landscape
+  const effectiveRatio = nativeAspect
+    ? Math.min(maxRatio, Math.max(minRatio, nativeAspect))
+    : defaultRatio
   const frameStyle = isShort
-    ? { aspectRatio: '9 / 16', minHeight: '460px', maxHeight: 'min(78vh, 640px)' }
-    : { aspectRatio: '4 / 5', minHeight: '360px', maxHeight: 'min(70vh, 560px)' }
+    ? { aspectRatio: `${effectiveRatio}`, minHeight: '460px', maxHeight: 'min(78vh, 640px)' }
+    : { aspectRatio: `${effectiveRatio}`, minHeight: '360px', maxHeight: 'min(70vh, 560px)' }
+  // Only crop (cover) when the frame's clamped ratio matches the video's real
+  // ratio closely enough that no meaningful crop occurs; otherwise letterbox
+  // (contain) against a blurred poster backdrop so nothing is ever cut off.
+  const needsLetterbox = nativeAspect !== null && Math.abs(nativeAspect - effectiveRatio) > 0.03
 
   const capturePosterFrame = useCallback(() => {
     const el = videoRef.current
@@ -1276,6 +1296,12 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
           <span style={{ color: '#64748b', fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Loading preview…</span>
         </div>
       )}
+      {needsLetterbox && posterUrl && (
+        <div
+          aria-hidden
+          style={{ position: 'absolute', inset: 0, zIndex: 0, background: `center / cover no-repeat url(${posterUrl})`, filter: 'blur(28px) brightness(0.55)', transform: 'scale(1.15)' }}
+        />
+      )}
       <video
         ref={videoRef}
         src={src}
@@ -1289,6 +1315,9 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
         onLoadedMetadata={() => {
           const el = videoRef.current
           setDuration(el?.duration ?? null)
+          if (el && el.videoWidth > 0 && el.videoHeight > 0) {
+            setNativeAspect(el.videoWidth / el.videoHeight)
+          }
           if (el && !posterCapturedRef.current && Number.isFinite(el.duration) && el.duration > 0.2) {
             try { el.currentTime = Math.min(0.12, el.duration / 8) } catch { /* first-frame seek can fail on some browsers */ }
           }
@@ -1298,7 +1327,7 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
         onSeeked={capturePosterFrame}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
-        style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', display: 'block', objectFit: 'cover', background: posterUrl && !previewReady ? `center / cover no-repeat url(${posterUrl})` : '#000' }}
+        style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', display: 'block', objectFit: needsLetterbox ? 'contain' : 'cover', background: needsLetterbox ? 'transparent' : (posterUrl && !previewReady ? `center / cover no-repeat url(${posterUrl})` : '#000') }}
       />
       <TextMediaOverlay overlay={textOverlay ?? null} compact={isShort} />
       {/* Play overlay */}
