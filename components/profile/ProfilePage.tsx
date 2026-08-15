@@ -18,6 +18,8 @@ import ActivityFeed, { type ActivityItem as CreatedItem } from '@/components/pro
 import PostCard, { type FeedPost } from '@/components/PostCard'
 import { trackEventOnce } from '@/lib/analytics'
 import { isCommunityVisibleProfile } from '@/lib/profile/completion'
+import StoryViewer from '@/components/stories/StoryViewer'
+import type { MemoryRecord, StoryAuthorGroup } from '@/types/stories'
 
 interface Profile {
   id: string
@@ -166,7 +168,7 @@ interface ConnectionProfile {
   location?: string | null
 }
 
-type ProfileTab = 'overview' | 'trust' | 'services' | 'products' | 'grassroots' | 'posts' | 'activity' | 'following' | 'followers'
+type ProfileTab = 'overview' | 'trust' | 'services' | 'products' | 'grassroots' | 'posts' | 'memories' | 'activity' | 'following' | 'followers'
 
 type CoverSettings = {
   positionX: number
@@ -426,6 +428,13 @@ export default function ProfilePage() {
   const [profilePosts, setProfilePosts] = useState<FeedPost[]>([])
   const [profilePostsLoading, setProfilePostsLoading] = useState(false)
   const [profilePostsLoaded, setProfilePostsLoaded] = useState(false)
+  const [memories, setMemories] = useState<MemoryRecord[]>([])
+  const [memoriesLoading, setMemoriesLoading] = useState(false)
+  const [memoriesLoaded, setMemoriesLoaded] = useState(false)
+  const [memoryMenuOpenId, setMemoryMenuOpenId] = useState<string | null>(null)
+  const [memoryViewerId, setMemoryViewerId] = useState<string | null>(null)
+  const [memoryDeleteConfirmId, setMemoryDeleteConfirmId] = useState<string | null>(null)
+  const [memoryToast, setMemoryToast] = useState('')
   const [profilePhotoGridPosts, setProfilePhotoGridPosts] = useState<FeedPost[]>([])
   const [profilePhotoGridLoading, setProfilePhotoGridLoading] = useState(false)
   const [profilePhotoGridLoaded, setProfilePhotoGridLoaded] = useState(false)
@@ -636,6 +645,53 @@ export default function ProfilePage() {
       setProfilePostsLoading(false)
     }
   }, [profilePostsLoaded])
+
+  const loadMemories = useCallback(async (userId: string) => {
+    if (memoriesLoaded || memoriesLoading) return
+    setMemoriesLoading(true)
+    try {
+      const res = await fetch(`/api/memories?userId=${encodeURIComponent(userId)}`, { cache: 'no-store' })
+      if (res.ok) {
+        const data = await res.json() as { memories?: MemoryRecord[] }
+        setMemories(data.memories ?? [])
+        setMemoriesLoaded(true)
+      }
+    } catch { /* non-critical */ } finally {
+      setMemoriesLoading(false)
+    }
+  }, [memoriesLoaded, memoriesLoading])
+
+  const showMemoryToast = (msg: string) => { setMemoryToast(msg); setTimeout(() => setMemoryToast(''), 3000) }
+
+  const handleRepostMemory = useCallback(async (memoryId: string) => {
+    setMemoryMenuOpenId(null)
+    try {
+      const res = await fetch(`/api/memories/${memoryId}/repost`, { method: 'POST' })
+      if (res.ok) {
+        showMemoryToast('✅ Added to your Stories — live for 24h')
+      } else {
+        const data = await res.json().catch(() => ({}))
+        showMemoryToast(data.error || 'Could not repost — try again')
+      }
+    } catch {
+      showMemoryToast('Network error — try again')
+    }
+  }, [])
+
+  const handleDeleteMemory = useCallback(async (memoryId: string) => {
+    try {
+      const res = await fetch(`/api/memories/${memoryId}`, { method: 'DELETE' })
+      if (res.ok) {
+        setMemories(prev => prev.filter(m => m.id !== memoryId))
+        showMemoryToast('🗑 Memory deleted')
+      } else {
+        showMemoryToast('Could not delete — try again')
+      }
+    } catch {
+      showMemoryToast('Network error — try again')
+    }
+    setMemoryDeleteConfirmId(null)
+  }, [])
 
   const loadProfilePhotoGrid = useCallback(async (userId: string) => {
     if (profilePhotoGridLoaded || profilePhotoGridLoading) return
@@ -1030,6 +1086,7 @@ export default function ProfilePage() {
     if (activeTab === 'products' && products.length === 0) void loadProducts(displayedProfileId)
     if (activeTab === 'grassroots' && grassroots.length === 0) void loadGrassroots(displayedProfileId)
     if (activeTab === 'posts') void loadProfilePosts(displayedProfileId)
+    if (activeTab === 'memories') void loadMemories(displayedProfileId)
     if (activeTab === 'activity' && activity.length === 0) void loadActivity(displayedProfileId)
     if ((activeTab === 'followers' || activeTab === 'following')) void loadConnections(displayedProfileId)
   }, [activeTab, displayedProfileId, services.length, products.length, grassroots.length, activity.length, loadServices, loadProducts, loadGrassroots, loadProfilePosts, loadProfilePhotoGrid, loadActivity, loadConnections])
@@ -1347,6 +1404,7 @@ export default function ProfilePage() {
     { key: 'products', label: 'Products', count: products.length || undefined },
     { key: 'grassroots', label: 'Grassroots', count: grassroots.length || undefined },
     { key: 'posts', label: 'Posts', count: profilePosts.length || undefined },
+    { key: 'memories', label: 'Memories', count: memories.length || undefined },
     { key: 'activity', label: 'Activity' },
     { key: 'following', label: 'Following', count: following.length || profile?.following_count || undefined },
     { key: 'followers', label: 'Followers', count: followerCount || undefined },
@@ -2588,6 +2646,142 @@ export default function ProfilePage() {
         )}
 
         {/* Posts tab — real social feed posts by this member */}
+        {activeTab === 'memories' && (
+          <div className="profile-card" style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: 'var(--ft-text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
+                Memories from {profile?.full_name ?? 'this member'}
+              </div>
+            </div>
+            {memoriesLoading ? (
+              <div style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.88rem' }}>Loading memories…</div>
+            ) : memories.length === 0 ? (
+              <div style={{ padding: '2.5rem 1rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🗂</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ft-text)', marginBottom: '0.4rem' }}>
+                  {isOwnProfile ? 'No memories yet' : 'No memories yet'}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', maxWidth: 280, margin: '0 auto', lineHeight: 1.5 }}>
+                  {isOwnProfile
+                    ? 'Save a Story before it expires to keep it here permanently.'
+                    : `Stories ${profile?.full_name ?? 'this member'} saves will appear here.`}
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6 }}>
+                {memories.map(memory => (
+                  <div
+                    key={memory.id}
+                    style={{ position: 'relative', aspectRatio: '1 / 1', borderRadius: 10, overflow: 'hidden', background: 'var(--ft-bg)', cursor: 'pointer' }}
+                    onClick={() => setMemoryViewerId(memory.id)}
+                  >
+                    {memory.media_type === 'video' ? (
+                      <video src={memory.media_url} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <img src={memory.media_url} alt={memory.caption || 'Memory'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    )}
+                    {memory.media_type === 'video' && (
+                      <div style={{ position: 'absolute', top: 6, left: 6, fontSize: 14, color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,.6)' }}>▶</div>
+                    )}
+                    {isOwnProfile && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setMemoryMenuOpenId(memoryMenuOpenId === memory.id ? null : memory.id) }}
+                        aria-label="Memory options"
+                        style={{
+                          position: 'absolute', top: 4, right: 4, width: 24, height: 24, borderRadius: '50%',
+                          background: 'rgba(0,0,0,.45)', color: '#fff', fontSize: 14, fontWeight: 800,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 4,
+                        }}
+                      >
+                        •••
+                      </button>
+                    )}
+                    {memoryMenuOpenId === memory.id && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          position: 'absolute', top: 30, right: 4, zIndex: 6, minWidth: 148,
+                          background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 10,
+                          boxShadow: '0 10px 28px rgba(0,0,0,.4)', overflow: 'hidden',
+                        }}
+                      >
+                        <button
+                          onClick={() => handleRepostMemory(memory.id)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '0.55rem 0.7rem', fontSize: 12.5, fontWeight: 700, color: 'var(--ft-accent)', background: 'none', border: 'none', textAlign: 'left', fontFamily: 'inherit' }}
+                        >
+                          🔁 Repost as Story
+                        </button>
+                        <div style={{ height: 1, background: 'var(--ft-border-strong)' }} />
+                        <button
+                          onClick={() => { setMemoryMenuOpenId(null); setMemoryDeleteConfirmId(memory.id) }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '0.55rem 0.7rem', fontSize: 12.5, fontWeight: 700, color: '#ff4d6d', background: 'none', border: 'none', textAlign: 'left', fontFamily: 'inherit' }}
+                        >
+                          🗑 Delete Memory
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {memoryDeleteConfirmId && (
+              <div
+                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 2200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+                onClick={() => setMemoryDeleteConfirmId(null)}
+              >
+                <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 16, padding: '1.25rem', width: '100%', maxWidth: 320 }}>
+                  <div style={{ fontWeight: 700, color: 'var(--ft-text)', marginBottom: 6 }}>Delete this memory?</div>
+                  <div style={{ fontSize: 13, color: 'var(--ft-text-tertiary)', marginBottom: 16 }}>This can&apos;t be undone.</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => setMemoryDeleteConfirmId(null)} style={{ flex: 1, padding: '0.6rem', borderRadius: 10, background: 'var(--ft-bg)', color: 'var(--ft-text)', fontWeight: 600 }}>Cancel</button>
+                    <button onClick={() => handleDeleteMemory(memoryDeleteConfirmId)} style={{ flex: 1, padding: '0.6rem', borderRadius: 10, background: '#ff4d6d', color: '#fff', fontWeight: 700 }}>Delete</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {memoryToast && (
+              <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: 'rgba(6,214,160,.16)', border: '1px solid rgba(6,214,160,.4)', color: '#06d6a0', fontSize: 13, fontWeight: 600, padding: '0.5rem 0.9rem', borderRadius: 999, zIndex: 2200 }}>
+                {memoryToast}
+              </div>
+            )}
+
+            {memoryViewerId && (() => {
+              const idx = memories.findIndex(m => m.id === memoryViewerId)
+              if (idx === -1) return null
+              const memoryGroup: StoryAuthorGroup = {
+                user: { id: profile?.id ?? '', full_name: profile?.full_name ?? null, avatar_url: profile?.avatar_url ?? null },
+                stories: memories.map(m => ({
+                  id: m.id,
+                  user_id: m.user_id,
+                  media_url: m.media_url,
+                  media_type: m.media_type,
+                  caption: m.caption,
+                  duration_seconds: m.media_type === 'image' ? 5 : 15,
+                  created_at: m.original_created_at,
+                  expires_at: m.saved_at,
+                  saved_as_memory: true,
+                  view_count: 0,
+                })),
+                hasUnviewed: false,
+                latestCreatedAt: memories[0]?.original_created_at ?? '',
+              }
+              return (
+                <StoryViewer
+                  groups={[memoryGroup]}
+                  startGroupIndex={0}
+                  startStoryIndex={idx}
+                  currentUserId={user?.id ?? ''}
+                  mode="memories"
+                  onClose={() => setMemoryViewerId(null)}
+                  onStoryChanged={() => { setMemoriesLoaded(false); if (displayedProfileId) void loadMemories(displayedProfileId) }}
+                />
+              )
+            })()}
+          </div>
+        )}
+
         {activeTab === 'posts' && (
           <div className="profile-card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14 }}>

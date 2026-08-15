@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Avatar from '@/components/Avatar'
 import PostCard, { FeedPost } from '@/components/PostCard'
+import StoriesBar from '@/components/stories/StoriesBar'
 import { createClient } from '@/lib/supabase/client'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -431,6 +432,7 @@ export default function FeedPage() {
 
       <div className="feed-grid">
         <main className="feed-main-col">
+          <StoriesBar currentUserId={currentUserId} />
           <ComposerCard />
 
           {/* Discover / Following toggle */}

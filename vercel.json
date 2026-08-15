@@ -48,6 +48,10 @@
     {
       "path": "/api/cron/fitplan-weekly-checkin",
       "schedule": "0 9 * * 1"
+    },
+    {
+      "path": "/api/cron/stories-cleanup",
+      "schedule": "0 4 * * *"
     }
   ]
 }

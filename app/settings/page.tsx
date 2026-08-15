@@ -894,6 +894,9 @@ function NotificationsTab({ profile, onSaved }: { profile: Profile; onSaved: (p:
   const [trust, setTrust] = useState<boolean>((np.trust_alerts as boolean) ?? true)
   const [followers, setFollowers] = useState<boolean>((np.follower_alerts as boolean) ?? true)
   const [claps, setClaps] = useState<boolean>((np.clap_alerts as boolean) ?? true)
+  // Stories notifications default to OFF (opt-in) per David's 2026-08-11 decision —
+  // unlike the other alert types above, which default to true.
+  const [stories, setStories] = useState<boolean>((np.stories_enabled as boolean) ?? false)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
 
@@ -912,10 +915,11 @@ function NotificationsTab({ profile, onSaved }: { profile: Profile; onSaved: (p:
           trust_alerts: trust,
           follower_alerts: followers,
           clap_alerts: claps,
+          stories_enabled: stories,
         }),
       })
       if (res.ok) {
-        onSaved({ ...profile, notification_prefs: { email_digest: emailDigest, push_notifications: push, message_alerts: messages, trust_alerts: trust, follower_alerts: followers, clap_alerts: claps } })
+        onSaved({ ...profile, notification_prefs: { email_digest: emailDigest, push_notifications: push, message_alerts: messages, trust_alerts: trust, follower_alerts: followers, clap_alerts: claps, stories_enabled: stories } })
         showToast('Notification preferences saved!')
       } else {
         showToast('Failed to save.')
@@ -950,6 +954,7 @@ function NotificationsTab({ profile, onSaved }: { profile: Profile; onSaved: (p:
           { label: 'Trust received',      desc: 'When you earn Trust tokens',      val: trust,     set: setTrust },
           { label: 'New follower alerts', desc: 'When someone follows you',        val: followers, set: setFollowers },
           { label: 'Article clap alerts', desc: 'When someone claps your article', val: claps,     set: setClaps },
+          { label: 'Stories',             desc: 'When a connection posts a new 24h Story (off by default)', val: stories, set: setStories },
         ] as { label: string; desc: string; val: boolean; set: (v: boolean) => void }[]).map(item => (
           <div key={item.label} className="toggle-row">
             <div>

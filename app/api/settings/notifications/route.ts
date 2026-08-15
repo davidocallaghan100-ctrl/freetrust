@@ -112,6 +112,7 @@ export async function PATCH(request: NextRequest) {
       'trust_alerts',
       'follower_alerts',
       'clap_alerts',
+      'stories_enabled',
     ] as const
     type AllowedKey = typeof allowed[number]
     const prefs: Partial<Record<AllowedKey, unknown>> = {}
