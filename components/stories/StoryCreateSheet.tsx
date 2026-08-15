@@ -1,10 +1,11 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadToSupabaseStorageDirect, getVideoUploadTimeoutMs, PHOTO_UPLOAD_TIMEOUT_MS } from '@/lib/storage/directUpload'
 import { validateStoryFileSize, validateStoryVideo, resizeImageMaxWidth, getVideoDurationSeconds } from '@/lib/stories/mediaValidation'
 import { MAX_STORY_IMAGE_WIDTH, DEFAULT_IMAGE_STORY_DURATION_SECONDS } from '@/types/stories'
+import type { ManageableOrgForStories } from '@/types/stories'
 
 export interface StoryCreateSheetProps {
   onClose: () => void
@@ -23,9 +24,46 @@ export default function StoryCreateSheet({ onClose, onShared }: StoryCreateSheet
   const [progressLabel, setProgressLabel] = useState('')
   const [progressPct, setProgressPct] = useState(0)
 
+  // "Post as" — mirrors the same selector on /create. Empty array means
+  // "don't show the selector" (most users manage zero orgs). Orgs where the
+  // user is only a 'member' (not owner/admin) are never fetched here, so
+  // they never appear as a postable option at all.
+  const [manageableOrgs, setManageableOrgs] = useState<ManageableOrgForStories[]>([])
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null)
+
   const photoInputRef = useRef<HTMLInputElement | null>(null)
   const videoInputRef = useRef<HTMLInputElement | null>(null)
   const galleryInputRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadManageableOrgs() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || cancelled) return
+      const { data, error: fetchErr } = await supabase
+        .from('organisation_members')
+        .select('role, organisation:organisations!organisation_id(id, name, logo_url)')
+        .eq('user_id', user.id)
+        .in('role', ['owner', 'admin'])
+      if (fetchErr || cancelled) return
+      const orgs: ManageableOrgForStories[] = []
+      for (const row of (data ?? []) as Array<{ organisation: unknown }>) {
+        // Supabase returns the nested relation as either a single object or
+        // a one-element array depending on version — handle both shapes.
+        const raw = row.organisation
+        const obj = Array.isArray(raw) ? raw[0] : raw
+        if (obj && typeof obj === 'object' && 'id' in obj) {
+          const o = obj as { id: string; name: string; logo_url: string | null }
+          orgs.push({ id: o.id, name: o.name, logo_url: o.logo_url })
+        }
+      }
+      const unique = Array.from(new Map(orgs.map(o => [o.id, o])).values())
+      if (!cancelled) setManageableOrgs(unique)
+    }
+    void loadManageableOrgs()
+    return () => { cancelled = true }
+  }, [])
 
   const handlePicked = async (picked: File) => {
     setError('')
@@ -119,6 +157,7 @@ export default function StoryCreateSheet({ onClose, onShared }: StoryCreateSheet
           media_type: mediaType,
           caption: caption.trim() || null,
           duration_seconds: durationSeconds,
+          organisation_id: selectedOrgId,
         }),
       })
 
@@ -154,6 +193,53 @@ export default function StoryCreateSheet({ onClose, onShared }: StoryCreateSheet
 
         {stage === 'pick' && (
           <div style={{ padding: '1rem' }}>
+            {manageableOrgs.length > 0 && (
+              <div style={{ marginBottom: '0.9rem' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--ft-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem' }}>
+                  Post as
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOrgId(null)}
+                    style={{
+                      padding: '0.5rem 0.9rem', borderRadius: 999, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                      border: selectedOrgId === null ? '1.5px solid rgba(56,189,248,0.45)' : '1px solid rgba(148,163,184,0.22)',
+                      background: selectedOrgId === null ? 'rgba(56,189,248,0.12)' : 'transparent',
+                      color: selectedOrgId === null ? 'var(--ft-accent)' : 'var(--ft-text-secondary)',
+                      display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                    }}
+                  >
+                    <span>👤</span><span>@me</span>
+                  </button>
+                  {manageableOrgs.map(org => {
+                    const active = selectedOrgId === org.id
+                    return (
+                      <button
+                        key={org.id}
+                        type="button"
+                        onClick={() => setSelectedOrgId(org.id)}
+                        title={`Post as ${org.name}`}
+                        style={{
+                          padding: '0.5rem 0.9rem', borderRadius: 999, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                          border: active ? '1.5px solid rgba(139,92,246,0.5)' : '1px solid rgba(148,163,184,0.22)',
+                          background: active ? 'rgba(139,92,246,0.14)' : 'transparent',
+                          color: active ? '#c4b5fd' : 'var(--ft-text-secondary)',
+                          display: 'inline-flex', alignItems: 'center', gap: '0.4rem', maxWidth: 200, overflow: 'hidden',
+                        }}
+                      >
+                        {org.logo_url ? (
+                          <img src={org.logo_url} alt="" style={{ width: 16, height: 16, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} />
+                        ) : (
+                          <span style={{ fontSize: '0.9rem' }}>🏢</span>
+                        )}
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{org.name}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => photoInputRef.current?.click()} style={pickerBtnStyle}>
                 <span style={{ fontSize: '1.4rem' }}>📷</span>Camera
@@ -207,7 +293,9 @@ export default function StoryCreateSheet({ onClose, onShared }: StoryCreateSheet
 
             {stage === 'done' && (
               <div style={{ marginTop: 14, padding: '0.6rem 0.8rem', borderRadius: 12, background: 'rgba(6,214,160,.12)', border: '1px solid rgba(6,214,160,.35)', color: '#06d6a0', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-                ✅ Story shared! Visible to your connections for 24h.
+                {selectedOrgId
+                  ? `✅ Story shared! Visible to this organisation's followers for 24h.`
+                  : '✅ Story shared! Visible to your connections for 24h.'}
               </div>
             )}
           </div>

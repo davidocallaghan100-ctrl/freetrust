@@ -106,9 +106,11 @@ export default function StoriesBar({ currentUserId }: StoriesBarProps) {
           </span>
         </button>
 
-        {/* Connections' bubbles */}
+        {/* Connections' + organisations' bubbles */}
         {otherGroups.map((group) => {
-          const displayName = group.user.full_name || 'FreeTrust member'
+          const isOrg = !!group.org
+          const displayName = group.user.full_name || (isOrg ? 'Organisation' : 'FreeTrust member')
+          const ringBg = group.hasUnviewed ? 'linear-gradient(135deg,var(--ft-accent),#00d4aa)' : 'var(--ft-text-faint)'
           return (
             <button
               key={group.user.id}
@@ -117,17 +119,39 @@ export default function StoriesBar({ currentUserId }: StoriesBarProps) {
             >
               <div
                 style={{
-                  width: 64, height: 64, borderRadius: '50%', padding: 2.5,
-                  background: group.hasUnviewed ? 'linear-gradient(135deg,var(--ft-accent),#00d4aa)' : 'var(--ft-text-faint)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 64, height: 64, borderRadius: isOrg ? 18 : '50%', padding: 2.5,
+                  background: ringBg,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative',
                 }}
               >
-                <div style={{ background: 'var(--ft-bg)', borderRadius: '50%', padding: 2 }}>
-                  <Avatar url={group.user.avatar_url} name={group.user.full_name} size={54} />
-                </div>
+                {isOrg ? (
+                  <div style={{ background: 'var(--ft-bg)', borderRadius: 15, padding: 2, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                    {group.user.avatar_url ? (
+                      <img src={group.user.avatar_url} alt={displayName} style={{ width: '100%', height: '100%', borderRadius: 12, objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ fontSize: 22 }}>🏢</span>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ background: 'var(--ft-bg)', borderRadius: '50%', padding: 2 }}>
+                    <Avatar url={group.user.avatar_url} name={group.user.full_name} size={54} />
+                  </div>
+                )}
+                {isOrg && (
+                  <div
+                    style={{
+                      position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, borderRadius: 6,
+                      background: 'var(--ft-bg)', border: '2px solid var(--ft-bg)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11,
+                    }}
+                    aria-label="Organisation"
+                  >
+                    🏢
+                  </div>
+                )}
               </div>
               <span style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', fontWeight: group.hasUnviewed ? 700 : 500, maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {displayName.split(' ')[0]}
+                {isOrg ? displayName : displayName.split(' ')[0]}
               </span>
             </button>
           )

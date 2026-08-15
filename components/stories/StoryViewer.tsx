@@ -72,7 +72,12 @@ export default function StoryViewer({
 
   const group = groups[groupIndex]
   const story: StoryRecord | undefined = group?.stories[storyIndex]
-  const isOwner = group?.user.id === currentUserId
+  const isOrgGroup = !!group?.org
+  // For personal groups, "owner" means it's literally your own group. For
+  // org groups, it means the viewer currently holds an owner/admin role in
+  // that org (group.canManage, computed server-side in GET /api/stories) —
+  // NOT whether they happen to be group.user.id, since that's the org's id.
+  const isOwner = isOrgGroup ? !!group?.canManage : group?.user.id === currentUserId
 
   const durationMs = story ? story.duration_seconds * 1000 : 5000
 
@@ -304,10 +309,22 @@ export default function StoryViewer({
         {/* Header */}
         <div style={{ position: 'absolute', top: mode === 'stories' ? 26 : 14, left: 12, right: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 5 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Avatar url={group.user.avatar_url} name={group.user.full_name} size={32} />
+            {isOrgGroup ? (
+              group.user.avatar_url ? (
+                <img src={group.user.avatar_url} alt={group.user.full_name || 'Organisation'} style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+              ) : (
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>🏢</div>
+              )
+            ) : (
+              <Avatar url={group.user.avatar_url} name={group.user.full_name} size={32} />
+            )}
             <div style={{ lineHeight: 1.2 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{isOwner ? 'You' : displayName}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 5 }}>
+                {isOrgGroup ? (group.user.full_name || 'Organisation') : (isOwner ? 'You' : displayName)}
+                {isOrgGroup && <span style={{ fontSize: 10, fontWeight: 700, color: '#7dd3fc', background: 'rgba(56,189,248,.18)', padding: '1px 5px', borderRadius: 5 }}>ORG</span>}
+              </div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,.65)' }}>
+                {isOrgGroup && story.posted_by_name ? `Posted by ${story.posted_by_name} · ` : ''}
                 {relativeTime(story.created_at)}{mode === 'memories' ? ' · Memory' : ''}
               </div>
             </div>
@@ -358,7 +375,7 @@ export default function StoryViewer({
               👁 {story.view_count} view{story.view_count === 1 ? '' : 's'}
             </button>
             <div style={{ display: 'flex', gap: 6 }}>
-              {!story.saved_as_memory && (
+              {!story.saved_as_memory && !isOrgGroup && (
                 <button
                   onClick={(e) => { e.stopPropagation(); handleSaveAsMemory() }}
                   style={{ fontSize: 12, fontWeight: 700, padding: '0.4rem 0.65rem', borderRadius: 999, background: 'linear-gradient(135deg,var(--ft-accent),#00d4aa)', color: 'var(--ft-bg)' }}

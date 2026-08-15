@@ -91,3 +91,78 @@ export async function notifyConnectionsNewStory(params: StoryFanoutParams): Prom
     console.error('[story-fanout] unexpected error:', err instanceof Error ? err.message : err)
   }
 }
+
+/**
+ * notifyOrgFollowersNewStory
+ *
+ * Same push-notification fanout as notifyConnectionsNewStory above, but for
+ * organisation-posted stories (stories.posted_as_organisation_id set). Fans
+ * out to the org's followers (organisation_follows) instead of the posting
+ * member's personal connections (user_follows) — these are two separate
+ * audiences and must never be merged. Still respects each recipient's
+ * `notification_prefs.stories_enabled` opt-in toggle (same toggle governs
+ * both personal and org story notifications).
+ */
+export interface OrgStoryFanoutParams {
+  storyId: string
+  orgId:   string
+  orgName: string
+}
+
+export async function notifyOrgFollowersNewStory(params: OrgStoryFanoutParams): Promise<void> {
+  const { storyId, orgId, orgName } = params
+
+  try {
+    const admin = createAdminClient()
+
+    const { data: followRows, error: followErr } = await admin
+      .from('organisation_follows')
+      .select('user_id')
+      .eq('organisation_id', orgId)
+
+    if (followErr) {
+      console.error('[org-story-fanout] failed to fetch org followers:', followErr.message)
+      return
+    }
+    if (!followRows || followRows.length === 0) return
+
+    const followerIds = followRows.map(r => r.user_id as string)
+
+    const { data: profiles, error: profilesErr } = await admin
+      .from('profiles')
+      .select('id, notification_prefs, deleted_at')
+      .in('id', followerIds)
+      .is('deleted_at', null)
+
+    if (profilesErr || !profiles) {
+      console.error('[org-story-fanout] failed to fetch profiles:', profilesErr?.message)
+      return
+    }
+
+    const optedIn = profiles.filter(p => {
+      const prefs = (p.notification_prefs ?? {}) as Record<string, unknown>
+      return prefs.stories_enabled === true
+    })
+
+    if (optedIn.length === 0) return
+
+    let pushSent = 0
+    for (const profile of optedIn) {
+      try {
+        const pushed = await sendPushNotification({
+          userId: profile.id as string,
+          title: `${orgName} posted a new Story`,
+          message: `Tap to view before it expires in 24h.`,
+          url: `https://freetrust.co/feed?story=${storyId}`,
+        })
+        if (pushed) pushSent++
+      } catch { /* silent — push is progressive enhancement */ }
+
+      await sleep(100)
+    }
+
+    console.log(`[org-story-fanout] sent ${pushSent}/${optedIn.length} pushes for org story ${storyId}`)
+  } catch (err) {
+    console.error('[org-story-fanout] unexpected error:', err instanceof Error ? err.message : err)
+  }
+}
