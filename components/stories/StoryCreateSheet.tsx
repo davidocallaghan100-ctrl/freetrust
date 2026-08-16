@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { uploadToSupabaseStorageDirect, getVideoUploadTimeoutMs, PHOTO_UPLOAD_TIMEOUT_MS } from '@/lib/storage/directUpload'
+import { uploadToSupabaseStorageDirect, getVideoUploadTimeoutMs, PHOTO_UPLOAD_TIMEOUT_MS, formatUploadProgress } from '@/lib/storage/directUpload'
 import { validateStoryFileSize, validateStoryVideo, resizeImageMaxWidth, getVideoDurationSeconds } from '@/lib/stories/mediaValidation'
 import { MAX_STORY_IMAGE_WIDTH, DEFAULT_IMAGE_STORY_DURATION_SECONDS } from '@/types/stories'
 import type { ManageableOrgForStories } from '@/types/stories'
@@ -131,6 +131,11 @@ export default function StoryCreateSheet({ onClose, onShared }: StoryCreateSheet
       setProgressLabel(`Uploading ${mediaType}…`)
       setProgressPct(35)
 
+      // Real byte-level progress (was a fixed 35%→75% jump with no feedback
+      // during the actual transfer — the slowest part of the whole flow).
+      // Maps the tracker's 0-100% onto the 35-75 UI band reserved for the
+      // upload step so "Preparing…"/"Publishing…" keep their own visible
+      // slots either side of it.
       const { publicUrl } = await uploadToSupabaseStorageDirect({
         bucket: 'stories',
         storagePath,
@@ -138,6 +143,10 @@ export default function StoryCreateSheet({ onClose, onShared }: StoryCreateSheet
         contentType: file.type || (mediaType === 'video' ? 'video/mp4' : 'image/jpeg'),
         accessToken,
         timeoutMs: mediaType === 'video' ? getVideoUploadTimeoutMs(file.size) : PHOTO_UPLOAD_TIMEOUT_MS,
+        onProgress: (snapshot) => {
+          setProgressPct(35 + Math.round((snapshot.percent / 100) * 40))
+          setProgressLabel(`Uploading ${mediaType}… ${formatUploadProgress(snapshot)}`)
+        },
       })
 
       setProgressPct(75)

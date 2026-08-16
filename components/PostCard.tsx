@@ -1191,36 +1191,52 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
         })
     }
 
+    // Debounce the play/pause decision: during a fast scroll flick, the
+    // observer can fire many times in quick succession as the card crosses
+    // the 8 threshold breakpoints below. Acting on every single fire caused
+    // rapid play()/pause() thrashing on a video that hadn't finished
+    // buffering from the previous play() call yet — a real contributor to
+    // the reported "glitching" (visible stutter), independent of the
+    // preload change above. Requiring the visibility state to hold for a
+    // short window before acting lets a quick flick-past skip playback
+    // entirely instead of starting-then-immediately-stopping a fetch.
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null
     const observer = new IntersectionObserver(
       entries => {
         const entry = entries[0]
-        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 1
-        const elementCenter = entry.boundingClientRect.top + (entry.boundingClientRect.height / 2)
-        const visibleTop = Math.max(0, entry.boundingClientRect.top)
-        const visibleBottom = Math.min(viewportHeight, entry.boundingClientRect.bottom)
-        const visiblePx = Math.max(0, visibleBottom - visibleTop)
-        const mostlyInView = entry.isIntersecting && entry.intersectionRatio >= 0.24
-        const centerNearViewport = elementCenter > viewportHeight * 0.12 && elementCenter < viewportHeight * 0.88
-        const visiblyInFeed = entry.isIntersecting && visiblePx >= Math.min(240, entry.boundingClientRect.height * 0.3)
-        const shouldAutoplay = (mostlyInView || (centerNearViewport && visiblyInFeed)) && !userPausedRef.current
+        if (debounceTimer) clearTimeout(debounceTimer)
+        debounceTimer = setTimeout(() => {
+          const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 1
+          const elementCenter = entry.boundingClientRect.top + (entry.boundingClientRect.height / 2)
+          const visibleTop = Math.max(0, entry.boundingClientRect.top)
+          const visibleBottom = Math.min(viewportHeight, entry.boundingClientRect.bottom)
+          const visiblePx = Math.max(0, visibleBottom - visibleTop)
+          const mostlyInView = entry.isIntersecting && entry.intersectionRatio >= 0.24
+          const centerNearViewport = elementCenter > viewportHeight * 0.12 && elementCenter < viewportHeight * 0.88
+          const visiblyInFeed = entry.isIntersecting && visiblePx >= Math.min(240, entry.boundingClientRect.height * 0.3)
+          const shouldAutoplay = (mostlyInView || (centerNearViewport && visiblyInFeed)) && !userPausedRef.current
 
-        if (shouldAutoplay) {
-          tryAutoplay()
-        } else {
-          if (!el.paused) {
-            autoPausedRef.current = true
-            el.pause()
-            setPlaying(false)
+          if (shouldAutoplay) {
+            tryAutoplay()
+          } else {
+            if (!el.paused) {
+              autoPausedRef.current = true
+              el.pause()
+              setPlaying(false)
+            }
+            if (!entry.isIntersecting || entry.intersectionRatio < 0.08) {
+              userPausedRef.current = false
+            }
           }
-          if (!entry.isIntersecting || entry.intersectionRatio < 0.08) {
-            userPausedRef.current = false
-          }
-        }
+        }, 180)
       },
       { threshold: [0, 0.08, 0.18, 0.24, 0.35, 0.5, 0.75, 1] }
     )
     observer.observe(el)
-    return () => observer.disconnect()
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      observer.disconnect()
+    }
   }, [])
 
   const togglePlay = () => {
@@ -1311,7 +1327,13 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
         loop={isShort}
         poster={posterUrl ?? undefined}
         crossOrigin="anonymous"
-        preload="metadata"
+        // Pre-buffer real media data (not just metadata) so playback has a
+        // head start once this card scrolls into view — reduces the
+        // stutter/rebuffer ("glitching") that showed up with metadata-only
+        // preload combined with the IntersectionObserver-driven autoplay
+        // below. Browsers still respect data-saver settings; this only
+        // raises the *hint* priority, it doesn't force a download.
+        preload="auto"
         onLoadedMetadata={() => {
           const el = videoRef.current
           setDuration(el?.duration ?? null)
