@@ -9,6 +9,7 @@ import SearchBar from './SearchBar'
 import TrustAssistant from './TrustAssistant'
 import LanguageSelector from './LanguageSelector'
 import ThemeToggleButton from './ThemeToggleButton'
+import CookieConsentBar from './CookieConsentBar'
 import { canReceivePush, getPushCapabilities } from '@/lib/push/capabilities'
 import { usePushSubscription } from '@/lib/push/usePushSubscription'
 import { createClient } from '@/lib/supabase/client'
@@ -256,6 +257,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--ft-bg)' }}>
         {children}
+        <CookieConsentBar />
       </div>
     )
   }
@@ -290,6 +292,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {showPushBanner && (
         <PushPromptBanner onDismiss={() => setShowPushBanner(false)} />
       )}
+      <CookieConsentBar />
     </>
   )
 }
