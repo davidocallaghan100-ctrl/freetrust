@@ -37,8 +37,8 @@ function Slider({
   return (
     <div style={{ marginBottom: 18 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span style={{ fontSize: 13, color: 'var(--ft-text-secondary)' }}>{label}</span>
-        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ft-text)' }}>
+        <span style={{ fontSize: 13, color: '#94a3b8' }}>{label}</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9' }}>
           {format ? format(value) : value}
         </span>
       </div>
@@ -66,7 +66,7 @@ function Slider({
         <div style={{
           position: 'absolute', left: `${pct}%`, transform: 'translateX(-50%)',
           width: 16, height: 16, borderRadius: '50%',
-          background: '#10b981', border: '2px solid var(--ft-bg)',
+          background: '#10b981', border: '2px solid #0f172a',
           boxShadow: '0 0 8px rgba(16,185,129,0.5)',
           pointerEvents: 'none', transition: 'left 0.1s',
         }} />
@@ -79,8 +79,8 @@ function Slider({
 function getTier(annual: number, labels: Record<string, string>): { label: string; color: string; emoji: string } {
   if (annual >= 10000) return { label: labels.platinum,  color: 'var(--ft-accent)', emoji: '💎' }
   if (annual >= 5000)  return { label: labels.gold,      color: '#f59e0b', emoji: '🥇' }
-  if (annual >= 1000)  return { label: labels.silver,    color: 'var(--ft-text-secondary)', emoji: '🥈' }
-  return                      { label: labels.member,    color: 'var(--ft-text-tertiary)', emoji: '🌱' }
+  if (annual >= 1000)  return { label: labels.silver,    color: '#94a3b8', emoji: '🥈' }
+  return                      { label: labels.member,    color: '#64748b', emoji: '🌱' }
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -151,7 +151,7 @@ export default function ROICalculator() {
                 : 'transparent',
               color: mode === m
                 ? m === 'seller' ? '#34d399' : '#60a5fa'
-                : 'var(--ft-text-tertiary)',
+                : '#64748b',
               borderBottom: mode === m
                 ? `2px solid ${m === 'seller' ? '#10b981' : '#3b82f6'}`
                 : '2px solid transparent',
@@ -174,7 +174,7 @@ export default function ROICalculator() {
           display: 'flex',
           flexDirection: 'column',
         }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ft-text-tertiary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 20 }}>
             {t('activity')}
           </div>
 
@@ -200,7 +200,7 @@ export default function ROICalculator() {
                 />
                 {/* On-time toggle */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                  <span style={{ fontSize: 13, color: 'var(--ft-text-secondary)' }}>{t('deliverOnTime')}</span>
+                  <span style={{ fontSize: 13, color: '#94a3b8' }}>{t('deliverOnTime')}</span>
                   <button
                     onClick={() => setOnTime(v => !v)}
                     style={{
@@ -254,7 +254,7 @@ export default function ROICalculator() {
 
         {/* ── Right: Output ── */}
         <div className="roi-right" style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ft-text-tertiary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
             {t('earnings')}
           </div>
 
@@ -268,10 +268,10 @@ export default function ROICalculator() {
                 borderRadius: 12, padding: '14px 16px',
               }}>
                 <div style={{ fontSize: 11, color: '#6ee7b7', marginBottom: 4, fontWeight: 600 }}>{t('monthlyRevenue')}</div>
-                <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--ft-text)', lineHeight: 1 }}>
+                <div style={{ fontSize: 32, fontWeight: 900, color: '#f1f5f9', lineHeight: 1 }}>
                   €<AnimatedNum value={result.monthlyNet} />
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', marginTop: 4 }}>
+                <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
                   €<AnimatedNum value={result.monthlyGross} /> {t('gross')} · {t('feeDeducted', {fee: result.platformFeePct})}
                 </div>
               </div>
@@ -284,11 +284,11 @@ export default function ROICalculator() {
                 gap: 8, minWidth: 0,
               }}>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', marginBottom: 3 }}>{t('annualRevenue')}</div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginBottom: 3 }}>{t('annualRevenue')}</div>
                   <div style={{ fontSize: 20, fontWeight: 800, color: '#34d399', whiteSpace: 'nowrap' }}>
                     €<AnimatedNum value={result.annualNet} />
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--ft-text-faint)', marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
                     €<AnimatedNum value={result.annualGross} /> {t('gross')}
                   </div>
                 </div>
@@ -313,13 +313,13 @@ export default function ROICalculator() {
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           }}>
             <div>
-              <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', marginBottom: 3 }}>{t('monthlyTrustCoins')}</div>
+              <div style={{ fontSize: 11, color: '#64748b', marginBottom: 3 }}>{t('monthlyTrustCoins')}</div>
               <div style={{ fontSize: 24, fontWeight: 900, color: '#10b981', lineHeight: 1 }}>
                 <AnimatedNum value={result.monthly} suffix="₮" />
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', marginBottom: 3 }}>{t('annual')}</div>
+              <div style={{ fontSize: 11, color: '#64748b', marginBottom: 3 }}>{t('annual')}</div>
               <div style={{ fontSize: 16, fontWeight: 800, color: '#34d399' }}>
                 <AnimatedNum value={result.annual} suffix="₮" />
               </div>
@@ -332,15 +332,15 @@ export default function ROICalculator() {
             border: `1px solid ${result.feeReduction > 0 ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.06)'}`,
             borderRadius: 12, padding: '12px 16px',
           }}>
-            <div style={{ fontSize: 11, color: 'var(--ft-text-tertiary)', marginBottom: 3 }}>{t('feeReduction')}</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: result.feeReduction > 0 ? '#f59e0b' : 'var(--ft-text-faint)' }}>
+            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 3 }}>{t('feeReduction')}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: result.feeReduction > 0 ? '#f59e0b' : '#475569' }}>
               {result.feeReduction > 0
                 ? <><AnimatedNum value={result.feeReduction} suffix="%" /> {t('offPlatformFees')}</>
                 : t('unlockSavings')
               }
             </div>
             {result.moneySaved > 0 && (
-              <div style={{ fontSize: 12, color: 'var(--ft-text-tertiary)', marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
                 ≈ <strong style={{ color: '#fbbf24' }}>€<AnimatedNum value={result.moneySaved} /></strong> {t('extraKept')}
               </div>
             )}
@@ -372,16 +372,16 @@ export default function ROICalculator() {
       }}>
         {mode === 'seller' ? (
           <>
-            <span style={{ fontSize: 11, color: 'var(--ft-text-faint)' }}>🏪 <strong style={{ color: 'var(--ft-text-tertiary)' }}>+100₮</strong> {t('perListing')}</span>
-            <span style={{ fontSize: 11, color: 'var(--ft-text-faint)' }}>⚡ <strong style={{ color: 'var(--ft-text-tertiary)' }}>+150₮</strong> {t('onTimeDelivery')}</span>
-            <span style={{ fontSize: 11, color: 'var(--ft-text-faint)' }}>⭐ <strong style={{ color: 'var(--ft-text-tertiary)' }}>+50₮</strong> {t('perReview')}</span>
-            <span style={{ fontSize: 11, color: 'var(--ft-text-faint)' }}>🗺️ <strong style={{ color: 'var(--ft-text-tertiary)' }}>+10₮</strong> {t('liveTracking')}</span>
+            <span style={{ fontSize: 11, color: '#475569' }}>🏪 <strong style={{ color: '#64748b' }}>+100₮</strong> {t('perListing')}</span>
+            <span style={{ fontSize: 11, color: '#475569' }}>⚡ <strong style={{ color: '#64748b' }}>+150₮</strong> {t('onTimeDelivery')}</span>
+            <span style={{ fontSize: 11, color: '#475569' }}>⭐ <strong style={{ color: '#64748b' }}>+50₮</strong> {t('perReview')}</span>
+            <span style={{ fontSize: 11, color: '#475569' }}>🗺️ <strong style={{ color: '#64748b' }}>+10₮</strong> {t('liveTracking')}</span>
           </>
         ) : (
           <>
-            <span style={{ fontSize: 11, color: 'var(--ft-text-faint)' }}>✅ <strong style={{ color: 'var(--ft-text-tertiary)' }}>+25₮</strong> {t('perPurchase')}</span>
-            <span style={{ fontSize: 11, color: 'var(--ft-text-faint)' }}>⭐ <strong style={{ color: 'var(--ft-text-tertiary)' }}>+55₮</strong> {t('fiveStarReview')}</span>
-            <span style={{ fontSize: 11, color: 'var(--ft-text-faint)' }}>🎁 <strong style={{ color: 'var(--ft-text-tertiary)' }}>+200₮</strong> {t('signupBonus')}</span>
+            <span style={{ fontSize: 11, color: '#475569' }}>✅ <strong style={{ color: '#64748b' }}>+25₮</strong> {t('perPurchase')}</span>
+            <span style={{ fontSize: 11, color: '#475569' }}>⭐ <strong style={{ color: '#64748b' }}>+55₮</strong> {t('fiveStarReview')}</span>
+            <span style={{ fontSize: 11, color: '#475569' }}>🎁 <strong style={{ color: '#64748b' }}>+200₮</strong> {t('signupBonus')}</span>
           </>
         )}
       </div>

@@ -8,6 +8,7 @@ import BottomNav from './BottomNav'
 import SearchBar from './SearchBar'
 import TrustAssistant from './TrustAssistant'
 import LanguageSelector from './LanguageSelector'
+import ThemeToggleButton from './ThemeToggleButton'
 import { canReceivePush, getPushCapabilities } from '@/lib/push/capabilities'
 import { usePushSubscription } from '@/lib/push/usePushSubscription'
 import { createClient } from '@/lib/supabase/client'
@@ -263,6 +264,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <>
       <Nav />
       <SearchBar />
+      {isLanding && <ThemeToggleButton variant="floating" />}
       {isLanding && <LanguageSelector variant="floating" />}
       <div style={{ display: 'flex' }}>
         <Sidebar />

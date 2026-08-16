@@ -8,6 +8,7 @@ import Avatar from '@/components/Avatar'
 import { createClient } from '@/lib/supabase/client'
 import CurrencySwitcher from '@/components/CurrencySwitcher'
 import LanguageSelector from '@/components/LanguageSelector'
+import ThemeToggleButton from '@/components/ThemeToggleButton'
 import { isWholeIslandIrelandProfile } from '@/lib/experience/irelandAccess'
 import { isFreeTrustAdminEmail } from '@/lib/admin/emails'
 import { useTheme } from '@/context/ThemeContext'
@@ -468,6 +469,7 @@ export default function Nav() {
             </Link>
           )}
           <CurrencySwitcher compact />
+          {isLanding && <ThemeToggleButton variant="header" />}
           {isLanding && <LanguageSelector variant="header" />}
           {user && <NotificationBell />}
           {!loading && !user && (
