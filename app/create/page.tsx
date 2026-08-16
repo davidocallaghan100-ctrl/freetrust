@@ -6,6 +6,15 @@ import { createClient } from '@/lib/supabase/client'
 import { compressImage } from '@/lib/image-compression'
 import dynamic from 'next/dynamic'
 import type { DeliveryZoneValue } from '@/components/DeliveryZoneMap'
+import {
+  uploadToSupabaseStorageDirect,
+  uploadVideoResumable,
+  getVideoUploadTimeoutMs,
+  formatUploadProgress,
+  PHOTO_UPLOAD_TIMEOUT_MS,
+  RESUMABLE_UPLOAD_THRESHOLD_BYTES,
+  type UploadProgressSnapshot,
+} from '@/lib/storage/directUpload'
 
 const DeliveryZonePicker = dynamic(() => import('@/components/DeliveryZonePicker'), { ssr: false })
 
@@ -44,11 +53,6 @@ type TextOverlayOption = {
   sampleStyle: React.CSSProperties
 }
 
-interface DirectStorageUploadResult {
-  publicUrl: string
-  storagePath: string
-}
-
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const POST_TYPES: { type: PostType; icon: string; label: string; desc: string }[] = [
@@ -64,25 +68,6 @@ const POST_TYPES: { type: PostType; icon: string; label: string; desc: string }[
   { type: 'product',  icon: '📦',  label: 'Product',      desc: 'List a product'          },
   { type: 'poll',     icon: '📊',  label: 'Poll',         desc: 'Get opinions'            },
 ]
-
-const PHOTO_UPLOAD_TIMEOUT_MS = 45_000
-
-// Videos can range from a few MB to hundreds of MB. A fixed timeout either
-// times out large-but-legitimate uploads on slower connections or leaves
-// tiny uploads waiting needlessly long to detect a genuinely stalled
-// connection. Scale the timeout with file size instead: a floor for small
-// clips, roughly 3s of budget per MB (≈333 KB/s sustained — a safe floor
-// for mobile networks), capped so a truly stalled upload still fails fast
-// enough for the user to retry.
-const VIDEO_UPLOAD_TIMEOUT_FLOOR_MS = 120_000   // 2 min minimum
-const VIDEO_UPLOAD_TIMEOUT_CAP_MS = 900_000     // 15 min maximum
-const VIDEO_UPLOAD_MS_PER_MB = 3_000            // ≈333 KB/s sustained-throughput budget
-
-function getVideoUploadTimeoutMs(fileSizeBytes: number) {
-  const sizeMb = fileSizeBytes / (1024 * 1024)
-  const scaled = VIDEO_UPLOAD_TIMEOUT_FLOOR_MS + sizeMb * VIDEO_UPLOAD_MS_PER_MB
-  return Math.min(VIDEO_UPLOAD_TIMEOUT_CAP_MS, Math.max(VIDEO_UPLOAD_TIMEOUT_FLOOR_MS, scaled))
-}
 
 const TEXT_OVERLAY_OPTIONS: TextOverlayOption[] = [
   {
@@ -134,72 +119,6 @@ function getTextOverlayPositionStyle(position: TextOverlayPosition): React.CSSPr
   if (position === 'top') return { alignItems: 'center', justifyContent: 'flex-start', paddingTop: '12%' }
   if (position === 'center') return { alignItems: 'center', justifyContent: 'center' }
   return { alignItems: 'center', justifyContent: 'flex-end', paddingBottom: '12%' }
-}
-
-function encodeStoragePath(path: string) {
-  return path.split('/').map(segment => encodeURIComponent(segment)).join('/')
-}
-
-async function uploadToSupabaseStorageDirect(params: {
-  bucket: string
-  storagePath: string
-  file: File
-  contentType: string
-  accessToken: string
-  timeoutMs: number
-}): Promise<DirectStorageUploadResult> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '')
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!supabaseUrl || !anonKey) {
-    throw new Error('Supabase upload config is missing')
-  }
-
-  const encodedPath = encodeStoragePath(params.storagePath)
-  const uploadUrl = `${supabaseUrl}/storage/v1/object/${params.bucket}/${encodedPath}`
-  const controller = new AbortController()
-  const timeout = window.setTimeout(() => controller.abort(), params.timeoutMs)
-
-  try {
-    const res = await fetch(uploadUrl, {
-      method: 'POST',
-      headers: {
-        apikey: anonKey,
-        authorization: `Bearer ${params.accessToken}`,
-        'cache-control': '31536000',
-        'content-type': params.contentType,
-        'x-upsert': 'false',
-      },
-      body: params.file,
-      signal: controller.signal,
-    })
-
-    if (!res.ok) {
-      let detail = `${res.status} ${res.statusText}`.trim()
-      try {
-        const data = await res.json() as { error?: string; message?: string }
-        detail = data.error || data.message || detail
-      } catch {
-        try {
-          const text = await res.text()
-          if (text.trim()) detail = text.slice(0, 180)
-        } catch { /* ignore */ }
-      }
-      throw new Error(detail)
-    }
-
-    return {
-      publicUrl: `${supabaseUrl}/storage/v1/object/public/${params.bucket}/${encodedPath}`,
-      storagePath: params.storagePath,
-    }
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      const seconds = Math.round(params.timeoutMs / 1000)
-      throw new Error(`Upload timed out after ${seconds}s. Please try again on Wi‑Fi or choose a smaller photo.`)
-    }
-    throw err
-  } finally {
-    window.clearTimeout(timeout)
-  }
 }
 
 const CATEGORIES = ['General', 'Business', 'Creative', 'Tech', 'Social', 'Education', 'Health', 'Finance', 'Events', 'Other']
@@ -426,6 +345,11 @@ export default function CreatePage() {
   const [uploadedMediaUrl, setUploadedMediaUrl] = useState<string | null>(null)
   const [uploadedPhotoUrls, setUploadedPhotoUrls] = useState<string[]>([])
   const [uploadProgress, setUploadProgress] = useState<string>('')
+  // Live byte-level progress for the animated bar + ETA. Only populated
+  // while bytes are actually in flight (null before/after the transfer, so
+  // the plain uploadProgress text — "Preparing…", "✓ Upload complete",
+  // error copy — still renders on its own outside that window).
+  const [uploadProgressSnapshot, setUploadProgressSnapshot] = useState<UploadProgressSnapshot | null>(null)
 
   // Link preview
   const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null)
@@ -572,6 +496,7 @@ export default function CreatePage() {
     // the actual MIME type below so we don't trust the UI's label.
     setUploadingMedia(true)
     setUploadProgress(_type === 'photo' ? 'Preparing photo…' : 'Preparing upload…')
+    setUploadProgressSnapshot(null)
     if (_type !== 'photo') setUploadedMediaUrl(null)
 
     // Client-side image compression — no-op for videos because
@@ -713,20 +638,40 @@ export default function CreatePage() {
       setUploadProgress(`Uploading ${(file.size / 1024 / 1024).toFixed(1)} MB…`)
 
       // ── 5. Upload ───────────────────────────────────────────────────────
-      // Use an abortable fetch to the Supabase Storage REST API. This keeps
-      // uploads direct from the phone to Supabase, but guarantees the UI will
-      // recover with a clear timeout message if the mobile network/PWA stalls.
+      // Videos at/above RESUMABLE_UPLOAD_THRESHOLD_BYTES use Supabase's TUS
+      // resumable protocol: a dropped mobile connection resumes from the
+      // last uploaded 6MB chunk instead of restarting the whole file, which
+      // is the real fix for large screen-recording uploads stalling out on
+      // flaky networks. Smaller files (photos, short clips) stay on the
+      // single-request XHR path — real upload.progress events either way,
+      // reported through the same onProgress callback.
       step = 'upload'
       let publicUrl: string
+      const onProgress = (snapshot: UploadProgressSnapshot) => {
+        setUploadProgressSnapshot(snapshot)
+        setUploadProgress(`Uploading ${(file.size / 1024 / 1024).toFixed(1)} MB… ${formatUploadProgress(snapshot)}`)
+      }
       try {
-        const uploaded = await uploadToSupabaseStorageDirect({
-          bucket: 'feed-media',
-          storagePath,
-          file,
-          contentType: fileType,
-          accessToken,
-          timeoutMs: isVideo ? getVideoUploadTimeoutMs(file.size) : PHOTO_UPLOAD_TIMEOUT_MS,
-        })
+        const timeoutMs = isVideo ? getVideoUploadTimeoutMs(file.size) : PHOTO_UPLOAD_TIMEOUT_MS
+        const uploaded = isVideo && file.size >= RESUMABLE_UPLOAD_THRESHOLD_BYTES
+          ? await uploadVideoResumable({
+              bucket: 'feed-media',
+              storagePath,
+              file,
+              contentType: fileType,
+              accessToken,
+              timeoutMs,
+              onProgress,
+            })
+          : await uploadToSupabaseStorageDirect({
+              bucket: 'feed-media',
+              storagePath,
+              file,
+              contentType: fileType,
+              accessToken,
+              timeoutMs,
+              onProgress,
+            })
         publicUrl = uploaded.publicUrl
       } catch (thrown) {
         const msg = thrown instanceof Error ? thrown.message : String(thrown)
@@ -772,6 +717,7 @@ export default function CreatePage() {
       setUploadProgress(`Upload failed [${step}] — ${msg}`)
     } finally {
       setUploadingMedia(false)
+      setUploadProgressSnapshot(null)
     }
   }
 
@@ -853,6 +799,61 @@ export default function CreatePage() {
   const textOverlayText = f('text_overlay_text').trim()
   const textOverlayStyle = normaliseTextOverlayStyle(f('text_overlay_style'))
   const textOverlayPosition = normaliseTextOverlayPosition(f('text_overlay_position'))
+
+  const renderUploadProgressBar = () => {
+    if (!uploadingMedia || !uploadProgressSnapshot) return null
+    const pct = uploadProgressSnapshot.percent
+    return (
+      <div style={{ marginTop: '0.4rem' }}>
+        <div
+          style={{
+            position: 'relative',
+            height: 6,
+            borderRadius: 999,
+            background: 'var(--ft-bg)',
+            border: '1px solid var(--ft-border-strong)',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: `${pct}%`,
+              minWidth: pct > 0 ? '6px' : 0,
+              borderRadius: 999,
+              background: 'linear-gradient(90deg, var(--ft-accent), #818cf8)',
+              transition: 'width 0.25s ease-out',
+            }}
+          />
+          {/* Subtle shimmer sweep to signal active transfer even when
+              percent updates are sparse (e.g. slow mobile uplink). */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: `${pct}%`,
+              minWidth: pct > 0 ? '6px' : 0,
+              borderRadius: 999,
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                width: '40%',
+                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent)',
+                animation: 'ftUploadShimmer 1.15s linear infinite',
+              }}
+            />
+          </div>
+        </div>
+        <style>{`@keyframes ftUploadShimmer { 0% { transform: translateX(-120%); } 100% { transform: translateX(280%); } }`}</style>
+      </div>
+    )
+  }
 
   const renderTextOverlay = (compact = false) => {
     if (!textOverlayText) return null
@@ -1333,6 +1334,7 @@ export default function CreatePage() {
                   {uploadingMedia ? '⏳ ' : ''}{uploadProgress}
                 </div>
               )}
+              {renderUploadProgressBar()}
               {uploadedPhotoUrls.length > 0 && selectedType === 'photo' && (
                 <div style={{ marginTop: '0.75rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))', gap: '0.6rem' }}>
                   {uploadedPhotoUrls.map((url, i) => (
@@ -1435,6 +1437,7 @@ export default function CreatePage() {
                   {uploadingMedia ? '⏳ ' : ''}{uploadProgress}
                 </div>
               )}
+              {renderUploadProgressBar()}
               {uploadedMediaUrl && selectedType === 'video' && (
                 <div style={{ position: 'relative', marginTop: '0.75rem', maxWidth: '100%', borderRadius: '8px', overflow: 'hidden', background: '#020617' }}>
                   <video src={uploadedMediaUrl} controls style={{ width: '100%', maxHeight: '300px', display: 'block' }} />
@@ -1471,6 +1474,7 @@ export default function CreatePage() {
                   {uploadingMedia ? '⏳ ' : ''}{uploadProgress}
                 </div>
               )}
+              {renderUploadProgressBar()}
               {uploadedMediaUrl && selectedType === 'short' && (
                 <div style={{ position: 'relative', marginTop: '0.75rem', maxWidth: 260, borderRadius: '8px', overflow: 'hidden', background: '#000' }}>
                   <video src={uploadedMediaUrl} controls style={{ width: '100%', maxHeight: '400px', aspectRatio: '9/16', display: 'block', background: '#000' }} />
