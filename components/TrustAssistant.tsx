@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
+import { emitTrustAssistantState } from '@/lib/avatar/trustAssistantBus'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Message {
@@ -245,6 +246,7 @@ export default function TrustAssistant() {
   const handleOpen = useCallback(() => {
     setOpen(true)
     setShowHintBadge(false)
+    emitTrustAssistantState({ open: true })
     if (messages.length === 0) {
       const firstName = user?.name?.split(' ')[0] ?? t('fallbackName')
       const hintKey = getPageHintKey(pathname)
@@ -288,6 +290,7 @@ export default function TrustAssistant() {
         creditCost: data.creditCost,
       }
       setMessages(prev => [...prev, assistantMsg])
+      emitTrustAssistantState({ open: true, assistantMessageId: assistantMsg.id, assistantText: assistantMsg.content })
     } catch {
       setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'assistant', content: t('errors.generic'), ts: Date.now() }])
     } finally {
@@ -421,7 +424,7 @@ export default function TrustAssistant() {
           {/* Main bubble — original ₮ */}
           <button
             className="ta-bubble"
-            onClick={open ? () => setOpen(false) : handleOpen}
+            onClick={open ? () => { setOpen(false); emitTrustAssistantState({ open: false }) } : handleOpen}
             aria-label={t('title')}
             style={{
               width: 44, height: 44, borderRadius: '50%',
