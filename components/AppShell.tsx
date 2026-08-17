@@ -7,7 +7,6 @@ import Sidebar from './Sidebar'
 import BottomNav from './BottomNav'
 import SearchBar from './SearchBar'
 import TrustAssistant from './TrustAssistant'
-import GodAvatarPanel from './GodAvatarPanel'
 import LanguageSelector from './LanguageSelector'
 import ThemeToggleButton from './ThemeToggleButton'
 import CookieConsentBar from './CookieConsentBar'
@@ -287,7 +286,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </div>
       <BottomNav />
       <TrustAssistant />
-      <GodAvatarPanel />
       {showProfilePrompt && (
         <ProfileSetupPrompt />
       )}
