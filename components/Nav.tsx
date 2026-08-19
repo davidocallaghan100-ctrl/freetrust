@@ -88,7 +88,6 @@ const DRAWER_SECTIONS = [
     label: 'EXPERIENCE',
     links: [
       { href: '/travel', label: 'Travel', icon: '✈️' },
-      { href: '/experience-pubs', label: 'Pubs', icon: '🍺' },
       { href: '/experience-activities', label: 'Activities', icon: '🏃' },
       { href: '/fitplan', label: 'FitPlan', icon: '🏋️' },
     ],

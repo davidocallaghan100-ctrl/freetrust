@@ -31,7 +31,6 @@ const NAV_SECTIONS = [
       { href: '/grassroots', label: 'Grassroots', icon: '🌱' },
       { href: '/products', label: 'Products', icon: '📦' },
       { href: '/travel', label: 'Experience Travel', icon: '✈️' },
-      { href: '/experience-pubs', label: 'Pubs', icon: '🍺' },
       { href: '/experience-activities', label: 'Activities', icon: '🏃' },
       { href: '/fitplan', label: 'FitPlan', icon: '🏋️' },
       { href: '/organisations', label: 'Organisations', icon: '🏢' },
