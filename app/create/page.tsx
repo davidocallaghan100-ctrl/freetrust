@@ -1627,6 +1627,7 @@ export default function CreatePage() {
                 The FreeTrust logo pulses with a real beat-synced visualizer while your track plays — this is exactly what shows in the feed.
               </p>
               <MusicPlayer
+                postId="ft-music-composer-preview"
                 src={uploadedMediaUrl ?? selectedSpotifyTrack?.previewUrl ?? null}
                 track={selectedSpotifyTrack ? {
                   id: selectedSpotifyTrack.id,
@@ -2208,6 +2209,7 @@ export default function CreatePage() {
         return (
           <div style={s.previewCard}>
             <MusicPlayer
+              postId="ft-music-composer-preview"
               src={uploadedMediaUrl ?? selectedSpotifyTrack?.previewUrl ?? null}
               track={selectedSpotifyTrack ? {
                 id: selectedSpotifyTrack.id,

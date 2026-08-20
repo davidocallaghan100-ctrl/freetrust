@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import Nav from './Nav'
 import Sidebar from './Sidebar'
 import BottomNav from './BottomNav'
+import MusicMiniPlayer from './MusicMiniPlayer'
 import SearchBar from './SearchBar'
 import TrustAssistant from './TrustAssistant'
 import LanguageSelector from './LanguageSelector'
@@ -257,6 +258,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--ft-bg)' }}>
         {children}
+        <MusicMiniPlayer />
         <CookieConsentBar />
       </div>
     )
@@ -285,6 +287,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       <BottomNav />
+      <MusicMiniPlayer />
       <TrustAssistant />
       {showProfilePrompt && (
         <ProfileSetupPrompt />

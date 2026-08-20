@@ -13,6 +13,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { CurrencyProvider } from "@/context/CurrencyContext";
 import { BasketProvider } from "@/context/BasketContext";
 import { ThemeProvider, THEME_INIT_SCRIPT } from "@/context/ThemeContext";
+import { MusicPlayerProvider } from "@/context/MusicPlayerContext";
 import AppShell from "@/components/AppShell";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
 import { OrganizationSchema } from "@/components/seo/OrganizationSchema";
@@ -171,9 +172,11 @@ export default async function RootLayout({
           <ThemeProvider>
             <CurrencyProvider>
               <BasketProvider>
-                <AppShell>
-                  {children}
-                </AppShell>
+                <MusicPlayerProvider>
+                  <AppShell>
+                    {children}
+                  </AppShell>
+                </MusicPlayerProvider>
                 <PWAInstallBanner />
               </BasketProvider>
             </CurrencyProvider>

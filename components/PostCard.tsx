@@ -9,6 +9,7 @@ import GifPicker from '@/components/gifs/GifPicker'
 import GifContent from '@/components/gifs/GifContent'
 import { appendGifMarker, type GifResult } from '@/lib/gifs'
 import { FEED_AUDIO_PLAY_EVENT, announceFeedAudioPlayback, generateFeedPlayerId } from '@/lib/feed/audioCoordinator'
+import { useMusicPlayer, FREETRUST_LOGO_SRC as GLOBAL_FREETRUST_LOGO_SRC } from '@/context/MusicPlayerContext'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1082,62 +1083,34 @@ function PhotoCarousel({ urls, alt, soundtrack, textOverlay, imageHref, imageBad
 // (spotifyTrack.previewUrl). Tap-to-play (not autoplay) — this is deliberate
 // content the user is choosing to listen to, not ambient background sound,
 // so it doesn't need the IntersectionObserver-driven autoplay complexity the
-// soundtrack feature has. Still participates in the platform-wide
-// single-audio-source rule via the same FEED_AUDIO_PLAY_EVENT coordinator
-// every other feed audio source uses.
-const FREETRUST_LOGO_SRC = '/icons/freetrust-logo-website-20260521.png'
+// soundtrack feature has.
+//
+// Playback itself is owned by the single global player in
+// context/MusicPlayerContext.tsx (mounted once at the app-shell level) so a
+// track keeps playing across route navigation instead of stopping when this
+// card unmounts. This component just calls into that shared player and
+// renders itself as "active" (progress, playing state, visualizer reacting
+// to the real AnalyserNode) only when its own track is the one currently
+// loaded — comparing by post id, not audio URL, since two different posts
+// can share the same Spotify preview URL. The provider already participates
+// in the platform-wide single-audio-source rule via FEED_AUDIO_PLAY_EVENT,
+// so this component doesn't need its own coordinator listener anymore.
+const FREETRUST_LOGO_SRC = GLOBAL_FREETRUST_LOGO_SRC
 const MUSIC_VISUALIZER_BAR_COUNT = 40
 
-export function MusicPlayer({ src, track, title }: { src: string | null; track: SpotifyTrackData | null; title?: string | null }) {
-  const [playing, setPlaying] = useState(false)
-  const [blocked, setBlocked] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+export function MusicPlayer({ postId, src, track, title }: { postId: string; src: string | null; track: SpotifyTrackData | null; title?: string | null }) {
+  const { current, playing: globalPlaying, blocked, currentTime: globalCurrentTime, duration: globalDuration, play, seek, getAnalyser } = useMusicPlayer()
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const audioCtxRef = useRef<AudioContext | null>(null)
-  const analyserRef = useRef<AnalyserNode | null>(null)
-  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null)
   const rafRef = useRef<number | null>(null)
-  const playerIdRef = useRef(generateFeedPlayerId('ft-music'))
+
+  const isActiveTrack = current?.id === postId
+  const playing = isActiveTrack && globalPlaying
+  const currentTime = isActiveTrack ? globalCurrentTime : 0
+  const duration = isActiveTrack ? globalDuration : 0
 
   const displayName = track?.name ?? title ?? 'Untitled track'
   const displayArtist = track?.artists ?? null
   const artwork = track?.image ?? null
-
-  useEffect(() => {
-    const yieldToAnotherPlayer = (event: Event) => {
-      const detail = (event as CustomEvent<{ playerId?: string }>).detail
-      if (detail?.playerId === playerIdRef.current) return
-      const audio = audioRef.current
-      if (!audio || audio.paused) return
-      audio.pause()
-    }
-    window.addEventListener(FEED_AUDIO_PLAY_EVENT, yieldToAnotherPlayer)
-    return () => window.removeEventListener(FEED_AUDIO_PLAY_EVENT, yieldToAnotherPlayer)
-  }, [])
-
-  const ensureAudioGraph = useCallback(() => {
-    const audio = audioRef.current
-    if (!audio || sourceNodeRef.current) return
-    try {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-      if (!AudioCtx) return
-      const ctx = audioCtxRef.current ?? new AudioCtx()
-      audioCtxRef.current = ctx
-      const analyser = ctx.createAnalyser()
-      analyser.fftSize = 128
-      analyser.smoothingTimeConstant = 0.82
-      const sourceNode = ctx.createMediaElementSource(audio)
-      sourceNode.connect(analyser)
-      analyser.connect(ctx.destination)
-      analyserRef.current = analyser
-      sourceNodeRef.current = sourceNode
-    } catch {
-      // Web Audio unavailable/blocked — plain <audio> playback still works,
-      // the visualizer just stays in its static resting state below.
-    }
-  }, [])
 
   const drawFrame = useCallback(() => {
     const canvas = canvasRef.current
@@ -1150,7 +1123,7 @@ export function MusicPlayer({ src, track, title }: { src: string | null; track: 
 
     ctx2d.clearRect(0, 0, size, size)
 
-    const analyser = analyserRef.current
+    const analyser = isActiveTrack ? getAnalyser() : null
     const isActive = playing && Boolean(analyser)
     const freqData = analyser ? new Uint8Array(analyser.frequencyBinCount) : null
     if (analyser && freqData) analyser.getByteFrequencyData(freqData)
@@ -1211,39 +1184,16 @@ export function MusicPlayer({ src, track, title }: { src: string | null; track: 
     ctx2d.stroke()
 
     rafRef.current = requestAnimationFrame(drawFrame)
-  }, [playing])
+  }, [playing, isActiveTrack, getAnalyser])
 
   useEffect(() => {
     rafRef.current = requestAnimationFrame(drawFrame)
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
   }, [drawFrame])
 
-  useEffect(() => {
-    return () => {
-      sourceNodeRef.current?.disconnect()
-      analyserRef.current?.disconnect()
-      void audioCtxRef.current?.close().catch(() => {})
-    }
-  }, [])
-
   const togglePlay = async () => {
-    const audio = audioRef.current
-    if (!audio || !src) return
-    if (playing) {
-      audio.pause()
-      return
-    }
-    ensureAudioGraph()
-    if (audioCtxRef.current?.state === 'suspended') {
-      await audioCtxRef.current.resume().catch(() => {})
-    }
-    try {
-      announceFeedAudioPlayback(playerIdRef.current)
-      await audio.play()
-      setBlocked(false)
-    } catch {
-      setBlocked(true)
-    }
+    if (!src) return
+    await play({ id: postId, src, title: displayName, artist: displayArtist, artwork })
   }
 
   const formatTimeMs = (secs: number) => {
@@ -1254,12 +1204,10 @@ export function MusicPlayer({ src, track, title }: { src: string | null; track: 
   }
 
   const seekTo = (clientX: number, target: HTMLDivElement) => {
-    const audio = audioRef.current
-    if (!audio || !duration) return
+    if (!isActiveTrack || !duration) return
     const rect = target.getBoundingClientRect()
     const frac = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width))
-    audio.currentTime = frac * duration
-    setCurrentTime(audio.currentTime)
+    seek(frac * duration)
   }
 
   if (!src) {
@@ -1353,35 +1301,10 @@ export function MusicPlayer({ src, track, title }: { src: string | null; track: 
             }}
           />
         </div>
-        {blocked ? (
+        {isActiveTrack && blocked ? (
           <div style={{ marginTop: 8, color: '#fbbf24', fontSize: 11.5 }}>Your browser blocked autoplay — tap ▶ again to start.</div>
         ) : null}
       </div>
-
-      <audio
-        ref={audioRef}
-        // `crossOrigin` MUST be set before `src` in the attribute-setting
-        // order for the browser to apply it to the resulting fetch — per
-        // spec, "the crossorigin content attribute must be set prior to
-        // setting the src content attribute in order to take effect."
-        // Having it listed after `src` in JSX (the original bug here)
-        // meant the element's initial media fetch still went out as a
-        // plain (non-CORS) request even though the attribute was present
-        // in the DOM, which silently taints the element for Web Audio:
-        // <audio>/<video> playback and `currentTime` advance completely
-        // normally, but `createMediaElementSource` → `AnalyserNode`
-        // output is zeroed out by the browser's CORS security
-        // restriction — exactly the "plays but silent + static
-        // visualizer" symptom reported.
-        crossOrigin="anonymous"
-        src={src}
-        preload="metadata"
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
-        onEnded={() => setPlaying(false)}
-        onTimeUpdate={e => setCurrentTime(e.currentTarget.currentTime)}
-        onLoadedMetadata={e => setDuration(e.currentTarget.duration)}
-      />
     </div>
   )
 }
@@ -2672,7 +2595,7 @@ export default function PostCard({
       {/* ── Media ── */}
       {post.type === 'music' ? (
         <div className="ft-post-media-wrap" style={{ padding: '0 16px' }}>
-          <MusicPlayer src={mediaUrls[0] ?? spotifyTrack?.previewUrl ?? null} track={spotifyTrack} title={postTitle} />
+          <MusicPlayer postId={post.id} src={mediaUrls[0] ?? spotifyTrack?.previewUrl ?? null} track={spotifyTrack} title={postTitle} />
         </div>
       ) : isVideo && mediaUrls.length > 0 ? (
         <div className="ft-post-media-wrap" style={{ padding: '0 16px' }}>
