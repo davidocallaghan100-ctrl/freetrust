@@ -197,7 +197,7 @@ export async function POST(req: NextRequest) {
     // Resolve once, reuse in the article + feed_posts branches below.
     // Allowed for every type exposed by /create. The actual storage field
     // differs by destination table, but the authorisation rule is identical.
-    const ALLOWED_ORG_TYPES = new Set(['text', 'article', 'photo', 'video', 'short', 'link', 'poll', 'article', 'job', 'event', 'service', 'product'])
+    const ALLOWED_ORG_TYPES = new Set(['text', 'article', 'photo', 'video', 'short', 'music', 'link', 'poll', 'article', 'job', 'event', 'service', 'product'])
     let postedAsOrganisationId: string | null = null
     let postedAsOrganisation: { id: string; name: string; logo_url: string | null; slug: string | null } | null = null
     if (body.organisation_id && ALLOWED_ORG_TYPES.has(type)) {
@@ -645,7 +645,7 @@ export async function POST(req: NextRequest) {
        redirectUrl = '/products'
     }
 
-    // ── text/photo/video/short/link/poll → feed_posts ──────────────────────
+    // ── text/photo/video/short/music/link/poll → feed_posts ────────────────
     else {
       const mediaUrl = (data.media_url as string | null | undefined) ?? null
       const photoMediaUrls = type === 'photo' ? normaliseMediaUrls(data.media_urls, mediaUrl) : []
@@ -666,14 +666,33 @@ export async function POST(req: NextRequest) {
         ? data.spotify_url.trim()
         : null
 
+      // Music posts need an actually-playable source: either an uploaded
+      // audio file, or a Spotify/iTunes track that has a real preview clip
+      // (a track with no preview would publish with nothing to play).
+      if (type === 'music') {
+        const spotifyHasPreview = typeof data.spotify_preview_url === 'string' && data.spotify_preview_url.trim().startsWith('http')
+        if (!primaryMediaUrl && !(spotifyUrl && spotifyHasPreview)) {
+          return fail('Add a track — search Spotify (with a preview) or upload an audio file', 400)
+        }
+      }
+
       const photoCaption = appendSpotifyMarker(appendTextOverlayMarker(appendMediaUrlsMarker(String(data.caption ?? ''), photoMediaUrls), data), data)
       const videoDescription = appendTextOverlayMarker(String(data.description ?? ''), data)
       const shortCaption = appendTextOverlayMarker(String(data.caption ?? ''), data)
+      const musicCaption = appendSpotifyMarker(String(data.caption ?? ''), data)
       const typeContentMap: Record<string, { content: string; media_url?: string | null; title?: string; link_url?: string }> = {
         text:  { content: String(data.content ?? '').trim() },
         photo: { content: photoCaption, media_url: primaryMediaUrl, link_url: spotifyUrl ?? undefined },
         video: { content: videoDescription, title: String(data.title ?? ''), media_url: primaryMediaUrl },
         short: { content: shortCaption, media_url: primaryMediaUrl },
+        // The track itself is the post (distinct from the photo/video
+        // background-soundtrack attachment above, which is unrelated).
+        // `media_url` holds an uploaded audio file when present; `link_url`
+        // holds the Spotify/iTunes URL; the appended marker carries the
+        // preview URL + track metadata for the feed card's visualizer,
+        // reusing the exact same marker/decode helpers as the photo
+        // soundtrack feature.
+        music: { content: musicCaption, media_url: primaryMediaUrl ?? undefined, title: String(data.track_title ?? '').trim() || undefined, link_url: spotifyUrl ?? undefined },
         link:  { content: String(data.description ?? ''), link_url: String(data.url ?? ''), title: String(data.link_title ?? '') },
         poll:  { content: JSON.stringify({ question: data.question, options: data.options, duration: data.duration }), title: String(data.question ?? '') },
       }
@@ -687,7 +706,7 @@ export async function POST(req: NextRequest) {
         title: mapped.title ?? null,
         link_url: mapped.link_url ?? null,
         media_url: mapped.media_url ?? null,
-        media_type: type === 'photo' ? 'image' : type === 'video' || type === 'short' ? 'video' : null,
+        media_type: type === 'photo' ? 'image' : type === 'video' || type === 'short' ? 'video' : type === 'music' ? (mapped.media_url ? 'audio' : null) : null,
         // Display override — null for personal posts, set to an
         // organisation id when the caller publishes as an org.
         posted_as_organisation_id: postedAsOrganisationId,

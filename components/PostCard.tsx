@@ -84,7 +84,7 @@ type LinkPreviewData = {
   hostname: string
 }
 
-type SpotifyTrackData = {
+export type SpotifyTrackData = {
   id?: string | null
   name: string | null
   artists: string | null
@@ -410,6 +410,7 @@ export const TYPE_META: Record<string, { label: string; color: string; bg: strin
   video:     { label: '🎬 Video',     color: '#f472b6', bg: 'rgba(244,114,182,0.1)' },
   short:     { label: '📱 Short',     color: '#f472b6', bg: 'rgba(244,114,182,0.1)' },
   photo:     { label: '📷 Photo',     color: '#34d399', bg: 'rgba(52,211,153,0.1)'  },
+  music:     { label: '🎵 Music',     color: '#38bdf8', bg: 'rgba(56,189,248,0.1)'  },
   article:   { label: '📰 Article',   color: 'var(--ft-accent)', bg: 'rgba(56,189,248,0.1)'  },
   listing:   { label: '🛍️ Listing',  color: '#34d399', bg: 'rgba(52,211,153,0.1)'  },
   service:   { label: '🛠 Service',   color: '#34d399', bg: 'rgba(52,211,153,0.1)'  },
@@ -1067,6 +1068,258 @@ function PhotoCarousel({ urls, alt, soundtrack, textOverlay, imageHref, imageBad
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Music Player ───────────────────────────────────────────────────────────────
+// Dedicated "Music" post type — the track itself is the post (distinct from
+// the Spotify/iTunes background-soundtrack attachment on Photo posts above,
+// which is unrelated and untouched). Centerpiece is the real FreeTrust logo
+// with a beat-synced visualizer driven by a real Web Audio AnalyserNode
+// reading the actual playback of whichever source is present: an uploaded
+// audio file (post.media_url) or a Spotify/iTunes preview clip
+// (spotifyTrack.previewUrl). Tap-to-play (not autoplay) — this is deliberate
+// content the user is choosing to listen to, not ambient background sound,
+// so it doesn't need the IntersectionObserver-driven autoplay complexity the
+// soundtrack feature has. Still participates in the platform-wide
+// single-audio-source rule via the same FEED_AUDIO_PLAY_EVENT coordinator
+// every other feed audio source uses.
+const FREETRUST_LOGO_SRC = '/icons/freetrust-logo-website-20260521.png'
+const MUSIC_VISUALIZER_BAR_COUNT = 40
+
+export function MusicPlayer({ src, track, title }: { src: string | null; track: SpotifyTrackData | null; title?: string | null }) {
+  const [playing, setPlaying] = useState(false)
+  const [blocked, setBlocked] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
+  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null)
+  const rafRef = useRef<number | null>(null)
+  const playerIdRef = useRef(generateFeedPlayerId('ft-music'))
+
+  const displayName = track?.name ?? title ?? 'Untitled track'
+  const displayArtist = track?.artists ?? null
+  const artwork = track?.image ?? null
+
+  useEffect(() => {
+    const yieldToAnotherPlayer = (event: Event) => {
+      const detail = (event as CustomEvent<{ playerId?: string }>).detail
+      if (detail?.playerId === playerIdRef.current) return
+      const audio = audioRef.current
+      if (!audio || audio.paused) return
+      audio.pause()
+    }
+    window.addEventListener(FEED_AUDIO_PLAY_EVENT, yieldToAnotherPlayer)
+    return () => window.removeEventListener(FEED_AUDIO_PLAY_EVENT, yieldToAnotherPlayer)
+  }, [])
+
+  const ensureAudioGraph = useCallback(() => {
+    const audio = audioRef.current
+    if (!audio || sourceNodeRef.current) return
+    try {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      if (!AudioCtx) return
+      const ctx = audioCtxRef.current ?? new AudioCtx()
+      audioCtxRef.current = ctx
+      const analyser = ctx.createAnalyser()
+      analyser.fftSize = 128
+      analyser.smoothingTimeConstant = 0.82
+      const sourceNode = ctx.createMediaElementSource(audio)
+      sourceNode.connect(analyser)
+      analyser.connect(ctx.destination)
+      analyserRef.current = analyser
+      sourceNodeRef.current = sourceNode
+    } catch {
+      // Web Audio unavailable/blocked — plain <audio> playback still works,
+      // the visualizer just stays in its static resting state below.
+    }
+  }, [])
+
+  const drawFrame = useCallback(() => {
+    const canvas = canvasRef.current
+    const ctx2d = canvas?.getContext('2d')
+    if (!canvas || !ctx2d) return
+    const size = canvas.width
+    const cx = size / 2
+    const cy = size / 2
+    const baseRadius = size * 0.26
+
+    ctx2d.clearRect(0, 0, size, size)
+
+    const analyser = analyserRef.current
+    const isActive = playing && Boolean(analyser)
+    const freqData = analyser ? new Uint8Array(analyser.frequencyBinCount) : null
+    if (analyser && freqData) analyser.getByteFrequencyData(freqData)
+
+    const avgAmp = freqData ? freqData.reduce((sum, v) => sum + v, 0) / freqData.length / 255 : 0
+    const idlePulse = 0.5 + 0.5 * Math.sin(Date.now() / 900)
+    const glowStrength = isActive ? 0.35 + avgAmp * 0.65 : 0.18 + idlePulse * 0.08
+
+    const glow = ctx2d.createRadialGradient(cx, cy, baseRadius * 0.4, cx, cy, size * 0.5)
+    glow.addColorStop(0, `rgba(56,189,248,${0.45 * glowStrength})`)
+    glow.addColorStop(0.55, `rgba(129,140,248,${0.28 * glowStrength})`)
+    glow.addColorStop(1, 'rgba(15,23,42,0)')
+    ctx2d.fillStyle = glow
+    ctx2d.fillRect(0, 0, size, size)
+
+    const barCount = MUSIC_VISUALIZER_BAR_COUNT
+    for (let i = 0; i < barCount; i++) {
+      const angle = (i / barCount) * Math.PI * 2
+      let amp: number
+      if (freqData) {
+        const bin = freqData[Math.floor((i / barCount) * freqData.length)] ?? 0
+        amp = bin / 255
+      } else {
+        amp = 0.08 + 0.05 * Math.sin(Date.now() / 500 + i)
+      }
+      const barLen = baseRadius * 0.22 + amp * baseRadius * 0.85
+      const innerR = baseRadius * 1.08
+      const outerR = innerR + barLen
+      const x1 = cx + Math.cos(angle) * innerR
+      const y1 = cy + Math.sin(angle) * innerR
+      const x2 = cx + Math.cos(angle) * outerR
+      const y2 = cy + Math.sin(angle) * outerR
+      ctx2d.strokeStyle = isActive
+        ? `rgba(${56 + amp * 120},189,${248 - amp * 40},${0.55 + amp * 0.45})`
+        : 'rgba(96,165,250,0.28)'
+      ctx2d.lineWidth = Math.max(2, size * 0.014)
+      ctx2d.lineCap = 'round'
+      ctx2d.beginPath()
+      ctx2d.moveTo(x1, y1)
+      ctx2d.lineTo(x2, y2)
+      ctx2d.stroke()
+    }
+
+    const peak = freqData ? Math.max(...Array.from(freqData)) / 255 : idlePulse * 0.15
+    ctx2d.beginPath()
+    ctx2d.arc(cx, cy, baseRadius * (1 + peak * 0.18), 0, Math.PI * 2)
+    ctx2d.strokeStyle = isActive ? `rgba(186,230,253,${0.35 + peak * 0.5})` : 'rgba(148,163,184,0.22)'
+    ctx2d.lineWidth = 2
+    ctx2d.stroke()
+
+    rafRef.current = requestAnimationFrame(drawFrame)
+  }, [playing])
+
+  useEffect(() => {
+    rafRef.current = requestAnimationFrame(drawFrame)
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
+  }, [drawFrame])
+
+  useEffect(() => {
+    return () => {
+      sourceNodeRef.current?.disconnect()
+      analyserRef.current?.disconnect()
+      void audioCtxRef.current?.close().catch(() => {})
+    }
+  }, [])
+
+  const togglePlay = async () => {
+    const audio = audioRef.current
+    if (!audio || !src) return
+    if (playing) {
+      audio.pause()
+      return
+    }
+    ensureAudioGraph()
+    if (audioCtxRef.current?.state === 'suspended') {
+      await audioCtxRef.current.resume().catch(() => {})
+    }
+    try {
+      announceFeedAudioPlayback(playerIdRef.current)
+      await audio.play()
+      setBlocked(false)
+    } catch {
+      setBlocked(true)
+    }
+  }
+
+  const formatTimeMs = (secs: number) => {
+    if (!Number.isFinite(secs) || secs <= 0) return '0:00'
+    const m = Math.floor(secs / 60)
+    const sec = Math.floor(secs % 60)
+    return `${m}:${String(sec).padStart(2, '0')}`
+  }
+
+  if (!src) {
+    return (
+      <div style={{ borderRadius: 16, border: '1px solid var(--ft-border-strong)', background: 'var(--ft-bg)', padding: '1.25rem', textAlign: 'center', color: 'var(--ft-text-tertiary)', fontSize: 13, marginBottom: 12 }}>
+        🎵 Track unavailable
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ marginBottom: 12, borderRadius: 18, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.28)', background: 'linear-gradient(160deg, rgba(8,47,73,0.55), rgba(2,6,23,0.98))', padding: '1.5rem 1.25rem' }}>
+      <div style={{ position: 'relative', width: 168, height: 168, margin: '0 auto 1.1rem' }}>
+        <canvas ref={canvasRef} width={168} height={168} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
+        <button
+          type="button"
+          onClick={togglePlay}
+          aria-label={playing ? `Pause ${displayName}` : `Play ${displayName}`}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            margin: 'auto',
+            width: 92,
+            height: 92,
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            borderRadius: '50%',
+            border: '2px solid rgba(186,230,253,0.55)',
+            background: artwork ? `center/cover no-repeat url(${artwork})` : '#0b1220',
+            cursor: 'pointer',
+            padding: 0,
+            overflow: 'hidden',
+            boxShadow: '0 0 0 6px rgba(15,23,42,0.9), 0 12px 30px rgba(0,0,0,0.5)',
+          }}
+        >
+          {!artwork && (
+            <img src={FREETRUST_LOGO_SRC} alt="FreeTrust" style={{ width: '68%', height: '68%', objectFit: 'contain', margin: '16% auto', display: 'block' }} />
+          )}
+          <span
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(2,6,23,0.32)',
+              fontSize: 30,
+              color: '#f0f9ff',
+            }}
+          >
+            {playing ? '⏸' : '▶'}
+          </span>
+        </button>
+      </div>
+
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ color: '#f0f9ff', fontWeight: 850, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</div>
+        {displayArtist ? <div style={{ color: '#93c5fd', fontSize: 13, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayArtist}</div> : null}
+        <div style={{ color: 'var(--ft-text-tertiary)', fontSize: 11.5, marginTop: 6 }}>
+          {formatTimeMs(currentTime)}{duration ? ` / ${formatTimeMs(duration)}` : track?.previewUrl ? ' / 0:30 preview' : ''}
+        </div>
+        {blocked ? (
+          <div style={{ marginTop: 8, color: '#fbbf24', fontSize: 11.5 }}>Your browser blocked autoplay — tap ▶ again to start.</div>
+        ) : null}
+      </div>
+
+      <audio
+        ref={audioRef}
+        src={src}
+        preload="metadata"
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => setPlaying(false)}
+        onTimeUpdate={e => setCurrentTime(e.currentTarget.currentTime)}
+        onLoadedMetadata={e => setDuration(e.currentTarget.duration)}
+      />
     </div>
   )
 }
@@ -2352,10 +2605,14 @@ export default function PostCard({
           their destination before the image/media. Photo Spotify tracks are shown
           as the rotated overlay in the carousel; rendering the full iframe above
           the media looks like a random box on mobile and duplicates the song. */}
-      {attachedUrl && post.type !== 'service' && !isPhotoSpotifyAttachment ? <LinkPreviewCard url={attachedUrl} /> : null}
+      {attachedUrl && post.type !== 'service' && post.type !== 'music' && !isPhotoSpotifyAttachment ? <LinkPreviewCard url={attachedUrl} /> : null}
 
       {/* ── Media ── */}
-      {isVideo && mediaUrls.length > 0 ? (
+      {post.type === 'music' ? (
+        <div className="ft-post-media-wrap" style={{ padding: '0 16px' }}>
+          <MusicPlayer src={mediaUrls[0] ?? spotifyTrack?.previewUrl ?? null} track={spotifyTrack} title={postTitle} />
+        </div>
+      ) : isVideo && mediaUrls.length > 0 ? (
         <div className="ft-post-media-wrap" style={{ padding: '0 16px' }}>
           <VideoPlayer src={mediaUrls[0]} isShort={isShort} textOverlay={textOverlay} />
         </div>

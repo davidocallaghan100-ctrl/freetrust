@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { compressImage } from '@/lib/image-compression'
 import dynamic from 'next/dynamic'
 import type { DeliveryZoneValue } from '@/components/DeliveryZoneMap'
+import StoryCreateSheet from '@/components/stories/StoryCreateSheet'
+import { MusicPlayer } from '@/components/PostCard'
 import {
   uploadToSupabaseStorageDirect,
   uploadVideoResumable,
@@ -20,7 +22,7 @@ const DeliveryZonePicker = dynamic(() => import('@/components/DeliveryZonePicker
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type PostType = 'text' | 'article' | 'photo' | 'video' | 'short' | 'link' | 'job' | 'event' | 'service' | 'product' | 'poll'
+type PostType = 'text' | 'article' | 'photo' | 'video' | 'short' | 'music' | 'link' | 'job' | 'event' | 'service' | 'product' | 'poll'
 type Visibility = 'public' | 'connections' | 'community'
 
 interface LinkPreview {
@@ -60,6 +62,7 @@ const POST_TYPES: { type: PostType; icon: string; label: string; desc: string }[
   { type: 'photo',    icon: '📷',  label: 'Photo',        desc: 'Share images'            },
   { type: 'video',    icon: '🎥',  label: 'Video',        desc: 'Upload a video'          },
   { type: 'short',    icon: '📱',  label: 'Short Video',  desc: 'TikTok-style clip'       },
+  { type: 'music',    icon: '🎵',  label: 'Music',        desc: 'Share a track'            },
   { type: 'article',  icon: '✍️',  label: 'Article',      desc: 'Long-form writing'      },
   { type: 'link',     icon: '🔗',  label: 'Shared Link',  desc: 'Share a URL'             },
   { type: 'job',      icon: '💼',  label: 'Job Posting',  desc: 'Post an opportunity'     },
@@ -350,6 +353,13 @@ export default function CreatePage() {
   // the plain uploadProgress text — "Preparing…", "✓ Upload complete",
   // error copy — still renders on its own outside that window).
   const [uploadProgressSnapshot, setUploadProgressSnapshot] = useState<UploadProgressSnapshot | null>(null)
+
+  // "Stories" composer tile — this is a discoverability shortcut into the
+  // EXISTING, already-live Stories feature (StoryCreateSheet), not a new
+  // post type. Clicking the tile opens this modal directly instead of
+  // selecting a PostType; the resulting story behaves exactly like every
+  // other story (same table/RLS/RPCs, same 24h expires_at lifetime).
+  const [storiesSheetOpen, setStoriesSheetOpen] = useState(false)
 
   // Link preview
   const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null)
@@ -721,6 +731,116 @@ export default function CreatePage() {
     }
   }
 
+  // Audio file upload for Music posts. Deliberately separate from
+  // handleFileUpload above (which only validates image/video MIME types
+  // and runs image compression) rather than overloading it with a third
+  // media family. Reuses the same direct-to-storage helper, bucket, and
+  // progress-tracking state as photo/video uploads — only the MIME
+  // allowlist, folder segment ("audio"), and size cap differ.
+  const AUDIO_MIME_TO_EXT: Record<string, string> = {
+    'audio/mpeg':    'mp3',
+    'audio/mp3':     'mp3',
+    'audio/wav':      'wav',
+    'audio/x-wav':    'wav',
+    'audio/mp4':      'm4a',
+    'audio/x-m4a':    'm4a',
+    'audio/aac':      'aac',
+    'audio/ogg':      'ogg',
+    'audio/webm':     'weba',
+  }
+  const MAX_AUDIO_BYTES = 30 * 1024 * 1024 // 30 MB — plenty for a full track, keeps uploads fast
+
+  const handleAudioFileUpload = async (rawFile: File) => {
+    setUploadingMedia(true)
+    setUploadProgress('Preparing audio…')
+    setUploadProgressSnapshot(null)
+    setUploadedMediaUrl(null)
+
+    let step = 'init'
+    try {
+      step = 'resolve-mime'
+      let fileType = rawFile.type
+      if (!fileType || !(fileType in AUDIO_MIME_TO_EXT)) {
+        const ext = (rawFile.name.split('.').pop() ?? '').toLowerCase()
+        const EXT_TO_MIME: Record<string, string> = {
+          mp3: 'audio/mpeg', wav: 'audio/wav', m4a: 'audio/mp4', aac: 'audio/aac', ogg: 'audio/ogg', weba: 'audio/webm',
+        }
+        if (ext in EXT_TO_MIME) {
+          fileType = EXT_TO_MIME[ext]
+        } else {
+          setUploadProgress(`Upload failed — unsupported audio format: .${ext || '(none)'}`)
+          setUploadingMedia(false)
+          return
+        }
+      }
+
+      step = 'size-check'
+      if (rawFile.size > MAX_AUDIO_BYTES) {
+        setUploadProgress(`Upload failed — file too large (max ${Math.round(MAX_AUDIO_BYTES / 1024 / 1024)} MB)`)
+        setUploadingMedia(false)
+        return
+      }
+
+      step = 'auth'
+      const supabase = createClient()
+      const [{ data: { user } }, { data: sessionData }] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase.auth.getSession(),
+      ])
+      if (!user) {
+        setUploadProgress('Upload failed — please sign in and try again')
+        setUploadingMedia(false)
+        return
+      }
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) {
+        setUploadProgress('Upload failed — your session was not ready. Please refresh and try again.')
+        setUploadingMedia(false)
+        return
+      }
+
+      step = 'build-path'
+      const ext = AUDIO_MIME_TO_EXT[fileType] || 'mp3'
+      const uidSafe = (user.id || '').toLowerCase().replace(/[^a-z0-9-]/g, '') || 'anon'
+      const rand = Math.random().toString(36).slice(2).replace(/[^a-z0-9]/g, '') || Date.now().toString(36)
+      const storagePath = `audio/${uidSafe}/${Date.now()}-${rand}.${ext}`
+
+      setUploadProgress(`Uploading ${(rawFile.size / 1024 / 1024).toFixed(1)} MB…`)
+
+      step = 'upload'
+      const onProgress = (snapshot: UploadProgressSnapshot) => {
+        setUploadProgressSnapshot(snapshot)
+        setUploadProgress(`Uploading ${(rawFile.size / 1024 / 1024).toFixed(1)} MB… ${formatUploadProgress(snapshot)}`)
+      }
+      try {
+        const { publicUrl } = await uploadToSupabaseStorageDirect({
+          bucket: 'feed-media',
+          storagePath,
+          file: rawFile,
+          contentType: fileType,
+          accessToken,
+          timeoutMs: PHOTO_UPLOAD_TIMEOUT_MS,
+          onProgress,
+        })
+        setUploadedMediaUrl(publicUrl)
+        setUploadProgress('✓ Upload complete')
+      } catch (thrown) {
+        const msg = thrown instanceof Error ? thrown.message : String(thrown)
+        console.error('[create/upload] audio upload failed:', { step, message: msg, storagePath, contentType: fileType })
+        setUploadProgress(`Upload failed — ${msg}`)
+        setUploadingMedia(false)
+        return
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[create/upload] audio unhandled at step', step, ':', err)
+      setUploadProgress(`Upload failed [${step}] — ${msg}`)
+    } finally {
+      setUploadingMedia(false)
+      setUploadProgressSnapshot(null)
+    }
+  }
+
   const showToastMsg = (msg: string) => {
     setToast(msg)
     setShowToast(true)
@@ -1051,7 +1171,7 @@ export default function CreatePage() {
     if (selectedType === 'photo' && (uploadedPhotoUrls.length > 0 || uploadedMediaUrl)) {
       const photoUrls = uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : (uploadedMediaUrl ? [uploadedMediaUrl] : [])
       data = { ...data, media_url: photoUrls[0] ?? uploadedMediaUrl, media_urls: photoUrls }
-    } else if (['video', 'short'].includes(selectedType) && uploadedMediaUrl) {
+    } else if (['video', 'short', 'music'].includes(selectedType) && uploadedMediaUrl) {
       data = { ...data, media_url: uploadedMediaUrl }
     }
     // Inject delivery zone fields for physical products
@@ -1099,6 +1219,10 @@ export default function CreatePage() {
       case 'video':
       case 'short':
         if (!uploadedMediaUrl) return 'Upload a file before publishing'
+        break
+      case 'music':
+        if (!uploadedMediaUrl && !selectedSpotifyTrack) return 'Add a track — search Spotify or upload an audio file'
+        if (!uploadedMediaUrl && selectedSpotifyTrack && !selectedSpotifyTrack.previewUrl) return 'That Spotify track has no preview available — pick another track or upload an audio file'
         break
       case 'link':
         if (!f('url').trim()) return 'Enter a URL'
@@ -1491,6 +1615,126 @@ export default function CreatePage() {
               <input style={s.input} placeholder="Describe the audio for accessibility…" value={f('audio_desc')} onChange={e => setField('audio_desc', e.target.value)} />
             </div>
             {renderTextOverlayEditor('Add a short, social-story style overlay for this vertical video.')}
+          </>
+        )
+
+      case 'music':
+        return (
+          <>
+            <div style={s.fieldGroup}>
+              <label style={s.label}>Live preview</label>
+              <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.82rem', marginTop: 0, marginBottom: '0.6rem', lineHeight: 1.45 }}>
+                The FreeTrust logo pulses with a real beat-synced visualizer while your track plays — this is exactly what shows in the feed.
+              </p>
+              <MusicPlayer
+                src={uploadedMediaUrl ?? selectedSpotifyTrack?.previewUrl ?? null}
+                track={selectedSpotifyTrack ? {
+                  id: selectedSpotifyTrack.id,
+                  name: selectedSpotifyTrack.name,
+                  artists: selectedSpotifyTrack.artists,
+                  image: selectedSpotifyTrack.image,
+                  url: selectedSpotifyTrack.url,
+                  previewUrl: selectedSpotifyTrack.previewUrl,
+                  previewSource: selectedSpotifyTrack.previewSource ?? null,
+                } : null}
+                title={f('track_title') || null}
+              />
+            </div>
+
+            <div style={s.fieldGroup}>
+              <label style={s.label}>🎵 Search Spotify</label>
+              <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.82rem', marginTop: 0, marginBottom: '0.6rem', lineHeight: 1.45 }}>
+                Pick a track with a real preview — that 30s preview clip is what plays in the feed. Uploading your own audio file below overrides this.
+              </p>
+              <input
+                style={s.input}
+                placeholder="Search Spotify tracks…"
+                value={spotifyQuery}
+                onChange={e => searchSpotify(e.target.value)}
+              />
+              {!spotifyConfigured && (
+                <div style={{ marginTop: '0.5rem', color: '#fbbf24', fontSize: '0.8rem', lineHeight: 1.45 }}>
+                  Spotify search needs API credentials. Paste a Spotify track URL below for now.
+                </div>
+              )}
+              {spotifyLoading && <div style={{ marginTop: '0.5rem', color: 'var(--ft-text-tertiary)', fontSize: '0.8rem' }}>Searching Spotify…</div>}
+              {spotifyResults.length > 0 && (
+                <div style={{ marginTop: '0.5rem', border: '1px solid var(--ft-border-strong)', borderRadius: 10, overflow: 'hidden', background: 'var(--ft-bg)' }}>
+                  {spotifyResults.map(track => (
+                    <button
+                      key={track.id}
+                      type="button"
+                      onClick={() => { selectSpotifyTrack(track); setUploadedMediaUrl(null); setUploadProgress('') }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--ft-surface)', padding: '0.65rem 0.75rem', cursor: 'pointer', color: 'var(--ft-text)', textAlign: 'left', fontFamily: 'inherit' }}
+                    >
+                      {track.image ? <img src={track.image} alt="" style={{ width: 42, height: 42, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} /> : <span style={{ width: 42, height: 42, borderRadius: 6, background: 'var(--ft-surface)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>🎵</span>}
+                      <span style={{ minWidth: 0, flex: 1 }}>
+                        <strong style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{track.name}</strong>
+                        <span style={{ color: 'var(--ft-text-secondary)', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{track.artists}</span>
+                      </span>
+                      <span style={{ flexShrink: 0, borderRadius: 999, padding: '3px 7px', fontSize: '0.68rem', fontWeight: 800, color: track.previewUrl ? '#bbf7d0' : '#fbbf24', background: track.previewUrl ? 'rgba(22,163,74,0.18)' : 'rgba(251,191,36,0.12)', border: `1px solid ${track.previewUrl ? 'rgba(34,197,94,0.28)' : 'rgba(251,191,36,0.25)'}` }}>
+                        {track.previewUrl ? (track.previewSource === 'itunes' ? 'Apple preview' : 'Preview') : 'No preview'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selectedSpotifyTrack && (
+                <div style={s.musicCard}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    {selectedSpotifyTrack.image ? <img src={selectedSpotifyTrack.image} alt="" style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover' }} /> : <span style={{ width: 56, height: 56, borderRadius: 8, background: 'var(--ft-bg)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>🎵</span>}
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ color: '#bbf7d0', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Selected track</div>
+                      <div style={{ color: 'var(--ft-text)', fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedSpotifyTrack.name}</div>
+                      <div style={{ color: 'var(--ft-text-secondary)', fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedSpotifyTrack.artists}</div>
+                      <div style={{ color: selectedSpotifyTrack.previewUrl ? '#86efac' : '#fbbf24', fontSize: '0.76rem', marginTop: 2 }}>
+                        {selectedSpotifyTrack.previewUrl ? (selectedSpotifyTrack.previewSource === 'itunes' ? 'Preview: Apple/iTunes' : 'Preview: Spotify') : 'Preview unavailable — pick another track or upload a file below'}
+                      </div>
+                    </div>
+                    <button type="button" onClick={clearSpotifyTrack} style={{ ...s.btnSecondary, padding: '0.45rem 0.7rem' }}>Remove</button>
+                  </div>
+                </div>
+              )}
+              <input
+                style={{ ...s.input, marginTop: '0.75rem' }}
+                placeholder="Or paste Spotify track URL…"
+                value={f('spotify_url')}
+                onChange={e => setField('spotify_url', e.target.value)}
+              />
+            </div>
+
+            <div style={s.fieldGroup}>
+              <label style={s.label}>🎧 Or upload your own audio file</label>
+              <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.82rem', marginTop: 0, marginBottom: '0.6rem', lineHeight: 1.45 }}>
+                MP3, WAV, M4A, AAC or OGG — up to 30 MB. Uploading here overrides the Spotify selection above.
+              </p>
+              <input type="file" accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/webm,audio/*" style={{ ...s.input, padding: '0.5rem' }} onChange={e => {
+                const file = e.target.files?.[0]
+                if (file) {
+                  clearSpotifyTrack()
+                  void handleAudioFileUpload(file)
+                }
+                e.currentTarget.value = ''
+              }} />
+              {uploadProgress && (
+                <div style={{ marginTop: '0.5rem', fontSize: '0.82rem', color: uploadProgress.startsWith('✓') ? '#34d399' : uploadProgress.startsWith('Upload') ? 'var(--ft-danger)' : 'var(--ft-text-tertiary)' }}>
+                  {uploadingMedia ? '⏳ ' : ''}{uploadProgress}
+                </div>
+              )}
+              {renderUploadProgressBar()}
+            </div>
+
+            {uploadedMediaUrl && (
+              <div style={s.fieldGroup}>
+                <label style={s.label}>Track title</label>
+                <input style={s.input} placeholder="Name your track…" value={f('track_title')} onChange={e => setField('track_title', e.target.value)} />
+              </div>
+            )}
+
+            <div style={s.fieldGroup}>
+              <label style={s.label}>Caption</label>
+              <textarea style={s.textarea} placeholder="Say something about this track…" value={f('caption')} onChange={e => setField('caption', e.target.value)} />
+            </div>
           </>
         )
 
@@ -1960,6 +2204,28 @@ export default function CreatePage() {
         )
       }
 
+      case 'music':
+        return (
+          <div style={s.previewCard}>
+            <MusicPlayer
+              src={uploadedMediaUrl ?? selectedSpotifyTrack?.previewUrl ?? null}
+              track={selectedSpotifyTrack ? {
+                id: selectedSpotifyTrack.id,
+                name: selectedSpotifyTrack.name,
+                artists: selectedSpotifyTrack.artists,
+                image: selectedSpotifyTrack.image,
+                url: selectedSpotifyTrack.url,
+                previewUrl: selectedSpotifyTrack.previewUrl,
+                previewSource: selectedSpotifyTrack.previewSource ?? null,
+              } : null}
+              title={f('track_title') || null}
+            />
+            <div style={{ fontSize: '0.95rem', color: 'var(--ft-text-secondary)', lineHeight: 1.7, whiteSpace: 'pre-wrap', marginTop: '0.75rem' }}>
+              {f('caption') || 'Your caption will appear here.'}
+            </div>
+          </div>
+        )
+
       case 'job':
         return (
           <div style={s.previewCard}>
@@ -1969,7 +2235,6 @@ export default function CreatePage() {
             <div style={{ color: 'var(--ft-text-secondary)', fontSize: '0.88rem', marginTop: '0.75rem', whiteSpace: 'pre-wrap' }}>{f('description')}</div>
           </div>
         )
-
       case 'event':
         return (
           <div style={s.previewCard}>
@@ -2042,10 +2307,36 @@ export default function CreatePage() {
             <span style={s.typeDesc}>{desc}</span>
           </button>
         ))}
+        {/* "Stories" — not a PostType. This is a discoverability shortcut
+            straight into the existing, already-live Stories feature (the
+            same StoryCreateSheet the "+" bubble in StoriesBar opens). It
+            does not select a composer form; it opens the story flow
+            directly, and the resulting story behaves exactly like every
+            other story (24h expiry, same table/RLS/RPCs). */}
+        <button
+          key="stories"
+          style={s.typeCard(false)}
+          onClick={() => setStoriesSheetOpen(true)}
+        >
+          <span style={s.typeIcon}>⭐</span>
+          <span style={s.typeLabel(false)}>Stories</span>
+          <span style={s.typeDesc}>Share to your 24h story</span>
+        </button>
       </div>
 
       {/* Form */}
       {selectedType && renderForm()}
+
+      {storiesSheetOpen && (
+        <StoryCreateSheet
+          onClose={() => setStoriesSheetOpen(false)}
+          onShared={() => {
+            showToastMsg('✅ Story shared!')
+            setStoriesSheetOpen(false)
+            router.push('/feed')
+          }}
+        />
+      )}
     </div>
   )
 }
