@@ -1360,8 +1360,21 @@ export function MusicPlayer({ src, track, title }: { src: string | null; track: 
 
       <audio
         ref={audioRef}
-        src={src}
+        // `crossOrigin` MUST be set before `src` in the attribute-setting
+        // order for the browser to apply it to the resulting fetch — per
+        // spec, "the crossorigin content attribute must be set prior to
+        // setting the src content attribute in order to take effect."
+        // Having it listed after `src` in JSX (the original bug here)
+        // meant the element's initial media fetch still went out as a
+        // plain (non-CORS) request even though the attribute was present
+        // in the DOM, which silently taints the element for Web Audio:
+        // <audio>/<video> playback and `currentTime` advance completely
+        // normally, but `createMediaElementSource` → `AnalyserNode`
+        // output is zeroed out by the browser's CORS security
+        // restriction — exactly the "plays but silent + static
+        // visualizer" symptom reported.
         crossOrigin="anonymous"
+        src={src}
         preload="metadata"
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
