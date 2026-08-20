@@ -1155,9 +1155,14 @@ export function MusicPlayer({ src, track, title }: { src: string | null; track: 
     const freqData = analyser ? new Uint8Array(analyser.frequencyBinCount) : null
     if (analyser && freqData) analyser.getByteFrequencyData(freqData)
 
-    const avgAmp = freqData ? freqData.reduce((sum, v) => sum + v, 0) / freqData.length / 255 : 0
+    // Boost small amplitudes with a sub-linear power curve (amp^0.55) so
+    // quieter passages still read as visibly "wavy" instead of flat —
+    // raw linear frequency-bin averages tend to sit low and look static
+    // even when the track is clearly audible.
+    const rawAvgAmp = freqData ? freqData.reduce((sum, v) => sum + v, 0) / freqData.length / 255 : 0
+    const avgAmp = Math.pow(rawAvgAmp, 0.55)
     const idlePulse = 0.5 + 0.5 * Math.sin(Date.now() / 900)
-    const glowStrength = isActive ? 0.35 + avgAmp * 0.65 : 0.18 + idlePulse * 0.08
+    const glowStrength = isActive ? 0.35 + avgAmp * 1.1 : 0.18 + idlePulse * 0.08
 
     const glow = ctx2d.createRadialGradient(cx, cy, baseRadius * 0.4, cx, cy, size * 0.5)
     glow.addColorStop(0, `rgba(56,189,248,${0.45 * glowStrength})`)
@@ -1172,11 +1177,15 @@ export function MusicPlayer({ src, track, title }: { src: string | null; track: 
       let amp: number
       if (freqData) {
         const bin = freqData[Math.floor((i / barCount) * freqData.length)] ?? 0
-        amp = bin / 255
+        // Same power-curve boost as the glow above, plus a touch of
+        // per-bar jitter so adjacent bars don't move in perfect lockstep
+        // — reads as a livelier, wavier motion rather than a smooth ring.
+        amp = Math.pow(bin / 255, 0.6) * (0.85 + 0.3 * Math.sin(Date.now() / 140 + i * 1.3))
+        amp = Math.max(0, Math.min(1, amp))
       } else {
         amp = 0.08 + 0.05 * Math.sin(Date.now() / 500 + i)
       }
-      const barLen = baseRadius * 0.22 + amp * baseRadius * 0.85
+      const barLen = baseRadius * 0.18 + amp * baseRadius * 1.55
       const innerR = baseRadius * 1.08
       const outerR = innerR + barLen
       const x1 = cx + Math.cos(angle) * innerR
@@ -1194,11 +1203,11 @@ export function MusicPlayer({ src, track, title }: { src: string | null; track: 
       ctx2d.stroke()
     }
 
-    const peak = freqData ? Math.max(...Array.from(freqData)) / 255 : idlePulse * 0.15
+    const peak = freqData ? Math.pow(Math.max(...Array.from(freqData)) / 255, 0.6) : idlePulse * 0.15
     ctx2d.beginPath()
-    ctx2d.arc(cx, cy, baseRadius * (1 + peak * 0.18), 0, Math.PI * 2)
+    ctx2d.arc(cx, cy, baseRadius * (1 + peak * 0.4), 0, Math.PI * 2)
     ctx2d.strokeStyle = isActive ? `rgba(186,230,253,${0.35 + peak * 0.5})` : 'rgba(148,163,184,0.22)'
-    ctx2d.lineWidth = 2
+    ctx2d.lineWidth = 2 + (isActive ? peak * 3 : 0)
     ctx2d.stroke()
 
     rafRef.current = requestAnimationFrame(drawFrame)
@@ -1242,6 +1251,15 @@ export function MusicPlayer({ src, track, title }: { src: string | null; track: 
     const m = Math.floor(secs / 60)
     const sec = Math.floor(secs % 60)
     return `${m}:${String(sec).padStart(2, '0')}`
+  }
+
+  const seekTo = (clientX: number, target: HTMLDivElement) => {
+    const audio = audioRef.current
+    if (!audio || !duration) return
+    const rect = target.getBoundingClientRect()
+    const frac = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width))
+    audio.currentTime = frac * duration
+    setCurrentTime(audio.currentTime)
   }
 
   if (!src) {
@@ -1305,6 +1323,36 @@ export function MusicPlayer({ src, track, title }: { src: string | null; track: 
         <div style={{ color: 'var(--ft-text-tertiary)', fontSize: 11.5, marginTop: 6 }}>
           {formatTimeMs(currentTime)}{duration ? ` / ${formatTimeMs(duration)}` : track?.previewUrl ? ' / 0:30 preview' : ''}
         </div>
+        <div
+          role="slider"
+          aria-label="Seek track position"
+          aria-valuemin={0}
+          aria-valuemax={Math.round(duration || 0)}
+          aria-valuenow={Math.round(currentTime)}
+          onClick={e => seekTo(e.clientX, e.currentTarget)}
+          style={{
+            position: 'relative',
+            height: 6,
+            marginTop: 10,
+            borderRadius: 999,
+            background: 'var(--ft-bg)',
+            border: '1px solid var(--ft-border-strong)',
+            overflow: 'hidden',
+            cursor: duration ? 'pointer' : 'default',
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: duration ? `${Math.min(100, (currentTime / duration) * 100)}%` : '0%',
+              minWidth: currentTime > 0 ? '6px' : 0,
+              borderRadius: 999,
+              background: 'linear-gradient(90deg, #38bdf8, #818cf8)',
+              transition: playing ? 'none' : 'width 0.2s ease-out',
+            }}
+          />
+        </div>
         {blocked ? (
           <div style={{ marginTop: 8, color: '#fbbf24', fontSize: 11.5 }}>Your browser blocked autoplay — tap ▶ again to start.</div>
         ) : null}
@@ -1313,6 +1361,7 @@ export function MusicPlayer({ src, track, title }: { src: string | null; track: 
       <audio
         ref={audioRef}
         src={src}
+        crossOrigin="anonymous"
         preload="metadata"
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
