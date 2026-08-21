@@ -52,6 +52,10 @@
     {
       "path": "/api/cron/stories-cleanup",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/e2e-test-cleanup",
+      "schedule": "*/15 * * * *"
     }
   ]
 }
