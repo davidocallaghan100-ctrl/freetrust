@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Avatar from '@/components/Avatar'
 import type { StoryAuthorGroup, StoryRecord } from '@/types/stories'
+import { FEED_AUDIO_PLAY_EVENT, announceFeedAudioPlayback, generateFeedPlayerId } from '@/lib/feed/audioCoordinator'
 
 // ── Relative time helper (kept local + tiny — most of the app formats dates
 // inline per-component rather than importing a shared date lib) ────────────
@@ -69,6 +70,16 @@ export default function StoryViewer({
   const pausedAccumRef = useRef<number>(0)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const reducedMotion = useMemo(usesReducedMotion, [])
+  // Stories' own video sound never coordinated with the rest of the feed's
+  // single-audio-source rule (see lib/feed/audioCoordinator.ts) — a story
+  // could play audible video sound at the same time as an already-playing
+  // feed video, soundtrack, or (since the global music player persists
+  // across route navigation) a Music post track. This mirrors the same
+  // playerId/announce/yield pattern PostCard's VideoPlayer uses: mute
+  // (not pause) when another player announces, and announce right before
+  // this story's own video goes audible.
+  const storyPlayerIdRef = useRef(generateFeedPlayerId('ft-story'))
+  const [storyVideoMuted, setStoryVideoMuted] = useState(false)
 
   const group = groups[groupIndex]
   const story: StoryRecord | undefined = group?.stories[storyIndex]
@@ -80,6 +91,32 @@ export default function StoryViewer({
   const isOwner = isOrgGroup ? !!group?.canManage : group?.user.id === currentUserId
 
   const durationMs = story ? story.duration_seconds * 1000 : 5000
+
+  // Yield to whichever feed audio source most recently announced itself as
+  // audible (another story's video, a feed VideoPlayer, a PhotoCarousel
+  // soundtrack, or the global Music post player) — mutes rather than
+  // pauses so this story's own playback/progress timing is unaffected.
+  useEffect(() => {
+    const yieldToAnotherPlayer = (event: Event) => {
+      const detail = (event as CustomEvent<{ playerId?: string }>).detail
+      if (detail?.playerId === storyPlayerIdRef.current) return
+      setStoryVideoMuted(true)
+    }
+    window.addEventListener(FEED_AUDIO_PLAY_EVENT, yieldToAnotherPlayer)
+    return () => window.removeEventListener(FEED_AUDIO_PLAY_EVENT, yieldToAnotherPlayer)
+  }, [])
+
+  // Each time a new video story becomes active, it tries sound-on by
+  // default (matching feed video behavior) and announces itself — before
+  // calling play() — so any other currently-audible feed player yields
+  // first. (Sequenced imperatively via videoRef instead of the `autoPlay`
+  // attribute so the announce always happens before playback can start.)
+  useEffect(() => {
+    if (!story || story.media_type !== 'video') return
+    setStoryVideoMuted(false)
+    announceFeedAudioPlayback(storyPlayerIdRef.current)
+    videoRef.current?.play().catch(() => { /* autoplay may be blocked until user gesture */ })
+  }, [story?.id, story?.media_type])
 
   // ── Record view on display (stories mode only — memories don't track views) ──
   useEffect(() => {
@@ -280,9 +317,8 @@ export default function StoryViewer({
           <video
             ref={videoRef}
             src={story.media_url}
-            autoPlay
             playsInline
-            muted={false}
+            muted={storyVideoMuted}
             onTimeUpdate={onVideoTimeUpdate}
             onEnded={onVideoEnded}
             style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#000' }}
