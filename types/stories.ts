@@ -1,4 +1,23 @@
-export type StoryMediaType = 'image' | 'video'
+export type StoryMediaType = 'image' | 'video' | 'shared_post'
+
+// Point-in-time snapshot of a shared feed post, captured by the
+// share_post_as_story() RPC. This is what StoryViewer renders for
+// media_type === 'shared_post' stories — it deliberately does NOT read live
+// from feed_posts, so the story keeps rendering correctly even after the
+// original post is edited or deleted.
+export interface SharedPostSnapshot {
+  post_type: string
+  title: string | null
+  content: string | null
+  media_url: string | null
+  media_type: string | null
+  link_url: string | null
+  author_name: string
+  author_avatar_url: string | null
+  is_organisation: boolean
+  original_post_id: string
+  original_created_at: string
+}
 
 export interface StoryRecord {
   id: string
@@ -19,6 +38,9 @@ export interface StoryRecord {
   // Populated by the API only when posted_as_organisation_id is set — the
   // posting member's display name, for the "Posted by [name]" line.
   posted_by_name?: string | null
+  // Set only when media_type === 'shared_post' — see share_post_as_story().
+  shared_post_id?: string | null
+  shared_post_snapshot?: SharedPostSnapshot | null
 }
 
 export interface StoryOrgIdentity {

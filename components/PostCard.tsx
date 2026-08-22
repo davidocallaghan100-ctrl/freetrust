@@ -10,6 +10,7 @@ import GifContent from '@/components/gifs/GifContent'
 import { appendGifMarker, type GifResult } from '@/lib/gifs'
 import { FEED_AUDIO_PLAY_EVENT, announceFeedAudioPlayback, generateFeedPlayerId } from '@/lib/feed/audioCoordinator'
 import { useMusicPlayer, FREETRUST_LOGO_SRC as GLOBAL_FREETRUST_LOGO_SRC } from '@/context/MusicPlayerContext'
+import { uploadToSupabaseStorageDirect } from '@/lib/storage/directUpload'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1620,7 +1621,25 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
 
 // ── Share Sheet ───────────────────────────────────────────────────────────────
 
-function ShareSheet({ postId, canonicalPath, text, onClose }: { postId: string; canonicalPath: string; text: string; onClose: () => void }) {
+function ShareSheet({
+  postId,
+  canonicalPath,
+  text,
+  onClose,
+  onShareToStory,
+  sharingToStory,
+  onShareToInstagramStory,
+  sharingToInstagram,
+}: {
+  postId: string
+  canonicalPath: string
+  text: string
+  onClose: () => void
+  onShareToStory: () => Promise<boolean>
+  sharingToStory: boolean
+  onShareToInstagramStory: () => Promise<boolean>
+  sharingToInstagram: boolean
+}) {
   const [copied, setCopied] = useState(false)
   const url = typeof window !== 'undefined' ? `${window.location.origin}${canonicalPath}` : canonicalPath
   const encoded = encodeURIComponent(url)
@@ -1631,12 +1650,26 @@ function ShareSheet({ postId, canonicalPath, text, onClose }: { postId: string; 
     catch { /* fallback */ }
   }
 
-  const options = [
-    { icon: '🔗', label: copied ? 'Copied!' : 'Copy link', action: copy },
-    { icon: '💬', label: 'WhatsApp', action: () => window.open(`https://wa.me/?text=${encodedText}%20${encoded}`, '_blank') },
-    { icon: '𝕏', label: 'Twitter / X', action: () => window.open(`https://twitter.com/intent/tweet?text=${encodedText}&url=${encoded}`, '_blank') },
-    { icon: '💼', label: 'LinkedIn', action: () => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encoded}`, '_blank') },
-    { icon: '📧', label: 'Email', action: () => window.open(`mailto:?subject=Check this out on FreeTrust&body=${encodedText}%20${encoded}`, '_blank') },
+  const shareToStory = async () => {
+    const ok = await onShareToStory()
+    if (ok) onClose()
+  }
+
+  const shareToInstagram = async () => {
+    // Don't auto-close: on desktop/no-Instagram-app cases this shows a
+    // "here's your downloaded image + instructions" fallback the user needs
+    // to read before the sheet disappears.
+    await onShareToInstagramStory()
+  }
+
+  const options: { icon: string; label: string; action: () => void; disabled?: boolean }[] = [
+    { icon: '🔗', label: copied ? 'Copied!' : 'Copy link', action: copy, disabled: false },
+    { icon: '⭐', label: sharingToStory ? 'Sharing…' : 'Share to my Story', action: shareToStory, disabled: sharingToStory },
+    { icon: '📸', label: sharingToInstagram ? 'Preparing…' : 'Instagram Stories', action: shareToInstagram, disabled: sharingToInstagram },
+    { icon: '💬', label: 'WhatsApp', action: () => window.open(`https://wa.me/?text=${encodedText}%20${encoded}`, '_blank'), disabled: false },
+    { icon: '𝕏', label: 'Twitter / X', action: () => window.open(`https://twitter.com/intent/tweet?text=${encodedText}&url=${encoded}`, '_blank'), disabled: false },
+    { icon: '💼', label: 'LinkedIn', action: () => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encoded}`, '_blank'), disabled: false },
+    { icon: '📧', label: 'Email', action: () => window.open(`mailto:?subject=Check this out on FreeTrust&body=${encodedText}%20${encoded}`, '_blank'), disabled: false },
   ]
 
   return (
@@ -1649,8 +1682,9 @@ function ShareSheet({ postId, canonicalPath, text, onClose }: { postId: string; 
         <button
           key={opt.label}
           onClick={opt.action}
-          style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '11px 14px', background: 'none', border: 'none', borderBottom: '1px solid var(--ft-surface)', color: 'var(--ft-text-secondary)', fontSize: '13px', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', transition: 'background 0.1s' }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(56,189,248,0.06)')}
+          disabled={opt.disabled}
+          style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '11px 14px', background: 'none', border: 'none', borderBottom: '1px solid var(--ft-surface)', color: 'var(--ft-text-secondary)', fontSize: '13px', cursor: opt.disabled ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit', transition: 'background 0.1s', opacity: opt.disabled ? 0.55 : 1 }}
+          onMouseEnter={e => { if (!opt.disabled) e.currentTarget.style.background = 'rgba(56,189,248,0.06)' }}
           onMouseLeave={e => (e.currentTarget.style.background = 'none')}
         >
           <span style={{ fontSize: '18px', width: '24px', textAlign: 'center', flexShrink: 0 }}>{opt.icon}</span>
@@ -1697,6 +1731,9 @@ export default function PostCard({
   const [commentExpanded,   setCommentExpanded]   = useState(false)
   const [showShare,         setShowShare]         = useState(false)
   const [shareCount,        setShareCount]        = useState(post.share_count ?? 0)
+  const [sharingToStory,    setSharingToStory]    = useState(false)
+  const [storyShareToast,   setStoryShareToast]   = useState('')
+  const [sharingToInstagram,setSharingToInstagram]= useState(false)
   const [showMenu,          setShowMenu]          = useState(false)
   const [deleting,          setDeleting]          = useState(false)
   const [deleted,           setDeleted]           = useState(false)
@@ -2337,11 +2374,149 @@ export default function PostCard({
     })
   }
 
+  const handleShareToStory = async (): Promise<boolean> => {
+    if (sharingToStory) return false
+    setSharingToStory(true)
+    let ok = false
+    try {
+      const res = await fetch('/api/stories/share-post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ post_id: post.id }),
+      })
+      if (res.ok) {
+        setStoryShareToast('⭐ Added to your Story!')
+        ok = true
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setStoryShareToast(data.error === 'Unauthorized' ? 'Please sign in to share to your Story.' : 'Could not share — try again.')
+      }
+    } catch {
+      setStoryShareToast('Network error — try again.')
+    }
+    setSharingToStory(false)
+    setTimeout(() => setStoryShareToast(''), 2500)
+    return ok
+  }
+
+  // Detects the current mobile OS from the user agent so we can pick the
+  // right Instagram Stories hand-off mechanism (iOS pasteboard vs Android
+  // intent). Returns 'other' for desktop/unknown — those get the
+  // download-and-instructions fallback.
+  const detectMobilePlatform = (): 'ios' | 'android' | 'other' => {
+    if (typeof navigator === 'undefined') return 'other'
+    const ua = navigator.userAgent || ''
+    if (/iPhone|iPad|iPod/i.test(ua)) return 'ios'
+    if (/Android/i.test(ua)) return 'android'
+    return 'other'
+  }
+
+  const handleShareToInstagramStory = async (): Promise<boolean> => {
+    if (sharingToInstagram) return false
+    setSharingToInstagram(true)
+    let ok = false
+    try {
+      // Render a branded 1080x1920 story-format image for this post via a
+      // server route (keeps canvas/font rendering off the client and gives
+      // us a stable, fetchable image URL for the Android intent path).
+      const renderRes = await fetch(`/api/stories/render-share-image?post_id=${post.id}`)
+      if (!renderRes.ok) {
+        const data = await renderRes.json().catch(() => ({}))
+        setStoryShareToast(data.error === 'Unauthorized' ? 'Please sign in to share to Instagram.' : 'Could not prepare image — try again.')
+        setSharingToInstagram(false)
+        setTimeout(() => setStoryShareToast(''), 2500)
+        return false
+      }
+      const blob = await renderRes.blob()
+      const imageUrl = URL.createObjectURL(blob)
+      const platform = detectMobilePlatform()
+
+      if (platform === 'ios') {
+        // Meta's documented "Sharing to Stories from Websites" flow for
+        // iOS: copy the image onto the OS pasteboard, then hand off to the
+        // instagram-stories:// URL scheme. Instagram picks the image up
+        // from the pasteboard when its Stories composer opens. No
+        // Facebook App ID is registered for FreeTrust yet, so
+        // source_application is omitted (it's optional per Meta's docs).
+        try {
+          const clipboardItem = new ClipboardItem({ [blob.type || 'image/png']: blob })
+          await navigator.clipboard.write([clipboardItem])
+          window.location.href = 'instagram-stories://share'
+          setStoryShareToast('📸 Opening Instagram — paste-in loads automatically')
+          ok = true
+        } catch {
+          // Clipboard write can fail (permissions, non-secure context,
+          // unsupported blob type) — fall back to download+instructions
+          // rather than leaving the user stuck.
+          downloadImage(blob, post.id)
+          setStoryShareToast('📸 Image saved — open Instagram → Add to Story → select it')
+          ok = true
+        }
+      } else if (platform === 'android') {
+        // Instagram's Android Stories intent fetches interactive_asset_uri
+        // itself, with no session cookies attached — it can't hit our
+        // authed render route directly. Upload the already-rendered image
+        // to the public `stories` bucket first (same bucket/pattern used
+        // by StoryCreateSheet) and hand Instagram that public URL instead.
+        try {
+          const supabase = createClient()
+          const { data: { user } } = await supabase.auth.getUser()
+          const { data: sessionData } = await supabase.auth.getSession()
+          const accessToken = sessionData.session?.access_token
+          if (!user || !accessToken) {
+            setStoryShareToast('Please sign in to share to Instagram.')
+            setSharingToInstagram(false)
+            setTimeout(() => setStoryShareToast(''), 2500)
+            return false
+          }
+          const storagePath = `${user.id}/share-image/${Date.now()}-${Math.random().toString(36).slice(2)}.png`
+          const { publicUrl } = await uploadToSupabaseStorageDirect({
+            bucket: 'stories',
+            storagePath,
+            file: blob,
+            contentType: blob.type || 'image/png',
+            accessToken,
+            timeoutMs: 20000,
+          })
+          const intentUrl = `intent://share#Intent;package=com.instagram.android;action=android.intent.action.SEND;type=image/png;S.interactive_asset_uri=${encodeURIComponent(publicUrl)};S.source_application=freetrust;end`
+          window.location.href = intentUrl
+          setStoryShareToast('📸 Opening Instagram…')
+          ok = true
+        } catch {
+          downloadImage(blob, post.id)
+          setStoryShareToast('📸 Image saved — open Instagram → Add to Story → select it')
+          ok = true
+        }
+      } else {
+        // Desktop / unknown UA / Instagram not installed: no reliable
+        // programmatic hand-off exists, so download the image and tell the
+        // user exactly what to do next.
+        downloadImage(blob, post.id)
+        setStoryShareToast('📸 Image downloaded — open Instagram → Add to Story → select it')
+        ok = true
+      }
+    } catch {
+      setStoryShareToast('Could not share to Instagram — try again.')
+    }
+    setSharingToInstagram(false)
+    setTimeout(() => setStoryShareToast(''), 4000)
+    return ok
+  }
+
+  const downloadImage = (blob: Blob, postId: string) => {
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `freetrust-story-${postId.slice(0, 8)}.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   // If deleted, vanish from feed instantly
   if (deleted) return null
 
   return (
-    <article ref={cardRef} className={`ft-post-card${expanded ? ' ft-post-card--expanded' : ''}`} style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '14px', marginBottom: '12px', overflow: 'hidden', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+    <article ref={cardRef} className={`ft-post-card${expanded ? ' ft-post-card--expanded' : ''}`} style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '14px', marginBottom: '12px', overflow: 'hidden', width: '100%', maxWidth: '100%', boxSizing: 'border-box', position: 'relative' }}>
 
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '14px 12px 10px 16px', minWidth: 0, overflow: 'visible', position: 'relative', zIndex: showMenu ? 200 : 2 }}>
@@ -2875,6 +3050,12 @@ export default function PostCard({
           onClick={toggleShare}
         />
         <ActionBtn
+          icon="⭐"
+          label={sharingToStory ? 'Sharing…' : 'Story'}
+          active={false}
+          onClick={handleShareToStory}
+        />
+        <ActionBtn
           icon={saved ? '🔖' : '🏷️'}
           label={saveCount > 0 ? saveCount.toString() : 'Save'}
           active={saved}
@@ -3021,7 +3202,23 @@ export default function PostCard({
       {/* ── Share sheet ── */}
       {showShare && (
         <div style={{ padding: '0 16px 14px' }}>
-          <ShareSheet postId={post.id} canonicalPath={canonicalUrl} text={shareText} onClose={() => setShowShare(false)} />
+          <ShareSheet
+            postId={post.id}
+            canonicalPath={canonicalUrl}
+            text={shareText}
+            onClose={() => setShowShare(false)}
+            onShareToStory={handleShareToStory}
+            sharingToStory={sharingToStory}
+            onShareToInstagramStory={handleShareToInstagramStory}
+            sharingToInstagram={sharingToInstagram}
+          />
+        </div>
+      )}
+
+      {/* ── Share-to-Story toast ── */}
+      {storyShareToast && (
+        <div style={{ position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', background: 'rgba(6,214,160,.16)', border: '1px solid rgba(6,214,160,.4)', color: '#06d6a0', fontSize: 12.5, fontWeight: 600, padding: '0.45rem 0.85rem', borderRadius: 999, zIndex: 50, whiteSpace: 'nowrap' }}>
+          {storyShareToast}
         </div>
       )}
 

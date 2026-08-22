@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Avatar from '@/components/Avatar'
+import Link from 'next/link'
 import type { StoryAuthorGroup, StoryRecord } from '@/types/stories'
+import { FEED_AUDIO_PLAY_EVENT, announceFeedAudioPlayback, generateFeedPlayerId } from '@/lib/feed/audioCoordinator'
+
+const SHARED_POST_TYPE_LABEL: Record<string, string> = {
+  text: '✏️ Post', video: '🎬 Video', short: '📱 Short', photo: '📷 Photo',
+  music: '🎵 Music', article: '📰 Article', listing: '🛍️ Listing', service: '🛠 Service',
+  product: '📦 Product', job: '💼 Job', event: '📅 Event', activity: '🏃 Activity',
+  poll: '📊 Poll', link: '🔗 Link', milestone: '🏆 Milestone',
+}
 
 // ── Relative time helper (kept local + tiny — most of the app formats dates
 // inline per-component rather than importing a shared date lib) ────────────
@@ -45,6 +54,75 @@ export interface StoryViewerProps {
   onStoryChanged?: () => void
 }
 
+// Card-style render for media_type === 'shared_post' stories — these have
+// no single image/video to fill the frame, so instead we render the
+// snapshot captured at share time (see share_post_as_story RPC): original
+// author, post type badge, title/content excerpt, and a media thumbnail
+// when the source post had one (photo/video/music/link posts etc).
+function SharedPostStoryCard({ story }: { story: StoryRecord }) {
+  const snap = story.shared_post_snapshot
+  if (!snap) {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ft-text-tertiary)', fontSize: 13, padding: 20, textAlign: 'center' }}>
+        This shared post is no longer available.
+      </div>
+    )
+  }
+  const typeLabel = SHARED_POST_TYPE_LABEL[snap.post_type] || '📝 Post'
+  const hasThumb = !!snap.media_url && (snap.media_type === 'image' || snap.media_type === 'photo' || snap.media_type === 'video')
+
+  return (
+    <div
+      style={{
+        width: '100%', height: '100%',
+        background: 'linear-gradient(160deg, var(--ft-surface) 0%, var(--ft-bg) 100%)',
+        display: 'flex', flexDirection: 'column',
+      }}
+    >
+      {hasThumb ? (
+        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#000' }}>
+          {snap.media_type === 'video' ? (
+            <video src={snap.media_url!} muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <img src={snap.media_url!} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          )}
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,.75) 100%)' }} />
+        </div>
+      ) : (
+        <div style={{ flex: 1 }} />
+      )}
+      <div style={{ padding: '1.1rem 1.2rem', paddingBottom: hasThumb ? '1.4rem' : '1.1rem', marginTop: hasThumb ? -70 : 0, position: 'relative', zIndex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: 'rgba(56,189,248,.16)', color: '#7dd3fc' }}>
+            {typeLabel}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+          <Avatar url={snap.author_avatar_url} name={snap.author_name} size={28} />
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{snap.author_name}</div>
+        </div>
+        {snap.title && (
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 6, lineHeight: 1.3 }}>{snap.title}</div>
+        )}
+        {snap.content && (
+          <div style={{ fontSize: 13.5, color: 'rgba(255,255,255,.85)', lineHeight: 1.45, maxHeight: 96, overflow: 'hidden' }}>
+            {snap.content.length > 220 ? `${snap.content.slice(0, 220)}…` : snap.content}
+          </div>
+        )}
+        {story.shared_post_id && (
+          <Link
+            href={`/feed/${story.shared_post_id}`}
+            onClick={(e) => e.stopPropagation()}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 14, fontSize: 13, fontWeight: 700, color: 'var(--ft-bg)', background: 'linear-gradient(135deg,var(--ft-accent),#00d4aa)', padding: '0.55rem 0.9rem', borderRadius: 999, textDecoration: 'none' }}
+          >
+            View post →
+          </Link>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function StoryViewer({
   groups,
   startGroupIndex,
@@ -69,6 +147,16 @@ export default function StoryViewer({
   const pausedAccumRef = useRef<number>(0)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const reducedMotion = useMemo(usesReducedMotion, [])
+  // Stories' own video sound never coordinated with the rest of the feed's
+  // single-audio-source rule (see lib/feed/audioCoordinator.ts) — a story
+  // could play audible video sound at the same time as an already-playing
+  // feed video, soundtrack, or (since the global music player persists
+  // across route navigation) a Music post track. This mirrors the same
+  // playerId/announce/yield pattern PostCard's VideoPlayer uses: mute
+  // (not pause) when another player announces, and announce right before
+  // this story's own video goes audible.
+  const storyPlayerIdRef = useRef(generateFeedPlayerId('ft-story'))
+  const [storyVideoMuted, setStoryVideoMuted] = useState(false)
 
   const group = groups[groupIndex]
   const story: StoryRecord | undefined = group?.stories[storyIndex]
@@ -80,6 +168,32 @@ export default function StoryViewer({
   const isOwner = isOrgGroup ? !!group?.canManage : group?.user.id === currentUserId
 
   const durationMs = story ? story.duration_seconds * 1000 : 5000
+
+  // Yield to whichever feed audio source most recently announced itself as
+  // audible (another story's video, a feed VideoPlayer, a PhotoCarousel
+  // soundtrack, or the global Music post player) — mutes rather than
+  // pauses so this story's own playback/progress timing is unaffected.
+  useEffect(() => {
+    const yieldToAnotherPlayer = (event: Event) => {
+      const detail = (event as CustomEvent<{ playerId?: string }>).detail
+      if (detail?.playerId === storyPlayerIdRef.current) return
+      setStoryVideoMuted(true)
+    }
+    window.addEventListener(FEED_AUDIO_PLAY_EVENT, yieldToAnotherPlayer)
+    return () => window.removeEventListener(FEED_AUDIO_PLAY_EVENT, yieldToAnotherPlayer)
+  }, [])
+
+  // Each time a new video story becomes active, it tries sound-on by
+  // default (matching feed video behavior) and announces itself — before
+  // calling play() — so any other currently-audible feed player yields
+  // first. (Sequenced imperatively via videoRef instead of the `autoPlay`
+  // attribute so the announce always happens before playback can start.)
+  useEffect(() => {
+    if (!story || story.media_type !== 'video') return
+    setStoryVideoMuted(false)
+    announceFeedAudioPlayback(storyPlayerIdRef.current)
+    videoRef.current?.play().catch(() => { /* autoplay may be blocked until user gesture */ })
+  }, [story?.id, story?.media_type])
 
   // ── Record view on display (stories mode only — memories don't track views) ──
   useEffect(() => {
@@ -276,17 +390,18 @@ export default function StoryViewer({
             alt={story.caption || `Story from ${displayName}`}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
-        ) : (
+        ) : story.media_type === 'video' ? (
           <video
             ref={videoRef}
             src={story.media_url}
-            autoPlay
             playsInline
-            muted={false}
+            muted={storyVideoMuted}
             onTimeUpdate={onVideoTimeUpdate}
             onEnded={onVideoEnded}
             style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#000' }}
           />
+        ) : (
+          <SharedPostStoryCard story={story} />
         )}
 
         {/* Progress segments — hidden entirely in memories mode */}

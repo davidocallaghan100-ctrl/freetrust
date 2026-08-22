@@ -39,7 +39,7 @@ export async function GET(_req: NextRequest) {
     // .or() filter so RLS + this scoping apply in one query.
     let query = supabase
       .from('stories')
-      .select('id, user_id, media_url, media_type, caption, duration_seconds, created_at, expires_at, saved_as_memory, view_count, posted_as_organisation_id')
+      .select('id, user_id, media_url, media_type, caption, duration_seconds, created_at, expires_at, saved_as_memory, view_count, posted_as_organisation_id, shared_post_id, shared_post_snapshot')
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
 
