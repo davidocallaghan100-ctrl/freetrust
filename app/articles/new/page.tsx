@@ -2,8 +2,37 @@
 import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { uploadToSupabaseStorageDirect, PHOTO_UPLOAD_TIMEOUT_MS, type UploadProgressSnapshot } from '@/lib/storage/directUpload'
 
 const CATEGORIES = ['Business', 'Technology', 'Sustainability', 'Design', 'Finance', 'Community']
+
+const FEATURED_IMAGE_BUCKET = 'feed-media'
+const FEATURED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif']
+const FEATURED_IMAGE_EXT_BY_MIME: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'image/heic': 'heic',
+  'image/heif': 'heif',
+}
+const MAX_FEATURED_IMAGE_BYTES = 10 * 1024 * 1024 // 10 MB — matches the app's other image upload limits
+
+// Perf/UX fix (2026-08-23): publishing was perceived as "taking too long."
+// Live timing against production showed the actual insert is fast
+// (~500-750ms round trip) — the real cost was downstream: a full extra
+// auth.getUser() network validation round trip on the critical path, and
+// the destination article page (app/articles/[slug]/page.tsx) doing
+// several sequential (not parallel) Supabase reads after the redirect,
+// which is fixed separately in that file. This page drops the redundant
+// getUser() round trip in favor of the already-cached local session — safe
+// because the DB's RLS policy `with check (auth.uid() = author_id)`
+// independently enforces the real author server-side regardless of what
+// the client sends — and adds a hard client-side timeout plus a
+// "still working" elapsed-time hint so a genuinely slow network never
+// just looks silently hung with only a static "Publishing…" label.
+const PUBLISH_TIMEOUT_MS = 25_000
+const SLOW_HINT_MS = 6_000
 
 function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80)
@@ -32,9 +61,14 @@ function NewArticleInner() {
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
   const [featuredImage, setFeaturedImage] = useState('')
+  const [imageUploading, setImageUploading] = useState(false)
+  const [imageUploadProgress, setImageUploadProgress] = useState<UploadProgressSnapshot | null>(null)
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null)
+  const featuredImageInputRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: ToastType } | null>(null)
+  const [elapsedHint, setElapsedHint] = useState<string | null>(null)
   const [wordCount, setWordCount] = useState(0)
   const editorRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
@@ -100,15 +134,89 @@ function NewArticleInner() {
 
   const getBody = () => editorRef.current?.innerHTML ?? ''
 
+  // Featured image upload — real media upload (2026-08-23 fix), replacing
+  // the old raw-URL text field. Uploads direct-to-Supabase-Storage from the
+  // browser (same transport as other image uploads in this app, see
+  // lib/storage/directUpload.ts), storing into the existing public
+  // `feed-media` bucket under `article-covers/<user_id>/<filename>` — this
+  // matches that bucket's existing RLS path convention
+  // (`(storage.foldername(name))[2] = auth.uid()::text`), so no new bucket
+  // or migration is needed. The resulting public URL is written into the
+  // same `featured_image_url` field the rest of the app already expects.
+  const uploadFeaturedImage = async (file: File) => {
+    setImageUploadError(null)
+
+    if (!FEATURED_IMAGE_TYPES.includes(file.type)) {
+      setImageUploadError('Please choose an image file (jpg, png, webp, gif, or heic).')
+      return
+    }
+    if (file.size > MAX_FEATURED_IMAGE_BYTES) {
+      setImageUploadError(`Image is too large (max ${Math.round(MAX_FEATURED_IMAGE_BYTES / 1024 / 1024)} MB).`)
+      return
+    }
+
+    setImageUploading(true)
+    setImageUploadProgress({ bytesUploaded: 0, bytesTotal: file.size, percent: 0, etaSeconds: null })
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+      const userId = session?.user?.id
+      if (!accessToken || !userId) {
+        setImageUploadError('Please sign in again to upload an image.')
+        return
+      }
+
+      const ext = FEATURED_IMAGE_EXT_BY_MIME[file.type] ?? 'jpg'
+      const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+      const storagePath = `article-covers/${userId}/${safeName}`
+
+      const result = await uploadToSupabaseStorageDirect({
+        bucket: FEATURED_IMAGE_BUCKET,
+        storagePath,
+        file,
+        contentType: file.type,
+        accessToken,
+        timeoutMs: PHOTO_UPLOAD_TIMEOUT_MS,
+        onProgress: setImageUploadProgress,
+      })
+
+      setFeaturedImage(result.publicUrl)
+    } catch (err) {
+      setImageUploadError(err instanceof Error ? err.message : 'Image upload failed. Please try again.')
+    } finally {
+      setImageUploading(false)
+      setImageUploadProgress(null)
+    }
+  }
+
+  const handleFeaturedImageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) uploadFeaturedImage(file)
+    e.target.value = ''
+  }
+
+  const handleFeaturedImageDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    const file = e.dataTransfer.files?.[0]
+    if (file) uploadFeaturedImage(file)
+  }
+
   const submit = async (status: 'draft' | 'published') => {
     if (!title.trim()) { showToast('Please add a title', 'error'); return }
     const body = getBody()
     if (!body.trim() || body === '<br>') { showToast('Please write some content', 'error'); return }
 
     if (status === 'published') setPublishing(true); else setSaving(true)
+    setElapsedHint(null)
+
+    const slowHintTimer = window.setTimeout(() => {
+      setElapsedHint(status === 'published' ? 'Still publishing… hang tight, this can take a few extra seconds on a slow connection.' : 'Still saving…')
+    }, SLOW_HINT_MS)
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
       if (!user) { showToast('Please sign in to publish', 'error'); return }
 
       const baseSlug = slugify(title)
@@ -129,12 +237,16 @@ function NewArticleInner() {
         author_id: user.id,
       }
 
-      let result
-      if (draftId) {
-        result = await supabase.from('articles').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', draftId).select().single()
-      } else {
-        result = await supabase.from('articles').insert(payload).select().single()
-      }
+      const dbCall = draftId
+        ? supabase.from('articles').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', draftId).select().single()
+        : supabase.from('articles').insert(payload).select().single()
+
+      // Hard timeout so a genuinely stalled request surfaces a real error
+      // instead of leaving the button stuck on "Publishing…" forever.
+      const timeout = new Promise<never>((_, reject) => {
+        window.setTimeout(() => reject(new Error(`This is taking unusually long (>${Math.round(PUBLISH_TIMEOUT_MS / 1000)}s). Please check your connection and try again.`)), PUBLISH_TIMEOUT_MS)
+      })
+      const result = await Promise.race([dbCall, timeout])
 
       if (result.error) {
         if (result.error.code === '42P01' || result.error.message?.includes('relation') || result.error.message?.includes('does not exist')) {
@@ -145,7 +257,7 @@ function NewArticleInner() {
 
       if (status === 'published') {
         showToast('Article published! ₮20 Trust earned 🎉', 'success')
-        setTimeout(() => router.push(`/articles/${result.data.slug}`), 1200)
+        setTimeout(() => router.push(`/articles/${result.data.slug}`), 700)
       } else {
         showToast('Draft saved ✓', 'success')
       }
@@ -153,6 +265,8 @@ function NewArticleInner() {
       const msg = err instanceof Error ? err.message : 'Something went wrong'
       showToast(msg, 'error')
     } finally {
+      window.clearTimeout(slowHintTimer)
+      setElapsedHint(null)
       setSaving(false)
       setPublishing(false)
     }
@@ -197,6 +311,13 @@ function NewArticleInner() {
         </div>
       )}
 
+      {/* Slow-network elapsed hint — only shows if publish/save is taking longer than expected */}
+      {elapsedHint && (saving || publishing) && (
+        <div style={{ position: 'fixed', top: toast ? 130 : 76, left: '50%', transform: 'translateX(-50%)', zIndex: 9998, background: 'rgba(15,23,42,0.92)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 10, padding: '0.6rem 1.25rem', color: 'var(--ft-text-secondary)', fontWeight: 500, fontSize: '0.82rem', animation: 'slideIn 0.2s ease', whiteSpace: 'nowrap' }}>
+          {elapsedHint}
+        </div>
+      )}
+
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '0.75rem' }}>
@@ -207,10 +328,10 @@ function NewArticleInner() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-            <button className="draft-btn" disabled={saving || publishing} onClick={() => submit('draft')}>
+            <button className="draft-btn" disabled={saving || publishing || imageUploading} onClick={() => submit('draft')}>
               {saving ? 'Saving…' : 'Save Draft'}
             </button>
-            <button className="pub-btn" disabled={saving || publishing} onClick={() => submit('published')}>
+            <button className="pub-btn" disabled={saving || publishing || imageUploading} onClick={() => submit('published')}>
               {publishing ? 'Publishing…' : 'Publish — Earn ₮20'}
             </button>
           </div>
@@ -275,19 +396,74 @@ function NewArticleInner() {
 
           {/* Featured image */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Featured Image URL</label>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Featured Image</label>
             <input
-              className="new-art-input"
-              value={featuredImage}
-              onChange={e => setFeaturedImage(e.target.value)}
-              placeholder="https://example.com/image.jpg"
-              style={{ padding: '0.65rem 1rem', fontSize: '0.9rem' }}
+              ref={featuredImageInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
+              onChange={handleFeaturedImageInputChange}
+              style={{ display: 'none' }}
             />
-            {featuredImage && (
-              <div style={{ marginTop: '0.75rem', borderRadius: 8, overflow: 'hidden', maxHeight: 200, border: '1px solid rgba(56,189,248,0.15)' }}>
+
+            {featuredImage && !imageUploading ? (
+              <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', maxHeight: 220, border: '1px solid rgba(56,189,248,0.15)' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={featuredImage} alt="Featured preview" style={{ width: '100%', objectFit: 'cover', maxHeight: 200 }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                <img src={featuredImage} alt="Featured preview" style={{ width: '100%', objectFit: 'cover', maxHeight: 220, display: 'block' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: '0.4rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => featuredImageInputRef.current?.click()}
+                    style={{ background: 'rgba(15,23,42,0.85)', border: '1px solid rgba(148,163,184,0.3)', borderRadius: 6, color: 'var(--ft-text)', fontSize: '0.75rem', fontWeight: 600, padding: '0.35rem 0.7rem', cursor: 'pointer' }}
+                  >
+                    Replace
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFeaturedImage('')}
+                    style={{ background: 'rgba(42,15,15,0.85)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 6, color: '#f87171', fontSize: '0.75rem', fontWeight: 600, padding: '0.35rem 0.7rem', cursor: 'pointer' }}
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
+            ) : (
+              <div
+                onClick={() => !imageUploading && featuredImageInputRef.current?.click()}
+                onDragOver={e => e.preventDefault()}
+                onDrop={handleFeaturedImageDrop}
+                style={{
+                  border: '1.5px dashed rgba(56,189,248,0.3)',
+                  borderRadius: 10,
+                  padding: '1.75rem 1rem',
+                  textAlign: 'center',
+                  cursor: imageUploading ? 'default' : 'pointer',
+                  background: 'var(--ft-surface)',
+                  transition: 'border-color 0.15s',
+                }}
+              >
+                {imageUploading ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'center' }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--ft-text-secondary)', fontWeight: 600 }}>
+                      Uploading… {imageUploadProgress?.percent ?? 0}%
+                    </div>
+                    <div style={{ width: '60%', height: 6, background: 'rgba(148,163,184,0.15)', borderRadius: 999, overflow: 'hidden' }}>
+                      <div style={{ width: `${imageUploadProgress?.percent ?? 0}%`, height: '100%', background: 'var(--ft-accent)', transition: 'width 0.15s' }} />
+                    </div>
+                    {imageUploadProgress?.etaSeconds != null && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)' }}>~{imageUploadProgress.etaSeconds}s left</div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>📷</div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--ft-text-secondary)', fontWeight: 600 }}>Click to upload or drag an image here</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', marginTop: '0.2rem' }}>JPG, PNG, WEBP, GIF, or HEIC — max 10 MB</div>
+                  </>
+                )}
+              </div>
+            )}
+            {imageUploadError && (
+              <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--ft-danger)' }}>{imageUploadError}</div>
             )}
           </div>
 
@@ -339,10 +515,10 @@ function NewArticleInner() {
 
           {/* Bottom action row */}
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', paddingTop: '0.5rem' }}>
-            <button className="draft-btn" disabled={saving || publishing} onClick={() => submit('draft')}>
+            <button className="draft-btn" disabled={saving || publishing || imageUploading} onClick={() => submit('draft')}>
               {saving ? 'Saving…' : 'Save Draft'}
             </button>
-            <button className="pub-btn" disabled={saving || publishing} onClick={() => submit('published')}>
+            <button className="pub-btn" disabled={saving || publishing || imageUploading} onClick={() => submit('published')}>
               {publishing ? 'Publishing…' : 'Publish Article'}
             </button>
           </div>
