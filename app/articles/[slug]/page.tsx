@@ -88,15 +88,21 @@ export default function ArticlePage() {
 
   const loadAll = useCallback(async () => {
     setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    setUserId(user?.id ?? null)
 
-    // Fetch article
-    const { data: art, error: artErr } = await supabase
-      .from('articles')
-      .select('*, profiles!author_id(id, full_name, avatar_url, bio)')
-      .eq('slug', slug)
-      .single()
+    // Perf fix (2026-08-23): the article + the current user are independent
+    // reads — fetch them concurrently instead of awaiting auth.getUser()
+    // before even starting the article query. This was adding a full extra
+    // network round trip (~150-250ms) in front of every article page load,
+    // which compounds badly right after Publish redirects here.
+    const [{ data: { user } }, { data: art, error: artErr }] = await Promise.all([
+      supabase.auth.getUser(),
+      supabase
+        .from('articles')
+        .select('*, profiles!author_id(id, full_name, avatar_url, bio)')
+        .eq('slug', slug)
+        .single(),
+    ])
+    setUserId(user?.id ?? null)
 
     if (artErr || !art) { setNotFound(true); setLoading(false); return }
 
@@ -104,38 +110,50 @@ export default function ArticlePage() {
     setArticle(mappedArt)
     setClapCount(art.clap_count ?? 0)
 
-    // Fetch user clap count
-    if (user) {
-      const { count } = await supabase.from('article_claps').select('*', { count: 'exact', head: true }).eq('article_id', art.id).eq('user_id', user.id)
-      setUserClapCount(count ?? 0)
-    }
+    // Perf fix (2026-08-23): the remaining reads (user's clap count,
+    // comments, related articles, author's published-article count) are
+    // all independent of each other — they only depend on `art`, which we
+    // already have. Previously these were four sequential awaits, each
+    // paying its own round-trip latency (~200-600ms observed live), so a
+    // freshly-published article could take several extra seconds to fully
+    // render after the redirect from Publish even though the publish
+    // write itself was fast. Running them in parallel cuts that wait to
+    // roughly the slowest single query instead of the sum of all of them.
+    const [userClapResult, commentsResult, relatedResult, authorCountResult] = await Promise.all([
+      user
+        ? supabase.from('article_claps').select('*', { count: 'exact', head: true }).eq('article_id', art.id).eq('user_id', user.id)
+        : Promise.resolve({ count: null }),
+      supabase
+        .from('article_comments')
+        .select('*, profiles!author_id(id, full_name, avatar_url, bio)')
+        .eq('article_id', art.id)
+        .order('created_at', { ascending: true }),
+      art.category
+        ? supabase
+            .from('articles')
+            .select('id, slug, title, clap_count, read_time_minutes, profiles!author_id(id, full_name, avatar_url, bio)')
+            .eq('status', 'published')
+            .eq('category', art.category)
+            .neq('id', art.id)
+            .order('clap_count', { ascending: false })
+            .limit(3)
+        : Promise.resolve({ data: null }),
+      art.author_id
+        ? supabase.from('articles').select('*', { count: 'exact', head: true }).eq('author_id', art.author_id).eq('status', 'published')
+        : Promise.resolve({ count: null }),
+    ])
 
-    // Fetch comments
-    const { data: cmts } = await supabase
-      .from('article_comments')
-      .select('*, profiles!author_id(id, full_name, avatar_url, bio)')
-      .eq('article_id', art.id)
-      .order('created_at', { ascending: true })
+    if (user) setUserClapCount(userClapResult.count ?? 0)
+
+    const cmts = commentsResult.data
     setComments((cmts ?? []).map((c: Record<string, unknown>) => ({ ...c, author: c.profiles as Author | null })) as Comment[])
 
-    // Fetch related articles (same category, excluding current)
     if (art.category) {
-      const { data: rel } = await supabase
-        .from('articles')
-        .select('id, slug, title, clap_count, read_time_minutes, profiles!author_id(id, full_name, avatar_url, bio)')
-        .eq('status', 'published')
-        .eq('category', art.category)
-        .neq('id', art.id)
-        .order('clap_count', { ascending: false })
-        .limit(3)
+      const rel = relatedResult.data
       setRelated((rel ?? []).map((r: Record<string, unknown>) => ({ ...r, author: r.profiles as Author | null })) as RelatedArticle[])
     }
 
-    // Author article count
-    if (art.author_id) {
-      const { count: ac } = await supabase.from('articles').select('*', { count: 'exact', head: true }).eq('author_id', art.author_id).eq('status', 'published')
-      setAuthorArticleCount(ac ?? 0)
-    }
+    if (art.author_id) setAuthorArticleCount(authorCountResult.count ?? 0)
 
     setLoading(false)
   }, [slug])
