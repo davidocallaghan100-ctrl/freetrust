@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { uploadToSupabaseStorageDirect, PHOTO_UPLOAD_TIMEOUT_MS, type UploadProgressSnapshot } from '@/lib/storage/directUpload'
+import { uploadToSupabaseStorageDirect, PHOTO_UPLOAD_TIMEOUT_MS, compressImageForUpload, type UploadProgressSnapshot } from '@/lib/storage/directUpload'
 
 const CATEGORIES = ['Business', 'Technology', 'Sustainability', 'Design', 'Finance', 'Community']
 
@@ -143,6 +143,15 @@ function NewArticleInner() {
   // (`(storage.foldername(name))[2] = auth.uid()::text`), so no new bucket
   // or migration is needed. The resulting public URL is written into the
   // same `featured_image_url` field the rest of the app already expects.
+  //
+  // 2026-08-24: images are resized/re-encoded client-side via
+  // compressImageForUpload() before the upload call. A real published
+  // article previously shipped 5 AI-generated PNGs totalling ~8.3MB with no
+  // compression step, which was the actual cause of that article's page
+  // loading slowly — see .memory/capabilities/freetrust-article-editor.md.
+  // compressImageForUpload() safely falls back to the original file on any
+  // failure (unsupported browser, decode error, etc.), so this never blocks
+  // a real upload.
   const uploadFeaturedImage = async (file: File) => {
     setImageUploadError(null)
 
@@ -155,8 +164,10 @@ function NewArticleInner() {
       return
     }
 
+    const uploadFile = await compressImageForUpload(file, { maxDimension: 1600, quality: 0.82 })
+
     setImageUploading(true)
-    setImageUploadProgress({ bytesUploaded: 0, bytesTotal: file.size, percent: 0, etaSeconds: null })
+    setImageUploadProgress({ bytesUploaded: 0, bytesTotal: uploadFile.size, percent: 0, etaSeconds: null })
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -167,15 +178,15 @@ function NewArticleInner() {
         return
       }
 
-      const ext = FEATURED_IMAGE_EXT_BY_MIME[file.type] ?? 'jpg'
+      const ext = FEATURED_IMAGE_EXT_BY_MIME[uploadFile.type] ?? FEATURED_IMAGE_EXT_BY_MIME[file.type] ?? 'jpg'
       const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
       const storagePath = `article-covers/${userId}/${safeName}`
 
       const result = await uploadToSupabaseStorageDirect({
         bucket: FEATURED_IMAGE_BUCKET,
         storagePath,
-        file,
-        contentType: file.type,
+        file: uploadFile,
+        contentType: uploadFile.type,
         accessToken,
         timeoutMs: PHOTO_UPLOAD_TIMEOUT_MS,
         onProgress: setImageUploadProgress,

@@ -16,6 +16,16 @@
  * Both transports report progress through the same `UploadProgressSnapshot`
  * shape via `createUploadProgressTracker()` so UI code can render one
  * consistent progress bar + ETA regardless of which path was used.
+ *
+ * Also exports `compressImageForUpload()` (added 2026-08-24) — a canvas-based
+ * resize/re-encode step for still-image uploads (photos, featured/cover
+ * images). This is deliberately NOT used for video uploads; the TUS
+ * resumable path above is already tuned for large video files and
+ * transcoding video client-side is a different problem entirely. Motivated
+ * by a real production incident where 5 AI-generated PNGs on one article
+ * totalled ~8.3MB uncompressed with no client-side resize/compression step,
+ * making that article's page slow to load purely from image weight — see
+ * `.memory/capabilities/freetrust-article-editor.md` for the full writeup.
  */
 
 export interface DirectStorageUploadResult {
@@ -298,6 +308,98 @@ export async function uploadVideoResumable(params: {
         // If lookup fails for any reason, just start fresh rather than blocking the upload.
         upload.start()
       })
+  })
+}
+
+export interface ImageCompressionOptions {
+  /** Longest edge in pixels the output image will be capped to. Images already smaller are not upscaled. */
+  maxDimension?: number
+  /** JPEG/WebP quality, 0-1. Ignored for GIFs (animated GIFs are passed through untouched). */
+  quality?: number
+  /** Preferred output MIME type. Falls back to the original file's type if the browser can't encode it. */
+  preferredMimeType?: 'image/webp' | 'image/jpeg'
+}
+
+const DEFAULT_MAX_DIMENSION = 1600
+const DEFAULT_QUALITY = 0.82
+
+/**
+ * Resizes and re-encodes a still image client-side (canvas-based, no extra
+ * dependency) before upload, so large camera/AI-generated images don't ship
+ * multi-megabyte originals straight to Storage. Deliberately still-image
+ * only — do not call this for video files.
+ *
+ * Skips GIFs (canvas re-encode would flatten animation to a single frame)
+ * and HEIC/HEIF (canvas can't reliably decode these in most browsers; they
+ * pass through unchanged and rely on Supabase/downstream handling, same as
+ * before this function existed).
+ *
+ * On any failure (canvas unsupported, decode error, toBlob failure) this
+ * resolves with the ORIGINAL file rather than throwing — a failed
+ * compression attempt should never block a real upload the user is waiting
+ * on. Also resolves with the original file unchanged if the compressed
+ * result would somehow be larger (can happen with already-optimized small
+ * source images) or if the source is already at/under both the target
+ * dimension and a sane size floor, to avoid pointless re-encoding.
+ */
+export async function compressImageForUpload(
+  file: File,
+  options: ImageCompressionOptions = {},
+): Promise<File> {
+  const maxDimension = options.maxDimension ?? DEFAULT_MAX_DIMENSION
+  const quality = options.quality ?? DEFAULT_QUALITY
+
+  const skipTypes = ['image/gif', 'image/heic', 'image/heif']
+  if (skipTypes.includes(file.type)) return file
+
+  // Small files are almost certainly already reasonably sized (e.g. a
+  // pre-cropped avatar) — skip the decode/re-encode round trip entirely.
+  const SKIP_BELOW_BYTES = 300 * 1024 // 300 KB
+  if (file.size <= SKIP_BELOW_BYTES) return file
+
+  try {
+    const bitmap = await createImageBitmap(file)
+    const { width, height } = bitmap
+    const longestEdge = Math.max(width, height)
+    const scale = longestEdge > maxDimension ? maxDimension / longestEdge : 1
+    const targetW = Math.round(width * scale)
+    const targetH = Math.round(height * scale)
+
+    const canvas = document.createElement('canvas')
+    canvas.width = targetW
+    canvas.height = targetH
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return file
+
+    ctx.drawImage(bitmap, 0, 0, targetW, targetH)
+    bitmap.close?.()
+
+    const preferredType = options.preferredMimeType ?? 'image/webp'
+    const outputType = await canvasSupportsEncoding(canvas, preferredType) ? preferredType : 'image/jpeg'
+
+    const blob: Blob | null = await new Promise((resolve) => {
+      canvas.toBlob((b) => resolve(b), outputType, quality)
+    })
+    if (!blob) return file
+
+    // Only use the compressed result if it's actually smaller — a tiny or
+    // already-optimized source image can occasionally re-encode larger.
+    if (blob.size >= file.size) return file
+
+    const ext = outputType === 'image/webp' ? 'webp' : 'jpg'
+    const baseName = file.name.replace(/\.[^./]+$/, '') || 'image'
+    return new File([blob], `${baseName}.${ext}`, { type: outputType, lastModified: Date.now() })
+  } catch {
+    // Decode/encode failed for any reason — fall back to the original file
+    // rather than blocking the upload.
+    return file
+  }
+}
+
+/** Feature-detects canvas WebP encoding support (Safari < 14 lacks it). */
+function canvasSupportsEncoding(canvas: HTMLCanvasElement, type: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(!!blob && blob.type === type), type, 0.5)
   })
 }
 
