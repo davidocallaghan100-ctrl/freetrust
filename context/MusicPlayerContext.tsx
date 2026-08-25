@@ -151,6 +151,20 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       await audio.play()
       setBlocked(false)
     } catch {
+      // Autoplay/gesture rejection (e.g. NotAllowedError). Per the HTML
+      // spec, calling play() sets `paused = false` and fires the native
+      // 'play' event SYNCHRONOUSLY, before the returned promise settles —
+      // so `playing` may already have flipped to true (via the onPlay
+      // listener below) even though the promise is about to reject and no
+      // audio is actually going to be audible. Some browsers don't follow
+      // up a rejected play() with a native 'pause' event, which would
+      // otherwise leave the UI stuck showing a Pause icon with no way to
+      // actually start playback (tapping it would call pause(), a no-op).
+      // Force both the real element and the `playing` state back to a
+      // known "not playing" state here so the button always renders as a
+      // tappable ▶ Play icon after a blocked attempt.
+      audio.pause()
+      setPlaying(false)
       setBlocked(true)
     }
   }, [ensureAudioGraph])
