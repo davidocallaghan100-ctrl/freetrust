@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const {
       title, description, category,
-      price_per_day, price_per_week, deposit,
+      price_per_day, price_per_week, price_per_month, deposit,
       location, images, available_from, available_to,
     } = body
 
@@ -78,6 +78,7 @@ export async function POST(req: NextRequest) {
       category:      category.trim(),
       price_per_day: (price_per_day != null && price_per_day !== '') ? Number(price_per_day) : null,
       price_per_week: (price_per_week != null && price_per_week !== '') ? Number(price_per_week) : null,
+      price_per_month: (price_per_month != null && price_per_month !== '') ? Number(price_per_month) : null,
       deposit:       (deposit != null && deposit !== '') ? Number(deposit) : 0,
       location:      location?.trim() || null,
       images:        imagesPg,

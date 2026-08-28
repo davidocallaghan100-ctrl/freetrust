@@ -33,6 +33,7 @@ export default function NewRentSharePage() {
   const [category, setCategory] = useState('Tools')
   const [pricePerDay, setPricePerDay] = useState('')
   const [pricePerWeek, setPricePerWeek] = useState('')
+  const [pricePerMonth, setPricePerMonth] = useState('')
   const [deposit, setDeposit] = useState('')
   const [location, setLocation] = useState('')
   const [photos, setPhotos] = useState<NewPhoto[]>([])
@@ -125,6 +126,7 @@ export default function NewRentSharePage() {
           category,
           price_per_day:  pricePerDay  ? parseFloat(pricePerDay)  : null,
           price_per_week: pricePerWeek ? parseFloat(pricePerWeek) : null,
+          price_per_month: pricePerMonth ? parseFloat(pricePerMonth) : null,
           deposit:        deposit      ? parseFloat(deposit)       : 0,
           location:       location.trim() || null,
           images:         uploadedImages,
@@ -185,6 +187,8 @@ export default function NewRentSharePage() {
         .rs-photo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin-bottom: 0.75rem; }
         @media (max-width: 600px) { .rs-photo-grid { grid-template-columns: repeat(3, 1fr) !important; } }
         @media (max-width: 400px) { .rs-photo-grid { grid-template-columns: repeat(2, 1fr) !important; } }
+        @media (max-width: 600px) { .rs-new-pricing-grid { grid-template-columns: 1fr 1fr !important; } }
+        @media (max-width: 400px) { .rs-new-pricing-grid { grid-template-columns: 1fr !important; } }
       `}</style>
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
         {/* Header */}
@@ -239,7 +243,7 @@ export default function NewRentSharePage() {
           </div>
 
           {/* Pricing */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+          <div className="rs-new-pricing-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.75rem' }}>
             <div>
               <label style={labelStyle}>Price / Day (€)</label>
               <input type="number" min="0" step="0.5" value={pricePerDay} onChange={e => setPricePerDay(e.target.value)} placeholder="0.00" style={inputStyle} />
@@ -249,11 +253,15 @@ export default function NewRentSharePage() {
               <input type="number" min="0" step="1" value={pricePerWeek} onChange={e => setPricePerWeek(e.target.value)} placeholder="0.00" style={inputStyle} />
             </div>
             <div>
+              <label style={labelStyle}>Price / Month (€)</label>
+              <input type="number" min="0" step="1" value={pricePerMonth} onChange={e => setPricePerMonth(e.target.value)} placeholder="0.00" style={inputStyle} />
+            </div>
+            <div>
               <label style={labelStyle}>Deposit (€)</label>
               <input type="number" min="0" step="1" value={deposit} onChange={e => setDeposit(e.target.value)} placeholder="0.00" style={inputStyle} />
             </div>
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-faint)', marginTop: -8 }}>Leave prices at 0 to list as free / community share</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-faint)', marginTop: -8 }}>Leave prices at 0 to list as free / community share. Monthly price is handy for rooms and property listings.</div>
 
           {/* Location */}
           <div>

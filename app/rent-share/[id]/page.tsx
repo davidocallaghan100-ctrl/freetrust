@@ -11,6 +11,7 @@ interface Listing {
   category: string
   price_per_day: number | null
   price_per_week: number | null
+  price_per_month: number | null
   deposit: number | null
   location: string | null
   images: string[]
@@ -267,7 +268,13 @@ export default function RentShareDetailPage() {
                   <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#2dd4bf' }}>€{listing.price_per_week}</div>
                 </div>
               )}
-              {(listing.price_per_day == null || listing.price_per_day === 0) && (listing.price_per_week == null || listing.price_per_week === 0) && (
+              {listing.price_per_month != null && listing.price_per_month > 0 && (
+                <div style={{ background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: 10, padding: '10px 16px' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--ft-text-faint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Monthly Budget</div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#a78bfa' }}>€{listing.price_per_month}</div>
+                </div>
+              )}
+              {(listing.price_per_day == null || listing.price_per_day === 0) && (listing.price_per_week == null || listing.price_per_week === 0) && (listing.price_per_month == null || listing.price_per_month === 0) && (
                 <div style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 10, padding: '10px 16px' }}>
                   <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#34d399' }}>Free to borrow ♻️</div>
                 </div>

@@ -13,6 +13,7 @@ interface Listing {
   category: string
   price_per_day: number | null
   price_per_week: number | null
+  price_per_month: number | null
   deposit: number | null
   location: string | null
   images: string[]
@@ -44,10 +45,12 @@ function daysAgo(iso: string) {
   return diff === 0 ? 'Today' : diff === 1 ? 'Yesterday' : `${diff}d ago`
 }
 
-function formatPrice(day: number | null, week: number | null) {
-  if (day && week) return `€${day}/day · €${week}/wk`
-  if (day) return `€${day}/day`
-  if (week) return `€${week}/wk`
+function formatPrice(day: number | null, week: number | null, month: number | null) {
+  const parts: string[] = []
+  if (day) parts.push(`€${day}/day`)
+  if (week) parts.push(`€${week}/wk`)
+  if (month) parts.push(`€${month}/mo`)
+  if (parts.length) return parts.join(' · ')
   return 'Free to borrow'
 }
 
@@ -144,7 +147,7 @@ function ListingCard({ listing, onClick, isOwner, onDelete }: { listing: Listing
         {/* Footer */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid rgba(56,189,248,0.06)' }}>
           <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ft-accent)' }}>
-            {formatPrice(listing.price_per_day, listing.price_per_week)}
+            {formatPrice(listing.price_per_day, listing.price_per_week, listing.price_per_month)}
           </span>
           {isOwner ? (
             <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }} onClick={e => e.stopPropagation()}>

@@ -29,6 +29,7 @@ export default function EditRentSharePage() {
   const [status,        setStatus]        = useState('active')
   const [pricePerDay,   setPricePerDay]   = useState('')
   const [pricePerWeek,  setPricePerWeek]  = useState('')
+  const [pricePerMonth, setPricePerMonth] = useState('')
   const [deposit,       setDeposit]       = useState('')
   const [location,      setLocation]      = useState('')
   const [availableFrom, setAvailableFrom] = useState('')
@@ -68,6 +69,7 @@ export default function EditRentSharePage() {
       setStatus(listing.status ?? 'active')
       setPricePerDay(listing.price_per_day != null ? String(listing.price_per_day) : '')
       setPricePerWeek(listing.price_per_week != null ? String(listing.price_per_week) : '')
+      setPricePerMonth(listing.price_per_month != null ? String(listing.price_per_month) : '')
       setDeposit(listing.deposit != null && listing.deposit > 0 ? String(listing.deposit) : '')
       setLocation(listing.location ?? '')
       setAvailableFrom(listing.available_from ?? '')
@@ -163,6 +165,7 @@ export default function EditRentSharePage() {
           status,
           price_per_day:  pricePerDay  ? parseFloat(pricePerDay)  : null,
           price_per_week: pricePerWeek ? parseFloat(pricePerWeek) : null,
+          price_per_month: pricePerMonth ? parseFloat(pricePerMonth) : null,
           deposit:        deposit      ? parseFloat(deposit)       : 0,
           location:       location.trim() || null,
           images:         finalImages,
@@ -222,7 +225,7 @@ export default function EditRentSharePage() {
         .drop-zone { border: 2px dashed var(--ft-border-strong); border-radius: 12px; padding: 1.5rem; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
         .drop-zone:hover, .drop-zone.drag-over { border-color: rgba(45,212,191,0.5); background: rgba(45,212,191,0.04); }
         .rs-edit-wrap { max-width: 700px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
-        .rs-pricing-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; }
+        .rs-pricing-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.75rem; }
         .rs-avail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
         .rs-photo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin-bottom: 0.75rem; }
         .rs-edit-actions { display: flex; gap: 0.75rem; padding-top: 0.5rem; }
@@ -316,11 +319,15 @@ export default function EditRentSharePage() {
                 <input type="number" min="0" step="1" value={pricePerWeek} onChange={e => setPricePerWeek(e.target.value)} placeholder="0.00" style={inputStyle} />
               </div>
               <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-faint)', marginBottom: 5 }}>Per Month</div>
+                <input type="number" min="0" step="1" value={pricePerMonth} onChange={e => setPricePerMonth(e.target.value)} placeholder="0.00" style={inputStyle} />
+              </div>
+              <div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--ft-text-faint)', marginBottom: 5 }}>Deposit</div>
                 <input type="number" min="0" step="1" value={deposit} onChange={e => setDeposit(e.target.value)} placeholder="0.00" style={inputStyle} />
               </div>
             </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-faint)', marginTop: 6 }}>Leave at 0 for free / community share</div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-faint)', marginTop: 6 }}>Leave at 0 for free / community share. Monthly price is handy for rooms and property listings.</div>
           </div>
 
           {/* Location */}
