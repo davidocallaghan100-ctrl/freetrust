@@ -14,6 +14,7 @@
 - Serves PWA metadata and app icons for installed mobile homescreen use.
 - Organisation directory cards show an options menu to organisation owners/admins and platform admins, including edit and confirmed delete actions.
 - Feed composer supports Spotify/link attachments and organisation `@slug` tagging; feed cards render Spotify embeds, link preview cards, clickable URLs, and organisation mention links.
+- Music posts support Spotify/iTunes previews or member-uploaded audio, an optional member-uploaded background image, and a persistent horizontal waveform driven by the real audio signal; only the member who uploaded the Music post can replace/remove its background.
 - Photo posts support multi-photo upload (up to 10 images) and render as swipe/click carousel slides in the feed while keeping the first image backward-compatible in `feed_posts.media_url`.
 - Photo upload on `/create` compresses client-side, uploads directly to Supabase Storage through an abortable REST request, and shows a clear timeout/error instead of leaving mobile users stuck on `Uploading…` indefinitely.
 - `/create` photo, video, and short-video posts support optional text overlays with five popular styles — Classic, Story, Neon, Caption Bar, and Minimal — plus top/center/bottom placement. Overlay metadata is stored as hidden feed-post content markers and rendered over photo carousels and videos in `PostCard`, so no database migration or media re-encoding is required.

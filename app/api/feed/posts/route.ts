@@ -12,6 +12,8 @@ type FeedItem = {
   content: string | null
   media_url: string | null
   media_type: string | null
+  music_background_url?: string | null
+  music_waveform?: number[] | null
   title: string | null
   link_url: string | null
   metadata?: Record<string, unknown> | null
@@ -136,7 +138,7 @@ export async function GET(req: NextRequest) {
      let query = supabase
        .from('feed_posts')
        .select(`
-         id, user_id, type, content, media_url, media_type, title, link_url,
+          id, user_id, type, content, media_url, media_type, music_background_url, music_waveform, title, link_url,
          trust_reward, likes_count, comments_count, saves_count, views_count, created_at, updated_at,
          posted_as_organisation_id,
           profiles!feed_posts_user_id_fkey(id, full_name, avatar_url, trust_balance, is_verified, verified_at, verification_status),

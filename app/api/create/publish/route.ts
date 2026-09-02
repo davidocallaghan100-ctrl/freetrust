@@ -8,6 +8,7 @@ import { awardTrust } from '@/lib/trust/award'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 import { assertStripeConnectedForPaidListing } from '@/lib/stripe/connect-gate'
 import { findServiceCategoryByLabel } from '@/lib/service-categories'
+import { normaliseMusicWaveform } from '@/lib/audio/musicWaveform'
 
 // Map UI-friendly labels (from the create form) to the DB CHECK constraint
 // values defined in lib/supabase/jobs-schema.sql.
@@ -33,6 +34,20 @@ function normaliseOptionalUuid(value: unknown): string | null {
   if (typeof value !== 'string') return null
   const trimmed = value.trim()
   return UUID_RE.test(trimmed) ? trimmed : null
+}
+
+function normaliseOptionalHttpUrl(value: unknown): string | null {
+  if (value === null || value === undefined) return null
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  if (trimmed.length > 2048 || !/^https?:\/\//i.test(trimmed)) return null
+  try {
+    const parsed = new URL(trimmed)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? trimmed : null
+  } catch {
+    return null
+  }
 }
 
 function normaliseMediaUrls(raw: unknown, fallback: string | null) {
@@ -676,6 +691,20 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      let musicBackgroundUrl: string | null = null
+      let musicWaveform: number[] | null = null
+      if (type === 'music') {
+        const hasBackgroundField = Object.prototype.hasOwnProperty.call(data, 'music_background_url')
+        const rawBackgroundUrl = data.music_background_url
+        musicBackgroundUrl = normaliseOptionalHttpUrl(rawBackgroundUrl)
+        if (hasBackgroundField && rawBackgroundUrl !== null && rawBackgroundUrl !== undefined && String(rawBackgroundUrl).trim() && !musicBackgroundUrl) {
+          return fail('Music background image URL is invalid', 400)
+        }
+        // Only keep a small, normalized JSON payload supplied by the composer;
+        // remote preview tracks can still render the client-side fallback.
+        musicWaveform = normaliseMusicWaveform(data.music_waveform)
+      }
+
       const photoCaption = appendSpotifyMarker(appendTextOverlayMarker(appendMediaUrlsMarker(String(data.caption ?? ''), photoMediaUrls), data), data)
       const videoDescription = appendTextOverlayMarker(String(data.description ?? ''), data)
       const shortCaption = appendTextOverlayMarker(String(data.caption ?? ''), data)
@@ -705,9 +734,11 @@ export async function POST(req: NextRequest) {
         content: mapped.content,
         title: mapped.title ?? null,
         link_url: mapped.link_url ?? null,
-        media_url: mapped.media_url ?? null,
-        media_type: type === 'photo' ? 'image' : type === 'video' || type === 'short' ? 'video' : type === 'music' ? (mapped.media_url ? 'audio' : null) : null,
-        // Display override — null for personal posts, set to an
+         media_url: mapped.media_url ?? null,
+         media_type: type === 'photo' ? 'image' : type === 'video' || type === 'short' ? 'video' : type === 'music' ? (mapped.media_url ? 'audio' : null) : null,
+         music_background_url: type === 'music' ? musicBackgroundUrl : null,
+         music_waveform: type === 'music' ? musicWaveform : null,
+         // Display override — null for personal posts, set to an
         // organisation id when the caller publishes as an org.
         posted_as_organisation_id: postedAsOrganisationId,
       })

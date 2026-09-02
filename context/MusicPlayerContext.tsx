@@ -45,6 +45,8 @@ export type MusicTrackInfo = {
   title: string
   artist?: string | null
   artwork?: string | null
+  backgroundImage?: string | null
+  waveform?: number[] | null
 }
 
 type MusicPlayerContextValue = {
@@ -201,7 +203,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
         artist: current.artist || 'FreeTrust',
         album: 'FreeTrust',
         artwork: [
-          { src: current.artwork || FREETRUST_LOGO_SRC, sizes: '512x512', type: current.artwork ? undefined : 'image/png' },
+          { src: current.backgroundImage || current.artwork || FREETRUST_LOGO_SRC, sizes: '512x512', type: current.backgroundImage || current.artwork ? undefined : 'image/png' },
         ].filter(a => !!a.src) as MediaImage[],
       })
     } catch {

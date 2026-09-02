@@ -10,7 +10,9 @@ import GifContent from '@/components/gifs/GifContent'
 import { appendGifMarker, type GifResult } from '@/lib/gifs'
 import { FEED_AUDIO_PLAY_EVENT, announceFeedAudioPlayback, generateFeedPlayerId } from '@/lib/feed/audioCoordinator'
 import { useMusicPlayer, FREETRUST_LOGO_SRC as GLOBAL_FREETRUST_LOGO_SRC } from '@/context/MusicPlayerContext'
-import { uploadToSupabaseStorageDirect } from '@/lib/storage/directUpload'
+import { PHOTO_UPLOAD_TIMEOUT_MS, uploadToSupabaseStorageDirect } from '@/lib/storage/directUpload'
+import MusicWaveform from '@/components/MusicWaveform'
+import { type MusicWaveformPeaks } from '@/lib/audio/musicWaveform'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -29,6 +31,8 @@ export type FeedPost = {
   media_url: string | null
   media_urls?: string[] | null      // multiple photos
   media_type?: string | null
+  music_background_url?: string | null
+  music_waveform?: MusicWaveformPeaks | null
   metadata?: Record<string, unknown>
   created_at: string
   updated_at?: string | null
@@ -1097,104 +1101,48 @@ function PhotoCarousel({ urls, alt, soundtrack, textOverlay, imageHref, imageBad
 // in the platform-wide single-audio-source rule via FEED_AUDIO_PLAY_EVENT,
 // so this component doesn't need its own coordinator listener anymore.
 const FREETRUST_LOGO_SRC = GLOBAL_FREETRUST_LOGO_SRC
-const MUSIC_VISUALIZER_BAR_COUNT = 40
-
-export function MusicPlayer({ postId, src, track, title }: { postId: string; src: string | null; track: SpotifyTrackData | null; title?: string | null }) {
+export function MusicPlayer({
+  postId,
+  src,
+  track,
+  title,
+  backgroundImage,
+  waveform,
+}: {
+  postId: string
+  src: string | null
+  track: SpotifyTrackData | null
+  title?: string | null
+  backgroundImage?: string | null
+  waveform?: MusicWaveformPeaks | null
+}) {
   const { current, playing: globalPlaying, blocked, currentTime: globalCurrentTime, duration: globalDuration, play, seek, getAnalyser } = useMusicPlayer()
-  const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const rafRef = useRef<number | null>(null)
 
   const isActiveTrack = current?.id === postId
   const playing = isActiveTrack && globalPlaying
   const currentTime = isActiveTrack ? globalCurrentTime : 0
   const duration = isActiveTrack ? globalDuration : 0
-
   const displayName = track?.name ?? title ?? 'Untitled track'
   const displayArtist = track?.artists ?? null
   const artwork = track?.image ?? null
-
-  const drawFrame = useCallback(() => {
-    const canvas = canvasRef.current
-    const ctx2d = canvas?.getContext('2d')
-    if (!canvas || !ctx2d) return
-    const size = canvas.width
-    const cx = size / 2
-    const cy = size / 2
-    const baseRadius = size * 0.26
-
-    ctx2d.clearRect(0, 0, size, size)
-
-    const analyser = isActiveTrack ? getAnalyser() : null
-    const isActive = playing && Boolean(analyser)
-    const freqData = analyser ? new Uint8Array(analyser.frequencyBinCount) : null
-    if (analyser && freqData) analyser.getByteFrequencyData(freqData)
-
-    // Boost small amplitudes with a sub-linear power curve (amp^0.55) so
-    // quieter passages still read as visibly "wavy" instead of flat —
-    // raw linear frequency-bin averages tend to sit low and look static
-    // even when the track is clearly audible.
-    const rawAvgAmp = freqData ? freqData.reduce((sum, v) => sum + v, 0) / freqData.length / 255 : 0
-    const avgAmp = Math.pow(rawAvgAmp, 0.55)
-    const idlePulse = 0.5 + 0.5 * Math.sin(Date.now() / 900)
-    const glowStrength = isActive ? 0.35 + avgAmp * 1.1 : 0.18 + idlePulse * 0.08
-
-    const glow = ctx2d.createRadialGradient(cx, cy, baseRadius * 0.4, cx, cy, size * 0.5)
-    glow.addColorStop(0, `rgba(56,189,248,${0.45 * glowStrength})`)
-    glow.addColorStop(0.55, `rgba(129,140,248,${0.28 * glowStrength})`)
-    glow.addColorStop(1, 'rgba(15,23,42,0)')
-    ctx2d.fillStyle = glow
-    ctx2d.fillRect(0, 0, size, size)
-
-    const barCount = MUSIC_VISUALIZER_BAR_COUNT
-    for (let i = 0; i < barCount; i++) {
-      const angle = (i / barCount) * Math.PI * 2
-      let amp: number
-      if (freqData) {
-        const bin = freqData[Math.floor((i / barCount) * freqData.length)] ?? 0
-        // Same power-curve boost as the glow above, plus a touch of
-        // per-bar jitter so adjacent bars don't move in perfect lockstep
-        // — reads as a livelier, wavier motion rather than a smooth ring.
-        amp = Math.pow(bin / 255, 0.6) * (0.85 + 0.3 * Math.sin(Date.now() / 140 + i * 1.3))
-        amp = Math.max(0, Math.min(1, amp))
-      } else {
-        amp = 0.08 + 0.05 * Math.sin(Date.now() / 500 + i)
-      }
-      const barLen = baseRadius * 0.18 + amp * baseRadius * 1.55
-      const innerR = baseRadius * 1.08
-      const outerR = innerR + barLen
-      const x1 = cx + Math.cos(angle) * innerR
-      const y1 = cy + Math.sin(angle) * innerR
-      const x2 = cx + Math.cos(angle) * outerR
-      const y2 = cy + Math.sin(angle) * outerR
-      ctx2d.strokeStyle = isActive
-        ? `rgba(${56 + amp * 120},189,${248 - amp * 40},${0.55 + amp * 0.45})`
-        : 'rgba(96,165,250,0.28)'
-      ctx2d.lineWidth = Math.max(2, size * 0.014)
-      ctx2d.lineCap = 'round'
-      ctx2d.beginPath()
-      ctx2d.moveTo(x1, y1)
-      ctx2d.lineTo(x2, y2)
-      ctx2d.stroke()
-    }
-
-    const peak = freqData ? Math.pow(Math.max(...Array.from(freqData)) / 255, 0.6) : idlePulse * 0.15
-    ctx2d.beginPath()
-    ctx2d.arc(cx, cy, baseRadius * (1 + peak * 0.4), 0, Math.PI * 2)
-    ctx2d.strokeStyle = isActive ? `rgba(186,230,253,${0.35 + peak * 0.5})` : 'rgba(148,163,184,0.22)'
-    ctx2d.lineWidth = 2 + (isActive ? peak * 3 : 0)
-    ctx2d.stroke()
-
-    rafRef.current = requestAnimationFrame(drawFrame)
-  }, [playing, isActiveTrack, getAnalyser])
-
-  useEffect(() => {
-    rafRef.current = requestAnimationFrame(drawFrame)
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
-  }, [drawFrame])
+  // The uploaded Music background is the only full-card backdrop. Without
+  // one, keep the approved FreeTrust-logo treatment rather than silently
+  // substituting provider album art as if it were member artwork.
+  const cardImage = backgroundImage || null
+  const progress = duration > 0 ? Math.min(1, Math.max(0, currentTime / duration)) : 0
+  const analyser = isActiveTrack ? getAnalyser() : null
 
   const togglePlay = async () => {
     if (!src) return
-    await play({ id: postId, src, title: displayName, artist: displayArtist, artwork })
+    await play({
+      id: postId,
+      src,
+      title: displayName,
+      artist: displayArtist,
+      artwork,
+      backgroundImage: backgroundImage ?? null,
+      waveform: waveform ?? null,
+    })
   }
 
   const formatTimeMs = (secs: number) => {
@@ -1204,11 +1152,9 @@ export function MusicPlayer({ postId, src, track, title }: { postId: string; src
     return `${m}:${String(sec).padStart(2, '0')}`
   }
 
-  const seekTo = (clientX: number, target: HTMLDivElement) => {
+  const seekTo = (fraction: number) => {
     if (!isActiveTrack || !duration) return
-    const rect = target.getBoundingClientRect()
-    const frac = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width))
-    seek(frac * duration)
+    seek(Math.min(1, Math.max(0, fraction)) * duration)
   }
 
   if (!src) {
@@ -1220,91 +1166,67 @@ export function MusicPlayer({ postId, src, track, title }: { postId: string; src
   }
 
   return (
-    <div style={{ marginBottom: 12, borderRadius: 18, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.28)', background: 'linear-gradient(160deg, rgba(8,47,73,0.55), rgba(2,6,23,0.98))', padding: '1.5rem 1.25rem' }}>
-      <div style={{ position: 'relative', width: 168, height: 168, margin: '0 auto 1.1rem' }}>
-        <canvas ref={canvasRef} width={168} height={168} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
-        <button
-          type="button"
-          onClick={togglePlay}
-          aria-label={playing ? `Pause ${displayName}` : `Play ${displayName}`}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            margin: 'auto',
-            width: 92,
-            height: 92,
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            borderRadius: '50%',
-            border: '2px solid rgba(186,230,253,0.55)',
-            background: artwork ? `center/cover no-repeat url(${artwork})` : '#0b1220',
-            cursor: 'pointer',
-            padding: 0,
-            overflow: 'hidden',
-            boxShadow: '0 0 0 6px rgba(15,23,42,0.9), 0 12px 30px rgba(0,0,0,0.5)',
-          }}
-        >
-          {!artwork && (
-            <img src={FREETRUST_LOGO_SRC} alt="FreeTrust" style={{ width: '68%', height: '68%', objectFit: 'contain', margin: '16% auto', display: 'block' }} />
-          )}
-          <span
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'rgba(2,6,23,0.32)',
-              fontSize: 30,
-              color: '#f0f9ff',
-            }}
+    <div
+      style={{
+        position: 'relative',
+        marginBottom: 12,
+        minHeight: 320,
+        overflow: 'hidden',
+        borderRadius: 18,
+        border: '1px solid rgba(56,189,248,0.32)',
+        background: cardImage ? '#071426' : 'linear-gradient(160deg, rgba(8,47,73,0.8), rgba(2,6,23,0.98))',
+      }}
+    >
+      {cardImage ? (
+        <img
+          src={cardImage}
+          alt=""
+          aria-hidden="true"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.72 }}
+        />
+      ) : null}
+      <div
+        aria-hidden="true"
+        style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(2,6,23,0.42) 0%, rgba(2,6,23,0.28) 38%, rgba(2,6,23,0.96) 100%)' }}
+      />
+      <div style={{ position: 'relative', zIndex: 1, padding: '1.25rem 1rem 1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
+          <span style={{ color: '#bae6fd', fontSize: 11, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase' }}>🎵 Music</span>
+          {backgroundImage ? <span style={{ color: 'rgba(224,242,254,0.85)', fontSize: 11, fontWeight: 700 }}>Member artwork</span> : null}
+        </div>
+
+        <div style={{ position: 'relative', width: 108, height: 108, margin: '0 auto 0.7rem', borderRadius: '50%', background: 'rgba(2,6,23,0.46)', border: '1px solid rgba(186,230,253,0.48)', boxShadow: playing ? '0 0 0 10px rgba(56,189,248,0.1), 0 0 34px rgba(45,212,191,0.36)' : '0 0 0 8px rgba(15,23,42,0.24)' }}>
+          <img src={FREETRUST_LOGO_SRC} alt="FreeTrust" style={{ width: '64%', height: '64%', objectFit: 'contain', margin: '18% auto', display: 'block' }} />
+          <button
+            type="button"
+            onClick={togglePlay}
+            aria-label={playing ? `Pause ${displayName}` : `Play ${displayName}`}
+            style={{ position: 'absolute', inset: 0, margin: 'auto', width: 48, height: 48, borderRadius: '50%', border: '1px solid rgba(224,242,254,0.82)', background: 'rgba(2,6,23,0.62)', color: '#f0f9ff', fontSize: 18, cursor: 'pointer', padding: 0, boxShadow: '0 8px 20px rgba(0,0,0,0.36)' }}
           >
             {playing ? '⏸' : '▶'}
-          </span>
-        </button>
-      </div>
+          </button>
+        </div>
 
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ color: '#f0f9ff', fontWeight: 850, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</div>
-        {displayArtist ? <div style={{ color: '#93c5fd', fontSize: 13, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayArtist}</div> : null}
-        <div style={{ color: 'var(--ft-text-tertiary)', fontSize: 11.5, marginTop: 6 }}>
-          {formatTimeMs(currentTime)}{duration ? ` / ${formatTimeMs(duration)}` : track?.previewUrl ? ' / 0:30 preview' : ''}
+        <MusicWaveform
+          peaks={waveform}
+          seed={`${postId}:${displayName}`}
+          progress={progress}
+          playing={playing}
+          analyser={analyser}
+          onSeek={isActiveTrack && duration ? seekTo : undefined}
+          height={92}
+        />
+
+        <div style={{ textAlign: 'center', marginTop: 2 }}>
+          <div style={{ color: '#f0f9ff', fontWeight: 850, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</div>
+          {displayArtist ? <div style={{ color: '#bae6fd', fontSize: 13, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayArtist}</div> : null}
+          <div style={{ color: 'rgba(226,232,240,0.78)', fontSize: 11.5, marginTop: 6 }}>
+            {formatTimeMs(currentTime)}{duration ? ` / ${formatTimeMs(duration)}` : track?.previewUrl ? ' / 0:30 preview' : ''}
+          </div>
+          {isActiveTrack && blocked ? (
+            <div style={{ marginTop: 8, color: '#fbbf24', fontSize: 11.5 }}>Your browser blocked autoplay — tap ▶ again to start.</div>
+          ) : null}
         </div>
-        <div
-          role="slider"
-          aria-label="Seek track position"
-          aria-valuemin={0}
-          aria-valuemax={Math.round(duration || 0)}
-          aria-valuenow={Math.round(currentTime)}
-          onClick={e => seekTo(e.clientX, e.currentTarget)}
-          style={{
-            position: 'relative',
-            height: 6,
-            marginTop: 10,
-            borderRadius: 999,
-            background: 'var(--ft-bg)',
-            border: '1px solid var(--ft-border-strong)',
-            overflow: 'hidden',
-            cursor: duration ? 'pointer' : 'default',
-          }}
-        >
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              width: duration ? `${Math.min(100, (currentTime / duration) * 100)}%` : '0%',
-              minWidth: currentTime > 0 ? '6px' : 0,
-              borderRadius: 999,
-              background: 'linear-gradient(90deg, #38bdf8, #818cf8)',
-              transition: playing ? 'none' : 'width 0.2s ease-out',
-            }}
-          />
-        </div>
-        {isActiveTrack && blocked ? (
-          <div style={{ marginTop: 8, color: '#fbbf24', fontSize: 11.5 }}>Your browser blocked autoplay — tap ▶ again to start.</div>
-        ) : null}
       </div>
     </div>
   )
@@ -1749,6 +1671,10 @@ export default function PostCard({
   const [editedPhotoUrls,  setEditedPhotoUrls]  = useState<string[]>([])
   const [editPhotoUploading,setEditPhotoUploading]= useState(false)
   const [editPhotoProgress,setEditPhotoProgress]= useState('')
+  const [editedMusicBackgroundUrl, setEditedMusicBackgroundUrl] = useState<string | null>(post.music_background_url ?? null)
+  const [postMusicBackgroundUrl, setPostMusicBackgroundUrl] = useState<string | null>(post.music_background_url ?? null)
+  const [editMusicBackgroundUploading, setEditMusicBackgroundUploading] = useState(false)
+  const [editMusicBackgroundProgress, setEditMusicBackgroundProgress] = useState('')
   const [savingEdit,        setSavingEdit]        = useState(false)
   const [postContent,       setPostContent]       = useState(post.content)
   const [postTitle,         setPostTitle]         = useState(post.title ?? null)
@@ -1931,6 +1857,11 @@ export default function PostCard({
 
   const authorDisplayOverride = getAuthorDisplayOverride(post.metadata)
   const isOwner = !!currentUserId && currentUserId === authorId && !authorDisplayOverride?.suppressOwnerMenu
+  // Music background editing follows the same owner rule as every other post:
+  // only the member who uploaded the song may edit it. Organisation ownership
+  // or admin membership must not grant access to another member's post.
+  const canEditMusicBackground = post.type === 'music' && isOwner
+  const canEditPost = isOwner
 
   const startEditing = () => {
     setEditedContent(stripInternalMarkers(postContent))
@@ -1939,6 +1870,8 @@ export default function PostCard({
     setEditedSpotifyUrl((spotifyTrack?.url ?? postLinkUrl ?? '').trim())
     setEditedPhotoUrls(mediaUrls)
     setEditPhotoProgress('')
+    setEditedMusicBackgroundUrl(postMusicBackgroundUrl)
+    setEditMusicBackgroundProgress('')
     setEditSpotifyQuery('')
     setEditSpotifyResults([])
     setEditing(true)
@@ -1952,6 +1885,8 @@ export default function PostCard({
     setEditedSpotifyUrl((spotifyTrack?.url ?? postLinkUrl ?? '').trim())
     setEditedPhotoUrls(mediaUrls)
     setEditPhotoProgress('')
+    setEditedMusicBackgroundUrl(postMusicBackgroundUrl)
+    setEditMusicBackgroundProgress('')
     setEditSpotifyQuery('')
     setEditSpotifyResults([])
     setEditing(false)
@@ -1992,6 +1927,53 @@ export default function PostCard({
       return null
     } finally {
       setEditPhotoUploading(false)
+    }
+  }
+
+  const uploadEditedMusicBackground = async (rawFile: File) => {
+    setEditMusicBackgroundUploading(true)
+    setEditMusicBackgroundProgress('Preparing background image…')
+    try {
+      const file = await compressImage(rawFile, 2)
+      const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif']
+      const extToMime: Record<string, string> = {
+        jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif',
+        webp: 'image/webp', heic: 'image/heic', heif: 'image/heif',
+      }
+      const fileType = file.type || extToMime[(file.name.split('.').pop() ?? '').toLowerCase()] || ''
+      if (!imageTypes.includes(fileType)) throw new Error(`Unsupported image type: ${fileType || 'unknown'}`)
+      if (file.size > 10 * 1024 * 1024) throw new Error('Background image too large (max 10 MB)')
+
+      const supabase = createClient()
+      const [{ data: { user } }, { data: sessionData }] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase.auth.getSession(),
+      ])
+      const accessToken = sessionData.session?.access_token
+      if (!user || !accessToken) throw new Error('Please sign in and try again')
+
+      const mimeToExt: Record<string, string> = {
+        'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif',
+        'image/webp': 'webp', 'image/heic': 'heic', 'image/heif': 'heif',
+      }
+      const uidSafe = user.id.toLowerCase().replace(/[^a-z0-9-]/g, '') || 'anon'
+      const randSafe = Math.random().toString(36).slice(2).replace(/[^a-z0-9]/g, '') || Date.now().toString(36)
+      const storagePath = `music-background/${uidSafe}/${Date.now()}-${randSafe}.${mimeToExt[fileType] ?? 'jpg'}`
+      const { publicUrl } = await uploadToSupabaseStorageDirect({
+        bucket: 'feed-media',
+        storagePath,
+        file,
+        contentType: fileType,
+        accessToken,
+        timeoutMs: PHOTO_UPLOAD_TIMEOUT_MS,
+      })
+      setEditedMusicBackgroundUrl(publicUrl)
+      setEditMusicBackgroundProgress('✓ Background image ready — save to apply')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Upload failed'
+      setEditMusicBackgroundProgress(`Upload failed — ${message}`)
+    } finally {
+      setEditMusicBackgroundUploading(false)
     }
   }
 
@@ -2093,14 +2075,16 @@ export default function PostCard({
       const nextContent = post.type === 'photo'
         ? buildPhotoContentWithMarkers(editedContent, postContent, editedSpotifyTrack, editedSpotifyUrl, nextPhotoUrls)
         : editedContent
+      const editBody: Record<string, unknown> = {
+        content: nextContent,
+        title: editedTitle || undefined,
+        ...(post.type === 'photo' ? { link_url: nextLinkUrl, media_url: nextPrimaryPhotoUrl, media_urls: nextPhotoUrls } : {}),
+        ...(canEditMusicBackground ? { music_background_url: editedMusicBackgroundUrl } : {}),
+      }
       const res = await fetch(`/api/feed/posts/${post.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: nextContent,
-          title: editedTitle || undefined,
-          ...(post.type === 'photo' ? { link_url: nextLinkUrl, media_url: nextPrimaryPhotoUrl, media_urls: nextPhotoUrls } : {}),
-        }),
+        body: JSON.stringify(editBody),
       })
       const data = await res.json().catch(() => ({} as { error?: string; post?: FeedPost }))
       if (!res.ok) {
@@ -2115,6 +2099,7 @@ export default function PostCard({
         setPostMediaUrl(updated?.media_url ?? nextPrimaryPhotoUrl)
         setEditedPhotoUrls(nextPhotoUrls)
       }
+      if (canEditMusicBackground) setPostMusicBackgroundUrl(editedMusicBackgroundUrl)
       setPostUpdatedAt(updated?.updated_at ?? new Date().toISOString())
       setEditing(false)
     } catch {
@@ -2569,7 +2554,7 @@ export default function PostCard({
           </span>
         )}
         {/* ── Owner menu ── */}
-        {isOwner && (
+        {canEditPost && (
           <div style={{ position: 'relative', flexShrink: 0, zIndex: 300 }} onClick={e => e.stopPropagation()}>
             <button
               onClick={() => setShowMenu(v => !v)}
@@ -2591,16 +2576,18 @@ export default function PostCard({
                     <span>Edit post</span>
                   </button>
                 )}
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '11px 14px', background: 'none', border: 'none', color: 'var(--ft-danger)', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.08)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-                >
-                  <span>🗑️</span>
-                  <span>{deleting ? 'Deleting…' : 'Delete post'}</span>
-                </button>
+                {isOwner ? (
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '11px 14px', background: 'none', border: 'none', color: 'var(--ft-danger)', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.08)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    <span>🗑️</span>
+                    <span>{deleting ? 'Deleting…' : 'Delete post'}</span>
+                  </button>
+                ) : null}
               </div>
             )}
           </div>
@@ -2611,21 +2598,29 @@ export default function PostCard({
       <div style={{ padding: '0 16px', minWidth: 0, overflow: 'hidden' }}>
         {editing ? (
           <div style={{ marginBottom: '12px' }}>
-            {postTitle ? (
-              <input
-                value={editedTitle}
-                onChange={e => setEditedTitle(e.target.value)}
-                maxLength={200}
-                style={{ width: '100%', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: '10px', padding: '10px 12px', color: 'var(--ft-text)', fontSize: '16px', fontWeight: 700, fontFamily: 'inherit', marginBottom: '10px', boxSizing: 'border-box' }}
-              />
-            ) : null}
-            <textarea
-              value={editedContent}
-              onChange={e => setEditedContent(e.target.value)}
-              rows={8}
-              maxLength={5000}
-              style={{ width: '100%', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: '10px', padding: '10px 12px', color: 'var(--ft-text-secondary)', fontSize: '14px', lineHeight: 1.65, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', marginBottom: '10px' }}
-            />
+            {isOwner ? (
+              <>
+                {postTitle ? (
+                  <input
+                    value={editedTitle}
+                    onChange={e => setEditedTitle(e.target.value)}
+                    maxLength={200}
+                    style={{ width: '100%', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: '10px', padding: '10px 12px', color: 'var(--ft-text)', fontSize: '16px', fontWeight: 700, fontFamily: 'inherit', marginBottom: '10px', boxSizing: 'border-box' }}
+                  />
+                ) : null}
+                <textarea
+                  value={editedContent}
+                  onChange={e => setEditedContent(e.target.value)}
+                  rows={8}
+                  maxLength={5000}
+                  style={{ width: '100%', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: '10px', padding: '10px 12px', color: 'var(--ft-text-secondary)', fontSize: '14px', lineHeight: 1.65, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', marginBottom: '10px' }}
+                />
+              </>
+            ) : (
+              <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 10, background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.22)', color: 'var(--ft-text-secondary)', fontSize: 12.5, lineHeight: 1.45 }}>
+                Only the member who uploaded this Music post can update its background image.
+              </div>
+            )}
             {post.type === 'photo' ? (
               <div style={{ border: '1px solid rgba(56,189,248,0.24)', borderRadius: 12, background: 'linear-gradient(135deg, rgba(56,189,248,0.08), rgba(15,23,42,0.96))', padding: 12, marginBottom: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', marginBottom: 10 }}>
@@ -2732,17 +2727,43 @@ export default function PostCard({
                 />
               </div>
             ) : null}
+            {canEditMusicBackground ? (
+              <div style={{ border: '1px solid rgba(56,189,248,0.28)', borderRadius: 12, background: 'linear-gradient(135deg, rgba(56,189,248,0.08), rgba(15,23,42,0.96))', padding: 12, marginBottom: 12 }}>
+                <div style={{ color: '#bae6fd', fontSize: 12, fontWeight: 900, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 5 }}>🎵 Edit background image</div>
+                <div style={{ color: 'var(--ft-text-secondary)', fontSize: 12, lineHeight: 1.4, marginBottom: 9 }}>Optional artwork shown behind the FreeTrust logo and waveform.</div>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,image/*"
+                  disabled={editMusicBackgroundUploading || savingEdit}
+                  onChange={e => { const file = e.target.files?.[0]; if (file) void uploadEditedMusicBackground(file); e.currentTarget.value = '' }}
+                  style={{ width: '100%', background: '#020617', border: '1px solid var(--ft-border-strong)', borderRadius: 9, padding: 8, color: 'var(--ft-text-secondary)', fontSize: 13, boxSizing: 'border-box' }}
+                />
+                {editedMusicBackgroundUrl ? (
+                  <div style={{ position: 'relative', marginTop: 10, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.28)' }}>
+                    <img src={editedMusicBackgroundUrl} alt="Music background preview" style={{ display: 'block', width: '100%', height: 132, objectFit: 'cover', opacity: 0.82 }} />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(2,6,23,0.08), rgba(2,6,23,0.72))' }} />
+                    <div style={{ position: 'absolute', left: 10, right: 10, bottom: 9, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <span style={{ color: '#e0f2fe', fontSize: 11.5, fontWeight: 800 }}>Current background</span>
+                      <button type="button" onClick={() => { setEditedMusicBackgroundUrl(null); setEditMusicBackgroundProgress('Background will be removed — save to apply') }} disabled={editMusicBackgroundUploading || savingEdit} style={{ border: '1px solid rgba(248,113,113,0.42)', background: 'rgba(15,23,42,0.84)', color: '#fecaca', borderRadius: 7, padding: '6px 8px', fontSize: 11.5, cursor: editMusicBackgroundUploading || savingEdit ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>Remove</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 10, padding: 10, borderRadius: 9, border: '1px dashed var(--ft-border-strong)', color: 'var(--ft-text-tertiary)', fontSize: 12 }}>No background image selected.</div>
+                )}
+                {editMusicBackgroundProgress ? <div style={{ marginTop: 8, color: editMusicBackgroundProgress.startsWith('Upload failed') ? '#fca5a5' : '#93c5fd', fontSize: 12, lineHeight: 1.35 }}>{editMusicBackgroundProgress}</div> : null}
+              </div>
+            ) : null}
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
               <button
                 onClick={cancelEditing}
-                disabled={savingEdit || editPhotoUploading}
-                style={{ background: 'transparent', border: '1px solid var(--ft-border-strong)', borderRadius: '8px', padding: '8px 12px', color: 'var(--ft-text-secondary)', cursor: savingEdit || editPhotoUploading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: '13px', opacity: savingEdit || editPhotoUploading ? 0.6 : 1 }}
+                disabled={savingEdit || editPhotoUploading || editMusicBackgroundUploading}
+                style={{ background: 'transparent', border: '1px solid var(--ft-border-strong)', borderRadius: '8px', padding: '8px 12px', color: 'var(--ft-text-secondary)', cursor: savingEdit || editPhotoUploading || editMusicBackgroundUploading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: '13px', opacity: savingEdit || editPhotoUploading || editMusicBackgroundUploading ? 0.6 : 1 }}
               >Cancel</button>
               <button
                 onClick={handleSaveEdit}
-                disabled={savingEdit || editPhotoUploading}
-                style={{ background: 'var(--ft-accent)', border: 'none', borderRadius: '8px', padding: '8px 12px', color: 'var(--ft-bg)', cursor: savingEdit || editPhotoUploading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: '13px', fontWeight: 700, opacity: savingEdit || editPhotoUploading ? 0.72 : 1 }}
-              >{editPhotoUploading ? 'Uploading…' : savingEdit ? 'Saving…' : 'Save'}</button>
+                disabled={savingEdit || editPhotoUploading || editMusicBackgroundUploading}
+                style={{ background: 'var(--ft-accent)', border: 'none', borderRadius: '8px', padding: '8px 12px', color: 'var(--ft-bg)', cursor: savingEdit || editPhotoUploading || editMusicBackgroundUploading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: '13px', fontWeight: 700, opacity: savingEdit || editPhotoUploading || editMusicBackgroundUploading ? 0.72 : 1 }}
+              >{editPhotoUploading || editMusicBackgroundUploading ? 'Uploading…' : savingEdit ? 'Saving…' : 'Save'}</button>
             </div>
           </div>
         ) : (
@@ -2770,7 +2791,14 @@ export default function PostCard({
       {/* ── Media ── */}
       {post.type === 'music' ? (
         <div className="ft-post-media-wrap" style={{ padding: '0 16px' }}>
-          <MusicPlayer postId={post.id} src={mediaUrls[0] ?? spotifyTrack?.previewUrl ?? null} track={spotifyTrack} title={postTitle} />
+          <MusicPlayer
+            postId={post.id}
+            src={mediaUrls[0] ?? spotifyTrack?.previewUrl ?? null}
+            track={spotifyTrack}
+            title={postTitle}
+            backgroundImage={postMusicBackgroundUrl}
+            waveform={post.music_waveform ?? null}
+          />
         </div>
       ) : isVideo && mediaUrls.length > 0 ? (
         <div className="ft-post-media-wrap" style={{ padding: '0 16px' }}>

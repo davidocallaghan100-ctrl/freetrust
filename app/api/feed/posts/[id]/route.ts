@@ -1,11 +1,82 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const INTERNAL_FEED_MARKER_RE = /\n?\n?\[\[FT_(?:MEDIA_URLS|SPOTIFY|TEXT_OVERLAY):[A-Za-z0-9_-]+\]\]/g
 
 function stripInternalFeedMarkers(content: string) {
   return content.replace(INTERNAL_FEED_MARKER_RE, '').trimEnd()
+}
+
+function normaliseOptionalHttpUrl(value: unknown): string | null {
+  if (value === null || value === undefined) return null
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  if (trimmed.length > 2048 || !/^https?:\/\//i.test(trimmed)) return null
+  try {
+    const parsed = new URL(trimmed)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? trimmed : null
+  } catch {
+    return null
+  }
+}
+
+function getOwnedMusicBackgroundPath(value: string | null | undefined, userId: string): string | null {
+  if (!value) return null
+  const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, '')
+  if (!configuredUrl) return null
+
+  try {
+    const configured = new URL(configuredUrl)
+    const parsed = new URL(value)
+    const publicPrefix = '/storage/v1/object/public/feed-media/'
+    if (parsed.origin !== configured.origin || !parsed.pathname.startsWith(publicPrefix)) return null
+
+    const encodedPath = parsed.pathname.slice(publicPrefix.length)
+    const path = encodedPath.split('/').map(segment => decodeURIComponent(segment)).join('/')
+    const expectedPrefix = `music-background/${userId}/`
+    const segments = path.split('/')
+    if (!path.startsWith(expectedPrefix) || segments.length !== 3 || segments.some(segment => !segment || segment === '.' || segment === '..')) {
+      return null
+    }
+    return path
+  } catch {
+    return null
+  }
+}
+
+async function removePreviousMusicBackground(
+  admin: ReturnType<typeof createAdminClient>,
+  previousUrl: string | null | undefined,
+  nextUrl: string | null | undefined,
+  postId: string,
+  userId: string,
+) {
+  if (!previousUrl || previousUrl === nextUrl) return
+  const storagePath = getOwnedMusicBackgroundPath(previousUrl, userId)
+  if (!storagePath) return
+
+  // Do not remove an object that another post references. This also keeps
+  // pasted/shared public URLs safe; only this feature's own user-scoped
+  // `music-background/<userId>/...` objects are eligible for cleanup.
+  const { count, error: referenceError } = await admin
+    .from('feed_posts')
+    .select('id', { count: 'exact', head: true })
+    .eq('music_background_url', previousUrl)
+    .neq('id', postId)
+
+  if (referenceError) {
+    console.warn('[PATCH /api/feed/posts/[id]] could not check old Music background references:', referenceError.message)
+    return
+  }
+  if ((count ?? 0) > 0) return
+
+  const { error: removeError } = await admin.storage.from('feed-media').remove([storagePath])
+  if (removeError) {
+    console.warn('[PATCH /api/feed/posts/[id]] could not remove old Music background:', removeError.message)
+  }
 }
 
 // PATCH /api/feed/posts/[id] — edit a post (owner only)
@@ -21,15 +92,41 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json().catch(() => ({})) as { content?: unknown; title?: unknown; link_url?: unknown; media_url?: unknown; media_urls?: unknown }
+    // Resolve ownership before looking at the requested fields. This keeps the
+    // permission boundary authoritative for every PATCH shape: a non-owner
+    // receives 403 even if they send an invalid or otherwise incomplete body.
+    // The admin client is server-only and is used here solely to avoid an
+    // RLS-dependent 404 for an authenticated outsider.
+    const admin = createAdminClient()
+    const { data: post, error: fetchError } = await admin
+      .from('feed_posts')
+      .select('id, user_id, type, music_background_url')
+      .eq('id', params.id)
+      .maybeSingle()
+
+    if (fetchError || !post) {
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 })
+    }
+
+    if (post.user_id !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const body = await request.json().catch(() => ({})) as { content?: unknown; title?: unknown; link_url?: unknown; media_url?: unknown; media_urls?: unknown; music_background_url?: unknown }
     const hasContent = typeof body.content === 'string'
     const hasTitle = typeof body.title === 'string'
     const hasLinkUrl = typeof body.link_url === 'string' || body.link_url === null
     const hasMediaUrl = typeof body.media_url === 'string' || body.media_url === null
     const hasMediaUrls = Array.isArray(body.media_urls)
+    const hasMusicBackgroundField = Object.prototype.hasOwnProperty.call(body, 'music_background_url')
+    const hasMusicBackground = hasMusicBackgroundField && (typeof body.music_background_url === 'string' || body.music_background_url === null)
 
-    if (!hasContent && !hasTitle && !hasLinkUrl && !hasMediaUrl && !hasMediaUrls) {
-      return NextResponse.json({ error: 'content, title, link_url, or media is required' }, { status: 400 })
+    if (hasMusicBackgroundField && !hasMusicBackground) {
+      return NextResponse.json({ error: 'music_background_url must be a URL or null' }, { status: 400 })
+    }
+
+    if (!hasContent && !hasTitle && !hasLinkUrl && !hasMediaUrl && !hasMediaUrls && !hasMusicBackground) {
+      return NextResponse.json({ error: 'content, title, link_url, media, or music background is required' }, { status: 400 })
     }
 
     const content = hasContent ? (body.content as string).trim() : undefined
@@ -47,6 +144,13 @@ export async function PATCH(
     const mediaUrl = hasMediaUrl
       ? (typeof body.media_url === 'string' && /^https?:\/\//i.test(body.media_url.trim()) ? body.media_url.trim() : null)
       : (mediaUrls !== undefined ? (mediaUrls[0] ?? null) : undefined)
+    const musicBackgroundUrl = hasMusicBackground
+      ? normaliseOptionalHttpUrl(body.music_background_url)
+      : undefined
+
+    if (hasMusicBackground && typeof body.music_background_url === 'string' && body.music_background_url.trim() && !musicBackgroundUrl) {
+      return NextResponse.json({ error: 'Music background image URL is invalid' }, { status: 400 })
+    }
 
     // Photo posts store edit-only metadata (multi-photo URLs, Spotify preview data,
     // and text-overlay settings) as hidden markers in `content`. The user-visible
@@ -61,19 +165,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'Title too long (max 200 chars)' }, { status: 400 })
     }
 
-    // Verify the post belongs to this user before editing
-    const { data: post, error: fetchError } = await supabase
-      .from('feed_posts')
-      .select('id, user_id, type')
-      .eq('id', params.id)
-      .maybeSingle()
-
-    if (fetchError || !post) {
-      return NextResponse.json({ error: 'Post not found' }, { status: 404 })
-    }
-
-    if (post.user_id !== user.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (hasMusicBackground && post.type !== 'music') {
+      return NextResponse.json({ error: 'Music background editing is only supported for Music posts' }, { status: 400 })
     }
 
     if (post.type === 'poll') {
@@ -84,7 +177,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Media editing is only supported for photo posts' }, { status: 400 })
     }
 
-    const update: { content?: string; title?: string | null; link_url?: string | null; media_url?: string | null; media_type?: string | null; updated_at: string } = {
+    const update: { content?: string; title?: string | null; link_url?: string | null; media_url?: string | null; media_type?: string | null; music_background_url?: string | null; updated_at: string } = {
       updated_at: new Date().toISOString(),
     }
     if (content !== undefined) update.content = content
@@ -94,8 +187,9 @@ export async function PATCH(
       update.media_url = mediaUrl
       update.media_type = mediaUrl ? 'image' : null
     }
+    if (musicBackgroundUrl !== undefined) update.music_background_url = musicBackgroundUrl
 
-    const { data: updatedPost, error: updateError } = await supabase
+    const { data: updatedPost, error: updateError } = await admin
       .from('feed_posts')
       .update(update)
       .eq('id', params.id)
@@ -105,6 +199,16 @@ export async function PATCH(
     if (updateError) {
       console.error('[PATCH /api/feed/posts/[id]]', updateError)
       return NextResponse.json({ error: 'Failed to edit post' }, { status: 500 })
+    }
+
+    if (hasMusicBackground) {
+      await removePreviousMusicBackground(
+        admin,
+        post.music_background_url as string | null | undefined,
+        musicBackgroundUrl,
+        params.id,
+        user.id,
+      )
     }
 
     return NextResponse.json({ success: true, post: updatedPost })

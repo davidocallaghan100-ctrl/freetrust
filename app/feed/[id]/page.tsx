@@ -145,7 +145,7 @@ export async function generateMetadata(
   const { data: post } = await supabase
     .from('feed_posts')
     .select(`
-      id, type, content, title, media_url, media_type, created_at,
+      id, type, content, title, media_url, media_type, music_background_url, music_waveform, created_at,
       profiles!feed_posts_user_id_fkey(full_name, avatar_url)
     `)
     .eq('id', id)
@@ -162,7 +162,10 @@ export async function generateMetadata(
   const description = cleanContent.slice(0, 200) || `${authorName} shared something on FreeTrust`
   const mediaUrl = isImagePost(post.type, post.media_type, post.media_url) ? post.media_url as string : null
   const postUrl  = `${BASE}/feed/${id}`
-  const ogImageUrl = mediaUrl ?? FALLBACK_OG_IMAGE
+  const backgroundUrl = typeof post.music_background_url === 'string' && /^https?:\/\//i.test(post.music_background_url)
+    ? post.music_background_url
+    : null
+  const ogImageUrl = mediaUrl ?? backgroundUrl ?? FALLBACK_OG_IMAGE
 
   const images = [{ url: ogImageUrl, width: 1200, height: 630, alt: title }]
 
@@ -202,7 +205,7 @@ export default async function PostPage(
   const { data: post } = await supabase
     .from('feed_posts')
     .select(`
-      id, user_id, type, content, title, media_url, media_type, link_url,
+      id, user_id, type, content, title, media_url, media_type, music_background_url, music_waveform, link_url,
       likes_count, comments_count, saves_count, views_count, created_at, updated_at,
       posted_as_organisation_id,
       profiles!feed_posts_user_id_fkey(id, full_name, avatar_url, username, trust_balance, is_verified, verified_at, verification_status),
@@ -221,7 +224,7 @@ export default async function PostPage(
   const { data: related } = await supabase
     .from('feed_posts')
     .select(`
-      id, user_id, type, content, title, media_url, media_type,
+       id, user_id, type, content, title, media_url, media_type, music_background_url, music_waveform,
       link_url, likes_count, comments_count, saves_count, views_count, created_at, updated_at,
       posted_as_organisation_id,
       profiles!feed_posts_user_id_fkey(id, full_name, avatar_url, username, trust_balance, is_verified, verified_at, verification_status),

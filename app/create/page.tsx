@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic'
 import type { DeliveryZoneValue } from '@/components/DeliveryZoneMap'
 import StoryCreateSheet from '@/components/stories/StoryCreateSheet'
 import { MusicPlayer } from '@/components/PostCard'
+import { decodeMusicWaveform, normaliseMusicWaveform } from '@/lib/audio/musicWaveform'
 import {
   uploadToSupabaseStorageDirect,
   uploadVideoResumable,
@@ -755,6 +756,7 @@ export default function CreatePage() {
     setUploadProgress('Preparing audio…')
     setUploadProgressSnapshot(null)
     setUploadedMediaUrl(null)
+    setFormData(prev => ({ ...prev, music_waveform: '' }))
 
     let step = 'init'
     try {
@@ -780,6 +782,11 @@ export default function CreatePage() {
         setUploadingMedia(false)
         return
       }
+
+      // Decode the source once while it is already local. The resulting
+      // bounded peak array is persisted with the post so feed cards do not
+      // need to download/decode the whole track just to draw its shape.
+      const waveformPromise = decodeMusicWaveform(rawFile)
 
       step = 'auth'
       const supabase = createClient()
@@ -821,9 +828,11 @@ export default function CreatePage() {
           accessToken,
           timeoutMs: PHOTO_UPLOAD_TIMEOUT_MS,
           onProgress,
-        })
-        setUploadedMediaUrl(publicUrl)
-        setUploadProgress('✓ Upload complete')
+         })
+         setUploadedMediaUrl(publicUrl)
+         const waveform = await waveformPromise
+         setFormData(prev => ({ ...prev, music_waveform: waveform ? JSON.stringify(waveform) : '' }))
+         setUploadProgress('✓ Upload complete')
       } catch (thrown) {
         const msg = thrown instanceof Error ? thrown.message : String(thrown)
         console.error('[create/upload] audio upload failed:', { step, message: msg, storagePath, contentType: fileType })
@@ -834,6 +843,85 @@ export default function CreatePage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[create/upload] audio unhandled at step', step, ':', err)
+      setUploadProgress(`Upload failed [${step}] — ${msg}`)
+    } finally {
+      setUploadingMedia(false)
+      setUploadProgressSnapshot(null)
+    }
+  }
+
+  // Optional artwork behind the Music post's logo and waveform. This is a
+  // separate upload family from the track itself so the feed can keep the
+  // audio URL in media_url and the visual treatment in its own column.
+  const handleMusicBackgroundUpload = async (rawFile: File) => {
+    setUploadingMedia(true)
+    setUploadProgress('Preparing background image…')
+    setUploadProgressSnapshot(null)
+
+    let step = 'init'
+    try {
+      step = 'compress'
+      const file = await compressImage(rawFile, 2)
+      const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif']
+      const extToMime: Record<string, string> = {
+        jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif',
+        webp: 'image/webp', heic: 'image/heic', heif: 'image/heif',
+      }
+      let fileType = file.type
+      if (!fileType) fileType = extToMime[(file.name.split('.').pop() ?? '').toLowerCase()] ?? ''
+      if (!imageTypes.includes(fileType)) {
+        setUploadProgress(`Upload failed — unsupported image format: ${fileType || 'unknown'}`)
+        return
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        setUploadProgress('Upload failed — background image is too large (max 10 MB)')
+        return
+      }
+
+      step = 'auth'
+      const supabase = createClient()
+      const [{ data: { user } }, { data: sessionData }] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase.auth.getSession(),
+      ])
+      if (!user) {
+        setUploadProgress('Upload failed — please sign in and try again')
+        return
+      }
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) {
+        setUploadProgress('Upload failed — your session was not ready. Please refresh and try again.')
+        return
+      }
+
+      step = 'build-path'
+      const mimeToExt: Record<string, string> = {
+        'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif',
+        'image/webp': 'webp', 'image/heic': 'heic', 'image/heif': 'heif',
+      }
+      const ext = mimeToExt[fileType] ?? 'jpg'
+      const uidSafe = user.id.toLowerCase().replace(/[^a-z0-9-]/g, '') || 'anon'
+      const randSafe = Math.random().toString(36).slice(2).replace(/[^a-z0-9]/g, '') || Date.now().toString(36)
+      const storagePath = `music-background/${uidSafe}/${Date.now()}-${randSafe}.${ext}`
+
+      step = 'upload'
+      const { publicUrl } = await uploadToSupabaseStorageDirect({
+        bucket: 'feed-media',
+        storagePath,
+        file,
+        contentType: fileType,
+        accessToken,
+        timeoutMs: PHOTO_UPLOAD_TIMEOUT_MS,
+        onProgress: snapshot => {
+          setUploadProgressSnapshot(snapshot)
+          setUploadProgress(`Uploading background image… ${formatUploadProgress(snapshot)}`)
+        },
+      })
+      setFormData(prev => ({ ...prev, music_background_url: publicUrl }))
+      setUploadProgress('✓ Background image ready')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[create/upload] music background failed:', { step, message: msg })
       setUploadProgress(`Upload failed [${step}] — ${msg}`)
     } finally {
       setUploadingMedia(false)
@@ -1078,6 +1166,10 @@ export default function CreatePage() {
     if (selectedType) localStorage.removeItem(getDraftKey(selectedType))
     setSelectedType(null)
     setFormData({})
+    setUploadedMediaUrl(null)
+    setUploadedPhotoUrls([])
+    setUploadProgress('')
+    setUploadProgressSnapshot(null)
     setPreview(false)
   }
 
@@ -1173,6 +1265,13 @@ export default function CreatePage() {
       data = { ...data, media_url: photoUrls[0] ?? uploadedMediaUrl, media_urls: photoUrls }
     } else if (['video', 'short', 'music'].includes(selectedType) && uploadedMediaUrl) {
       data = { ...data, media_url: uploadedMediaUrl }
+    }
+    if (selectedType === 'music') {
+      data = {
+        ...data,
+        music_background_url: f('music_background_url').trim() || null,
+        music_waveform: normaliseMusicWaveform(f('music_waveform')),
+      }
     }
     // Inject delivery zone fields for physical products
     if (selectedType === 'product' && (f('product_type') || 'physical') === 'physical') {
@@ -1637,9 +1736,11 @@ export default function CreatePage() {
                   url: selectedSpotifyTrack.url,
                   previewUrl: selectedSpotifyTrack.previewUrl,
                   previewSource: selectedSpotifyTrack.previewSource ?? null,
-                } : null}
-                title={f('track_title') || null}
-              />
+               } : null}
+               title={f('track_title') || null}
+               backgroundImage={f('music_background_url') || null}
+               waveform={normaliseMusicWaveform(f('music_waveform'))}
+             />
             </div>
 
             <div style={s.fieldGroup}>
@@ -1665,7 +1766,7 @@ export default function CreatePage() {
                     <button
                       key={track.id}
                       type="button"
-                      onClick={() => { selectSpotifyTrack(track); setUploadedMediaUrl(null); setUploadProgress('') }}
+                       onClick={() => { selectSpotifyTrack(track); setUploadedMediaUrl(null); setFormData(prev => ({ ...prev, music_waveform: '' })); setUploadProgress('') }}
                       style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--ft-surface)', padding: '0.65rem 0.75rem', cursor: 'pointer', color: 'var(--ft-text)', textAlign: 'left', fontFamily: 'inherit' }}
                     >
                       {track.image ? <img src={track.image} alt="" style={{ width: 42, height: 42, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} /> : <span style={{ width: 42, height: 42, borderRadius: 6, background: 'var(--ft-surface)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>🎵</span>}
@@ -1723,6 +1824,34 @@ export default function CreatePage() {
                 </div>
               )}
               {renderUploadProgressBar()}
+            </div>
+
+            <div style={s.fieldGroup}>
+              <label style={s.label}>🖼 Background image (optional)</label>
+              <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.82rem', marginTop: 0, marginBottom: '0.6rem', lineHeight: 1.45 }}>
+                Add artwork behind the FreeTrust logo and waveform. JPG, PNG, GIF or WebP — up to 10 MB.
+              </p>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,image/*"
+                disabled={uploadingMedia}
+                style={{ ...s.input, padding: '0.5rem' }}
+                onChange={e => {
+                  const file = e.target.files?.[0]
+                  if (file) void handleMusicBackgroundUpload(file)
+                  e.currentTarget.value = ''
+                }}
+              />
+              {f('music_background_url') ? (
+                <div style={{ position: 'relative', marginTop: '0.75rem', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.34)', background: '#020617' }}>
+                  <img src={f('music_background_url')} alt="Music background preview" style={{ width: '100%', height: 150, objectFit: 'cover', display: 'block', opacity: 0.8 }} />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(2,6,23,0.12), rgba(2,6,23,0.74))' }} />
+                  <div style={{ position: 'absolute', left: 12, right: 12, bottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                    <span style={{ color: '#e0f2fe', fontSize: 12, fontWeight: 800 }}>Background image ready</span>
+                    <button type="button" onClick={() => setFormData(prev => ({ ...prev, music_background_url: '' }))} style={{ ...s.btnDanger, padding: '0.4rem 0.7rem', color: '#fecaca', background: 'rgba(15,23,42,0.8)' }}>Remove</button>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             {uploadedMediaUrl && (
@@ -2218,9 +2347,11 @@ export default function CreatePage() {
                 image: selectedSpotifyTrack.image,
                 url: selectedSpotifyTrack.url,
                 previewUrl: selectedSpotifyTrack.previewUrl,
-                previewSource: selectedSpotifyTrack.previewSource ?? null,
+               previewSource: selectedSpotifyTrack.previewSource ?? null,
               } : null}
               title={f('track_title') || null}
+              backgroundImage={f('music_background_url') || null}
+              waveform={normaliseMusicWaveform(f('music_waveform'))}
             />
             <div style={{ fontSize: '0.95rem', color: 'var(--ft-text-secondary)', lineHeight: 1.7, whiteSpace: 'pre-wrap', marginTop: '0.75rem' }}>
               {f('caption') || 'Your caption will appear here.'}
