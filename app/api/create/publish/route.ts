@@ -466,7 +466,15 @@ export async function POST(req: NextRequest) {
       const deliveryTypesLit  = toPgTagArray(data.delivery_types)
       const tagsLit           = toPgTagArray(data.tags)
       const skillsLit         = toPgTagArray(data.skills)
-      const imagesLit         = toPgUrlArray(data.images)
+      const validImageUrls    = Array.isArray(data.images)
+        ? data.images
+            .filter((value): value is string => typeof value === 'string' && /^https?:\/\//i.test(value.trim()) && value.trim().length <= 2048)
+            .map(value => value.trim())
+        : []
+      if (validImageUrls.length === 0) {
+        return fail('Add at least one photo before creating a service listing', 400)
+      }
+      const imagesLit         = toPgUrlArray(validImageUrls)
       const serviceRadius     = data.service_radius != null && data.service_radius !== ''
         ? Number(data.service_radius)
         : null
@@ -512,9 +520,7 @@ export async function POST(req: NextRequest) {
         tags:           tagsLit,
         skills:         skillsLit,
         images:         imagesLit,
-        cover_image:    Array.isArray(data.images) && data.images.length > 0 && typeof data.images[0] === 'string'
-                          ? (data.images[0] as string)
-                          : null,
+        cover_image:    validImageUrls[0] ?? null,
         // Production currently has `service_radius` as text (older schema),
         // while some migrations/comments expect numeric. Sending a string
         // keeps the current text column happy and still casts cleanly if the

@@ -81,7 +81,7 @@ const AGENT_INPUT_GUIDANCE: Record<string, { placeholder: string; example: strin
     example: 'I am the founder of FreeTrust. What should I do to improve the platform? Research best practices and give me a prioritized plan.',
   },
   listingCreator: {
-    placeholder: 'Tell it what you want to sell. Attach product photos, screenshots, or notes...',
+    placeholder: 'Tell it what you want to offer. Attach at least one service photo or product photo...',
     example: 'Create a service listing for 1-hour Spanish conversation practice for professionals relocating to Spain. €35/hr, online, friendly and practical.',
   },
   matchFinder: {
@@ -171,7 +171,7 @@ const ACTION_IDEAS: ActionIdea[] = [
     label: 'Create\na listing',
     icon: 'listing',
     sparkle: true,
-    starterPrompt: 'What do you want to list on FreeTrust? Tell me if it is a service or product, the title, price, location/online details, and any photos or notes you want me to use.',
+    starterPrompt: 'What do you want to list on FreeTrust? Tell me if it is a service or product, the title, price, location or online details, and any notes you want me to use. A service listing needs at least one photo before I can add it to the Services Marketplace.',
   },
   {
     agentName: 'eventPromoter',
@@ -418,7 +418,11 @@ function numberFrom(value: unknown, fallback = 0) {
   return fallback;
 }
 
-function inferActions(agent: AgentConfig, raw: unknown): AgentAction[] {
+function hasUsableImageAttachment(attachment: AgentAttachment) {
+  return attachment.kind === 'image' && IMAGE_TYPES.has(attachment.type) && typeof attachment.dataUrl === 'string' && attachment.dataUrl.startsWith('data:image/') && !attachment.note;
+}
+
+function inferActions(agent: AgentConfig, raw: unknown, attachments: AgentAttachment[] = []): AgentAction[] {
   if (!raw || typeof raw !== 'object') {
     if (agent.name === 'messageDrafter' || agent.name === 'salesDevelopment' || agent.name === 'collabMatchmaker') {
       return [{ id: makeId('action'), kind: 'prepare_message', label: 'Prepare in Messages', helper: 'Save this as an editable FreeTrust message draft and choose where to send it.', payload: { text: stringifyOutput(raw), source: agent.name } }];
@@ -436,8 +440,12 @@ function inferActions(agent: AgentConfig, raw: unknown): AgentAction[] {
 
   if (agent.name === 'listingCreator') {
     const description = [shortDescription, longDescription].filter(Boolean).join('\n\n') || stringifyOutput(data);
-    const basePayload = { title, description, price, currency: 'EUR', tags, category: 'General' };
-    actions.push({ id: makeId('action'), kind: 'create_service', label: 'Create service listing', helper: 'Review/edit the fields, then create a live FreeTrust service.', payload: { ...basePayload, product_type: 'service', service_mode: 'online' } });
+    const category = typeof data.category === 'string' && data.category.trim() ? data.category.trim() : 'General';
+    const basePayload = { title, description, price, currency: 'EUR', tags, category };
+    const hasPhoto = attachments.some(hasUsableImageAttachment);
+    if (hasPhoto) {
+      actions.push({ id: makeId('action'), kind: 'create_service', label: 'Create service listing', helper: 'Review/edit the fields, then add the photo and create a live FreeTrust service.', payload: { ...basePayload, product_type: 'service', service_mode: 'online' } });
+    }
     actions.push({ id: makeId('action'), kind: 'create_product', label: 'Create product listing', helper: 'Use this if the offer is a physical/digital product rather than a service.', payload: { ...basePayload, product_type: 'physical' } });
   }
 
@@ -510,7 +518,27 @@ async function readFileAsAttachment(file: File): Promise<AgentAttachment> {
   return { ...base, kind: 'file', note: 'Attached as metadata only. Paste important text if you want the agent to read it.' };
 }
 
-function ActionCard({ action }: { action: AgentAction }) {
+async function uploadAgentImages(attachments: AgentAttachment[]): Promise<string[]> {
+  const imageAttachments = attachments.filter(hasUsableImageAttachment);
+  const uploaded: string[] = [];
+  for (let index = 0; index < imageAttachments.length; index += 1) {
+    const attachment = imageAttachments[index];
+    const response = await fetch(String(attachment.dataUrl));
+    if (!response.ok) throw new Error(`Could not read service photo ${index + 1}`);
+    const blob = await response.blob();
+    const file = new File([blob], attachment.name || `service-photo-${index + 1}.jpg`, { type: blob.type || attachment.type || 'image/jpeg' });
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', 'photo');
+    const uploadResponse = await fetch('/api/upload/media', { method: 'POST', body: formData });
+    const uploadData = await uploadResponse.json().catch(() => ({})) as { url?: string; error?: string };
+    if (!uploadResponse.ok || !uploadData.url) throw new Error(uploadData.error || `Photo ${index + 1} upload failed`);
+    uploaded.push(uploadData.url);
+  }
+  return uploaded;
+}
+
+function ActionCard({ action, attachments = [] }: { action: AgentAction; attachments?: AgentAttachment[] }) {
   const [payloadText, setPayloadText] = useState(() => {
     if (action.kind === 'prepare_message' || action.kind === 'prepare_social_post') {
       return String(action.payload.text ?? action.payload.content ?? '');
@@ -556,6 +584,10 @@ function ActionCard({ action }: { action: AgentAction }) {
       let successMessage = 'Done.';
 
       if (action.kind === 'create_service' || action.kind === 'create_product') {
+        const imageUrls = await uploadAgentImages(attachments);
+        if (action.kind === 'create_service' && imageUrls.length === 0) {
+          throw new Error('Attach at least one photo before creating a service listing.');
+        }
         res = await fetch('/api/listings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -568,6 +600,8 @@ function ActionCard({ action }: { action: AgentAction }) {
             category: String(payload.category ?? 'General'),
             service_mode: String(payload.service_mode ?? 'online'),
             tags: Array.isArray(payload.tags) ? payload.tags : [],
+            images: imageUrls,
+            cover_image: imageUrls[0] ?? null,
           }),
         });
         const data = await res.json().catch(() => ({}));
@@ -772,6 +806,18 @@ export default function AgentsPage() {
     if (runWithAgent.name !== selectedAgent.name) setSelectedAgent(runWithAgent);
 
     const userMessage: ChatMessage = { id: makeId('msg'), role: 'user', content: cleanedInput || 'Use the attached files/photos as context.', attachments };
+    const hasPhoto = attachments.some(hasUsableImageAttachment);
+    if (runWithAgent.name === 'listingCreator' && /\b(service|gig|lesson|consultation)\b/i.test(cleanedInput) && !hasPhoto) {
+      setMessages((current) => [...current, userMessage, {
+        id: makeId('msg'),
+        role: 'assistant',
+        content: 'Please attach at least one photo for the service listing. Once it is attached, I can add the service to the Services Marketplace.',
+      }]);
+      setInput('');
+      setAttachments([]);
+      setError(null);
+      return;
+    }
     setMessages((current) => [...current, userMessage]);
     setInput('');
     setAttachments([]);
@@ -832,7 +878,7 @@ export default function AgentsPage() {
         id: assistantId,
         role: 'assistant',
         content: cleanAssistantText(stringifyOutput(raw)),
-        actions: inferActions(runWithAgent, raw),
+        actions: inferActions(runWithAgent, raw, userMessage.attachments),
         raw,
       };
       setMessages((current) => [...current, assistantMessage]);
@@ -1057,7 +1103,7 @@ export default function AgentsPage() {
                       </div>
                     );
                   })()}
-                  {message.actions?.map((action) => <ActionCard key={action.id} action={action} />)}
+                  {message.actions?.map((action) => <ActionCard key={action.id} action={action} attachments={message.attachments} />)}
                 </div>
               </div>
             ))}

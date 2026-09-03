@@ -8,12 +8,15 @@ Output a JSON object with these exact keys:
 - title (max 60 characters, benefit-led, plain English)
 - short_description (max 140 characters, one sentence)
 - long_description (3 short paragraphs: what they get, how it works, who it's for)
+- listing_type (exactly "service" or "product"; use "service" for any gig, lesson, consultation, or other work offered by the member)
+- category (a relevant FreeTrust marketplace category label such as "Music & Audio", "Design & Creative", or "Education & Tutoring")
 - tags (array of 3–6 lowercase single-word tags)
 - suggested_price_eur (integer, realistic for the member's stated market)
 - suggested_price_rationale (one sentence explaining the price)
 
 Rules:
 - Never invent credentials, qualifications, or reviews the member didn't claim
+- When the member is creating a service, explain that at least one real photo is required before it can be added to the Services Marketplace. Do not imply that a service is ready to publish without a photo.
 - Use UK/Irish English spelling by default (colour, organise, favour); match the member's spelling if they've written in US English
 - No emojis inside the title or description fields
 - No "we leverage" / "revolutionary" / "game-changing" — plain words only

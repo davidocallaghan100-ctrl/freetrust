@@ -160,13 +160,25 @@ export async function POST(request: NextRequest) {
       ? product_type.trim()
       : 'physical'
 
+    // Services need a real cover photo to be discoverable and trustworthy in
+    // the Services Marketplace. Keep this invariant on the server as well as
+    // in the Agents UI so every creation path behaves consistently.
+    const validImageUrls = Array.isArray(images)
+      ? images
+          .filter((value): value is string => typeof value === 'string' && /^https?:\/\//i.test(value.trim()) && value.trim().length <= 2048)
+          .map(value => value.trim())
+      : []
+    if (resolvedProductType === 'service' && validImageUrls.length === 0) {
+      return NextResponse.json({ error: 'Add at least one photo before creating a service listing.' }, { status: 400 })
+    }
+
     // Encode every text[] column as a PostgreSQL array literal string
     // BEFORE the insert. PostgREST's JSON → text[] coercion fails on
     // some Supabase project versions with "The string did not match the
     // expected pattern" (see lib/supabase/text-array.ts for the full
     // history). Images are additionally filtered to http(s) URLs only
     // so a bad client can't poison the column with garbage.
-    const imagesLiteral        = toPgUrlArray(images)
+    const imagesLiteral        = toPgUrlArray(validImageUrls)
     const tagsLiteral          = toPgTagArray(tags)
     const deliveryTypesLiteral = toPgTagArray(delivery_types)
 
@@ -175,8 +187,8 @@ export async function POST(request: NextRequest) {
     // garbage into the column.
     const coverImageResolved = (typeof cover_image === 'string' && /^https?:\/\//i.test(cover_image))
       ? cover_image
-      : (Array.isArray(images) && typeof images[0] === 'string' && /^https?:\/\//i.test(images[0]))
-        ? images[0]
+      : validImageUrls.length > 0
+        ? validImageUrls[0]
         : null
 
     // Normalise stock_qty: accept a non-negative integer or null. Reject
