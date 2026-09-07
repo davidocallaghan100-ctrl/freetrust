@@ -1270,6 +1270,83 @@ html[dir="rtl"] .ft-page-content {
   }
 }
 
+/* ---- Feed action row -------------------------------------------------------
+   Keep the reaction/comment/share/story actions and the per-post identity
+   picker in the same mobile viewport. The Save action remains available on
+   desktop, but is intentionally hidden on phones where it otherwise pushes
+   the profile switcher off the right edge. */
+.ft-post-action-bar {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ft-post-action {
+  min-width: 0;
+  flex: 0 1 auto;
+  white-space: nowrap;
+}
+
+.ft-post-action .action-btn-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ft-post-action-spacer {
+  min-width: 8px;
+  flex: 1 1 auto;
+}
+
+@media (max-width: 640px) {
+  .ft-post-action-bar {
+    gap: 0 !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+
+  .ft-post-action {
+    gap: 2px !important;
+    padding: 6px 5px !important;
+    font-size: 12px !important;
+  }
+
+  .ft-post-action > span:first-child {
+    font-size: 14px !important;
+  }
+
+  .ft-post-action--save {
+    display: none !important;
+  }
+
+  .ft-post-action-spacer {
+    min-width: 0;
+  }
+
+  .ft-feed-identity-picker {
+    flex-shrink: 0 !important;
+  }
+
+  .ft-feed-identity-picker > button {
+    padding-left: 4px !important;
+    padding-right: 2px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .action-btn-label {
+    display: none !important;
+  }
+
+  .ft-post-action {
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+
+  .ft-feed-identity-picker > button {
+    padding-left: 2px !important;
+  }
+}
+
 /* ---- Very small screens (≤ 380px) ---- */
 @media (max-width: 380px) {
   /* Calendar: reduce cell text further */

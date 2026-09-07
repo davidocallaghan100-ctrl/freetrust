@@ -3011,7 +3011,7 @@ export default function PostCard({
       )}
 
       {/* ── Action bar ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: hasReactionCounts ? '7px 8px 10px' : '10px 8px 10px', borderTop: '1px solid rgba(51,65,85,0.6)', marginTop: hasReactionCounts ? '7px' : '10px', width: '100%', boxSizing: 'border-box' }}>
+      <div className="ft-post-action-bar" style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: hasReactionCounts ? '7px 8px 10px' : '10px 8px 10px', borderTop: '1px solid rgba(51,65,85,0.6)', marginTop: hasReactionCounts ? '7px' : '10px', width: '100%', boxSizing: 'border-box' }}>
         {/* React button + picker */}
         <div ref={reactBtnWrapRef} style={{ position: 'relative' }}>
           <ActionBtn
@@ -3077,20 +3077,21 @@ export default function PostCard({
           active={showShare}
           onClick={toggleShare}
         />
-        <ActionBtn
-          icon="⭐"
-          label={sharingToStory ? 'Sharing…' : 'Story'}
-          active={false}
-          onClick={handleShareToStory}
-        />
-        <ActionBtn
-          icon={saved ? '🔖' : '🏷️'}
-          label={saveCount > 0 ? saveCount.toString() : 'Save'}
-          active={saved}
-          onClick={handleSave}
-        />
-        <div style={{ flex: 1 }} />
-        {currentUserId ? <div ref={identityPickerRef} style={{ position: 'relative', flexShrink: 0 }}>
+          <ActionBtn
+            icon="⭐"
+            label={sharingToStory ? 'Sharing…' : 'Story'}
+            active={false}
+            onClick={handleShareToStory}
+          />
+          <ActionBtn
+            className="ft-post-action--save"
+            icon={saved ? '🔖' : '🏷️'}
+            label={saveCount > 0 ? saveCount.toString() : 'Save'}
+            active={saved}
+            onClick={handleSave}
+          />
+        <div className="ft-post-action-spacer" style={{ flex: 1 }} />
+        {currentUserId ? <div ref={identityPickerRef} className="ft-feed-identity-picker" style={{ position: 'relative', flexShrink: 0 }}>
           <style>{`
             @media (max-width: 640px) {
               .ft-feed-identity-menu {
@@ -3479,14 +3480,10 @@ function CommentRow({
 
 // ── Action button ─────────────────────────────────────────────────────────────
 
-function ActionBtn({ icon, label, active, onClick }: { icon: string; label: string; active: boolean; onClick: (e?: ReactMouseEvent) => void }) {
+function ActionBtn({ icon, label, active, onClick, className }: { icon: string; label: string; active: boolean; onClick: (e?: ReactMouseEvent) => void; className?: string }) {
   return (
-    <>
-      <style>{`
-        .action-btn-label { display: inline; }
-        @media (max-width: 380px) { .action-btn-label { display: none !important; } }
-      `}</style>
-      <button
+    <button
+        className={['ft-post-action', className].filter(Boolean).join(' ')}
         onClick={onClick}
         style={{
           display: 'flex', alignItems: 'center', gap: '3px', padding: '6px 8px',
@@ -3502,6 +3499,5 @@ function ActionBtn({ icon, label, active, onClick }: { icon: string; label: stri
         <span style={{ fontSize: '15px', lineHeight: 1 }}>{icon}</span>
         <span className="action-btn-label">{label}</span>
       </button>
-    </>
   )
 }
