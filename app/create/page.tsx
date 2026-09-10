@@ -56,6 +56,22 @@ type TextOverlayOption = {
   sampleStyle: React.CSSProperties
 }
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeout = window.setTimeout(() => reject(new Error(message)), timeoutMs)
+    promise.then(
+      value => {
+        window.clearTimeout(timeout)
+        resolve(value)
+      },
+      error => {
+        window.clearTimeout(timeout)
+        reject(error)
+      },
+    )
+  })
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const POST_TYPES: { type: PostType; icon: string; label: string; desc: string }[] = [
@@ -594,16 +610,25 @@ export default function CreatePage() {
       //        under folders named after the user's own id) ───────────────
       step = 'auth'
       const supabase = createClient()
-      const [{ data: { user } }, { data: sessionData }] = await Promise.all([
-        supabase.auth.getUser(),
+      setUploadProgress('Checking session…')
+      // The old getUser()+getSession() Promise.all could leave iOS Safari on
+      // "Preparing upload…" forever when the auth refresh request stalled.
+      // The session already contains the user id and bearer token needed by
+      // Storage RLS, so avoid the extra network round-trip and fail clearly
+      // if the local auth lock does not resolve promptly.
+      const { data: sessionData } = await withTimeout(
         supabase.auth.getSession(),
-      ])
+        12_000,
+        'Session lookup timed out. Please refresh and try again.',
+      )
+      const session = sessionData.session
+      const user = session?.user ?? null
       if (!user) {
         setUploadProgress('Upload failed — please sign in and try again')
         setUploadingMedia(false)
         return
       }
-      const accessToken = sessionData.session?.access_token
+      const accessToken = session?.access_token
       if (!accessToken) {
         setUploadProgress('Upload failed — your session was not ready. Please refresh and try again.')
         setUploadingMedia(false)
@@ -658,6 +683,7 @@ export default function CreatePage() {
       // reported through the same onProgress callback.
       step = 'upload'
       let publicUrl: string
+      setUploadProgress(`Starting upload of ${(file.size / 1024 / 1024).toFixed(1)} MB…`)
       const onProgress = (snapshot: UploadProgressSnapshot) => {
         setUploadProgressSnapshot(snapshot)
         setUploadProgress(`Uploading ${(file.size / 1024 / 1024).toFixed(1)} MB… ${formatUploadProgress(snapshot)}`)

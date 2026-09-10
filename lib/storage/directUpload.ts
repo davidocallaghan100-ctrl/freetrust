@@ -237,12 +237,30 @@ export async function uploadVideoResumable(params: {
   return new Promise<DirectStorageUploadResult>((resolve, reject) => {
     let settled = false
     let overallTimeout: number | null = null
+    let lookupTimeout: number | null = null
+    let started = false
 
     const finish = (fn: () => void) => {
       if (settled) return
       settled = true
       if (overallTimeout != null) window.clearTimeout(overallTimeout)
+      if (lookupTimeout != null) window.clearTimeout(lookupTimeout)
       fn()
+    }
+
+    // Safari can occasionally leave the local TUS fingerprint lookup
+    // pending while a PWA is resuming from the background. Never let that
+    // keep the composer on "Preparing upload…" forever. If the lookup wins
+    // later, the started guard prevents it from launching a second upload.
+    const startUpload = () => {
+      if (settled || started) return
+      started = true
+      if (lookupTimeout != null) window.clearTimeout(lookupTimeout)
+      try {
+        upload.start()
+      } catch (error) {
+        finish(() => reject(error instanceof Error ? error : new Error(String(error))))
+      }
     }
 
     const upload = new Upload(params.file, {
@@ -287,16 +305,18 @@ export async function uploadVideoResumable(params: {
       })
     }, params.timeoutMs)
 
+    lookupTimeout = window.setTimeout(startUpload, 4_000)
     upload.findPreviousUploads()
       .then((previousUploads) => {
+        if (started || settled) return
         if (previousUploads.length > 0) {
           upload.resumeFromPreviousUpload(previousUploads[0])
         }
-        upload.start()
+        startUpload()
       })
       .catch(() => {
         // If lookup fails for any reason, just start fresh rather than blocking the upload.
-        upload.start()
+        startUpload()
       })
   })
 }
