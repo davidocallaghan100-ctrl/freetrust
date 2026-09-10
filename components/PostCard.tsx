@@ -1247,6 +1247,7 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
   const [posterUrl, setPosterUrl] = useState<string | null>(null)
   const [previewReady, setPreviewReady] = useState(false)
   const [nativeAspect, setNativeAspect] = useState<number | null>(null)
+  const [nearViewport, setNearViewport] = useState(false)
 
   // Videos are uploaded in many native formats (portrait 9:16, square, landscape
   // 16:9, etc). The feed frame used to force every video into a single fixed
@@ -1299,6 +1300,7 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
     setPreviewReady(false)
     setPlaying(false)
     setDuration(null)
+    setNearViewport(false)
   }, [src])
 
   // Yield to whichever feed post (video or photo-carousel soundtrack) most
@@ -1318,6 +1320,23 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
     }
     window.addEventListener(FEED_AUDIO_PLAY_EVENT, yieldToAnotherPlayer)
     return () => window.removeEventListener(FEED_AUDIO_PLAY_EVENT, yieldToAnotherPlayer)
+  }, [])
+
+  // Only let videos within roughly one half viewport of the visible feed
+  // pre-buffer media. `preload="auto"` on every feed card makes a single
+  // high-bitrate 4K upload compete with every other video on the page, while
+  // `play()` below still starts the current card immediately when it enters
+  // view. Keeping the preload hint scoped to nearby cards preserves the
+  // smoother handoff without flooding the connection with off-screen media.
+  useEffect(() => {
+    const el = videoRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => setNearViewport(entry.isIntersecting),
+      { rootMargin: '50% 0px', threshold: 0 },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
   }, [])
 
   // Auto-play video when it is visibly in the feed. Sound is enabled by
@@ -1482,19 +1501,15 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
       <video
         ref={videoRef}
         src={src}
-        autoPlay
         muted={muted}
         playsInline
         loop={isShort}
         poster={posterUrl ?? undefined}
         crossOrigin="anonymous"
-        // Pre-buffer real media data (not just metadata) so playback has a
-        // head start once this card scrolls into view — reduces the
-        // stutter/rebuffer ("glitching") that showed up with metadata-only
-        // preload combined with the IntersectionObserver-driven autoplay
-        // below. Browsers still respect data-saver settings; this only
-        // raises the *hint* priority, it doesn't force a download.
-        preload="auto"
+        // Pre-buffer only cards near the viewport. The observer below owns
+        // playback, so the browser does not start fetching every off-screen
+        // video just because the feed rendered it.
+        preload={nearViewport ? 'auto' : 'metadata'}
         onLoadedMetadata={() => {
           const el = videoRef.current
           setDuration(el?.duration ?? null)
