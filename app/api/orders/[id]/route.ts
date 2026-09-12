@@ -255,6 +255,24 @@ export async function PATCH(
         )
       }
 
+      // Checkout used manual capture, so keep the TrustCoin discount reserved
+      // until the card is actually captured. This makes buyer cancellation
+      // before escrow release return the TrustCoin correctly. Once capture
+      // succeeds, the discount is consumed even if a later seller transfer
+      // needs manual reconciliation.
+      const { error: confirmDiscountError } = await admin.rpc('confirm_service_discount', {
+        p_order_id: id,
+      })
+      if (confirmDiscountError) {
+        console.error(`[orders/${id}] TrustCoin discount confirmation failed:`, confirmDiscountError)
+        const { error: fallbackError } = await admin
+          .from('orders')
+          .update({ trust_discount_status: 'spent', updated_at: new Date().toISOString() })
+          .eq('id', id)
+          .eq('trust_discount_status', 'reserved')
+        if (fallbackError) console.error(`[orders/${id}] TrustCoin discount state fallback failed:`, fallbackError)
+      }
+
       // ── 2. Create the Transfer to the seller ─────────────────────────
       // The fee was already retained by application_fee_amount on
       // capture. We still need to send the net-of-fee payout from the
@@ -477,17 +495,41 @@ export async function PATCH(
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err)
           console.error(`[orders/${id}] paymentIntents.cancel(${piId}) failed:`, msg)
-          // If the PaymentIntent is already cancelled or in a terminal
-          // state, Stripe returns an error — we still want to flip
-          // the order locally to cancelled so the UI reflects it.
-          // Only block on unrecoverable errors.
-          if (!msg.toLowerCase().includes('already')) {
+          // An already-cancelled intent is safe to finish locally. A
+          // successfully captured intent is not: never reverse a TrustCoin
+          // reservation after the card has actually been charged.
+          if (msg.toLowerCase().includes('already')) {
+            try {
+              const currentIntent = await stripe.paymentIntents.retrieve(piId)
+              if (currentIntent.status === 'succeeded' || currentIntent.status === 'processing') {
+                return NextResponse.json(
+                  { error: 'This payment has already been captured and cannot be cancelled.', code: 'payment_already_captured' },
+                  { status: 409 },
+                )
+              }
+            } catch (retrieveErr) {
+              console.error(`[orders/${id}] payment intent status check failed after cancel error:`, retrieveErr)
+              return NextResponse.json({ error: `Could not confirm payment state: ${msg}`, code: 'cancel_state_unknown' }, { status: 502 })
+            }
+          } else {
             return NextResponse.json(
               { error: `Could not cancel payment: ${msg}`, code: 'cancel_failed' },
               { status: 502 },
             )
           }
         }
+      }
+
+      // If this order reserved TrustCoin for a service discount, return it
+      // before marking the order cancelled. The RPC is idempotent, so a
+      // Stripe webhook racing this request cannot double-credit the buyer.
+      const { error: reverseError } = await admin.rpc('reverse_service_discount', {
+        p_order_id: id,
+        p_reason: 'Buyer cancelled service checkout before escrow capture',
+      })
+      if (reverseError) {
+        console.error(`[orders/${id}] TrustCoin discount reversal failed:`, reverseError)
+        return NextResponse.json({ error: 'Payment cancelled, but the TrustCoin discount could not be returned yet. Please retry.' }, { status: 502 })
       }
 
       const nowIso = new Date().toISOString()
@@ -521,12 +563,10 @@ export async function PATCH(
         body:      'Payment was not taken.',
       })
 
-      // Notify both parties. If the buyer earned ₮5 purchase_reward
-      // on checkout.session.completed, we'd normally reverse it here —
-      // but the Webhook only awards that AFTER the hold, and most
-      // cancellations happen before any trust was awarded, so we
-      // leave the ledger untouched to keep the accounting simple.
-      // Admin can manually reverse via /admin if needed.
+      // Notify both parties. The service discount reservation, if any, was
+      // reversed above. The separate ₮5 purchase reward is only issued after
+      // checkout.session.completed, so a pre-capture cancellation does not
+      // need to reverse that reward.
       // Fire-and-forget — don't block the 'cancelled' response on notifications
       void Promise.all([
         insertNotification({

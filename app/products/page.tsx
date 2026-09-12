@@ -1521,7 +1521,7 @@ function ProductsInner() {
               ))}
             </select>
             <Link href="/products/new" onClick={e => { e.preventDefault(); void openCreateProduct() }} style={{ background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', color: '#fff', padding: '0.5rem 1.1rem', borderRadius: 9, fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none', minHeight: 36, display: 'flex', alignItems: 'center' }}>
-              {t('listProduct')}
+              ⬆ Upload Product
             </Link>
           </div>
         </div>

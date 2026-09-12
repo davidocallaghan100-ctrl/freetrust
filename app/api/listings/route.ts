@@ -7,6 +7,7 @@ import { awardTrust } from '@/lib/trust/award'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 import { assertStripeConnectedForPaidListing } from '@/lib/stripe/connect-gate'
 import { findServiceCategoryByLabel } from '@/lib/service-categories'
+import { normaliseKeywordList } from '@/lib/marketplace/keywords'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -159,6 +160,9 @@ export async function POST(request: NextRequest) {
     const resolvedProductType = (typeof product_type === 'string' && product_type.trim())
       ? product_type.trim()
       : 'physical'
+    const resolvedCurrency = resolvedProductType === 'service'
+      ? 'EUR'
+      : (typeof currency === 'string' && currency.trim() ? currency.trim().toUpperCase() : 'EUR')
 
     // Services need a real cover photo to be discoverable and trustworthy in
     // the Services Marketplace. Keep this invariant on the server as well as
@@ -179,7 +183,7 @@ export async function POST(request: NextRequest) {
     // history). Images are additionally filtered to http(s) URLs only
     // so a bad client can't poison the column with garbage.
     const imagesLiteral        = toPgUrlArray(validImageUrls)
-    const tagsLiteral          = toPgTagArray(tags)
+    const tagsLiteral          = toPgTagArray(normaliseKeywordList(tags, { lowercase: true }))
     const deliveryTypesLiteral = toPgTagArray(delivery_types)
 
     // Normalise cover_image: accept an https URL or null; anything else
@@ -240,7 +244,7 @@ export async function POST(request: NextRequest) {
       title: (title as string).trim(),
       description: (description as string).trim(),
       price,
-      currency,
+      currency: resolvedCurrency,
       product_type: resolvedProductType,
       // `listings.category_id` is a UUID FK in production. The service
       // category catalog uses UI slugs (e.g. "design-creative"), so never

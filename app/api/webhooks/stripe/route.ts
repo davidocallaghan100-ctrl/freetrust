@@ -41,6 +41,12 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      case "checkout.session.expired": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        await handleCheckoutExpired(session);
+        break;
+      }
+
       case "payment_intent.succeeded": {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         await handlePaymentIntentSucceeded(paymentIntent);
@@ -255,7 +261,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       return;
     }
 
-    // Fetch order to issue trust reward to buyer + get listing_id for delivery deadline
+    // Fetch order to issue trust reward to buyer + get listing_id for delivery deadline.
+    // The TrustCoin discount remains `reserved` here because this checkout uses
+    // manual capture: the card is authorised, but the buyer may still cancel
+    // before escrow release and receive the TrustCoin back.
     const { data: order } = await supabase
       .from('orders')
       .select('buyer_id, title, listing_id')
@@ -313,6 +322,30 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   } catch (err) {
     console.error('[Stripe Webhook] service/product checkout handler error:', err);
   }
+}
+
+async function handleCheckoutExpired(session: Stripe.Checkout.Session) {
+  const orderId = session.metadata?.order_id
+  if (!orderId) return
+
+  const supabase = createAdminClient()
+  const { error: reverseError } = await supabase.rpc('reverse_service_discount', {
+    p_order_id: orderId,
+    p_reason: 'Stripe Checkout session expired before payment',
+  })
+  if (reverseError) {
+    console.error('[Stripe Webhook] Failed to reverse expired service TrustCoin discount:', reverseError)
+    throw reverseError
+  }
+
+  const { error: orderError } = await supabase
+    .from('orders')
+    .update({ status: 'cancelled', cancelled_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('id', orderId)
+    .eq('status', 'pending_escrow')
+
+  if (orderError) throw orderError
+  console.log(`[Stripe Webhook] Expired service checkout reversed: order=${orderId}`)
 }
 
 async function handleFitPlanTopup(session: Stripe.Checkout.Session) {
@@ -898,6 +931,12 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
       .from('orders')
       .update({ status: 'refunded', updated_at: new Date().toISOString() })
       .eq('id', orderId);
+
+    const { error: reverseError } = await supabase.rpc('reverse_service_discount', {
+      p_order_id: orderId,
+      p_reason: 'Stripe PaymentIntent failed before escrow capture',
+    })
+    if (reverseError) console.error('[Stripe Webhook] Failed to reverse failed-payment TrustCoin discount:', reverseError)
 
     const { data: order } = await supabase
       .from('orders')

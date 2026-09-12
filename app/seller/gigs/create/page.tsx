@@ -5,6 +5,7 @@ import { Suspense, useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { compressImage } from '@/lib/image-compression'
+import { normaliseKeywordList } from '@/lib/marketplace/keywords'
 
 type Category = 'online' | 'offline'
 
@@ -252,9 +253,9 @@ function CreateGigPageContent() {
   }
 
   const addTag = () => {
-    const tag = tagInput.trim().toLowerCase()
-    if (tag && !form.tags.includes(tag) && form.tags.length < 10) {
-      updateForm('tags', [...form.tags, tag])
+    const tags = normaliseKeywordList([...form.tags, tagInput], { lowercase: true })
+    if (tags.length > form.tags.length) {
+      updateForm('tags', tags)
       setTagInput('')
     }
   }
@@ -264,9 +265,9 @@ function CreateGigPageContent() {
   }
 
   const addSkill = () => {
-    const skill = skillInput.trim()
-    if (skill && !form.skills.includes(skill) && form.skills.length < 10) {
-      updateForm('skills', [...form.skills, skill])
+    const skills = normaliseKeywordList([...form.skills, skillInput])
+    if (skills.length > form.skills.length) {
+      updateForm('skills', skills)
       setSkillInput('')
     }
   }
@@ -449,7 +450,13 @@ function CreateGigPageContent() {
             description,
             price: priceNum,
             // Rich-data fields — read by the service branch of the route
-            packages: form.packages,
+            packages: Object.fromEntries(
+              Object.entries(form.packages).map(([key, pkg]) => [key, {
+                ...pkg,
+                price: Number(pkg.price),
+                currency: 'EUR',
+              }]),
+            ),
             delivery_types: form.deliveryTypes,
             tags:           form.tags,
             skills:         form.skills,
@@ -978,6 +985,15 @@ function CreateGigPageContent() {
                       }
                     }}
                   />
+                  <button
+                    type="button"
+                    style={styles.keywordAddBtn}
+                    onClick={addTag}
+                    disabled={!tagInput.trim() || form.tags.length >= 10}
+                    aria-label="Add tag"
+                  >
+                    Add
+                  </button>
                 </div>
                 {errors.tags && <p style={styles.error}>{errors.tags}</p>}
               </div>
@@ -1009,6 +1025,15 @@ function CreateGigPageContent() {
                       }
                     }}
                   />
+                  <button
+                    type="button"
+                    style={styles.keywordAddBtn}
+                    onClick={addSkill}
+                    disabled={!skillInput.trim() || form.skills.length >= 10}
+                    aria-label="Add skill"
+                  >
+                    Add
+                  </button>
                 </div>
               </div>
             </div>
@@ -1709,6 +1734,17 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'inherit',
     opacity: 0.6,
     padding: 0,
+  },
+  keywordAddBtn: {
+    border: '1px solid rgba(56,189,248,0.35)',
+    background: 'rgba(56,189,248,0.1)',
+    color: 'var(--ft-accent)',
+    borderRadius: 7,
+    padding: '5px 9px',
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
   },
   tagInput: {
     border: 'none',

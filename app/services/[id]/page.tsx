@@ -55,6 +55,7 @@ type ServiceListing = {
   title: string
   description: string
   price: number
+  price_eur: number | null
   currency: string
   service_mode: 'online' | 'offline' | 'both' | null
   tags: string[] | null
@@ -97,7 +98,8 @@ function Avatar({ url, name, size = 48 }: { url: string | null; name: string; si
 
 function BookCard({ svc, mobile = false }: { svc: ServiceListing; mobile?: boolean }) {
   const { format } = useCurrency()
-  const currency = (svc.currency || 'GBP') as CurrencyCode
+  const currency = 'EUR' as CurrencyCode
+  const displayPrice = svc.price_eur && svc.price_eur > 0 ? svc.price_eur : svc.price
 
   return (
     <div style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '16px', overflow: 'hidden' }}>
@@ -105,7 +107,7 @@ function BookCard({ svc, mobile = false }: { svc: ServiceListing; mobile?: boole
         {/* Price */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '6px' }}>
           <span style={{ fontSize: '36px', fontWeight: 900, color: 'var(--ft-text)', letterSpacing: '-1px' }}>
-            {format(svc.price, currency)}
+            {format(displayPrice, currency)}
           </span>
           <span style={{ fontSize: '13px', color: 'var(--ft-text-tertiary)' }}>/ project</span>
         </div>
@@ -118,7 +120,7 @@ function BookCard({ svc, mobile = false }: { svc: ServiceListing; mobile?: boole
           href={`/checkout?service=${svc.id}`}
           style={{ display: 'block', background: 'linear-gradient(135deg,var(--ft-accent),#818cf8)', borderRadius: '12px', padding: '15px', textAlign: 'center', fontWeight: 800, fontSize: '16px', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.25)', marginBottom: '10px' }}
         >
-          Book Now — {format(svc.price, currency)}
+          Book Now — {format(displayPrice, currency)}
         </Link>
 
         {/* AI Agent link */}
@@ -137,14 +139,15 @@ function BookCard({ svc, mobile = false }: { svc: ServiceListing; mobile?: boole
 
 function MobileStickyBar({ svc }: { svc: ServiceListing }) {
   const { format } = useCurrency()
-  const currency = (svc.currency || 'GBP') as CurrencyCode
+  const currency = 'EUR' as CurrencyCode
+  const displayPrice = svc.price_eur && svc.price_eur > 0 ? svc.price_eur : svc.price
 
   return (
     <div style={{ position: 'fixed', bottom: '60px', left: 0, right: 0, zIndex: 90, background: 'var(--ft-bg)', borderTop: '1px solid var(--ft-surface)', padding: '10px 16px 12px', display: 'flex', gap: '10px', alignItems: 'center', boxShadow: '0 -10px 30px rgba(2,6,23,0.35)' }}>
       {/* Price pill */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '12px', padding: '8px 12px', minWidth: 90 }}>
         <span style={{ fontSize: '10px', color: 'var(--ft-text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>Price</span>
-        <span style={{ fontSize: '16px', fontWeight: 900, color: 'var(--ft-text)' }}>{format(svc.price, currency)}</span>
+        <span style={{ fontSize: '16px', fontWeight: 900, color: 'var(--ft-text)' }}>{format(displayPrice, currency)}</span>
       </div>
 
       {/* CTA */}
@@ -152,7 +155,7 @@ function MobileStickyBar({ svc }: { svc: ServiceListing }) {
         href={`/checkout?service=${svc.id}`}
         style={{ flex: 1, display: 'block', background: 'linear-gradient(135deg,var(--ft-accent),#818cf8)', borderRadius: '12px', padding: '14px', textAlign: 'center', fontWeight: 800, fontSize: '15px', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 20px rgba(56,189,248,0.25)' }}
       >
-        Book Now — {format(svc.price, currency)}
+        Book Now — {format(displayPrice, currency)}
       </Link>
     </div>
   )
@@ -249,7 +252,7 @@ export default function ServiceDetailPage() {
         const { data, error } = await supabase
           .from('listings')
           .select(`
-            id, title, description, price, currency,
+            id, title, description, price, currency, price_eur,
             service_mode, tags, location,
             images, category_id, category, delivery_types,
             quality_score, avg_rating, review_count,
@@ -272,7 +275,8 @@ export default function ServiceDetailPage() {
             title: raw.title as string,
             description: raw.description as string,
             price: raw.price as number,
-            currency: (raw.currency as string) || 'GBP',
+            price_eur: (raw.price_eur as number | null) ?? null,
+            currency: 'EUR',
             service_mode: raw.service_mode as ServiceListing['service_mode'],
             tags: raw.tags as string[] | null,
             location: raw.location as string | null,

@@ -9,6 +9,7 @@ import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 import { assertStripeConnectedForPaidListing } from '@/lib/stripe/connect-gate'
 import { findServiceCategoryByLabel } from '@/lib/service-categories'
 import { normaliseMusicWaveform } from '@/lib/audio/musicWaveform'
+import { normaliseKeywordList } from '@/lib/marketplace/keywords'
 
 // Map UI-friendly labels (from the create form) to the DB CHECK constraint
 // values defined in lib/supabase/jobs-schema.sql.
@@ -206,7 +207,11 @@ export async function POST(req: NextRequest) {
     // Normalise the structured location once — every insert path uses it
     const struct = normaliseLocation(body.structured_location)
     const isRemote = Boolean(body.is_remote ?? struct.is_remote ?? false)
-    const currencyCode = (body.currency_code ?? 'EUR').toUpperCase()
+    // Services are an EUR-only marketplace surface. Keep this server-side
+    // invariant even if an older or modified client sends another currency.
+    const currencyCode = type === 'service'
+      ? 'EUR'
+      : String(body.currency_code ?? 'EUR').trim().toUpperCase()
 
     // ── Post-as-organisation auth check ─────────────────────────────────────
     // Resolve once, reuse in the article + feed_posts branches below.
@@ -461,11 +466,31 @@ export async function POST(req: NextRequest) {
       // the PostgREST JSON→text[] coercion bug. jsonb can be passed
       // through as a plain object — supabase-js serialises it natively.
       // See lib/supabase/text-array.ts for the text[] bug history.
-      const rawPackages       = data.packages
-      const packages          = (rawPackages && typeof rawPackages === 'object') ? rawPackages : null
+      const rawPackages = data.packages
+      const packages = rawPackages && typeof rawPackages === 'object' && !Array.isArray(rawPackages)
+        ? Object.fromEntries(
+            Object.entries(rawPackages as Record<string, unknown>)
+              .filter(([key]) => ['basic', 'standard', 'premium'].includes(key))
+              .map(([key, rawPackage]) => {
+                const pkg = rawPackage && typeof rawPackage === 'object'
+                  ? rawPackage as Record<string, unknown>
+                  : {}
+                const packagePrice = Number(pkg.price)
+                return [key, {
+                  name: typeof pkg.name === 'string' ? pkg.name.slice(0, 32) : key,
+                  description: typeof pkg.description === 'string' ? pkg.description.slice(0, 1000) : '',
+                  price: Number.isFinite(packagePrice) && packagePrice > 0 ? packagePrice : 0,
+                  currency: 'EUR',
+                  deliveryTime: typeof pkg.deliveryTime === 'string' ? pkg.deliveryTime.slice(0, 32) : '',
+                  revisions: typeof pkg.revisions === 'string' ? pkg.revisions.slice(0, 32) : '',
+                  features: normaliseKeywordList(pkg.features, { lowercase: false, max: 8 }),
+                }]
+              }),
+          )
+        : null
       const deliveryTypesLit  = toPgTagArray(data.delivery_types)
-      const tagsLit           = toPgTagArray(data.tags)
-      const skillsLit         = toPgTagArray(data.skills)
+      const tagsLit           = toPgTagArray(normaliseKeywordList(data.tags, { lowercase: true }))
+      const skillsLit         = toPgTagArray(normaliseKeywordList(data.skills))
       const validImageUrls    = Array.isArray(data.images)
         ? data.images
             .filter((value): value is string => typeof value === 'string' && /^https?:\/\//i.test(value.trim()) && value.trim().length <= 2048)

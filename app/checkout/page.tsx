@@ -17,6 +17,7 @@ interface ServiceListing {
   title: string
   description: string | null
   price: number
+  price_eur: number | null
   currency: string | null
   seller_id: string | null
   avg_rating: number | null
@@ -36,6 +37,8 @@ function CheckoutContent() {
   const [status, setStatus] = useState<'loading' | 'ready' | 'paying' | 'error'>('loading')
   const [error, setError] = useState('')
   const [service, setService] = useState<ServiceListing | null>(null)
+  const [trustBalance, setTrustBalance] = useState<number | null>(null)
+  const [useTrustDiscount, setUseTrustDiscount] = useState(false)
 
   useEffect(() => {
     if (!serviceId) {
@@ -75,7 +78,7 @@ function CheckoutContent() {
       // ── 3. Fetch service details ───────────────────────────────────────────
       const { data: svc, error: svcErr } = await supabase
         .from('listings')
-        .select('id, title, description, price, currency, seller_id, avg_rating, review_count, seller:profiles!seller_id(full_name, avatar_url)')
+         .select('id, title, description, price, currency, price_eur, seller_id, avg_rating, review_count, seller:profiles!seller_id(full_name, avatar_url)')
         .eq('id', serviceId)
         .eq('status', 'active')
         .maybeSingle()
@@ -88,6 +91,15 @@ function CheckoutContent() {
 
       setService(svc as unknown as ServiceListing)
       setStatus('ready')
+
+      // TrustCoin is optional checkout context; do not block the service
+      // details from rendering if the wallet request is unavailable.
+      fetch('/api/wallet', { cache: 'no-store' })
+        .then(res => res.ok ? res.json() as Promise<{ trust?: { balance?: number } }> : null)
+        .then(wallet => {
+          if (wallet) setTrustBalance(Math.max(0, Number(wallet.trust?.balance ?? 0)))
+        })
+        .catch(() => setTrustBalance(0))
     }
 
     init().catch(err => {
@@ -104,7 +116,11 @@ function CheckoutContent() {
       const res = await fetch('/api/checkout/service', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ service_id: service.id, package_tier: 'Basic' }),
+        body: JSON.stringify({
+          service_id: service.id,
+          package_tier: 'Basic',
+          trust_discount_tokens: trustDiscountTokens,
+        }),
       })
       const data = await res.json() as { url?: string; error?: string }
       if (!res.ok || !data.url) {
@@ -144,10 +160,21 @@ function CheckoutContent() {
   }
 
   // ── Checkout summary ─────────────────────────────────────────────────────────
-  const currency = (service.currency ?? 'EUR') as string
-  const price = service.price
-  const fee = Math.round(price * 0.08 * 100) / 100
-  const sellerReceives = Math.round((price - fee) * 100) / 100
+  const currency = 'EUR'
+  const price = service.price_eur && service.price_eur > 0 ? service.price_eur : service.price
+  const priceCents = Math.round(price * 100)
+  // ₮100 = €1.00. Keep at least €0.50 payable through Stripe Checkout.
+  const maxTrustDiscountTokens = trustBalance == null
+    ? 0
+    : Math.min(
+        Math.floor(Math.max(0, priceCents - 50) / 100) * 100,
+        Math.floor(trustBalance / 100) * 100,
+      )
+  const trustDiscountTokens = useTrustDiscount ? maxTrustDiscountTokens : 0
+  const trustDiscount = trustDiscountTokens / 100
+  const amountDue = Math.max(0, (priceCents - trustDiscountTokens) / 100)
+  const fee = Math.round(amountDue * 0.08 * 100) / 100
+  const sellerReceives = Math.round((amountDue - fee) * 100) / 100
   const sellerName = service.seller?.full_name ?? 'FreeTrust Member'
 
   return (
@@ -183,6 +210,7 @@ function CheckoutContent() {
           <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--ft-text-faint)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '0.75rem' }}>Price Breakdown</div>
           {[
             { label: 'Service price', value: fmt(price, currency) },
+            ...(trustDiscountTokens > 0 ? [{ label: 'TrustCoin discount', value: `−${fmt(trustDiscount, currency)}`, muted: true }] : []),
             { label: 'Platform fee (8%)', value: fmt(fee, currency), muted: true },
             { label: 'Seller receives', value: fmt(sellerReceives, currency), muted: true },
           ].map(row => (
@@ -193,9 +221,40 @@ function CheckoutContent() {
           ))}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
             <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--ft-text)' }}>Total due today</span>
-            <span style={{ fontWeight: 900, fontSize: '1.2rem', color: 'var(--ft-accent)' }}>{fmt(price, currency)}</span>
+            <span style={{ fontWeight: 900, fontSize: '1.2rem', color: 'var(--ft-accent)' }}>{fmt(amountDue, currency)}</span>
           </div>
         </div>
+
+        {/* Optional TrustCoin discount — discounted checkouts use the normal
+            Stripe Checkout flow so reservation/reversal stays order-linked. */}
+        {trustBalance !== null && (
+          <div style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 12, padding: '0.9rem 1rem', marginBottom: '1.5rem' }}>
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.7rem', cursor: maxTrustDiscountTokens > 0 ? 'pointer' : 'default' }}>
+              <input
+                type="checkbox"
+                checked={useTrustDiscount}
+                disabled={maxTrustDiscountTokens <= 0}
+                onChange={e => setUseTrustDiscount(e.target.checked)}
+                style={{ marginTop: 3, accentColor: '#f59e0b' }}
+              />
+              <span>
+                <span style={{ display: 'block', color: 'var(--ft-text)', fontWeight: 800, fontSize: '0.86rem' }}>
+                  Use TrustCoin discount
+                </span>
+                <span style={{ display: 'block', color: 'var(--ft-text-tertiary)', fontSize: '0.76rem', lineHeight: 1.45, marginTop: 3 }}>
+                  {maxTrustDiscountTokens > 0
+                    ? `Apply up to ₮${maxTrustDiscountTokens} (${fmt(maxTrustDiscountTokens / 100, currency)}) off. Balance: ₮${trustBalance}.`
+                    : `You need at least ₮100 and a service total above €0.50. Balance: ₮${trustBalance}.`}
+                </span>
+              </span>
+            </label>
+            {useTrustDiscount && trustDiscountTokens > 0 && (
+              <div style={{ color: '#fbbf24', fontSize: '0.74rem', marginTop: 8, paddingLeft: 28 }}>
+                The remaining {fmt(amountDue, currency)} will be paid securely by Stripe.
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Escrow note */}
         <div style={{ background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 10, padding: '0.75rem 1rem', marginBottom: '1.5rem', display: 'flex', gap: '0.65rem', alignItems: 'flex-start' }}>
@@ -213,18 +272,20 @@ function CheckoutContent() {
         )}
 
         {/* Apple Pay / Google Pay express checkout — only shown on supported devices */}
-        <AppleGooglePayButton
-          amountCents={Math.round(price * 100)}
-          currency={currency.toUpperCase()}
-          label={service.title ?? 'FreeTrust Service'}
-          description={service.title ?? undefined}
-          metadata={{ type: 'service_purchase', service_id: service.id }}
-          onSuccess={(piId) => {
-            router.push(`/checkout/success?payment_intent=${piId}`)
-          }}
-          onError={(msg) => setError(msg)}
-          style={{ marginBottom: 12 }}
-        />
+        {!useTrustDiscount && (
+          <AppleGooglePayButton
+            amountCents={Math.round(price * 100)}
+            currency={currency.toUpperCase()}
+            label={service.title ?? 'FreeTrust Service'}
+            description={service.title ?? undefined}
+            metadata={{ type: 'service_purchase', service_id: service.id }}
+            onSuccess={(piId) => {
+              router.push(`/checkout/success?payment_intent=${piId}`)
+            }}
+            onError={(msg) => setError(msg)}
+            style={{ marginBottom: 12 }}
+          />
+        )}
 
         {/* CTA */}
         <button
@@ -234,7 +295,7 @@ function CheckoutContent() {
         >
           {status === 'paying'
             ? <><div style={{ width: 18, height: 18, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} /> Redirecting to payment…</>
-            : <>💳 Pay {fmt(price, currency)} by card</>
+            : <>💳 Pay {fmt(amountDue, currency)} by card</>
           }
         </button>
 

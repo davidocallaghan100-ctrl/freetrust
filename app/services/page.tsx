@@ -671,8 +671,8 @@ export default function ServicesPage() {
               coverImage: (s.cover_image as string | null) ?? null,
               reviews: Number(s.review_count ?? 0),
               rating: Number(s.review_count ?? 0) > 0 ? Number(s.avg_rating ?? 5) : 5,
-              price: Number(s.price ?? 0),
-              currency: String(s.currency_code ?? s.currency ?? 'EUR'),
+              price: Number(s.price_eur ?? s.price ?? 0),
+              currency: 'EUR',
               delivery: mode === 'online' ? t('card.online') : t('card.inPerson'),
               tags,
               category: categoryInfo?.label ?? categoryLabel,
@@ -1208,6 +1208,13 @@ export default function ServicesPage() {
           <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '13px', margin: '0 0 16px' }}>{t('subtitle')}</p>
 
           <div style={{ display: 'flex', gap: 12, margin: '16px 0', flexWrap: 'wrap', alignItems: 'center' }}>
+            <Link
+              href="/seller/gigs/create"
+              onClick={e => { e.preventDefault(); void openCreateService() }}
+              style={{ padding: '10px 20px', minHeight: 44, display: 'inline-flex', alignItems: 'center', borderRadius: 8, border: '2px solid var(--ft-accent)', background: 'linear-gradient(135deg,var(--ft-accent),#818cf8)', color: '#fff', cursor: 'pointer', fontWeight: 800, fontFamily: 'inherit', textDecoration: 'none' }}
+            >
+              ⬆ Upload Service
+            </Link>
             <button
               onClick={() => setActiveTab('freetrust')}
               style={{
@@ -1353,7 +1360,7 @@ export default function ServicesPage() {
 
           {/* Post a service CTA */}
           <Link href="/seller/gigs/create" onClick={e => { e.preventDefault(); void openCreateService() }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '12px', padding: '12px', background: 'linear-gradient(135deg,var(--ft-accent),#818cf8)', borderRadius: '12px', color: '#fff', fontWeight: 700, fontSize: '13px', textDecoration: 'none' }}>
-            ➕ {t('listService')}
+            ⬆ Upload Service
           </Link>
         </aside>
 
