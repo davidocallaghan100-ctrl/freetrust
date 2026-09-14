@@ -1300,7 +1300,6 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
     setPreviewReady(false)
     setPlaying(false)
     setDuration(null)
-    setNearViewport(false)
   }, [src])
 
   // Yield to whichever feed post (video or photo-carousel soundtrack) most
@@ -1332,7 +1331,21 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
     const el = videoRef.current
     if (!el) return
     const observer = new IntersectionObserver(
-      ([entry]) => setNearViewport(entry.isIntersecting),
+      ([entry]) => {
+        if (!entry.isIntersecting) {
+          setNearViewport(false)
+          return
+        }
+
+        // Changing the preload attribute alone is only a hint. On Safari/iOS
+        // a video that already loaded metadata may not start fetching media
+        // data after React changes `preload` from `metadata` to `auto`.
+        // Promote the element imperatively and restart its load while it is
+        // actually near the viewport so the later play() call has data to use.
+        el.preload = 'auto'
+        if (el.readyState < 3) el.load()
+        setNearViewport(true)
+      },
       { rootMargin: '50% 0px', threshold: 0 },
     )
     observer.observe(el)
@@ -1349,6 +1362,12 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
 
     const tryAutoplay = () => {
       const shouldMute = !audioEnabledRef.current
+      // IntersectionObserver can ask us to play in the same task in which
+      // the nearby-preload observer promotes this element. Keep this guard
+      // here too so a mobile browser cannot receive play() before media data
+      // loading has been kicked off.
+      if (el.preload !== 'auto') el.preload = 'auto'
+      if (el.readyState < 3) el.load()
       if (!shouldMute) announceFeedAudioPlayback(playerIdRef.current)
       el.muted = shouldMute
       setMuted(shouldMute)
@@ -1448,6 +1467,8 @@ function VideoPlayer({ src, isShort, textOverlay }: { src: string; isShort: bool
     const visiblePx = Math.max(0, visibleBottom - visibleTop)
     if (visiblePx < Math.min(240, rect.height * 0.3)) return
     const shouldMute = !audioEnabledRef.current
+    if (el.preload !== 'auto') el.preload = 'auto'
+    if (el.readyState < 3) el.load()
     if (!shouldMute) announceFeedAudioPlayback(playerIdRef.current)
     el.muted = shouldMute
     setMuted(shouldMute)
