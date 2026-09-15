@@ -1270,6 +1270,27 @@ html[dir="rtl"] .ft-page-content {
   }
 }
 
+/* ---- Top nav header on narrow phones (≤ 400px, e.g. iPhone SE/8, older
+   Android ~320-375px wide) ----
+   The header row (avatar + logo + wallet chip + currency switcher +
+   notification bell + Sign In/Sign Up + hamburger) is fixed-width and does
+   not shrink on purpose (buttons must stay tappable), so on narrow phones
+   it can overflow past the viewport edge and push the hamburger/menu
+   button off-screen. These rules drop the lowest-priority controls first —
+   they all remain reachable elsewhere (drawer menu / Settings) — so the
+   logo, essential auth CTA, and hamburger always stay on-screen and
+   correctly proportioned instead of the header appearing oversized. */
+@media (max-width: 400px) {
+  .ft-nav-currency,
+  .ft-nav-signin,
+  .ft-nav-wallet-abbr {
+    display: none !important;
+  }
+  .ft-nav-wallet {
+    padding: 5px 6px !important;
+  }
+}
+
 /* ---- Feed action row -------------------------------------------------------
    Keep the reaction/comment/share/story actions and the per-post identity
    picker in the same mobile viewport. The Save action remains available on

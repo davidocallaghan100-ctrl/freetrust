@@ -343,7 +343,14 @@ export default function RentShareDetailPage() {
             {/* Request form */}
             {!isOwner && (
               <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(45,212,191,0.2)', borderRadius: 14, padding: '1.25rem' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--ft-text-faint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.85rem' }}>Request to Rent</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--ft-text-faint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Request to Rent</div>
+                  {currentUserId && (
+                    <Link href="/rent-share/my-bookings" style={{ fontSize: '0.72rem', color: '#2dd4bf', textDecoration: 'none', fontWeight: 600 }}>
+                      My bookings →
+                    </Link>
+                  )}
+                </div>
 
                 {requestSuccess ? (
                   <div style={{ textAlign: 'center', padding: '1rem 0' }}>
@@ -352,6 +359,9 @@ export default function RentShareDetailPage() {
                     <div style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.5 }}>
                       {listing.owner?.full_name ?? 'The owner'} will review your request and get back to you.
                     </div>
+                    <Link href="/rent-share/my-bookings" style={{ display: 'inline-block', marginTop: 12, fontSize: '0.8rem', fontWeight: 700, color: '#2dd4bf', textDecoration: 'none', border: '1px solid rgba(45,212,191,0.3)', borderRadius: 8, padding: '0.45rem 1rem' }}>
+                      View my request →
+                    </Link>
                   </div>
                 ) : (
                   <form onSubmit={handleRequest} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -360,7 +370,7 @@ export default function RentShareDetailPage() {
                       <input
                         type="date" value={fromDate} min={today}
                         onChange={e => setFromDate(e.target.value)}
-                        style={{ width: '100%', boxSizing: 'border-box', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: 8, padding: '8px 12px', fontSize: 14, color: 'var(--ft-text)', outline: 'none', fontFamily: 'inherit', colorScheme: 'dark' }}
+                         style={{ width: '100%', boxSizing: 'border-box', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: 8, padding: '8px 12px', fontSize: 16, color: 'var(--ft-text)', outline: 'none', fontFamily: 'inherit', colorScheme: 'dark' }}
                       />
                     </div>
                     <div>
@@ -368,7 +378,7 @@ export default function RentShareDetailPage() {
                       <input
                         type="date" value={toDate} min={fromDate || today}
                         onChange={e => setToDate(e.target.value)}
-                        style={{ width: '100%', boxSizing: 'border-box', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: 8, padding: '8px 12px', fontSize: 14, color: 'var(--ft-text)', outline: 'none', fontFamily: 'inherit', colorScheme: 'dark' }}
+                         style={{ width: '100%', boxSizing: 'border-box', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: 8, padding: '8px 12px', fontSize: 16, color: 'var(--ft-text)', outline: 'none', fontFamily: 'inherit', colorScheme: 'dark' }}
                       />
                     </div>
                     <div>
@@ -377,7 +387,7 @@ export default function RentShareDetailPage() {
                         value={message} onChange={e => setMessage(e.target.value)}
                         placeholder="Introduce yourself and explain your plans…"
                         rows={3}
-                        style={{ width: '100%', boxSizing: 'border-box', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: 8, padding: '8px 12px', fontSize: 14, color: 'var(--ft-text)', resize: 'none', outline: 'none', fontFamily: 'inherit' }}
+                         style={{ width: '100%', boxSizing: 'border-box', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', borderRadius: 8, padding: '8px 12px', fontSize: 16, color: 'var(--ft-text)', resize: 'none', outline: 'none', fontFamily: 'inherit' }}
                       />
                     </div>
                     {requestError && (
@@ -416,6 +426,17 @@ export default function RentShareDetailPage() {
               <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(45,212,191,0.2)', borderRadius: 14, padding: '1rem 1.25rem' }}>
                 <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-faint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.6rem' }}>Your listing</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <Link
+                    href="/gig-economy?tab=bookings"
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)',
+                      color: '#34d399', borderRadius: 10, padding: '10px 0', fontSize: 14, fontWeight: 700,
+                      textDecoration: 'none', width: '100%',
+                    }}
+                  >
+                    📅 Manage Bookings
+                  </Link>
                   <Link
                     href={`/rent-share/${id}/edit`}
                     style={{

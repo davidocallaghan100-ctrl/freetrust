@@ -2,10 +2,16 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 import { NextRequest } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getAgent } from '@/lib/agents'
+import {
+  buildAgentConversationContext,
+  CONVERSATIONAL_WORKFLOW_RULE,
+  normaliseAgentHistory,
+  normaliseAgentTaskSummary,
+} from '@/lib/agents/conversationContext'
+import { getAgentModelProvider } from '@/lib/agents/modelProvider'
 
 type AgentAttachment = {
   name?: unknown
@@ -104,16 +110,6 @@ function buildUserContent(userInput: string, attachments: AgentAttachment[]): st
 // mid-way the user loses those credits (same as the non-streaming
 // route). A full model error before the first token triggers a refund.
 
-let _anthropic: Anthropic | null = null
-function getAnthropicClient(): Anthropic {
-  if (!_anthropic) {
-    const key = process.env.ANTHROPIC_API_KEY
-    if (!key) throw new Error('ANTHROPIC_API_KEY is not configured')
-    _anthropic = new Anthropic({ apiKey: key })
-  }
-  return _anthropic
-}
-
 function sse(obj: Record<string, unknown>): string {
   return `data: ${JSON.stringify(obj)}\n\n`
 }
@@ -134,11 +130,15 @@ export async function POST(req: NextRequest) {
     agent?: unknown
     input?: unknown
     attachments?: unknown
+    history?: unknown
+    taskSummary?: unknown
   } | null
 
   const agentName = typeof body?.agent === 'string' ? body.agent : ''
   const userInput = typeof body?.input === 'string' ? body.input.trim() : ''
   const attachments = normaliseAttachments(body?.attachments)
+  const history = normaliseAgentHistory(body?.history)
+  const taskSummary = normaliseAgentTaskSummary(body?.taskSummary)
 
   const config = getAgent(agentName)
   if (!config) {
@@ -194,19 +194,20 @@ export async function POST(req: NextRequest) {
       p_user_id: user.id,
       p_amount:  config.creditCost,
       p_type:    `agent_refund_${config.name}`,
+      p_ref:     null,
       p_desc:    `Refund: ${config.displayName} agent failed (${reason})`,
     })
     if (refundErr) console.error('[agents/stream] refund failed:', refundErr)
   }
 
   // ── 4. Stream ────────────────────────────────────────────────────
-  let anthropic: Anthropic
+  let modelProvider: ReturnType<typeof getAgentModelProvider>
   try {
-    anthropic = getAnthropicClient()
-  } catch {
-    await refundCredits('AI not configured')
+    modelProvider = getAgentModelProvider()
+  } catch (providerErr) {
+    await refundCredits('AI provider not configured')
     return new Response(
-      sse({ type: 'error', error: 'AI agents are not configured on this server' }),
+      sse({ type: 'error', error: providerErr instanceof Error ? providerErr.message : 'AI agents are not configured on this server' }),
       { status: 503, headers: { 'Content-Type': 'text/event-stream' } },
     )
   }
@@ -220,30 +221,16 @@ export async function POST(req: NextRequest) {
 
       try {
         const request: any = {
-          model:      config.model,
-          max_tokens: config.maxTokens,
-          system:     `${config.systemPrompt}${CHAT_FORMATTING_RULE}`,
+          model: config.model,
+          maxTokens: config.maxTokens,
+          system: `${config.systemPrompt}${CHAT_FORMATTING_RULE}${CONVERSATIONAL_WORKFLOW_RULE}${buildAgentConversationContext(history, taskSummary)}`,
           messages: [{ role: 'user', content: buildUserContent(userInput, attachments) as any }],
+          webSearch: config.webSearch,
         }
 
-        if (config.webSearch) {
-          request.tools = [
-            {
-              type: 'web_search_20250305',
-              name: 'web_search',
-              max_uses: 5,
-            },
-          ]
-        }
-
-        const anthropicStream = await anthropic.messages.stream(request)
-
-        for await (const event of anthropicStream) {
-          if (
-            event.type === 'content_block_delta' &&
-            event.delta.type === 'text_delta'
-          ) {
-            push({ type: 'delta', text: event.delta.text })
+        for await (const event of modelProvider.stream(request)) {
+          if (event.type === 'text_delta') {
+            push({ type: 'delta', text: event.text })
           }
         }
 
@@ -252,6 +239,7 @@ export async function POST(req: NextRequest) {
           creditsCharged: config.creditCost,
           newBalance:     typeof newBalance === 'number' ? newBalance : null,
           agentName:      config.name,
+          model:          process.env.FREETRUST_AGENT_PROVIDER === 'openai-compatible' ? process.env.FREETRUST_AGENT_MODEL ?? null : config.model,
         })
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)

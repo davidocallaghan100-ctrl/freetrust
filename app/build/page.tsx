@@ -7,6 +7,8 @@ import { formatDistanceToNow } from 'date-fns'
 import type { DesignSpec, SectionKey } from '@/lib/build/spec'
 import { GENERATE_COST, PDF_COST, DISCLAIMER_TEXT } from '@/lib/build/spec'
 import { createClient } from '@/lib/supabase/client'
+import { useNativePlatform } from '@/lib/nativeApp'
+import NativeIOSRestriction from '@/components/NativeIOSRestriction'
 import { uploadBuildImages, validateBuildImageFiles, MAX_BUILD_IMAGES_PER_MESSAGE } from '@/lib/build/attachments'
 import BuildChat, { type ChatMessage, type PendingImage, type SendStage } from '@/components/build/BuildChat'
 import BuildSections, { type SectionRecord } from '@/components/build/BuildSections'
@@ -29,6 +31,7 @@ interface InsufficientFundsInfo {
 }
 
 export default function BuildPage() {
+  const nativePlatform = useNativePlatform()
   const [balance, setBalance] = useState<number | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
@@ -50,9 +53,10 @@ export default function BuildPage() {
   const [imageError, setImageError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (nativePlatform === null || nativePlatform === 'ios') return
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => setUserId(user?.id ?? null))
-  }, [])
+  }, [nativePlatform])
 
   // Kept in sync so the mount-time auto-load effect below can check the
   // LATEST activeConversationId without depending on a stale closure value
@@ -61,6 +65,18 @@ export default function BuildPage() {
   useEffect(() => {
     activeConversationIdRef.current = activeConversationId
   }, [activeConversationId])
+
+  // Monotonically increasing request counter used by loadConversation to
+  // guard against out-of-order network responses. Without this, two
+  // in-flight loadConversation calls (e.g. the mount-time auto-select
+  // firing for the most-recent design, racing against a manual click on a
+  // DIFFERENT saved design a moment later) can resolve in an order that
+  // does not match the order they were requested in — whichever fetch
+  // happens to land LAST silently overwrites the UI, even if the user's
+  // manual click was the more recent user intent. Bumped at the start of
+  // every loadConversation call; each call's own state-applying branch is
+  // gated on "is my id still the latest requested id when I finish".
+  const loadRequestIdRef = useRef(0)
 
   // Revoke blob: preview URLs when they're no longer needed to avoid
   // leaking memory across a long Build session.
@@ -119,15 +135,26 @@ export default function BuildPage() {
   }, [])
 
   useEffect(() => {
+    if (nativePlatform === null || nativePlatform === 'ios') return
     refreshBalance()
-  }, [refreshBalance])
+  }, [refreshBalance, nativePlatform])
 
   const loadConversation = useCallback(async (id: string) => {
+    const requestId = ++loadRequestIdRef.current
     setLoadingConvo(true)
     try {
       const res = await fetch(`/api/build/conversations/${id}`)
+      // A newer loadConversation call was issued while this fetch was
+      // in-flight (e.g. the user clicked a different saved design, or the
+      // mount-time auto-select and a manual click raced) — this response
+      // is stale. Discard it entirely rather than letting it stomp on
+      // whatever the more recent call already applied or is about to
+      // apply. Deliberately checked BEFORE the res.ok/json work below so a
+      // stale failed response can't clear loadingConvo early either.
+      if (requestId !== loadRequestIdRef.current) return
       if (!res.ok) return
       const data = await res.json()
+      if (requestId !== loadRequestIdRef.current) return
       setActiveConversationId(id)
       setMessages((data.messages ?? []).map((m: { id: string; role: string; content: string; image_urls?: string[] }) => ({
         id: m.id, role: m.role, content: m.content, imageUrls: m.image_urls,
@@ -145,7 +172,11 @@ export default function BuildPage() {
       setSections(data.sections ?? [])
       setActiveSectionKey('brief')
     } finally {
-      setLoadingConvo(false)
+      // Only the most recent call should ever clear the loading flag —
+      // a stale call finishing (even via its own finally) must not flip
+      // loadingConvo back to false while a newer, still-in-flight call is
+      // the one the user actually cares about seeing settle.
+      if (requestId === loadRequestIdRef.current) setLoadingConvo(false)
     }
   }, [])
 
@@ -158,6 +189,7 @@ export default function BuildPage() {
   // empty-state experience (blank composer, empty "Saved Designs" list) —
   // nothing to auto-select, no-op.
   useEffect(() => {
+    if (nativePlatform === null || nativePlatform === 'ios') return
     let cancelled = false
     refreshConversations().then(list => {
       if (cancelled) return
@@ -168,7 +200,7 @@ export default function BuildPage() {
     return () => { cancelled = true }
     // Intentionally run once on mount only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [nativePlatform])
 
   const startNewConversation = () => {
     setActiveConversationId(null)
@@ -352,6 +384,10 @@ export default function BuildPage() {
     } finally {
       setDownloading(false)
     }
+  }
+
+  if (nativePlatform === 'ios') {
+    return <NativeIOSRestriction feature="Trust Coin-powered AI design generation and PDF exports" />
   }
 
   return (

@@ -10,6 +10,8 @@ import { createClient } from '@/lib/supabase/client'
 import ListingQualityBadge from '@/components/marketplace/ListingQualityBadge'
 import ReviewsSection from '@/components/ReviewsSection'
 import { trackEvent, trackEventOnce } from '@/lib/analytics'
+import { useNativePlatform } from '@/lib/nativeApp'
+import NativeIOSRestriction from '@/components/NativeIOSRestriction'
 
 const AppleGooglePayButton = dynamic(() => import('@/components/payments/AppleGooglePayButton'), { ssr: false })
 const DeliveryZoneMap = dynamic(() => import('@/components/DeliveryZoneMap'), { ssr: false })
@@ -126,6 +128,7 @@ export default function ProductDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { format: formatCurrency } = useCurrency()
+  const nativePlatform = useNativePlatform()
   const id = typeof params.id === 'string' ? params.id : ''
 
   const [listing, setListing] = useState<Listing | null>(null)
@@ -209,6 +212,18 @@ export default function ProductDetailPage() {
     } finally {
       setDeleting(false)
     }
+  }
+
+  async function requireAccount(redirectPath: string) {
+    if (currentUserId) return true
+    const sb = createClient()
+    const { data: { user } } = await sb.auth.getUser()
+    if (user) {
+      setCurrentUserId(user.id)
+      return true
+    }
+    router.push(`/login?redirect=${encodeURIComponent(redirectPath)}`)
+    return false
   }
 
   // Fetch listing from Supabase
@@ -327,6 +342,10 @@ export default function ProductDetailPage() {
   const isService = listing.product_type === 'service'
   const isDigital = listing.product_type === 'digital'
   const isPhysical = listing.product_type === 'physical'
+
+  if (nativePlatform === 'ios' && isDigital) {
+    return <NativeIOSRestriction feature="Digital product purchases" />
+  }
   const conditionLabel = listing.condition ? listing.condition.charAt(0).toUpperCase() + listing.condition.slice(1) : 'New'
   const stockWarning = isPhysical && listing.stock_qty > 0 && listing.stock_qty <= 5
   const outOfStock = isPhysical && listing.stock_qty === 0
@@ -334,8 +353,9 @@ export default function ProductDetailPage() {
   const reviewCount = listing.review_count || 0
   const avgRating = reviewCount > 0 ? (listing.avg_rating || 5) : 5
 
-  function handleAddToCart() {
+  async function handleAddToCart() {
     if (outOfStock) return
+    if (!(await requireAccount(`/products/${id}`))) return
     addToCart({
       id: listing!.id,
       title: listing!.title,
@@ -348,8 +368,9 @@ export default function ProductDetailPage() {
     setTimeout(() => setCartAdded(false), 2500)
   }
 
-  function handleBuyNow() {
+  async function handleBuyNow() {
     if (outOfStock) return
+    if (!(await requireAccount(`/products/${id}`))) return
     setBuyLoading(true)
     addToCart({
       id: listing!.id,
@@ -593,7 +614,7 @@ export default function ProductDetailPage() {
             )}
 
             {/* Apple Pay / Google Pay express checkout */}
-            {!outOfStock && listing.price > 0 && (
+            {currentUserId && !outOfStock && listing.price > 0 && (
               <>
                 <AppleGooglePayButton
                   amountCents={Math.round(listing.price * 100 * qty)}

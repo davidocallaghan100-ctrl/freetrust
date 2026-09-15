@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AGENT_LIST, type AgentConfig } from '@/lib/agents';
+import { useNativePlatform } from '@/lib/nativeApp';
+import NativeIOSRestriction from '@/components/NativeIOSRestriction';
+import AgentThinkingIndicator from '@/components/agents/AgentThinkingIndicator';
 
 const COLORS = {
   bgBase: 'var(--ft-bg)',
@@ -30,6 +33,24 @@ type AgentActionKind =
   | 'create_feed_post'
   | 'prepare_message'
   | 'prepare_social_post';
+
+type AgentTaskIntent = 'listing' | 'event' | 'message' | 'feed_post' | 'article' | 'research' | 'image' | null;
+type AgentTaskStatus = 'gathering' | 'ready_for_review' | 'awaiting_approval' | 'completed' | 'cancelled';
+
+type AgentTaskState = {
+  intent: AgentTaskIntent;
+  status: AgentTaskStatus;
+  collected: Record<string, unknown>;
+  missing: string[];
+  question?: string;
+};
+
+const EMPTY_TASK_STATE: AgentTaskState = {
+  intent: null,
+  status: 'gathering',
+  collected: {},
+  missing: [],
+};
 
 type AgentAction = {
   id: string;
@@ -220,6 +241,13 @@ function stringifyOutput(value: unknown): string {
   const obj = value as Record<string, unknown>;
   if (typeof obj.error === 'string' && obj.error.trim()) return obj.error.trim();
 
+  if (typeof obj.question === 'string' && obj.question.trim()) {
+    const acknowledgement = typeof obj.acknowledgement === 'string' && obj.acknowledgement.trim()
+      ? `${obj.acknowledgement.trim()}\n\n`
+      : '';
+    return `${acknowledgement}${obj.question.trim()}`.trim();
+  }
+
   if (obj.type === 'generated_image') {
     const caption = typeof obj.caption === 'string' && obj.caption.trim() ? obj.caption.trim() : 'Generated image ready.';
     const safety = typeof obj.safety_note === 'string' && obj.safety_note.trim() ? `\n\nSafety check\n\n${obj.safety_note.trim()}` : '';
@@ -260,10 +288,17 @@ function stringifyOutput(value: unknown): string {
     obj.event_description,
     obj.social_post_long,
     obj.message,
+    obj.outreach_message,
+    obj.next_action,
     obj.recommendation,
   ].filter((part): part is string => typeof part === 'string' && Boolean(part.trim()));
-  const details = JSON.stringify(value, null, 2);
-  return preferred.length ? preferred.join('\n\n') : details;
+  if (preferred.length) return preferred.join('\n\n');
+  const readable = Object.entries(obj)
+    .filter(([key, part]) => key !== 'status' && key !== 'missing' && key !== 'question' && (typeof part === 'string' || typeof part === 'number' || typeof part === 'boolean'))
+    .map(([key, part]) => `${key.replace(/_/g, ' ')}\n\n${String(part).trim()}`)
+    .filter((part) => part.trim())
+    .join('\n\n');
+  return readable || 'I have a response ready. Tell me what you would like to do next.';
 }
 
 function stripChatFormattingMarkers(text: string): string {
@@ -281,6 +316,82 @@ function cleanAssistantText(text: string): string {
     .replace(/^```(?:json)?\s*\n?([\s\S]*?)\n?```\s*$/i, '$1')
     .replace(/\n{3,}/g, '\n\n')
     .trim());
+}
+
+const ANSWER_TRANSITION_SCALE = 5;
+const ANSWER_SECTION_STAGGER_MS = 240 * ANSWER_TRANSITION_SCALE;
+const ANSWER_SECTION_MAX_DELAY_MS = 1200 * ANSWER_TRANSITION_SCALE;
+
+function splitReplyIntoSections(content: string): string[] {
+  const maxSectionChars = 480;
+  const paragraphs = content
+    .replace(/\r\n/g, '\n')
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+
+  const sections: string[] = [];
+  const pushWordChunks = (text: string) => {
+    const words = text.split(/\s+/);
+    let current = '';
+    for (const word of words) {
+      const next = current ? `${current} ${word}` : word;
+      if (current && next.length > maxSectionChars) {
+        sections.push(current);
+        current = word;
+      } else {
+        current = next;
+      }
+    }
+    if (current) sections.push(current);
+  };
+
+  for (const paragraph of paragraphs) {
+    if (paragraph.length <= maxSectionChars) {
+      sections.push(paragraph);
+      continue;
+    }
+
+    const sentences = paragraph.match(/[^.!?]+(?:[.!?]+(?=\s|$)|$)/g)?.map((sentence) => sentence.trim()).filter(Boolean) ?? [];
+    if (sentences.length === 0) {
+      pushWordChunks(paragraph);
+      continue;
+    }
+
+    let current = '';
+    for (const sentence of sentences) {
+      if (sentence.length > maxSectionChars) {
+        if (current) {
+          sections.push(current);
+          current = '';
+        }
+        pushWordChunks(sentence);
+        continue;
+      }
+      const next = current ? `${current} ${sentence}` : sentence;
+      if (current && next.length > maxSectionChars) {
+        sections.push(current);
+        current = sentence;
+      } else {
+        current = next;
+      }
+    }
+    if (current) sections.push(current);
+  }
+
+  return sections.length > 0 ? sections : [content.trim()];
+}
+
+function AnswerSections({ content }: { content: string }) {
+  return (
+    <span className="answer-sections">
+      {splitReplyIntoSections(content).map((section, index) => (
+        <span key={index} className="answer-section" style={{ animationDelay: `${Math.min(index * ANSWER_SECTION_STAGGER_MS, ANSWER_SECTION_MAX_DELAY_MS)}ms` }}>
+          {section}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 function messageExcerpt(content: string, max = 140) {
@@ -373,7 +484,7 @@ function shouldAutoResearch(input: string, selectedAgent: AgentConfig) {
   if (selectedAgent.name === 'generalResearch') return false;
   const trimmed = input.trim();
   if (!trimmed) return false;
-  const hasQuestionShape = /\?$|\b(what|why|how|should|research|analyse|analyze|compare|strategy|improve|best practices|competitor|market|plan)\b/i.test(trimmed);
+  const hasQuestionShape = /\?$|\b(what|why|how|should|research|analyse|analyze|compare|strategy|improve|best practices|competitor|market|plan|design|workflow|user journey|experience design|ux|ui|requirements|states|flow)\b/i.test(trimmed);
   if (!hasQuestionShape) return false;
   const matchingActionIntent = ACTION_INTENT_PATTERNS.find((item) => item.agent === selectedAgent.name);
   if (matchingActionIntent?.patterns.some((pattern) => pattern.test(trimmed))) return false;
@@ -418,6 +529,67 @@ function numberFrom(value: unknown, fallback = 0) {
   return fallback;
 }
 
+function textFrom(value: unknown, fallback = '') {
+  return typeof value === 'string' && value.trim() ? value.trim() : fallback;
+}
+
+function messageBodyFromData(data: Record<string, unknown>) {
+  return textFrom(data.body) || textFrom(data.message) || textFrom(data.outreach_message) || textFrom(data.primary_draft) || textFrom(data.content) || textFrom(data.next_action) || textFrom(data.recommendation) || stringifyOutput(data);
+}
+
+function taskIntentFor(agent: AgentConfig, actions: AgentAction[] = []): AgentTaskIntent {
+  const actionIntent = actions[0]?.kind;
+  if (actionIntent === 'create_service' || actionIntent === 'create_product') return 'listing';
+  if (actionIntent === 'create_event') return 'event';
+  if (actionIntent === 'prepare_message') return 'message';
+  if (actionIntent === 'create_feed_post' || actionIntent === 'prepare_social_post') return 'feed_post';
+  if (actionIntent === 'publish_article') return 'article';
+  if (agent.name === 'generalResearch') return 'research';
+  if (agent.name === 'imageGenerator') return 'image';
+  if (agent.name === 'eventPromoter') return 'event';
+  if (agent.name === 'messageDrafter' || agent.name === 'salesDevelopment' || agent.name === 'collabMatchmaker') return 'message';
+  if (agent.name === 'listingCreator' || agent.name === 'bulkListingGenerator') return 'listing';
+  return null;
+}
+
+function collectTaskFields(raw: unknown): Record<string, unknown> {
+  if (!raw || typeof raw !== 'object') return {};
+  const data = raw as Record<string, unknown>;
+  const allowed = [
+    'title', 'short_description', 'long_description', 'description', 'listing_type', 'category', 'tags',
+    'suggested_price_eur', 'price', 'currency', 'service_mode', 'location', 'delivery_scope',
+    'delivery_country', 'delivery_countries', 'delivery_radius_km', 'start_date', 'end_date',
+    'event_description', 'subject', 'body', 'message', 'platform', 'primary_draft', 'image_url',
+  ];
+  return Object.fromEntries(allowed.filter((key) => data[key] !== undefined && data[key] !== null).map((key) => [key, data[key]]));
+}
+
+function modelNeedsMoreInput(raw: unknown) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false;
+  const data = raw as Record<string, unknown>;
+  if (data.status === 'gathering' || data.status === 'cancelled') return true;
+  return Array.isArray(data.missing) && data.missing.some((item) => typeof item === 'string' && item.trim().length > 0);
+}
+
+function taskStateFromResult(agent: AgentConfig, raw: unknown, actions: AgentAction[]): AgentTaskState {
+  const data = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
+  const missing = Array.isArray(data.missing)
+    ? data.missing.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, 6)
+    : [];
+  const status = actions.length > 0
+    ? 'ready_for_review'
+    : typeof data.status === 'string' && ['completed', 'cancelled'].includes(data.status)
+      ? data.status as AgentTaskStatus
+      : 'gathering';
+  return {
+    intent: taskIntentFor(agent, actions),
+    status,
+    collected: collectTaskFields(raw),
+    missing,
+    question: textFrom(data.question) || undefined,
+  };
+}
+
 function hasUsableImageAttachment(attachment: AgentAttachment) {
   return attachment.kind === 'image' && IMAGE_TYPES.has(attachment.type) && typeof attachment.dataUrl === 'string' && attachment.dataUrl.startsWith('data:image/') && !attachment.note;
 }
@@ -431,6 +603,7 @@ function inferActions(agent: AgentConfig, raw: unknown, attachments: AgentAttach
   }
 
   const data = raw as Record<string, unknown>;
+  if (modelNeedsMoreInput(raw)) return [];
   const title = typeof data.title === 'string' ? data.title : '';
   const shortDescription = typeof data.short_description === 'string' ? data.short_description : '';
   const longDescription = typeof data.long_description === 'string' ? data.long_description : '';
@@ -443,30 +616,64 @@ function inferActions(agent: AgentConfig, raw: unknown, attachments: AgentAttach
     const category = typeof data.category === 'string' && data.category.trim() ? data.category.trim() : 'General';
     const basePayload = { title, description, price, currency: 'EUR', tags, category };
     const hasPhoto = attachments.some(hasUsableImageAttachment);
-    if (hasPhoto) {
+    const listingType = textFrom(data.listing_type).toLowerCase();
+    const priceProvided = data.suggested_price_eur !== undefined && data.suggested_price_eur !== null;
+    const hasDeliveryContext = Boolean(
+      data.delivery_scope || data.deliveryScope || data.delivery_country || data.delivery_countries ||
+      data.delivery_radius_km || data.deliveryRadiusKm || data.digital_delivery,
+    );
+    const completeEnough = Boolean(title && description && priceProvided && (listingType === 'service' || listingType === 'product'));
+    if (hasPhoto && completeEnough && listingType === 'service') {
       actions.push({ id: makeId('action'), kind: 'create_service', label: 'Create service listing', helper: 'Review/edit the fields, then add the photo and create a live FreeTrust service.', payload: { ...basePayload, product_type: 'service', service_mode: 'online' } });
     }
-    actions.push({ id: makeId('action'), kind: 'create_product', label: 'Create product listing', helper: 'Use this if the offer is a physical/digital product rather than a service.', payload: { ...basePayload, product_type: 'physical' } });
+    if (completeEnough && listingType === 'product' && hasDeliveryContext) {
+      actions.push({
+        id: makeId('action'),
+        kind: 'create_product',
+        label: 'Create product listing',
+        helper: 'Review the product details and delivery plan before publishing it to FreeTrust.',
+        payload: {
+          ...basePayload,
+          product_type: textFrom(data.product_type, 'physical'),
+          delivery_scope: data.delivery_scope ?? data.deliveryScope ?? null,
+          delivery_country: data.delivery_country ?? data.deliveryCountry ?? null,
+          delivery_countries: data.delivery_countries ?? data.deliveryCountries ?? null,
+          delivery_radius_km: data.delivery_radius_km ?? data.deliveryRadiusKm ?? null,
+          location: data.location ?? null,
+        },
+      });
+    }
   }
 
   if (agent.name === 'articleDrafter') {
     const body = [data.hook, data.body_markdown, data.call_to_action].filter((part): part is string => typeof part === 'string' && Boolean(part.trim())).join('\n\n');
-    actions.push({ id: makeId('action'), kind: 'publish_article', label: 'Publish article', helper: 'Review/edit before publishing to FreeTrust Articles.', payload: { title, body, category: 'General' } });
+    if (title && body.trim()) {
+      actions.push({ id: makeId('action'), kind: 'publish_article', label: 'Publish article', helper: 'Review/edit before publishing to FreeTrust Articles.', payload: { title, body, category: 'General' } });
+    }
   }
 
   if (agent.name === 'eventPromoter') {
     const description = typeof data.event_description === 'string' ? data.event_description : stringifyOutput(data);
     const social = typeof data.social_post_long === 'string' ? data.social_post_long : typeof data.social_post_short === 'string' ? data.social_post_short : description;
-    actions.push({ id: makeId('action'), kind: 'create_feed_post', label: 'Post event promo to feed', helper: 'Create an editable FreeTrust feed post from the event promo draft.', payload: { content: social } });
-    actions.push({ id: makeId('action'), kind: 'create_event', label: 'Create event draft', helper: 'Add/check start_date before publishing the event.', payload: { title: title || 'Untitled event', description, start_date: '', price: 0, category: 'Events' } });
+    const startDate = textFrom(data.start_date) || textFrom(data.startDate) || textFrom(data.date_time) || textFrom(data.dateTime);
+    const eventLocation = textFrom(data.location) || textFrom(data.online_link) || textFrom(data.onlineLink);
+    const eventIsComplete = Boolean(title && description.trim() && startDate && eventLocation);
+    if (social.trim() && eventIsComplete) {
+      actions.push({ id: makeId('action'), kind: 'create_feed_post', label: 'Post event promo to feed', helper: 'Review the event announcement before publishing it to your FreeTrust feed.', payload: { content: social } });
+    }
+    if (eventIsComplete) {
+      actions.push({ id: makeId('action'), kind: 'create_event', label: 'Publish event', helper: 'Review the details, then approve publication to FreeTrust Events.', payload: { title, description, start_date: startDate, end_date: textFrom(data.end_date) || textFrom(data.endDate) || null, location: eventLocation, price: numberFrom(data.price, 0), category: textFrom(data.category, 'Events') } });
+    }
   }
 
   if (agent.name === 'contentRepurposer') {
-    const content = [data.primary_draft, data.linkedin_post, data.social_post, data.social_post_long, data.social_caption, stringifyOutput(data)]
-      .find((part): part is string => typeof part === 'string' && Boolean(part.trim())) ?? stringifyOutput(data);
+    const content = [data.primary_draft, data.linkedin_post, data.social_post, data.social_post_long, data.social_caption]
+      .find((part): part is string => typeof part === 'string' && Boolean(part.trim())) ?? '';
     const platform = typeof data.platform === 'string' && data.platform.trim() ? data.platform.trim() : 'social';
-    actions.push({ id: makeId('action'), kind: 'prepare_social_post', label: 'Prepare social draft', helper: `Review/edit this ${platform} draft before posting outside FreeTrust.`, payload: { text: content, platform, source: agent.name } });
-    actions.push({ id: makeId('action'), kind: 'create_feed_post', label: 'Post to FreeTrust feed', helper: 'Optionally adapt this as a FreeTrust feed post after review.', payload: { content } });
+    if (content.trim()) {
+      actions.push({ id: makeId('action'), kind: 'prepare_social_post', label: 'Prepare social draft', helper: `Review/edit this ${platform} draft before posting outside FreeTrust.`, payload: { text: content, platform, source: agent.name } });
+      actions.push({ id: makeId('action'), kind: 'create_feed_post', label: 'Post to FreeTrust feed', helper: 'Optionally adapt this as a FreeTrust feed post after review.', payload: { content } });
+    }
   }
 
   if (agent.name === 'imageGenerator') {
@@ -484,7 +691,20 @@ function inferActions(agent: AgentConfig, raw: unknown, attachments: AgentAttach
   }
 
   if (agent.name === 'messageDrafter' || agent.name === 'salesDevelopment' || agent.name === 'collabMatchmaker' || agent.name === 'matchFinder') {
-    actions.push({ id: makeId('action'), kind: 'prepare_message', label: agent.name === 'matchFinder' ? 'Open action plan' : 'Prepare in Messages', helper: agent.name === 'matchFinder' ? 'Keep this as an actionable matching plan inside FreeTrust.' : 'Save this as an editable FreeTrust message draft and choose where to send it.', payload: { text: stringifyOutput(data), source: agent.name } });
+    const messageText = messageBodyFromData(data);
+    if (messageText.trim()) {
+      actions.push({
+        id: makeId('action'),
+        kind: 'prepare_message',
+        label: agent.name === 'matchFinder' ? 'Open action plan' : 'Approve & send message',
+        helper: agent.name === 'matchFinder' ? 'Keep this as an actionable matching plan inside FreeTrust.' : 'Choose the member, review the message, then approve sending it through FreeTrust.',
+        payload: {
+          text: messageText,
+          subject: textFrom(data.subject) || null,
+          source: agent.name,
+        },
+      });
+    }
   }
 
   return actions;
@@ -538,48 +758,105 @@ async function uploadAgentImages(attachments: AgentAttachment[]): Promise<string
   return uploaded;
 }
 
-function ActionCard({ action, attachments = [] }: { action: AgentAction; attachments?: AgentAttachment[] }) {
-  const [payloadText, setPayloadText] = useState(() => {
-    if (action.kind === 'prepare_message' || action.kind === 'prepare_social_post') {
-      return String(action.payload.text ?? action.payload.content ?? '');
-    }
-    return JSON.stringify(action.payload, null, 2);
-  });
+function ActionCard({
+  action,
+  attachments = [],
+  onChangeOneThing,
+  onStartOver,
+  onComplete,
+}: {
+  action: AgentAction;
+  attachments?: AgentAttachment[];
+  onChangeOneThing: (prompt: string) => void;
+  onStartOver: () => void;
+  onComplete: (status: AgentTaskStatus) => void;
+}) {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [recipientQuery, setRecipientQuery] = useState('');
+  const [recipientHits, setRecipientHits] = useState<Array<{ id: string; title: string; subtitle?: string; avatarUrl?: string | null }>>([]);
+  const [selectedRecipient, setSelectedRecipient] = useState<{ id: string; title: string; subtitle?: string; avatarUrl?: string | null } | null>(null);
+  const [searchingRecipient, setSearchingRecipient] = useState(false);
+
+  const isMessageAction = action.kind === 'prepare_message' && String(action.payload.source ?? '') !== 'matchFinder';
+  const payload = action.payload;
+  const previewText = textFrom(payload.text ?? payload.content);
+  const title = textFrom(payload.title, action.kind === 'prepare_social_post' ? textFrom(payload.platform, 'Social draft') : action.label);
+  const description = textFrom(payload.description);
+  const price = numberFrom(payload.price, 0);
+  const photo = attachments.find(hasUsableImageAttachment);
+
+  async function searchRecipients() {
+    const query = recipientQuery.trim();
+    if (query.length < 2) {
+      setRecipientHits([]);
+      return;
+    }
+    setSearchingRecipient(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=20`, { cache: 'no-store' });
+      const data = await response.json().catch(() => ({})) as { hits?: Array<{ id?: unknown; type?: unknown; title?: unknown; subtitle?: unknown; avatarUrl?: unknown }> };
+      if (!response.ok) throw new Error('Could not search members right now.');
+      setRecipientHits((data.hits ?? [])
+        .filter((hit) => hit.type === 'member' && typeof hit.id === 'string' && typeof hit.title === 'string')
+        .slice(0, 8)
+        .map((hit) => ({ id: String(hit.id), title: String(hit.title), subtitle: typeof hit.subtitle === 'string' ? hit.subtitle : undefined, avatarUrl: typeof hit.avatarUrl === 'string' ? hit.avatarUrl : null })));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not search members right now.');
+    } finally {
+      setSearchingRecipient(false);
+    }
+  }
 
   async function execute() {
     setBusy(true);
     setStatus(null);
     setError(null);
     try {
+      if (isMessageAction) {
+        if (!selectedRecipient) throw new Error('Choose the FreeTrust member who should receive this message.');
+        const conversationResponse = await fetch('/api/conversations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recipientId: selectedRecipient.id }),
+        });
+        const conversationData = await conversationResponse.json().catch(() => ({})) as { conversationId?: string; error?: string };
+        if (!conversationResponse.ok || !conversationData.conversationId) throw new Error(conversationData.error || 'Could not open the FreeTrust conversation.');
+
+        const messageResponse = await fetch(`/api/messages/${conversationData.conversationId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: previewText }),
+        });
+        const messageData = await messageResponse.json().catch(() => ({})) as { error?: string };
+        if (!messageResponse.ok) throw new Error(messageData.error || 'Could not send the message.');
+        setStatus(`Sent to ${selectedRecipient.title}.`);
+        onComplete('completed');
+        return;
+      }
+
       if (action.kind === 'prepare_message') {
-        try {
-          window.localStorage.setItem('freetrust.agent.messageDraft.v1', JSON.stringify({
-            text: payloadText.trim(),
-            source: String(action.payload.source ?? 'agent'),
-            createdAt: new Date().toISOString(),
-          }));
-        } catch { /* ignore local draft persistence */ }
-        setStatus('Draft saved. Open Messages to choose a conversation and send it.');
+        setStatus('Action plan ready. Use the conversation to choose the next member or change one detail.');
+        onComplete('completed');
         return;
       }
 
       if (action.kind === 'prepare_social_post') {
         try {
           window.localStorage.setItem('freetrust.agent.socialPostDraft.v1', JSON.stringify({
-            text: payloadText.trim(),
+            text: previewText,
             platform: String(action.payload.platform ?? 'social'),
             source: String(action.payload.source ?? 'agent'),
             createdAt: new Date().toISOString(),
           }));
         } catch { /* ignore local draft persistence */ }
         setStatus('Social draft saved on this device. Review it before posting publicly.');
+        onComplete('completed');
         return;
       }
 
-      const payload = JSON.parse(payloadText) as Record<string, unknown>;
       let res: Response;
       let successMessage = 'Done.';
 
@@ -602,6 +879,11 @@ function ActionCard({ action, attachments = [] }: { action: AgentAction; attachm
             tags: Array.isArray(payload.tags) ? payload.tags : [],
             images: imageUrls,
             cover_image: imageUrls[0] ?? null,
+            location: payload.location ?? null,
+            delivery_scope: payload.delivery_scope ?? null,
+            delivery_country: payload.delivery_country ?? null,
+            delivery_countries: Array.isArray(payload.delivery_countries) ? payload.delivery_countries : payload.delivery_country ? [payload.delivery_country] : null,
+            delivery_radius_km: typeof payload.delivery_radius_km === 'number' ? payload.delivery_radius_km : null,
           }),
         });
         const data = await res.json().catch(() => ({}));
@@ -609,6 +891,7 @@ function ActionCard({ action, attachments = [] }: { action: AgentAction; attachm
         const id = data?.listing?.id;
         successMessage = id ? `Created. Open: ${action.kind === 'create_service' ? `/services/${id}` : `/products/${id}`}` : 'Listing created.';
         setStatus(successMessage);
+        onComplete('completed');
         return;
       }
 
@@ -642,6 +925,7 @@ function ActionCard({ action, attachments = [] }: { action: AgentAction; attachm
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(String(data.error ?? 'Action failed'));
       setStatus(data.redirectUrl ? `Published. Open: ${data.redirectUrl}` : 'Published.');
+      onComplete('completed');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Action failed');
     } finally {
@@ -656,10 +940,64 @@ function ActionCard({ action, attachments = [] }: { action: AgentAction; attachm
           <div className="action-label">{action.label}</div>
           <div className="action-helper">{action.helper}</div>
         </div>
-        <span className="confirm-chip">Needs tap</span>
+        <span className="confirm-chip">Review required</span>
       </div>
-      <textarea className="action-payload" value={payloadText} onChange={(e) => setPayloadText(e.target.value)} disabled={busy} />
-      <button type="button" className="action-btn" onClick={execute} disabled={busy}>{busy ? 'Working…' : action.label}</button>
+
+      <div className="action-review">
+        <div className="review-state"><span className="review-dot" /> Draft complete · Nothing published</div>
+        {(action.kind === 'create_service' || action.kind === 'create_product') && (
+          <>
+            {photo && <div className="review-photo-row"><img src={photo.dataUrl} alt="Attached listing cover" /><span>Cover photo attached</span></div>}
+            <div className="review-title">{title}</div>
+            <div className="review-meta"><span>{textFrom(payload.category, 'FreeTrust listing')}</span><span>{price > 0 ? `€${price}` : 'Price to confirm'}</span><span>{action.kind === 'create_service' ? (textFrom(payload.service_mode, 'Online')) : textFrom(payload.delivery_scope, 'Delivery details')}</span></div>
+            {description && <div className="review-description">{description}</div>}
+          </>
+        )}
+        {action.kind === 'create_event' && (
+          <>
+            <div className="review-title">{title}</div>
+            <div className="review-meta"><span>{textFrom(payload.start_date, 'Date to confirm')}</span><span>{textFrom(payload.location, 'Location to confirm')}</span>{price > 0 && <span>€{price}</span>}</div>
+            {description && <div className="review-description">{description}</div>}
+          </>
+        )}
+        {action.kind === 'publish_article' && (
+          <>
+            <div className="review-title">{title}</div>
+            <div className="review-description review-long-copy">{textFrom(payload.body, 'Article draft ready for your review.')}</div>
+          </>
+        )}
+        {(action.kind === 'create_feed_post' || action.kind === 'prepare_social_post') && (
+          <>
+            <div className="review-title">{title}</div>
+            <div className="review-description review-long-copy">{previewText}</div>
+          </>
+        )}
+        {action.kind === 'prepare_message' && (
+          <>
+            <div className="review-title">{textFrom(payload.subject, 'Message to a FreeTrust member')}</div>
+            <div className="review-description review-long-copy">{previewText}</div>
+            {isMessageAction && (
+              <div className="recipient-picker">
+                {selectedRecipient ? (
+                  <div className="selected-recipient"><span className="recipient-avatar">{selectedRecipient.avatarUrl ? <img src={selectedRecipient.avatarUrl} alt="" /> : '👤'}</span><span><strong>{selectedRecipient.title}</strong><small>{selectedRecipient.subtitle || 'FreeTrust member'}</small></span><button type="button" onClick={() => setSelectedRecipient(null)} aria-label="Change recipient">Change</button></div>
+                ) : (
+                  <>
+                    <label htmlFor={`recipient-${action.id}`}>Who should receive this?</label>
+                    <div className="recipient-search-row"><input id={`recipient-${action.id}`} value={recipientQuery} onChange={(event) => setRecipientQuery(event.target.value)} placeholder="Search members by name" autoComplete="off" /><button type="button" onClick={searchRecipients} disabled={searchingRecipient || recipientQuery.trim().length < 2}>{searchingRecipient ? 'Searching…' : 'Find'}</button></div>
+                    {recipientHits.length > 0 && <div className="recipient-results">{recipientHits.map((hit) => <button type="button" key={hit.id} onClick={() => { setSelectedRecipient(hit); setRecipientHits([]); }}><span className="recipient-avatar">{hit.avatarUrl ? <img src={hit.avatarUrl} alt="" /> : '👤'}</span><span><strong>{hit.title}</strong><small>{hit.subtitle || 'FreeTrust member'}</small></span></button>)}</div>}
+                  </>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <div className="action-buttons">
+        <button type="button" className="action-btn" onClick={execute} disabled={busy || (isMessageAction && !selectedRecipient)}>{busy ? 'Completing…' : isMessageAction ? 'Approve & send' : action.kind === 'prepare_social_post' ? 'Save reviewed draft' : action.kind === 'create_feed_post' || action.kind === 'publish_article' || action.kind === 'create_event' || action.kind === 'create_service' || action.kind === 'create_product' ? 'Approve & publish' : action.label}</button>
+        <button type="button" className="action-secondary-btn" onClick={() => onChangeOneThing(`Change one thing in this ${action.label.toLowerCase()}: `)} disabled={busy}>Change one thing</button>
+        <button type="button" className="action-tertiary-btn" onClick={onStartOver} disabled={busy}>Start over</button>
+      </div>
       {status && <div className="action-status">{status}</div>}
       {error && <div className="action-error">{error}</div>}
     </div>
@@ -667,12 +1005,14 @@ function ActionCard({ action, attachments = [] }: { action: AgentAction; attachm
 }
 
 export default function AgentsPage() {
+  const nativePlatform = useNativePlatform();
   const [balance, setBalance] = useState<number | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<AgentConfig>(DEFAULT_AGENT);
   const [conversationId, setConversationId] = useState(() => makeId('conversation'));
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<AgentAttachment[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [taskState, setTaskState] = useState<AgentTaskState>(EMPTY_TASK_STATE);
   const [savedConversations, setSavedConversations] = useState<SavedConversation[]>([]);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -715,10 +1055,14 @@ export default function AgentsPage() {
     } catch { /* non-blocking */ }
   }, []);
 
-  useEffect(() => { fetchBalance(); }, [fetchBalance]);
+  useEffect(() => {
+    if (nativePlatform === null || nativePlatform === 'ios') return;
+    fetchBalance();
+  }, [fetchBalance, nativePlatform]);
   useEffect(() => { setSavedConversations(readSavedConversations()); }, []);
   useEffect(() => {
     if (deepLinkLoadedRef.current || typeof window === 'undefined') return;
+    if (nativePlatform === null || nativePlatform === 'ios') return;
     const params = new URLSearchParams(window.location.search);
     const prompt = params.get('prompt')?.trim();
     if (!prompt) return;
@@ -733,7 +1077,7 @@ export default function AgentsPage() {
     setError(null);
     setIdeaOpen(false);
     setMenuOpen(false);
-  }, []);
+  }, [nativePlatform]);
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [messages, running]);
   useEffect(() => {
     if (messages.length === 0) return;
@@ -756,6 +1100,14 @@ export default function AgentsPage() {
     setConversationId(conversation.id);
     setSelectedAgent(agent);
     setMessages(conversation.messages);
+    const restoredActions = conversation.messages.flatMap((message) => message.actions ?? []);
+    const restoredAction = restoredActions[restoredActions.length - 1];
+    setTaskState(restoredAction ? {
+      intent: taskIntentFor(agent, [restoredAction]),
+      status: 'ready_for_review',
+      collected: restoredAction.payload,
+      missing: [],
+    } : EMPTY_TASK_STATE);
     setAttachments([]);
     setInput('');
     setError(null);
@@ -766,6 +1118,7 @@ export default function AgentsPage() {
     setConversationId(makeId('conversation'));
     setSelectedAgent(DEFAULT_AGENT);
     setMessages([]);
+    setTaskState(EMPTY_TASK_STATE);
     setAttachments([]);
     setInput('');
     setError(null);
@@ -776,6 +1129,7 @@ export default function AgentsPage() {
     setConversationId(makeId('conversation'));
     setSelectedAgent(idea.agent);
     setMessages([{ id: makeId('msg'), role: 'assistant', content: cleanAssistantText(idea.starterPrompt) }]);
+    setTaskState({ ...EMPTY_TASK_STATE, intent: taskIntentFor(idea.agent), question: idea.starterPrompt });
     setAttachments([]);
     setInput('');
     setError(null);
@@ -806,6 +1160,7 @@ export default function AgentsPage() {
     if (runWithAgent.name !== selectedAgent.name) setSelectedAgent(runWithAgent);
 
     const userMessage: ChatMessage = { id: makeId('msg'), role: 'user', content: cleanedInput || 'Use the attached files/photos as context.', attachments };
+    const conversationForModel = [...messages, userMessage].slice(-12).map((message) => ({ role: message.role, content: message.content }));
     const hasPhoto = attachments.some(hasUsableImageAttachment);
     if (runWithAgent.name === 'listingCreator' && /\b(service|gig|lesson|consultation)\b/i.test(cleanedInput) && !hasPhoto) {
       setMessages((current) => [...current, userMessage, {
@@ -813,6 +1168,7 @@ export default function AgentsPage() {
         role: 'assistant',
         content: 'Please attach at least one photo for the service listing. Once it is attached, I can add the service to the Services Marketplace.',
       }]);
+      setTaskState({ intent: 'listing', status: 'gathering', collected: {}, missing: ['photo'], question: 'Please attach at least one photo for the service listing.' });
       setInput('');
       setAttachments([]);
       setError(null);
@@ -831,7 +1187,7 @@ export default function AgentsPage() {
         const res = await fetch('/api/agents/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ agent: runWithAgent.name, input: cleanedInput, attachments: userMessage.attachments }),
+          body: JSON.stringify({ agent: runWithAgent.name, input: cleanedInput, attachments: userMessage.attachments, history: conversationForModel, taskSummary: taskState }),
         });
         if (res.status === 401) throw new Error('You need to sign in to run agents.');
         if (res.status === 402) throw new Error(`Not enough AI Credits. You need ${runWithAgent.creditCost}.`);
@@ -859,13 +1215,21 @@ export default function AgentsPage() {
             if (payload.type === 'error') throw new Error(payload.error ?? 'Agent stream failed.');
           }
         }
+        const streamedActions = inferActions(runWithAgent, output, userMessage.attachments);
+        setMessages((current) => current.map((message) => message.id === assistantId ? {
+          ...message,
+          content: cleanAssistantText(output),
+          actions: streamedActions,
+          raw: output,
+        } : message));
+        setTaskState(taskStateFromResult(runWithAgent, output, streamedActions));
         return;
       }
 
       const res = await fetch('/api/agents/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ agent: runWithAgent.name, input: cleanedInput, attachments: userMessage.attachments }),
+          body: JSON.stringify({ agent: runWithAgent.name, input: cleanedInput, attachments: userMessage.attachments, history: conversationForModel, taskSummary: taskState }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -882,6 +1246,7 @@ export default function AgentsPage() {
         raw,
       };
       setMessages((current) => [...current, assistantMessage]);
+      setTaskState(taskStateFromResult(runWithAgent, raw, assistantMessage.actions ?? []));
       if (typeof data.newBalance === 'number') setBalance(data.newBalance);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Agent run failed.';
@@ -897,10 +1262,41 @@ export default function AgentsPage() {
     if (guidance) setInput(guidance.example);
   }
 
+  function requestActionChange(prompt: string) {
+    setInput(prompt);
+    setError(null);
+    setTaskState((current) => ({ ...current, status: 'gathering' }));
+  }
+
+  function startOverFromAction() {
+    setConversationId(makeId('conversation'));
+    setSelectedAgent(DEFAULT_AGENT);
+    setMessages([]);
+    setTaskState(EMPTY_TASK_STATE);
+    setAttachments([]);
+    setInput('');
+    setError(null);
+  }
+
+  if (nativePlatform === 'ios') {
+    return <NativeIOSRestriction feature="Trust Coin-powered AI agents" />;
+  }
+
   return (
     <div className="agents-page">
       <style dangerouslySetInnerHTML={{ __html: `
-        .agents-page { color: ${COLORS.text}; width: 100%; min-height: 100dvh; background: radial-gradient(circle at 50% 30%, rgba(14,165,233,0.16), transparent 28%), radial-gradient(circle at 78% 5%, rgba(56,189,248,0.08), transparent 18%), radial-gradient(circle at 22% 96%, rgba(14,116,144,0.13), transparent 32%), #030712; overflow: hidden; }
+         @keyframes agent-answer-fade-in {
+           from { opacity: 0; transform: translateY(8px); }
+           to { opacity: 1; transform: translateY(0); }
+         }
+         @keyframes agent-answer-section-fade-in {
+           from { opacity: 0; transform: translateY(8px); filter: blur(2px); }
+           to { opacity: 1; transform: translateY(0); filter: blur(0); }
+         }
+         @media (prefers-reduced-motion: reduce) {
+           .answer-message, .answer-section { animation: none !important; opacity: 1 !important; filter: none !important; }
+         }
+         .agents-page { color: ${COLORS.text}; width: 100%; min-height: 100dvh; background: radial-gradient(circle at 50% 30%, rgba(14,165,233,0.16), transparent 28%), radial-gradient(circle at 78% 5%, rgba(56,189,248,0.08), transparent 18%), radial-gradient(circle at 22% 96%, rgba(14,116,144,0.13), transparent 32%), #030712; overflow: hidden; }
         .agents-page, .agents-page * { box-sizing: border-box; }
         [class^="ta-"], [class*=" ta-"] { display: none !important; }
         .agents-page::before { content: ''; position: absolute; inset: 9% 5% auto; height: 52dvh; border-radius: 38%; background: radial-gradient(circle at 50% 45%, rgba(15,23,42,0.58), rgba(15,23,42,0.16) 45%, transparent 72%); pointer-events: none; }
@@ -939,7 +1335,15 @@ export default function AgentsPage() {
         .avatar { width: 32px; height: 32px; border-radius: 50%; background: rgba(56,189,248,0.12); display: grid; place-items: center; flex-shrink: 0; font-size: 14px; }
         .message.user .avatar { font-size: 10px; color: ${COLORS.sky}; }
         .bubble { max-width: min(720px, 86%); border: 1px solid rgba(255,255,255,0.08); border-radius: 19px; padding: 13px 14px; background: rgba(30,41,59,0.72); white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.52; font-size: 14px; backdrop-filter: blur(18px); }
-        .message.user .bubble { background: rgba(56,189,248,0.13); border-color: rgba(56,189,248,0.18); }
+         .message.user .bubble { background: rgba(56,189,248,0.13); border-color: rgba(56,189,248,0.18); }
+         .message.assistant .bubble { padding: 0; border: none; background: transparent; backdrop-filter: none; }
+         .answer-message { animation: agent-answer-fade-in 5.75s cubic-bezier(.22,1,.36,1) both; }
+         .answer-sections { display: flex; flex-direction: column; gap: 10px; }
+         .answer-section { display: block; opacity: 0; padding: 13px 14px; border: 1px solid rgba(56,189,248,0.14); border-radius: 19px; background: rgba(30,41,59,0.72); white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.52; box-shadow: inset 0 1px 0 rgba(255,255,255,0.025); backdrop-filter: blur(18px); animation: agent-answer-section-fade-in 6.5s cubic-bezier(.22,1,.36,1) both; }
+         .thinking-bubble { min-width: 62px; min-height: 50px; display: grid; place-items: center; padding: 8px 12px; }
+         .agent-thinking-indicator { display: inline-block; position: relative; flex: 0 0 auto; color: #67e8f9; }
+         .agent-thinking-orbit { position: absolute; inset: 0; display: block; }
+         .agent-thinking-dot { position: absolute; display: block; border-radius: 50%; background: currentColor; box-shadow: 0 0 11px rgba(103,232,249,0.70); transform-origin: center; }
         .attachment-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
         .attachment-chip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid ${COLORS.borderMuted}; border-radius: 999px; padding: 7px 10px; color: ${COLORS.textMuted}; background: rgba(15,23,42,0.62); font-size: 12px; }
         .attachment-chip button { border: none; background: transparent; color: ${COLORS.textFaint}; cursor: pointer; font-size: 15px; min-width: 24px; min-height: 24px; }
@@ -975,14 +1379,41 @@ export default function AgentsPage() {
         .send-btn-arrow svg { width: 17px; height: 17px; }
         .send-btn:disabled { opacity: 1; cursor: not-allowed; background: #f8fafc; color: var(--ft-bg); }
         .error { margin: 10px 0; border: 1px solid rgba(248,113,113,0.32); color: ${COLORS.danger}; background: rgba(248,113,113,0.08); border-radius: 14px; padding: 11px 12px; font-size: 13px; }
-        .action-card { margin-top: 12px; border: 1px solid rgba(52,211,153,0.26); background: rgba(6,78,59,0.18); border-radius: 16px; padding: 12px; }
-        .action-top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
-        .action-label { font-weight: 850; color: ${COLORS.text}; }
-        .action-helper { color: ${COLORS.textMuted}; font-size: 12px; margin-top: 4px; line-height: 1.35; }
-        .confirm-chip { color: ${COLORS.warning}; border: 1px solid rgba(251,191,36,0.28); border-radius: 999px; padding: 5px 8px; font-size: 11px; white-space: nowrap; }
-        .action-payload { width: 100%; min-height: 116px; background: rgba(15,23,42,0.74); border: 1px solid ${COLORS.borderMuted}; color: ${COLORS.text}; border-radius: 12px; margin-top: 10px; padding: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 16px; line-height: 1.45; }
-        .action-btn { width: 100%; min-height: 46px; margin-top: 10px; border: none; border-radius: 12px; background: ${COLORS.success}; color: #052e16; font-weight: 900; cursor: pointer; }
-        .action-status { color: ${COLORS.success}; font-size: 12px; margin-top: 8px; }
+         .action-card { margin-top: 12px; border: 1px solid rgba(52,211,153,0.26); background: linear-gradient(155deg, rgba(6,78,59,0.20), rgba(15,23,42,0.68)); border-radius: 18px; padding: 13px; }
+         .action-top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+         .action-label { font-weight: 850; color: ${COLORS.text}; }
+         .action-helper { color: ${COLORS.textMuted}; font-size: 12px; margin-top: 4px; line-height: 1.35; }
+         .confirm-chip { color: ${COLORS.warning}; border: 1px solid rgba(251,191,36,0.28); border-radius: 999px; padding: 5px 8px; font-size: 11px; white-space: nowrap; }
+         .action-review { margin-top: 12px; border: 1px solid rgba(148,163,184,0.16); border-radius: 15px; padding: 12px; background: rgba(2,6,23,0.34); }
+         .review-state { display: flex; align-items: center; gap: 7px; color: rgba(167,243,208,0.9); font-size: 11px; font-weight: 750; margin-bottom: 10px; }
+         .review-dot { width: 7px; height: 7px; border-radius: 50%; background: ${COLORS.success}; box-shadow: 0 0 12px rgba(52,211,153,0.8); }
+         .review-title { font-size: 17px; font-weight: 850; line-height: 1.2; color: rgba(248,250,252,0.98); }
+         .review-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+         .review-meta span { border: 1px solid rgba(56,189,248,0.18); background: rgba(14,116,144,0.14); color: rgba(186,230,253,0.9); border-radius: 999px; padding: 5px 8px; font-size: 11px; }
+         .review-description { color: rgba(203,213,225,0.88); font-size: 13px; line-height: 1.48; margin-top: 10px; white-space: pre-wrap; }
+         .review-long-copy { max-height: 180px; overflow-y: auto; }
+         .review-photo-row { display: flex; align-items: center; gap: 9px; color: rgba(167,243,208,0.9); font-size: 12px; margin-bottom: 10px; }
+         .review-photo-row img { width: 46px; height: 46px; border-radius: 10px; object-fit: cover; border: 1px solid rgba(52,211,153,0.35); }
+         .action-buttons { display: grid; gap: 8px; margin-top: 11px; }
+         .action-btn, .action-secondary-btn, .action-tertiary-btn { width: 100%; min-height: 44px; border-radius: 12px; font: inherit; font-weight: 850; cursor: pointer; }
+         .action-btn { border: none; background: ${COLORS.success}; color: #052e16; }
+         .action-secondary-btn { border: 1px solid rgba(56,189,248,0.28); background: rgba(14,116,144,0.16); color: #bae6fd; }
+         .action-tertiary-btn { border: 1px solid rgba(148,163,184,0.15); background: transparent; color: ${COLORS.textMuted}; font-size: 12px; min-height: 38px; }
+         .recipient-picker { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(148,163,184,0.13); }
+         .recipient-picker label { display: block; color: rgba(226,232,240,0.9); font-size: 12px; font-weight: 750; margin-bottom: 7px; }
+         .recipient-search-row { display: flex; gap: 7px; }
+         .recipient-search-row input { min-width: 0; flex: 1; min-height: 42px; border-radius: 11px; border: 1px solid rgba(148,163,184,0.20); background: rgba(15,23,42,0.78); color: ${COLORS.text}; padding: 0 11px; font: inherit; font-size: 16px; }
+         .recipient-search-row button { min-width: 68px; border-radius: 11px; border: 1px solid rgba(56,189,248,0.28); background: rgba(14,116,144,0.24); color: #bae6fd; font: inherit; font-size: 12px; font-weight: 850; }
+         .recipient-search-row button:disabled { opacity: 0.5; }
+         .recipient-results { display: grid; gap: 6px; margin-top: 8px; }
+         .recipient-results button, .selected-recipient { width: 100%; min-height: 48px; display: flex; align-items: center; gap: 9px; border-radius: 11px; border: 1px solid rgba(148,163,184,0.15); background: rgba(30,41,59,0.68); color: ${COLORS.text}; padding: 7px 9px; text-align: left; font: inherit; }
+         .selected-recipient { justify-content: flex-start; border-color: rgba(52,211,153,0.25); background: rgba(6,78,59,0.20); }
+         .recipient-results button strong, .selected-recipient strong { display: block; font-size: 13px; }
+         .recipient-results button small, .selected-recipient small { display: block; color: ${COLORS.textMuted}; font-size: 11px; margin-top: 2px; }
+         .selected-recipient button { margin-left: auto; border: none; background: transparent; color: #67e8f9; font: inherit; font-size: 11px; font-weight: 800; }
+         .recipient-avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; overflow: hidden; background: rgba(56,189,248,0.12); }
+         .recipient-avatar img { width: 100%; height: 100%; object-fit: cover; }
+         .action-status { color: ${COLORS.success}; font-size: 12px; margin-top: 8px; }
         .action-error { color: ${COLORS.danger}; font-size: 12px; margin-top: 8px; }
         .idea-sheet-backdrop { position: absolute; inset: 0; z-index: 8; display: flex; align-items: flex-end; background: rgba(2,6,23,0.58); backdrop-filter: blur(14px); padding: 18px; }
         .idea-sheet { width: 100%; max-height: min(78dvh, 720px); overflow-y: auto; border: 1px solid rgba(255,255,255,0.12); background: rgba(15,23,42,0.94); border-radius: 30px 30px 22px 22px; box-shadow: 0 -24px 80px rgba(0,0,0,0.42); padding: 18px; }
@@ -1083,10 +1514,10 @@ export default function AgentsPage() {
 
           <div className="messages" aria-live="polite">
             {messages.map((message) => (
-              <div key={message.id} className={`message ${message.role}`}>
+               <div key={message.id} className={`message ${message.role}${message.role === 'assistant' && message.content.trim() ? ' answer-message' : ''}`}>
                 <div className="avatar">{message.role === 'user' ? 'You' : selectedAgent.icon}</div>
-                <div className="bubble">
-                  {message.content}
+                 <div className="bubble">
+                   {message.content.trim() && (message.role === 'assistant' ? <AnswerSections content={message.content} /> : message.content)}
                   {message.attachments && message.attachments.length > 0 && (
                     <div className="attachment-row">
                       {message.attachments.map((att) => <span key={att.id} className="attachment-chip">{att.kind === 'image' ? '🖼' : att.kind === 'text' ? '📄' : '📎'} {att.name}</span>)}
@@ -1103,11 +1534,11 @@ export default function AgentsPage() {
                       </div>
                     );
                   })()}
-                  {message.actions?.map((action) => <ActionCard key={action.id} action={action} attachments={message.attachments} />)}
+                  {message.actions?.map((action) => <ActionCard key={action.id} action={action} attachments={message.attachments} onChangeOneThing={requestActionChange} onStartOver={startOverFromAction} onComplete={(status) => setTaskState((current) => ({ ...current, status }))} />)}
                 </div>
               </div>
             ))}
-            {running && <div className="message"><div className="avatar">{selectedAgent.icon}</div><div className="bubble">{selectedAgent.name === 'generalResearch' ? 'Researching…' : 'Working on an action preview…'}</div></div>}
+             {running && <div className="message"><div className="avatar">{selectedAgent.icon}</div><div className="bubble thinking-bubble"><AgentThinkingIndicator /></div></div>}
             <div ref={messagesEndRef} />
           </div>
         </main>
@@ -1117,7 +1548,7 @@ export default function AgentsPage() {
             <div className="preview-icon"><AgentLineIcon name="preview" /></div>
             <div className="preview-copy">
               {latestAction.label}
-              <span>Confirm this FreeTrust platform action in the editable card above.</span>
+              <span>{taskState.status === 'completed' ? 'Completed inside FreeTrust.' : 'Review the details, then approve the action below.'}</span>
             </div>
             <div className="preview-actions" aria-hidden="true">
               <button type="button" tabIndex={-1}>Edit</button>
@@ -1149,7 +1580,7 @@ export default function AgentsPage() {
               </div>
               <div className="composer-right">
                 <button type="button" className="mic-btn" aria-label="Voice input coming soon" disabled><AgentLineIcon name="mic" /></button>
-                <button type="button" className={`send-btn ${hasTypedInput ? 'send-btn-arrow' : 'send-btn-voice'}`} onClick={runAgent} disabled={running || (!input.trim() && attachments.length === 0)} aria-label={hasTypedInput ? 'Send message' : 'Ask agent'}>{running ? '…' : hasTypedInput ? <SendArrowIcon /> : <AgentLineIcon name="wave" />}</button>
+                 <button type="button" className={`send-btn ${hasTypedInput ? 'send-btn-arrow' : 'send-btn-voice'}`} onClick={runAgent} disabled={running || (!input.trim() && attachments.length === 0)} aria-label={hasTypedInput ? 'Send message' : 'Ask agent'}>{running ? <AgentThinkingIndicator size={16} /> : hasTypedInput ? <SendArrowIcon /> : <AgentLineIcon name="wave" />}</button>
               </div>
             </div>
           </div>

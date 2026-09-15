@@ -283,13 +283,14 @@ const REACTION_EMOJI: Record<string, string> = {
   trust: '👍', love: '❤️', insightful: '💡', collab: '🤝',
 }
 
-export async function sendNewReactionEmail(to: string, name: string, reactorName: string, reactionType: string, postId: string) {
+export async function sendNewReactionEmail(to: string, name: string, reactorName: string, reactionType: string, postId: string, postUrl?: string) {
   const emoji = REACTION_EMOJI[reactionType] ?? '❤️'
   const label = reactionType.charAt(0).toUpperCase() + reactionType.slice(1)
+  const viewUrl = postUrl?.startsWith('http') ? postUrl : `${BASE_URL}${postUrl ?? `/feed/${postId}`}`
   const html = wrap('New reaction', `
     ${h1(`${reactorName} reacted ${emoji} to your post`)}
     ${p(`Hi ${name}, your post just got a new <strong style="color:#f1f5f9;">${label}</strong> reaction.`)}
-    <div style="text-align:center;">${btn('View Post', `${BASE_URL}/feed/${postId}`)}</div>
+    <div style="text-align:center;">${btn('View Post', viewUrl)}</div>
   `)
   return getResend().emails.send({ from: FROM, to, subject: `${reactorName} reacted to your post`, html })
 }

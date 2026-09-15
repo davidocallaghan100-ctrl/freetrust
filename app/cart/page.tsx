@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import { createClient } from '@/lib/supabase/client'
 
 const AppleGooglePayButton = dynamic(() => import('@/components/payments/AppleGooglePayButton'), { ssr: false })
 
@@ -63,6 +64,13 @@ export default function CartPage() {
   }
 
   async function handleCheckout() {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      router.push(`/login?redirect=${encodeURIComponent('/cart')}`)
+      return
+    }
+
     // Require delivery address if any physical item in cart
     const hasPhysical = cart.some(i => !i.product_type || i.product_type === 'physical')
     if (hasPhysical && !deliveryAddress.trim()) {

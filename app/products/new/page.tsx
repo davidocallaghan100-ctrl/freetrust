@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { compressImage } from '@/lib/image-compression'
 import dynamic from 'next/dynamic'
 import type { DeliveryZoneValue } from '@/components/DeliveryZoneMap'
+import { useNativePlatform } from '@/lib/nativeApp'
 
 const DeliveryZonePicker = dynamic(() => import('@/components/DeliveryZonePicker'), { ssr: false })
 
@@ -76,6 +77,7 @@ export default function NewProductPage() {
 
 function NewProductPageContent() {
   const router = useRouter()
+  const nativePlatform = useNativePlatform()
   const searchParams = useSearchParams()
   const requestedOrgId = searchParams.get('orgId')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -463,7 +465,7 @@ function NewProductPageContent() {
               {[
                 { value: 'physical', label: '📦 Physical', hint: 'Shipped or collected in person' },
                 { value: 'digital',  label: '💾 Digital',  hint: 'Instant download or link' },
-              ].map(t => (
+              ].filter(t => nativePlatform !== 'ios' || t.value === 'physical').map(t => (
                 <button
                   key={t.value}
                   type="button"

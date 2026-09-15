@@ -155,6 +155,14 @@ function MessagesPageInner() {
   const searchParams = useSearchParams()
   const [userId, setUserId] = useState<string | null>(null)
   const [conversations, setConversations] = useState<ConversationItem[]>([])
+  // Distinguishes "haven't fetched yet" from "fetched and it's really
+  // empty" — see loadConversations below. Starts true so the "No
+  // conversations yet" empty state can never flash before the first
+  // real fetch resolves.
+  const [conversationsLoading, setConversationsLoading] = useState(true)
+  const [conversationsError, setConversationsError] = useState<string | null>(null)
+  const [messagesLoading, setMessagesLoading] = useState(false)
+  const [messagesError, setMessagesError] = useState<string | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [participantIds, setParticipantIds] = useState<string[]>([])
@@ -188,6 +196,12 @@ function MessagesPageInner() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map())
   const markedReadRef = useRef<Set<string>>(new Set())
+  const messageRequestRef = useRef(0)
+  // Only show the loading spinner on the very first inbox fetch.
+  // loadConversations is also called on tab-visibility changes to
+  // refresh unread counts/previews in the background — those
+  // shouldn't flash the spinner over an already-populated list.
+  const hasLoadedConversationsRef = useRef(false)
 
   const selectConversation = useCallback((id: string) => {
     setActiveId(id)
@@ -195,22 +209,68 @@ function MessagesPageInner() {
     setSafetyWarning(null)
     setSendError(null)
     setPendingResend(null)
+    setMessages([])
+    setMessagesError(null)
+    setMessagesLoading(true)
     setAttachedFiles([])
     setSelectedGif(null)
     setReplyingTo(null)
     setParticipantIds([])
     markedReadRef.current.clear()
-    // Mark as read
-    setConversations(prev => prev.map(c => c.id === id ? { ...c, unread_count: 0 } : c))
+    // Mark as read — zero the badge for this conversation immediately
+    // (optimistic; the actual last_read_at write happens server-side
+    // in GET /api/messages/:id, called from loadMessages right after
+    // this). Also tell nav-chrome badges (MessagesBell, Sidebar/drawer
+    // "Messages" link) to decrement by the same amount right away,
+    // rather than waiting on a realtime round trip, so opening a
+    // conversation with unread messages updates every unread
+    // indicator on screen in the same frame.
+    setConversations(prev => {
+      const opened = prev.find(c => c.id === id)
+      if (opened && opened.unread_count > 0) {
+        window.dispatchEvent(new CustomEvent('freetrust:messages-read', { detail: { amount: opened.unread_count } }))
+      }
+      return prev.map(c => c.id === id ? { ...c, unread_count: 0 } : c)
+    })
   }, [])
 
+  // Resolve the current user and load the inbox. getUser() does a live
+  // round-trip to Supabase Auth to re-verify the session; if that call
+  // ever throws (network blip, or contention from multiple GoTrueClient
+  // instances calling it at once — see lib/supabase/client.ts) this used
+  // to have no .catch and the effect would silently die, leaving the
+  // inbox stuck on "No conversations yet" forever even though the user
+  // has real conversations. Fall back to the locally-cached session
+  // (getSession(), no network call) before giving up and redirecting.
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    let cancelled = false
+
+    const resolveUser = async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser()
+        if (user) return user
+        if (error) console.error('[messages] getUser failed, falling back to getSession:', error)
+      } catch (err) {
+        console.error('[messages] getUser threw, falling back to getSession:', err)
+      }
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        return session?.user ?? null
+      } catch (err) {
+        console.error('[messages] getSession also threw:', err)
+        return null
+      }
+    }
+
+    resolveUser().then(user => {
+      if (cancelled) return
       if (!user) { router.push('/login'); return }
       setUserId(user.id)
       loadConversations(user.id)
     })
+
+    return () => { cancelled = true }
   }, [router])
 
   // Auto-open a conversation when ?to=userId is present in the URL.
@@ -246,12 +306,12 @@ function MessagesPageInner() {
   // in this inbox page, so open the thread here and clean the URL once loaded.
   useEffect(() => {
     const conversationId = searchParams.get('conversation') || searchParams.get('conversationId')
-    if (!conversationId || !userId || conversations.length === 0) return
+    if (!conversationId || !userId || conversationsLoading || conversationsError) return
     const exists = conversations.some(conversation => conversation.id === conversationId)
     if (!exists) return
     selectConversation(conversationId)
     router.replace('/messages')
-  }, [searchParams, userId, conversations, router, selectConversation])
+  }, [searchParams, userId, conversations, conversationsLoading, conversationsError, router, selectConversation])
 
   // Refresh the conversation list whenever the tab comes back into
   // view so unread counts + last-message previews stay current.
@@ -276,12 +336,24 @@ function MessagesPageInner() {
   // The RLS is fixed by 20260415000009_messaging_rls.sql, and this
   // API-route path is kept as the canonical fetch so all enrichment
   // (last message, unread count, sort order) lives on the server.
+  //
+  // conversationsLoading tracks in-flight state so the UI can show a
+  // spinner instead of "No conversations yet" while this is pending.
+  // Only cleared to false in `finally` — a failed fetch still stops
+  // showing the spinner (falls back to whatever's already in state,
+  // which is an empty list on first load) rather than spinning
+  // forever.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const loadConversations = async (_uid: string) => {
+    if (!hasLoadedConversationsRef.current) setConversationsLoading(true)
+    setConversationsError(null)
     try {
       const res = await fetch('/api/messages', { cache: 'no-store' })
       if (!res.ok) {
-        console.error('[messages] loadConversations failed:', res.status)
+        const data = await res.json().catch(() => null) as { error?: string } | null
+        const message = data?.error || `Unable to load conversations (HTTP ${res.status})`
+        console.error('[messages] loadConversations failed:', res.status, message)
+        setConversationsError(message)
         return
       }
       const data = await res.json() as {
@@ -303,8 +375,13 @@ function MessagesPageInner() {
           other_user:   c.other_user as Profile,
         }))
       setConversations(items)
+      setConversationsError(null)
     } catch (err) {
       console.error('[messages] loadConversations threw:', err)
+      setConversationsError(err instanceof Error ? err.message : 'Unable to load conversations')
+    } finally {
+      hasLoadedConversationsRef.current = true
+      setConversationsLoading(false)
     }
   }
 
@@ -371,21 +448,39 @@ function MessagesPageInner() {
     }
   }, [showNewModal])
 
-  const loadMessages = useCallback(async (convId: string) => {
+  // `silent` skips the loading spinner — used by the pageshow/
+  // visibilitychange refetches below, which refresh an
+  // already-rendered thread in the background and shouldn't flash a
+  // spinner over messages the user is actively reading.
+  const loadMessages = useCallback(async (convId: string, opts?: { silent?: boolean }) => {
+    const requestId = ++messageRequestRef.current
+    if (!opts?.silent) setMessagesLoading(true)
+    setMessagesError(null)
     try {
       const res = await fetch(`/api/messages/${convId}`, { cache: 'no-store' })
       if (!res.ok) {
-        console.error('[messages] loadMessages failed:', res.status)
-        setMessages([])
+        const data = await res.json().catch(() => null) as { error?: string } | null
+        const message = data?.error || `Unable to load messages (HTTP ${res.status})`
+        console.error('[messages] loadMessages failed:', res.status, message)
+        if (requestId === messageRequestRef.current) {
+          setMessages([])
+          setMessagesError(message)
+        }
         return
       }
       const data = await res.json() as { messages?: Message[]; participant_ids?: string[] }
+      if (requestId !== messageRequestRef.current) return
       setMessages(data.messages ?? [])
       setParticipantIds(Array.isArray(data.participant_ids) ? data.participant_ids : [])
     } catch (err) {
       console.error('[messages] loadMessages threw:', err)
-      setMessages([])
-      setParticipantIds([])
+      if (requestId === messageRequestRef.current) {
+        setMessages([])
+        setParticipantIds([])
+        setMessagesError(err instanceof Error ? err.message : 'Unable to load messages')
+      }
+    } finally {
+      if (requestId === messageRequestRef.current) setMessagesLoading(false)
     }
   }, [])
 
@@ -431,13 +526,13 @@ function MessagesPageInner() {
     const onPageShow = (e: PageTransitionEvent) => {
       if (e.persisted) {
         console.log('[messages] pageshow persisted — refetching thread')
-        loadMessages(activeId)
+        loadMessages(activeId, { silent: true })
       }
     }
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         console.log('[messages] tab became visible — refetching thread')
-        loadMessages(activeId)
+        loadMessages(activeId, { silent: true })
       }
     }
     window.addEventListener('pageshow', onPageShow)
@@ -628,6 +723,18 @@ function MessagesPageInner() {
            iOS Safari's collapsing URL bar doesn't hide the bottom of
            the thread behind the browser chrome. 100vh fallback keeps
            older browsers working. Subtract 58 px for the top nav. */
+        .msg-spinner {
+          display: inline-block;
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          border: 3px solid rgba(56,189,248,0.18);
+          border-top-color: #38bdf8;
+          animation: msg-spin 0.8s linear infinite;
+        }
+        @keyframes msg-spin {
+          to { transform: rotate(360deg); }
+        }
         .msg-root {
           height: calc(100vh - 58px);
           height: calc(100dvh - 58px);
@@ -764,7 +871,21 @@ function MessagesPageInner() {
 
         {/* Conversation list */}
         <div style={{ flex: 1, overflowY: 'auto' }}>
-          {filteredConvs.length === 0 ? (
+          {conversationsLoading ? (
+            <div style={{ padding: '2.5rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', color: '#475569' }} role="status" aria-live="polite">
+              <span className="msg-spinner" aria-hidden="true" />
+              <div style={{ fontSize: '0.8rem' }}>Loading conversations…</div>
+            </div>
+          ) : conversationsError && conversations.length === 0 ? (
+            <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#94a3b8' }} role="alert">
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚠️</div>
+              <div style={{ fontSize: '0.85rem', color: '#fca5a5' }}>Couldn’t load your conversations</div>
+              <div style={{ fontSize: '0.76rem', marginTop: '0.4rem', color: '#64748b', lineHeight: 1.45 }}>{conversationsError}</div>
+              <button type="button" onClick={() => userId && void loadConversations(userId)} style={{ marginTop: '0.9rem', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 8, padding: '0.45rem 0.8rem', fontSize: '0.78rem', fontWeight: 700, color: '#38bdf8', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Retry
+              </button>
+            </div>
+          ) : filteredConvs.length === 0 ? (
             <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#475569' }}>
               <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>💬</div>
               <div style={{ fontSize: '0.85rem' }}>No conversations yet</div>
@@ -801,6 +922,11 @@ function MessagesPageInner() {
               </div>
             </div>
           ))}
+          {!conversationsLoading && conversationsError && conversations.length > 0 && (
+            <div style={{ padding: '0.6rem 1rem', borderTop: '1px solid rgba(248,113,113,0.15)', color: '#fca5a5', fontSize: '0.72rem', lineHeight: 1.4 }} role="status">
+              Sync failed. <button type="button" onClick={() => userId && void loadConversations(userId)} style={{ border: 0, background: 'transparent', color: '#7dd3fc', padding: 0, font: 'inherit', cursor: 'pointer' }}>Retry</button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -836,7 +962,19 @@ function MessagesPageInner() {
 
             {/* Messages */}
             <div className="msg-thread-scroll">
-              {messages.map((msg, i) => {
+              {messagesLoading && messages.length === 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', color: '#475569', minHeight: '100%', paddingTop: '3rem' }} role="status" aria-live="polite">
+                  <span className="msg-spinner" aria-hidden="true" />
+                  <div style={{ fontSize: '0.8rem' }}>Loading messages…</div>
+                </div>
+              ) : messagesError ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', color: '#94a3b8', minHeight: '100%', padding: '3rem 1.5rem', textAlign: 'center' }} role="alert">
+                  <div style={{ fontSize: '2rem' }}>⚠️</div>
+                  <div style={{ fontSize: '0.85rem', color: '#fca5a5' }}>Couldn’t load this conversation</div>
+                  <div style={{ fontSize: '0.76rem', color: '#64748b', lineHeight: 1.45 }}>{messagesError}</div>
+                  <button type="button" onClick={() => activeId && void loadMessages(activeId)} style={{ marginTop: '0.35rem', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 8, padding: '0.45rem 0.8rem', fontSize: '0.78rem', fontWeight: 700, color: '#38bdf8', cursor: 'pointer', fontFamily: 'inherit' }}>Retry</button>
+                </div>
+              ) : messages.map((msg, i) => {
                 const isSent = msg.sender_id === userId || msg.sender_id === 'me'
                 const gifOnly = isGifOnlyMessage(msg.content)
                 const prevMsg = messages[i - 1]

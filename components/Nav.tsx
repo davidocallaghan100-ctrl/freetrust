@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useState, useEffect, useRef } from 'react'
 import NotificationBell from '@/components/notifications/NotificationBell'
+import MessagesBell from '@/components/messaging/MessagesBell'
 import Avatar from '@/components/Avatar'
 import { createClient } from '@/lib/supabase/client'
 import CurrencySwitcher from '@/components/CurrencySwitcher'
@@ -12,6 +13,7 @@ import ThemeToggleButton from '@/components/ThemeToggleButton'
 import { isWholeIslandIrelandProfile } from '@/lib/experience/irelandAccess'
 import { isFreeTrustAdminEmail } from '@/lib/admin/emails'
 import { useTheme } from '@/context/ThemeContext'
+import { useUnreadCount } from '@/hooks/useUnreadCount'
 
 const FREETRUST_LOGO_SRC = '/icons/freetrust-mark-perfect-transparent-20260521.png'
 const FREETRUST_LOGO_STYLE = {
@@ -46,6 +48,7 @@ const DRAWER_SECTIONS = [
       { href: '/articles',        label: 'Articles',          icon: '✍️' },
       { href: '/jobs',            label: 'Jobs',              icon: '💼' },
       { href: '/rent-share',      label: 'Rent & Share',      icon: '♻️' },
+      { href: '/rent-share/my-bookings', label: 'My Bookings', icon: '🏠' },
       { href: '/organisations',   label: 'Organisations',     icon: '🏢' },
       { href: '/organisations/new', label: 'Add Organisation', icon: '➕' },
     ],
@@ -149,6 +152,7 @@ export default function Nav() {
   const [pagesLoading, setPagesLoading] = useState(true)
   const [feedIdentity, setFeedIdentity] = useState<FeedIdentity | null>(null)
   const [pubExperienceEligible, setPubExperienceEligible] = useState(false)
+  const { unreadCount: unreadMessages } = useUnreadCount()
 
   const profileRef = useRef<HTMLDivElement>(null)
 
@@ -459,21 +463,29 @@ export default function Nav() {
 
         <div style={{ flex: 1 }} />
 
-        {/* Right side — hamburger always last and always visible */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, paddingRight: '8px' }}>
+        {/* Right side — hamburger always last and always visible.
+            On very narrow phones (≤400px, e.g. iPhone SE/older Android) the
+            wallet chip, currency switcher, and "Sign In" text link are
+            de-prioritised via CSS (see .ft-nav-* rules in globals.css) so
+            they never push the hamburger or "Sign Up" CTA off-screen. Every
+            hidden control remains reachable from the drawer/menu. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, paddingRight: '8px', minWidth: 0 }}>
           {user && walletBalance !== null && (
-            <Link href="/wallet" title={tNav('wallet')} style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '5px 8px', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '8px', fontSize: '12px', fontWeight: 600, color: 'var(--ft-accent)', textDecoration: 'none', flexShrink: 0 }}>
+            <Link href="/wallet" title={tNav('wallet')} className="ft-nav-wallet" style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '5px 8px', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '8px', fontSize: '12px', fontWeight: 600, color: 'var(--ft-accent)', textDecoration: 'none', flexShrink: 0 }}>
               ₮{walletBalance.toFixed(0)}
-              <span style={{ fontSize: '9px', fontWeight: 500, color: 'var(--ft-text-tertiary)', lineHeight: 1 }}>{tNav('balanceAbbr')}</span>
+              <span className="ft-nav-wallet-abbr" style={{ fontSize: '9px', fontWeight: 500, color: 'var(--ft-text-tertiary)', lineHeight: 1 }}>{tNav('balanceAbbr')}</span>
             </Link>
           )}
-          <CurrencySwitcher compact />
+          <span className="ft-nav-currency" style={{ display: 'flex', flexShrink: 0 }}>
+            <CurrencySwitcher compact />
+          </span>
           {isLanding && <ThemeToggleButton variant="header" />}
           {isLanding && <LanguageSelector variant="header" />}
+          {user && <MessagesBell />}
           {user && <NotificationBell />}
           {!loading && !user && (
             <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-              <Link href="/login" style={{ padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 500, color: 'var(--ft-text-secondary)', textDecoration: 'none', border: '1px solid var(--ft-border-strong)' }}>{tAuth('signIn')}</Link>
+              <Link href="/login" className="ft-nav-signin" style={{ padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 500, color: 'var(--ft-text-secondary)', textDecoration: 'none', border: '1px solid var(--ft-border-strong)' }}>{tAuth('signIn')}</Link>
               <Link href="/register" style={{ padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, color: '#fff', textDecoration: 'none', background: 'linear-gradient(135deg, var(--ft-accent), #818cf8)' }}>{tAuth('signUp')}</Link>
             </div>
           )}
@@ -580,6 +592,7 @@ export default function Nav() {
               </div>
               {section.links.map(({ href, label, icon }) => {
                 const active = isActive(href)
+                const isMessages = href === '/messages'
                 return (
                   <Link
                     key={href}
@@ -599,7 +612,23 @@ export default function Nav() {
                     }}
                   >
                     <span style={{ ...EMOJI_STYLE, fontSize: '16px' }}>{icon}</span>
-                    {navLabel(label)}
+                    <span style={{ flex: 1 }}>{navLabel(label)}</span>
+                    {isMessages && unreadMessages > 0 && (
+                      <span style={{
+                        background: '#ef4444',
+                        color: '#fff',
+                        borderRadius: 999,
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        padding: '1px 5px',
+                        lineHeight: '16px',
+                        minWidth: 16,
+                        textAlign: 'center',
+                        flexShrink: 0,
+                      }}>
+                        {unreadMessages > 99 ? '99+' : unreadMessages}
+                      </span>
+                    )}
                   </Link>
                 )
               })}

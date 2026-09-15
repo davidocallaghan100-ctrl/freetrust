@@ -2091,12 +2091,32 @@ export default function PostCard({
   }
 
   const handleDelete = async () => {
-    if (!confirm('Delete this post? This cannot be undone.')) return
+    // Services are composed into the feed from `listings` with a synthetic
+    // `service-<uuid>` id. They are not rows in `feed_posts`, so sending that
+    // prefixed id to the feed-post DELETE endpoint always returned 404.
+    const isServiceListing = post.type === 'service'
+    const sourceId = isServiceListing && post.id.startsWith('service-')
+      ? post.id.slice('service-'.length)
+      : post.id
+    const deleteUrl = isServiceListing
+      ? `/api/listings/${encodeURIComponent(sourceId)}`
+      : `/api/feed/posts/${encodeURIComponent(sourceId)}`
+    const itemLabel = isServiceListing ? 'service' : 'post'
+
+    if (!confirm(`Delete this ${itemLabel}? This cannot be undone.`)) return
     setDeleting(true)
     try {
-      const res = await fetch(`/api/feed/posts/${post.id}`, { method: 'DELETE' })
-      if (res.ok) { setDeleted(true); onDelete?.(post.id) }
-    } catch { /* silent */ }
+      const res = await fetch(deleteUrl, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({} as { error?: string }))
+      if (!res.ok) {
+        alert(data.error ?? `Could not delete ${itemLabel}. Please try again.`)
+        return
+      }
+      setDeleted(true)
+      onDelete?.(post.id)
+    } catch {
+      alert(`Could not delete ${itemLabel}. Please try again.`)
+    }
     finally { setDeleting(false); setShowMenu(false) }
   }
 

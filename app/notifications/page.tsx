@@ -14,6 +14,8 @@ type DBType =
   | 'message' | 'new_message'
   // Orders
   | 'order' | 'order_placed' | 'order_update'
+  // Rent & Share bookings
+  | 'rent_request' | 'rent_approved' | 'rent_declined' | 'rent_cancelled' | 'rent_checkin_payout' | 'rent_completed'
   // Payments / wallet
   | 'trust' | 'wallet' | 'wallet_transfer' | 'payment' | 'transfer_received' | 'transfer_sent'
   // Reviews
@@ -61,6 +63,13 @@ const TYPE_TO_TAB: Record<DBType, TabKey> = {
   order:                'orders',
   order_placed:         'orders',
   order_update:         'orders',
+  // Rent & Share bookings
+  rent_request:         'orders',
+  rent_approved:        'orders',
+  rent_declined:        'orders',
+  rent_cancelled:       'orders',
+  rent_checkin_payout:  'payments',
+  rent_completed:       'orders',
   // Payments
   trust:                'payments',
   wallet:               'payments',
@@ -97,6 +106,12 @@ const TYPE_ICON: Record<DBType, string> = {
   order:                '📦',
   order_placed:         '🛒',
   order_update:         '📦',
+  rent_request:         '🏠',
+  rent_approved:        '✅',
+  rent_declined:        '❌',
+  rent_cancelled:       '↩️',
+  rent_checkin_payout:  '💰',
+  rent_completed:       '🏁',
   trust:                '₮',
   wallet:               '₮',
   wallet_transfer:      '₮',
@@ -131,6 +146,13 @@ const TYPE_COLOR: Record<DBType, { bg: string; color: string }> = {
   order:                { bg: 'rgba(16,185,129,0.15)',  color: '#34d399' },
   order_placed:         { bg: 'rgba(16,185,129,0.15)',  color: '#34d399' },
   order_update:         { bg: 'rgba(16,185,129,0.15)',  color: '#34d399' },
+  // Rent & Share bookings — green (orders-family) / amber (payout)
+  rent_request:         { bg: 'rgba(16,185,129,0.15)',  color: '#34d399' },
+  rent_approved:        { bg: 'rgba(16,185,129,0.15)',  color: '#34d399' },
+  rent_declined:        { bg: 'rgba(239,68,68,0.15)',   color: 'var(--ft-danger)' },
+  rent_cancelled:       { bg: 'rgba(100,116,139,0.15)', color: 'var(--ft-text-tertiary)' },
+  rent_checkin_payout:  { bg: 'rgba(245,158,11,0.15)',  color: '#fbbf24' },
+  rent_completed:       { bg: 'rgba(16,185,129,0.15)',  color: '#34d399' },
   // Payments — amber
   trust:                { bg: 'rgba(245,158,11,0.15)',  color: '#fbbf24' },
   wallet:               { bg: 'rgba(245,158,11,0.15)',  color: '#fbbf24' },

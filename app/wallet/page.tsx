@@ -6,6 +6,8 @@ import nextDynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useCurrency } from '@/context/CurrencyContext'
+import { useNativePlatform } from '@/lib/nativeApp'
+import NativeIOSRestriction from '@/components/NativeIOSRestriction'
 
 // Apple Pay / Google Pay button — client-only (uses browser Payment Request API)
 const AppleGooglePayButton = nextDynamic(
@@ -465,6 +467,7 @@ function TransferModal({ walletData, onClose, onSuccess }: { walletData: WalletD
 
 function WalletPageInner() {
   const { currency: curr } = useCurrency()
+  const nativePlatform = useNativePlatform()
   const sym = curr.symbol
   const [data,        setData]        = useState<WalletData | null>(null)
   const [actions,     setActions]     = useState<TrustAction[]>([])
@@ -537,7 +540,14 @@ function WalletPageInner() {
     finally { setLoading(false) }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    if (nativePlatform === null || nativePlatform === 'ios') return
+    load()
+  }, [load, nativePlatform])
+
+  if (nativePlatform === 'ios') {
+    return <NativeIOSRestriction feature="Wallet top-ups and Trust Coin spending" />
+  }
 
   // Build 6-month trust history approximation
   const trustHistory = (() => {

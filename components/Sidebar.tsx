@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useDirection } from '@/hooks/useDirection'
 import { isWholeIslandIrelandProfile } from '@/lib/experience/irelandAccess'
+import { useUnreadCount } from '@/hooks/useUnreadCount'
 
 const EMOJI_STYLE = {
   fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol", sans-serif',
@@ -81,6 +82,7 @@ export default function Sidebar() {
   const [walletBalance, setWalletBalance] = useState<number | null>(null)
   const [unreadNotifs, setUnreadNotifs] = useState(0)
   const [pubExperienceEligible, setPubExperienceEligible] = useState(false)
+  const { unreadCount: unreadMessages } = useUnreadCount()
 
   // Fetch unread notification count
   const fetchUnread = async () => {
@@ -219,6 +221,7 @@ export default function Sidebar() {
               {section.links.map(({ href, label, icon }) => {
                 const active = isActive(href)
                 const isNotifications = href === '/notifications'
+                const isMessages = href === '/messages'
                 return (
                   <Link
                     key={href}
@@ -254,6 +257,22 @@ export default function Sidebar() {
                         flexShrink: 0,
                       }}>
                         {unreadNotifs > 99 ? '99+' : unreadNotifs}
+                      </span>
+                    )}
+                    {isMessages && unreadMessages > 0 && (
+                      <span style={{
+                        background: '#ef4444',
+                        color: '#fff',
+                        borderRadius: 999,
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        padding: '1px 5px',
+                        lineHeight: '16px',
+                        minWidth: 16,
+                        textAlign: 'center',
+                        flexShrink: 0,
+                      }}>
+                        {unreadMessages > 99 ? '99+' : unreadMessages}
                       </span>
                     )}
                   </Link>

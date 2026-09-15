@@ -3,12 +3,168 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+interface InboxRow {
+  conversation_id: string
+  conv_updated_at: string
+  last_message_at: string | null
+  last_message_id: string | null
+  last_message_sender_id: string | null
+  last_message_content: string | null
+  last_message_created_at: string | null
+  last_message_attachments: unknown
+  unread_count: number
+  other_user_id: string | null
+}
+
+interface InboxConversation {
+  id: string
+  updated_at: string
+  last_message: {
+    id: string
+    conversation_id: string
+    sender_id: string
+    content: string | null
+    created_at: string
+    attachments: unknown
+  } | null
+  unread_count: number
+  other_user: {
+    id: string
+    full_name: string | null
+    avatar_url: string | null
+  } | null
+}
+
 function getAutoDeleteCutoffIso(days: unknown): string | null {
   if (!Number.isInteger(days) || typeof days !== 'number' || days <= 0) return null
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
 }
 
+/**
+ * Safe fallback for databases that have not received the inbox-performance
+ * migration yet. The RPC is an optimisation, not a requirement for showing a
+ * member's conversations; an unavailable RPC must never be presented as an
+ * empty inbox.
+ */
+async function loadInboxFallback(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+  autoDeleteCutoffIso: string | null,
+): Promise<{ conversations: InboxConversation[]; totalUnreadCount: number }> {
+  const { data: participantRows, error: participantErr } = await admin
+    .from('conversation_participants')
+    .select('conversation_id, last_read_at')
+    .eq('user_id', userId)
+
+  if (participantErr) throw new Error(participantErr.message)
+
+  const visibleParticipantRows = participantRows ?? []
+  if (visibleParticipantRows.length === 0) {
+    return { conversations: [], totalUnreadCount: 0 }
+  }
+
+  const conversationIds = visibleParticipantRows.map(row => row.conversation_id)
+  const [{ data: conversations, error: conversationsErr }, { data: allParticipants, error: allParticipantsErr }] = await Promise.all([
+    admin
+      .from('conversations')
+      .select('id, updated_at, last_message_at')
+      .in('id', conversationIds)
+      .order('last_message_at', { ascending: false, nullsFirst: false }),
+    admin
+      .from('conversation_participants')
+      .select('conversation_id, user_id')
+      .in('conversation_id', conversationIds),
+  ])
+
+  if (conversationsErr) throw new Error(conversationsErr.message)
+  if (allParticipantsErr) throw new Error(allParticipantsErr.message)
+
+  const participantUserIds = Array.from(new Set((allParticipants ?? [])
+    .map(row => row.user_id)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0)))
+
+  const { data: participantProfiles, error: profilesErr } = participantUserIds.length > 0
+    ? await admin
+      .from('profiles')
+      .select('id, full_name, avatar_url')
+      .in('id', participantUserIds)
+    : { data: [], error: null }
+
+  if (profilesErr) throw new Error(profilesErr.message)
+
+  const profileById = new Map((participantProfiles ?? []).map(profile => [profile.id, profile]))
+  const participantsByConversation = new Map<string, string[]>()
+  for (const participant of allParticipants ?? []) {
+    if (typeof participant.conversation_id !== 'string' || typeof participant.user_id !== 'string') continue
+    const rows = participantsByConversation.get(participant.conversation_id) ?? []
+    rows.push(participant.user_id)
+    participantsByConversation.set(participant.conversation_id, rows)
+  }
+
+  let totalUnreadCount = 0
+  const enriched = await Promise.all((conversations ?? []).map(async conversation => {
+    const [{ data: lastMessage, error: lastMessageErr }, unreadResult] = await Promise.all([
+      admin
+        .from('messages')
+        .select('id, sender_id, content, created_at, attachments')
+        .eq('conversation_id', conversation.id)
+        .gte('created_at', autoDeleteCutoffIso ?? '0001-01-01T00:00:00.000Z')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      (() => {
+        const participant = visibleParticipantRows.find(row => row.conversation_id === conversation.id)
+        let query = admin
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('conversation_id', conversation.id)
+          .neq('sender_id', userId)
+          .gte('created_at', autoDeleteCutoffIso ?? '0001-01-01T00:00:00.000Z')
+        if (participant?.last_read_at) query = query.gt('created_at', participant.last_read_at)
+        return query
+      })(),
+    ])
+
+    if (lastMessageErr) throw new Error(lastMessageErr.message)
+    if (unreadResult.error) throw new Error(unreadResult.error.message)
+
+    const unreadCount = unreadResult.count ?? 0
+    totalUnreadCount += unreadCount
+    const otherUserId = (participantsByConversation.get(conversation.id) ?? [])
+      .find(participantId => participantId !== userId)
+
+    return {
+      id: conversation.id,
+      updated_at: conversation.updated_at,
+      last_message: lastMessage
+        ? {
+          id: lastMessage.id,
+          conversation_id: conversation.id,
+          sender_id: lastMessage.sender_id,
+          content: lastMessage.content,
+          created_at: lastMessage.created_at,
+          attachments: lastMessage.attachments ?? [],
+        }
+        : null,
+      unread_count: unreadCount,
+      other_user: otherUserId ? (profileById.get(otherUserId) ?? null) : null,
+    }
+  }))
+
+  return { conversations: enriched, totalUnreadCount }
+}
+
 // GET /api/messages — list conversations for current user
+//
+// Performance note (2026-08-18): this used to loop over every
+// conversation and fire two sequential Supabase queries per
+// conversation (last message, unread count) — up to 2N+3 round trips
+// for a user with N conversations, which stalled the inbox on slower
+// connections. Now delegates the entire last-message + unread-count
+// computation to a single Postgres RPC (get_message_inbox, see
+// supabase/migrations/20260818120000_message_inbox_perf.sql) so the
+// whole inbox is one query. Only a follow-up profile lookup for the
+// "other participant" avatars/names remains as a second query.
 export async function GET() {
   try {
     const supabase = await createClient()
@@ -24,31 +180,6 @@ export async function GET() {
     // /api/messages/:id route.
     const admin = createAdminClient()
 
-    // Get all conversation IDs the user is part of
-    const { data: participantRows, error: partErr } = await supabase
-      .from('conversation_participants')
-      .select('conversation_id, last_read_at')
-      .eq('user_id', user.id)
-
-    const { data: adminParticipantRows, error: adminPartErr } = partErr || !participantRows || participantRows.length === 0
-      ? await admin
-        .from('conversation_participants')
-        .select('conversation_id, last_read_at')
-        .eq('user_id', user.id)
-      : { data: participantRows, error: null }
-
-    if (adminPartErr) {
-      return NextResponse.json({ error: adminPartErr.message }, { status: 500 })
-    }
-
-    const visibleParticipantRows = adminParticipantRows ?? []
-
-    if (visibleParticipantRows.length === 0) {
-      return NextResponse.json({ conversations: [] })
-    }
-
-    const convIds = visibleParticipantRows.map(p => p.conversation_id)
-
     const { data: profile, error: profileErr } = await admin
       .from('profiles')
       .select('message_auto_delete_days')
@@ -61,99 +192,65 @@ export async function GET() {
 
     const autoDeleteCutoffIso = getAutoDeleteCutoffIso(profile?.message_auto_delete_days)
 
-    // Get conversations first, then enrich participants with profiles in a
-    // separate query. Production does not currently expose a PostgREST FK
-    // relationship from conversation_participants.user_id -> profiles.id, so
-    // nested `profile:profiles(...)` fails with PGRST200 and the client keeps
-    // rendering an empty inbox even though the message drawer can load threads.
-    const { data: conversations, error: convErr } = await admin
-      .from('conversations')
-      .select(`
-        id,
-        updated_at,
-        last_message_at
-      `)
-      .in('id', convIds)
-      .order('last_message_at', { ascending: false, nullsFirst: false })
+    const { data: inboxRows, error: inboxErr } = await admin.rpc('get_message_inbox', {
+      p_user_id: user.id,
+      p_auto_delete_cutoff: autoDeleteCutoffIso,
+    })
 
-    if (convErr) {
-      return NextResponse.json({ error: convErr.message }, { status: 500 })
+    if (inboxErr) {
+      console.warn('[GET /api/messages] inbox RPC unavailable; using safe fallback:', inboxErr.message)
+      const fallback = await loadInboxFallback(admin, user.id, autoDeleteCutoffIso)
+      return NextResponse.json({
+        conversations: fallback.conversations,
+        total_unread_count: fallback.totalUnreadCount,
+      })
     }
 
-    const { data: allParticipants, error: allParticipantsErr } = await admin
-      .from('conversation_participants')
-      .select('conversation_id, user_id, last_read_at')
-      .in('conversation_id', convIds)
+    const rows = (inboxRows ?? []) as InboxRow[]
 
-    if (allParticipantsErr) {
-      return NextResponse.json({ error: allParticipantsErr.message }, { status: 500 })
+    if (rows.length === 0) {
+      return NextResponse.json({ conversations: [], total_unread_count: 0 })
     }
 
-    const participantUserIds = Array.from(new Set((allParticipants ?? [])
-      .map(p => p.user_id)
+    const otherUserIds = Array.from(new Set(rows
+      .map(row => row.other_user_id)
       .filter((id): id is string => typeof id === 'string' && id.length > 0)))
 
-    const { data: participantProfiles, error: participantProfilesErr } = participantUserIds.length > 0
+    const { data: otherProfiles, error: otherProfilesErr } = otherUserIds.length > 0
       ? await admin
         .from('profiles')
         .select('id, full_name, avatar_url')
-        .in('id', participantUserIds)
+        .in('id', otherUserIds)
       : { data: [], error: null }
 
-    if (participantProfilesErr) {
-      return NextResponse.json({ error: participantProfilesErr.message }, { status: 500 })
+    if (otherProfilesErr) {
+      return NextResponse.json({ error: otherProfilesErr.message }, { status: 500 })
     }
 
-    const profileById = new Map((participantProfiles ?? []).map(profile => [profile.id, profile]))
-    const participantsByConversation = new Map<string, Array<{ user_id: string; last_read_at: string | null }>>()
-    for (const participant of allParticipants ?? []) {
-      if (typeof participant.conversation_id !== 'string' || typeof participant.user_id !== 'string') continue
-      const rows = participantsByConversation.get(participant.conversation_id) ?? []
-      rows.push({ user_id: participant.user_id, last_read_at: participant.last_read_at ?? null })
-      participantsByConversation.set(participant.conversation_id, rows)
-    }
+    const profileById = new Map((otherProfiles ?? []).map(profile => [profile.id, profile]))
 
-    // Get last message for each conversation
-    const enriched = await Promise.all((conversations || []).map(async (conv) => {
-      const { data: lastMsg } = await admin
-        .from('messages')
-        .select('id, sender_id, content, created_at, attachments, sender:profiles(id, full_name, avatar_url)')
-        .eq('conversation_id', conv.id)
-        .gte('created_at', autoDeleteCutoffIso ?? '0001-01-01T00:00:00.000Z')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
-
-      // Calculate unread count
-      const myParticipant = visibleParticipantRows.find(p => p.conversation_id === conv.id)
-      const lastReadAt = myParticipant?.last_read_at
-      let unreadCount = 0
-      if (lastReadAt) {
-        const { count } = await admin
-          .from('messages')
-          .select('id', { count: 'exact', head: true })
-          .eq('conversation_id', conv.id)
-          .neq('sender_id', user.id)
-          .gt('created_at', lastReadAt)
-          .gte('created_at', autoDeleteCutoffIso ?? '0001-01-01T00:00:00.000Z')
-        unreadCount = count || 0
-      }
-
-      // Get other participant
-      const otherParticipant = (participantsByConversation.get(conv.id) ?? [])
-        .find(p => p.user_id !== user.id)
-      const otherProfile = otherParticipant ? profileById.get(otherParticipant.user_id) : null
-
+    let totalUnreadCount = 0
+    const enriched = rows.map(row => {
+      totalUnreadCount += Number(row.unread_count) || 0
       return {
-        id: conv.id,
-        updated_at: conv.updated_at,
-        last_message: lastMsg || null,
-        unread_count: unreadCount,
-        other_user: otherProfile || null,
+        id: row.conversation_id,
+        updated_at: row.conv_updated_at,
+        last_message: row.last_message_id
+          ? {
+            id: row.last_message_id,
+            conversation_id: row.conversation_id,
+            sender_id: row.last_message_sender_id,
+            content: row.last_message_content,
+            created_at: row.last_message_created_at,
+            attachments: row.last_message_attachments ?? [],
+          }
+          : null,
+        unread_count: Number(row.unread_count) || 0,
+        other_user: row.other_user_id ? (profileById.get(row.other_user_id) ?? null) : null,
       }
-    }))
+    })
 
-    return NextResponse.json({ conversations: enriched })
+    return NextResponse.json({ conversations: enriched, total_unread_count: totalUnreadCount })
   } catch (err) {
     console.error('[GET /api/messages]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

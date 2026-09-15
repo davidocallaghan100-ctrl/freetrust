@@ -8,6 +8,14 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getAgent } from '@/lib/agents'
 import type { AgentConfig, AgentRunResult } from '@/lib/agents'
+import {
+  buildAgentConversationContext,
+  CONVERSATIONAL_WORKFLOW_RULE,
+  normaliseAgentHistory,
+  normaliseAgentTaskSummary,
+  type AgentConversationTurn,
+} from '@/lib/agents/conversationContext'
+import { getAgentModelProvider, type AgentModelResponse } from '@/lib/agents/modelProvider'
 
 type AgentAttachment = {
   name?: unknown
@@ -91,7 +99,8 @@ function buildUserContent(userInput: string, attachments: AgentAttachment[]): st
   return content
 }
 
-function extractAssistantText(response: Anthropic.Messages.Message): string {
+function extractAssistantText(response: AgentModelResponse | Anthropic.Messages.Message): string {
+  if ('text' in response) return response.text.trim()
   return response.content
     .filter((block): block is Anthropic.TextBlock => block.type === 'text')
     .map((block) => block.text)
@@ -129,49 +138,43 @@ type ImageSafetyResult = {
 
 type ImagePolicyBlock = {
   reason: string
-  code: 'non_professional_image_request' | 'unsolicited_or_manipulative_content'
+  code: 'explicit_or_harmful_content'
 }
 
-const UNSOLICITED_IMAGE_INTENT_PATTERNS = [
-  /\bunsolicited\b/i,
-  /\bspam(?:my)?\b/i,
-  /\bmass\s+(?:dm|message|text|email|outreach|blast)\b/i,
-  /\b(?:dm|message|text|email)\s+blast\b/i,
-  /\bcold\s+(?:dm|message|text|email|outreach)\b/i,
-  /\bphish(?:ing)?\b/i,
-  /\bscam\b/i,
-  /\bclickbait\b/i,
-  /\boutrage\s*bait\b/i,
-  /\bpressure\s*(?:sale|sales|selling)\b/i,
-  /\bfake\s+(?:endorsement|review|testimonial|screenshot|notification|alert|invoice|receipt)\b/i,
-]
+const IMAGE_CONTINUATION_PATTERN = /^(?:please\s+)?(?:continue|retry|try again|run it again|go ahead|proceed|do it|yes|okay|ok|generate it|try that again)[!.?\s]*$/i
 
-const CREATIVE_OR_PROFESSIONAL_CONTEXT_PATTERNS = [
-  /\b(marketplace|listing|product|service|event|poster|banner|profile|cover|thumbnail|graphic|illustration|visual|artwork|concept|brand|branding|social|community|educational|professional|creative|portfolio|presentation|flyer|logo-free|abstract|design)\b/i,
-  /\b(image|picture|photo|visual|poster|graphic|banner|thumbnail|artwork|illustration)\b/i,
+const EXPLICIT_OR_HARMFUL_IMAGE_PATTERNS = [
+  /\b(?:porn(?:ography|ographic)?|sexually\s+explicit|explicit\s+sex|nude|nudity|naked|genitals?|sexualized|erotic|fetish)\b/i,
+  /\b(?:child|minor|teen)\b[\s\S]{0,50}\b(?:sexual|nude|porn|erotic|explicit)\b/i,
+  /\b(?:graphic\s+violence|gore|dismember(?:ed|ment)?|torture|beheading|snuff)\b/i,
+  /\b(?:non[-\s]?consensual\s+(?:intimate|sexual)|revenge\s+porn|deepfake\s+nude|sexual\s+deepfake)\b/i,
+  /\b(?:extremist|terrorist)\s+(?:propaganda|recruitment)\b/i,
+  /\b(?:how\s+to|instructions?\s+to)\b[\s\S]{0,80}\b(?:build|make|use)\b[\s\S]{0,40}\b(?:bomb|explosive|weapon|poison)\b/i,
 ]
 
 function localImagePolicyBlock(prompt: string): ImagePolicyBlock | null {
   const compactPrompt = prompt.trim()
-  if (!compactPrompt) {
-    return { code: 'non_professional_image_request', reason: 'Image generation needs a clear creative or professional visual brief.' }
-  }
-
-  if (!CREATIVE_OR_PROFESSIONAL_CONTEXT_PATTERNS.some((pattern) => pattern.test(compactPrompt))) {
+  if (EXPLICIT_OR_HARMFUL_IMAGE_PATTERNS.some((pattern) => pattern.test(compactPrompt))) {
     return {
-      code: 'non_professional_image_request',
-      reason: 'FreeTrust image generation is limited to creative, professional, brand-safe visual assets such as marketplace images, posters, banners, product concepts, profile covers, and community graphics.',
-    }
-  }
-
-  if (UNSOLICITED_IMAGE_INTENT_PATTERNS.some((pattern) => pattern.test(compactPrompt))) {
-    return {
-      code: 'unsolicited_or_manipulative_content',
-      reason: 'FreeTrust does not generate unsolicited outreach, spam, phishing, clickbait, fake endorsement, pressure-sales, or manipulative promotional images.',
+      code: 'explicit_or_harmful_content',
+      reason: 'FreeTrust image generation blocks only clearly explicit or harmful imagery.',
     }
   }
 
   return null
+}
+
+function resolveImagePrompt(userInput: string, history: AgentConversationTurn[]) {
+  const currentPrompt = userInput.trim()
+  if (!IMAGE_CONTINUATION_PATTERN.test(currentPrompt)) return currentPrompt
+
+  const previousImagePrompt = [...history]
+    .reverse()
+    .find((turn) => turn.role === 'user' && turn.content.trim() && !IMAGE_CONTINUATION_PATTERN.test(turn.content.trim()))
+
+  // A short retry/approval message should continue the prior image brief rather
+  // than being safety-checked as a brand-new prompt such as "Continue".
+  return previousImagePrompt?.content.trim() || currentPrompt
 }
 
 function readSafetyResult(text: string, fallbackPrompt: string): ImageSafetyResult {
@@ -191,13 +194,11 @@ async function reviewImagePromptSafety(anthropic: Anthropic, prompt: string): Pr
     temperature: 0,
     system: `You are FreeTrust's strict image-generation safety gate. Return JSON only.
 
-Approve only benign, lawful, safe-for-work image requests that are clearly creative or professional: marketplace visuals, product/service concept art, event posters, social graphics, profile banners, educational/community visuals, or brand-safe creative assets.
+Approve ordinary business, service, marketplace, product, advertising, pricing, promotional, social, event, and category-banner image requests by default. Do not block normal sales language, calls to action, approval/review language, or a request to use an image for a FreeTrust listing.
 
-Block if the prompt requests, implies, enables, or tries to evade safeguards around: unlawful acts, sexual content or nudity, minors in unsafe contexts, non-consensual or intimate imagery, harassment or threats, hate or extremist symbols/propaganda, realistic gore or graphic violence, weapons instructions, illegal drugs, fraud/scams, fake documents/IDs/payment cards, doxxing/private data, real private-person likenesses, public-figure deepfakes, impersonation, copyrighted characters/logos/trademarks, or any upload/generation that could reasonably be illegal.
+Block only when the prompt clearly requests explicit sexual content or nudity, sexual content involving minors, graphic gore or torture, hateful or extremist propaganda, non-consensual intimate imagery or sexual deepfakes, or visual instructions that facilitate serious illegal or violent wrongdoing. Do not infer harmful intent from a normal business or marketplace request.
 
-Also block unsolicited or manipulative content: spam, cold DMs, mass outreach graphics, phishing or scam visuals, pressure-sales ads, fake endorsements/reviews/testimonials, fake screenshots/alerts, political persuasion targeted at people, harassment campaigns, outrage bait, clickbait, deceptive urgency, or content designed to pressure strangers who did not opt in. Marketing visuals may be approved only when they are truthful, general-audience, brand-safe, non-targeted, non-deceptive, and professional.
-
-If approved, rewrite the prompt into a safe original visual prompt. Remove unsafe details, real-person likenesses, copyrighted/trademarked references, gore, weapons, drugs, privacy-invasive material, manipulative calls-to-action, and unsolicited-targeting language. Add "original, lawful, safe-for-work, professional, brand-safe, no logos, no real person likeness, no unsolicited outreach" when helpful.
+If approved, rewrite only as needed into a clear original image prompt while preserving the user's legitimate business, service, marketplace, branding, pricing, and promotional intent.
 
 JSON shape: {"allowed": boolean, "reason": string, "rewrittenPrompt": string}`,
     messages: [{ role: 'user', content: `Image request to review:\n\n${prompt}` }],
@@ -210,9 +211,11 @@ async function reviewGeneratedImageSafety(anthropic: Anthropic, image: { mediaTy
     model: 'claude-sonnet-4-5-20250929',
     max_tokens: 500,
     temperature: 0,
-    system: `You are FreeTrust's strict post-generation image safety reviewer. Return JSON only.
+    system: `You are FreeTrust's post-generation image safety reviewer. Return JSON only.
 
-Approve only if the image is clearly lawful, safe-for-work, creative or professional, brand-safe, non-exploitative, non-sexual, non-hateful, non-fraudulent, non-invasive, and not built for unsolicited outreach or manipulation. It must not contain realistic gore, abuse, extremist propaganda, illegal-drug promotion, weapons-focused wrongdoing, fake documents, payment cards, private data, real-person/public-figure impersonation, fake endorsements, deceptive urgency, spam/cold-outreach language, or pressure-sales/clickbait framing. If uncertain, block.
+Approve ordinary business, service, marketplace, product, advertising, pricing, promotional, social, event, and category-banner images. Do not block an image because it contains normal marketing, sales, pricing, calls to action, approval language, or a FreeTrust listing context.
+
+Block only if the image clearly contains explicit sexual content or nudity, sexual content involving minors, graphic gore or torture, hateful or extremist propaganda, non-consensual intimate imagery or sexual deepfakes, or visual instructions that facilitate serious illegal or violent wrongdoing. If uncertain, use the visible image and the approved prompt together; do not invent harmful context from ordinary business imagery.
 
 JSON shape: {"allowed": boolean, "reason": string, "rewrittenPrompt": string}`,
     messages: [
@@ -236,8 +239,11 @@ async function fetchGeneratedImage(prompt: string): Promise<{ bytes: Buffer, med
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), IMAGE_GENERATION_TIMEOUT_MS)
   try {
-    const safePrompt = `${prompt}\n\nOriginal lawful safe-for-work creative professional commercial image. Brand-safe. No logos. No text that looks like official documents. No real person likeness. No nudity. No gore. No weapons. No illegal drugs. No unsolicited outreach, pressure-sales, fake endorsement, clickbait, phishing, spam, or manipulative promotional content.`
-    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(safePrompt)}?width=1024&height=1024&nologo=true&safe=true&seed=${Date.now()}`
+    const safePrompt = `${prompt}\n\nOriginal lawful image for ordinary business, service, marketplace, or creative use. Keep it non-explicit and free of graphic gore, hateful extremist propaganda, and instructions for serious wrongdoing.`
+    // Pollinations validates seed as a signed 32-bit integer. Date.now()
+    // exceeds that range, which causes a deterministic provider-side 500.
+    const seed = Date.now() % 2_147_483_647
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(safePrompt)}?width=1024&height=1024&nologo=true&safe=true&seed=${seed}`
     const res = await fetch(url, { signal: controller.signal, headers: { Accept: 'image/png,image/jpeg,image/webp' } })
     if (!res.ok) throw new Error(`image provider returned ${res.status}`)
     const contentType = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
@@ -272,12 +278,24 @@ async function uploadGeneratedImage(admin: ReturnType<typeof createAdminClient>,
   return data.publicUrl
 }
 
+let _anthropicSafety: Anthropic | null = null
+function getAnthropicClient(): Anthropic {
+  if (!_anthropicSafety) {
+    const key = process.env.ANTHROPIC_API_KEY
+    if (!key) throw new Error('ANTHROPIC_API_KEY is not configured')
+    _anthropicSafety = new Anthropic({ apiKey: key })
+  }
+  return _anthropicSafety
+}
+
 async function runImageGenerationAgent(params: {
   userId: string
   userInput: string
+  history: AgentConversationTurn[]
   config: AgentConfig
 }) {
-  const { userId, userInput, config } = params
+  const { userId, userInput, history, config } = params
+  const imagePrompt = resolveImagePrompt(userInput, history)
   let anthropic: Anthropic
   try {
     anthropic = getAnthropicClient()
@@ -290,7 +308,7 @@ async function runImageGenerationAgent(params: {
 
   let promptSafety: ImageSafetyResult
   try {
-    const localPolicyBlock = localImagePolicyBlock(userInput)
+    const localPolicyBlock = localImagePolicyBlock(imagePrompt)
     if (localPolicyBlock) {
       return NextResponse.json(
         {
@@ -303,7 +321,7 @@ async function runImageGenerationAgent(params: {
       )
     }
 
-    promptSafety = await reviewImagePromptSafety(anthropic, userInput)
+    promptSafety = await reviewImagePromptSafety(anthropic, imagePrompt)
   } catch (err) {
     console.error('[agents/run] image prompt safety failed:', err)
     return NextResponse.json(
@@ -315,7 +333,7 @@ async function runImageGenerationAgent(params: {
   if (!promptSafety.allowed) {
     return NextResponse.json(
       {
-        error: `I can’t generate that image because it may be unsafe, unsolicited, unprofessional, or unlawful. ${promptSafety.reason}`,
+        error: `I can’t generate that image because it may contain explicit or harmful content. ${promptSafety.reason}`,
         code: 'safety_blocked',
         safetyReason: promptSafety.reason,
         creditsCharged: 0,
@@ -356,6 +374,7 @@ async function runImageGenerationAgent(params: {
       p_user_id: userId,
       p_amount:  IMAGE_AGENT_COST,
       p_type:    `agent_refund_${config.name}`,
+      p_ref:     null,
       p_desc:    `Refund: ${config.displayName} agent failed (${reason})`,
     })
     if (refundErr) console.error('[agents/run] image refund failed:', refundErr)
@@ -385,9 +404,9 @@ async function runImageGenerationAgent(params: {
       type: 'generated_image',
       image_url: imageUrl,
       media_url: imageUrl,
-      prompt: userInput,
+      prompt: imagePrompt,
       revised_prompt: promptSafety.rewrittenPrompt,
-      safety_note: 'FreeTrust checked that the prompt was creative/professional, not unsolicited or manipulative, and reviewed the generated image before upload.',
+      safety_note: 'FreeTrust checked that the image was not clearly explicit or harmful and reviewed it before upload.',
       caption: 'Generated image ready. Review it before posting or using publicly.',
     }
 
@@ -529,19 +548,6 @@ function buildTrustSignalsBlock(signals: TrustSignals): string {
 `
 }
 
-// Lazy singleton — only created when the env var is present at
-// runtime. The route returns 503 if it's missing so the caller
-// sees a clear "not configured" error rather than a crash.
-let _anthropic: Anthropic | null = null
-function getAnthropicClient(): Anthropic {
-  if (!_anthropic) {
-    const key = process.env.ANTHROPIC_API_KEY
-    if (!key) throw new Error('ANTHROPIC_API_KEY is not configured')
-    _anthropic = new Anthropic({ apiKey: key })
-  }
-  return _anthropic
-}
-
 // POST /api/agents/run
 //
 // Body: { agent: AgentName, input: string }
@@ -551,7 +557,7 @@ function getAnthropicClient(): Anthropic {
 //   2. Validate — agent name exists in the registry
 //   3. Credits — check the user's trust balance covers the
 //      agent's credit cost, then debit via the spend_trust RPC
-//   4. Run — call the Anthropic Messages API with the agent's
+//   4. Run — call the configured FreeTrust model provider with the agent's
 //      system prompt and the caller's input as a user message
 //   5. Parse — the agent's system prompt instructs the model to
 //      respond with JSON only, so we attempt a JSON.parse on the
@@ -576,11 +582,15 @@ export async function POST(req: NextRequest) {
       agent?: unknown
       input?: unknown
       attachments?: unknown
+      history?: unknown
+      taskSummary?: unknown
     } | null
 
     const agentName = typeof body?.agent === 'string' ? body.agent : ''
     const userInput = typeof body?.input === 'string' ? body.input.trim() : ''
     const attachments = normaliseAttachments(body?.attachments)
+    const history = normaliseAgentHistory(body?.history)
+    const taskSummary = normaliseAgentTaskSummary(body?.taskSummary)
 
     const config = getAgent(agentName)
     if (!config) {
@@ -603,7 +613,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (config.name === 'imageGenerator') {
-      return runImageGenerationAgent({ userId: user.id, userInput, config })
+      return runImageGenerationAgent({ userId: user.id, userInput, history, config })
     }
 
     // ── 3. Credits ──────────────────────────────────────────────────
@@ -644,20 +654,20 @@ export async function POST(req: NextRequest) {
         p_user_id: user.id,
         p_amount:  config.creditCost,
         p_type:    `agent_refund_${config.name}`,
+        p_ref:     null,
         p_desc:    `Refund: ${config.displayName} agent failed (${reason})`,
       })
       if (refundErr) console.error('[agents/run] refund failed:', refundErr)
     }
 
     // ── 4. Run the model ────────────────────────────────────────────
-    let anthropic: Anthropic
+    let modelProvider: ReturnType<typeof getAgentModelProvider>
     try {
-      anthropic = getAnthropicClient()
-    } catch {
-      // Refund credits — model not configured, not the user's fault
-      await refundCredits('AI not configured')
+      modelProvider = getAgentModelProvider()
+    } catch (providerErr) {
+      await refundCredits('AI provider not configured')
       return NextResponse.json(
-        { error: 'AI agents are not configured on this server (missing ANTHROPIC_API_KEY)' },
+        { error: providerErr instanceof Error ? providerErr.message : 'AI agents are not configured on this server' },
         { status: 503 },
       )
     }
@@ -678,28 +688,17 @@ export async function POST(req: NextRequest) {
     let response: any
     try {
       const request: any = {
-        model:      config.model,
-        max_tokens: config.maxTokens,
-        system:     `${config.systemPrompt}${CHAT_FORMATTING_RULE}`,
-        messages: [
-          { role: 'user', content: buildUserContent(effectiveInput, attachments) as any },
-        ],
+        model: config.model,
+        maxTokens: config.maxTokens,
+        system: `${config.systemPrompt}${CHAT_FORMATTING_RULE}${CONVERSATIONAL_WORKFLOW_RULE}${buildAgentConversationContext(history, taskSummary)}`,
+        messages: [{ role: 'user', content: buildUserContent(effectiveInput, attachments) as any }],
+        webSearch: config.webSearch,
       }
 
-      if (config.webSearch) {
-        request.tools = [
-          {
-            type: 'web_search_20250305',
-            name: 'web_search',
-            max_uses: 5,
-          },
-        ]
-      }
-
-      response = await anthropic.messages.create(request)
+      response = await modelProvider.create(request)
     } catch (modelErr) {
       // Refund credits — model call failed, not the user's fault
-      console.error('[agents/run] Claude API error:', modelErr)
+      console.error('[agents/run] model provider error:', modelErr)
       await refundCredits('model error')
       return NextResponse.json(
         { error: 'Agent run failed — your credits have been refunded.' },
@@ -734,10 +733,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ...result,
       newBalance: typeof newBalance === 'number' ? newBalance : null,
-      model:      config.model,
+      model: response.model,
       tokens: {
-        input:  response.usage?.input_tokens  ?? null,
-        output: response.usage?.output_tokens ?? null,
+        input:  response.usage.inputTokens,
+        output: response.usage.outputTokens,
       },
     })
   } catch (err) {

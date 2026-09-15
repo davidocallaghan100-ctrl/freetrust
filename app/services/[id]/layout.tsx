@@ -10,7 +10,7 @@ export async function generateMetadata(
   try {
     const { id } = await params
     const res = await fetch(
-      `${SUPABASE}/rest/v1/listings?id=eq.${id}&select=title,description,cover_image&limit=1`,
+      `${SUPABASE}/rest/v1/listings?id=eq.${id}&select=title,description,cover_image,images&limit=1`,
       {
         headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
         next: { revalidate: 3600 },
@@ -22,8 +22,11 @@ export async function generateMetadata(
 
     const title = listing.title ?? 'Service'
     const description = (listing.description ?? '').slice(0, 155)
-    const ogImage = listing.cover_image
-      ?? `${BASE}/api/og?title=${encodeURIComponent(title)}&category=Services`
+    // Keep social crawlers on freetrust.co. Direct Supabase Storage URLs can
+    // stall in Facebook's link-preview fetcher even though they load in a
+    // normal browser. The route serves the listing image when it is usable and
+    // falls back to the static FreeTrust logo when it is not.
+    const ogImage = `${BASE}/api/services/${encodeURIComponent(id)}/og-image?v=2`
 
     return {
       title,

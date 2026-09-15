@@ -29,6 +29,127 @@ async function canReactAsOrganisation(admin: ReturnType<typeof createAdminClient
   return Boolean(created)
 }
 
+type CrossTableReference = {
+  itemType: 'article' | 'service'
+  itemId: string
+}
+
+type CrossTableTarget = CrossTableReference & {
+  ownerId: string
+  canonicalUrl: string
+}
+
+function parseCrossTableReference(postId: string): CrossTableReference | null {
+  if (postId.startsWith('article-')) return { itemType: 'article', itemId: postId.slice('article-'.length) }
+  if (postId.startsWith('service-')) return { itemType: 'service', itemId: postId.slice('service-'.length) }
+  return null
+}
+
+async function resolveCrossTableTarget(
+  admin: ReturnType<typeof createAdminClient>,
+  reference: CrossTableReference,
+): Promise<CrossTableTarget | null> {
+  if (reference.itemType === 'article') {
+    const { data } = await admin
+      .from('articles')
+      .select('id, author_id, slug')
+      .eq('id', reference.itemId)
+      .eq('status', 'published')
+      .maybeSingle()
+
+    if (!data?.author_id || !data.slug) return null
+    return {
+      ...reference,
+      ownerId: data.author_id,
+      canonicalUrl: `/articles/${data.slug}`,
+    }
+  }
+
+  const { data } = await admin
+    .from('listings')
+    .select('id, seller_id')
+    .eq('id', reference.itemId)
+    .eq('product_type', 'service')
+    .eq('status', 'active')
+    .maybeSingle()
+
+  if (!data?.seller_id) return null
+  return {
+    ...reference,
+    ownerId: data.seller_id,
+    canonicalUrl: `/services/${data.id}`,
+  }
+}
+
+async function toggleCrossTableReaction(
+  admin: ReturnType<typeof createAdminClient>,
+  target: CrossTableTarget,
+  userId: string,
+  type: string,
+  postedAsOrganisationId: string | null,
+) {
+  let existingQuery = admin
+    .from('feed_item_reactions')
+    .select('id, reaction_type')
+    .eq('item_type', target.itemType)
+    .eq('item_id', target.itemId)
+    .eq('user_id', userId)
+
+  existingQuery = postedAsOrganisationId
+    ? existingQuery.eq('posted_as_organisation_id', postedAsOrganisationId)
+    : existingQuery.is('posted_as_organisation_id', null)
+
+  const { data: existing, error: existingError } = await existingQuery.maybeSingle()
+  if (existingError) throw existingError
+
+  let userReaction: string | null = null
+  if (existing) {
+    if (existing.reaction_type === type) {
+      const { error } = await admin.from('feed_item_reactions').delete().eq('id', existing.id)
+      if (error) throw error
+    } else {
+      const { error } = await admin
+        .from('feed_item_reactions')
+        .update({ reaction_type: type })
+        .eq('id', existing.id)
+      if (error) throw error
+      userReaction = type
+    }
+  } else {
+    const { error } = await admin
+      .from('feed_item_reactions')
+      .insert({
+        item_type: target.itemType,
+        item_id: target.itemId,
+        user_id: userId,
+        reaction_type: type,
+        posted_as_organisation_id: postedAsOrganisationId,
+      })
+    if (error) throw error
+    userReaction = type
+  }
+
+  const { data: rows, error: countsError } = await admin
+    .from('feed_item_reactions')
+    .select('reaction_type')
+    .eq('item_type', target.itemType)
+    .eq('item_id', target.itemId)
+  if (countsError) throw countsError
+
+  const counts: Record<string, number> = { trust: 0, love: 0, insightful: 0, collab: 0 }
+  for (const row of rows ?? []) {
+    const reactionType = (row as { reaction_type: string }).reaction_type
+    if (reactionType in counts) counts[reactionType]++
+  }
+
+  return {
+    user_reaction: userReaction,
+    counts,
+    total: counts.trust + counts.love + counts.insightful + counts.collab,
+    changed: !existing || existing.reaction_type !== type,
+  }
+}
+
 // POST /api/feed/posts/[id]/react { type }
 // - If user has no reaction → insert
 // - If user has the same reaction → delete (toggle off)
@@ -62,6 +183,50 @@ export async function POST(
       if (!allowed) {
         return NextResponse.json({ error: 'You are not allowed to react as this page' }, { status: 403 })
       }
+    }
+
+    // Articles and services are composed into the newsfeed with synthetic
+    // IDs (article-<uuid> / service-<uuid>). They cannot use feed_reactions,
+    // whose post_id is correctly constrained to feed_posts(id).
+    const crossTableReference = parseCrossTableReference(postId)
+    if (crossTableReference) {
+      const target = await resolveCrossTableTarget(admin, crossTableReference)
+      if (!target) {
+        return NextResponse.json({ error: 'Feed item not found' }, { status: 404 })
+      }
+
+      const result = await toggleCrossTableReaction(admin, target, user.id, type, postedAsOrganisationId)
+      if (result.changed && result.user_reaction && target.ownerId !== user.id) {
+        let reactorName = 'Someone'
+        if (postedAsOrganisationId) {
+          const { data: org } = await admin
+            .from('organisations')
+            .select('name')
+            .eq('id', postedAsOrganisationId)
+            .maybeSingle()
+          reactorName = org?.name ?? 'A page'
+        } else {
+          const { data: reactor } = await admin
+            .from('profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .maybeSingle()
+          reactorName = reactor?.full_name ?? 'Someone'
+        }
+        sendEmail({
+          type: 'new_reaction',
+          userId: target.ownerId,
+          payload: { reactorName, reactionType: type, postId, postUrl: target.canonicalUrl },
+        }).catch(() => {})
+        sendPushNotification({
+          userId: target.ownerId,
+          title: `${reactorName} reacted to your ${target.itemType}`,
+          message: `They gave it a "${type}" reaction`,
+          url: target.canonicalUrl,
+        }).catch(() => {})
+      }
+
+      return NextResponse.json(result)
     }
 
     // Check existing reaction

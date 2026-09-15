@@ -1,7 +1,7 @@
 'use client'
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -43,18 +43,22 @@ type Dispute = {
 }
 
 type WalletData = {
-  balance: number
-  currency: string
-  pending_balance: number
+  available: number
+  pendingPayout: number
+  totalEarned: number
+  totalSpent: number
+  totalDeposited: number
+  trustBalance: number
 }
 
 type WalletTx = {
   id: string
+  category: 'earned' | 'spent' | 'pending' | 'withdrawn' | 'trust' | 'deposit' | 'transfer_sent' | 'transfer_received'
   amount: number
-  type: 'credit' | 'debit'
+  currency: 'EUR' | 'TRUST'
   description: string
-  created_at: string
-  reference_id: string | null
+  date: string
+  status: string
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -72,6 +76,7 @@ const C = {
 const TABS = [
   { id: 'analytics', label: '📊 Analytics' },
   { id: 'management', label: '⚙️ My Gigs' },
+  { id: 'bookings', label: '🏠 Bookings' },
   { id: 'performance', label: '📈 Performance' },
   { id: 'disputes', label: '⚖️ Disputes' },
   { id: 'payments', label: '💳 Payments' },
@@ -530,7 +535,6 @@ function DisputesTab({ userId }: { userId: string }) {
 // ── Payments Tab ──────────────────────────────────────────────────────────────
 
 function PaymentsTab({ userId }: { userId: string }) {
-  const router = useRouter()
   const [wallet, setWallet] = useState<WalletData | null>(null)
   const [txs, setTxs] = useState<WalletTx[]>([])
   const [loading, setLoading] = useState(true)
@@ -539,34 +543,29 @@ function PaymentsTab({ userId }: { userId: string }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const [walletRes, txRes] = await Promise.allSettled([
-          fetch('/api/wallet', { cache: 'no-store' }),
-          (async () => {
-            const sb = createClient()
-            const { data } = await sb.from('wallet_transactions').select('id, amount, type, description, created_at, reference_id').eq('user_id', userId).order('created_at', { ascending: false }).limit(30)
-            return data
-          })(),
-        ])
-
-        if (walletRes.status === 'fulfilled' && walletRes.value.ok) {
-          const d = await walletRes.value.json()
-          setWallet({ balance: d.balance ?? 0, currency: d.currency ?? 'EUR', pending_balance: d.pending_balance ?? 0 })
+        const res = await fetch('/api/wallet', { cache: 'no-store' })
+        if (res.ok) {
+          const d = await res.json()
+          setWallet({
+            available: d.money?.available ?? 0,
+            pendingPayout: d.money?.pendingPayout ?? 0,
+            totalEarned: d.money?.totalEarned ?? 0,
+            totalSpent: d.money?.totalSpent ?? 0,
+            totalDeposited: d.money?.totalDeposited ?? 0,
+            trustBalance: d.trust?.balance ?? 0,
+          })
+          setTxs((d.transactions ?? []) as WalletTx[])
         } else {
-          setWallet({ balance: 0, currency: 'EUR', pending_balance: 0 })
-        }
-
-        if (txRes.status === 'fulfilled' && txRes.value) {
-          setTxs(txRes.value as WalletTx[])
+          setWallet({ available: 0, pendingPayout: 0, totalEarned: 0, totalSpent: 0, totalDeposited: 0, trustBalance: 0 })
         }
       } catch {
-        setWallet({ balance: 0, currency: 'EUR', pending_balance: 0 })
+        setWallet({ available: 0, pendingPayout: 0, totalEarned: 0, totalSpent: 0, totalDeposited: 0, trustBalance: 0 })
       } finally { setLoading(false) }
     }
     load()
   }, [userId])
 
-  const earned = txs.filter(t => t.type === 'credit').reduce((s, t) => s + t.amount, 0)
-  const spent = txs.filter(t => t.type === 'debit').reduce((s, t) => s + t.amount, 0)
+  const eurTxs = txs.filter(t => t.currency === 'EUR')
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -575,16 +574,16 @@ function PaymentsTab({ userId }: { userId: string }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '1rem' }}>
           <div style={{ background: 'linear-gradient(135deg,rgba(56,189,248,0.15),rgba(129,140,248,0.1))', border: `1px solid ${C.border}`, borderRadius: 14, padding: '1.25rem' }}>
             <div style={{ fontSize: '0.72rem', color: C.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Wallet Balance</div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: C.accent }}>{fmt(wallet?.balance ?? 0, wallet?.currency)}</div>
-            {(wallet?.pending_balance ?? 0) > 0 && <div style={{ fontSize: '0.72rem', color: '#fbbf24', marginTop: 4 }}>₮{wallet?.pending_balance?.toFixed(2)} pending</div>}
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: C.accent }}>{fmt(wallet?.available ?? 0)}</div>
+            {(wallet?.pendingPayout ?? 0) > 0 && <div style={{ fontSize: '0.72rem', color: '#fbbf24', marginTop: 4 }}>{fmt(wallet?.pendingPayout ?? 0)} pending</div>}
           </div>
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '1.25rem' }}>
             <div style={{ fontSize: '0.72rem', color: C.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Total Earned</div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#34d399' }}>{fmt(earned)}</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#34d399' }}>{fmt(wallet?.totalEarned ?? 0)}</div>
           </div>
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '1.25rem' }}>
-            <div style={{ fontSize: '0.72rem', color: C.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Fees Paid</div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--ft-danger)' }}>{fmt(spent)}</div>
+            <div style={{ fontSize: '0.72rem', color: C.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Total Spent</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--ft-danger)' }}>{fmt(wallet?.totalSpent ?? 0)}</div>
           </div>
         </div>
       )}
@@ -609,24 +608,27 @@ function PaymentsTab({ userId }: { userId: string }) {
           <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} h={36} />)}
           </div>
-        ) : txs.length === 0 ? (
+        ) : eurTxs.length === 0 ? (
           <div style={{ padding: '2rem', textAlign: 'center', color: C.muted, fontSize: '0.85rem' }}>No transactions yet</div>
         ) : (
           <div>
-            {txs.map((tx, i) => (
-              <div key={tx.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.8rem 1rem', borderBottom: i < txs.length - 1 ? `1px solid rgba(56,189,248,0.05)` : 'none' }}>
-                <div style={{ width: 34, height: 34, borderRadius: '50%', background: tx.type === 'credit' ? 'rgba(52,211,153,0.15)' : 'rgba(248,113,113,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>
-                  {tx.type === 'credit' ? '↓' : '↑'}
+            {eurTxs.map((tx, i) => {
+              const isCredit = tx.amount >= 0
+              return (
+                <div key={tx.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.8rem 1rem', borderBottom: i < eurTxs.length - 1 ? `1px solid rgba(56,189,248,0.05)` : 'none' }}>
+                  <div style={{ width: 34, height: 34, borderRadius: '50%', background: isCredit ? 'rgba(52,211,153,0.15)' : 'rgba(248,113,113,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>
+                    {isCredit ? '↓' : '↑'}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.description}</div>
+                    <div style={{ fontSize: '0.7rem', color: C.muted, marginTop: 2 }}>{timeAgo(tx.date)}</div>
+                  </div>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 800, color: isCredit ? '#34d399' : 'var(--ft-danger)', flexShrink: 0 }}>
+                    {isCredit ? '+' : '-'}{fmt(Math.abs(tx.amount))}
+                  </div>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.description}</div>
-                  <div style={{ fontSize: '0.7rem', color: C.muted, marginTop: 2 }}>{timeAgo(tx.created_at)}</div>
-                </div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: tx.type === 'credit' ? '#34d399' : 'var(--ft-danger)', flexShrink: 0 }}>
-                  {tx.type === 'credit' ? '+' : '-'}{fmt(tx.amount)}
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
@@ -644,6 +646,208 @@ function PaymentsTab({ userId }: { userId: string }) {
               Got it
             </button>
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Bookings Tab (owner side — Rent & Share booking calendar/management) ────
+// Lives inside Earn because check-in on a booking triggers the wallet payout,
+// so it belongs with the rest of the owner's earning activity.
+
+type RentBookingRow = {
+  id: string
+  listing_id: string
+  requester_id: string
+  from_date: string
+  to_date: string
+  message: string | null
+  status: 'pending' | 'approved' | 'declined' | 'cancelled' | 'completed'
+  amount: number | null
+  currency: string
+  order_status?: string | null
+  checked_in_at: string | null
+  created_at: string
+  perspective: 'buyer' | 'seller'
+  requester?: { full_name: string | null; avatar_url: string | null } | null
+  rent_share_listings?: { id: string; title: string; images: string[] } | { id: string; title: string; images: string[] }[] | null
+}
+
+const BOOKING_STATUS_COLOR: Record<string, { bg: string; color: string; label: string }> = {
+  pending:   { bg: 'rgba(245,158,11,0.15)', color: '#fbbf24', label: 'Pending' },
+  approved:  { bg: 'rgba(16,185,129,0.15)', color: '#34d399', label: 'Approved' },
+  declined:  { bg: 'rgba(239,68,68,0.15)',  color: 'var(--ft-danger)', label: 'Declined' },
+  cancelled: { bg: 'rgba(100,116,139,0.15)', color: 'var(--ft-text-tertiary)', label: 'Cancelled' },
+  completed: { bg: 'rgba(56,189,248,0.15)', color: 'var(--ft-accent)', label: 'Checked-in · Completed' },
+}
+
+function listingOf(row: RentBookingRow) {
+  return Array.isArray(row.rent_share_listings) ? row.rent_share_listings[0] : row.rent_share_listings
+}
+
+function BookingsTab({ userId }: { userId: string }) {
+  const [bookings, setBookings] = useState<RentBookingRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [actionError, setActionError] = useState<Record<string, string>>({})
+  const [actingOn, setActingOn] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch('/api/rent-share/requests?role=seller', { cache: 'no-store' })
+      if (res.ok) {
+        const d = await res.json()
+        setBookings((d.requests ?? []) as RentBookingRow[])
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load, userId])
+
+  const respond = async (id: string, action: 'approve' | 'decline') => {
+    setActingOn(id)
+    setActionError(prev => ({ ...prev, [id]: '' }))
+    try {
+      const res = await fetch(`/api/rent-share/requests/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
+      const d = await res.json()
+      if (!res.ok) {
+        setActionError(prev => ({ ...prev, [id]: d.error ?? 'Something went wrong' }))
+      } else {
+        await load()
+      }
+    } catch {
+      setActionError(prev => ({ ...prev, [id]: 'Network error' }))
+    } finally {
+      setActingOn(null)
+    }
+  }
+
+  const pending = bookings.filter(b => b.status === 'pending')
+  const upcoming = bookings.filter(b => b.status === 'approved').sort((a, b) => a.from_date.localeCompare(b.from_date))
+  const past = bookings.filter(b => b.status === 'completed' || b.status === 'declined' || b.status === 'cancelled')
+  const paidOut = bookings.filter(b => b.status === 'completed').reduce((sum, booking) => sum + Number(booking.amount ?? 0), 0)
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} h={70} />)}
+      </div>
+    )
+  }
+
+  if (bookings.length === 0) {
+    return (
+      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '2.5rem 1.5rem', textAlign: 'center' }}>
+        <div style={{ fontSize: 36, marginBottom: 10 }}>🏠</div>
+        <div style={{ fontWeight: 700, color: C.text, marginBottom: 6 }}>No booking requests yet</div>
+        <div style={{ fontSize: '0.85rem', color: C.muted, marginBottom: '1rem' }}>Requests for your Rent & Share listings will appear here.</div>
+        <Link href="/rent-share/new" style={{ color: C.accent, textDecoration: 'none', fontSize: '0.85rem', fontWeight: 700, border: `1px solid ${C.border}`, borderRadius: 8, padding: '0.5rem 1rem', display: 'inline-block' }}>
+          + List an item
+        </Link>
+      </div>
+    )
+  }
+
+  const renderRow = (b: RentBookingRow) => {
+    const listing = listingOf(b)
+    const colors = BOOKING_STATUS_COLOR[b.status] ?? BOOKING_STATUS_COLOR.pending
+    const payoutStatus = b.status === 'completed'
+      ? 'Released to wallet'
+      : b.order_status === 'pending_escrow'
+        ? 'Pending until check-in'
+        : b.status === 'approved'
+          ? 'Awaiting escrow order'
+          : 'Not applicable'
+    return (
+      <div key={b.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '1rem 1.1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
+          <div style={{ minWidth: 0 }}>
+            <Link href={`/rent-share/${b.listing_id}`} style={{ color: C.text, textDecoration: 'none', fontWeight: 700, fontSize: '0.9rem' }}>
+              {listing?.title ?? 'Listing'}
+            </Link>
+            <div style={{ fontSize: '0.78rem', color: C.muted, marginTop: 2 }}>
+              {b.requester?.full_name ?? 'A member'} · Check-in {b.from_date} · Check-out {b.to_date}
+            </div>
+            {b.message && <div style={{ fontSize: '0.78rem', color: C.subtle, marginTop: 4, fontStyle: 'italic' }}>&ldquo;{b.message}&rdquo;</div>}
+          </div>
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '0.25rem 0.6rem', borderRadius: 999, background: colors.bg, color: colors.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              {colors.label}
+            </span>
+            {b.amount != null && <div style={{ fontSize: '0.85rem', fontWeight: 800, color: C.text, marginTop: 6 }}>{fmt(b.amount, b.currency)}</div>}
+          </div>
+        </div>
+
+        {b.status === 'pending' && (
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+            <button
+              onClick={() => respond(b.id, 'approve')}
+              disabled={actingOn === b.id}
+              style={{ flex: 1, background: 'linear-gradient(135deg,#2dd4bf,#0891b2)', border: 'none', borderRadius: 8, padding: '0.55rem 0', color: 'var(--ft-bg)', fontWeight: 700, fontSize: '0.8rem', cursor: actingOn === b.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
+            >
+              {actingOn === b.id ? '…' : '✅ Approve'}
+            </button>
+            <button
+              onClick={() => respond(b.id, 'decline')}
+              disabled={actingOn === b.id}
+              style={{ flex: 1, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '0.55rem 0', color: '#ef4444', fontWeight: 700, fontSize: '0.8rem', cursor: actingOn === b.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
+            >
+              ❌ Decline
+            </button>
+          </div>
+        )}
+        {b.status === 'approved' && (
+          <div style={{ fontSize: '0.75rem', color: '#fbbf24' }}>⏳ Payout status: {payoutStatus} — releases automatically when the guest confirms check-in.</div>
+        )}
+        {b.status === 'completed' && b.checked_in_at && (
+          <div style={{ fontSize: '0.75rem', color: '#34d399' }}>💰 Payout status: {payoutStatus} on check-in ({new Date(b.checked_in_at).toLocaleDateString('en-IE')})</div>
+        )}
+        {actionError[b.id] && (
+          <div style={{ fontSize: '0.75rem', color: 'var(--ft-danger)' }}>{actionError[b.id]}</div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {/* Calendar overview */}
+      <div style={{ background: 'linear-gradient(135deg,rgba(45,212,191,0.1),rgba(56,189,248,0.06))', border: `1px solid ${C.border}`, borderRadius: 14, padding: '1.1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 800, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.06em' }}>📅 Booking calendar</div>
+            <div style={{ fontSize: '0.82rem', color: C.muted, marginTop: 4 }}>Incoming requests, upcoming check-ins and payout tracking</div>
+          </div>
+          <Link href="/rent-share" style={{ color: C.accent, textDecoration: 'none', fontSize: '0.78rem', fontWeight: 700 }}>View listings →</Link>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(100px,1fr))', gap: '0.6rem', marginTop: '1rem' }}>
+          <div style={{ background: 'rgba(245,158,11,0.1)', borderRadius: 10, padding: '0.7rem' }}><div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#fbbf24' }}>{pending.length}</div><div style={{ fontSize: '0.68rem', color: C.muted }}>Awaiting response</div></div>
+          <div style={{ background: 'rgba(52,211,153,0.1)', borderRadius: 10, padding: '0.7rem' }}><div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#34d399' }}>{upcoming.length}</div><div style={{ fontSize: '0.68rem', color: C.muted }}>Upcoming stays</div></div>
+          <div style={{ background: 'rgba(56,189,248,0.1)', borderRadius: 10, padding: '0.7rem' }}><div style={{ fontSize: '1.2rem', fontWeight: 900, color: C.accent }}>{fmt(paidOut)}</div><div style={{ fontSize: '0.68rem', color: C.muted }}>Paid out</div></div>
+        </div>
+      </div>
+      {pending.length > 0 && (
+        <div>
+          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.6rem' }}>Pending requests</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>{pending.map(renderRow)}</div>
+        </div>
+      )}
+      {upcoming.length > 0 && (
+        <div>
+          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.6rem' }}>Upcoming check-ins</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>{upcoming.map(renderRow)}</div>
+        </div>
+      )}
+      {past.length > 0 && (
+        <div>
+          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.6rem' }}>History</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>{past.map(renderRow)}</div>
         </div>
       )}
     </div>
@@ -695,24 +899,45 @@ function PageSkeleton() {
   )
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
+// ── Main Page (inner — needs Suspense because it uses useSearchParams) ──────
 
-export default function GigEconomyPage() {
+function GigEconomyPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [userId, setUserId] = useState<string | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('analytics')
+  const initialTab = (searchParams.get('tab') && TABS.some(t => t.id === searchParams.get('tab')))
+    ? (searchParams.get('tab') as string)
+    : 'analytics'
+  const [activeTab, setActiveTab] = useState(initialTab)
   // Track which tabs have been visited so they stay mounted (avoids re-fetching
   // data when switching back to a previously loaded tab).
-  const [mountedTabs, setMountedTabs] = useState<Set<string>>(new Set(['analytics']))
+  const [mountedTabs, setMountedTabs] = useState<Set<string>>(new Set([initialTab]))
 
   useEffect(() => {
     const sb = createClient()
-    sb.auth.getUser().then(({ data }) => {
-      if (!data.user) { router.push('/login'); return }
-      setUserId(data.user.id)
+    // Use getSession() instead of getUser() — getUser() makes a network round-trip
+    // to the Supabase Auth server on every load, blocking all tab content from
+    // rendering before any tab's own data fetch even starts. getSession() reads
+    // the already-verified local session (same pattern used in lib/supabase/client.ts,
+    // components/Nav.tsx, components/BottomNav.tsx, components/profile/ProfilePage.tsx).
+    // Downstream data queries are still protected by RLS regardless.
+    let cancelled = false
+    sb.auth.getSession().then(({ data }) => {
+      if (cancelled) return
+      if (!data.session?.user) {
+        setAuthLoading(false)
+        router.push('/login')
+        return
+      }
+      setUserId(data.session.user.id)
       setAuthLoading(false)
+    }).catch(() => {
+      if (cancelled) return
+      setAuthLoading(false)
+      router.push('/login')
     })
+    return () => { cancelled = true }
   }, [router])
 
   const handleTabChange = (tabId: string) => {
@@ -744,8 +969,12 @@ export default function GigEconomyPage() {
             </Link>
           </div>
 
-          {/* Tab bar */}
-          <div style={{ display: 'flex', gap: 0, overflowX: 'auto', scrollbarWidth: 'none', marginTop: '0.5rem' }}>
+          {/* Tab bar — horizontal swipe/scroll only. touchAction: 'pan-x' locks the
+              browser's touch gesture handling on this element to horizontal panning
+              so a vertical drag over the tab strip never scrolls/drags it (it should
+              instead fall through to normal page vertical scroll). overflowY hidden
+              is a defensive backstop in case any child content ever overflows. */}
+          <div style={{ display: 'flex', gap: 0, overflowX: 'auto', overflowY: 'hidden', touchAction: 'pan-x', scrollbarWidth: 'none', marginTop: '0.5rem' }}>
             {TABS.map(tab => (
               <button
                 key={tab.id}
@@ -766,6 +995,7 @@ export default function GigEconomyPage() {
           <>
             <div style={{ display: activeTab === 'analytics'   ? 'block' : 'none' }}>{mountedTabs.has('analytics')   && <AnalyticsTab   userId={userId} />}</div>
             <div style={{ display: activeTab === 'management'  ? 'block' : 'none' }}>{mountedTabs.has('management')  && <ManagementTab  userId={userId} />}</div>
+            <div style={{ display: activeTab === 'bookings'    ? 'block' : 'none' }}>{mountedTabs.has('bookings')    && <BookingsTab    userId={userId} />}</div>
             <div style={{ display: activeTab === 'performance' ? 'block' : 'none' }}>{mountedTabs.has('performance') && <PerformanceTab userId={userId} />}</div>
             <div style={{ display: activeTab === 'disputes'    ? 'block' : 'none' }}>{mountedTabs.has('disputes')    && <DisputesTab   userId={userId} />}</div>
             <div style={{ display: activeTab === 'payments'    ? 'block' : 'none' }}>{mountedTabs.has('payments')    && <PaymentsTab   userId={userId} />}</div>
@@ -773,5 +1003,15 @@ export default function GigEconomyPage() {
         )}
       </div>
     </div>
+  )
+}
+
+// ── Default export wrapped in Suspense (required for useSearchParams) ───────
+
+export default function GigEconomyPage() {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <GigEconomyPageInner />
+    </Suspense>
   )
 }

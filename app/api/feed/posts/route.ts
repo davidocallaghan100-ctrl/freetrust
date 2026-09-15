@@ -36,6 +36,8 @@ type FeedItem = {
     slug: string | null
     logo_url: string | null
   } | null
+  reactions?: { trust: number; love: number; insightful: number; collab: number; total: number }
+  user_reaction?: string | null
   // Poll vote data (only present for type === 'poll')
   poll_vote_counts?: Record<number, number> | null
   user_poll_vote?: number | null
@@ -86,6 +88,73 @@ async function withProfileVerificationBadges<T extends { profiles: FeedItem['pro
   })
 }
 
+type ReactionSummary = { trust: number; love: number; insightful: number; collab: number; total: number }
+
+async function withSideTableReactions(
+  supabase: SupabaseLike,
+  items: FeedItem[],
+  itemType: 'article' | 'service',
+  userId: string | null,
+): Promise<FeedItem[]> {
+  if (items.length === 0) return items
+
+  const prefix = `${itemType}-`
+  const itemIds = items
+    .map(item => item.id.startsWith(prefix) ? item.id.slice(prefix.length) : null)
+    .filter((id): id is string => Boolean(id))
+  if (itemIds.length === 0) return items
+
+  const [allReactionsRes, userReactionsRes] = await Promise.all([
+    supabase
+      .from('feed_item_reactions')
+      .select('item_id, reaction_type')
+      .eq('item_type', itemType)
+      .in('item_id', itemIds),
+    userId
+      ? supabase
+          .from('feed_item_reactions')
+          .select('item_id, reaction_type')
+          .eq('item_type', itemType)
+          .eq('user_id', userId)
+          .in('item_id', itemIds)
+      : Promise.resolve({ data: [], error: null }),
+  ])
+
+  // Keep the feed available during a rolling deploy if the database migration
+  // has not reached a replica yet. The reaction endpoint will report the real
+  // error instead of silently writing to the wrong table.
+  if (allReactionsRes.error) {
+    console.warn('[feed/posts] side-table reactions lookup skipped:', allReactionsRes.error.message)
+    return items
+  }
+
+  const empty = (): ReactionSummary => ({ trust: 0, love: 0, insightful: 0, collab: 0, total: 0 })
+  const counts: Record<string, ReactionSummary> = {}
+  for (const row of (allReactionsRes.data ?? []) as { item_id: string; reaction_type: string }[]) {
+    const summary = counts[row.item_id] ?? (counts[row.item_id] = empty())
+    if (row.reaction_type in summary) {
+      summary[row.reaction_type as keyof Omit<ReactionSummary, 'total'>]++
+      summary.total++
+    }
+  }
+
+  const userReactions: Record<string, string> = {}
+  if (!userReactionsRes.error) {
+    for (const row of (userReactionsRes.data ?? []) as { item_id: string; reaction_type: string }[]) {
+      userReactions[row.item_id] = row.reaction_type
+    }
+  }
+
+  return items.map(item => {
+    const itemId = item.id.startsWith(prefix) ? item.id.slice(prefix.length) : null
+    return {
+      ...item,
+      reactions: itemId ? (counts[itemId] ?? empty()) : empty(),
+      user_reaction: itemId ? (userReactions[itemId] ?? null) : null,
+    }
+  })
+}
+
 export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient()
@@ -105,10 +174,10 @@ export async function GET(req: NextRequest) {
 
     // ── Side-table filters: query a different table and map to FeedItem ─────
     if (filter === 'articles') {
-      return await fetchArticles(supabase, offset, limit)
+      return await fetchArticles(supabase, offset, limit, user?.id ?? null)
     }
     if (filter === 'services') {
-      return await fetchServices(supabase, offset, limit)
+      return await fetchServices(supabase, offset, limit, user?.id ?? null)
     }
     if (filter === 'jobs') {
       return await fetchJobs(supabase, offset, limit)
@@ -117,7 +186,7 @@ export async function GET(req: NextRequest) {
       return await fetchEvents(supabase, offset, limit)
     }
 
-    // ── feed_posts query (all/discover / photos / videos / trending / following) ─────
+    // ── feed_posts query (all/discover / media / photos / videos / trending / following) ─────
     // All/Discover is the canonical newsfeed. Keep it complete and stable:
     // fetch from the start of each source window, merge by created_at, then
     // apply the global page slice once. The previous wider-candidate ranking
@@ -152,7 +221,9 @@ export async function GET(req: NextRequest) {
       query = query.eq('user_id', authorId).is('posted_as_organisation_id', null)
     }
 
-    if (filter === 'photos') {
+    if (filter === 'media') {
+      query = query.or('type.eq.photo,media_type.eq.image,type.eq.video,type.eq.short,media_type.eq.video')
+    } else if (filter === 'photos') {
       query = query.or('type.eq.photo,media_type.eq.image')
     } else if (filter === 'videos') {
       query = query.or('type.eq.video,type.eq.short,media_type.eq.video')
@@ -348,7 +419,7 @@ export async function GET(req: NextRequest) {
     })))
 
     const unifiedResult = isUnifiedAll
-      ? await buildUnifiedAllFeed(supabase, feedItemsWithBadges, offset, limit, fetchLimit)
+      ? await buildUnifiedAllFeed(supabase, feedItemsWithBadges, offset, limit, fetchLimit, user?.id ?? null)
       : { posts: feedItemsWithBadges, hasMore: enriched.length === limit }
 
     return NextResponse.json({
@@ -375,10 +446,11 @@ async function buildUnifiedAllFeed(
   offset: number,
   limit: number,
   sourceWindow: number,
+  userId: string | null,
 ): Promise<{ posts: FeedItem[]; hasMore: boolean }> {
   const [articles, services, activities] = await Promise.all([
-    loadArticles(supabase, 0, sourceWindow),
-    loadServices(supabase, 0, sourceWindow),
+    loadArticles(supabase, 0, sourceWindow, userId),
+    loadServices(supabase, 0, sourceWindow, userId),
     loadActivities(supabase, 0, sourceWindow),
   ])
 
@@ -389,7 +461,7 @@ async function buildUnifiedAllFeed(
   }
 }
 
-async function loadArticles(supabase: SupabaseLike, offset: number, limit: number): Promise<FeedItem[]> {
+async function loadArticles(supabase: SupabaseLike, offset: number, limit: number, userId: string | null = null): Promise<FeedItem[]> {
   const { data, error } = await supabase
     .from('articles')
     .select(`
@@ -458,10 +530,10 @@ async function loadArticles(supabase: SupabaseLike, offset: number, limit: numbe
     }
   })
 
-  return await withProfileVerificationBadges(supabase, items)
+  return await withProfileVerificationBadges(supabase, await withSideTableReactions(supabase, items, 'article', userId))
 }
 
-async function loadServices(supabase: SupabaseLike, offset: number, limit: number): Promise<FeedItem[]> {
+async function loadServices(supabase: SupabaseLike, offset: number, limit: number, userId: string | null = null): Promise<FeedItem[]> {
   // Services live in the `listings` table with product_type='service'.
   // Same canonical pattern as app/services/page.tsx and
   // app/api/admin/content/route.ts. There is no separate `services` table.
@@ -498,7 +570,7 @@ async function loadServices(supabase: SupabaseLike, offset: number, limit: numbe
     profiles: normaliseProfile(s.seller),
   }))
 
-  return await withProfileVerificationBadges(supabase, items)
+  return await withProfileVerificationBadges(supabase, await withSideTableReactions(supabase, items, 'service', userId))
 }
 
 async function loadActivities(supabase: SupabaseLike, offset: number, limit: number): Promise<FeedItem[]> {
@@ -560,13 +632,13 @@ async function loadActivities(supabase: SupabaseLike, offset: number, limit: num
   return await withProfileVerificationBadges(supabase, items)
 }
 
-async function fetchArticles(supabase: SupabaseLike, offset: number, limit: number) {
-  const items = await loadArticles(supabase, offset, limit)
+async function fetchArticles(supabase: SupabaseLike, offset: number, limit: number, userId: string | null) {
+  const items = await loadArticles(supabase, offset, limit, userId)
   return NextResponse.json({ posts: items, hasMore: items.length === limit })
 }
 
-async function fetchServices(supabase: SupabaseLike, offset: number, limit: number) {
-  const items = await loadServices(supabase, offset, limit)
+async function fetchServices(supabase: SupabaseLike, offset: number, limit: number, userId: string | null) {
+  const items = await loadServices(supabase, offset, limit, userId)
   return NextResponse.json({ posts: items, hasMore: items.length === limit })
 }
 

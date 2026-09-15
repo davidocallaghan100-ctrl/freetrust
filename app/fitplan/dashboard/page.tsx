@@ -4,6 +4,8 @@ import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from '
 import type { CSSProperties, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { buildFitPlanCalendar, planCompletionValue, scheduledWorkoutDate, todayKey } from '@/lib/fitplan/calendar'
+import { useNativePlatform } from '@/lib/nativeApp'
+import NativeIOSRestriction from '@/components/NativeIOSRestriction'
 
 const C = { bg: '#06131f', panel: '#0c1f30', card: '#10283b', card2: '#0b1a29', ink: '#050b16', line: 'rgba(148,163,184,.18)', text: '#f8fafc', muted: '#9fb2c7', green: '#10b981', gold: '#f4c96b', blue: 'var(--ft-accent)', cyan: '#67e8f9', red: '#fb7185' }
 type FitData = { profile: any; activePlan: any; progress: any[]; checkins: any[]; messages: any[]; completions?: any[]; calendar?: any; trustBalance: number; costs: any }
@@ -62,6 +64,7 @@ function imageGeneratorPrompt(workout: any, index: number) {
 
 export default function FitPlanDashboardPage() {
   const router = useRouter()
+  const nativePlatform = useNativePlatform()
   const coachRef = useRef<HTMLDivElement | null>(null)
   const [data, setData] = useState<FitData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -82,7 +85,10 @@ export default function FitPlanDashboardPage() {
     if (!json.profile) router.push('/fitplan/onboarding')
   }
 
-  useEffect(() => { void load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (nativePlatform === null || nativePlatform === 'ios') return
+    void load()
+  }, [nativePlatform]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const shouldGenerate = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('generate') === '1'
     if (shouldGenerate && data?.profile && !data.activePlan && !busy) void generatePlan()
@@ -159,6 +165,10 @@ export default function FitPlanDashboardPage() {
 
   function workoutKey(e: KeyboardEvent<HTMLDivElement>, workout: any, index: number) {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openWorkoutInCoach(workout, index) }
+  }
+
+  if (nativePlatform === 'ios') {
+    return <NativeIOSRestriction feature="Trust Coin-powered FitPlan and coach features" />
   }
 
   if (loading) return <main style={{ minHeight: '100vh', background: C.bg, color: C.text, display: 'grid', placeItems: 'center' }}>Loading FitPlan…</main>

@@ -33,6 +33,39 @@ import { FEED_AUDIO_PLAY_EVENT, announceFeedAudioPlayback, generateFeedPlayerId 
 
 export const FREETRUST_LOGO_SRC = '/icons/freetrust-logo-website-20260521.png'
 
+type NativeWebViewBridge = {
+  postMessage: (message: string) => void
+}
+
+function postNativeMusicState(state: {
+  track: MusicTrackInfo | null
+  playing: boolean
+  currentTime: number
+  duration: number
+}) {
+  if (typeof window === 'undefined' || !(window as Window & { __FREETRUST_NATIVE_APP__?: boolean }).__FREETRUST_NATIVE_APP__) return
+  const bridge = (window as Window & { ReactNativeWebView?: NativeWebViewBridge }).ReactNativeWebView
+  if (!bridge) return
+  try {
+    bridge.postMessage(JSON.stringify({
+      type: 'freetrust-music-state',
+      track: state.track ? {
+        id: state.track.id,
+        src: state.track.src,
+        title: state.track.title,
+        artist: state.track.artist || null,
+        artwork: state.track.artwork || null,
+        backgroundImage: state.track.backgroundImage || null,
+      } : null,
+      playing: state.playing,
+      currentTime: Number.isFinite(state.currentTime) ? state.currentTime : 0,
+      duration: Number.isFinite(state.duration) ? state.duration : 0,
+    }))
+  } catch {
+    // A WebView can be torn down while a state update is being delivered.
+  }
+}
+
 export type MusicTrackInfo = {
   /** Stable unique id for this track's *source post/card* — used to tell
    * whether a given feed card is the one currently loaded into the global
@@ -82,6 +115,14 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => { currentRef.current = current }, [current])
 
+  // The native wrapper uses this as the handoff snapshot when the OS moves
+  // FreeTrust into the background. The normal web app has no bridge and is
+  // unaffected. Sending state from the single global player keeps background
+  // playback tied to the same source of truth as the visible waveform/UI.
+  useEffect(() => {
+    postNativeMusicState({ track: current, playing, currentTime, duration })
+  }, [current, playing, currentTime, duration])
+
   // Yield to any other feed audio source (video sound, soundtrack preview)
   // the moment it starts, and vice versa — every other player already
   // calls announceFeedAudioPlayback() before it becomes audible.
@@ -124,6 +165,46 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       // Session controls) still work; only the visualizer stays idle.
     }
   }, [])
+
+  // On returning from native background playback, restore the WebView player
+  // at the position reached by the native service. On background entry, the
+  // wrapper pauses this player after starting native playback so there is no
+  // double audio.
+  useEffect(() => {
+    const handleNativeAudioCommand = (event: Event) => {
+      const detail = (event as CustomEvent<{ action?: string; currentTime?: number; playing?: boolean }>).detail
+      const audio = audioRef.current
+      if (!audio || !detail) return
+
+      if (detail.action === 'pause-for-background') {
+        audio.pause()
+        setPlaying(false)
+        return
+      }
+
+      if (detail.action !== 'resume-from-background') return
+      if (typeof detail.currentTime === 'number' && Number.isFinite(detail.currentTime) && detail.currentTime >= 0) {
+        try { audio.currentTime = detail.currentTime } catch { /* metadata may not be ready yet */ }
+        setCurrentTime(detail.currentTime)
+      }
+      if (detail.playing) {
+        ensureAudioGraph()
+        void audio.play().then(() => {
+          setBlocked(false)
+        }).catch(() => {
+          audio.pause()
+          setPlaying(false)
+          setBlocked(true)
+        })
+      } else {
+        audio.pause()
+        setPlaying(false)
+      }
+    }
+
+    window.addEventListener('freetrust:native-audio-command', handleNativeAudioCommand)
+    return () => window.removeEventListener('freetrust:native-audio-command', handleNativeAudioCommand)
+  }, [ensureAudioGraph])
 
   const play = useCallback(async (track: MusicTrackInfo) => {
     const audio = audioRef.current

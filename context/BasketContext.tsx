@@ -18,6 +18,7 @@ export interface BasketItem {
   retailer_name?: string | null
   retailer_url?: string | null
   seller_id?: string | null
+  listing_product_type?: 'physical' | 'digital' | 'service' | null
 }
 
 interface BasketContextValue {

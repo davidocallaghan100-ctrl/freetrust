@@ -16,6 +16,7 @@ import FindOnlineTab from '@/components/marketplace/FindOnlineTab'
 import { PRODUCT_CATEGORIES, PRODUCTS_INITIAL_DISPLAY, PRODUCTS_LOAD_MORE_BATCH, categoryMeta, isExternalDigitalCategory, normaliseExternalCategory } from '@/lib/externalProductCategories'
 import { useBasket, type BasketItem } from '@/context/BasketContext'
 import { FREETRUST_PRODUCT_FEE_LABEL, formatEuroFromCents } from '@/lib/checkoutConfig'
+import { useNativePlatform } from '@/lib/nativeApp'
 import { isAffiliateTrackingEnabled, stripFreetrustReferralParams, toAffiliateUrl } from '@/lib/skimlinks'
 
 let stripePromise: Promise<Stripe | null> | null = null
@@ -627,10 +628,11 @@ function BasketPaymentElement({ clientSecret, totalCents, onPaid }: {
   )
 }
 
-function BasketDrawer({ open, onClose, onRetailer }: {
+function BasketDrawer({ open, onClose, onRetailer, isIOSNative }: {
   open: boolean
   onClose: () => void
   onRetailer: (item: BasketItem) => void
+  isIOSNative: boolean
 }) {
   const t = useTranslations('productsPage')
   const basket = useBasket()
@@ -643,6 +645,7 @@ function BasketDrawer({ open, onClose, onRetailer }: {
     order_id: string
     total_cents: number
   } | null>(null)
+  const hasDigitalCommunityItem = isIOSNative && basket.communityItems.some(item => item.listing_product_type === 'digital')
 
   async function checkoutCommunityItems() {
     setCheckingOut(true)
@@ -722,7 +725,8 @@ function BasketDrawer({ open, onClose, onRetailer }: {
                 <span style={{ color: '#fff', fontWeight: 900 }}>{t('basket.total')}</span>
                 <span style={{ color: '#00c2cb', fontWeight: 950, fontSize: 20 }}>{formatEuroFromCents(basket.communityTotalCents)}</span>
               </div>
-              <button onClick={checkoutCommunityItems} disabled={checkingOut || basket.communityTotalCents <= 0} style={{ width: '100%', marginTop: 14, padding: '13px 14px', borderRadius: 12, border: 'none', background: '#00c2cb', color: '#001014', fontWeight: 950, cursor: checkingOut ? 'wait' : 'pointer', fontSize: 15 }}>
+              {hasDigitalCommunityItem && <p style={{ margin: '10px 0 0', color: 'var(--ft-text-secondary)', fontSize: 12, lineHeight: 1.45 }}>Digital purchases are available at freetrust.co in a web browser.</p>}
+              <button onClick={checkoutCommunityItems} disabled={checkingOut || basket.communityTotalCents <= 0 || hasDigitalCommunityItem} style={{ width: '100%', marginTop: 14, padding: '13px 14px', borderRadius: 12, border: 'none', background: '#00c2cb', color: '#001014', fontWeight: 950, cursor: checkingOut || hasDigitalCommunityItem ? 'default' : 'pointer', fontSize: 15, opacity: hasDigitalCommunityItem ? 0.55 : 1 }}>
                 {checkingOut ? t('checkout.creating') : checkoutIntent ? t('checkout.refresh') : t('checkout.communityItems')}
               </button>
               {checkoutMessage && <p style={{ margin: '10px 0 0', color: '#34d399', fontSize: 12, lineHeight: 1.45 }}>{checkoutMessage}</p>}
@@ -793,6 +797,8 @@ function ProductsInner() {
   const { format } = useCurrency()
   const basket = useBasket()
   const searchParams = useSearchParams()
+  const nativePlatform = useNativePlatform()
+  const isIOSNative = nativePlatform === 'ios'
   const initCat = normaliseExternalCategory(searchParams.get('category') ?? 'all')
   const initType = (searchParams.get('type') ?? 'all') as 'all' | 'digital' | 'physical'
 
@@ -829,6 +835,10 @@ function ProductsInner() {
     setDisplayLimit(PRODUCTS_INITIAL_DISPLAY)
     setLoadingMore(false)
   }, [activeTab, catFilter, typeFilter, sortBy, maxPrice, minRating, countryFilter, radiusKm, filterLoc.latitude, filterLoc.longitude])
+
+  useEffect(() => {
+    if (isIOSNative && typeFilter !== 'physical') setTypeFilter('physical')
+  }, [isIOSNative, typeFilter])
 
   useEffect(() => {
     const supabase = createClient();
@@ -1046,6 +1056,7 @@ function ProductsInner() {
     }
     return p
   }).filter(p => {
+    if (isIOSNative && p.type === 'digital') return false
     if (typeFilter !== 'all' && p.type !== typeFilter) return false
     if (catFilter !== 'all' && p.category !== catFilter) return false
     if (p.price > maxPrice) return false
@@ -1067,6 +1078,7 @@ function ProductsInner() {
 
   let filteredExternal = externalProducts.filter(p => {
     const externalType = isExternalDigitalCategory(p.category) ? 'digital' : 'physical'
+    if (isIOSNative && externalType === 'digital') return false
     if (typeFilter !== 'all' && externalType !== typeFilter) return false
     if (catFilter !== 'all' && p.category !== catFilter) return false
     if (p.price_eur != null && p.price_eur > maxPrice) return false
@@ -1148,15 +1160,11 @@ function ProductsInner() {
   }
 
   async function openProductDetail(id: string) {
-    const path = `/products/${id}`
-    if (!(await requireAuth(path))) return
-    router.push(path)
+    router.push(`/products/${id}`)
   }
 
   async function openSellerProfile(sellerId: string) {
-    const path = `/profile?id=${sellerId}`
-    if (!(await requireAuth(path))) return
-    router.push(path)
+    router.push(`/profile?id=${sellerId}`)
   }
 
   async function openCreateProduct() {
@@ -1166,7 +1174,6 @@ function ProductsInner() {
   }
 
   async function openFindOnlineTab() {
-    if (!(await requireAuth('/products'))) return
     setActiveTab('find-online')
   }
 
@@ -1203,7 +1210,6 @@ function ProductsInner() {
   }
 
   async function handleExternalProductClick(product: ExternalProduct) {
-    if (!(await requireAuth('/products'))) return
     setClickedProduct(product)
   }
 
@@ -1259,7 +1265,6 @@ function ProductsInner() {
 
   async function continueToRetailer() {
     if (!clickedProduct) return
-    if (!(await requireAuth('/products'))) return
     setOpeningRetailer(true)
     const outboundProduct = clickedProduct
     window.open(toAffiliateUrl(outboundProduct.retailer_url), '_blank', 'noopener,noreferrer')
@@ -1328,7 +1333,7 @@ function ProductsInner() {
           opening={openingRetailer}
         />
       )}
-      <BasketDrawer open={basketOpen} onClose={() => setBasketOpen(false)} onRetailer={openRetailerFromBasket} />
+      <BasketDrawer open={basketOpen} onClose={() => setBasketOpen(false)} onRetailer={openRetailerFromBasket} isIOSNative={isIOSNative} />
       <style jsx global>{`
         .ft-products-title-block {
           display: flex;
@@ -1585,7 +1590,7 @@ function ProductsInner() {
 
           {/* Type filters */}
           <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2, marginBottom: '0.75rem' }}>
-            {(['all','digital','physical'] as const).map(type => (
+            {(['all','digital','physical'] as const).filter(type => !isIOSNative || type !== 'digital').map(type => (
               <button key={type} onClick={() => setTypeFilter(type)} style={pillStyle(typeFilter === type)}>
                 {type === 'all' ? t('filters.allTypes') : type === 'digital' ? `💾 ${t('filters.digital')}` : `📦 ${t('filters.physical')}`}
               </button>

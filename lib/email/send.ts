@@ -118,7 +118,7 @@ export type SendEmailParams =
   | { type: 'new_follower';        userId: string; payload: { followerName: string; followerId: string } }
   | { type: 'new_message';         userId: string; payload: { senderName: string; preview: string } }
   | { type: 'new_comment';         userId: string; payload: { commenterName: string; preview: string; postId: string } }
-  | { type: 'new_reaction';        userId: string; payload: { reactorName: string; reactionType: string; postId: string } }
+  | { type: 'new_reaction';        userId: string; payload: { reactorName: string; reactionType: string; postId: string; postUrl?: string } }
   | { type: 'order_placed';        userId: string; payload: { orderTitle: string; amount: number; orderId: string } }
   | { type: 'order_dispatched';    userId: string; payload: { orderTitle: string; orderId: string } }
   | { type: 'order_delivered';     userId: string; payload: { orderTitle: string; orderId: string } }
@@ -216,7 +216,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
         await sendNewCommentEmail(to, name, params.payload.commenterName, params.payload.preview, params.payload.postId)
         break
       case 'new_reaction':
-        await sendNewReactionEmail(to, name, params.payload.reactorName, params.payload.reactionType, params.payload.postId)
+         await sendNewReactionEmail(to, name, params.payload.reactorName, params.payload.reactionType, params.payload.postId, params.payload.postUrl)
         break
       case 'order_placed':
         await sendOrderPlacedEmail(to, name, params.payload.orderTitle, params.payload.amount, params.payload.orderId)

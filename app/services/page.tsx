@@ -959,15 +959,11 @@ export default function ServicesPage() {
   }
 
   async function openServiceDetail(id: string | number) {
-    const path = `/services/${id}`
-    if (!(await requireAuth(path))) return
-    router.push(path)
+    router.push(`/services/${id}`)
   }
 
   async function openProviderProfile(providerId: string) {
-    const path = `/profile?id=${providerId}`
-    if (!(await requireAuth(path))) return
-    router.push(path)
+    router.push(`/profile?id=${providerId}`)
   }
 
   async function openCreateService() {
@@ -977,7 +973,6 @@ export default function ServicesPage() {
   }
 
   async function openFindProviderTab() {
-    if (!(await requireAuth('/services'))) return
     setActiveTab('external')
   }
 
@@ -1007,7 +1002,6 @@ export default function ServicesPage() {
   }, [activeTab, mixedServices.length, filteredExternalServices.length])
 
   async function handleExternalServiceClick(item: ExternalService) {
-    if (!(await requireAuth('/services'))) return
     const outboundUrl = item.is_awin && item.awin_deeplink ? item.awin_deeplink : item.provider_url
     window.open(outboundUrl, '_blank', 'noopener,noreferrer')
 

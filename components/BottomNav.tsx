@@ -425,6 +425,34 @@ export default function BottomNav() {
                       </span>
                       {pathname.startsWith('/profile') || feedIdentity?.type === 'personal' ? <span style={{ color: 'var(--ft-accent)', fontSize: 14 }}>✓</span> : null}
                     </button>
+                    <Link
+                      href="/rent-share/my-bookings"
+                      onClick={() => setSwitcherOpen(false)}
+                      style={{
+                        width: '100%',
+                        minHeight: 48,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        border: '1px solid transparent',
+                        background: pathname.startsWith('/rent-share/my-bookings') ? 'rgba(45,212,191,0.12)' : 'transparent',
+                        color: 'var(--ft-text)',
+                        borderRadius: 12,
+                        padding: '8px 9px',
+                        textAlign: 'left',
+                        textDecoration: 'none',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      <span style={{ width: 34, height: 34, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(45,212,191,0.14)', fontSize: 18, flexShrink: 0 }}>🏠</span>
+                      <span style={{ minWidth: 0, flex: 1 }}>
+                        <span style={{ display: 'block', fontSize: 13, fontWeight: 900 }}>My Bookings</span>
+                        <span style={{ display: 'block', color: 'var(--ft-text-secondary)', fontSize: 11 }}>Rent &amp; Share requests</span>
+                      </span>
+                      {pathname.startsWith('/rent-share/my-bookings') ? <span style={{ color: 'var(--ft-accent)', fontSize: 14 }}>✓</span> : null}
+                    </Link>
                     {adminPages.length > 0 || switcherLoading ? (
                       <div style={{ height: 1, background: 'rgba(51,65,85,0.8)', margin: '6px 4px' }} />
                     ) : null}

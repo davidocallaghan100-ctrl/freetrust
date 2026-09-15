@@ -268,7 +268,23 @@ export default function ConversationPage() {
     let cancelled = false
     const supabase = createClient()
     setLoading(true)
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    const resolveUser = async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser()
+        if (user) return user
+        if (error) console.error('[messages/:id] getUser failed, falling back to getSession:', error)
+      } catch (err) {
+        console.error('[messages/:id] getUser threw, falling back to getSession:', err)
+      }
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        return session?.user ?? null
+      } catch (err) {
+        console.error('[messages/:id] getSession also threw:', err)
+        return null
+      }
+    }
+    resolveUser().then(async user => {
       if (cancelled) return
       if (!user) { router.push('/login'); return }
       setUserId(user.id)

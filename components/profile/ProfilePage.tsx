@@ -358,7 +358,7 @@ function decodeMediaUrlsFromPostContent(text: string | null | undefined) {
   return parsed.filter((value): value is string => typeof value === 'string' && /^https?:\/\//i.test(value)).slice(0, 10)
 }
 
-function getPhotoUrlsFromPost(post: FeedPost) {
+function getMediaUrlsFromPost(post: FeedPost) {
   const fromMetadata = Array.isArray(post.metadata?.media_urls)
     ? post.metadata.media_urls.filter((value): value is string => typeof value === 'string' && /^https?:\/\//i.test(value))
     : []
@@ -697,10 +697,10 @@ export default function ProfilePage() {
     if (profilePhotoGridLoaded || profilePhotoGridLoading) return
     setProfilePhotoGridLoading(true)
     try {
-      const res = await fetch(`/api/feed/posts?authorId=${encodeURIComponent(userId)}&filter=photos&limit=18`, { cache: 'no-store' })
+      const res = await fetch(`/api/feed/posts?authorId=${encodeURIComponent(userId)}&filter=media&limit=18`, { cache: 'no-store' })
       if (res.ok) {
         const data = await res.json() as { posts?: FeedPost[] }
-        setProfilePhotoGridPosts((data.posts ?? []).filter(post => getPhotoUrlsFromPost(post).length > 0).slice(0, 18))
+        setProfilePhotoGridPosts((data.posts ?? []).filter(post => getMediaUrlsFromPost(post).length > 0).slice(0, 18))
         setProfilePhotoGridLoaded(true)
       }
     } catch { /* non-critical */ } finally {
@@ -1382,7 +1382,7 @@ export default function ProfilePage() {
   const { pct: completeness, missing } = calcCompleteness(profile, user?.email ?? null)
   const trustLevel = getTrustLevel(trustBalance)
   const photoGridTiles = profilePhotoGridPosts
-    .map(post => ({ post, urls: getPhotoUrlsFromPost(post) }))
+    .map(post => ({ post, urls: getMediaUrlsFromPost(post) }))
     .filter(item => item.urls.length > 0)
     .slice(0, 18)
 
@@ -1835,7 +1835,7 @@ export default function ProfilePage() {
                   </Link>
                 )}
                 {isOwnProfile && (
-                  <Link href="/create" className="profile-photo-grid-add" aria-label="Add photo post" title="Add photo post">
+                  <Link href="/create" className="profile-photo-grid-add" aria-label="Add photo or video post" title="Add photo or video post">
                     +
                   </Link>
                 )}
@@ -1848,23 +1848,35 @@ export default function ProfilePage() {
               </div>
             ) : photoGridTiles.length > 0 ? (
               <div className="profile-photo-grid">
-                {photoGridTiles.map(({ post, urls }) => (
-                  <Link key={post.id} href={`/feed/${post.id}`} aria-label="Open photo post" className="profile-photo-tile">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={urls[0]} alt={post.title ?? post.content?.slice(0, 80) ?? 'Photo post'} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                    {urls.length > 1 && (
+                {photoGridTiles.map(({ post, urls }) => {
+                  const isVideoPost = post.media_type === 'video' || post.type === 'video' || post.type === 'short'
+                  return (
+                  <Link key={post.id} href={`/feed/${post.id}`} aria-label={isVideoPost ? 'Open video post' : 'Open photo post'} className="profile-photo-tile">
+                    {isVideoPost ? (
+                      <video src={urls[0]} muted playsInline preload="metadata" aria-label={post.title ?? post.content?.slice(0, 80) ?? 'Video post'} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    ) : (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={urls[0]} alt={post.title ?? post.content?.slice(0, 80) ?? 'Photo post'} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    )}
+                    {isVideoPost && (
+                      <span aria-hidden="true" style={{ position: 'absolute', top: 7, left: 7, width: 24, height: 24, borderRadius: 7, background: 'rgba(2,6,23,0.72)', border: '1px solid rgba(248,250,252,0.65)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#f8fafc', fontSize: 12, fontWeight: 900, boxShadow: '0 6px 16px rgba(0,0,0,0.35)' }}>
+                        ▶
+                      </span>
+                    )}
+                    {urls.length > 1 && !isVideoPost && (
                       <span aria-label={`${urls.length} photos`} style={{ position: 'absolute', top: 7, right: 7, width: 20, height: 20, borderRadius: 6, background: 'rgba(2,6,23,0.72)', border: '1px solid rgba(248,250,252,0.65)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#f8fafc', fontSize: 12, fontWeight: 900, boxShadow: '0 6px 16px rgba(0,0,0,0.35)' }}>
                         ▣
                       </span>
                     )}
                   </Link>
-                ))}
+                  )
+                })}
               </div>
             ) : isOwnProfile ? (
               <div style={{ padding: '2.25rem 1rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>📸</div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--ft-text)', marginBottom: '0.35rem' }}>No photo posts yet</div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', maxWidth: 300, margin: '0 auto', lineHeight: 1.5 }}>Upload photo posts and they will appear here in a clean grid on your profile overview.</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--ft-text)', marginBottom: '0.35rem' }}>No photo or video posts yet</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', maxWidth: 300, margin: '0 auto', lineHeight: 1.5 }}>Upload photo or video posts and they will appear here in a clean grid on your profile overview.</div>
               </div>
             ) : null}
           </div>
@@ -2951,6 +2963,9 @@ export default function ProfilePage() {
               </Link>
               <Link href="/wallet" style={{ fontSize: '0.82rem', color: 'var(--ft-accent)', textDecoration: 'none', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 6, padding: '0.35rem 0.75rem' }}>
                 💎 Wallet
+              </Link>
+              <Link href="/rent-share/my-bookings" style={{ fontSize: '0.82rem', color: 'var(--ft-accent)', textDecoration: 'none', border: '1px solid rgba(56,189,248,0.3)', borderRadius: 6, padding: '0.35rem 0.75rem' }}>
+                🏠 My Bookings
               </Link>
             </div>
           </div>

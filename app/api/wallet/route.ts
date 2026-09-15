@@ -210,8 +210,11 @@ export async function GET() {
     const completedEarned = (ordersEarnedRes.data ?? [])
       .filter((o: { status: string }) => o.status === 'completed')
       .reduce((s: number, o: { amount: number }) => s + (o.amount ?? 0), 0)
+    // Rent & Share approvals use the existing escrow order status
+    // `pending_escrow`; include it here so an approved booking is visible as
+    // a pending payout in the Earn/Wallet surfaces until buyer check-in.
     const pendingEarned = (ordersEarnedRes.data ?? [])
-      .filter((o: { status: string }) => o.status === 'pending' || o.status === 'processing')
+      .filter((o: { status: string }) => o.status === 'pending' || o.status === 'processing' || o.status === 'pending_escrow')
       .reduce((s: number, o: { amount: number }) => s + (o.amount ?? 0), 0)
     const totalSpent = (ordersSpentRes.data ?? [])
       .filter((o: { status: string }) => o.status === 'completed')

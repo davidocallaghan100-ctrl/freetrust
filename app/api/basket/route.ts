@@ -26,6 +26,7 @@ type ListingRow = {
   images: string[] | null
   cover_image: string | null
   seller_id: string | null
+  product_type: 'physical' | 'digital' | 'service' | null
 }
 
 type ExternalRow = {
@@ -74,7 +75,7 @@ async function loadBasket(userId: string) {
 
   const [listingRes, externalRes] = await Promise.all([
     listingIds.length
-      ? admin.from('listings').select('id, title, price, currency, currency_code, price_eur, images, cover_image, seller_id').in('id', listingIds)
+      ? admin.from('listings').select('id, title, price, currency, currency_code, price_eur, images, cover_image, seller_id, product_type').in('id', listingIds)
       : Promise.resolve({ data: [] as ListingRow[], error: null }),
     externalIds.length
       ? admin.from('external_product_listings').select('id, title, price, price_eur, currency, thumbnail, retailer_name, retailer_url').in('id', externalIds)
@@ -103,6 +104,7 @@ async function loadBasket(userId: string) {
         price_label: price.price_label,
         image: listing?.cover_image ?? images[0] ?? null,
         seller_id: listing?.seller_id ?? null,
+        listing_product_type: listing?.product_type ?? null,
       }
     }
 
