@@ -121,9 +121,9 @@ export async function GET(req: NextRequest) {
             height: '1920px',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'space-between',
-            background: 'linear-gradient(160deg, #020617 0%, #0f172a 55%, #082f49 100%)',
-            padding: '90px 80px',
+            background: 'radial-gradient(circle at 18% 30%, rgba(14,116,144,0.22) 0%, rgba(14,116,144,0) 34%), linear-gradient(160deg, #020617 0%, #0f172a 56%, #082f49 100%)',
+            padding: '112px 80px 128px',
+            boxSizing: 'border-box',
             fontFamily: 'sans-serif',
             color: '#f8fafc',
             position: 'relative',
@@ -156,11 +156,11 @@ export async function GET(req: NextRequest) {
               style={{
                 display: 'flex',
                 width: '100%',
-                height: '760px',
+                height: '780px',
                 borderRadius: '32px',
                 overflow: 'hidden',
                 border: '2px solid rgba(56,189,248,0.35)',
-                marginTop: '40px',
+                marginTop: '46px',
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -173,10 +173,11 @@ export async function GET(req: NextRequest) {
             style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: '28px',
-              marginTop: coverImage ? '48px' : '0px',
-              flex: 1,
-              justifyContent: coverImage ? 'flex-start' : 'center',
+              gap: '24px',
+              marginTop: coverImage ? '36px' : '0px',
+              height: coverImage ? '560px' : '820px',
+              flexShrink: 0,
+              justifyContent: 'center',
             }}
           >
             <div
@@ -185,6 +186,11 @@ export async function GET(req: NextRequest) {
                 fontWeight: 800,
                 lineHeight: 1.35,
                 color: '#f8fafc',
+                maxWidth: '900px',
+                padding: '34px 38px 38px',
+                background: 'rgba(2,6,23,0.42)',
+                border: '2px solid rgba(125,211,252,0.18)',
+                borderRadius: '28px',
               }}
             >
               {displayText || 'Shared from FreeTrust'}
@@ -192,7 +198,7 @@ export async function GET(req: NextRequest) {
           </div>
 
           {/* Author + footer */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', paddingTop: '26px', borderTop: '2px solid rgba(125,211,252,0.18)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
               {renderableAvatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element

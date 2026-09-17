@@ -82,7 +82,14 @@ function SharedPostStoryCard({ story }: { story: StoryRecord }) {
       {hasThumb ? (
         <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#000' }}>
           {snap.media_type === 'video' ? (
-            <video src={snap.media_url!} muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <video
+              src={snap.media_url!}
+              autoPlay
+              muted
+              playsInline
+              preload="auto"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
           ) : (
             <img src={snap.media_url!} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           )}
