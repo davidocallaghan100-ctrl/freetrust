@@ -1429,12 +1429,12 @@ export default function ServicesPage() {
             )}
           </div>
 
-          {loadingServices || loadingExternalServices ? (
+          {loadingServices ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--ft-text-tertiary)' }}>
               <div style={{ fontSize: '34px', marginBottom: '12px' }}>🛠️</div>
               <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ft-text-secondary)' }}>{t('loading.services')}</div>
             </div>
-          ) : servicesError || externalServicesError ? (
+          ) : servicesError ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--ft-text-tertiary)' }}>
               <div style={{ fontSize: '34px', marginBottom: '12px' }}>⚠️</div>
               <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ft-text-secondary)', marginBottom: 6 }}>{t('errors.servicesTitle')}</div>

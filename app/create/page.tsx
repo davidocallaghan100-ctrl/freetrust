@@ -1311,6 +1311,12 @@ export default function CreatePage() {
         delivery_notes: deliveryNotes.trim() || null,
       }
     }
+    if (selectedType === 'service') {
+      // Service listings use the same uploaded image URLs as photo posts. The
+      // publish route requires at least one real image so every marketplace
+      // service has a trustworthy visual card and cover image.
+      data = { ...data, images: uploadedPhotoUrls }
+    }
     const payload: Record<string, unknown> = {
       type: selectedType,
       data,
@@ -1357,6 +1363,9 @@ export default function CreatePage() {
       case 'service':
         if (!title) return 'Title is required'
         if (!f('description').trim()) return 'Description is required'
+        if (selectedType === 'service' && uploadedPhotoUrls.length === 0) {
+          return 'Upload at least one photo before publishing a service'
+        }
         if (selectedType === 'event' && !f('start_date')) return 'Start date is required'
         break
       case 'product':
@@ -2011,6 +2020,38 @@ export default function CreatePage() {
         return (
           <>
             <div style={s.fieldGroup}>
+              <label style={s.label}>Service Photo <span style={{ color: 'var(--ft-danger)' }}>*</span></label>
+              <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.82rem', marginTop: 0, marginBottom: '0.6rem', lineHeight: 1.45 }}>
+                Add at least one real photo. It becomes the cover image shown in the Services Marketplace and helps buyers trust the listing.
+              </p>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,image/*"
+                style={{ ...s.input, padding: '0.5rem' }}
+                onChange={e => {
+                  void handlePhotoFiles(e.target.files)
+                  e.currentTarget.value = ''
+                }}
+              />
+              {uploadProgress && (
+                <div style={{ marginTop: '0.5rem', fontSize: '0.82rem', color: uploadProgress.startsWith('✓') ? '#34d399' : uploadProgress.startsWith('Upload') ? 'var(--ft-danger)' : 'var(--ft-text-tertiary)' }}>
+                  {uploadingMedia ? '⏳ ' : ''}{uploadProgress}
+                </div>
+              )}
+              {renderUploadProgressBar()}
+              {uploadedPhotoUrls.length > 0 && (
+                <div style={{ marginTop: '0.75rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))', gap: '0.6rem' }}>
+                  {uploadedPhotoUrls.map((url, i) => (
+                    <div key={`${url}-${i}`} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--ft-border-strong)', background: 'var(--ft-bg)', aspectRatio: '1 / 1' }}>
+                      <img src={url} alt={`Service photo ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      <span style={{ position: 'absolute', top: 6, left: 6, background: 'rgba(15,23,42,0.8)', color: '#f8fafc', borderRadius: 999, padding: '2px 7px', fontSize: '0.72rem', fontWeight: 800 }}>{i + 1}</span>
+                      <button type="button" onClick={() => removeUploadedPhoto(i)} style={{ position: 'absolute', top: 5, right: 5, width: 28, height: 28, borderRadius: '50%', border: '1px solid rgba(248,113,113,0.5)', background: 'rgba(15,23,42,0.86)', color: '#fecaca', cursor: 'pointer', fontWeight: 800 }} aria-label={`Remove service photo ${i + 1}`}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={s.fieldGroup}>
               <label style={s.label}>Service Title</label>
               <input style={s.input} placeholder="e.g. Logo Design" value={f('title')} onChange={e => setField('title', e.target.value)} />
             </div>
@@ -2409,6 +2450,9 @@ export default function CreatePage() {
       case 'product':
         return (
           <div style={s.previewCard}>
+            {selectedType === 'service' && uploadedPhotoUrls[0] && (
+              <img src={uploadedPhotoUrls[0]} alt="Service cover preview" style={{ width: '100%', maxHeight: '220px', objectFit: 'cover', borderRadius: '8px', marginBottom: '0.9rem' }} />
+            )}
             <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--ft-text)' }}>{f('title') || (selectedType === 'service' ? 'Service Title' : 'Product Title')}</div>
             <div style={{ color: 'var(--ft-accent)', fontSize: '1rem', fontWeight: 700, marginTop: '0.25rem' }}>₮{f('price') || '0'}</div>
             <div style={{ color: 'var(--ft-text-secondary)', fontSize: '0.88rem', marginTop: '0.75rem' }}>{f('description')}</div>
