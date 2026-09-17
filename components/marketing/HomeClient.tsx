@@ -52,6 +52,17 @@ type FeaturedService = {
   tags: string[]
   grad: string
 }
+
+type ServicePreviewCard = {
+  type: 'service'
+  title: string
+  subtitle: string
+  price: string
+  image: string | null
+  visual: { background: string; icon: string }
+  href: string
+  badge: string
+}
 type HomeEvent = {
   id: string
   title: string
@@ -173,6 +184,18 @@ const screenshots = {
   services: '/landing-assets/service-marketplace-mobile.png',
   community: '/landing-assets/community-mobile.png',
 }
+
+// These are intentionally lightweight visual fallbacks, not fake listing
+// photos. The old fallback reused the full Services mobile screenshot for
+// every card, which made unrelated cards all appear to show the same listing.
+const SERVICE_PREVIEW_VISUALS = [
+  { background: 'linear-gradient(135deg, #0f766e, #164e63 58%, #0f172a)', icon: '🔧' },
+  { background: 'linear-gradient(135deg, #7c3aed, #4338ca 58%, #172554)', icon: '✦' },
+  { background: 'linear-gradient(135deg, #0369a1, #1e3a8a 58%, #111827)', icon: '▦' },
+  { background: 'linear-gradient(135deg, #be185d, #7e22ce 58%, #1e1b4b)', icon: '◎' },
+  { background: 'linear-gradient(135deg, #b45309, #9a3412 58%, #431407)', icon: '✺' },
+  { background: 'linear-gradient(135deg, #047857, #166534 58%, #052e16)', icon: '⌘' },
+] as const
 
 async function fetchJsonWithTimeout<T>(url: string, fallback: T, timeoutMs = 8000): Promise<T> {
   const controller = new AbortController()
@@ -507,10 +530,25 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
   const activeTestimonial = testimonialQuotes[testimonialIndex] ?? testimonialQuotes[0]
 
   const serviceSlides = useMemo(() => {
-    const serviceCards = featuredServices.slice(0, 6).map(s => ({ type: 'service', title: s.title, subtitle: s.provider, price: format(s.price, s.currency as 'GBP' | 'EUR' | 'USD'), image: s.coverImage || screenshots.services, href: `/services/${s.id}`, badge: s.reviews > 0 ? t('liveMarketplace.badges.trustScore', {score: s.rating.toFixed(1)}) : t('liveMarketplace.badges.verifiedService') }))
+    const serviceCards: ServicePreviewCard[] = featuredServices.slice(0, 6).map((s, index) => ({
+      type: 'service',
+      title: s.title,
+      subtitle: s.provider,
+      price: format(s.price, s.currency as 'GBP' | 'EUR' | 'USD'),
+      image: s.coverImage || null,
+      visual: SERVICE_PREVIEW_VISUALS[index % SERVICE_PREVIEW_VISUALS.length],
+      href: `/services/${s.id}`,
+      badge: s.reviews > 0 ? t('liveMarketplace.badges.trustScore', {score: s.rating.toFixed(1)}) : t('liveMarketplace.badges.verifiedService'),
+    }))
     if (serviceCards.length >= 6) return serviceCards
     return [...serviceCards, ...[
-      ...serviceFallbacks.map(item => ({...item, type: 'service', image: screenshots.services, href: '/services'})),
+      ...serviceFallbacks.map((item, index) => ({
+        ...item,
+        type: 'service' as const,
+        image: null,
+        visual: SERVICE_PREVIEW_VISUALS[(serviceCards.length + index) % SERVICE_PREVIEW_VISUALS.length],
+        href: '/services',
+      })),
     ]].slice(0, 6)
   }, [featuredServices, format, serviceFallbacks, t])
 
@@ -812,7 +850,9 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
               {serviceSlides.map(card => (
                 <Link className="ft-market-product-card ft-card-hover" key={`${card.type}-${card.title}`} href={card.href} style={{ minWidth: 0, textDecoration: 'none', background: 'linear-gradient(180deg,rgba(17,24,39,.96),rgba(8,16,32,.96))', border: '1px solid #1e293b', borderRadius: 24, overflow: 'hidden', color: '#fff', boxShadow: '0 22px 70px rgba(0,0,0,.22)' }}>
                   <div style={{ height: 190, position: 'relative', background: 'linear-gradient(135deg,#0e7490,#1e293b 55%,#111827)', overflow: 'hidden' }}>
-                    {card.image && <img src={card.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transform: 'scale(1.02)' }} />}
+                    {card.image
+                      ? <img src={card.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transform: 'scale(1.02)' }} />
+                      : <div aria-hidden="true" style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', background: card.visual.background, fontSize: 58, opacity: 0.92 }}>{card.visual.icon}</div>}
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(5,10,20,.02),rgba(5,10,20,.72))' }} />
                     <span style={{ position: 'absolute', left: 14, top: 14, display: 'inline-flex', padding: '7px 10px', borderRadius: 999, background: 'rgba(4,16,24,.72)', color: '#aafaff', fontSize: 12, fontWeight: 900, border: '1px solid rgba(127,247,255,.22)', backdropFilter: 'blur(10px)' }}>{card.badge}</span>
                     <strong style={{ position: 'absolute', left: 14, right: 14, bottom: 14, fontSize: 20, lineHeight: 1.12, letterSpacing: '-0.03em' }}>{card.title}</strong>
