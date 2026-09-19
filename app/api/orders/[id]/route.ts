@@ -8,6 +8,7 @@ import { insertNotification } from '@/lib/notifications/insert'
 import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 import { logActivity } from '@/lib/activity/logActivity'
 import { awardDeliveryTrust } from '@/lib/trust/deliveryRewards'
+import { capturePayPalAuthorization, sendPayPalPayout, voidPayPalAuthorization } from '@/lib/paypal'
 
 // Stripe client — optional at module load so the route can still
 // return clean errors (not crash) on environments without a key.
@@ -117,6 +118,20 @@ export async function PATCH(
     }
     const { action, delivery_notes, dispute_reason } = body
 
+    // Basket PayPal orders are captured and paid out in the PayPal return
+    // handler. They are not service-style authorizations and must never be
+    // sent through the generic escrow release/cancel actions afterward.
+    if (
+      order.type === 'product_basket' &&
+      order.payment_gateway === 'paypal' &&
+      (action === 'release_payment' || action === 'cancel_order')
+    ) {
+      return NextResponse.json(
+        { error: 'This PayPal basket order was already captured and cannot be released or cancelled through the escrow flow.' },
+        { status: 409 },
+      )
+    }
+
     // ── Seller: mark_delivered ─────────────────────────────────────────
     if (user.id === order.seller_id && action === 'mark_delivered') {
       // Allow delivering from 'paid' OR 'in_progress' so both the
@@ -192,6 +207,150 @@ export async function PATCH(
       if (order.status === 'completed') {
         return NextResponse.json({ error: 'Order is already completed' }, { status: 400 })
       }
+
+      // ── PayPal escrow release ─────────────────────────────────────────
+      // PayPal authorizations are captured only after the buyer confirms
+      // delivery. The capture is followed by a PayPal Payouts transfer to
+      // the seller's explicitly configured PayPal email.
+      if (order.payment_gateway === 'paypal') {
+        const authorizationId = (order.paypal_authorization_id as string | null) ?? null
+        if (!authorizationId) {
+          return NextResponse.json({ error: 'Order has no associated PayPal authorization' }, { status: 400 })
+        }
+
+        const { data: sellerProfile } = await admin
+          .from('profiles')
+          .select('paypal_email, full_name')
+          .eq('id', order.seller_id)
+          .maybeSingle()
+        const sellerPayPalEmail = typeof sellerProfile?.paypal_email === 'string'
+          ? sellerProfile.paypal_email.trim().toLowerCase()
+          : ''
+        if (!sellerPayPalEmail) {
+          return NextResponse.json(
+            { error: 'Seller has not configured a PayPal payout email', code: 'seller_no_paypal_email' },
+            { status: 409 },
+          )
+        }
+
+        let captureId = (order.paypal_capture_id as string | null) ?? null
+        let capturedAmount = Number(order.payment_amount_cents ?? order.amount ?? 0)
+        if (!captureId) {
+          try {
+            const captured = await capturePayPalAuthorization(authorizationId)
+            if (captured.status && captured.status !== 'COMPLETED') {
+              return NextResponse.json(
+                { error: `PayPal capture returned status=${captured.status}`, code: 'capture_not_completed' },
+                { status: 502 },
+              )
+            }
+            captureId = captured.id
+            if (captured.amount?.value) capturedAmount = Math.round(Number(captured.amount.value) * 100)
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err)
+            console.error(`[orders/${id}] PayPal authorization capture failed:`, msg)
+            return NextResponse.json({ error: `Could not capture PayPal payment: ${msg}`, code: 'capture_failed' }, { status: 502 })
+          }
+        }
+
+        const itemType = String(order.type ?? '').toLowerCase()
+        const feeRate = itemType === 'product' ? FEE_RATE_PRODUCT : FEE_RATE_SERVICE
+        const feeCents = Math.round(capturedAmount * feeRate)
+        const payoutCents = Math.max(capturedAmount - feeCents, 0)
+        let payoutBatchId = (order.paypal_payout_batch_id as string | null) ?? null
+        let payoutStatus = (order.paypal_payout_status as string | null) ?? null
+
+        if (!payoutBatchId) {
+          try {
+            const payout = await sendPayPalPayout({
+              orderId: id,
+              recipientEmail: sellerPayPalEmail,
+              amountCents: payoutCents,
+              note: `FreeTrust payout for ${order.title}`,
+            })
+            payoutBatchId = payout.batch_header?.payout_batch_id ?? null
+            payoutStatus = payout.batch_header?.batch_status ?? null
+            if (!payoutBatchId) throw new Error('PayPal did not return a payout batch id')
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err)
+            console.error(`[orders/${id}] PayPal payout failed after capture:`, msg)
+            await admin
+              .from('orders')
+              .update({ paypal_capture_id: captureId, updated_at: new Date().toISOString() })
+              .eq('id', id)
+            return NextResponse.json(
+              {
+                error: `PayPal payment captured but seller payout failed: ${msg}. Funds are safe in PayPal and require reconciliation.`,
+                code: 'payout_failed_after_capture',
+                paypal_capture_id: captureId,
+              },
+              { status: 502 },
+            )
+          }
+        }
+
+        const nowIso = new Date().toISOString()
+        const { error: confirmDiscountError } = await admin.rpc('confirm_service_discount', { p_order_id: id })
+        if (confirmDiscountError) console.error(`[orders/${id}] PayPal TrustCoin discount confirmation failed:`, confirmDiscountError)
+
+        const { error: updateError } = await admin
+          .from('orders')
+          .update({
+            status: 'completed',
+            escrow_released_at: nowIso,
+            paypal_capture_id: captureId,
+            paypal_payout_batch_id: payoutBatchId,
+            paypal_payout_status: payoutStatus,
+            updated_at: nowIso,
+          })
+          .eq('id', id)
+        if (updateError) console.error(`[orders/${id}] PayPal completion update failed:`, updateError)
+
+        void admin.rpc('append_order_status_history', {
+          p_order_id: id,
+          p_status: 'completed',
+          p_actor_id: user.id,
+        })
+
+        try {
+          await admin.rpc('issue_trust', {
+            p_user_id: order.seller_id,
+            p_amount: TRUST_REWARDS.COMPLETE_ORDER,
+            p_type: TRUST_LEDGER_TYPES.COMPLETE_ORDER,
+            p_ref: id,
+            p_desc: `₮${TRUST_REWARDS.COMPLETE_ORDER} reward for completing sale: ${order.title}`,
+          })
+        } catch (err) {
+          console.error('[orders/release_payment] PayPal seller trust award failed:', err)
+        }
+        void awardDeliveryTrust(user.id, 'buyer_confirmed', id)
+        void logActivity({
+          orderId: id,
+          actorId: user.id,
+          actorRole: 'buyer',
+          eventType: 'buyer_confirmed',
+          title: '✅ +25₮ Confirmed receipt',
+          body: 'PayPal payment released from escrow to seller.',
+        })
+        void insertNotification({
+          userId: order.seller_id,
+          type: 'order',
+          title: `Payment released: ₮${payoutCents / 100}`,
+          body: `"${order.title}" — ${(payoutCents / 100).toFixed(2)} EUR sent to your PayPal account.`,
+          link: `/orders/${id}`,
+        }).catch(err => console.error('[orders/release_payment] PayPal seller notification failed:', err))
+
+        return NextResponse.json({
+          success: true,
+          status: 'completed',
+          paypal_capture_id: captureId,
+          paypal_payout_batch_id: payoutBatchId,
+          captured_amount: capturedAmount,
+          platform_fee: feeCents,
+          seller_payout: payoutCents,
+        })
+      }
+
       if (!stripe) {
         return NextResponse.json({ error: 'Payments not configured on the server' }, { status: 503 })
       }
@@ -480,6 +639,39 @@ export async function PATCH(
           { status: 400 },
         )
       }
+
+      if (order.payment_gateway === 'paypal') {
+        const authorizationId = (order.paypal_authorization_id as string | null) ?? null
+        if (authorizationId) {
+          try {
+            await voidPayPalAuthorization(authorizationId)
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err)
+            if (!msg.toLowerCase().includes('already') && !msg.toLowerCase().includes('void')) {
+              console.error(`[orders/${id}] PayPal authorization void failed:`, msg)
+              return NextResponse.json({ error: `Could not cancel PayPal payment: ${msg}`, code: 'cancel_failed' }, { status: 502 })
+            }
+          }
+        }
+
+        const { error: reverseError } = await admin.rpc('reverse_service_discount', {
+          p_order_id: id,
+          p_reason: 'Buyer cancelled PayPal payment before escrow capture',
+        })
+        if (reverseError) {
+          console.error(`[orders/${id}] PayPal TrustCoin discount reversal failed:`, reverseError)
+          return NextResponse.json({ error: 'Payment cancelled, but the TrustCoin discount could not be returned yet. Please retry.' }, { status: 502 })
+        }
+
+        const { error: paypalCancelError } = await admin
+          .from('orders')
+          .update({ status: 'cancelled', cancelled_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .eq('id', id)
+        if (paypalCancelError) return NextResponse.json({ error: 'Payment cancelled but order update failed' }, { status: 500 })
+
+        return NextResponse.json({ success: true, status: 'cancelled', gateway: 'paypal' })
+      }
+
       if (!stripe) {
         return NextResponse.json({ error: 'Payments not configured on the server' }, { status: 503 })
       }

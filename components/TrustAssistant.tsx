@@ -256,6 +256,14 @@ export default function TrustAssistant() {
     }
   }, [messages.length, user, pathname, t])
 
+  // Let contextual surfaces such as the Messages overflow menu open the
+  // existing Trust Assistant instead of creating a second support flow.
+  useEffect(() => {
+    const openFromSurface = () => handleOpen()
+    window.addEventListener('freetrust:open-support', openFromSurface)
+    return () => window.removeEventListener('freetrust:open-support', openFromSurface)
+  }, [handleOpen])
+
   // ── Send message ──
   const send = useCallback(async (text?: string) => {
     const content = (text ?? input).trim()

@@ -7,10 +7,37 @@ export default function SellerConnectPage() {
   const [info, setInfo] = useState<{ charges_enabled?: boolean; payouts_enabled?: boolean; account_id?: string } | null>(null)
   const [redirecting, setRedirecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [paypalEmail, setPaypalEmail] = useState('')
+  const [paypalSaving, setPaypalSaving] = useState(false)
+  const [paypalMessage, setPaypalMessage] = useState<string | null>(null)
 
   useEffect(() => {
     checkStatus()
+    fetch('/api/paypal/seller', { cache: 'no-store' })
+      .then(res => res.ok ? res.json() as Promise<{ paypal_email?: string }> : null)
+      .then(data => { if (data) setPaypalEmail(data.paypal_email ?? '') })
+      .catch(() => {})
   }, [])
+
+  const savePayPalEmail = async () => {
+    setPaypalSaving(true)
+    setPaypalMessage(null)
+    try {
+      const res = await fetch('/api/paypal/seller', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paypal_email: paypalEmail }),
+      })
+      const data = await res.json() as { paypal_email?: string; error?: string }
+      if (!res.ok) throw new Error(data.error ?? 'Could not save PayPal email')
+      setPaypalEmail(data.paypal_email ?? paypalEmail)
+      setPaypalMessage('PayPal payout email saved.')
+    } catch (err) {
+      setPaypalMessage(err instanceof Error ? err.message : 'Could not save PayPal email')
+    } finally {
+      setPaypalSaving(false)
+    }
+  }
 
   const checkStatus = async () => {
     try {
@@ -82,6 +109,33 @@ export default function SellerConnectPage() {
             <h1 style={{ fontSize: '1.5rem', fontWeight: 800, lineHeight: 1.2 }}>Seller Payments</h1>
             <p style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.85rem', margin: 0 }}>Powered by Stripe Connect</p>
           </div>
+        </div>
+
+        <div style={{ marginTop: '1.5rem', background: 'rgba(37,99,235,0.07)', border: '1px solid rgba(96,165,250,0.22)', borderRadius: 16, padding: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <span style={{ fontSize: 22 }}>🅿️</span>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '0.98rem' }}>PayPal payout details</div>
+              <div style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.78rem' }}>Optional until PayPal checkout is enabled for FreeTrust.</div>
+            </div>
+          </div>
+          <p style={{ color: 'var(--ft-text-secondary)', fontSize: '0.82rem', lineHeight: 1.55, margin: '0.75rem 0 0.9rem' }}>
+            Add the email address of your PayPal account so PayPal orders can be released to you after the buyer confirms delivery.
+          </p>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+            <input
+              type="email"
+              value={paypalEmail}
+              onChange={event => setPaypalEmail(event.target.value)}
+              placeholder="you@example.com"
+              autoComplete="email"
+              style={{ flex: 1, minWidth: 0, border: '1px solid rgba(96,165,250,0.28)', background: 'var(--ft-bg)', color: 'var(--ft-text)', borderRadius: 10, padding: '0.75rem 0.8rem', fontSize: 16 }}
+            />
+            <button onClick={savePayPalEmail} disabled={paypalSaving || !paypalEmail.trim()} style={{ border: 'none', borderRadius: 10, padding: '0 1rem', background: '#2563eb', color: '#fff', fontWeight: 800, cursor: paypalSaving ? 'wait' : 'pointer', opacity: paypalSaving || !paypalEmail.trim() ? 0.55 : 1 }}>
+              {paypalSaving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+          {paypalMessage && <div style={{ marginTop: 8, color: paypalMessage.includes('saved') ? '#34d399' : '#fca5a5', fontSize: '0.78rem' }}>{paypalMessage}</div>}
         </div>
 
         {status === 'loading' && (

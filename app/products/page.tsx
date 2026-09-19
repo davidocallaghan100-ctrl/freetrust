@@ -639,6 +639,8 @@ function BasketDrawer({ open, onClose, onRetailer, isIOSNative }: {
   const [checkingOut, setCheckingOut] = useState(false)
   const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [paypalEnabled, setPaypalEnabled] = useState(false)
+  const [gateway, setGateway] = useState<'stripe' | 'paypal'>('stripe')
   const [checkoutIntent, setCheckoutIntent] = useState<{
     client_secret: string
     payment_intent_id: string
@@ -647,16 +649,32 @@ function BasketDrawer({ open, onClose, onRetailer, isIOSNative }: {
   } | null>(null)
   const hasDigitalCommunityItem = isIOSNative && basket.communityItems.some(item => item.listing_product_type === 'digital')
 
+  useEffect(() => {
+    if (!open) return
+    fetch('/api/paypal/config', { cache: 'no-store' })
+      .then(res => res.ok ? res.json() as Promise<{ enabled?: boolean }> : null)
+      .then(config => { if (config?.enabled) setPaypalEnabled(true) })
+      .catch(() => {})
+  }, [open])
+
   async function checkoutCommunityItems() {
     setCheckingOut(true)
     setCheckoutMessage(null)
     setCheckoutError(null)
     setCheckoutIntent(null)
     try {
-      const res = await fetch('/api/checkout/create-payment-intent', { method: 'POST' })
-      const data = await res.json() as { error?: string; client_secret?: string; payment_intent_id?: string; order_id?: string; total_cents?: number }
+      const res = await fetch('/api/checkout/create-payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gateway }),
+      })
+      const data = await res.json() as { error?: string; approval_url?: string; client_secret?: string; payment_intent_id?: string; order_id?: string; total_cents?: number }
       if (!res.ok || data.error) {
         setCheckoutError(data.error ?? t('checkout.startFailed'))
+        return
+      }
+      if (gateway === 'paypal' && data.approval_url) {
+        window.location.href = data.approval_url
         return
       }
       if (!data.client_secret || !data.payment_intent_id || !data.order_id || !data.total_cents) {
@@ -726,8 +744,17 @@ function BasketDrawer({ open, onClose, onRetailer, isIOSNative }: {
                 <span style={{ color: '#00c2cb', fontWeight: 950, fontSize: 20 }}>{formatEuroFromCents(basket.communityTotalCents)}</span>
               </div>
               {hasDigitalCommunityItem && <p style={{ margin: '10px 0 0', color: 'var(--ft-text-secondary)', fontSize: 12, lineHeight: 1.45 }}>Digital purchases are available at freetrust.co in a web browser.</p>}
-              <button onClick={checkoutCommunityItems} disabled={checkingOut || basket.communityTotalCents <= 0 || hasDigitalCommunityItem} style={{ width: '100%', marginTop: 14, padding: '13px 14px', borderRadius: 12, border: 'none', background: '#00c2cb', color: '#001014', fontWeight: 950, cursor: checkingOut || hasDigitalCommunityItem ? 'default' : 'pointer', fontSize: 15, opacity: hasDigitalCommunityItem ? 0.55 : 1 }}>
-                {checkingOut ? t('checkout.creating') : checkoutIntent ? t('checkout.refresh') : t('checkout.communityItems')}
+              {paypalEnabled && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ color: 'var(--ft-text-tertiary)', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 7 }}>Payment method</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <button type="button" onClick={() => setGateway('stripe')} style={{ minHeight: 42, borderRadius: 10, border: gateway === 'stripe' ? '1px solid #00c2cb' : '1px solid rgba(148,163,184,0.2)', background: gateway === 'stripe' ? 'rgba(0,194,203,0.1)' : 'transparent', color: '#f8fafc', fontWeight: 800, cursor: 'pointer' }}>💳 Stripe</button>
+                    <button type="button" onClick={() => setGateway('paypal')} style={{ minHeight: 42, borderRadius: 10, border: gateway === 'paypal' ? '1px solid #60a5fa' : '1px solid rgba(148,163,184,0.2)', background: gateway === 'paypal' ? 'rgba(37,99,235,0.15)' : 'transparent', color: '#f8fafc', fontWeight: 800, cursor: 'pointer' }}>🅿️ PayPal</button>
+                  </div>
+                </div>
+              )}
+              <button onClick={checkoutCommunityItems} disabled={checkingOut || basket.communityTotalCents <= 0 || hasDigitalCommunityItem} style={{ width: '100%', marginTop: 14, padding: '13px 14px', borderRadius: 12, border: 'none', background: gateway === 'paypal' ? '#2563eb' : '#00c2cb', color: gateway === 'paypal' ? '#fff' : '#001014', fontWeight: 950, cursor: checkingOut || hasDigitalCommunityItem ? 'default' : 'pointer', fontSize: 15, opacity: hasDigitalCommunityItem ? 0.55 : 1 }}>
+                {checkingOut ? t('checkout.creating') : checkoutIntent ? t('checkout.refresh') : gateway === 'paypal' ? `Continue with PayPal · ${formatEuroFromCents(basket.communityTotalCents)}` : t('checkout.communityItems')}
               </button>
               {checkoutMessage && <p style={{ margin: '10px 0 0', color: '#34d399', fontSize: 12, lineHeight: 1.45 }}>{checkoutMessage}</p>}
               {checkoutError && <p style={{ margin: '10px 0 0', color: 'var(--ft-danger)', fontSize: 12, lineHeight: 1.45 }}>{checkoutError}</p>}

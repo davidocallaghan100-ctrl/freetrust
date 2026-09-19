@@ -4,6 +4,104 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail } from '@/lib/email/send'
 
+async function createTransferReceiptMessage({
+  admin,
+  transferId,
+  senderId,
+  recipientId,
+  amount,
+  currency,
+  note,
+  recipientName,
+}: {
+  admin: ReturnType<typeof createAdminClient>
+  transferId: string
+  senderId: string
+  recipientId: string
+  amount: number
+  currency: string
+  note: string
+  recipientName: string | null
+}) {
+  const { data: senderConversations, error: senderConversationError } = await admin
+    .from('conversation_participants')
+    .select('conversation_id')
+    .eq('user_id', senderId)
+
+  if (senderConversationError) throw senderConversationError
+
+  const conversationIds = (senderConversations ?? []).map(row => row.conversation_id as string)
+  let conversationId: string | null = null
+
+  if (conversationIds.length > 0) {
+    const { data: sharedConversation, error: sharedConversationError } = await admin
+      .from('conversation_participants')
+      .select('conversation_id')
+      .eq('user_id', recipientId)
+      .in('conversation_id', conversationIds)
+      .limit(1)
+
+    if (sharedConversationError) throw sharedConversationError
+    conversationId = sharedConversation?.[0]?.conversation_id as string | null ?? null
+  }
+
+  if (!conversationId) {
+    const nowIso = new Date().toISOString()
+    const { data: newConversation, error: conversationError } = await admin
+      .from('conversations')
+      .insert({ created_at: nowIso, updated_at: nowIso, last_message_at: nowIso })
+      .select('id')
+      .single()
+
+    if (conversationError || !newConversation) throw conversationError ?? new Error('Could not create transfer conversation')
+    conversationId = newConversation.id as string
+
+    const { error: participantError } = await admin
+      .from('conversation_participants')
+      .insert([
+        { conversation_id: conversationId, user_id: senderId, last_read_at: nowIso },
+        { conversation_id: conversationId, user_id: recipientId, last_read_at: null },
+      ])
+
+    if (participantError) {
+      await admin.from('conversations').delete().eq('id', conversationId)
+      throw participantError
+    }
+  }
+
+  const { data: existingReceipt, error: existingReceiptError } = await admin
+    .from('messages')
+    .select('id')
+    .eq('conversation_id', conversationId)
+    .contains('metadata', { type: 'wallet_transfer', transfer_id: transferId })
+    .limit(1)
+
+  if (existingReceiptError) throw existingReceiptError
+  if (existingReceipt && existingReceipt.length > 0) return
+
+  const symbol = currency === 'EUR' ? '€' : '₮'
+  const formattedAmount = currency === 'EUR' ? amount.toFixed(2) : String(amount)
+  const { error: messageError } = await admin
+    .from('messages')
+    .insert({
+      conversation_id: conversationId,
+      sender_id: senderId,
+      content: `Transfer completed: ${symbol}${formattedAmount} sent to ${recipientName ?? 'a member'}`,
+      metadata: {
+        type: 'wallet_transfer',
+        transfer_id: transferId,
+        amount,
+        currency,
+        note: note || null,
+        sender_id: senderId,
+        recipient_id: recipientId,
+        status: 'completed',
+      },
+    })
+
+  if (messageError) throw messageError
+}
+
 export async function POST(req: NextRequest) {
   try {
     // ── Auth ──────────────────────────────────────────────────────────────────
@@ -214,6 +312,19 @@ export async function POST(req: NextRequest) {
     }
 
     console.log('[transfer] recorded:', transfer.id, currency, amount, 'from', user.id, 'to', recipientId)
+
+    // The wallet mutation is already complete. A receipt is best-effort so a
+    // messaging outage can never make a successful transfer look failed.
+    await createTransferReceiptMessage({
+      admin,
+      transferId: transfer.id as string,
+      senderId: user.id,
+      recipientId,
+      amount,
+      currency,
+      note,
+      recipientName: recipient.full_name as string | null,
+    }).catch(err => console.error('[transfer] receipt message failed:', err))
 
     // ── Notify recipient ──────────────────────────────────────────────────────
     const symbol = currency === 'EUR' ? '€' : '₮'

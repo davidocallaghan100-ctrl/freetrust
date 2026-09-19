@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createPayPalOrder, getPayPalApprovalUrl, isPayPalAvailable } from '@/lib/paypal'
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' })
@@ -31,10 +32,6 @@ function priceToPence(price: unknown): number | null {
 }
 
 export async function POST(req: NextRequest) {
-  if (!stripe) {
-    return NextResponse.json({ error: 'Payments not configured' }, { status: 503 })
-  }
-
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -46,11 +43,13 @@ export async function POST(req: NextRequest) {
       service_id?: unknown
       package_tier?: unknown
       trust_discount_tokens?: unknown
+      gateway?: unknown
     } | null
     const service_id = body?.service_id
     const package_tier = typeof body?.package_tier === 'string' && body.package_tier.trim()
       ? body.package_tier.trim()
       : 'Basic'
+    const gateway = body?.gateway === 'paypal' ? 'paypal' : 'stripe'
     const requestedTrustTokens = body?.trust_discount_tokens == null
       ? 0
       : Number(body.trust_discount_tokens)
@@ -108,6 +107,17 @@ export async function POST(req: NextRequest) {
     const feePence = Math.round(chargedAmountPence * SERVICE_FEE_RATE)
     const payoutPence = chargedAmountPence - feePence
 
+    if (gateway === 'paypal') {
+      const { data: sellerProfile } = await admin
+        .from('profiles')
+        .select('paypal_email')
+        .eq('id', sellerId)
+        .maybeSingle()
+      if (typeof sellerProfile?.paypal_email !== 'string' || !sellerProfile.paypal_email.trim()) {
+        return NextResponse.json({ error: 'This seller has not configured a PayPal payout email yet.', code: 'seller_no_paypal_email' }, { status: 409 })
+      }
+    }
+
     // Insert order record
     const { data: order, error: orderError } = await supabase
       .from('orders')
@@ -116,8 +126,11 @@ export async function POST(req: NextRequest) {
         seller_id: sellerId,
         listing_id: service.id,
         title: service.title,
+        type: 'service',
         amount: amountPence,
         gross_amount: amountPence,
+        payment_gateway: gateway,
+        payment_amount_cents: chargedAmountPence,
         status: 'pending_escrow',
       })
       .select()
@@ -153,6 +166,71 @@ export async function POST(req: NextRequest) {
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+
+    if (gateway === 'paypal') {
+      if (!isPayPalAvailable()) {
+        if (requestedTrustTokens > 0) {
+          await admin.rpc('reverse_service_discount', {
+            p_order_id: order.id,
+            p_reason: 'PayPal is not configured',
+          })
+        }
+        await admin
+          .from('orders')
+          .update({ status: 'cancelled', cancelled_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .eq('id', order.id)
+        return NextResponse.json({ error: 'PayPal is not currently available' }, { status: 503 })
+      }
+
+      try {
+        const paypalOrder = await createPayPalOrder({
+          referenceId: order.id,
+          customId: order.id,
+          description: `${service.title} — ${package_tier}`,
+          amountCents: chargedAmountPence,
+          returnUrl: `${baseUrl}/api/paypal/return?order_id=${encodeURIComponent(order.id)}`,
+          cancelUrl: `${baseUrl}/api/paypal/cancel?order_id=${encodeURIComponent(order.id)}`,
+          intent: 'AUTHORIZE',
+        })
+        const approvalUrl = getPayPalApprovalUrl(paypalOrder)
+        if (!paypalOrder.id || !approvalUrl) throw new Error('PayPal did not return an approval URL')
+
+        const { error: paypalOrderUpdateError } = await admin
+          .from('orders')
+          .update({ paypal_order_id: paypalOrder.id, paypal_intent: 'AUTHORIZE', updated_at: new Date().toISOString() })
+          .eq('id', order.id)
+        if (paypalOrderUpdateError) throw paypalOrderUpdateError
+
+        return NextResponse.json({ url: approvalUrl, order_id: order.id, gateway: 'paypal' })
+      } catch (paypalError) {
+        if (requestedTrustTokens > 0) {
+          await admin.rpc('reverse_service_discount', {
+            p_order_id: order.id,
+            p_reason: 'PayPal order creation failed',
+          })
+        }
+        await admin
+          .from('orders')
+          .update({ status: 'cancelled', cancelled_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .eq('id', order.id)
+        throw paypalError
+      }
+    }
+
+    if (!stripe) {
+      if (requestedTrustTokens > 0) {
+        await admin.rpc('reverse_service_discount', {
+          p_order_id: order.id,
+          p_reason: 'Stripe is not configured',
+        })
+      }
+      await admin
+        .from('orders')
+        .update({ status: 'cancelled', cancelled_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('id', order.id)
+      return NextResponse.json({ error: 'Payments not configured' }, { status: 503 })
+    }
+
     let session: Stripe.Checkout.Session
     try {
       session = await stripe.checkout.sessions.create({

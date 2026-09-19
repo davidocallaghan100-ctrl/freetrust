@@ -1,10 +1,11 @@
 export const dynamic = 'force-dynamic'
 
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { calculateProductBasketTotals, eurFromCents } from '@/lib/checkoutConfig'
+import { createPayPalOrder, getPayPalApprovalUrl, isPayPalAvailable } from '@/lib/paypal'
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' })
@@ -35,6 +36,7 @@ type SellerRow = {
   stripe_account_id: string | null
   stripe_onboarded: boolean | null
   stripe_onboarding_complete: boolean | null
+  paypal_email: string | null
 }
 
 function priceToCents(listing: ListingRow): number | null {
@@ -44,10 +46,13 @@ function priceToCents(listing: ListingRow): number | null {
   return Math.round(value * 100)
 }
 
-export async function POST() {
-  if (!stripe) return NextResponse.json({ error: 'Payments not configured' }, { status: 503 })
-
+export async function POST(req: NextRequest) {
   try {
+    const body = await req.json().catch(() => ({})) as { gateway?: unknown }
+    const gateway = body.gateway === 'paypal' ? 'paypal' : 'stripe'
+    if (gateway === 'stripe' && !stripe) return NextResponse.json({ error: 'Payments not configured' }, { status: 503 })
+    if (gateway === 'paypal' && !isPayPalAvailable()) return NextResponse.json({ error: 'PayPal is not currently available' }, { status: 503 })
+
     const authClient = await createClient()
     const { data: { user }, error: authError } = await authClient.auth.getUser()
     if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -87,7 +92,7 @@ export async function POST() {
     const sellerIds = Array.from(new Set(Array.from(listings.values()).map(row => row.seller_id).filter(Boolean))) as string[]
     const { data: sellersData, error: sellersError } = await admin
       .from('profiles')
-      .select('id, stripe_account_id, stripe_onboarded, stripe_onboarding_complete')
+      .select('id, stripe_account_id, stripe_onboarded, stripe_onboarding_complete, paypal_email')
       .in('id', sellerIds)
 
     if (sellersError) {
@@ -118,8 +123,11 @@ export async function POST() {
         return NextResponse.json({ error: `${listing.title} cannot be bought by this account` }, { status: 409 })
       }
       const seller = sellers.get(listing.seller_id)
-      if (!seller?.stripe_account_id || (!seller.stripe_onboarded && !seller.stripe_onboarding_complete)) {
+      if (gateway === 'stripe' && (!seller?.stripe_account_id || (!seller.stripe_onboarded && !seller.stripe_onboarding_complete))) {
         return NextResponse.json({ error: `${listing.title} seller is not ready for Stripe checkout` }, { status: 409 })
+      }
+      if (gateway === 'paypal' && !seller?.paypal_email) {
+        return NextResponse.json({ error: `${listing.title} seller has not configured a PayPal payout email` }, { status: 409 })
       }
       const unit = priceToCents(listing)
       if (!unit) return NextResponse.json({ error: `${listing.title} has no valid price` }, { status: 409 })
@@ -151,8 +159,11 @@ export async function POST() {
         seller_id: null,
         listing_id: null,
         title: `Product basket (${orderItems.length} item${orderItems.length === 1 ? '' : 's'})`,
+        type: 'product_basket',
         amount: totalCents,
         currency: 'EUR',
+        payment_gateway: gateway,
+        payment_amount_cents: totalCents,
         status: 'pending_escrow',
         notes: 'FreeTrust Phase 1C multi-item product basket',
         total_eur: eurFromCents(totalCents),
@@ -179,7 +190,37 @@ export async function POST() {
       return NextResponse.json({ error: 'Could not create order items' }, { status: 500 })
     }
 
-    const paymentIntent = await stripe.paymentIntents.create({
+    if (gateway === 'paypal') {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+      try {
+        const paypalOrder = await createPayPalOrder({
+          referenceId: order.id,
+          customId: order.id,
+          description: `FreeTrust product basket (${orderItems.length} item${orderItems.length === 1 ? '' : 's'})`,
+          amountCents: totalCents,
+          returnUrl: `${baseUrl}/api/paypal/return?order_id=${encodeURIComponent(order.id)}`,
+          cancelUrl: `${baseUrl}/api/paypal/cancel?order_id=${encodeURIComponent(order.id)}`,
+          intent: 'CAPTURE',
+        })
+        const approvalUrl = getPayPalApprovalUrl(paypalOrder)
+        if (!paypalOrder.id || !approvalUrl) throw new Error('PayPal did not return an approval URL')
+        await admin.from('orders').update({ paypal_order_id: paypalOrder.id, paypal_intent: 'CAPTURE', updated_at: new Date().toISOString() }).eq('id', order.id)
+        return NextResponse.json({
+          approval_url: approvalUrl,
+          paypal_order_id: paypalOrder.id,
+          order_id: order.id,
+          subtotal_cents: subtotalCents,
+          platform_fee_cents: platformFeeCents,
+          total_cents: totalCents,
+          community_item_count: orderItems.length,
+        })
+      } catch (paypalError) {
+        await admin.from('orders').update({ status: 'cancelled', cancelled_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', order.id)
+        throw paypalError
+      }
+    }
+
+    const paymentIntent = await stripe!.paymentIntents.create({
       amount: totalCents,
       currency: 'eur',
       description: `FreeTrust product basket ${order.id}`,

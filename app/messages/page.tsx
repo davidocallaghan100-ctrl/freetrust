@@ -39,6 +39,7 @@ interface Message {
   attachments?: MessageAttachment[]
   reply_to_id?: string | null
   read_receipts?: MessageReadReceipt[]
+  metadata?: Record<string, unknown> | null
   sender?: Profile
 }
 
@@ -134,10 +135,104 @@ function formatTime(iso: string): string {
 }
 
 function messagePreview(message: Message): string {
+  const type = getMessageMetadataType(message)
+  if (type === 'wallet_transfer') {
+    const metadata = message.metadata as Record<string, unknown>
+    return `💸 ${formatMetadataAmount(metadata)} transfer`
+  }
+  if (type === 'custom_order') {
+    const title = typeof message.metadata?.title === 'string' ? message.metadata.title : 'Custom order'
+    return `🧾 ${title}`
+  }
   if (message.content) return gifPreviewLabel(message.content, message.content)
   const count = message.attachments?.length ?? 0
   if (count === 0) return ''
   return count === 1 ? '📎 Attachment' : `📎 ${count} attachments`
+}
+
+function getMessageMetadataType(message: Message): string | null {
+  const type = message.metadata && typeof message.metadata.type === 'string'
+    ? message.metadata.type
+    : null
+  return type
+}
+
+function formatMetadataAmount(metadata: Record<string, unknown>): string {
+  const amount = Number(metadata.amount)
+  const currency = typeof metadata.currency === 'string' ? metadata.currency.toUpperCase() : 'EUR'
+  if (!Number.isFinite(amount)) return currency === 'TRUST' ? '₮' : '€'
+  return currency === 'TRUST' ? `₮${amount.toLocaleString()}` : `€${amount.toFixed(2)}`
+}
+
+interface CustomOrderForm {
+  title: string
+  description: string
+  amount: string
+  deliveryDetails: string
+  deliveryDays: string
+}
+
+function StructuredMessageCard({
+  message,
+  currentUserId,
+  onOpenWallet,
+  onOpenOrder,
+}: {
+  message: Message
+  currentUserId: string | null
+  onOpenWallet: () => void
+  onOpenOrder: (orderId: string) => void
+}) {
+  const type = getMessageMetadataType(message)
+  const metadata = message.metadata ?? {}
+  const amountLabel = formatMetadataAmount(metadata)
+
+  if (type === 'wallet_transfer') {
+    const isSender = message.sender_id === currentUserId || message.sender_id === 'me'
+    const note = typeof metadata.note === 'string' ? metadata.note : ''
+    return (
+      <div className="msg-transfer-card">
+        <div className="msg-structured-topline">
+          <div className="msg-structured-icon">💸</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="msg-structured-eyebrow">Wallet transfer</div>
+            <div className="msg-structured-title">{isSender ? 'You sent funds' : 'Funds received'}</div>
+          </div>
+          <span className="msg-structured-status">✓ Complete</span>
+        </div>
+        <div className="msg-structured-amount">{amountLabel}</div>
+        {note && <div className="msg-structured-note">“{note}”</div>}
+        <button type="button" className="msg-structured-link" onClick={onOpenWallet}>View in Wallet ↗</button>
+      </div>
+    )
+  }
+
+  if (type === 'custom_order') {
+    const orderId = typeof metadata.order_id === 'string' ? metadata.order_id : ''
+    const title = typeof metadata.title === 'string' ? metadata.title : 'Custom order'
+    const description = typeof metadata.description === 'string' ? metadata.description : ''
+    const deliveryDays = Number(metadata.delivery_days)
+    return (
+      <div className="msg-custom-order-card">
+        <div className="msg-structured-topline">
+          <div className="msg-structured-icon msg-structured-icon-order">🧾</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="msg-structured-eyebrow">Custom order</div>
+            <div className="msg-structured-title">{title}</div>
+          </div>
+          <span className="msg-structured-status msg-structured-status-order">Pending</span>
+        </div>
+        <div className="msg-structured-amount">{amountLabel}</div>
+        {description && <div className="msg-structured-description">{description}</div>}
+        {Number.isFinite(deliveryDays) && deliveryDays > 0 && (
+          <div className="msg-structured-delivery">Delivery in {deliveryDays} day{deliveryDays === 1 ? '' : 's'}</div>
+        )}
+        <button type="button" className="msg-structured-link" onClick={() => orderId && onOpenOrder(orderId)} disabled={!orderId}>View order ↗</button>
+      </div>
+    )
+  }
+
+  return null
 }
 
 
@@ -181,6 +276,20 @@ function MessagesPageInner() {
   const [pendingResend, setPendingResend] = useState<{ id: string; text: string } | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showNewModal, setShowNewModal] = useState(false)
+  const [showThreadMenu, setShowThreadMenu] = useState(false)
+  const [sellerEligible, setSellerEligible] = useState<boolean | null>(null)
+  const [showCustomOrderModal, setShowCustomOrderModal] = useState(false)
+  const [customOrderStep, setCustomOrderStep] = useState<'form' | 'review'>('form')
+  const [customOrderForm, setCustomOrderForm] = useState<CustomOrderForm>({
+    title: '',
+    description: '',
+    amount: '',
+    deliveryDetails: '',
+    deliveryDays: '7',
+  })
+  const [customOrderError, setCustomOrderError] = useState<string | null>(null)
+  const [customOrderSubmitting, setCustomOrderSubmitting] = useState(false)
+  const [threadNotice, setThreadNotice] = useState<string | null>(null)
   // New Message modal — live member search dropdown. Replaces the old
   // dead-end "type a name/email" input that went nowhere.
   const [newSearch,        setNewSearch]        = useState('')
@@ -194,6 +303,7 @@ function MessagesPageInner() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const threadMenuRef = useRef<HTMLDivElement>(null)
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map())
   const markedReadRef = useRef<Set<string>>(new Set())
   const messageRequestRef = useRef(0)
@@ -272,6 +382,52 @@ function MessagesPageInner() {
 
     return () => { cancelled = true }
   }, [router])
+
+  // Custom orders are a seller action. Prefer the onboarding purpose flag,
+  // then fall back to the user's existing listings so established sellers
+  // remain eligible even if their profile purpose was never completed.
+  useEffect(() => {
+    if (!userId) return
+    let cancelled = false
+    const checkSellerEligibility = async () => {
+      try {
+        const profileRes = await fetch('/api/profile', { cache: 'no-store' })
+        if (profileRes.ok) {
+          const profileData = await profileRes.json() as { profile?: { purpose?: unknown } }
+          const purposes = Array.isArray(profileData.profile?.purpose)
+            ? profileData.profile.purpose.filter((value): value is string => typeof value === 'string').map(value => value.toLowerCase())
+            : []
+          if (purposes.includes('selling') || purposes.includes('both')) {
+            if (!cancelled) setSellerEligible(true)
+            return
+          }
+        }
+
+        const listingsRes = await fetch('/api/listings?mine=true&limit=1', { cache: 'no-store' })
+        const listingsData = await listingsRes.json().catch(() => ({})) as { total?: number; listings?: unknown[] }
+        if (!cancelled) setSellerEligible(listingsRes.ok && ((listingsData.total ?? listingsData.listings?.length ?? 0) > 0))
+      } catch (err) {
+        console.error('[messages] seller eligibility check failed:', err)
+        if (!cancelled) setSellerEligible(false)
+      }
+    }
+    void checkSellerEligibility()
+    return () => { cancelled = true }
+  }, [userId])
+
+  useEffect(() => {
+    setShowThreadMenu(false)
+    setThreadNotice(null)
+  }, [activeId])
+
+  useEffect(() => {
+    if (!showThreadMenu) return
+    const closeMenu = (event: PointerEvent) => {
+      if (!threadMenuRef.current?.contains(event.target as Node)) setShowThreadMenu(false)
+    }
+    document.addEventListener('pointerdown', closeMenu)
+    return () => document.removeEventListener('pointerdown', closeMenu)
+  }, [showThreadMenu])
 
   // Auto-open a conversation when ?to=userId is present in the URL.
   // Several pages link to /messages?to=X (job applications, grassroots,
@@ -653,6 +809,84 @@ function MessagesPageInner() {
     setSending(false)
   }
 
+  const resetCustomOrder = () => {
+    setCustomOrderStep('form')
+    setCustomOrderForm({ title: '', description: '', amount: '', deliveryDetails: '', deliveryDays: '7' })
+    setCustomOrderError(null)
+    setCustomOrderSubmitting(false)
+  }
+
+  const startCustomOrder = () => {
+    setShowThreadMenu(false)
+    resetCustomOrder()
+    setShowCustomOrderModal(true)
+  }
+
+  const reviewCustomOrder = () => {
+    const title = customOrderForm.title.trim()
+    const description = customOrderForm.description.trim()
+    const amount = Number(customOrderForm.amount)
+    const deliveryDays = Number(customOrderForm.deliveryDays)
+    if (title.length < 3 || title.length > 120) {
+      setCustomOrderError('Give the custom order a title between 3 and 120 characters.')
+      return
+    }
+    if (description.length < 10 || description.length > 2000) {
+      setCustomOrderError('Add a description between 10 and 2,000 characters.')
+      return
+    }
+    if (!Number.isFinite(amount) || amount <= 0 || amount > 1000000) {
+      setCustomOrderError('Enter a valid EUR amount.')
+      return
+    }
+    if (!Number.isInteger(deliveryDays) || deliveryDays < 1 || deliveryDays > 365) {
+      setCustomOrderError('Choose a delivery timeframe between 1 and 365 days.')
+      return
+    }
+    setCustomOrderError(null)
+    setCustomOrderStep('review')
+  }
+
+  const submitCustomOrder = async () => {
+    if (!activeId || !activeConv?.other_user.id || customOrderSubmitting) return
+    setCustomOrderSubmitting(true)
+    setCustomOrderError(null)
+    try {
+      const res = await fetch('/api/orders/custom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversation_id: activeId,
+          recipient_id: activeConv.other_user.id,
+          title: customOrderForm.title.trim(),
+          description: customOrderForm.description.trim(),
+          amount: Number(customOrderForm.amount),
+          delivery_details: customOrderForm.deliveryDetails.trim(),
+          delivery_days: Number(customOrderForm.deliveryDays),
+        }),
+      })
+      const data = await res.json().catch(() => ({})) as { error?: string; order?: { id: string }; warning?: string }
+      if (!res.ok || !data.order) {
+        setCustomOrderError(data.error ?? 'Could not create the custom order.')
+        return
+      }
+      setShowCustomOrderModal(false)
+      resetCustomOrder()
+      setThreadNotice(data.warning ? 'Custom order created, but the thread receipt is still syncing.' : 'Custom order sent securely in this conversation.')
+      await loadMessages(activeId, { silent: true })
+      if (userId) void loadConversations(userId)
+    } catch (err) {
+      setCustomOrderError(err instanceof Error ? err.message : 'Could not create the custom order.')
+    } finally {
+      setCustomOrderSubmitting(false)
+    }
+  }
+
+  const openSupport = () => {
+    setShowThreadMenu(false)
+    window.dispatchEvent(new CustomEvent('freetrust:open-support'))
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
   }
@@ -760,8 +994,24 @@ function MessagesPageInner() {
         .msg-bubble.recv { background: rgba(30,41,59,0.96); color: #e2e8f0; border-bottom-left-radius: 6px; border: 1px solid rgba(148,163,184,0.1); }
         .msg-bubble.gif-only { padding: 0; background: transparent; border: none; box-shadow: none; max-width: min(72%, 280px); }
         .msg-bubble.gif-only .msg-bubble-time { color: #64748b; padding-right: 0.2rem; }
-        .msg-bubble-time { display: block; margin-top: 0.3rem; font-size: 0.68rem; line-height: 1; opacity: 0.7; text-align: right; }
-        .msg-message-highlight .msg-bubble { box-shadow: 0 0 0 3px rgba(251,191,36,0.55), 0 10px 28px rgba(0,0,0,0.18); }
+         .msg-bubble-time { display: block; margin-top: 0.3rem; font-size: 0.68rem; line-height: 1; opacity: 0.7; text-align: right; }
+         .msg-bubble.structured { padding: 0; background: transparent; border: none; box-shadow: none; max-width: min(88%, 380px); }
+         .msg-transfer-card, .msg-custom-order-card { border-radius: 18px; padding: 0.95rem 1rem 0.85rem; color: #e2e8f0; box-shadow: 0 16px 34px rgba(2,6,23,0.28); }
+         .msg-transfer-card { background: linear-gradient(145deg, rgba(20,184,166,0.2), rgba(14,165,233,0.16)); border: 1px solid rgba(45,212,191,0.34); }
+         .msg-custom-order-card { background: linear-gradient(145deg, rgba(129,140,248,0.2), rgba(56,189,248,0.12)); border: 1px solid rgba(129,140,248,0.34); }
+         .msg-structured-topline { display: flex; align-items: center; gap: 0.65rem; }
+         .msg-structured-icon { width: 34px; height: 34px; border-radius: 11px; display: flex; align-items: center; justify-content: center; background: rgba(45,212,191,0.16); font-size: 1rem; flex-shrink: 0; }
+         .msg-structured-icon-order { background: rgba(167,139,250,0.17); }
+         .msg-structured-eyebrow { color: #99f6e4; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+         .msg-structured-title { margin-top: 0.12rem; color: #f8fafc; font-size: 0.84rem; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+         .msg-structured-status { color: #5eead4; font-size: 0.64rem; font-weight: 800; white-space: nowrap; }
+         .msg-structured-status-order { color: #c4b5fd; }
+         .msg-structured-amount { margin-top: 0.9rem; color: #f8fafc; font-size: 1.55rem; font-weight: 900; letter-spacing: -0.04em; }
+         .msg-structured-note, .msg-structured-description { margin-top: 0.42rem; color: #cbd5e1; font-size: 0.78rem; line-height: 1.45; }
+         .msg-structured-delivery { margin-top: 0.45rem; color: #c4b5fd; font-size: 0.72rem; font-weight: 700; }
+         .msg-structured-link { margin-top: 0.75rem; padding: 0; border: 0; background: transparent; color: #7dd3fc; cursor: pointer; font: inherit; font-size: 0.74rem; font-weight: 800; }
+         .msg-structured-link:disabled { cursor: default; opacity: 0.45; }
+         .msg-message-highlight .msg-bubble { box-shadow: 0 0 0 3px rgba(251,191,36,0.55), 0 10px 28px rgba(0,0,0,0.18); }
         .msg-reply-action { align-self: center; border: none; background: transparent; color: #64748b; cursor: pointer; font-size: 0.72rem; padding: 0.25rem 0.4rem; }
         .msg-reply-action:hover { color: #38bdf8; }
         .msg-quote { border-left: 3px solid rgba(45,212,191,0.6); border-radius: 9px; padding: 0.38rem 0.55rem; margin-bottom: 0.45rem; background: rgba(15,23,42,0.18); color: inherit; width: 100%; text-align: left; cursor: pointer; font: inherit; }
@@ -956,9 +1206,40 @@ function MessagesPageInner() {
               <button onClick={() => router.push(`/profile?id=${activeConv?.other_user.id}`)} style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 999, padding: '0.38rem 0.72rem', fontSize: '0.76rem', color: '#7dd3fc', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}>
                 View Profile
               </button>
+              <div ref={threadMenuRef} style={{ position: 'relative', flexShrink: 0 }}>
+                <button
+                  type="button"
+                  aria-label="Conversation actions"
+                  aria-expanded={showThreadMenu}
+                  onClick={() => setShowThreadMenu(value => !value)}
+                  style={{ width: 36, height: 36, borderRadius: 999, background: showThreadMenu ? 'rgba(56,189,248,0.16)' : 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', color: '#bae6fd', cursor: 'pointer', fontSize: '1.25rem', lineHeight: 1, fontFamily: 'inherit' }}
+                >
+                  ⋯
+                </button>
+                {showThreadMenu && (
+                  <div role="menu" style={{ position: 'absolute', top: 'calc(100% + 0.55rem)', right: 0, width: 210, padding: '0.35rem', borderRadius: 14, background: '#0f1d31', border: '1px solid rgba(56,189,248,0.2)', boxShadow: '0 18px 42px rgba(0,0,0,0.42)', zIndex: 120 }}>
+                    {sellerEligible === true && (
+                      <button type="button" role="menuitem" onClick={startCustomOrder} style={{ width: '100%', border: 0, borderRadius: 10, padding: '0.7rem 0.75rem', background: 'transparent', color: '#f8fafc', textAlign: 'left', cursor: 'pointer', font: 'inherit', fontSize: '0.82rem', fontWeight: 700 }}>
+                        🧾 Create custom order
+                      </button>
+                    )}
+                    <button type="button" role="menuitem" onClick={() => { setShowThreadMenu(false); router.push('/resolution-centre') }} style={{ width: '100%', border: 0, borderRadius: 10, padding: '0.7rem 0.75rem', background: 'transparent', color: '#f8fafc', textAlign: 'left', cursor: 'pointer', font: 'inherit', fontSize: '0.82rem', fontWeight: 700 }}>
+                      🛡 Resolution Centre
+                    </button>
+                    <button type="button" role="menuitem" onClick={openSupport} style={{ width: '100%', border: 0, borderRadius: 10, padding: '0.7rem 0.75rem', background: 'transparent', color: '#f8fafc', textAlign: 'left', cursor: 'pointer', font: 'inherit', fontSize: '0.82rem', fontWeight: 700 }}>
+                      💬 Help &amp; support
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="msg-safety-chip">🛡 Verified member conversation · payments stay inside FreeTrust</div>
+            {threadNotice && (
+              <div role="status" style={{ margin: '0.7rem 1rem 0', padding: '0.6rem 0.75rem', borderRadius: 10, border: '1px solid rgba(52,211,153,0.25)', background: 'rgba(52,211,153,0.08)', color: '#86efac', fontSize: '0.78rem' }}>
+                {threadNotice}
+              </div>
+            )}
 
             {/* Messages */}
             <div className="msg-thread-scroll">
@@ -977,6 +1258,7 @@ function MessagesPageInner() {
               ) : messages.map((msg, i) => {
                 const isSent = msg.sender_id === userId || msg.sender_id === 'me'
                 const gifOnly = isGifOnlyMessage(msg.content)
+                const metadataType = getMessageMetadataType(msg)
                 const prevMsg = messages[i - 1]
                 const showTime = !prevMsg || new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() > 300000
                 return (
@@ -1000,21 +1282,37 @@ function MessagesPageInner() {
                           <AvatarCircle profile={msg.sender ?? activeConv?.other_user ?? null} id={msg.sender_id} name={msg.sender?.full_name ?? activeConv?.other_user.full_name} size={28} fontSize="0.6rem" />
                         </div>
                       )}
-                      <div className={`msg-bubble ${isSent ? 'sent' : 'recv'}${gifOnly ? ' gif-only' : ''}`}>
-                        {msg.reply_to_id && (() => {
-                          const replied = messagesById.get(msg.reply_to_id)
-                          return (
-                            <button type="button" className="msg-quote" onClick={() => scrollToMessage(msg.reply_to_id!)}>
-                              <span className="msg-quote-label">Replying to {replied?.sender_id === userId ? 'you' : 'member'}</span>
-                              <span className="msg-quote-text">{gifPreviewLabel(replied?.content, replied?.attachments?.length ? 'Attachment' : 'Original message')}</span>
-                            </button>
-                          )
-                        })()}
-                        {msg.content && <GifContent content={msg.content} />}
-                        <MessageAttachments attachments={msg.attachments ?? []} compact />
-                        <span className="msg-bubble-time">
-                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{isSent ? ` ${isMessageReadByAllOthers(msg, userId, participantIds) ? '✓✓' : '✓'}` : ''}
-                        </span>
+                      <div className={`msg-bubble ${isSent ? 'sent' : 'recv'}${gifOnly ? ' gif-only' : ''}${metadataType ? ' structured' : ''}`}>
+                        {metadataType ? (
+                          <>
+                            <StructuredMessageCard
+                              message={msg}
+                              currentUserId={userId}
+                              onOpenWallet={() => router.push('/wallet')}
+                              onOpenOrder={orderId => router.push(`/orders/${orderId}`)}
+                            />
+                            <span className="msg-bubble-time">
+                              {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{isSent ? ` ${isMessageReadByAllOthers(msg, userId, participantIds) ? '✓✓' : '✓'}` : ''}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            {msg.reply_to_id && (() => {
+                              const replied = messagesById.get(msg.reply_to_id)
+                              return (
+                                <button type="button" className="msg-quote" onClick={() => scrollToMessage(msg.reply_to_id!)}>
+                                  <span className="msg-quote-label">Replying to {replied?.sender_id === userId ? 'you' : 'member'}</span>
+                                  <span className="msg-quote-text">{gifPreviewLabel(replied?.content, replied?.attachments?.length ? 'Attachment' : 'Original message')}</span>
+                                </button>
+                              )
+                            })()}
+                            {msg.content && <GifContent content={msg.content} />}
+                            <MessageAttachments attachments={msg.attachments ?? []} compact />
+                            <span className="msg-bubble-time">
+                              {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{isSent ? ` ${isMessageReadByAllOthers(msg, userId, participantIds) ? '✓✓' : '✓'}` : ''}
+                            </span>
+                          </>
+                        )}
                       </div>
                       <button type="button" className="msg-reply-action" onClick={() => { setReplyingTo(msg); inputRef.current?.focus() }} aria-label="Reply to message">
                         Reply
@@ -1178,6 +1476,72 @@ function MessagesPageInner() {
           </>
         )}
       </div>
+
+      {showCustomOrderModal && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem', zIndex: 9999 }}
+          onClick={() => { if (!customOrderSubmitting) setShowCustomOrderModal(false) }}
+        >
+          <div onClick={event => event.stopPropagation()} style={{ width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto', background: '#101d31', border: '1px solid rgba(129,140,248,0.3)', borderRadius: 20, padding: '1.25rem', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '1rem' }}>
+              <div>
+                <div style={{ color: '#c4b5fd', fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Seller tools</div>
+                <h3 style={{ margin: '0.2rem 0 0', color: '#f8fafc', fontSize: '1.12rem' }}>Create a custom order</h3>
+                <div style={{ marginTop: '0.3rem', color: '#94a3b8', fontSize: '0.78rem' }}>Send a protected proposal to {activeConv?.other_user.full_name || 'this member'}.</div>
+              </div>
+              <button type="button" aria-label="Close" onClick={() => { if (!customOrderSubmitting) setShowCustomOrderModal(false) }} style={{ background: 'rgba(148,163,184,0.1)', border: 0, borderRadius: 999, width: 34, height: 34, color: '#cbd5e1', cursor: 'pointer', fontSize: '1.2rem' }}>×</button>
+            </div>
+
+            {customOrderStep === 'form' ? (
+              <div style={{ display: 'grid', gap: '0.85rem' }}>
+                <label style={{ display: 'grid', gap: '0.35rem', color: '#cbd5e1', fontSize: '0.76rem', fontWeight: 700 }}>
+                  Order title
+                  <input value={customOrderForm.title} onChange={event => setCustomOrderForm(prev => ({ ...prev, title: event.target.value }))} maxLength={120} placeholder="e.g. Brand identity refresh" style={{ width: '100%', boxSizing: 'border-box', borderRadius: 10, border: '1px solid rgba(148,163,184,0.2)', background: '#0b1525', color: '#f8fafc', padding: '0.72rem 0.8rem', font: 'inherit', fontSize: '16px' }} />
+                </label>
+                <label style={{ display: 'grid', gap: '0.35rem', color: '#cbd5e1', fontSize: '0.76rem', fontWeight: 700 }}>
+                  What will you deliver?
+                  <textarea value={customOrderForm.description} onChange={event => setCustomOrderForm(prev => ({ ...prev, description: event.target.value }))} maxLength={2000} rows={4} placeholder="Describe the work, inclusions, and success criteria…" style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical', borderRadius: 10, border: '1px solid rgba(148,163,184,0.2)', background: '#0b1525', color: '#f8fafc', padding: '0.72rem 0.8rem', font: 'inherit', fontSize: '16px', lineHeight: 1.45 }} />
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.7rem' }}>
+                  <label style={{ display: 'grid', gap: '0.35rem', color: '#cbd5e1', fontSize: '0.76rem', fontWeight: 700 }}>
+                    Price (EUR)
+                    <input type="number" min="0.01" step="0.01" value={customOrderForm.amount} onChange={event => setCustomOrderForm(prev => ({ ...prev, amount: event.target.value }))} placeholder="0.00" style={{ width: '100%', boxSizing: 'border-box', borderRadius: 10, border: '1px solid rgba(148,163,184,0.2)', background: '#0b1525', color: '#f8fafc', padding: '0.72rem 0.8rem', font: 'inherit', fontSize: '16px' }} />
+                  </label>
+                  <label style={{ display: 'grid', gap: '0.35rem', color: '#cbd5e1', fontSize: '0.76rem', fontWeight: 700 }}>
+                    Delivery (days)
+                    <input type="number" min="1" max="365" step="1" value={customOrderForm.deliveryDays} onChange={event => setCustomOrderForm(prev => ({ ...prev, deliveryDays: event.target.value }))} style={{ width: '100%', boxSizing: 'border-box', borderRadius: 10, border: '1px solid rgba(148,163,184,0.2)', background: '#0b1525', color: '#f8fafc', padding: '0.72rem 0.8rem', font: 'inherit', fontSize: '16px' }} />
+                  </label>
+                </div>
+                <label style={{ display: 'grid', gap: '0.35rem', color: '#cbd5e1', fontSize: '0.76rem', fontWeight: 700 }}>
+                  Extra delivery details <span style={{ color: '#64748b', fontWeight: 500 }}>(optional)</span>
+                  <textarea value={customOrderForm.deliveryDetails} onChange={event => setCustomOrderForm(prev => ({ ...prev, deliveryDetails: event.target.value }))} maxLength={1000} rows={2} placeholder="Milestones, hand-off details, or access notes…" style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical', borderRadius: 10, border: '1px solid rgba(148,163,184,0.2)', background: '#0b1525', color: '#f8fafc', padding: '0.72rem 0.8rem', font: 'inherit', fontSize: '16px', lineHeight: 1.45 }} />
+                </label>
+                {customOrderError && <div role="alert" style={{ padding: '0.65rem 0.75rem', borderRadius: 10, background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)', color: '#fca5a5', fontSize: '0.78rem' }}>{customOrderError}</div>}
+                <button type="button" onClick={reviewCustomOrder} style={{ marginTop: '0.15rem', border: 0, borderRadius: 11, padding: '0.8rem', background: 'linear-gradient(135deg,#818cf8,#38bdf8)', color: '#07111f', font: 'inherit', fontWeight: 900, cursor: 'pointer' }}>Review custom order →</button>
+              </div>
+            ) : (
+              <div>
+                <div style={{ padding: '0.9rem', borderRadius: 14, background: 'rgba(129,140,248,0.08)', border: '1px solid rgba(129,140,248,0.22)' }}>
+                  <div style={{ color: '#c4b5fd', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Review proposal</div>
+                  <div style={{ marginTop: '0.35rem', color: '#f8fafc', fontSize: '1.05rem', fontWeight: 800 }}>{customOrderForm.title.trim()}</div>
+                  <div style={{ marginTop: '0.65rem', color: '#cbd5e1', fontSize: '0.82rem', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{customOrderForm.description.trim()}</div>
+                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginTop: '0.9rem', color: '#e0e7ff', fontSize: '0.8rem', fontWeight: 800 }}>
+                    <span>€{Number(customOrderForm.amount).toFixed(2)}</span>
+                    <span>Delivery in {Number(customOrderForm.deliveryDays)} days</span>
+                  </div>
+                  {customOrderForm.deliveryDetails.trim() && <div style={{ marginTop: '0.7rem', color: '#94a3b8', fontSize: '0.78rem', lineHeight: 1.4 }}>{customOrderForm.deliveryDetails.trim()}</div>}
+                </div>
+                <div style={{ marginTop: '0.75rem', color: '#94a3b8', fontSize: '0.75rem', lineHeight: 1.45 }}>The buyer will receive this as a pending FreeTrust order. Funds stay protected through the existing escrow flow.</div>
+                {customOrderError && <div role="alert" style={{ marginTop: '0.75rem', padding: '0.65rem 0.75rem', borderRadius: 10, background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)', color: '#fca5a5', fontSize: '0.78rem' }}>{customOrderError}</div>}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: '0.65rem', marginTop: '1rem' }}>
+                  <button type="button" disabled={customOrderSubmitting} onClick={() => { setCustomOrderError(null); setCustomOrderStep('form') }} style={{ border: '1px solid rgba(148,163,184,0.2)', borderRadius: 11, padding: '0.8rem', background: 'transparent', color: '#cbd5e1', font: 'inherit', fontWeight: 800, cursor: customOrderSubmitting ? 'wait' : 'pointer' }}>Edit</button>
+                  <button type="button" disabled={customOrderSubmitting} onClick={submitCustomOrder} style={{ border: 0, borderRadius: 11, padding: '0.8rem', background: 'linear-gradient(135deg,#34d399,#14b8a6)', color: '#042f2e', font: 'inherit', fontWeight: 900, cursor: customOrderSubmitting ? 'wait' : 'pointer', opacity: customOrderSubmitting ? 0.65 : 1 }}>{customOrderSubmitting ? 'Sending…' : 'Send protected order'}</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* New Message modal — live member search dropdown */}
       {showNewModal && (

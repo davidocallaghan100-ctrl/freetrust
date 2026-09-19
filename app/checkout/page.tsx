@@ -39,6 +39,8 @@ function CheckoutContent() {
   const [service, setService] = useState<ServiceListing | null>(null)
   const [trustBalance, setTrustBalance] = useState<number | null>(null)
   const [useTrustDiscount, setUseTrustDiscount] = useState(false)
+  const [paypalEnabled, setPaypalEnabled] = useState(false)
+  const [gateway, setGateway] = useState<'stripe' | 'paypal'>('stripe')
 
   useEffect(() => {
     if (!serviceId) {
@@ -92,6 +94,15 @@ function CheckoutContent() {
       setService(svc as unknown as ServiceListing)
       setStatus('ready')
 
+      fetch('/api/paypal/config', { cache: 'no-store' })
+        .then(res => res.ok ? res.json() as Promise<{ enabled?: boolean }> : null)
+        .then(config => { if (config?.enabled) setPaypalEnabled(true) })
+        .catch(() => {})
+
+      const paypalState = searchParams.get('paypal')
+      if (paypalState === 'cancel') setError('PayPal checkout was cancelled. You can choose another payment method.')
+      if (paypalState === 'error') setError('PayPal could not complete this payment. Please try again or choose Stripe.')
+
       // TrustCoin is optional checkout context; do not block the service
       // details from rendering if the wallet request is unavailable.
       fetch('/api/wallet', { cache: 'no-store' })
@@ -107,7 +118,7 @@ function CheckoutContent() {
       setError('Something went wrong. Please try again.')
       setStatus('error')
     })
-  }, [serviceId, router])
+  }, [serviceId, router, searchParams])
 
   const handlePay = async () => {
     if (!service) return
@@ -120,6 +131,7 @@ function CheckoutContent() {
           service_id: service.id,
           package_tier: 'Basic',
           trust_discount_tokens: trustDiscountTokens,
+          gateway,
         }),
       })
       const data = await res.json() as { url?: string; error?: string }
@@ -248,13 +260,13 @@ function CheckoutContent() {
                 </span>
               </span>
             </label>
-            {useTrustDiscount && trustDiscountTokens > 0 && (
+             {useTrustDiscount && trustDiscountTokens > 0 && (
               <div style={{ color: '#fbbf24', fontSize: '0.74rem', marginTop: 8, paddingLeft: 28 }}>
-                The remaining {fmt(amountDue, currency)} will be paid securely by Stripe.
-              </div>
-            )}
-          </div>
-        )}
+                 The remaining {fmt(amountDue, currency)} will be paid securely by {gateway === 'paypal' ? 'PayPal' : 'Stripe'}.
+               </div>
+             )}
+           </div>
+         )}
 
         {/* Escrow note */}
         <div style={{ background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 10, padding: '0.75rem 1rem', marginBottom: '1.5rem', display: 'flex', gap: '0.65rem', alignItems: 'flex-start' }}>
@@ -264,6 +276,16 @@ function CheckoutContent() {
           </p>
         </div>
 
+        {paypalEnabled && (
+          <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 16, padding: '1rem 1.1rem', marginBottom: '1rem' }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--ft-text-faint)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '0.7rem' }}>Payment method</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <button type="button" onClick={() => setGateway('stripe')} style={{ minHeight: 48, borderRadius: 10, border: gateway === 'stripe' ? '1px solid var(--ft-accent)' : '1px solid var(--ft-border-strong)', background: gateway === 'stripe' ? 'rgba(56,189,248,0.12)' : 'transparent', color: 'var(--ft-text)', fontWeight: 800, cursor: 'pointer' }}>💳 Stripe</button>
+              <button type="button" onClick={() => setGateway('paypal')} style={{ minHeight: 48, borderRadius: 10, border: gateway === 'paypal' ? '1px solid #60a5fa' : '1px solid var(--ft-border-strong)', background: gateway === 'paypal' ? 'rgba(37,99,235,0.15)' : 'transparent', color: 'var(--ft-text)', fontWeight: 800, cursor: 'pointer' }}>🅿️ PayPal</button>
+            </div>
+          </div>
+        )}
+
         {/* Error */}
         {error && (
           <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10, padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--ft-danger)' }}>
@@ -272,7 +294,7 @@ function CheckoutContent() {
         )}
 
         {/* Apple Pay / Google Pay express checkout — only shown on supported devices */}
-        {!useTrustDiscount && (
+        {!useTrustDiscount && gateway === 'stripe' && (
           <AppleGooglePayButton
             amountCents={Math.round(price * 100)}
             currency={currency.toUpperCase()}
@@ -295,7 +317,7 @@ function CheckoutContent() {
         >
           {status === 'paying'
             ? <><div style={{ width: 18, height: 18, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} /> Redirecting to payment…</>
-            : <>💳 Pay {fmt(amountDue, currency)} by card</>
+            : gateway === 'paypal' ? <>🅿️ Pay {fmt(amountDue, currency)} with PayPal</> : <>💳 Pay {fmt(amountDue, currency)} by card</>
           }
         </button>
 
