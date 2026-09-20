@@ -43,6 +43,7 @@ type DBArticle = {
   tags: string[]
   clap_count: number
   comment_count: number
+  view_count: number
   read_time_minutes: number
   published_at: string | null
   author: { full_name: string | null } | null
@@ -59,7 +60,7 @@ export default function ArticlesPage() {
       try {
         const { data, error } = await supabase
           .from('articles')
-          .select('id, slug, title, excerpt, category, tags, clap_count, comment_count, read_time_minutes, published_at, profiles!author_id(full_name)')
+          .select('id, slug, title, excerpt, category, tags, clap_count, comment_count, view_count, read_time_minutes, published_at, profiles!author_id(full_name)')
           .eq('status', 'published')
           .order('published_at', { ascending: false })
           .limit(50)
@@ -143,6 +144,8 @@ export default function ArticlesPage() {
                   <span>{formatDate(featured.published_at ?? '')}</span>
                   <span>·</span>
                   <span>{featured.read_time_minutes} min read</span>
+                  <span>·</span>
+                  <span>👁 {featured.view_count.toLocaleString()} reads</span>
                 </div>
                 <p style={{ fontSize: '0.88rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.7, marginBottom: '1.25rem' }}>{featured.excerpt}</p>
                 <span style={{ background: 'var(--ft-accent)', border: 'none', borderRadius: 8, padding: '0.65rem 1.5rem', fontSize: '0.88rem', fontWeight: 700, color: 'var(--ft-bg)', display: 'inline-block' }}>Read Article →</span>
@@ -196,6 +199,7 @@ export default function ArticlesPage() {
                       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                         <span>👏 {a.clap_count.toLocaleString()}</span>
                         <span>· 💬 {a.comment_count}</span>
+                        <span>· 👁 {a.view_count.toLocaleString()}</span>
                       </div>
                     </div>
                   </div>

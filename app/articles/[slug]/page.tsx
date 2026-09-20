@@ -44,7 +44,7 @@ type Author = { id: string; full_name: string | null; avatar_url: string | null;
 type Article = {
   id: string; slug: string; title: string; excerpt: string | null; body: string;
   featured_image_url: string | null; status: string; category: string | null;
-  tags: string[]; clap_count: number; comment_count: number; read_time_minutes: number;
+  tags: string[]; clap_count: number; comment_count: number; view_count: number; read_time_minutes: number;
   published_at: string | null; author_id: string;
   author: Author | null
 }
@@ -61,6 +61,7 @@ export default function ArticlePage() {
   const [comments, setComments] = useState<Comment[]>([])
   const [userId, setUserId] = useState<string | null>(null)
   const [clapCount, setClapCount] = useState(0)
+  const [viewCount, setViewCount] = useState(0)
   const [userClapCount, setUserClapCount] = useState(0)
   const [clapAnimating, setClapAnimating] = useState(false)
   const [commentText, setCommentText] = useState('')
@@ -112,6 +113,7 @@ export default function ArticlePage() {
     const mappedArt: Article = { ...art, author: art.profiles as Author | null }
     setArticle(mappedArt)
     setClapCount(art.clap_count ?? 0)
+    setViewCount(art.view_count ?? 0)
     setCanAdminEdit(isFreeTrustAdminEmail(user?.email))
 
     // Perf fix (2026-08-23): the remaining reads (user's clap count,
@@ -163,6 +165,37 @@ export default function ArticlePage() {
   }, [slug])
 
   useEffect(() => { loadAll() }, [loadAll])
+
+  // Count one read per article/browser session. The server-side RPC performs
+  // the atomic increment, while sessionStorage prevents refreshes from
+  // inflating the public number for the same reader session.
+  useEffect(() => {
+    const articleId = article?.id
+    if (!articleId) return
+
+    const storageKey = `freetrust:article-view:${articleId}`
+    let markedForSession = false
+    try {
+      if (sessionStorage.getItem(storageKey) === '1') return
+      sessionStorage.setItem(storageKey, '1')
+      markedForSession = true
+    } catch {
+      // Continue counting if browser storage is unavailable.
+    }
+
+    fetch(`/api/articles/${encodeURIComponent(articleId)}/view`, { method: 'POST' })
+      .then(response => {
+        if (!response.ok) throw new Error('Unable to record article view')
+        return response.json() as Promise<{ view_count?: number }>
+      })
+      .then(data => {
+        if (typeof data.view_count === 'number') setViewCount(data.view_count)
+      })
+      .catch(() => {
+        if (!markedForSession) return
+        try { sessionStorage.removeItem(storageKey) } catch { /* storage is unavailable */ }
+      })
+  }, [article?.id])
 
   const handleClap = async () => {
     if (!userId) { router.push('/login'); return }
@@ -323,9 +356,10 @@ export default function ArticlePage() {
               <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--ft-text)' }}>{article.author?.full_name ?? 'Author'}</div>
               <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)' }}>{formatDate(article.published_at)} · {article.read_time_minutes} min read</div>
             </div>
-            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: 'var(--ft-text-tertiary)' }}>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.82rem', color: 'var(--ft-text-tertiary)' }}>
               <span>👏 {clapCount.toLocaleString()}</span>
               <span>· 💬 {comments.length}</span>
+              <span title="Article reads">· 👁 {viewCount.toLocaleString()} reads</span>
             </div>
           </div>
 

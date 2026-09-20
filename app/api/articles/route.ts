@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('articles')
-      .select('id, slug, title, excerpt, category, tags, clap_count, comment_count, read_time_minutes, published_at, status, profiles!author_id(id, full_name, avatar_url)', { count: 'exact' })
+      .select('id, slug, title, excerpt, category, tags, clap_count, comment_count, view_count, read_time_minutes, published_at, status, profiles!author_id(id, full_name, avatar_url)', { count: 'exact' })
       .order('published_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
