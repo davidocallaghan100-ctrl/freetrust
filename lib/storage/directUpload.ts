@@ -195,6 +195,75 @@ export async function uploadToSupabaseStorageDirect(params: {
 }
 
 /**
+ * Uploads a file to a Supabase signed upload URL while preserving the same
+ * progress/timeout behaviour as the authenticated direct-upload transport.
+ * The signed URL is minted server-side, so this is used for privileged flows
+ * that must not rely on the caller owning the target storage folder.
+ */
+export async function uploadToSupabaseSignedStorageDirect(params: {
+  signedUrl: string
+  file: File | Blob
+  contentType: string
+  timeoutMs: number
+  onProgress?: (snapshot: UploadProgressSnapshot) => void
+}): Promise<void> {
+  const bytesTotal = params.file.size
+  const tracker = params.onProgress && bytesTotal > 0
+    ? createUploadProgressTracker(bytesTotal, params.onProgress)
+    : null
+
+  return new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    let timedOut = false
+    const timeout = window.setTimeout(() => {
+      timedOut = true
+      xhr.abort()
+    }, params.timeoutMs)
+
+    xhr.upload.onprogress = (event) => {
+      if (tracker && event.lengthComputable) tracker.report(event.loaded)
+    }
+
+    xhr.onload = () => {
+      window.clearTimeout(timeout)
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve()
+        return
+      }
+      let detail = `${xhr.status} ${xhr.statusText}`.trim()
+      try {
+        const data = JSON.parse(xhr.responseText) as { error?: string; message?: string }
+        detail = data.error || data.message || detail
+      } catch {
+        if (xhr.responseText?.trim()) detail = xhr.responseText.slice(0, 180)
+      }
+      reject(new Error(detail))
+    }
+
+    xhr.onerror = () => {
+      window.clearTimeout(timeout)
+      reject(new Error('Network error during upload. Please check your connection and try again.'))
+    }
+
+    xhr.onabort = () => {
+      window.clearTimeout(timeout)
+      if (timedOut) {
+        const seconds = Math.round(params.timeoutMs / 1000)
+        reject(new Error(`Upload timed out after ${seconds}s. Please try again on Wi‑Fi or choose a smaller file.`))
+      } else {
+        reject(new Error('Upload cancelled.'))
+      }
+    }
+
+    xhr.open('PUT', params.signedUrl, true)
+    xhr.setRequestHeader('cache-control', '31536000')
+    xhr.setRequestHeader('content-type', params.contentType)
+    xhr.setRequestHeader('x-upsert', 'false')
+    xhr.send(params.file)
+  })
+}
+
+/**
  * Resolves the direct storage hostname Supabase recommends for large
  * resumable uploads (`<ref>.storage.supabase.co` instead of
  * `<ref>.supabase.co`) when the project URL matches the standard hosted

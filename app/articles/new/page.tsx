@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { uploadToSupabaseStorageDirect, PHOTO_UPLOAD_TIMEOUT_MS, type UploadProgressSnapshot } from '@/lib/storage/directUpload'
+import { uploadToSupabaseStorageDirect, uploadToSupabaseSignedStorageDirect, PHOTO_UPLOAD_TIMEOUT_MS, type UploadProgressSnapshot } from '@/lib/storage/directUpload'
 
 const CATEGORIES = ['Business', 'Technology', 'Sustainability', 'Design', 'Finance', 'Community']
 
@@ -54,6 +54,8 @@ function NewArticleInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const draftId = searchParams.get('draft')
+  const editId = searchParams.get('edit')
+  const adminEditMode = Boolean(editId)
 
   const [title, setTitle] = useState('')
   const [excerpt, setExcerpt] = useState('')
@@ -61,6 +63,7 @@ function NewArticleInner() {
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
   const [featuredImage, setFeaturedImage] = useState('')
+  const [articleStatus, setArticleStatus] = useState<'draft' | 'published'>('published')
   const [imageUploading, setImageUploading] = useState(false)
   const [imageUploadProgress, setImageUploadProgress] = useState<UploadProgressSnapshot | null>(null)
   const [imageUploadError, setImageUploadError] = useState<string | null>(null)
@@ -78,23 +81,32 @@ function NewArticleInner() {
     setTimeout(() => setToast(null), 3500)
   }, [])
 
-  // Load draft if draftId provided
+  // Load a normal author draft or an approved-admin article edit.
   useEffect(() => {
-    if (!draftId) return
+    if (!draftId && !editId) return
     const load = async () => {
-      const { data } = await supabase.from('articles').select('*').eq('id', draftId).single()
+      const response = editId
+        ? await fetch(`/api/admin/articles/${encodeURIComponent(editId)}`, { cache: 'no-store' })
+        : null
+      const result = response
+        ? { data: response.ok ? (await response.json()).article : null, error: response.ok ? null : new Error('Only approved FreeTrust admins can edit articles.') }
+        : await supabase.from('articles').select('*').eq('id', draftId).single()
+      const { data } = result
       if (data) {
         setTitle(data.title ?? '')
         setExcerpt(data.excerpt ?? '')
         setCategory(data.category ?? CATEGORIES[0])
         setTags(data.tags ?? [])
         setFeaturedImage(data.featured_image_url ?? '')
+        setArticleStatus(data.status === 'draft' ? 'draft' : 'published')
         if (editorRef.current) editorRef.current.innerHTML = data.body ?? ''
         setWordCount(countWords(data.body ?? ''))
+      } else if (result.error) {
+        showToast(result.error instanceof Error ? result.error.message : 'Unable to load article', 'error')
       }
     }
     load()
-  }, [draftId])
+  }, [draftId, editId, showToast])
 
   const handleEditorInput = () => {
     const html = editorRef.current?.innerHTML ?? ''
@@ -138,11 +150,13 @@ function NewArticleInner() {
   // the old raw-URL text field. Uploads direct-to-Supabase-Storage from the
   // browser (same transport as other image uploads in this app, see
   // lib/storage/directUpload.ts), storing into the existing public
-  // `feed-media` bucket under `article-covers/<user_id>/<filename>` — this
-  // matches that bucket's existing RLS path convention
-  // (`(storage.foldername(name))[2] = auth.uid()::text`), so no new bucket
-  // or migration is needed. The resulting public URL is written into the
-  // same `featured_image_url` field the rest of the app already expects.
+  // `feed-media` bucket under `article-covers/<user_id>/<filename>` for normal
+  // authors, matching that bucket's existing RLS path convention
+  // (`(storage.foldername(name))[2] = auth.uid()::text`). Approved-admin edits
+  // use a server-minted signed upload URL instead, because an admin must not
+  // impersonate the original author's storage folder. No new bucket or
+  // migration is needed. The resulting public URL is written into the same
+  // `featured_image_url` field the rest of the app already expects.
   const uploadFeaturedImage = async (file: File) => {
     setImageUploadError(null)
 
@@ -159,6 +173,31 @@ function NewArticleInner() {
     setImageUploadProgress({ bytesUploaded: 0, bytesTotal: file.size, percent: 0, etaSeconds: null })
 
     try {
+      const ext = FEATURED_IMAGE_EXT_BY_MIME[file.type] ?? 'jpg'
+      const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+
+      if (adminEditMode && editId) {
+        const response = await fetch(`/api/admin/articles/${encodeURIComponent(editId)}/featured-image`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contentType: file.type }),
+        })
+        const upload = await response.json().catch(() => ({}))
+        if (!response.ok || typeof upload.signedUrl !== 'string' || typeof upload.publicUrl !== 'string') {
+          throw new Error(upload.error ?? 'Unable to prepare admin image upload')
+        }
+
+        await uploadToSupabaseSignedStorageDirect({
+          signedUrl: upload.signedUrl,
+          file,
+          contentType: file.type,
+          timeoutMs: PHOTO_UPLOAD_TIMEOUT_MS,
+          onProgress: setImageUploadProgress,
+        })
+        setFeaturedImage(upload.publicUrl)
+        return
+      }
+
       const { data: { session } } = await supabase.auth.getSession()
       const accessToken = session?.access_token
       const userId = session?.user?.id
@@ -167,13 +206,9 @@ function NewArticleInner() {
         return
       }
 
-      const ext = FEATURED_IMAGE_EXT_BY_MIME[file.type] ?? 'jpg'
-      const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
-      const storagePath = `article-covers/${userId}/${safeName}`
-
       const result = await uploadToSupabaseStorageDirect({
         bucket: FEATURED_IMAGE_BUCKET,
-        storagePath,
+        storagePath: `article-covers/${userId}/${safeName}`,
         file,
         contentType: file.type,
         accessToken,
@@ -219,10 +254,32 @@ function NewArticleInner() {
       const user = session?.user
       if (!user) { showToast('Please sign in to publish', 'error'); return }
 
+      const wc = countWords(body)
+
+      if (editId) {
+        const response = await fetch(`/api/admin/articles/${encodeURIComponent(editId)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: title.trim(),
+            excerpt: excerpt.trim(),
+            body,
+            featured_image_url: featuredImage.trim(),
+            category,
+            tags,
+            status: articleStatus,
+          }),
+        })
+        const result = await response.json().catch(() => ({}))
+        if (!response.ok) throw new Error(result.error ?? 'Unable to save article changes')
+        showToast('Article changes saved ✓', 'success')
+        window.setTimeout(() => router.push(`/articles/${result.article.slug}`), 700)
+        return
+      }
+
       const baseSlug = slugify(title)
       const suffix = Math.random().toString(36).slice(2, 7)
       const slug = `${baseSlug}-${suffix}`
-      const wc = countWords(body)
 
       const payload = {
         title: title.trim(),
@@ -322,17 +379,17 @@ function NewArticleInner() {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '0.75rem' }}>
           <div>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.15rem' }}>{draftId ? 'Edit Draft' : 'Write Article'}</h1>
+            <h1 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.15rem' }}>{adminEditMode ? 'Edit Article' : draftId ? 'Edit Draft' : 'Write Article'}</h1>
             <div style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)' }}>
               {wordCount} words · {readTime} min read
             </div>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-            <button className="draft-btn" disabled={saving || publishing || imageUploading} onClick={() => submit('draft')}>
-              {saving ? 'Saving…' : 'Save Draft'}
+            <button className="draft-btn" disabled={saving || publishing || imageUploading} onClick={() => submit(adminEditMode ? articleStatus : 'draft')}>
+              {saving ? 'Saving…' : adminEditMode ? 'Save Changes' : 'Save Draft'}
             </button>
-            <button className="pub-btn" disabled={saving || publishing || imageUploading} onClick={() => submit('published')}>
-              {publishing ? 'Publishing…' : 'Publish — Earn ₮20'}
+            <button className="pub-btn" disabled={saving || publishing || imageUploading} onClick={() => submit(adminEditMode ? articleStatus : 'published')}>
+              {publishing ? 'Publishing…' : adminEditMode ? 'Save Changes' : 'Publish — Earn ₮20'}
             </button>
           </div>
         </div>
@@ -515,11 +572,11 @@ function NewArticleInner() {
 
           {/* Bottom action row */}
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', paddingTop: '0.5rem' }}>
-            <button className="draft-btn" disabled={saving || publishing || imageUploading} onClick={() => submit('draft')}>
-              {saving ? 'Saving…' : 'Save Draft'}
+            <button className="draft-btn" disabled={saving || publishing || imageUploading} onClick={() => submit(adminEditMode ? articleStatus : 'draft')}>
+              {saving ? 'Saving…' : adminEditMode ? 'Save Changes' : 'Save Draft'}
             </button>
-            <button className="pub-btn" disabled={saving || publishing || imageUploading} onClick={() => submit('published')}>
-              {publishing ? 'Publishing…' : 'Publish Article'}
+            <button className="pub-btn" disabled={saving || publishing || imageUploading} onClick={() => submit(adminEditMode ? articleStatus : 'published')}>
+              {publishing ? 'Publishing…' : adminEditMode ? 'Save Changes' : 'Publish Article'}
             </button>
           </div>
         </div>

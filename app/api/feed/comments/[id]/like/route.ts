@@ -18,6 +18,88 @@ export async function POST(
 
     const admin = createAdminClient()
 
+    // Comments on articles/services are stored in the side-table because the
+    // regular feed_comment_likes.comment_id FK points at feed_comments. Look
+    // up the side table first; if there is no matching row, keep the original
+    // feed_posts comment path below unchanged.
+    const { data: sideComment } = await admin
+      .from('feed_item_comments')
+      .select('id, user_id, item_type, item_id, content')
+      .eq('id', commentId)
+      .maybeSingle()
+
+    if (sideComment) {
+      const { data: existing, error: existingError } = await admin
+        .from('feed_item_comment_likes')
+        .select('id')
+        .eq('comment_id', commentId)
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (existingError) {
+        console.error('[side comment like] lookup error:', existingError)
+        return NextResponse.json({ error: 'Could not read comment like' }, { status: 500 })
+      }
+
+      if (existing) {
+        const { error: deleteError } = await admin
+          .from('feed_item_comment_likes')
+          .delete()
+          .eq('comment_id', commentId)
+          .eq('user_id', user.id)
+        if (deleteError) {
+          console.error('[side comment like] unlike error:', deleteError)
+          return NextResponse.json({ error: 'Could not remove comment like' }, { status: 500 })
+        }
+        const { count } = await admin
+          .from('feed_item_comment_likes')
+          .select('id', { count: 'exact', head: true })
+          .eq('comment_id', commentId)
+        return NextResponse.json({ liked: false, like_count: count ?? 0 })
+      }
+
+      const { error: insertError } = await admin
+        .from('feed_item_comment_likes')
+        .insert({ comment_id: commentId, user_id: user.id })
+      if (insertError) {
+        console.error('[side comment like] like error:', insertError)
+        return NextResponse.json({ error: 'Could not like comment' }, { status: 500 })
+      }
+
+      const { count } = await admin
+        .from('feed_item_comment_likes')
+        .select('id', { count: 'exact', head: true })
+        .eq('comment_id', commentId)
+
+      if (sideComment.user_id && sideComment.user_id !== user.id) {
+        const { data: likerProfile } = await admin
+          .from('profiles')
+          .select('full_name, username')
+          .eq('id', user.id)
+          .maybeSingle()
+        const likerName = likerProfile?.full_name ?? likerProfile?.username ?? 'Someone'
+        const itemType = sideComment.item_type === 'article' ? 'article' : 'service'
+
+        await admin.from('notifications').insert({
+          user_id: sideComment.user_id,
+          type: 'comment_like',
+          title: `${likerName} liked your comment`,
+          body: `"${sideComment.content?.slice(0, 60) ?? 'your comment'}"`,
+          data: {
+            comment_id: commentId,
+            post_id: `${itemType}-${sideComment.item_id}`,
+            item_type: itemType,
+            item_id: sideComment.item_id,
+            liker_id: user.id,
+            liker_name: likerName,
+          },
+          read: false,
+        })
+      }
+
+      return NextResponse.json({ liked: true, like_count: count ?? 1 })
+    }
+
     // Check if already liked
     const { data: existing } = await admin
       .from('feed_comment_likes')

@@ -137,6 +137,7 @@ export default function CreateOrganisationPage() {
 
       setSuccess(true)
       const orgId = data.organisation?.slug || data.organisation?.id
+      // The App Router page lives under /organisations/[id] (plural).
       setTimeout(() => router.push(orgId ? `/organisations/${orgId}` : '/organisations'), 1200)
     } catch {
       setError('Network error — please check your connection.')

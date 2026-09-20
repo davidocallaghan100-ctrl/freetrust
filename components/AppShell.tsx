@@ -176,6 +176,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isAuth = AUTH_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
   const isImmersive = pathname === '/agents'
   const isLanding = pathname === '/'
+  // Business signups deliberately leave the personal-profile flow to create
+  // an organisation first. Keep the global profile prompt off that route.
   const isOrganisationFlow = pathname.startsWith('/organisations/')
     || (pathname === '/seller/gigs/create' && Boolean(searchParams.get('orgId')))
   const [showPushBanner, setShowPushBanner] = useState(false)

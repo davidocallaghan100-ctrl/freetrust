@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { isFreeTrustAdminEmail } from '@/lib/admin/emails'
 
 const AVATAR_GRAD: Record<string, string> = {
   AD: 'linear-gradient(135deg,#f472b6,#db2777)', TW: 'linear-gradient(135deg,#fb923c,#ea580c)',
@@ -65,6 +66,8 @@ export default function ArticlePage() {
   const [commentText, setCommentText] = useState('')
   const [submittingComment, setSubmittingComment] = useState(false)
   const [authorArticleCount, setAuthorArticleCount] = useState(0)
+  const [canAdminEdit, setCanAdminEdit] = useState(false)
+  const [shareLabel, setShareLabel] = useState('Share')
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [scrollProgress, setScrollProgress] = useState(0)
@@ -109,6 +112,7 @@ export default function ArticlePage() {
     const mappedArt: Article = { ...art, author: art.profiles as Author | null }
     setArticle(mappedArt)
     setClapCount(art.clap_count ?? 0)
+    setCanAdminEdit(isFreeTrustAdminEmail(user?.email))
 
     // Perf fix (2026-08-23): the remaining reads (user's clap count,
     // comments, related articles, author's published-article count) are
@@ -192,6 +196,40 @@ export default function ArticlePage() {
     setSubmittingComment(false)
   }
 
+  const handleShare = async () => {
+    if (!article) return
+    const shareUrl = `${window.location.origin}/articles/${article.slug}`
+
+    try {
+      if (typeof navigator.share === 'function') {
+        await navigator.share({
+          title: article.title,
+          text: article.excerpt ?? 'Read this article on FreeTrust',
+          url: shareUrl,
+        })
+        setShareLabel('Shared')
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl)
+        setShareLabel('Link copied')
+      } else {
+        window.prompt('Copy this article link', shareUrl)
+        setShareLabel('Link ready')
+      }
+    } catch (error) {
+      // Closing the native share sheet is not an error. For other failures,
+      // still offer a copy fallback when the browser permits it.
+      if (error instanceof DOMException && error.name === 'AbortError') return
+      try {
+        await navigator.clipboard?.writeText(shareUrl)
+        setShareLabel('Link copied')
+      } catch {
+        setShareLabel('Copy link')
+      }
+    }
+
+    window.setTimeout(() => setShareLabel('Share'), 2500)
+  }
+
   if (loading) return (
     <div style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--ft-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ color: 'var(--ft-text-tertiary)', fontSize: '0.9rem' }}>Loading article…</div>
@@ -232,6 +270,13 @@ export default function ArticlePage() {
         .related-card { background: var(--ft-surface); border: 1px solid rgba(56,189,248,0.08); border-radius: 10px; padding: 0.9rem; text-decoration: none; color: inherit; display: block; transition: border-color 0.15s, transform 0.15s; }
         .related-card:hover { border-color: rgba(56,189,248,0.25); transform: translateY(-1px); }
         .comment-card { background: rgba(30,41,59,0.6); border: 1px solid rgba(56,189,248,0.06); border-radius: 10px; padding: 1rem; margin-bottom: 0.75rem; }
+         .art-share-btn, .art-edit-btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; border-radius: 8px; padding: 0.55rem 0.9rem; font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer; text-decoration: none; box-sizing: border-box; }
+         .art-share-btn { background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.25); color: var(--ft-accent); }
+         .art-share-btn:hover { background: rgba(56,189,248,0.16); border-color: rgba(56,189,248,0.45); }
+         .art-edit-btn { background: transparent; border: 1px solid rgba(148,163,184,0.2); color: var(--ft-text-secondary); }
+         .art-edit-btn:hover { border-color: rgba(56,189,248,0.35); color: var(--ft-accent); }
+         .art-share-wide, .art-edit-wide { width: 100%; }
+         .art-edit-wide { margin-top: 0.5rem; }
         @media (max-width: 768px) {
           .art-read-layout { grid-template-columns: 1fr !important; padding: 1rem 1rem 3rem !important; }
           .art-read-sidebar { position: static !important; }
@@ -281,6 +326,22 @@ export default function ArticlePage() {
               <span>👏 {clapCount.toLocaleString()}</span>
               <span>· 💬 {comments.length}</span>
             </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+            <button
+              type="button"
+              className="art-share-btn"
+              onClick={handleShare}
+              aria-label="Share this article"
+            >
+              🔗 {shareLabel}
+            </button>
+            {canAdminEdit && (
+              <Link href={`/articles/new?edit=${article.id}`} className="art-edit-btn">
+                ✎ Edit article
+              </Link>
+            )}
           </div>
 
           {/* Excerpt */}
@@ -388,6 +449,12 @@ export default function ArticlePage() {
 
         {/* Sidebar */}
         <aside className="art-read-sidebar">
+          <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.12)', borderRadius: 12, padding: '1rem' }}>
+            <button type="button" className="art-share-btn art-share-wide" onClick={handleShare}>🔗 {shareLabel}</button>
+            {canAdminEdit && (
+              <Link href={`/articles/new?edit=${article.id}`} className="art-edit-btn art-edit-wide">✎ Edit article</Link>
+            )}
+          </div>
           {/* Clap widget */}
           <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.12)', borderRadius: 12, padding: '1.25rem', textAlign: 'center' }}>
             <div style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)', marginBottom: '0.75rem' }}>Enjoying this article?</div>

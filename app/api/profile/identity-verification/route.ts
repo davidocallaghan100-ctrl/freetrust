@@ -35,6 +35,22 @@ function isMissingVerificationSchema(err: unknown) {
   return message.includes('profile_verifications') || message.includes('profile_verification')
 }
 
+function isIdentityAccountNotReady(err: unknown) {
+  const message = err && typeof err === 'object' && 'message' in err
+    ? String((err as { message?: unknown }).message ?? '')
+    : String(err ?? '')
+  return message.toLowerCase().includes('not set up to use identity')
+    || message.includes('dashboard.stripe.com/identity/application')
+}
+
+function identitySetupResponse() {
+  return NextResponse.json({
+    status: 'unconfigured' as const,
+    setup_url: 'https://dashboard.stripe.com/identity/application',
+    error: 'Stripe Identity is not enabled for this account yet. An account admin must complete the Stripe Identity application before verification can start.',
+  }, { status: 503 })
+}
+
 async function getAuthedUser() {
   const supabase = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
@@ -140,6 +156,7 @@ export async function POST() {
       status: 'pending',
     })
   } catch (err) {
+    if (isIdentityAccountNotReady(err)) return identitySetupResponse()
     if (isMissingVerificationSchema(err)) return setupMissingResponse()
     const message = err instanceof Error ? err.message : String(err)
     console.error('[identity-verification POST] unexpected:', message)

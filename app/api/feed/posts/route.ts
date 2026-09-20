@@ -482,19 +482,34 @@ async function loadArticles(supabase: SupabaseLike, offset: number, limit: numbe
 
   // Don't trust the cached articles.comment_count / clap_count columns —
   // they may have drifted from seeded data or buggy increment logic.
-  // Count real rows in article_comments and article_claps for the visible
-  // article ids in two parallel round-trips.
+  // Count real rows in article_comments, feed_item_comments, and
+  // article_claps for the visible article ids.
   const articleIds = (data ?? []).map((a: Record<string, unknown>) => a.id as string)
   const realCommentCounts: Record<string, number> = {}
   const realClapCounts: Record<string, number> = {}
   if (articleIds.length > 0) {
-    const [commentsRes, clapsRes] = await Promise.all([
+    const [commentsRes, feedItemCommentsRes, clapsRes] = await Promise.all([
       supabase.from('article_comments').select('article_id').in('article_id', articleIds),
+      supabase
+        .from('feed_item_comments')
+        .select('item_id')
+        .eq('item_type', 'article')
+        .in('item_id', articleIds),
       supabase.from('article_claps').select('article_id').in('article_id', articleIds),
     ])
     for (const row of commentsRes.data ?? []) {
       const aid = (row as { article_id: string }).article_id
       realCommentCounts[aid] = (realCommentCounts[aid] ?? 0) + 1
+    }
+    if (feedItemCommentsRes.error) {
+      // Keep the feed available while a deployment is waiting for the
+      // additive side-table migration to reach production.
+      console.warn('[feed/posts articles] feed item comment count skipped:', feedItemCommentsRes.error.message)
+    } else {
+      for (const row of feedItemCommentsRes.data ?? []) {
+        const aid = (row as { item_id: string }).item_id
+        realCommentCounts[aid] = (realCommentCounts[aid] ?? 0) + 1
+      }
     }
     for (const row of clapsRes.data ?? []) {
       const aid = (row as { article_id: string }).article_id
@@ -553,6 +568,24 @@ async function loadServices(supabase: SupabaseLike, offset: number, limit: numbe
     return []
   }
 
+  const serviceIds = (data ?? []).map((s: Record<string, unknown>) => s.id as string)
+  const serviceCommentCounts: Record<string, number> = {}
+  if (serviceIds.length > 0) {
+    const { data: comments, error: commentsError } = await supabase
+      .from('feed_item_comments')
+      .select('item_id')
+      .eq('item_type', 'service')
+      .in('item_id', serviceIds)
+    if (commentsError) {
+      console.warn('[feed/posts services] feed item comment count skipped:', commentsError.message)
+    } else {
+      for (const row of comments ?? []) {
+        const serviceId = (row as { item_id: string }).item_id
+        serviceCommentCounts[serviceId] = (serviceCommentCounts[serviceId] ?? 0) + 1
+      }
+    }
+  }
+
   const items: FeedItem[] = (data ?? []).map((s: Record<string, unknown>) => ({
     id: `service-${s.id}`,
     user_id: s.seller_id as string,
@@ -563,7 +596,7 @@ async function loadServices(supabase: SupabaseLike, offset: number, limit: numbe
     title: s.title as string,
     link_url: `/services/${s.id}`,
     likes_count: 0,
-    comments_count: 0,
+    comments_count: serviceCommentCounts[s.id as string] ?? 0,
     saves_count: 0,
     views_count: 0,
     created_at: s.created_at as string,

@@ -1686,6 +1686,7 @@ export default function PostCard({
   const [newComment,        setNewComment]        = useState('')
   const [selectedCommentGif,setSelectedCommentGif]= useState<GifResult | null>(null)
   const [submitting,        setSubmitting]        = useState(false)
+  const [commentError,      setCommentError]      = useState('')
   const [commentExpanded,   setCommentExpanded]   = useState(false)
   const [showShare,         setShowShare]         = useState(false)
   const [shareCount,        setShareCount]        = useState(post.share_count ?? 0)
@@ -2347,6 +2348,7 @@ export default function PostCard({
   const submitComment = async () => {
     if (!newComment.trim() && !selectedCommentGif) return
     setSubmitting(true)
+    setCommentError('')
     const commentBody = appendGifMarker(newComment.trim(), selectedCommentGif)
     try {
       const res = await fetch(`/api/feed/posts/${post.id}/comments`, {
@@ -2366,8 +2368,13 @@ export default function PostCard({
           metadata: { title: postTitle ?? stripInternalMarkers(postContent)?.slice(0, 80) ?? null },
         })
         setNewComment(''); setSelectedCommentGif(null); setCommentCount(c => c + 1); await loadComments()
+      } else {
+        const data = await res.json().catch(() => ({} as { error?: string }))
+        setCommentError(data.error ?? 'Could not post comment. Please try again.')
       }
-    } catch { /* silent */ }
+    } catch {
+      setCommentError('Network error — please try again.')
+    }
     finally { setSubmitting(false) }
   }
 
@@ -3329,6 +3336,14 @@ export default function PostCard({
             ))}
             {/* Comment composer */}
             <div style={{ marginTop: '8px' }}>
+              {commentError ? (
+                <div
+                  role="alert"
+                  style={{ marginBottom: 8, padding: '8px 10px', borderRadius: 9, border: '1px solid rgba(248,113,113,0.3)', background: 'rgba(127,29,29,0.18)', color: '#fca5a5', fontSize: 12.5, lineHeight: 1.4 }}
+                >
+                  {commentError}
+                </div>
+              ) : null}
               {feedIdentity ? (
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginBottom: 8, padding: '5px 9px', borderRadius: 999, border: '1px solid rgba(56,189,248,0.18)', background: 'rgba(15,23,42,0.45)', color: feedIdentity.type === 'org' ? '#86efac' : 'var(--ft-text-secondary)', fontSize: 11, fontWeight: 700 }}>
                   <Avatar url={feedIdentity.type === 'org' ? feedIdentity.logo_url : feedIdentity.avatar_url} name={feedIdentity.name} size={20} />

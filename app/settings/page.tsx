@@ -243,6 +243,25 @@ function SettingsPageInner() {
         .modal-box { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 28px; max-width: 400px; width: 100%; max-height: calc(100vh - 40px); overflow-y: auto; }
         .danger-row { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; border-top: 1px solid #1e293b; gap: 16px; }
         .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+        .identity-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+        .identity-card-intro { display: flex; align-items: flex-start; gap: 14px; flex: 1 1 300px; min-width: 0; }
+        .identity-shield { width: 48px; height: 48px; flex: 0 0 48px; display: flex; align-items: center; justify-content: center; border-radius: 16px; background: linear-gradient(145deg, rgba(56,189,248,0.22), rgba(99,91,255,0.18)); border: 1px solid rgba(125,211,252,0.45); color: #7dd3fc; font-size: 23px; box-shadow: 0 10px 24px rgba(14,165,233,0.12); }
+        .identity-cta { white-space: nowrap; min-height: 44px; }
+        .identity-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 18px; }
+        .identity-step { min-width: 0; border: 1px solid rgba(148,163,184,0.16); background: rgba(15,23,42,0.52); border-radius: 10px; padding: 11px 12px; }
+        .identity-step.active { border-color: rgba(56,189,248,0.45); background: rgba(14,116,144,0.12); }
+        .identity-step.done { border-color: rgba(52,211,153,0.36); background: rgba(16,185,129,0.08); }
+        .identity-step-marker { width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; background: rgba(148,163,184,0.14); color: #94a3b8; font-size: 11px; font-weight: 800; }
+        .identity-step.active .identity-step-marker { background: #38bdf8; color: #082f49; }
+        .identity-step.done .identity-step-marker { background: #34d399; color: #052e1b; }
+        .identity-step-label { display: block; margin-top: 8px; color: #e2e8f0; font-size: 12px; font-weight: 700; line-height: 1.35; }
+        .identity-step-detail { display: block; margin-top: 4px; color: #64748b; font-size: 11px; line-height: 1.4; }
+        .identity-visual { position: relative; min-height: 190px; display: flex; align-items: center; justify-content: center; margin: 22px 0 18px; border: 1px solid rgba(56,189,248,0.28); border-radius: 18px; overflow: hidden; isolation: isolate; background: radial-gradient(circle at 50% 42%, rgba(56,189,248,0.18), transparent 42%), linear-gradient(135deg, rgba(14,116,144,0.18), rgba(30,41,59,0.76) 58%, rgba(49,46,129,0.2)); }
+        .identity-visual::before { content: ''; position: absolute; inset: 18px; border: 1px solid rgba(125,211,252,0.12); border-radius: 14px; pointer-events: none; }
+        .identity-visual-content { position: relative; z-index: 1; display: flex; align-items: center; flex-direction: column; gap: 8px; padding: 24px 18px; text-align: center; }
+        .identity-visual-mark { width: 72px; height: 72px; object-fit: contain; filter: drop-shadow(0 0 18px rgba(103,232,249,0.52)); }
+        .identity-visual-kicker { color: #7dd3fc; font-size: 11px; font-weight: 900; letter-spacing: 0.2em; line-height: 1.3; }
+        .identity-visual-copy { max-width: 360px; color: rgba(226,232,240,0.78); font-size: 12px; line-height: 1.5; }
         .avatar-wrap { position: relative; width: 80px; height: 80px; border-radius: 50%; overflow: hidden; cursor: pointer; flex-shrink: 0; }
         .avatar-img { width: 100%; height: 100%; object-fit: cover; }
         .avatar-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; background: linear-gradient(135deg, #38bdf8, #0284c7); color: white; }
@@ -262,6 +281,10 @@ function SettingsPageInner() {
           .danger-row .danger-btn { width: 100%; }
           .modal-actions { flex-direction: column-reverse; }
           .modal-actions button { width: 100%; }
+          .identity-card-top { flex-direction: column; }
+          .identity-cta { width: 100%; }
+          .identity-steps { grid-template-columns: 1fr; }
+          .identity-visual { min-height: 176px; margin-top: 18px; }
         }
       `}</style>
 
@@ -1716,6 +1739,7 @@ function IdentityVerificationCard() {
   const [starting, setStarting] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [setupUrl, setSetupUrl] = useState<string | null>(null)
 
   const loadStatus = useCallback(async () => {
     setLoading(true)
@@ -1726,11 +1750,13 @@ function IdentityVerificationCard() {
         status?: IdentityVerificationStatus
         verified_at?: string | null
         attempt_count?: number
+        setup_url?: string
         error?: string
       } | null
       setStatus(data?.status ?? (res.ok ? 'unverified' : 'unconfigured'))
       setVerifiedAt(data?.verified_at ?? null)
       setAttempts(Number(data?.attempt_count ?? 0))
+      setSetupUrl(data?.setup_url ?? null)
       if (!res.ok && data?.error) setError(data.error)
     } catch {
       setError('Could not load identity verification status.')
@@ -1755,8 +1781,10 @@ function IdentityVerificationCard() {
       }
 
       const res = await fetch('/api/profile/identity-verification', { method: 'POST' })
-      const data = await res.json().catch(() => null) as { client_secret?: string; error?: string } | null
+      const data = await res.json().catch(() => null) as { client_secret?: string; error?: string; status?: IdentityVerificationStatus; setup_url?: string } | null
       if (!res.ok || !data?.client_secret) {
+        if (data?.status) setStatus(data.status)
+        if (data?.setup_url) setSetupUrl(data.setup_url)
         setError(data?.error ?? 'Could not start identity verification.')
         return
       }
@@ -1791,13 +1819,63 @@ function IdentityVerificationCard() {
     return { icon: '🛡️', label: 'Not verified yet', color: '#94a3b8', border: 'rgba(148,163,184,0.28)', bg: 'rgba(148,163,184,0.08)' }
   })()
 
+  const verificationSteps = [
+    { label: 'Secure document check', detail: 'Stripe checks your document securely.' },
+    { label: 'Review', detail: 'A short review confirms the result.' },
+    { label: 'Verified badge', detail: 'Your profile earns a visible trust signal.' },
+  ]
+  const stepState = (index: number) => {
+    if (status === 'verified') return 'done'
+    if (status === 'pending') return index === 0 ? 'done' : index === 1 ? 'active' : ''
+    return index === 0 ? 'active' : ''
+  }
+
   return (
-    <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 260px', minWidth: 0 }}>
-          <h2 className="section-title">Identity Verification</h2>
+    <div className="card" style={{ overflow: 'hidden' }}>
+      <div className="identity-card-top">
+        <div className="identity-card-intro">
+          <div className="identity-shield" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 3 19 6v5c0 4.7-3 8.2-7 10-4-1.8-7-5.3-7-10V6l7-3Z" />
+              <path d="m8.5 12 2.2 2.2 4.8-4.8" />
+            </svg>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: '#7dd3fc', fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>FreeTrust Trust Layer</div>
+            <h2 className="section-title">Identity Verification</h2>
+          </div>
+        </div>
+        <button
+          className="save-btn identity-cta"
+          onClick={startVerification}
+          disabled={loading || starting || status === 'verified' || status === 'unconfigured'}
+          style={{ background: status === 'failed' ? '#f59e0b' : status === 'verified' ? '#166534' : '#38bdf8' }}
+        >
+          {starting ? 'Opening Stripe…' : status === 'failed' ? 'Try again' : status === 'pending' ? 'Continue verification' : status === 'verified' ? 'Verified' : 'Start verification'}
+        </button>
+      </div>
+
+      <div className="identity-visual" aria-label="FreeTrust Trust Layer">
+        <svg aria-hidden="true" viewBox="0 0 640 210" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.62 }}>
+          <path d="M44 164 152 106 244 154 336 68 438 130 584 42" fill="none" stroke="rgba(125,211,252,0.28)" strokeWidth="1" />
+          <path d="M92 32 194 78 292 34 402 88 520 42" fill="none" stroke="rgba(52,211,153,0.18)" strokeWidth="1" />
+          <circle cx="44" cy="164" r="4" fill="#38bdf8" /><circle cx="152" cy="106" r="3" fill="#67e8f9" />
+          <circle cx="244" cy="154" r="4" fill="#34d399" /><circle cx="336" cy="68" r="4" fill="#7dd3fc" />
+          <circle cx="438" cy="130" r="3" fill="#34d399" /><circle cx="584" cy="42" r="4" fill="#38bdf8" />
+          <circle cx="92" cy="32" r="3" fill="#7dd3fc" /><circle cx="194" cy="78" r="3" fill="#34d399" />
+          <circle cx="292" cy="34" r="3" fill="#38bdf8" /><circle cx="402" cy="88" r="3" fill="#67e8f9" />
+          <circle cx="520" cy="42" r="3" fill="#34d399" />
+        </svg>
+        <div className="identity-visual-content">
+          <img className="identity-visual-mark" src="/icons/freetrust-mark-perfect-transparent-20260521.png" alt="" />
+          <div className="identity-visual-kicker">TRUST THAT TRAVELS</div>
+          <div className="identity-visual-copy">One secure identity check. A stronger trust signal across your FreeTrust profile.</div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 10, maxWidth: 650 }}>
           <p className="section-desc" style={{ marginBottom: 14 }}>
-            Verify your identity with Stripe Identity to earn the official FreeTrust profile badge and a one-time ₮100 Trust Coin bonus.
+            Build trust that travels with you. Verify once with Stripe Identity to earn the official FreeTrust profile badge and a one-time ₮100 Trust Coin bonus.
           </p>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, border: `1px solid ${badge.border}`, background: badge.bg, color: badge.color, borderRadius: 999, padding: '6px 12px', fontSize: 13, fontWeight: 800 }}>
             <span>{badge.icon}</span>
@@ -1809,23 +1887,38 @@ function IdentityVerificationCard() {
           {attempts > 0 && status !== 'verified' && (
             <div style={{ fontSize: 12, color: '#64748b', marginTop: 10 }}>Verification attempts: {attempts}</div>
           )}
-        </div>
-        <button
-          className="save-btn"
-          onClick={startVerification}
-          disabled={loading || starting || status === 'verified' || status === 'unconfigured'}
-          style={{ whiteSpace: 'nowrap', background: status === 'failed' ? '#f59e0b' : '#38bdf8' }}
-        >
-          {starting ? 'Opening Stripe…' : status === 'failed' ? 'Try again' : status === 'pending' ? 'Continue verification' : status === 'verified' ? 'Verified' : 'Verify identity'}
-        </button>
       </div>
 
-      <div style={{ background: '#0f172a', border: '1px solid rgba(56,189,248,0.12)', borderRadius: 10, padding: '12px 14px', marginTop: 18, fontSize: 13, lineHeight: 1.6, color: '#94a3b8' }}>
-        Stripe handles the document check. FreeTrust stores only the verification status, timestamps, and Stripe session ID — not your ID documents.
+      <div className="identity-steps" aria-label="Verification progress">
+        {verificationSteps.map((step, index) => {
+          const state = stepState(index)
+          return (
+            <div key={step.label} className={`identity-step${state ? ` ${state}` : ''}`}>
+              <span className="identity-step-marker">{state === 'done' ? '✓' : index + 1}</span>
+              <span className="identity-step-label">{step.label}</span>
+              <span className="identity-step-detail">{step.detail}</span>
+            </div>
+          )
+        })}
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: '#0f172a', border: '1px solid rgba(56,189,248,0.16)', borderRadius: 10, padding: '12px 14px', marginTop: 14, fontSize: 13, lineHeight: 1.6, color: '#94a3b8' }}>
+        <span aria-hidden="true" style={{ color: '#7dd3fc', fontSize: 16, lineHeight: 1.4 }}>🔒</span>
+        <span>Stripe handles the document check. FreeTrust stores only the verification status, timestamps, and Stripe session ID — never your ID documents.</span>
       </div>
 
       {message && <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#6ee7b7', marginTop: 14 }}>{message}</div>}
       {error && <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#fca5a5', marginTop: 14 }}>{error}</div>}
+      {status === 'unconfigured' && (
+        <a
+          href={setupUrl ?? 'https://dashboard.stripe.com/identity/application'}
+          target="_blank"
+          rel="noreferrer"
+          style={{ display: 'inline-block', marginTop: 12, color: '#7dd3fc', fontSize: 13, fontWeight: 800 }}
+        >
+          Complete Stripe Identity setup in Stripe Dashboard ↗
+        </a>
+      )}
     </div>
   )
 }
