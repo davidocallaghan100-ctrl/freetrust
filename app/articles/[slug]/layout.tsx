@@ -29,7 +29,7 @@ export async function generateMetadata(
     const imageVersion = typeof article.updated_at === 'string'
       ? encodeURIComponent(article.updated_at)
       : '1'
-    const ogImage = `${BASE}/api/articles/${encodedSlug}/og-image?v=${imageVersion}`
+    const ogImage = `${BASE}/api/articles/${encodedSlug}/og-image?v=${imageVersion}&format=wide-v2`
 
     return {
       title,
