@@ -253,10 +253,11 @@ export default function ArticlePage() {
       <style>{`
         .art-read-layout { display: grid; grid-template-columns: 1fr 300px; gap: 2.5rem; max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; align-items: start; }
         .art-read-sidebar { position: sticky; top: 78px; display: flex; flex-direction: column; gap: 1.25rem; }
-        .art-body { font-size: 1.05rem; line-height: 1.85; color: var(--ft-text-secondary); }
+        .art-body { font-size: 1.05rem; line-height: 1.85; color: var(--ft-text); }
+        .art-body p, .art-body li { color: var(--ft-text); }
         .art-body h2 { font-size: 1.5rem; font-weight: 700; margin: 1.75rem 0 0.75rem; color: var(--ft-text); }
         .art-body h3 { font-size: 1.2rem; font-weight: 600; margin: 1.5rem 0 0.5rem; color: var(--ft-text); }
-        .art-body blockquote { border-left: 3px solid var(--ft-accent); padding: 0.5rem 1rem; margin: 1.25rem 0; color: var(--ft-text-secondary); font-style: italic; background: rgba(56,189,248,0.04); border-radius: 0 8px 8px 0; }
+        .art-body blockquote { border-left: 3px solid var(--ft-accent); padding: 0.5rem 1rem; margin: 1.25rem 0; color: var(--ft-text); font-style: italic; background: rgba(56,189,248,0.04); border-radius: 0 8px 8px 0; }
         .art-body ul, .art-body ol { padding-left: 1.5rem; margin: 0.75rem 0; }
         .art-body li { margin-bottom: 0.4rem; }
         .art-body pre, .art-body code { background: #0c1628; border: 1px solid rgba(56,189,248,0.15); border-radius: 8px; padding: 0.9rem 1.1rem; font-family: monospace; font-size: 0.88rem; color: var(--ft-accent); display: block; margin: 1rem 0; white-space: pre-wrap; overflow-x: auto; }
