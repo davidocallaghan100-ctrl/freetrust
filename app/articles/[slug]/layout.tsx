@@ -9,8 +9,9 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   try {
     const { slug } = await params
+    const encodedSlug = encodeURIComponent(slug)
     const res = await fetch(
-      `${SUPABASE}/rest/v1/articles?slug=eq.${slug}&select=title,excerpt,cover_image,author_name&limit=1`,
+      `${SUPABASE}/rest/v1/articles?slug=eq.${encodedSlug}&status=eq.published&select=title,excerpt,featured_image_url,updated_at&limit=1`,
       {
         headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
         next: { revalidate: 3600 },
@@ -22,17 +23,21 @@ export async function generateMetadata(
 
     const title = article.title ?? 'Article'
     const description = (article.excerpt ?? '').slice(0, 155)
-    const ogImage = article.cover_image
-      ?? `${BASE}/api/og?title=${encodeURIComponent(title)}&category=Articles`
+    // Keep social crawlers on freetrust.co. The article cover route proxies
+    // public Supabase images and falls back to the static FreeTrust logo when
+    // an article has no compatible cover image.
+    const imageVersion = typeof article.updated_at === 'string'
+      ? encodeURIComponent(article.updated_at)
+      : '1'
+    const ogImage = `${BASE}/api/articles/${encodedSlug}/og-image?v=${imageVersion}`
 
     return {
       title,
       description,
-      authors: article.author_name ? [{ name: article.author_name }] : undefined,
       openGraph: {
         title,
         description,
-        url: `${BASE}/articles/${slug}`,
+        url: `${BASE}/articles/${encodedSlug}`,
         type: 'article',
         images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
       },
@@ -42,7 +47,7 @@ export async function generateMetadata(
         description,
         images: [ogImage],
       },
-      alternates: { canonical: `${BASE}/articles/${slug}` },
+      alternates: { canonical: `${BASE}/articles/${encodedSlug}` },
     }
   } catch {
     return {}
