@@ -359,7 +359,7 @@ export default function ArticlePage() {
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.82rem', color: 'var(--ft-text-tertiary)' }}>
               <span>👏 {clapCount.toLocaleString()}</span>
               <span>· 💬 {comments.length}</span>
-              <span title="Article reads">· 👁 {viewCount.toLocaleString()} reads</span>
+              <span title="Article reads">· 👀 {viewCount.toLocaleString()} reads</span>
             </div>
           </div>
 
