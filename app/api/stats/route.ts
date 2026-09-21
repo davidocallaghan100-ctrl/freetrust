@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -92,6 +93,39 @@ export async function GET() {
     const articlesPublished = getCount(articlesRes)
     const communitiesCount = getCount(communitiesRes)
 
+    // These two public landing metrics use the same definitions as the
+    // investor deck. The ledger and wallet tables are protected by RLS, so
+    // use the server-only admin client here and keep the whole block optional
+    // so a missing admin configuration never prevents the landing page from
+    // rendering its other live stats.
+    let aiAgentRuns = 0
+    let walletTransactions = 0
+    try {
+      const admin = createAdminClient()
+      const [agentLedgerRes, walletLedgerRes, depositsRes, transfersRes, ordersRes] = await Promise.all([
+        admin.from('trust_ledger').select('type').neq('type', 'test_seed'),
+        admin.from('trust_ledger').select('*', { count: 'exact', head: true }).neq('type', 'test_seed'),
+        admin.from('money_deposits').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
+        admin.from('wallet_transfers').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
+        admin.from('orders').select('*', { count: 'exact', head: true }).in('status', ['completed', 'delivered']),
+      ])
+
+      if (!agentLedgerRes.error && agentLedgerRes.data) {
+        aiAgentRuns = agentLedgerRes.data.filter(({ type }) => {
+          const ledgerType = type ?? ''
+          return ledgerType.startsWith('agent_') && !ledgerType.startsWith('agent_refund_')
+        }).length
+      }
+
+      walletTransactions =
+        (walletLedgerRes.count ?? 0) +
+        (depositsRes.count ?? 0) +
+        (transfersRes.count ?? 0) +
+        (ordersRes.count ?? 0)
+    } catch (err) {
+      console.warn('[GET /api/stats] wallet/agent metrics unavailable:', err)
+    }
+
     const activeProfileRows = getData<{ id: string }>(activeProfilesRes)
     const activeProfileIds = new Set(activeProfileRows.map((p) => p.id))
     const hasActiveProfileFilter = activeProfilesRes.status === 'fulfilled'
@@ -168,6 +202,8 @@ export async function GET() {
       articles: { published: articlesPublished },
       communities: { total: communitiesCount },
       trust: { total: totalTrust, thisWeek: trustThisWeek, inCirculation: trustInCirculation, membersHolding: membersHoldingTrust },
+      aiAgentRuns,
+      walletTransactions,
       ticker: tickerFeed,
       growth: growthChart,
       foundingGoal: 1000,
@@ -183,6 +219,8 @@ export async function GET() {
       articles: { published: 0 },
       communities: { total: 0 },
       trust: { total: 0, thisWeek: 0, inCirculation: 0, membersHolding: 0 },
+      aiAgentRuns: 0,
+      walletTransactions: 0,
       ticker: [],
       growth: [],
       foundingGoal: 1000,

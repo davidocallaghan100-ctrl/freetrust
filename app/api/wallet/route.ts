@@ -25,6 +25,7 @@ export async function GET() {
         .from('trust_ledger')
         .select('id, amount, type, description, created_at')
         .eq('user_id', user.id)
+        .neq('type', 'test_seed')
         .order('created_at', { ascending: false })
         .limit(100),
       // Money earned — orders where this user is the seller (not deposits)
@@ -242,6 +243,7 @@ export async function GET() {
         updatedAt: trustUpdated,
       },
       transactions: txList,
+      transactionCount: txList.length,
     }, {
       headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
     })

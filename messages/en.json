@@ -203,6 +203,10 @@
       "shopNow": "Shop now",
       "totalIssued": "Total ₮ issued",
       "sinceLaunch": "Since launch",
+      "agentRuns": "AI agent runs",
+      "agentRunsSub": "TrustCoin-paid",
+      "walletTransactions": "Wallet transactions",
+      "walletTransactionsSub": "Ledger + wallet activity",
       "live": "Live",
       "ticker": {
         "someone": "Someone",

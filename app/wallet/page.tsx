@@ -44,6 +44,7 @@ interface WalletData {
     updatedAt: string | null
   }
   transactions: Tx[]
+  transactionCount: number
 }
 
 interface TrustAction {
@@ -876,6 +877,7 @@ function WalletPageInner() {
               <StatCard icon="⬇" label="Total Earned" value={`${sym}${(data?.money.totalEarned ?? 0).toFixed(2)}`} color="#34d399" />
               <StatCard icon="⬆" label="Total Spent" value={`${sym}${(data?.money.totalSpent ?? 0).toFixed(2)}`} color="var(--ft-danger)" />
               <StatCard icon="💎" label="Trust Lifetime" value={`₮${(data?.trust.lifetime ?? 0).toLocaleString()}`} color="#818cf8" sub="All-time earned" />
+              <StatCard icon="🧾" label="Transactions" value={(data?.transactionCount ?? data?.transactions.length ?? 0).toLocaleString()} color="var(--ft-accent)" sub="Wallet history entries" />
             </div>
 
             {/* Transaction history */}

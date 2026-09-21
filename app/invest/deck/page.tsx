@@ -17,7 +17,19 @@ const C = {
 
 const SLIDES = ['cover','problem','insight','product','model','moat','traction','market','gtm','roadmap','ask'] as const;
 type SlideKey = typeof SLIDES[number];
-interface Metrics { members: number; listings: number; orders: number; trustInCirculation: number; founderBuyers: number; aiCreditsUsed: number; }
+interface Metrics {
+  members: number;
+  listings: number;
+  orders: number;
+  trustInCirculation: number;
+  founderBuyers: number;
+  aiAgentRuns: number;
+  walletTransactions: number;
+}
+
+function metricValue(value: number | undefined) {
+  return value === undefined ? '—' : value.toLocaleString('en-IE');
+}
 
 export default function InvestorDeckPage() {
   const [i, setI] = useState(0);
@@ -273,12 +285,13 @@ function Slide({ k, metrics }: { k: SlideKey; metrics: Metrics | null }) {
         <h1 className="h">Early. Honest. Compounding.</h1>
         <p className="sub">Figures update from the live database. Built solo with AI operating tooling in under 6 months.</p>
         <div className="g4">
-          <div className="stat"><div className="sl1">Members</div><div className="sv">{metrics?.members ?? '—'}</div><div className="sh">verified humans</div></div>
-          <div className="stat"><div className="sl1">Listings</div><div className="sv">{metrics?.listings ?? '—'}</div><div className="sh">services + products</div></div>
-          <div className="stat"><div className="sl1">Orders</div><div className="sv">{metrics?.orders ?? '—'}</div><div className="sh">completed</div></div>
-          <div className="stat"><div className="sl1">₮ in circulation</div><div className="sv">{metrics?.trustInCirculation ?? '—'}</div><div className="sh">reputation stock</div></div>
-          <div className="stat"><div className="sl1">Invest tier buyers</div><div className="sv">{metrics?.founderBuyers ?? '—'}</div><div className="sh">paid tier members</div></div>
-          <div className="stat"><div className="sl1">AI agent runs</div><div className="sv">{metrics?.aiCreditsUsed ?? '—'}</div><div className="sh">credits spent</div></div>
+          <div className="stat"><div className="sl1">Members</div><div className="sv">{metricValue(metrics?.members)}</div><div className="sh">active real members</div></div>
+          <div className="stat"><div className="sl1">Listings</div><div className="sv">{metricValue(metrics?.listings)}</div><div className="sh">active community listings</div></div>
+          <div className="stat"><div className="sl1">Orders</div><div className="sv">{metricValue(metrics?.orders)}</div><div className="sh">completed / delivered</div></div>
+          <div className="stat"><div className="sl1">₮ in circulation</div><div className="sv">{metricValue(metrics?.trustInCirculation)}</div><div className="sh">active member balances</div></div>
+          <div className="stat"><div className="sl1">Invest tier buyers</div><div className="sv">{metricValue(metrics?.founderBuyers)}</div><div className="sh">distinct paid members</div></div>
+          <div className="stat"><div className="sl1">AI agent runs</div><div className="sv">{metricValue(metrics?.aiAgentRuns)}</div><div className="sh">TrustCoin-paid runs</div></div>
+          <div className="stat"><div className="sl1">Wallet transactions</div><div className="sv">{metricValue(metrics?.walletTransactions)}</div><div className="sh">ledger + wallet activity</div></div>
         </div>
         <p className="body" style={{ marginTop: 20, color: C.textFaint, fontSize: 13 }}>Metrics refresh on every page load. The graph builds from here.</p>
       </>);

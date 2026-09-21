@@ -29,6 +29,8 @@ type StatsData = {
   articles: { published: number }
   communities: { total: number }
   trust: { total: number; thisWeek: number; inCirculation: number; membersHolding: number }
+  aiAgentRuns: number
+  walletTransactions: number
   ticker: TickerItem[]
   growth: { date: string; count: number; cumulative: number }[]
   foundingGoal: number
@@ -392,6 +394,8 @@ function LegacyTopDesign({
               { val: services, prefix: '', suffix: '', label: t('stats.servicesAvailable'), sub: services === 0 ? t('stats.beFirst') : t('stats.browseNow'), color: 'var(--ft-accent)' },
               { val: products, prefix: '', suffix: '', label: t('stats.productsListed'), sub: products === 0 ? t('stats.listYours') : t('stats.shopNow'), color: 'var(--ft-accent)' },
               { val: trustIssued, prefix: '₮', suffix: '', label: t('stats.totalIssued'), sub: t('stats.sinceLaunch'), color: 'var(--ft-accent)' },
+              { val: stats?.aiAgentRuns ?? 0, prefix: '', suffix: '', label: t('stats.agentRuns'), sub: t('stats.agentRunsSub'), color: '#2dd4bf' },
+              { val: stats?.walletTransactions ?? 0, prefix: '', suffix: '', label: t('stats.walletTransactions'), sub: t('stats.walletTransactionsSub'), color: '#2dd4bf' },
             ].map(s => (
               <div key={s.label} style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1rem 0.5rem' }}>
                 <div className="stat-val" style={{ fontSize: '1.8rem', fontWeight: 900, color: s.color, letterSpacing: '-1px' }}>
