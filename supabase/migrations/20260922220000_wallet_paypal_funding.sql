@@ -254,7 +254,9 @@ $$;
 
 -- This helper accepts an arbitrary user id and is only called server-side;
 -- exposing it to authenticated clients would leak another member's balance.
-revoke all on function public.wallet_withdrawable_cents(uuid) from public, authenticated;
+revoke all on function public.wallet_withdrawable_cents(uuid) from public, anon, authenticated;
+revoke all on function public.reserve_wallet_withdrawal(uuid, integer, text, text) from public, anon, authenticated;
+revoke all on function public.create_eur_wallet_transfer(uuid, uuid, integer, text) from public, anon, authenticated;
 grant execute on function public.wallet_withdrawable_cents(uuid) to service_role;
 grant execute on function public.reserve_wallet_withdrawal(uuid, integer, text, text) to service_role;
 grant execute on function public.create_eur_wallet_transfer(uuid, uuid, integer, text) to service_role;
@@ -422,7 +424,7 @@ begin
 end;
 $$;
 
-revoke all on function public.rent_share_check_in(uuid, uuid) from public;
+revoke all on function public.rent_share_check_in(uuid, uuid) from public, anon, authenticated;
 grant execute on function public.rent_share_check_in(uuid, uuid) to service_role;
 
 notify pgrst, 'reload schema';
