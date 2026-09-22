@@ -54,7 +54,9 @@ function isProductionDeployment() {
 // Vercel previews may use sandbox credentials; production requires live
 // credentials and PayPal's live-access approval.
 export function isPayPalAvailable() {
-  return isPayPalConfigured() && (!isProductionDeployment() || environment === 'live')
+  const productionEnabled = process.env.PAYPAL_PRODUCTION_ENABLED === 'true'
+    || process.env.PAYPAL_LIVE_TEST_ENABLED === 'true'
+  return isPayPalConfigured() && (!isProductionDeployment() || (environment === 'live' && productionEnabled))
 }
 
 export function getPayPalEnvironment() {

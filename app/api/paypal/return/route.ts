@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
   const admin = createAdminClient()
   const { data: order, error: orderError } = await admin
     .from('orders')
-    .select('id, buyer_id, seller_id, listing_id, title, amount, payment_amount_cents, payment_gateway, paypal_order_id, paypal_intent, type, status')
+    .select('id, buyer_id, seller_id, listing_id, title, amount, payment_amount_cents, payment_gateway, paypal_order_id, paypal_intent, paypal_capture_id, type, status')
     .eq('id', orderId)
     .maybeSingle()
 
@@ -43,7 +43,11 @@ export async function GET(req: NextRequest) {
 
   try {
     const approved = await getPayPalOrder(paypalOrderId)
-    if (approved.status !== 'APPROVED') throw new Error(`Unexpected PayPal order status: ${approved.status ?? 'unknown'}`)
+    const captureAlreadyRecorded = order.paypal_intent === 'CAPTURE' && Boolean(order.paypal_capture_id)
+    const authorizationAlreadyRecorded = order.paypal_intent === 'AUTHORIZE' && Boolean(getPayPalAuthorizationId(approved))
+    if (approved.status !== 'APPROVED' && !(captureAlreadyRecorded && approved.status === 'COMPLETED') && !authorizationAlreadyRecorded) {
+      throw new Error(`Unexpected PayPal order status: ${approved.status ?? 'unknown'}`)
+    }
 
     const purchaseUnit = approved.purchase_units?.[0]
     const paypalAmount = Number(purchaseUnit?.amount?.value ?? NaN)
@@ -53,16 +57,33 @@ export async function GET(req: NextRequest) {
     }
 
     if (order.paypal_intent === 'CAPTURE') {
-      const captured = await capturePayPalOrder(paypalOrderId)
-      if (captured.status && captured.status !== 'COMPLETED') throw new Error(`Unexpected PayPal capture status: ${captured.status}`)
-      const captureId = getPayPalCaptureId(captured)
+      let captureId = order.paypal_capture_id as string | null
+      if (!captureId) {
+        const captured = await capturePayPalOrder(paypalOrderId)
+        if (captured.status && captured.status !== 'COMPLETED') throw new Error(`Unexpected PayPal capture status: ${captured.status}`)
+        captureId = getPayPalCaptureId(captured)
+      }
       if (!captureId) throw new Error('PayPal did not return a capture id')
 
       const { data: items, error: itemError } = await admin
         .from('order_items')
-        .select('id, seller_id, title, seller_payout_cents')
+        .select('id, listing_id, seller_id, title, seller_payout_cents, paypal_payout_batch_id, paypal_payout_status')
         .eq('order_id', order.id)
       if (itemError) throw itemError
+
+      // Persist the capture before attempting seller payouts. If the browser
+      // return is interrupted after capture, a retry must not attempt to
+      // capture the PayPal order again.
+      const { error: captureStateError } = await admin
+        .from('orders')
+        .update({
+          paypal_capture_id: captureId,
+          paypal_payout_status: 'PROCESSING',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', order.id)
+        .eq('status', 'pending_escrow')
+      if (captureStateError) throw captureStateError
 
       const sellerIds = Array.from(new Set((items ?? []).map(item => item.seller_id).filter(Boolean))) as string[]
       const { data: sellers } = sellerIds.length
@@ -73,6 +94,10 @@ export async function GET(req: NextRequest) {
       let payoutFailure = false
 
       for (const item of items ?? []) {
+        if (item.paypal_payout_batch_id && item.paypal_payout_status !== 'failed') {
+          payoutBatchIds.push(item.paypal_payout_batch_id)
+          continue
+        }
         const email = item.seller_id ? sellerMap.get(item.seller_id) : null
         if (!email) {
           payoutFailure = true
@@ -102,14 +127,26 @@ export async function GET(req: NextRequest) {
         .from('orders')
         .update({
           status: 'paid',
-          paypal_capture_id: captureId,
           paypal_payout_batch_id: payoutBatchIds.join(',') || null,
           paypal_payout_status: payoutFailure ? 'PARTIAL_FAILURE' : 'SUBMITTED',
           updated_at: new Date().toISOString(),
         })
         .eq('id', order.id)
 
-      await admin.from('basket_items').delete().eq('user_id', order.buyer_id).eq('product_type', 'community')
+      const purchasedListingIds = Array.from(new Set(
+        (items ?? [])
+          .map(item => item.listing_id)
+          .filter((listingId): listingId is string => typeof listingId === 'string' && listingId.length > 0),
+      ))
+      if (purchasedListingIds.length > 0) {
+        const { error: basketCleanupError } = await admin
+          .from('basket_items')
+          .delete()
+          .eq('user_id', order.buyer_id)
+          .eq('product_type', 'community')
+          .in('listing_id', purchasedListingIds)
+        if (basketCleanupError) console.error('[PayPal Return] basket cleanup failed', { orderId: order.id, message: basketCleanupError.message })
+      }
       await insertNotification({
         userId: order.buyer_id,
         type: 'order',
@@ -129,8 +166,12 @@ export async function GET(req: NextRequest) {
       return redirect(req, `/orders/${order.id}/success?gateway=paypal`)
     }
 
-    const authorized = await authorizePayPalOrder(paypalOrderId)
-    const authorizationId = getPayPalAuthorizationId(authorized)
+    let authorizationId = getPayPalAuthorizationId(approved)
+    if (!authorizationId) {
+      if (approved.status !== 'APPROVED') throw new Error(`Unexpected PayPal authorization order status: ${approved.status ?? 'unknown'}`)
+      const authorized = await authorizePayPalOrder(paypalOrderId)
+      authorizationId = getPayPalAuthorizationId(authorized)
+    }
     if (!authorizationId) throw new Error('PayPal did not return an authorization id')
 
     const { error: updateError } = await admin

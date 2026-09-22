@@ -253,6 +253,35 @@ export async function PATCH(
           }
         }
 
+        const expectedAmount = Number(order.payment_amount_cents ?? order.amount ?? 0)
+        if (!Number.isFinite(capturedAmount) || capturedAmount !== expectedAmount) {
+          console.error(`[orders/${id}] PayPal capture amount mismatch`, { capturedAmount, expectedAmount })
+          return NextResponse.json(
+            { error: 'PayPal capture amount did not match the FreeTrust order', code: 'capture_amount_mismatch' },
+            { status: 502 },
+          )
+        }
+
+        // Persist the capture before sending money to the seller. If the
+        // request is interrupted after capture, a retry can resume without
+        // attempting a second capture.
+        const { error: captureStateError } = await admin
+          .from('orders')
+          .update({
+            paypal_capture_id: captureId,
+            paypal_payout_status: 'PROCESSING',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', id)
+          .in('status', ['paid', 'delivered'])
+        if (captureStateError) {
+          console.error(`[orders/${id}] PayPal capture state persistence failed:`, captureStateError)
+          return NextResponse.json(
+            { error: 'PayPal payment was captured but its FreeTrust state could not be saved', code: 'capture_state_persistence_failed' },
+            { status: 500 },
+          )
+        }
+
         const itemType = String(order.type ?? '').toLowerCase()
         const feeRate = itemType === 'product' ? FEE_RATE_PRODUCT : FEE_RATE_SERVICE
         const feeCents = Math.round(capturedAmount * feeRate)
@@ -276,7 +305,7 @@ export async function PATCH(
             console.error(`[orders/${id}] PayPal payout failed after capture:`, msg)
             await admin
               .from('orders')
-              .update({ paypal_capture_id: captureId, updated_at: new Date().toISOString() })
+              .update({ paypal_capture_id: captureId, paypal_payout_status: 'FAILED', updated_at: new Date().toISOString() })
               .eq('id', id)
             return NextResponse.json(
               {
@@ -289,9 +318,32 @@ export async function PATCH(
           }
         }
 
+        const { error: payoutStateError } = await admin
+          .from('orders')
+          .update({
+            paypal_capture_id: captureId,
+            paypal_payout_batch_id: payoutBatchId,
+            paypal_payout_status: payoutStatus ?? 'SUBMITTED',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', id)
+        if (payoutStateError) {
+          console.error(`[orders/${id}] PayPal payout state persistence failed:`, payoutStateError)
+          return NextResponse.json(
+            { error: 'PayPal seller payout was submitted but its FreeTrust state could not be saved', code: 'payout_state_persistence_failed' },
+            { status: 500 },
+          )
+        }
+
         const nowIso = new Date().toISOString()
         const { error: confirmDiscountError } = await admin.rpc('confirm_service_discount', { p_order_id: id })
-        if (confirmDiscountError) console.error(`[orders/${id}] PayPal TrustCoin discount confirmation failed:`, confirmDiscountError)
+        if (confirmDiscountError) {
+          console.error(`[orders/${id}] PayPal TrustCoin discount confirmation failed:`, confirmDiscountError)
+          return NextResponse.json(
+            { error: 'PayPal payment and seller payout succeeded, but the TrustCoin discount is still pending confirmation', code: 'trust_discount_confirmation_failed' },
+            { status: 502 },
+          )
+        }
 
         const { error: updateError } = await admin
           .from('orders')

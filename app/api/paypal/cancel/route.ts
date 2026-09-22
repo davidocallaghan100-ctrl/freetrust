@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getPayPalAuthorizationId, getPayPalOrder, voidPayPalAuthorization } from '@/lib/paypal'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
   const admin = createAdminClient()
   const { data: order, error: orderError } = await admin
     .from('orders')
-    .select('id, buyer_id, listing_id, payment_gateway, paypal_order_id, status')
+    .select('id, buyer_id, listing_id, payment_gateway, paypal_order_id, paypal_intent, status')
     .eq('id', orderId)
     .maybeSingle()
 
@@ -45,6 +46,20 @@ export async function GET(req: NextRequest) {
 
   if (order.status === 'cancelled') return redirect(req, withPayPalState(returnPath, 'cancel'))
   if (order.status !== 'pending_escrow') return redirect(req, withPayPalState(returnPath, 'error'))
+
+  // If the browser was interrupted after PayPal authorization but before
+  // FreeTrust stored the authorization id, recover it from PayPal and void it
+  // before reversing any TrustCoin reservation.
+  if (order.paypal_intent === 'AUTHORIZE' && order.paypal_order_id) {
+    try {
+      const paypalOrder = await getPayPalOrder(order.paypal_order_id)
+      const authorizationId = getPayPalAuthorizationId(paypalOrder)
+      if (authorizationId) await voidPayPalAuthorization(authorizationId)
+    } catch (error) {
+      console.error('[PayPal Cancel] authorization void/recovery failed', error)
+      return redirect(req, withPayPalState(returnPath, 'error'))
+    }
+  }
 
   const { error: reverseError } = await admin.rpc('reverse_service_discount', {
     p_order_id: order.id,
