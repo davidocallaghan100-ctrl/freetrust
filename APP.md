@@ -11,6 +11,7 @@
 - Runs the FreeTrust community economy marketplace and mobile PWA.
 - Provides a high-security internal `/admin` analytics dashboard locked to David's Supabase auth emails (`David@freetrust.co` and `davidocallaghan100@gmail.com`), with middleware, server-layout, and API guards. For those emails, the mobile/menu Account section's **Analytics Dashboard** link opens `/admin`; other users keep their normal member analytics link. The dashboard shows real Supabase-backed metrics for users, marketplace listings, messaging, campaign sends/notifications, engagement, Trust Coin, orders, and platform health; missing analytics sources such as dedicated Trust Score or Vercel Analytics API data are shown as explicit empty states rather than inferred or fabricated.
 - Provides marketplace, profiles, events, wallet, calendar, messaging, and community flows.
+- Includes a temporary admin-only `/admin/paypal-live-test` page guarded by `PAYPAL_LIVE_TEST_ENABLED=true` and live PayPal mode. It creates one dedicated €1 EUR capture test, records an audit row in `paypal_live_test_runs`, and never submits a seller payout; disable the flag immediately after the authorized test.
 - Rent & Share supports real booking requests with owner approval/decline in the Earn → Bookings calendar, buyer-side `/rent-share/my-bookings` status tracking, date-overlap protection, in-app notifications, and buyer-confirmed check-in payout through the existing EUR wallet/order ledger. The Earn wallet view reads the real `/api/wallet` response and its tab strip is constrained to horizontal touch scrolling.
 - Serves PWA metadata and app icons for installed mobile homescreen use.
 - Organisation directory cards show an options menu to organisation owners/admins and platform admins, including edit and confirmed delete actions.
@@ -96,7 +97,7 @@
 - **Supabase**: auth and application data.
 - **Vercel**: production deployment for `freetrust.co`.
 - **Stripe**: payments and Apple Pay domain verification.
-- **PayPal**: optional buyer checkout with server-side Orders v2 authorization/capture and seller payouts; enabled only when PayPal REST credentials are configured. Service approvals return through `/api/paypal/return` and cancelled approvals through `/api/paypal/cancel`; sandbox testing must complete before live activation.
+- **PayPal**: optional buyer checkout with server-side Orders v2 authorization/capture and seller payouts; enabled only when PayPal REST credentials are configured. Service approvals return through `/api/paypal/return` and cancelled approvals through `/api/paypal/cancel`; the separate admin-only `/admin/paypal-live-test` route is gated by `PAYPAL_LIVE_TEST_ENABLED`, captures exactly €1 without payout, and is intended only for a single authorized production smoke test.
 - **Anthropic**: server-side FitPlan plan, coach, and check-in generation through `@anthropic-ai/sdk` using Claude Sonnet.
 - **Google Calendar**: optional calendar integration.
 - **SerpApi**: Google Shopping price comparison for `/products` and organic/Google Maps external provider discovery for `/services` via `SERPAPI_KEY`.
