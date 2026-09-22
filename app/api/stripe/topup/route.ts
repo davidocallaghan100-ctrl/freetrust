@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
         user_id: user.id,
         amount_cents: amountCents,
         currency: 'eur',
+        provider: 'stripe',
         status: 'pending',
       })
       .select('id')

@@ -1,14 +1,13 @@
-// Shared EUR wallet balance calculator — mirrors the inline calc in
-// app/api/wallet/transfer/route.ts so booking check-in (and any future
-// money-movement flow) can validate sufficient funds the same way the
-// rest of the app does.
+// Shared EUR wallet balance calculator — mirrors the wallet ledger so booking
+// check-in (and any future money-movement flow) cannot reuse funds already
+// reserved for a PayPal withdrawal.
 
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function getEurAvailableBalance(userId: string): Promise<number> {
   const admin = createAdminClient()
 
-  const [depositsRes, earnedRes, spentRes, sentRes, recvRes] = await Promise.all([
+  const [depositsRes, earnedRes, spentRes, sentRes, recvRes, withdrawalsRes] = await Promise.all([
     admin.from('money_deposits')
       .select('amount_cents')
       .eq('user_id', userId)
@@ -33,9 +32,13 @@ export async function getEurAvailableBalance(userId: string): Promise<number> {
       .eq('recipient_id', userId)
       .eq('currency', 'EUR')
       .eq('status', 'completed'),
+    admin.from('wallet_withdrawals')
+      .select('amount_cents')
+      .eq('user_id', userId)
+      .in('status', ['pending', 'processing', 'completed']),
   ])
 
-  const queryErrors = [depositsRes, earnedRes, spentRes, sentRes, recvRes]
+  const queryErrors = [depositsRes, earnedRes, spentRes, sentRes, recvRes, withdrawalsRes]
     .map(result => result.error)
     .filter(Boolean)
   if (queryErrors.length > 0) {
@@ -48,6 +51,7 @@ export async function getEurAvailableBalance(userId: string): Promise<number> {
   const totalSpent = (spentRes.data ?? []).reduce((s, o) => s + Number((o as { amount: number }).amount ?? 0), 0)
   const totalSent = (sentRes.data ?? []).reduce((s, t) => s + Number((t as { amount: number }).amount), 0)
   const totalReceived = (recvRes.data ?? []).reduce((s, t) => s + Number((t as { amount: number }).amount), 0)
+  const totalWithdrawn = (withdrawalsRes.data ?? []).reduce((s, w) => s + (Number((w as { amount_cents: number }).amount_cents) / 100), 0)
 
-  return totalDeposited + totalEarned - totalSpent - totalSent + totalReceived
+  return totalDeposited + totalEarned - totalSpent - totalSent + totalReceived - totalWithdrawn
 }

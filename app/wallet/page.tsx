@@ -33,6 +33,7 @@ interface Tx {
 interface WalletData {
   money: {
     available: number
+    withdrawable: number
     pendingPayout: number
     totalEarned: number
     totalSpent: number
@@ -143,9 +144,20 @@ function AddFundsModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
   const [selected, setSelected] = useState<number | null>(null)
   const [custom,   setCustom]   = useState('')
   const [loading,  setLoading]  = useState(false)
+  const [paypalEnabled, setPaypalEnabled] = useState(false)
+  const [paypalLoading, setPaypalLoading] = useState(false)
   const [error,    setError]    = useState<string | null>(null)
 
   const amountCents = selected ?? (custom ? Math.round(parseFloat(custom) * 100) : null)
+
+  useEffect(() => {
+    let active = true
+    fetch('/api/paypal/wallet/config', { cache: 'no-store' })
+      .then(res => res.json() as Promise<{ enabled?: boolean }>)
+      .then(data => { if (active) setPaypalEnabled(data.enabled === true) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [])
 
   const handlePay = async () => {
     if (!amountCents || amountCents < 100) { setError('Minimum top-up is €1'); return }
@@ -170,13 +182,37 @@ function AddFundsModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
     }
   }
 
+  const handlePayPal = async () => {
+    if (!amountCents || amountCents < 100) { setError('Minimum top-up is €1'); return }
+    if (amountCents > 1000000) { setError('Maximum top-up is €10,000'); return }
+    setPaypalLoading(true); setError(null)
+    try {
+      const key = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `topup-${Date.now()}-${Math.random()}`
+      const res = await fetch('/api/paypal/wallet/topup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Idempotency-Key': key },
+        body: JSON.stringify({ amount_cents: amountCents }),
+      })
+      const data = await res.json().catch(() => ({})) as { url?: string; error?: string }
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        setError(data.error ?? 'Could not start PayPal payment')
+        setPaypalLoading(false)
+      }
+    } catch {
+      setError('Network error — please try again')
+      setPaypalLoading(false)
+    }
+  }
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
       <div style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: '480px', boxShadow: '0 -8px 40px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div>
             <div style={{ fontSize: '17px', fontWeight: 800, color: 'var(--ft-text)' }}>➕ Add Funds</div>
-            <div style={{ fontSize: '12px', color: 'var(--ft-text-tertiary)', marginTop: '2px' }}>Secure payment via Stripe</div>
+            <div style={{ fontSize: '12px', color: 'var(--ft-text-tertiary)', marginTop: '2px' }}>Secure payment via Stripe or PayPal</div>
           </div>
           <button onClick={onClose} style={{ background: 'var(--ft-bg)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', color: 'var(--ft-text-tertiary)', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
         </div>
@@ -222,7 +258,7 @@ function AddFundsModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
         {/* Summary */}
         {amountCents && amountCents >= 100 && (
           <div style={{ fontSize: '13px', color: 'var(--ft-text-tertiary)', marginBottom: '14px', padding: '10px 14px', background: 'rgba(56,189,248,0.06)', borderRadius: '8px', border: '1px solid rgba(56,189,248,0.12)' }}>
-            Adding <span style={{ color: 'var(--ft-accent)', fontWeight: 700 }}>€{(amountCents / 100).toFixed(2)}</span> to your wallet · Secure card payment
+            Adding <span style={{ color: 'var(--ft-accent)', fontWeight: 700 }}>€{(amountCents / 100).toFixed(2)}</span> to your wallet · Choose Stripe, Apple Pay, Google Pay, or PayPal
           </div>
         )}
 
@@ -236,11 +272,28 @@ function AddFundsModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
             metadata={{ type: 'wallet_topup' }}
             onSuccess={() => {
               onClose()
-              window.location.href = '/wallet?topup=success'
+              window.location.href = `/wallet?topup=success&amount=${amountCents}`
             }}
             onError={(msg: string) => setError(msg)}
             style={{ marginBottom: 12 }}
           />
+        )}
+
+        {/* PayPal wallet top-up — shown only when the server has live/sandbox PayPal configured */}
+        {amountCents && amountCents >= 100 && paypalEnabled && (
+          <button
+            type="button"
+            onClick={handlePayPal}
+            disabled={paypalLoading}
+            style={{
+              width: '100%', padding: '14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.18)',
+              background: paypalLoading ? 'rgba(30,41,59,0.8)' : '#ffc439', color: '#111827',
+              fontSize: '15px', fontWeight: 800, cursor: paypalLoading ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit', opacity: paypalLoading ? 0.7 : 1, marginBottom: 12,
+            }}
+          >
+            {paypalLoading ? '⏳ Opening PayPal…' : `🅿️ Pay €${(amountCents / 100).toFixed(2)} with PayPal`}
+          </button>
         )}
 
         <button
@@ -258,8 +311,97 @@ function AddFundsModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
         </button>
 
         <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--ft-border-strong)', marginTop: '12px' }}>
-          🔒 Powered by Stripe · SSL encrypted · No card data stored
+          🔒 Powered by Stripe and PayPal · SSL encrypted · No card data stored
         </div>
+      </div>
+    </div>
+  )
+}
+
+function PayPalWithdrawModal({ available, onClose, onSuccess }: { available: number; onClose: () => void; onSuccess: (msg: string) => void }) {
+  const [amount, setAmount] = useState(available > 0 ? available.toFixed(2) : '')
+  const [paypalEmail, setPaypalEmail] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const idempotencyKey = useRef<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+    fetch('/api/paypal/seller', { cache: 'no-store' })
+      .then(res => res.json() as Promise<{ paypal_email?: string }>)
+      .then(data => { if (active) setPaypalEmail(data.paypal_email ?? '') })
+      .catch(() => {})
+    return () => { active = false }
+  }, [])
+
+  const handleSubmit = async () => {
+    const amountCents = Math.round(Number(amount) * 100)
+    const email = paypalEmail.trim().toLowerCase()
+    if (!Number.isInteger(amountCents) || amountCents < 100) { setError('Minimum withdrawal is €1'); return }
+    if (amountCents > Math.round(available * 100)) { setError('That exceeds your PayPal-withdrawable balance'); return }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('Enter a valid PayPal email address'); return }
+
+    setLoading(true); setError(null)
+    try {
+      const saveRes = await fetch('/api/paypal/seller', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paypal_email: email }),
+      })
+      const saveData = await saveRes.json().catch(() => ({})) as { error?: string }
+      if (!saveRes.ok) { setError(saveData.error ?? 'Could not save PayPal payout details'); setLoading(false); return }
+
+      if (!idempotencyKey.current) idempotencyKey.current = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `wallet-${Date.now()}-${Math.random()}`
+      const res = await fetch('/api/paypal/wallet/withdraw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Idempotency-Key': idempotencyKey.current },
+        body: JSON.stringify({ amount_cents: amountCents }),
+      })
+      const data = await res.json().catch(() => ({})) as { status?: string; error?: string; code?: string }
+      if (!res.ok && data.code !== 'withdrawal_pending') {
+        setError(data.error ?? 'Could not start PayPal withdrawal')
+        setLoading(false)
+        return
+      }
+
+      onClose()
+      onSuccess(data.status === 'completed' ? `✅ €${(amountCents / 100).toFixed(2)} sent to PayPal` : `⏳ €${(amountCents / 100).toFixed(2)} PayPal withdrawal is processing`)
+    } catch {
+      setError('Network error — please try again')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: '480px', boxShadow: '0 -8px 40px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+          <div>
+            <div style={{ fontSize: '17px', fontWeight: 800, color: 'var(--ft-text)' }}>🅿️ Withdraw to PayPal</div>
+            <div style={{ fontSize: '12px', color: 'var(--ft-text-tertiary)', marginTop: '3px' }}>Withdrawable from deposits and EUR transfers: €{available.toFixed(2)}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'var(--ft-bg)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', color: 'var(--ft-text-tertiary)', fontSize: '16px', cursor: 'pointer' }}>✕</button>
+        </div>
+
+        <div style={{ marginTop: '18px', marginBottom: '14px' }}>
+          <label style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)', fontWeight: 600, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Amount</label>
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--ft-text-tertiary)', fontSize: '15px', fontWeight: 600 }}>€</span>
+            <input type="number" min="1" max={available.toFixed(2)} step="0.01" value={amount} onChange={e => setAmount(e.target.value)} style={{ width: '100%', background: 'var(--ft-bg)', border: '1.5px solid var(--ft-border-strong)', borderRadius: '10px', padding: '12px 12px 12px 28px', fontSize: '15px', color: 'var(--ft-text)', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+          </div>
+        </div>
+
+        <div style={{ marginBottom: '18px' }}>
+          <label style={{ fontSize: '11px', color: 'var(--ft-text-tertiary)', fontWeight: 600, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PayPal email</label>
+          <input type="email" autoComplete="email" value={paypalEmail} onChange={e => setPaypalEmail(e.target.value)} placeholder="you@example.com" style={{ width: '100%', background: 'var(--ft-bg)', border: '1.5px solid var(--ft-border-strong)', borderRadius: '10px', padding: '12px', fontSize: '15px', color: 'var(--ft-text)', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+        </div>
+
+        {error && <div style={{ fontSize: '13px', color: 'var(--ft-danger)', marginBottom: '12px', padding: '10px 14px', background: 'rgba(248,113,113,0.08)', borderRadius: '8px' }}>{error}</div>}
+
+        <button type="button" onClick={handleSubmit} disabled={loading || available < 1} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: 'none', background: loading || available < 1 ? 'var(--ft-surface)' : '#ffc439', color: loading || available < 1 ? 'var(--ft-text-faint)' : '#111827', fontSize: '15px', fontWeight: 800, cursor: loading || available < 1 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: loading ? 0.7 : 1 }}>
+          {loading ? '⏳ Sending to PayPal…' : `Withdraw €${amount && Number(amount) > 0 ? Number(amount).toFixed(2) : '0.00'}`}
+        </button>
+        <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--ft-text-faint)', marginTop: '12px', lineHeight: 1.5 }}>Marketplace earnings remain on their existing Stripe/PayPal seller-payout flow.</div>
       </div>
     </div>
   )
@@ -279,7 +421,7 @@ function TransferModal({ walletData, onClose, onSuccess }: { walletData: WalletD
   const [error, setError]           = useState<string | null>(null)
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const availableEur   = walletData?.money.available ?? 0
+  const availableEur   = walletData?.money.withdrawable ?? 0
   const availableTrust = walletData?.trust.balance ?? 0
 
   // Debounced user search
@@ -479,6 +621,7 @@ function WalletPageInner() {
   const [spendLoading,setSpendLoading]= useState<string | null>(null)
   const [toast,       setToast]       = useState<string | null>(null)
   const [showAddFunds,  setShowAddFunds]  = useState(false)
+  const [showPayPalWithdraw, setShowPayPalWithdraw] = useState(false)
   const [showTransfer,  setShowTransfer]  = useState(false)
   const [withdrawing,   setWithdrawing]   = useState(false)
 
@@ -497,6 +640,21 @@ function WalletPageInner() {
   useEffect(() => {
     const topup = searchParams.get('topup')
     const amount = searchParams.get('amount')
+    const paypalTopup = searchParams.get('paypal_topup')
+    const paypalAmount = searchParams.get('amount')
+
+    if (paypalTopup) {
+      if (paypalTopup === 'success') {
+        showToast(`✅ €${paypalAmount ? (parseInt(paypalAmount) / 100).toFixed(2) : ''} added to your wallet via PayPal!`)
+      } else if (paypalTopup === 'cancelled') {
+        showToast('PayPal payment cancelled — no funds were added')
+      } else {
+        showToast('PayPal top-up could not be confirmed. Please try again.', 6000)
+      }
+      window.history.replaceState({}, '', '/wallet')
+      return
+    }
+
     if (topup === 'success' && amount) {
       showToast(`✅ €${(parseInt(amount) / 100).toFixed(2)} added to your wallet!`)
       window.history.replaceState({}, '', '/wallet')
@@ -773,6 +931,14 @@ function WalletPageInner() {
         />
       )}
 
+      {showPayPalWithdraw && (
+        <PayPalWithdrawModal
+          available={data?.money.withdrawable ?? 0}
+          onClose={() => setShowPayPalWithdraw(false)}
+          onSuccess={(msg) => { setShowPayPalWithdraw(false); showToast(msg); load() }}
+        />
+      )}
+
       {/* Transfer Modal */}
       {showTransfer && (
         <TransferModal
@@ -831,7 +997,7 @@ function WalletPageInner() {
                   + {sym}{(data?.money.pendingPayout ?? 0).toFixed(2)} pending payout
                 </div>
               )}
-              <div style={{ fontSize: '12px', color: 'var(--ft-text-faint)', marginBottom: '18px' }}>FreeTrust earnings account</div>
+              <div style={{ fontSize: '12px', color: 'var(--ft-text-faint)', marginBottom: '18px' }}>FreeTrust earnings account · PayPal cash-out tracks deposits and EUR transfers separately</div>
 
               {/* Trust balance inline */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px', padding: '10px 14px', background: 'rgba(56,189,248,0.08)', borderRadius: '10px', border: '1px solid rgba(56,189,248,0.15)' }}>
@@ -854,7 +1020,14 @@ function WalletPageInner() {
                   disabled={withdrawing}
                   style={{ flex: 1, minWidth: '100px', padding: '11px 14px', background: withdrawing ? 'var(--ft-surface)' : 'var(--ft-accent)', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 700, color: withdrawing ? 'var(--ft-text-faint)' : 'var(--ft-bg)', cursor: withdrawing ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: withdrawing ? 0.7 : 1 }}
                 >
-                  {withdrawing ? '⏳ Opening…' : '💸 Withdraw'}
+                  {withdrawing ? '⏳ Opening…' : '💸 Stripe Earnings'}
+                </button>
+                <button
+                  onClick={() => setShowPayPalWithdraw(true)}
+                  disabled={(data?.money.withdrawable ?? 0) < 1}
+                  style={{ flex: 1, minWidth: '100px', padding: '11px 14px', background: (data?.money.withdrawable ?? 0) >= 1 ? '#ffc439' : 'var(--ft-surface)', border: '1px solid rgba(255,196,57,0.35)', borderRadius: '10px', fontSize: '13px', fontWeight: 700, color: (data?.money.withdrawable ?? 0) >= 1 ? '#111827' : 'var(--ft-text-faint)', cursor: (data?.money.withdrawable ?? 0) >= 1 ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}
+                >
+                  🅿️ PayPal €{(data?.money.withdrawable ?? 0).toFixed(2)}
                 </button>
                 <button
                   onClick={() => setShowTransfer(true)}
@@ -876,6 +1049,7 @@ function WalletPageInner() {
               <StatCard icon="💳" label="Deposited" value={`${sym}${(data?.money.totalDeposited ?? 0).toFixed(2)}`} color="#a78bfa" />
               <StatCard icon="⬇" label="Total Earned" value={`${sym}${(data?.money.totalEarned ?? 0).toFixed(2)}`} color="#34d399" />
               <StatCard icon="⬆" label="Total Spent" value={`${sym}${(data?.money.totalSpent ?? 0).toFixed(2)}`} color="var(--ft-danger)" />
+              <StatCard icon="🅿️" label="PayPal Withdrawable" value={`${sym}${(data?.money.withdrawable ?? 0).toFixed(2)}`} color="#ffc439" sub="Deposits + EUR transfers" />
               <StatCard icon="💎" label="Trust Lifetime" value={`₮${(data?.trust.lifetime ?? 0).toLocaleString()}`} color="#818cf8" sub="All-time earned" />
               <StatCard icon="🧾" label="Transactions" value={(data?.transactionCount ?? data?.transactions.length ?? 0).toLocaleString()} color="var(--ft-accent)" sub="Wallet history entries" />
             </div>

@@ -603,8 +603,11 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
         .ft-footer-story-body p { margin: 0 0 14px; }
         .ft-footer-story-body ol { margin: 0; padding-left: 1.15rem; display: grid; gap: 12px; }
         .ft-footer-story-body li strong { color: #fff; display: block; margin-bottom: 4px; }
+        .ft-payment-rail { transition: border-color .2s ease, background .2s ease, transform .2s ease; }
+        .ft-payment-rail:hover { border-color: rgba(127,247,255,.38) !important; background: rgba(15,23,42,.95) !important; transform: translateY(-2px); }
         @media (max-width: 900px) {
           .ft-hero-grid, .ft-showcase-row, .ft-showcase-row-alt, .ft-banner-inner, .ft-footer-grid { grid-template-columns: 1fr !important; }
+          .ft-payments-layout { grid-template-columns: 1fr !important; gap: 30px !important; }
           .ft-hero-copy { text-align:left !important; }
           .ft-phone-stage { min-height: 520px !important; transform: scale(.88); transform-origin: top center; }
           .ft-secondary-phone { display:none; }
@@ -652,6 +655,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           .ft-factor-grid { grid-template-columns:1fr !important; }
           .ft-footer-links { grid-template-columns:1fr 1fr !important; }
           .ft-footer-story-body { padding: 20px; }
+          .ft-payment-rail-grid { grid-template-columns: 1fr 1fr !important; }
           .ft-legacy-stat-grid, .ft-trust-econ-top-grid { grid-template-columns: 1fr !important; }
         }
         @media (max-width: 480px) {
@@ -667,6 +671,8 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           .ft-market-product-card { flex-basis: 82% !important; min-width: 238px !important; }
           .ft-market-list > a { flex-basis: 86% !important; min-width: 238px !important; }
           .ft-market-tab { font-size: 15px !important; padding-left: 10px !important; padding-right: 10px !important; }
+          .ft-payment-rail-grid { grid-template-columns: 1fr !important; }
+          .ft-payment-rail { min-height: 74px !important; }
         }
       `}</style>
 
@@ -796,6 +802,43 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
             ))}
           </div>
           <p style={{ maxWidth: 760, margin: '32px auto 0', textAlign: 'center', color: SLATE, lineHeight: 1.8 }}>{t('impact.body')}</p>
+        </div>
+      </section>
+
+      <section className="ft-section" style={{ background: 'radial-gradient(circle at 12% 18%, rgba(0,194,203,.16), transparent 28%), linear-gradient(180deg,#081020,#0a0f1e)', borderBottom: '1px solid rgba(0,194,203,.08)', color: '#fff' }}>
+        <div className="ft-container">
+          <div className="ft-payments-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, .95fr) minmax(420px, 1.05fr)', gap: 54, alignItems: 'center' }}>
+            <div>
+              <div style={{ color: '#7ff7ff', fontSize: 12, fontWeight: 900, letterSpacing: '0.11em', textTransform: 'uppercase', marginBottom: 12 }}>{t('trustedPayments.eyebrow')}</div>
+              <h2 className="ft-h2" style={{ fontSize: 42, lineHeight: 1.05, letterSpacing: '-0.055em', margin: '0 0 16px', color: '#fff', fontWeight: 850 }}>{t('trustedPayments.title')}</h2>
+              <p style={{ margin: '0 0 18px', color: SLATE, fontSize: 16, lineHeight: 1.75, maxWidth: 520 }}>{t('trustedPayments.description')}</p>
+              <p style={{ margin: 0, color: '#c8fbff', fontSize: 15, lineHeight: 1.65, fontWeight: 750, maxWidth: 520 }}>{t('trustedPayments.support')}</p>
+            </div>
+
+            <div style={{ position: 'relative', borderRadius: 28, padding: 26, background: 'linear-gradient(145deg,rgba(17,24,39,.96),rgba(8,16,32,.9))', border: '1px solid rgba(127,247,255,.2)', boxShadow: '0 28px 90px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.05)', overflow: 'hidden' }}>
+              <div aria-hidden="true" style={{ position: 'absolute', width: 240, height: 240, right: -80, top: -100, borderRadius: '50%', background: 'radial-gradient(circle,rgba(0,194,203,.2),transparent 68%)', filter: 'blur(10px)' }} />
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, color: '#fff', fontWeight: 850 }}>
+                  <span aria-hidden="true" style={{ width: 34, height: 34, display: 'grid', placeItems: 'center', borderRadius: 12, background: 'rgba(0,194,203,.14)', border: '1px solid rgba(0,194,203,.3)', color: '#7ff7ff', fontSize: 18 }}>✓</span>
+                  <span>{t('trustedPayments.protected')}</span>
+                </div>
+                <div className="ft-payment-rail-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12 }}>
+                  {[
+                    { key: 'stripe', label: t('trustedPayments.stripe'), mark: 'stripe', tone: '#635bff' },
+                    { key: 'paypal', label: t('trustedPayments.paypal'), mark: 'P', tone: '#0070ba' },
+                    { key: 'applePay', label: t('trustedPayments.applePay'), mark: '', tone: '#f8fafc' },
+                    { key: 'googlePay', label: t('trustedPayments.googlePay'), mark: 'G', tone: '#4285f4' },
+                  ].map(method => (
+                    <div key={method.key} className="ft-payment-rail" aria-label={method.label} style={{ minHeight: 92, display: 'flex', alignItems: 'center', gap: 12, padding: '15px 16px', borderRadius: 17, background: 'rgba(15,23,42,.72)', border: '1px solid rgba(148,163,184,.16)' }}>
+                      <span aria-hidden="true" style={{ minWidth: 38, height: 38, display: 'grid', placeItems: 'center', borderRadius: 12, background: `${method.tone}22`, border: `1px solid ${method.tone}55`, color: method.tone, fontSize: method.key === 'stripe' ? 11 : 22, fontWeight: 950, letterSpacing: method.key === 'stripe' ? '-0.04em' : 0 }}>{method.mark}</span>
+                      <span style={{ color: '#f8fafc', fontSize: 15, fontWeight: 850 }}>{method.label}</span>
+                    </div>
+                  ))}
+                </div>
+                <p style={{ margin: '18px 0 0', color: '#64748b', fontSize: 12, lineHeight: 1.55 }}>{t('trustedPayments.availability')}</p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

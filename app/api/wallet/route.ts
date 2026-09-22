@@ -15,7 +15,7 @@ export async function GET() {
     const admin = createAdminClient()
 
     // ── Trust balance ────────────────────────────────────────────────────────
-    const [trustBalRes, trustLedgerRes, ordersEarnedRes, ordersSpentRes, depositsRes, sentTransfersRes, receivedTransfersRes] = await Promise.all([
+    const [trustBalRes, trustLedgerRes, ordersEarnedRes, ordersSpentRes, depositsRes, sentTransfersRes, receivedTransfersRes, withdrawalsRes, withdrawableRes] = await Promise.all([
       supabase
         .from('trust_balances')
         .select('balance, lifetime, updated_at')
@@ -47,7 +47,7 @@ export async function GET() {
       // Wallet top-ups from money_deposits (use admin — no RLS SELECT policy on this table)
       admin
         .from('money_deposits')
-        .select('id, amount_cents, currency, status, created_at')
+        .select('id, amount_cents, currency, provider, status, created_at')
         .eq('user_id', user.id)
         .eq('status', 'completed')
         .order('created_at', { ascending: false })
@@ -68,6 +68,16 @@ export async function GET() {
         .eq('status', 'completed')
         .order('created_at', { ascending: false })
         .limit(100),
+      admin
+        .from('wallet_withdrawals')
+        .select('id, amount_cents, provider, status, created_at')
+        .eq('user_id', user.id)
+        .in('status', ['pending', 'processing', 'completed'])
+        .order('created_at', { ascending: false })
+        .limit(100),
+      // The RPC is the authoritative, unbounded cash-out balance. The
+      // transaction queries above are intentionally paginated for the UI.
+      admin.rpc('wallet_withdrawable_cents', { p_user_id: user.id }),
     ])
 
     const trustBalance  = trustBalRes.data?.balance  ?? 0
@@ -138,7 +148,7 @@ export async function GET() {
         category: 'deposit',
         amount: d.amount_cents / 100,
         currency: 'EUR',
-        description: 'Wallet Top-up',
+        description: `${d.provider === 'paypal' ? 'PayPal' : 'Stripe'} Wallet Top-up`,
         date: d.created_at,
         status: d.status,
       })
@@ -187,6 +197,21 @@ export async function GET() {
       })
     }
 
+    // PayPal wallet withdrawals are tracked separately from marketplace
+    // earnings. Pending/processing withdrawals are included here so the
+    // transaction history reflects funds already reserved for payout.
+    for (const w of withdrawalsRes.data ?? []) {
+      txList.push({
+        id: `withdrawal-${w.id}`,
+        category: 'withdrawn',
+        amount: -(Number(w.amount_cents) / 100),
+        currency: 'EUR',
+        description: `${w.provider === 'paypal' ? 'PayPal' : w.provider} wallet withdrawal`,
+        date: w.created_at,
+        status: w.status,
+      })
+    }
+
     // Trust ledger as trust transactions
     for (const entry of trustLedger) {
       txList.push({
@@ -204,7 +229,7 @@ export async function GET() {
     txList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
     // ── Money stats ───────────────────────────────────────────────────────────
-    // Total deposited via Stripe top-ups
+    // Total deposited via Stripe and PayPal wallet top-ups
     const totalDeposited = (depositsRes.data ?? [])
       .reduce((s: number, d: { amount_cents: number }) => s + (d.amount_cents / 100), 0)
 
@@ -229,13 +254,30 @@ export async function GET() {
       .filter((t: { currency: string }) => t.currency === 'EUR')
       .reduce((s: number, t: { amount: number }) => s + Number(t.amount), 0)
 
+    const totalWithdrawn = (withdrawalsRes.data ?? [])
+      .reduce((s: number, w: { amount_cents: number }) => s + (Number(w.amount_cents) / 100), 0)
+
+    const rpcWithdrawable = withdrawableRes.error === null && withdrawableRes.data !== null
+      ? Number(withdrawableRes.data)
+      : null
+
     return NextResponse.json({
       money: {
-        available: totalDeposited + completedEarned - totalSpent - eurSent + eurReceived,
+        // PayPal wallet withdrawals reduce the spendable tracked cash too.
+        // Marketplace earnings remain included here for existing internal
+        // wallet behaviour, but are not included in `withdrawable` below.
+        available: totalDeposited + completedEarned - totalSpent - eurSent + eurReceived - totalWithdrawn,
         pendingPayout: pendingEarned,
         totalEarned: completedEarned,
         totalSpent,
         totalDeposited,
+        // This deliberately excludes marketplace earnings because those may
+        // already have been paid through Stripe Connect or PayPal Payouts.
+        // Completed purchases also consume tracked wallet funds, so keep this
+        // fallback aligned with wallet_withdrawable_cents.
+        withdrawable: rpcWithdrawable !== null
+          ? Math.max(0, rpcWithdrawable / 100)
+          : Math.max(0, totalDeposited + eurReceived - eurSent - totalSpent - totalWithdrawn),
       },
       trust: {
         balance: trustBalance,

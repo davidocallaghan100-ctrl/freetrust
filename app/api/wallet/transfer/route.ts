@@ -181,6 +181,8 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
     const senderName = senderProfile?.full_name ?? 'Someone'
 
+    let transfer: { id: string } | null = null
+
     // ── Check sender balance & execute ────────────────────────────────────────
     if (currency === 'TRUST') {
       const { data: bal } = await admin
@@ -233,82 +235,61 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Transfer failed — could not credit recipient' }, { status: 500 })
       }
     } else {
-      // ── EUR balance check ──────────────────────────────────────────────────
-      const [depositsRes, earnedRes, spentRes, sentRes, recvRes] = await Promise.all([
-        admin.from('money_deposits')
-          .select('amount_cents')
-          .eq('user_id', user.id)
-          .eq('status', 'completed'),
-        admin.from('orders')
-          .select('amount')
-          .eq('seller_id', user.id)
-          .eq('status', 'completed')
-          .neq('delivery_type', 'deposit'),
-        admin.from('orders')
-          .select('amount')
-          .eq('buyer_id', user.id)
-          .eq('status', 'completed')
-          .neq('delivery_type', 'deposit'),
-        admin.from('wallet_transfers')
-          .select('amount')
-          .eq('sender_id', user.id)
-          .eq('currency', 'EUR')
-          .eq('status', 'completed'),
-        admin.from('wallet_transfers')
-          .select('amount')
-          .eq('recipient_id', user.id)
-          .eq('currency', 'EUR')
-          .eq('status', 'completed'),
-      ])
-
-      // Log any query errors (e.g. table doesn't exist)
-      if (depositsRes.error) console.error('[transfer] deposits query error:', depositsRes.error.message)
-      if (earnedRes.error) console.error('[transfer] earned query error:', earnedRes.error.message)
-      if (spentRes.error) console.error('[transfer] spent query error:', spentRes.error.message)
-      if (sentRes.error) console.error('[transfer] sent transfers query error:', sentRes.error.message)
-      if (recvRes.error) console.error('[transfer] recv transfers query error:', recvRes.error.message)
-
-      const totalDeposited = (depositsRes.data ?? []).reduce((s, d) => s + ((d as { amount_cents: number }).amount_cents / 100), 0)
-      const totalEarned = (earnedRes.data ?? []).reduce((s, o) => s + ((o as { amount: number }).amount ?? 0), 0)
-      const totalSpent = (spentRes.data ?? []).reduce((s, o) => s + ((o as { amount: number }).amount ?? 0), 0)
-      const totalSent = (sentRes.data ?? []).reduce((s, t) => s + Number((t as { amount: number }).amount), 0)
-      const totalReceived = (recvRes.data ?? []).reduce((s, t) => s + Number((t as { amount: number }).amount), 0)
-
-      const available = totalDeposited + totalEarned - totalSpent - totalSent + totalReceived
-      console.log('[transfer] EUR balance:', { totalDeposited, totalEarned, totalSpent, totalSent, totalReceived, available, need: amount })
-
-      if (available < amount) {
-        return NextResponse.json(
-          { error: `Insufficient balance. You have €${available.toFixed(2)} available.` },
-          { status: 400 }
-        )
+      // EUR transfers use the same atomic, deposit/transfer-only balance
+      // reservation model as PayPal wallet withdrawals. This prevents a
+      // concurrent transfer and withdrawal from spending the same funds.
+      const amountCents = Math.round(amount * 100)
+      const { data: transferId, error: transferRpcError } = await admin.rpc('create_eur_wallet_transfer', {
+        p_sender_id: user.id,
+        p_recipient_id: recipientId,
+        p_amount_cents: amountCents,
+        p_note: note,
+      })
+      if (transferRpcError || !transferId) {
+        const message = transferRpcError?.message ?? 'Could not reserve wallet funds'
+        console.error('[transfer] EUR atomic transfer failed:', transferRpcError)
+        if (message.includes('insufficient_withdrawable_balance')) {
+          return NextResponse.json({ error: 'Insufficient tracked wallet funds for this transfer.' }, { status: 400 })
+        }
+        return NextResponse.json({ error: 'Transfer failed — could not reserve wallet funds' }, { status: 500 })
       }
+
+      // The RPC already inserted the completed transfer. The common insert
+      // block below is skipped by setting the transfer id here.
+      transfer = { id: transferId } as { id: string }
     }
 
     // ── Record the transfer ───────────────────────────────────────────────────
-    const { data: transfer, error: insertErr } = await admin
-      .from('wallet_transfers')
-      .insert({
-        sender_id: user.id,
-        recipient_id: recipientId,
-        amount,
-        currency,
-        note,
-        status: 'completed',
-      })
-      .select('id')
-      .single()
+    if (currency === 'EUR') {
+      // `transfer` was created atomically by create_eur_wallet_transfer above.
+      // The declaration is assigned there; this branch exists only to keep
+      // the TrustCoin and EUR code paths explicit.
+      if (!transfer) throw new Error('EUR transfer reservation missing')
+    } else {
+      const { data: insertedTransfer, error: insertErr } = await admin
+        .from('wallet_transfers')
+        .insert({
+          sender_id: user.id,
+          recipient_id: recipientId,
+          amount,
+          currency,
+          note,
+          status: 'completed',
+        })
+        .select('id')
+        .single()
 
-    if (insertErr) {
-      console.error('[transfer] insert error:', JSON.stringify(insertErr))
-      // Table might not exist — return helpful error
-      if (insertErr.message?.includes('does not exist') || insertErr.code === '42P01') {
-        return NextResponse.json(
-          { error: 'Transfers table not set up. Please run the wallet_transfers migration.' },
-          { status: 500 }
-        )
+      if (insertErr || !insertedTransfer) {
+        console.error('[transfer] insert error:', JSON.stringify(insertErr))
+        if (insertErr?.message?.includes('does not exist') || insertErr?.code === '42P01') {
+          return NextResponse.json(
+            { error: 'Transfers table not set up. Please run the wallet_transfers migration.' },
+            { status: 500 }
+          )
+        }
+        return NextResponse.json({ error: `Failed to record transfer: ${insertErr?.message ?? 'unknown error'}` }, { status: 500 })
       }
-      return NextResponse.json({ error: `Failed to record transfer: ${insertErr.message}` }, { status: 500 })
+      transfer = insertedTransfer as { id: string }
     }
 
     console.log('[transfer] recorded:', transfer.id, currency, amount, 'from', user.id, 'to', recipientId)

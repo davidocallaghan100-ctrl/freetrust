@@ -30,6 +30,11 @@ export type PayPalPayout = {
     payout_batch_id?: string
     batch_status?: string
   }
+  items?: Array<{
+    payout_item_id?: string
+    transaction_status?: string
+    errors?: { name?: string; message?: string }
+  }>
 }
 
 const clientId = process.env.PAYPAL_CLIENT_ID?.trim()
@@ -57,6 +62,13 @@ export function isPayPalAvailable() {
   const productionEnabled = process.env.PAYPAL_PRODUCTION_ENABLED === 'true'
     || process.env.PAYPAL_LIVE_TEST_ENABLED === 'true'
   return isPayPalConfigured() && (!isProductionDeployment() || (environment === 'live' && productionEnabled))
+}
+
+// Keep wallet funding/cash-out behind its own production switch. The
+// temporary live-smoke-test flag must not accidentally expose wallet PayPal
+// payments to every member while the one-off admin test is enabled.
+export function isPayPalWalletAvailable() {
+  return isPayPalAvailable() && (!isProductionDeployment() || process.env.PAYPAL_WALLET_ENABLED === 'true')
 }
 
 export function getPayPalEnvironment() {
@@ -118,11 +130,12 @@ export async function createPayPalOrder(input: {
   returnUrl: string
   cancelUrl: string
   intent?: 'AUTHORIZE' | 'CAPTURE'
+  requestId?: string
 }) {
   const value = (input.amountCents / 100).toFixed(2)
   return paypalRequest<PayPalOrder>('/v2/checkout/orders', {
     method: 'POST',
-    headers: { 'PayPal-Request-Id': `freetrust-${input.referenceId}-${randomUUID()}` },
+    headers: { 'PayPal-Request-Id': input.requestId ?? `freetrust-${input.referenceId}-${randomUUID()}` },
     body: JSON.stringify({
       intent: input.intent ?? 'AUTHORIZE',
       purchase_units: [{
@@ -221,4 +234,8 @@ export async function sendPayPalPayout(input: {
       }],
     }),
   })
+}
+
+export async function getPayPalPayoutBatch(batchId: string) {
+  return paypalRequest<PayPalPayout>(`/v1/payments/payouts/${encodeURIComponent(batchId)}`)
 }

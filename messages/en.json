@@ -357,6 +357,18 @@
       },
       "body": "The FreeTrust Impact Fund directs a portion of every transaction fee toward verified community causes, selected transparently by members."
     },
+    "trustedPayments": {
+      "eyebrow": "Trusted checkout",
+      "title": "Payments you already trust",
+      "description": "Choose a familiar way to pay while FreeTrust keeps the transaction, messaging, and trust signals together in one protected experience.",
+      "support": "Stripe and PayPal support, with Apple Pay and Google Pay available where supported.",
+      "protected": "Protected checkout inside FreeTrust",
+      "availability": "Availability varies by device, region, browser, and merchant support.",
+      "stripe": "Stripe",
+      "paypal": "PayPal",
+      "applePay": "Apple Pay",
+      "googlePay": "Google Pay"
+    },
     "showcase": {
       "open": "Open {name} →",
       "rows": [
