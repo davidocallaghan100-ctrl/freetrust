@@ -101,34 +101,43 @@ async function loadInboxFallback(
     participantsByConversation.set(participant.conversation_id, rows)
   }
 
+  // Older deployments may not have the inbox RPC. Keep the fallback to a
+  // bounded number of round trips too: the old implementation fired two
+  // message queries per conversation, which could overwhelm Supabase on a
+  // slow/mobile connection. The rows are already ordered newest-first, so
+  // latest-message and unread values can be derived in one pass.
+  const { data: messageRows, error: messagesErr } = await admin
+    .from('messages')
+    .select('id, conversation_id, sender_id, content, created_at, attachments')
+    .in('conversation_id', conversationIds)
+    .gte('created_at', autoDeleteCutoffIso ?? '0001-01-01T00:00:00.000Z')
+    .order('created_at', { ascending: false })
+
+  if (messagesErr) throw new Error(messagesErr.message)
+
+  const readAtByConversation = new Map(visibleParticipantRows.map(row => [row.conversation_id, row.last_read_at]))
+  const latestByConversation = new Map<string, NonNullable<InboxConversation['last_message']>>()
+  const unreadByConversation = new Map<string, number>()
+  for (const message of messageRows ?? []) {
+    if (!latestByConversation.has(message.conversation_id)) {
+      latestByConversation.set(message.conversation_id, {
+        id: message.id,
+        conversation_id: message.conversation_id,
+        sender_id: message.sender_id,
+        content: message.content,
+        created_at: message.created_at,
+        attachments: message.attachments ?? [],
+      })
+    }
+    const readAt = readAtByConversation.get(message.conversation_id)
+    if (message.sender_id !== userId && (!readAt || new Date(message.created_at).getTime() > new Date(readAt).getTime())) {
+      unreadByConversation.set(message.conversation_id, (unreadByConversation.get(message.conversation_id) ?? 0) + 1)
+    }
+  }
+
   let totalUnreadCount = 0
-  const enriched = await Promise.all((conversations ?? []).map(async conversation => {
-    const [{ data: lastMessage, error: lastMessageErr }, unreadResult] = await Promise.all([
-      admin
-        .from('messages')
-        .select('id, sender_id, content, created_at, attachments')
-        .eq('conversation_id', conversation.id)
-        .gte('created_at', autoDeleteCutoffIso ?? '0001-01-01T00:00:00.000Z')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      (() => {
-        const participant = visibleParticipantRows.find(row => row.conversation_id === conversation.id)
-        let query = admin
-          .from('messages')
-          .select('id', { count: 'exact', head: true })
-          .eq('conversation_id', conversation.id)
-          .neq('sender_id', userId)
-          .gte('created_at', autoDeleteCutoffIso ?? '0001-01-01T00:00:00.000Z')
-        if (participant?.last_read_at) query = query.gt('created_at', participant.last_read_at)
-        return query
-      })(),
-    ])
-
-    if (lastMessageErr) throw new Error(lastMessageErr.message)
-    if (unreadResult.error) throw new Error(unreadResult.error.message)
-
-    const unreadCount = unreadResult.count ?? 0
+  const enriched = (conversations ?? []).map(conversation => {
+    const unreadCount = unreadByConversation.get(conversation.id) ?? 0
     totalUnreadCount += unreadCount
     const otherUserId = (participantsByConversation.get(conversation.id) ?? [])
       .find(participantId => participantId !== userId)
@@ -136,20 +145,11 @@ async function loadInboxFallback(
     return {
       id: conversation.id,
       updated_at: conversation.updated_at,
-      last_message: lastMessage
-        ? {
-          id: lastMessage.id,
-          conversation_id: conversation.id,
-          sender_id: lastMessage.sender_id,
-          content: lastMessage.content,
-          created_at: lastMessage.created_at,
-          attachments: lastMessage.attachments ?? [],
-        }
-        : null,
+      last_message: latestByConversation.get(conversation.id) ?? null,
       unread_count: unreadCount,
       other_user: otherUserId ? (profileById.get(otherUserId) ?? null) : null,
     }
-  }))
+  })
 
   return { conversations: enriched, totalUnreadCount }
 }

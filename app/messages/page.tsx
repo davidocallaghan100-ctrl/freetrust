@@ -21,6 +21,12 @@ import {
   markMessagesRead,
   type MessageReadReceipt,
 } from '@/lib/messageReadReceipts'
+import {
+  readInboxCache,
+  readThreadCache,
+  writeInboxCache,
+  writeThreadCache,
+} from '@/lib/messaging/cache'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface Profile {
@@ -49,6 +55,11 @@ interface ConversationItem {
   last_message?: Message | null
   unread_count: number
   other_user: Profile
+}
+
+interface ThreadCachePayload {
+  messages: Message[]
+  participantIds: string[]
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -499,9 +510,15 @@ function MessagesPageInner() {
   // showing the spinner (falls back to whatever's already in state,
   // which is an empty list on first load) rather than spinning
   // forever.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const loadConversations = async (_uid: string) => {
-    if (!hasLoadedConversationsRef.current) setConversationsLoading(true)
+  const loadConversations = async (uid: string) => {
+    const cached = readInboxCache<ConversationItem[]>(uid)
+    if (cached) {
+      setConversations(cached)
+      hasLoadedConversationsRef.current = true
+      setConversationsLoading(false)
+    } else if (!hasLoadedConversationsRef.current) {
+      setConversationsLoading(true)
+    }
     setConversationsError(null)
     try {
       const res = await fetch('/api/messages', { cache: 'no-store' })
@@ -509,6 +526,7 @@ function MessagesPageInner() {
         const data = await res.json().catch(() => null) as { error?: string } | null
         const message = data?.error || `Unable to load conversations (HTTP ${res.status})`
         console.error('[messages] loadConversations failed:', res.status, message)
+        if (res.status === 401) router.push('/login')
         setConversationsError(message)
         return
       }
@@ -531,6 +549,7 @@ function MessagesPageInner() {
           other_user:   c.other_user as Profile,
         }))
       setConversations(items)
+      writeInboxCache(uid, items)
       setConversationsError(null)
     } catch (err) {
       console.error('[messages] loadConversations threw:', err)
@@ -610,7 +629,14 @@ function MessagesPageInner() {
   // spinner over messages the user is actively reading.
   const loadMessages = useCallback(async (convId: string, opts?: { silent?: boolean }) => {
     const requestId = ++messageRequestRef.current
-    if (!opts?.silent) setMessagesLoading(true)
+    const cached = userId ? readThreadCache<ThreadCachePayload>(userId, convId) : null
+    if (cached) {
+      setMessages(cached.messages)
+      setParticipantIds(cached.participantIds)
+      setMessagesLoading(false)
+    } else if (!opts?.silent) {
+      setMessagesLoading(true)
+    }
     setMessagesError(null)
     try {
       const res = await fetch(`/api/messages/${convId}`, { cache: 'no-store' })
@@ -618,27 +644,36 @@ function MessagesPageInner() {
         const data = await res.json().catch(() => null) as { error?: string } | null
         const message = data?.error || `Unable to load messages (HTTP ${res.status})`
         console.error('[messages] loadMessages failed:', res.status, message)
+        if (res.status === 401) router.push('/login')
         if (requestId === messageRequestRef.current) {
-          setMessages([])
+          if (!cached) {
+            setMessages([])
+            setParticipantIds([])
+          }
           setMessagesError(message)
         }
         return
       }
       const data = await res.json() as { messages?: Message[]; participant_ids?: string[] }
       if (requestId !== messageRequestRef.current) return
-      setMessages(data.messages ?? [])
-      setParticipantIds(Array.isArray(data.participant_ids) ? data.participant_ids : [])
+      const nextMessages = data.messages ?? []
+      const nextParticipantIds = Array.isArray(data.participant_ids) ? data.participant_ids : []
+      setMessages(nextMessages)
+      setParticipantIds(nextParticipantIds)
+      if (userId) writeThreadCache(userId, convId, { messages: nextMessages, participantIds: nextParticipantIds })
     } catch (err) {
       console.error('[messages] loadMessages threw:', err)
       if (requestId === messageRequestRef.current) {
-        setMessages([])
-        setParticipantIds([])
+        if (!cached) {
+          setMessages([])
+          setParticipantIds([])
+        }
         setMessagesError(err instanceof Error ? err.message : 'Unable to load messages')
       }
     } finally {
       if (requestId === messageRequestRef.current) setMessagesLoading(false)
     }
-  }, [])
+  }, [router, userId])
 
   useEffect(() => {
     if (!activeId) return
@@ -1248,14 +1283,21 @@ function MessagesPageInner() {
                   <span className="msg-spinner" aria-hidden="true" />
                   <div style={{ fontSize: '0.8rem' }}>Loading messages…</div>
                 </div>
-              ) : messagesError ? (
+              ) : messagesError && messages.length === 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', color: '#94a3b8', minHeight: '100%', padding: '3rem 1.5rem', textAlign: 'center' }} role="alert">
                   <div style={{ fontSize: '2rem' }}>⚠️</div>
                   <div style={{ fontSize: '0.85rem', color: '#fca5a5' }}>Couldn’t load this conversation</div>
                   <div style={{ fontSize: '0.76rem', color: '#64748b', lineHeight: 1.45 }}>{messagesError}</div>
                   <button type="button" onClick={() => activeId && void loadMessages(activeId)} style={{ marginTop: '0.35rem', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 8, padding: '0.45rem 0.8rem', fontSize: '0.78rem', fontWeight: 700, color: '#38bdf8', cursor: 'pointer', fontFamily: 'inherit' }}>Retry</button>
                 </div>
-              ) : messages.map((msg, i) => {
+              ) : (
+                <>
+                  {messagesError && (
+                    <div role="status" style={{ margin: '0 0 0.8rem', padding: '0.55rem 0.7rem', borderRadius: 10, border: '1px solid rgba(248,113,113,0.22)', background: 'rgba(248,113,113,0.07)', color: '#fca5a5', fontSize: '0.74rem' }}>
+                      Showing saved messages. <button type="button" onClick={() => activeId && void loadMessages(activeId)} style={{ border: 0, background: 'transparent', color: '#7dd3fc', padding: 0, font: 'inherit', cursor: 'pointer' }}>Retry sync</button>
+                    </div>
+                  )}
+                  {messages.map((msg, i) => {
                 const isSent = msg.sender_id === userId || msg.sender_id === 'me'
                 const gifOnly = isGifOnlyMessage(msg.content)
                 const metadataType = getMessageMetadataType(msg)
@@ -1320,7 +1362,9 @@ function MessagesPageInner() {
                     </div>
                   </React.Fragment>
                 )
-              })}
+                  })}
+                </>
+              )}
               <div ref={bottomRef} />
             </div>
 

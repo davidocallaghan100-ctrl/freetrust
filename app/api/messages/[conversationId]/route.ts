@@ -23,6 +23,18 @@ const messageRateBuckets = new Map<string, number[]>()
 
 const OFF_PLATFORM_PAYMENT_RE = /\b(?:cash\s?app|venmo|paypal|revolut|western\s+union|bank\s+transfer|wire\s+transfer|pay\s+outside|outside\s+free\s*trust|off\s*platform|send\s+me\s+money|crypto|bitcoin|btc|usdt)\b/i
 
+interface ThreadMessageRow {
+  id: string
+  conversation_id: string
+  sender_id: string
+  content: string
+  created_at: string
+  attachments?: unknown
+  reply_to_id?: string | null
+  metadata?: Record<string, unknown> | null
+  [key: string]: unknown
+}
+
 function normalizeMessageContent(input: string): string {
   return input.replace(/\0/g, '').replace(/\r\n/g, '\n').trim()
 }
@@ -88,6 +100,53 @@ async function getParticipantIds(conversationId: string): Promise<string[] | nul
     .filter((id): id is string => typeof id === 'string' && id.length > 0)
 }
 
+function isMissingMetadataColumn(error: { message?: string } | null): boolean {
+  return !!error?.message && /messages\.metadata|column .*metadata.*does not exist/i.test(error.message)
+}
+
+async function loadThreadMessages(
+  admin: ReturnType<typeof createAdminClient>,
+  conversationId: string,
+): Promise<{ data: ThreadMessageRow[] | null; error: { message: string } | null }> {
+  const withMetadata = await admin
+    .from('messages')
+    .select('id, conversation_id, sender_id, content, created_at, attachments, reply_to_id, metadata, sender:profiles(id, full_name, avatar_url), read_receipts:message_reads(user_id, read_at)')
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: true })
+
+  if (!isMissingMetadataColumn(withMetadata.error)) {
+    return {
+      data: (withMetadata.data ?? null) as ThreadMessageRow[] | null,
+      error: withMetadata.error ? { message: withMetadata.error.message } : null,
+    }
+  }
+
+  // Some older FreeTrust production databases were bootstrapped before the
+  // metadata column migration. Normal messages must still open while the
+  // additive schema repair is applied; structured cards simply receive null
+  // metadata on that legacy path.
+  console.warn('[GET /api/messages/:id] messages.metadata is missing; using legacy message projection')
+  const legacy = await admin
+    .from('messages')
+    .select('id, conversation_id, sender_id, content, created_at, attachments, reply_to_id, sender:profiles(id, full_name, avatar_url), read_receipts:message_reads(user_id, read_at)')
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: true })
+
+  return {
+    data: legacy.data
+      ? (legacy.data.map(message => ({ ...message, metadata: null })) as ThreadMessageRow[])
+      : null,
+    error: legacy.error ? { message: legacy.error.message } : null,
+  }
+}
+
+// POST paths only need a boolean participation check. Keep it separate from
+// the GET path's single participant-id query so send validation stays clear.
+async function assertParticipant(conversationId: string, userId: string): Promise<boolean> {
+  const participantIds = await getParticipantIds(conversationId)
+  return !!participantIds?.includes(userId)
+}
+
 function applyMessageAutoDeleteFilter<T extends { created_at: string }>(
   messages: T[] | null,
   autoDeleteDays: number | null | undefined,
@@ -97,36 +156,6 @@ function applyMessageAutoDeleteFilter<T extends { created_at: string }>(
 
   const cutoffMs = Date.now() - autoDeleteDays * 24 * 60 * 60 * 1000
   return allMessages.filter(message => new Date(message.created_at).getTime() >= cutoffMs)
-}
-
-// Participation check uses the admin (service-role) client so it
-// bypasses RLS cleanly. We've already validated `user.id` from the
-// auth session via the user-session client, so looking up whether
-// that id has a row in conversation_participants for the given
-// conversation is safe to do with the admin client — the caller
-// cannot spoof a different user id.
-//
-// Why this matters: the user-session client is subject to RLS on
-// conversation_participants. If the production DB is still on the
-// broken self-referential participants_select policy (fixed by
-// 20260415000009_messaging_rls.sql but not applied yet in every
-// environment), the SELECT raises infinite-recursion, `data` is
-// null, and the route returns 403. The /messages/[id] page then
-// redirects to /messages, which looks from the user's side like
-// "the Message button goes to the inbox instead of the thread".
-async function assertParticipant(conversationId: string, userId: string): Promise<boolean> {
-  const admin = createAdminClient()
-  const { data, error } = await admin
-    .from('conversation_participants')
-    .select('id')
-    .eq('conversation_id', conversationId)
-    .eq('user_id',         userId)
-    .maybeSingle()
-  if (error) {
-    console.error('[api/messages/:id] participation check failed:', error)
-    return false
-  }
-  return !!data
 }
 
 // GET /api/messages/[conversationId] — list messages in conversation
@@ -146,8 +175,15 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid conversation id' }, { status: 400 })
     }
 
-    const isParticipant = await assertParticipant(conversationId, user.id)
-    if (!isParticipant) {
+    // Fetch participant ids once and use the same result for both the
+    // authorization check and the thread header/read-receipt payload.
+    // The previous path queried this table twice before it could fetch any
+    // messages.
+    const participantIds = await getParticipantIds(conversationId)
+    if (!participantIds) {
+      return NextResponse.json({ error: 'Could not verify conversation participants' }, { status: 500 })
+    }
+    if (!participantIds.includes(user.id)) {
       return NextResponse.json(
         { error: 'Not a participant in this conversation' },
         { status: 403 },
@@ -159,13 +195,8 @@ export async function GET(
     // participants, so it also trips the infinite-recursion bug
     // on a DB that hasn't had the fix applied yet.
     const admin = createAdminClient()
-    const [{ data: messages, error: msgErr }, participantIds, { data: profile, error: profileErr }] = await Promise.all([
-      admin
-        .from('messages')
-        .select('*, sender:profiles(id, full_name, avatar_url), read_receipts:message_reads(user_id, read_at)')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true }),
-      getParticipantIds(conversationId),
+    const [{ data: messages, error: msgErr }, { data: profile, error: profileErr }] = await Promise.all([
+      loadThreadMessages(admin, conversationId),
       admin
         .from('profiles')
         .select('message_auto_delete_days')
@@ -187,15 +218,19 @@ export async function GET(
       : null
     const visibleMessages = applyMessageAutoDeleteFilter(messages ?? [], autoDeleteDays)
 
-    // Mark as read — update last_read_at on the caller's
-    // participant row. Also admin-client so RLS can't block it.
-    await admin
+    // Mark as read without delaying first paint. The inbox/thread UI already
+    // applies the read state optimistically, and a later unread refresh
+    // reconciles with this authoritative write.
+    void admin
       .from('conversation_participants')
       .update({ last_read_at: new Date().toISOString() })
       .eq('conversation_id', conversationId)
-      .eq('user_id',         user.id)
+      .eq('user_id', user.id)
+      .then(({ error }) => {
+        if (error) console.error('[GET /api/messages/:id] mark-read failed:', error)
+      })
 
-    return NextResponse.json({ messages: visibleMessages, participant_ids: participantIds ?? [] })
+    return NextResponse.json({ messages: visibleMessages, participant_ids: participantIds })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[GET /api/messages/:id]', msg, err)
