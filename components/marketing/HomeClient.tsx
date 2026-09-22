@@ -614,7 +614,8 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
         .ft-payment-logo-paypal { color: #246fc1; font-size: clamp(18px, 2.8vw, 28px); font-weight: 850; letter-spacing: -.055em; }
         .ft-payment-logo-paypal-mark { color: #f8fafc; font-size: 1.1em; font-style: italic; font-weight: 950; text-shadow: 4px 2px 0 #0070ba; }
         .ft-payment-logo-apple { color: #f8fafc; font-size: clamp(17px, 2.8vw, 27px); font-weight: 750; letter-spacing: -.055em; }
-        .ft-payment-logo-apple-mark { width: 22px; height: 24px; display: grid; place-items: center; flex: 0 0 22px; }
+        .ft-payment-logo-apple-mark { width: 25px; height: 27px; display: grid; place-items: center; flex: 0 0 25px; }
+        .ft-payment-logo-apple-mark svg { display: block; width: 24px; height: 27px; }
         .ft-payment-logo-google { color: #f8fafc; font-size: clamp(17px, 2.8vw, 27px); font-weight: 750; letter-spacing: -.055em; }
         .ft-payment-logo-google-mark { background: conic-gradient(from -45deg, #4285f4 0 25%, #34a853 25% 49%, #fbbc05 49% 72%, #ea4335 72% 100%); -webkit-background-clip: text; background-clip: text; color: transparent; font-size: 1.2em; font-weight: 950; }
         .ft-payment-availability { display: flex; align-items: center; justify-content: center; gap: 8px; color: #94a3b8; font-size: 12px; line-height: 1.5; text-align: center; }
@@ -691,6 +692,8 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
            .ft-payment-logo-separator { height: 31px; }
            .ft-payment-logo-stripe { font-size: 21px; }
            .ft-payment-logo-paypal, .ft-payment-logo-apple, .ft-payment-logo-google { font-size: 16px; }
+           .ft-payment-logo-apple-mark { width: 22px; height: 25px; flex-basis: 22px; }
+           .ft-payment-logo-apple-mark svg { width: 22px; height: 25px; }
            .ft-payment-availability { font-size: 11px; }
            .ft-payment-footer { margin-top: 20px; padding-top: 19px; font-size: 15px; }
          }
@@ -843,7 +846,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
                 <span className="ft-payment-logo-separator" aria-hidden="true" />
                 <div className="ft-payment-logo" aria-label={t('trustedPayments.paypal')}><span className="ft-payment-logo-paypal-mark" aria-hidden="true">P</span><span className="ft-payment-logo-paypal">PayPal</span></div>
                 <span className="ft-payment-logo-separator" aria-hidden="true" />
-                <div className="ft-payment-logo" aria-label={t('trustedPayments.applePay')}><span className="ft-payment-logo-apple-mark" aria-hidden="true"><svg viewBox="0 0 24 28" width="21" height="24" fill="currentColor"><path d="M19.7 14.6c0-2.6 2.1-3.9 2.2-4-.1-.1-1.1-1.4-2.9-1.4-.8-.1-1.6.5-2.1.5-.5 0-1.2-.5-2-.5-1.7 0-3.3 1-4.2 2.5-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.5 1.3-.1 1.7-.8 3.2-.8 1.5 0 1.9.8 3.2.8 1.4 0 2.3-1.2 3.1-2.4.9-1.3 1.3-2.7 1.3-2.8-.1 0-2.5-1-2.5-4.6ZM17.9 8c.7-.9 1.2-2.1 1.1-3.3-1.1 0-2.4.7-3.1 1.5-.7.8-1.3 2-1.1 3.2 1.2.1 2.4-.6 3.1-1.4Z" transform="translate(-4 -2) scale(.78)" /></svg></span><span className="ft-payment-logo-apple">Pay</span></div>
+                <div className="ft-payment-logo" aria-label={t('trustedPayments.applePay')}><span className="ft-payment-logo-apple-mark" aria-hidden="true"><svg viewBox="7 2 20 28" fill="currentColor"><path d="M19.7 14.6c0-2.6 2.1-3.9 2.2-4-.1-.1-1.1-1.4-2.9-1.4-.8-.1-1.6.5-2.1.5-.5 0-1.2-.5-2-.5-1.7 0-3.3 1-4.2 2.5-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.5 1.3-.1 1.7-.8 3.2-.8 1.5 0 1.9.8 3.2.8 1.4 0 2.3-1.2 3.1-2.4.9-1.3 1.3-2.7 1.3-2.8-.1 0-2.5-1-2.5-4.6ZM17.9 8c.7-.9 1.2-2.1 1.1-3.3-1.1 0-2.4.7-3.1 1.5-.7.8-1.3 2-1.1 3.2 1.2.1 2.4-.6 3.1-1.4Z" /></svg></span><span className="ft-payment-logo-apple">Pay</span></div>
                 <span className="ft-payment-logo-separator" aria-hidden="true" />
                 <div className="ft-payment-logo" aria-label={t('trustedPayments.googlePay')}><span className="ft-payment-logo-google-mark" aria-hidden="true">G</span><span className="ft-payment-logo-google">Pay</span></div>
               </div>
