@@ -603,11 +603,25 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
         .ft-footer-story-body p { margin: 0 0 14px; }
         .ft-footer-story-body ol { margin: 0; padding-left: 1.15rem; display: grid; gap: 12px; }
         .ft-footer-story-body li strong { color: #fff; display: block; margin-bottom: 4px; }
-        .ft-payment-rail { transition: border-color .2s ease, background .2s ease, transform .2s ease; }
-        .ft-payment-rail:hover { border-color: rgba(127,247,255,.38) !important; background: rgba(15,23,42,.95) !important; transform: translateY(-2px); }
+        .ft-payment-card { max-width: 760px; margin: 0 auto; position: relative; overflow: hidden; border-radius: 28px; padding: 34px clamp(22px, 5vw, 54px) 24px; background: linear-gradient(145deg, rgba(7,18,38,.98), rgba(10,24,43,.94) 54%, rgba(8,16,32,.98)); border: 1px solid rgba(127,247,255,.34); box-shadow: 0 28px 90px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06); }
+        .ft-payment-card::before { content: ''; position: absolute; width: 360px; height: 250px; right: -110px; top: -120px; border-radius: 50%; background: radial-gradient(circle, rgba(41,196,231,.28), transparent 68%); filter: blur(8px); pointer-events: none; }
+        .ft-payment-card::after { content: ''; position: absolute; width: 620px; height: 180px; left: 50%; bottom: -126px; transform: translateX(-50%); border-radius: 50%; border: 1px solid rgba(62,214,239,.25); box-shadow: 0 -12px 34px rgba(30,190,224,.12), 0 -28px 70px rgba(30,190,224,.07); pointer-events: none; }
+        .ft-payment-shield { width: 74px; height: 74px; margin: 0 auto 20px; display: grid; place-items: center; border-radius: 50%; background: radial-gradient(circle at 35% 30%, rgba(127,247,255,.18), rgba(0,194,203,.04) 64%, transparent 65%); border: 1px solid rgba(127,247,255,.46); box-shadow: 0 0 26px rgba(75,224,247,.22), inset 0 0 18px rgba(75,224,247,.1); color: #8cefff; }
+        .ft-payment-logo-row { display: flex; align-items: center; justify-content: space-between; gap: clamp(8px, 2.5vw, 22px); max-width: 650px; margin: 30px auto 24px; }
+        .ft-payment-logo { min-width: 0; flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 7px; color: #f8fafc; white-space: nowrap; line-height: 1; }
+        .ft-payment-logo-separator { width: 1px; height: 36px; flex: 0 0 1px; background: rgba(148,163,184,.45); }
+        .ft-payment-logo-stripe { color: #635bff; font-size: clamp(24px, 3.2vw, 34px); font-weight: 900; letter-spacing: -.08em; }
+        .ft-payment-logo-paypal { color: #246fc1; font-size: clamp(18px, 2.8vw, 28px); font-weight: 850; letter-spacing: -.055em; }
+        .ft-payment-logo-paypal-mark { color: #f8fafc; font-size: 1.1em; font-style: italic; font-weight: 950; text-shadow: 4px 2px 0 #0070ba; }
+        .ft-payment-logo-apple { color: #f8fafc; font-size: clamp(17px, 2.8vw, 27px); font-weight: 750; letter-spacing: -.055em; }
+        .ft-payment-logo-apple-mark { width: 22px; height: 24px; display: grid; place-items: center; flex: 0 0 22px; }
+        .ft-payment-logo-google { color: #f8fafc; font-size: clamp(17px, 2.8vw, 27px); font-weight: 750; letter-spacing: -.055em; }
+        .ft-payment-logo-google-mark { background: conic-gradient(from -45deg, #4285f4 0 25%, #34a853 25% 49%, #fbbc05 49% 72%, #ea4335 72% 100%); -webkit-background-clip: text; background-clip: text; color: transparent; font-size: 1.2em; font-weight: 950; }
+        .ft-payment-availability { display: flex; align-items: center; justify-content: center; gap: 8px; color: #94a3b8; font-size: 12px; line-height: 1.5; text-align: center; }
+        .ft-payment-footer { display: flex; align-items: center; justify-content: center; gap: 11px; margin-top: 24px; padding-top: 22px; border-top: 1px solid rgba(148,163,184,.25); color: #8cefff; font-size: clamp(15px, 2.1vw, 19px); font-weight: 800; }
+        .ft-payment-footer-shield { width: 34px; height: 34px; flex: 0 0 34px; display: grid; place-items: center; color: #8cefff; filter: drop-shadow(0 0 8px rgba(75,224,247,.22)); }
         @media (max-width: 900px) {
           .ft-hero-grid, .ft-showcase-row, .ft-showcase-row-alt, .ft-banner-inner, .ft-footer-grid { grid-template-columns: 1fr !important; }
-          .ft-payments-layout { grid-template-columns: 1fr !important; gap: 30px !important; }
           .ft-hero-copy { text-align:left !important; }
           .ft-phone-stage { min-height: 520px !important; transform: scale(.88); transform-origin: top center; }
           .ft-secondary-phone { display:none; }
@@ -653,10 +667,9 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           .ft-float-verified { left: 10px !important; }
           .ft-score-row { grid-template-columns:1fr !important; text-align:center; }
           .ft-factor-grid { grid-template-columns:1fr !important; }
-          .ft-footer-links { grid-template-columns:1fr 1fr !important; }
-          .ft-footer-story-body { padding: 20px; }
-          .ft-payment-rail-grid { grid-template-columns: 1fr 1fr !important; }
-          .ft-legacy-stat-grid, .ft-trust-econ-top-grid { grid-template-columns: 1fr !important; }
+           .ft-footer-links { grid-template-columns:1fr 1fr !important; }
+           .ft-footer-story-body { padding: 20px; }
+           .ft-legacy-stat-grid, .ft-trust-econ-top-grid { grid-template-columns: 1fr !important; }
         }
         @media (max-width: 480px) {
           .stats-grid { grid-template-columns: repeat(2,1fr) !important; gap: 0.5rem !important; }
@@ -671,9 +684,16 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           .ft-market-product-card { flex-basis: 82% !important; min-width: 238px !important; }
           .ft-market-list > a { flex-basis: 86% !important; min-width: 238px !important; }
           .ft-market-tab { font-size: 15px !important; padding-left: 10px !important; padding-right: 10px !important; }
-          .ft-payment-rail-grid { grid-template-columns: 1fr !important; }
-          .ft-payment-rail { min-height: 74px !important; }
-        }
+           .ft-payment-card { padding: 28px 17px 20px; border-radius: 24px; }
+           .ft-payment-shield { width: 66px; height: 66px; margin-bottom: 17px; }
+           .ft-payment-logo-row { gap: 5px; margin-top: 26px; margin-bottom: 22px; }
+           .ft-payment-logo { gap: 4px; }
+           .ft-payment-logo-separator { height: 31px; }
+           .ft-payment-logo-stripe { font-size: 21px; }
+           .ft-payment-logo-paypal, .ft-payment-logo-apple, .ft-payment-logo-google { font-size: 16px; }
+           .ft-payment-availability { font-size: 11px; }
+           .ft-payment-footer { margin-top: 20px; padding-top: 19px; font-size: 15px; }
+         }
       `}</style>
 
       <LegacyTopDesign
@@ -807,35 +827,42 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
 
       <section className="ft-section" style={{ background: 'radial-gradient(circle at 12% 18%, rgba(0,194,203,.16), transparent 28%), linear-gradient(180deg,#081020,#0a0f1e)', borderBottom: '1px solid rgba(0,194,203,.08)', color: '#fff' }}>
         <div className="ft-container">
-          <div className="ft-payments-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, .95fr) minmax(420px, 1.05fr)', gap: 54, alignItems: 'center' }}>
-            <div>
-              <div style={{ color: '#7ff7ff', fontSize: 12, fontWeight: 900, letterSpacing: '0.11em', textTransform: 'uppercase', marginBottom: 12 }}>{t('trustedPayments.eyebrow')}</div>
-              <h2 className="ft-h2" style={{ fontSize: 42, lineHeight: 1.05, letterSpacing: '-0.055em', margin: '0 0 16px', color: '#fff', fontWeight: 850 }}>{t('trustedPayments.title')}</h2>
-              <p style={{ margin: '0 0 18px', color: SLATE, fontSize: 16, lineHeight: 1.75, maxWidth: 520 }}>{t('trustedPayments.description')}</p>
-              <p style={{ margin: 0, color: '#c8fbff', fontSize: 15, lineHeight: 1.65, fontWeight: 750, maxWidth: 520 }}>{t('trustedPayments.support')}</p>
-            </div>
+          <div className="ft-payment-card">
+            <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
+              <div className="ft-payment-shield" aria-hidden="true">
+                <svg viewBox="0 0 48 48" width="42" height="42" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M24 5 38 10v10c0 9.4-5.8 17.6-14 22-8.2-4.4-14-12.6-14-22V10l14-5Z" />
+                  <path d="m17.5 24 4.5 4.5 9-10" />
+                </svg>
+              </div>
+              <h2 className="ft-h2" style={{ fontSize: 34, lineHeight: 1.12, letterSpacing: '-0.055em', margin: '0 0 12px', color: '#f8fafc', fontWeight: 850 }}>{t('trustedPayments.title')}</h2>
+              <p style={{ maxWidth: 540, margin: '0 auto', color: '#aeb9cc', fontSize: 16, lineHeight: 1.5 }}>{t('trustedPayments.support')}</p>
 
-            <div style={{ position: 'relative', borderRadius: 28, padding: 26, background: 'linear-gradient(145deg,rgba(17,24,39,.96),rgba(8,16,32,.9))', border: '1px solid rgba(127,247,255,.2)', boxShadow: '0 28px 90px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.05)', overflow: 'hidden' }}>
-              <div aria-hidden="true" style={{ position: 'absolute', width: 240, height: 240, right: -80, top: -100, borderRadius: '50%', background: 'radial-gradient(circle,rgba(0,194,203,.2),transparent 68%)', filter: 'blur(10px)' }} />
-              <div style={{ position: 'relative', zIndex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, color: '#fff', fontWeight: 850 }}>
-                  <span aria-hidden="true" style={{ width: 34, height: 34, display: 'grid', placeItems: 'center', borderRadius: 12, background: 'rgba(0,194,203,.14)', border: '1px solid rgba(0,194,203,.3)', color: '#7ff7ff', fontSize: 18 }}>✓</span>
-                  <span>{t('trustedPayments.protected')}</span>
-                </div>
-                <div className="ft-payment-rail-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12 }}>
-                  {[
-                    { key: 'stripe', label: t('trustedPayments.stripe'), mark: 'stripe', tone: '#635bff' },
-                    { key: 'paypal', label: t('trustedPayments.paypal'), mark: 'P', tone: '#0070ba' },
-                    { key: 'applePay', label: t('trustedPayments.applePay'), mark: '', tone: '#f8fafc' },
-                    { key: 'googlePay', label: t('trustedPayments.googlePay'), mark: 'G', tone: '#4285f4' },
-                  ].map(method => (
-                    <div key={method.key} className="ft-payment-rail" aria-label={method.label} style={{ minHeight: 92, display: 'flex', alignItems: 'center', gap: 12, padding: '15px 16px', borderRadius: 17, background: 'rgba(15,23,42,.72)', border: '1px solid rgba(148,163,184,.16)' }}>
-                      <span aria-hidden="true" style={{ minWidth: 38, height: 38, display: 'grid', placeItems: 'center', borderRadius: 12, background: `${method.tone}22`, border: `1px solid ${method.tone}55`, color: method.tone, fontSize: method.key === 'stripe' ? 11 : 22, fontWeight: 950, letterSpacing: method.key === 'stripe' ? '-0.04em' : 0 }}>{method.mark}</span>
-                      <span style={{ color: '#f8fafc', fontSize: 15, fontWeight: 850 }}>{method.label}</span>
-                    </div>
-                  ))}
-                </div>
-                <p style={{ margin: '18px 0 0', color: '#64748b', fontSize: 12, lineHeight: 1.55 }}>{t('trustedPayments.availability')}</p>
+              <div className="ft-payment-logo-row" aria-label={t('trustedPayments.title')}>
+                <div className="ft-payment-logo" aria-label={t('trustedPayments.stripe')}><span className="ft-payment-logo-stripe">stripe</span></div>
+                <span className="ft-payment-logo-separator" aria-hidden="true" />
+                <div className="ft-payment-logo" aria-label={t('trustedPayments.paypal')}><span className="ft-payment-logo-paypal-mark" aria-hidden="true">P</span><span className="ft-payment-logo-paypal">PayPal</span></div>
+                <span className="ft-payment-logo-separator" aria-hidden="true" />
+                <div className="ft-payment-logo" aria-label={t('trustedPayments.applePay')}><span className="ft-payment-logo-apple-mark" aria-hidden="true"><svg viewBox="0 0 24 28" width="21" height="24" fill="currentColor"><path d="M19.7 14.6c0-2.6 2.1-3.9 2.2-4-.1-.1-1.1-1.4-2.9-1.4-.8-.1-1.6.5-2.1.5-.5 0-1.2-.5-2-.5-1.7 0-3.3 1-4.2 2.5-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.5 1.3-.1 1.7-.8 3.2-.8 1.5 0 1.9.8 3.2.8 1.4 0 2.3-1.2 3.1-2.4.9-1.3 1.3-2.7 1.3-2.8-.1 0-2.5-1-2.5-4.6ZM17.9 8c.7-.9 1.2-2.1 1.1-3.3-1.1 0-2.4.7-3.1 1.5-.7.8-1.3 2-1.1 3.2 1.2.1 2.4-.6 3.1-1.4Z" transform="translate(-4 -2) scale(.78)" /></svg></span><span className="ft-payment-logo-apple">Pay</span></div>
+                <span className="ft-payment-logo-separator" aria-hidden="true" />
+                <div className="ft-payment-logo" aria-label={t('trustedPayments.googlePay')}><span className="ft-payment-logo-google-mark" aria-hidden="true">G</span><span className="ft-payment-logo-google">Pay</span></div>
+              </div>
+
+              <div className="ft-payment-availability">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
+                </svg>
+                <span>{t('trustedPayments.availability')}</span>
+              </div>
+
+              <div className="ft-payment-footer">
+                <span className="ft-payment-footer-shield" aria-hidden="true">
+                  <svg viewBox="0 0 48 48" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M24 5 38 10v10c0 9.4-5.8 17.6-14 22-8.2-4.4-14-12.6-14-22V10l14-5Z" />
+                    <path d="m17.5 24 4.5 4.5 9-10" />
+                  </svg>
+                </span>
+                <span>{t('trustedPayments.protected')}</span>
               </div>
             </div>
           </div>
