@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import Nav from './Nav'
 import Sidebar from './Sidebar'
@@ -171,10 +171,13 @@ function ProfileSetupPrompt() {
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const tCommon = useTranslations('common')
   const isAuth = AUTH_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
   const isImmersive = pathname === '/agents'
   const isLanding = pathname === '/'
+  const isOrganisationFlow = pathname.startsWith('/organisations/')
+    || (pathname === '/seller/gigs/create' && Boolean(searchParams.get('orgId')))
   const [showPushBanner, setShowPushBanner] = useState(false)
   const [showProfilePrompt, setShowProfilePrompt] = useState(false)
 
@@ -199,7 +202,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // out profile basics and hobbies. Do not replay onboarding for legacy members
   // who joined before the strict signup requirements were introduced.
   useEffect(() => {
-    if (isAuth || isImmersive) return
+    if (isAuth || isImmersive || isOrganisationFlow) return
     if (typeof window === 'undefined') return
     const timer = setTimeout(async () => {
       try {
@@ -211,7 +214,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }, 1200)
 
     return () => clearTimeout(timer)
-  }, [isAuth, isImmersive])
+  }, [isAuth, isImmersive, isOrganisationFlow])
 
   // Register the push notification service worker (sw-push.js) once per session.
   // This is separate from the Workbox sw.js so it won't be overwritten by builds.

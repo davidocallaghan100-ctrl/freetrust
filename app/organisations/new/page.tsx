@@ -137,7 +137,7 @@ export default function CreateOrganisationPage() {
 
       setSuccess(true)
       const orgId = data.organisation?.slug || data.organisation?.id
-      setTimeout(() => router.push(orgId ? `/organisation/${orgId}` : '/organisations'), 1200)
+      setTimeout(() => router.push(orgId ? `/organisations/${orgId}` : '/organisations'), 1200)
     } catch {
       setError('Network error — please check your connection.')
     } finally {
@@ -211,7 +211,7 @@ export default function CreateOrganisationPage() {
             <div style={S.fieldRow}>
               <label style={S.label}>Organisation Name <span style={{ color: 'var(--ft-danger)' }}>*</span></label>
               <input className="nc-input" style={S.input} placeholder="e.g. GreenPath Labs" value={name} onChange={e => setName(e.target.value)} maxLength={120} required />
-              {name && <p style={S.hint}>URL: <span style={{ color: 'var(--ft-accent)' }}>freetrust.co/organisation/{slugify(name)}</span></p>}
+              {name && <p style={S.hint}>URL: <span style={{ color: 'var(--ft-accent)' }}>freetrust.co/organisations/{slugify(name)}</span></p>}
             </div>
 
             <div style={S.fieldRow}>
