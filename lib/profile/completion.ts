@@ -1,4 +1,5 @@
 export type ProfileCompletionRecord = {
+  email?: string | null
   first_name?: string | null
   last_name?: string | null
   full_name?: string | null
@@ -9,6 +10,14 @@ export type ProfileCompletionRecord = {
   onboarding_complete?: boolean | null
   created_at?: string | null
   deleted_at?: string | null
+}
+
+// This is a private, non-member account reserved for App Store review. It
+// must remain usable for reviewers without appearing as a public member.
+const APP_REVIEW_EMAIL = 'appreview@freetrust.co'
+
+function isAppReviewAccount(profile: ProfileCompletionRecord | null | undefined) {
+  return profile?.email?.trim().toLowerCase() === APP_REVIEW_EMAIL
 }
 
 export const STRICT_PROFILE_REQUIREMENTS_STARTED_AT = '2026-06-22T20:22:00.000Z'
@@ -91,9 +100,11 @@ export function isStrictProfileCompletionRequired(profile: ProfileCompletionReco
 }
 
 export function needsSignupProfileSetup(profile: ProfileCompletionRecord | null | undefined) {
+  if (isAppReviewAccount(profile)) return false
   return isStrictProfileCompletionRequired(profile) && getProfileCompletionIssues(profile).length > 0
 }
 
 export function isCommunityVisibleProfile(profile: ProfileCompletionRecord | null | undefined) {
+  if (isAppReviewAccount(profile)) return false
   return getProfileCompletionIssues(profile).length === 0
 }

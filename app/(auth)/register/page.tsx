@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { detectInAppBrowser, type InAppBrowserInfo } from '@/lib/auth/in-app-browser'
 import OpenInBrowserModal from '@/components/OpenInBrowserModal'
+import { useNativePlatform } from '@/lib/nativeApp'
 
 type OAuthProvider = 'apple' | 'google' | 'facebook' | 'linkedin_oidc'
 
@@ -53,6 +54,9 @@ const VISIBLE_OAUTH_PROVIDERS = OAUTH_PROVIDERS.filter(({ enabled = true }) => e
 export default function RegisterPage() {
   const router = useRouter()
   const supabase = createClient()
+  const nativePlatform = useNativePlatform()
+  const isNativeApp = nativePlatform !== null && nativePlatform !== 'web'
+  const visibleOauthProviders = isNativeApp ? [] : VISIBLE_OAUTH_PROVIDERS
   const [signupIntent, setSignupIntent] = useState<'individual' | 'business'>('individual')
 
   // Re-stamp the ft_ref cookie from the ?ref= URL param if it's present.
@@ -289,7 +293,7 @@ export default function RegisterPage() {
     // inside Facebook/Instagram/TikTok/etc. in-app browsers.
     if (provider === 'google') {
       const info = detectInAppBrowser()
-      if (info.isInApp) {
+      if (!isNativeApp && info.isInApp) {
         console.warn('[register] blocked Google OAuth — in-app browser detected:', info.browserName)
         setInAppInfo(info)
         return
@@ -698,8 +702,9 @@ export default function RegisterPage() {
                 </span>
               </div>
 
-              <div className="oauth-list" aria-label="Social sign-up options">
-                {VISIBLE_OAUTH_PROVIDERS.map(({ provider, label, icon, queryParams }) => {
+               {visibleOauthProviders.length > 0 && (
+                 <div className="oauth-list" aria-label="Social sign-up options">
+                 {visibleOauthProviders.map(({ provider, label, icon, queryParams }) => {
                   const isLoading = oauthLoading === provider
                   return (
                     <button
@@ -715,8 +720,24 @@ export default function RegisterPage() {
                       {isLoading ? 'Redirecting…' : label}
                     </button>
                   )
-                })}
-              </div>
+                 })}
+                 </div>
+               )}
+
+               {isNativeApp && (
+                 <div style={{
+                   background: 'rgba(16,185,129,0.06)',
+                   border: '1px solid rgba(16,185,129,0.16)',
+                   borderRadius: 10,
+                   padding: '10px 12px',
+                   color: '#94a3b8',
+                   fontSize: 12,
+                   lineHeight: 1.5,
+                   marginBottom: 16,
+                 }}>
+                   Create your account with email directly in the FreeTrust app.
+                 </div>
+               )}
 
               <div className="auth-divider">
                 <div className="auth-divider-line" />

@@ -1,13 +1,16 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useNativePlatform } from '@/lib/nativeApp'
 
 const COOKIE_CONSENT_KEY = 'ft_cookie_consent'
 
 export default function CookieConsentBar() {
+  const nativePlatform = useNativePlatform()
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
+    if (nativePlatform !== 'web') return
     try {
       if (localStorage.getItem(COOKIE_CONSENT_KEY) === 'true') return
     } catch {
@@ -15,7 +18,7 @@ export default function CookieConsentBar() {
       return
     }
     setVisible(true)
-  }, [])
+  }, [nativePlatform])
 
   const handleAccept = () => {
     try {
@@ -26,7 +29,7 @@ export default function CookieConsentBar() {
     setVisible(false)
   }
 
-  if (!visible) return null
+  if (nativePlatform !== 'web' || !visible) return null
 
   return (
     <>
@@ -57,7 +60,7 @@ export default function CookieConsentBar() {
         }}
       >
         <p style={{ margin: 0, flex: '1 1 260px', fontSize: '12.5px', lineHeight: 1.4, color: 'var(--ft-text-secondary)' }}>
-          We use cookies to improve your experience. By using FreeTrust, you agree to our{' '}
+          FreeTrust uses necessary cookies for sign-in, security, and preferences. We do not use cookies to track you. By using FreeTrust, you agree to our{' '}
           <Link href="/terms" style={{ color: 'var(--ft-accent)', textDecoration: 'underline' }}>
             Terms &amp; Conditions
           </Link>.

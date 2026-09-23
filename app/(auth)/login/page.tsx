@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { detectInAppBrowser, type InAppBrowserInfo } from '@/lib/auth/in-app-browser'
 import OpenInBrowserModal from '@/components/OpenInBrowserModal'
+import { useNativePlatform } from '@/lib/nativeApp'
 
 type OAuthProvider = 'apple' | 'google' | 'facebook' | 'linkedin_oidc'
 
@@ -56,6 +57,9 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
+  const nativePlatform = useNativePlatform()
+  const isNativeApp = nativePlatform !== null && nativePlatform !== 'web'
+  const visibleOauthProviders = isNativeApp ? [] : VISIBLE_OAUTH_PROVIDERS
   // Where to send the user after login — middleware sets ?redirect=<path>
   const redirectTo = searchParams.get('redirect') || '/feed'
 
@@ -125,7 +129,7 @@ function LoginForm() {
     // BEFORE starting Google OAuth and show an instructional modal instead.
     if (provider === 'google') {
       const info = detectInAppBrowser()
-      if (info.isInApp) {
+      if (!isNativeApp && info.isInApp) {
         console.warn('[login] blocked Google OAuth — in-app browser detected:', info.browserName)
         setInAppInfo(info)
         return
@@ -476,8 +480,9 @@ function LoginForm() {
                 </div>
               )}
 
-              <div className="oauth-list" aria-label="Social sign-in options">
-                {VISIBLE_OAUTH_PROVIDERS.map(({ provider, label, icon, queryParams }) => {
+               {visibleOauthProviders.length > 0 && (
+                 <div className="oauth-list" aria-label="Social sign-in options">
+                 {visibleOauthProviders.map(({ provider, label, icon, queryParams }) => {
                   const isLoading = oauthLoading === provider
                   return (
                     <button
@@ -493,8 +498,24 @@ function LoginForm() {
                       {isLoading ? 'Redirecting…' : label}
                     </button>
                   )
-                })}
-              </div>
+                 })}
+                 </div>
+               )}
+
+               {isNativeApp && (
+                 <div style={{
+                   background: 'rgba(56,189,248,0.06)',
+                   border: '1px solid rgba(56,189,248,0.16)',
+                   borderRadius: 10,
+                   padding: '10px 12px',
+                   color: '#94a3b8',
+                   fontSize: 12,
+                   lineHeight: 1.5,
+                   marginBottom: 16,
+                 }}>
+                   Sign in with email directly in the FreeTrust app.
+                 </div>
+               )}
 
               <div className="auth-divider">
                 <div className="auth-divider-line" />

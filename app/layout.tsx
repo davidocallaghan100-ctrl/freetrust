@@ -15,6 +15,7 @@ import { BasketProvider } from "@/context/BasketContext";
 import { ThemeProvider, THEME_INIT_SCRIPT } from "@/context/ThemeContext";
 import { MusicPlayerProvider } from "@/context/MusicPlayerContext";
 import AppShell from "@/components/AppShell";
+import NativePrivacyGate from "@/components/NativePrivacyGate";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
 import { OrganizationSchema } from "@/components/seo/OrganizationSchema";
 import { defaultLocale, directionForLocale, isAppLocale } from "@/i18n/routing";
@@ -182,20 +183,24 @@ export default async function RootLayout({
             </CurrencyProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
-        <Analytics />
+        <NativePrivacyGate>
+          <Analytics />
+        </NativePrivacyGate>
 
         {/* Google Analytics 4 — loaded after page is interactive */}
-        {process.env.NEXT_PUBLIC_GA_ID && (
-          <>
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
-              strategy="afterInteractive"
-            />
-            <Script id="ga4-init" strategy="afterInteractive">
-              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${process.env.NEXT_PUBLIC_GA_ID}',{page_path:window.location.pathname});`}
-            </Script>
-          </>
-        )}
+        <NativePrivacyGate>
+          {process.env.NEXT_PUBLIC_GA_ID && (
+            <>
+              <Script
+                src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
+                strategy="afterInteractive"
+              />
+              <Script id="ga4-init" strategy="afterInteractive">
+                {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${process.env.NEXT_PUBLIC_GA_ID}',{page_path:window.location.pathname});`}
+              </Script>
+            </>
+          )}
+        </NativePrivacyGate>
 
       </body>
     </html>
