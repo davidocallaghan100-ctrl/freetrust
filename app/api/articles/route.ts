@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80)
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     // Issue trust if published (DB trigger also handles this, but do it here as backup)
     if (status === 'published') {
-      const { error: trustError } = await supabase.rpc('issue_trust', {
+      const { error: trustError } = await createAdminClient().rpc('issue_trust', {
         p_user_id: user.id,
         p_amount: 20,
         p_type: 'article_published',

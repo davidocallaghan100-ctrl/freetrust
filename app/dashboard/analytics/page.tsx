@@ -16,7 +16,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { createClient } from '@/lib/supabase/client'
 import type { AnalyticsEventType } from '@/lib/analytics'
 
 type RangeDays = 7 | 30 | 90
@@ -191,9 +190,10 @@ function EmptyState() {
 
 export default function DashboardAnalyticsPage() {
   const router = useRouter()
-  const supabase = useMemo(() => createClient(), [])
   const [rangeDays, setRangeDays] = useState<RangeDays>(30)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
   const [events, setEvents] = useState<AnalyticsRow[]>([])
   const [profile, setProfile] = useState<ProfileSummary | null>(null)
   const [viewportWidth, setViewportWidth] = useState<number | null>(null)
@@ -207,39 +207,38 @@ export default function DashboardAnalyticsPage() {
 
   useEffect(() => {
     let cancelled = false
+
     async function load() {
       setLoading(true)
+      setError(null)
+      const controller = new AbortController()
+      const requestTimeout = window.setTimeout(() => controller.abort(), 10000)
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.user) {
+        const response = await fetch(`/api/analytics?days=${rangeDays}`, { cache: 'no-store', signal: controller.signal })
+        if (response.status === 401) {
           router.push('/login?redirect=/dashboard/analytics')
           return
         }
-        const since = new Date(Date.now() - rangeDays * 2 * 24 * 60 * 60 * 1000).toISOString()
-        const [{ data: profileData }, { data: eventData, error }] = await Promise.all([
-          supabase.from('profiles').select('full_name, username, trust_balance').eq('id', session.user.id).maybeSingle(),
-          supabase
-            .from('analytics_events')
-            .select('id,user_id,actor_id,event_type,entity_type,entity_id,metadata,created_at')
-            .eq('user_id', session.user.id)
-            .gte('created_at', since)
-            .order('created_at', { ascending: false }),
-        ])
-        if (error) throw error
+        if (!response.ok) throw new Error(`Analytics request failed (${response.status})`)
+        const data = await response.json() as { profile?: ProfileSummary | null; events?: AnalyticsRow[] }
         if (!cancelled) {
-          setProfile((profileData ?? null) as ProfileSummary | null)
-          setEvents((eventData ?? []) as AnalyticsRow[])
+          setProfile(data.profile ?? null)
+          setEvents(data.events ?? [])
         }
       } catch (err) {
         console.error('[dashboard/analytics] load failed:', err)
-        if (!cancelled) setEvents([])
+        if (!cancelled) {
+          setEvents([])
+          setError('Analytics could not be loaded. Check your connection and try again.')
+        }
       } finally {
+        window.clearTimeout(requestTimeout)
         if (!cancelled) setLoading(false)
       }
     }
     load()
     return () => { cancelled = true }
-  }, [rangeDays, router, supabase])
+  }, [rangeDays, retryCount, router])
 
   const { current, previous } = useMemo(() => splitCurrentAndPrevious(events, rangeDays), [events, rangeDays])
   const dailySeries = useMemo(() => buildDailySeries(current, rangeDays), [current, rangeDays])
@@ -304,6 +303,16 @@ export default function DashboardAnalyticsPage() {
 
         {loading ? (
           <Card style={{ marginTop: 18, padding: 28, color: BRAND.muted }}>Loading analytics…</Card>
+        ) : error ? (
+          <Card style={{ marginTop: 18, padding: 28, textAlign: 'center' }}>
+            <div style={{ color: '#B42318', fontSize: 16, fontWeight: 850 }}>Analytics unavailable</div>
+            <p style={{ color: BRAND.muted, margin: '8px auto 16px', maxWidth: 520, lineHeight: 1.6, fontSize: 14 }}>{error}</p>
+            <button
+              type="button"
+              onClick={() => setRetryCount(value => value + 1)}
+              style={{ border: 'none', borderRadius: 12, padding: '10px 16px', background: BRAND.blue, color: BRAND.white, fontWeight: 850, cursor: 'pointer', fontFamily: 'inherit' }}
+            >Try again</button>
+          </Card>
         ) : current.length === 0 ? (
           <div style={{ marginTop: 18 }}><EmptyState /></div>
         ) : (

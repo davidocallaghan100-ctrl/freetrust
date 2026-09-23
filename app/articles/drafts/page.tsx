@@ -56,14 +56,8 @@ export default function DraftsPage() {
       .eq('author_id', userId!)
 
     if (!error) {
-      // Issue trust
-      await supabase.rpc('issue_trust', {
-        p_user_id: userId,
-        p_amount: 20,
-        p_type: 'article_published',
-        p_ref: draftId,
-        p_desc: `Published article: ${title.slice(0, 100)}`,
-      })
+      // The database publish trigger awards Trust. Never call the privileged
+      // issue_trust RPC from the browser.
       setDrafts(prev => prev.filter(d => d.id !== draftId))
     }
     setPublishing(null)

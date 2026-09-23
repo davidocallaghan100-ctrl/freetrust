@@ -1,6 +1,8 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { isFreeTrustAdminEmail } from '@/lib/admin/emails'
 
 // GET /api/trust — get current user's trust balance and recent ledger
 export async function GET() {
@@ -55,6 +57,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    if (!isFreeTrustAdminEmail(user.email)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const body = await request.json()
     const { targetUserId, amount, type, description } = body
 
@@ -62,7 +68,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 })
     }
 
-    const { error } = await supabase.rpc('issue_trust', {
+    const { error } = await createAdminClient().rpc('issue_trust', {
       p_user_id: targetUserId,
       p_amount: Math.floor(amount),
       p_type: type ?? 'manual',
