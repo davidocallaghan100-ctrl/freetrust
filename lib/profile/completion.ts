@@ -18,6 +18,7 @@ const APP_REVIEW_EMAIL = 'appreview@freetrust.co'
 
 function isAppReviewAccount(profile: ProfileCompletionRecord | null | undefined) {
   return profile?.email?.trim().toLowerCase() === APP_REVIEW_EMAIL
+    || profile?.full_name?.trim().toLowerCase() === 'app review'
 }
 
 export const STRICT_PROFILE_REQUIREMENTS_STARTED_AT = '2026-06-22T20:22:00.000Z'
