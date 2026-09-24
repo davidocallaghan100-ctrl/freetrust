@@ -12,6 +12,7 @@ import ROICalculator from './ROICalculator'
 import HeroGlobe from './HeroGlobe'
 import LegalDocModal from '@/components/legal/LegalDocModal'
 import { legalDocs } from '@/lib/legalDocs'
+import SalesAiOneSponsoredCard from '@/components/ads/SalesAiOneSponsoredCard'
 
 export interface HomeClientProps {
   initialCounts: {
@@ -710,6 +711,12 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
         trustCirculation={tc}
         trustHolders={th}
       />
+
+      <section aria-label="Sponsored partner" style={{ background: 'linear-gradient(180deg,#081020,#0a0f1e)', borderBottom: '1px solid rgba(0,194,203,.08)', padding: '1.25rem 1.25rem 2.25rem' }}>
+        <div className="ft-container">
+          <SalesAiOneSponsoredCard placement="landing" />
+        </div>
+      </section>
 
       <section className="ft-premium-hero" style={{ minHeight: '92vh', position: 'relative', overflow: 'hidden', background: 'radial-gradient(circle at 72% 42%, rgba(0,194,203,.27), transparent 28%), linear-gradient(135deg,#0a0f1e 0%,#0b1327 48%,#0f1f2e 100%)', borderBottom: '1px solid rgba(0,194,203,.12)' , color: '#fff' }}>
         <div style={{ position: 'absolute', inset: '-20%', background: 'radial-gradient(circle at 8% 8%,rgba(255,255,255,.08),transparent 22%),radial-gradient(circle at 88% 92%,rgba(0,119,182,.24),transparent 28%)', pointerEvents: 'none' }} />

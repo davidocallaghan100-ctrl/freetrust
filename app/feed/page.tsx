@@ -6,6 +6,7 @@ import Avatar from '@/components/Avatar'
 import PostCard, { FeedPost } from '@/components/PostCard'
 import StoriesBar from '@/components/stories/StoriesBar'
 import { createClient } from '@/lib/supabase/client'
+import SalesAiOneSponsoredCard from '@/components/ads/SalesAiOneSponsoredCard'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -370,10 +371,12 @@ export default function FeedPage() {
         .feed-grid { display: grid; grid-template-columns: 1fr 272px; gap: 1.5rem; max-width: 1080px; margin: 0 auto; padding: 1.5rem; align-items: start; }
         .feed-main-col { min-width: 0; width: 100%; overflow: hidden; }
         .feed-sidebar-col { position: sticky; top: 110px; display: flex; flex-direction: column; gap: 1rem; }
+        .feed-mobile-ad { display: none; }
         @media (max-width: 800px) {
           .feed-grid { grid-template-columns: 1fr !important; padding: 0 !important; gap: 0; max-width: none !important; }
           .feed-main-col { overflow: visible !important; }
           .feed-sidebar-col { display: none !important; }
+          .feed-mobile-ad { display: block; margin: 0 0 0.85rem; }
           .feed-main-col > div:not(.feed-filter-pills) { margin-left: 0.75rem; margin-right: 0.75rem; }
           .feed-filter-pills { padding-left: 0.75rem; padding-right: 0.75rem; }
           .ft-post-card { border-left: 0 !important; border-right: 0 !important; border-radius: 0 !important; }
@@ -473,6 +476,8 @@ export default function FeedPage() {
             })}
           </div>
 
+          {scope === 'discover' && activeFilter === 'all' ? <div className="feed-mobile-ad"><SalesAiOneSponsoredCard placement="feed-inline" /></div> : null}
+
           {loading ? (
             // Skeleton cards
             Array.from({ length: 4 }).map((_, i) => (
@@ -544,6 +549,7 @@ export default function FeedPage() {
               <Link key={tag} href={`/search?q=${encodeURIComponent(tag)}`} style={{ display: 'block', padding: '0.4rem 0', fontSize: '0.83rem', color: 'var(--ft-accent)', textDecoration: 'none', borderBottom: '1px solid rgba(56,189,248,0.06)' }}>{tag}</Link>
             ))}
           </div>
+          <SalesAiOneSponsoredCard placement="feed-rail" />
           <div style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: '12px', padding: '1.25rem' }}>
             <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--ft-text)' }}>✨ Discover</div>
             <p style={{ fontSize: '0.82rem', color: 'var(--ft-text-tertiary)', lineHeight: 1.5, marginBottom: '0.75rem' }}>The Discover feed shows the latest real FreeTrust activity, including posts, hosted activities, member services, and published articles, in one continuous feed.</p>
