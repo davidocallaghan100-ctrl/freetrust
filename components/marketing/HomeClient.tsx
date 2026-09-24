@@ -712,12 +712,6 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
         trustHolders={th}
       />
 
-      <section aria-label="Sponsored partner" style={{ background: 'linear-gradient(180deg,#081020,#0a0f1e)', borderBottom: '1px solid rgba(0,194,203,.08)', padding: '1.25rem 1.25rem 2.25rem' }}>
-        <div className="ft-container">
-          <SalesAiOneSponsoredCard placement="landing" />
-        </div>
-      </section>
-
       <section className="ft-premium-hero" style={{ minHeight: '92vh', position: 'relative', overflow: 'hidden', background: 'radial-gradient(circle at 72% 42%, rgba(0,194,203,.27), transparent 28%), linear-gradient(135deg,#0a0f1e 0%,#0b1327 48%,#0f1f2e 100%)', borderBottom: '1px solid rgba(0,194,203,.12)' , color: '#fff' }}>
         <div style={{ position: 'absolute', inset: '-20%', background: 'radial-gradient(circle at 8% 8%,rgba(255,255,255,.08),transparent 22%),radial-gradient(circle at 88% 92%,rgba(0,119,182,.24),transparent 28%)', pointerEvents: 'none' }} />
         <div className="ft-container" style={{ position: 'relative', zIndex: 1, paddingTop: 72, paddingBottom: 86 }}>
@@ -964,7 +958,13 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
               {(eventPreviewCards.length ? eventPreviewCards : eventFallbacks.map(ev => ({...ev, starts_at: null, image: eventPosterDataUri({ title: ev.title, category: ev.category, startsAt: null, location: ev.location })}))).slice(0, 6).map(ev => <Link key={ev.id} href={ev.id.startsWith('events') ? '/events' : `/events/${ev.id}`} className="ft-card-hover" style={{ textDecoration: 'none', color: '#fff', background: 'linear-gradient(180deg,rgba(17,24,39,.96),rgba(8,16,32,.96))', border: '1px solid #1e293b', borderRadius: 20, overflow: 'hidden' }}><div style={{ height: 154, background: `linear-gradient(135deg, ${ev.catColor}33, rgba(15,23,42,.96))`, position: 'relative' }}><img src={ev.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /><span style={{ position: 'absolute', left: 13, top: 13, display: 'inline-flex', padding: '7px 10px', borderRadius: 999, background: 'rgba(4,16,24,.72)', color: '#fff', fontSize: 12, fontWeight: 900, border: '1px solid rgba(255,255,255,.18)', backdropFilter: 'blur(10px)' }}>{ev.category ?? t('liveMarketplace.fallbacks.event')}</span></div><div style={{ padding: 18 }}><h4 style={{ margin: '0 0 8px', fontSize: 20, lineHeight: 1.2, letterSpacing: '-0.03em' }}>{ev.title}</h4><div style={{ color: SLATE, fontSize: 13, lineHeight: 1.5 }}>{ev.location}</div><div style={{ marginTop: 16, color: TEAL, fontWeight: 900, fontSize: 13 }}>{t('liveMarketplace.cta.viewEvent')}</div></div></Link>)}
             </div>
           )}
-          <p style={{ margin: '20px 0 0', color: '#64748b', textAlign: 'center', fontSize: 13 }}>{t('liveMarketplace.status.showing')}{liveListings ? t('liveMarketplace.status.loaded', {count: liveListings}) : ''}</p>
+           <p style={{ margin: '20px 0 0', color: '#64748b', textAlign: 'center', fontSize: 13 }}>{t('liveMarketplace.status.showing')}{liveListings ? t('liveMarketplace.status.loaded', {count: liveListings}) : ''}</p>
+         </div>
+       </section>
+
+      <section aria-label="Sponsored partner" style={{ background: 'linear-gradient(180deg,#081020,#0a0f1e)', borderBottom: '1px solid rgba(0,194,203,.08)', padding: '1.25rem 1.25rem 2.25rem' }}>
+        <div className="ft-container">
+          <SalesAiOneSponsoredCard placement="landing" />
         </div>
       </section>
 
