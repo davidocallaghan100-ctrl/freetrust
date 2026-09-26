@@ -170,7 +170,7 @@ export async function GET(
     const { data: comments, error } = await supabase
       .from('feed_comments')
       .select(`
-        id, content, user_id, created_at, updated_at, posted_as_organisation_id,
+        id, content, user_id, created_at, posted_as_organisation_id,
         profiles!feed_comments_user_id_fkey(id, full_name, avatar_url),
         posted_as_organisation:organisations!feed_comments_posted_as_organisation_id_fkey(id, name, slug, logo_url)
       `)
@@ -299,7 +299,7 @@ export async function POST(
       .from('feed_comments')
       .insert({ post_id: id, user_id: user.id, content, posted_as_organisation_id: postedAsOrganisationId })
       .select(`
-        id, content, user_id, created_at, updated_at, posted_as_organisation_id,
+        id, content, user_id, created_at, posted_as_organisation_id,
         profiles!feed_comments_user_id_fkey(id, full_name, avatar_url),
         posted_as_organisation:organisations!feed_comments_posted_as_organisation_id_fkey(id, name, slug, logo_url)
       `)

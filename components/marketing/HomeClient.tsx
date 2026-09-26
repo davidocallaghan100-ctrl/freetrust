@@ -389,22 +389,56 @@ function LegacyTopDesign({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', marginBottom: '1rem', fontSize: '0.72rem', color: 'var(--ft-text-faint)' }}>
             <span className="live-dot" /> {t('liveStats')}
           </div>
+          <style>{`
+            .stats-grid .stats-link {
+              display: block;
+              color: inherit;
+              text-decoration: none;
+              border-radius: 12px;
+            }
+            .stats-grid .stats-link > div {
+              height: 100%;
+              transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+            }
+            .stats-grid .stats-link:hover > div,
+            .stats-grid .stats-link:active > div {
+              border-color: rgba(56,189,248,0.32) !important;
+              transform: translateY(-2px);
+              box-shadow: 0 8px 22px rgba(2,132,199,0.12);
+            }
+            .stats-grid .stats-link:focus-visible {
+              outline: 2px solid var(--ft-accent);
+              outline-offset: 3px;
+            }
+          `}</style>
           <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.85rem', textAlign: 'center' }}>
             {[
-              { val: members, prefix: '', suffix: '', label: t('stats.membersGrowing'), sub: membersThisWeek > 0 ? t('stats.thisWeek', {count: membersThisWeek}) : t('stats.joinFree'), color: 'var(--ft-accent)' },
-              { val: services, prefix: '', suffix: '', label: t('stats.servicesAvailable'), sub: services === 0 ? t('stats.beFirst') : t('stats.browseNow'), color: 'var(--ft-accent)' },
-              { val: products, prefix: '', suffix: '', label: t('stats.productsListed'), sub: products === 0 ? t('stats.listYours') : t('stats.shopNow'), color: 'var(--ft-accent)' },
-              { val: trustIssued, prefix: '₮', suffix: '', label: t('stats.totalIssued'), sub: t('stats.sinceLaunch'), color: 'var(--ft-accent)' },
+              { href: '/members', val: members, prefix: '', suffix: '', label: t('stats.membersGrowing'), sub: membersThisWeek > 0 ? t('stats.thisWeek', {count: membersThisWeek}) : t('stats.joinFree'), color: 'var(--ft-accent)' },
+              { href: '/services', val: services, prefix: '', suffix: '', label: t('stats.servicesAvailable'), sub: services === 0 ? t('stats.beFirst') : t('stats.browseNow'), color: 'var(--ft-accent)' },
+              { href: '/products', val: products, prefix: '', suffix: '', label: t('stats.productsListed'), sub: products === 0 ? t('stats.listYours') : t('stats.shopNow'), color: 'var(--ft-accent)' },
+              { href: '/impact', val: trustIssued, prefix: '₮', suffix: '', label: t('stats.totalIssued'), sub: t('stats.sinceLaunch'), color: 'var(--ft-accent)' },
               { val: stats?.aiAgentRuns ?? 0, prefix: '', suffix: '', label: t('stats.agentRuns'), sub: t('stats.agentRunsSub'), color: '#2dd4bf' },
               { val: stats?.walletTransactions ?? 0, prefix: '', suffix: '', label: t('stats.walletTransactions'), sub: t('stats.walletTransactionsSub'), color: '#2dd4bf' },
             ].map(s => (
-              <div key={s.label} style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1rem 0.5rem' }}>
-                <div className="stat-val" style={{ fontSize: '1.8rem', fontWeight: 900, color: s.color, letterSpacing: '-1px' }}>
-                  <Counter target={s.val} prefix={s.prefix} suffix={s.suffix} />
+              s.href ? (
+                <Link key={s.label} href={s.href} className="stats-link" aria-label={`${s.label}: ${s.sub}`}>
+                  <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1rem 0.5rem' }}>
+                    <div className="stat-val" style={{ fontSize: '1.8rem', fontWeight: 900, color: s.color, letterSpacing: '-1px' }}>
+                      <Counter target={s.val} prefix={s.prefix} suffix={s.suffix} />
+                    </div>
+                    <div className="stat-label" style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
+                    <div className="stat-sub" style={{ fontSize: '0.65rem', color: s.color, marginTop: 3, fontWeight: 600 }}>{s.sub}</div>
+                  </div>
+                </Link>
+              ) : (
+                <div key={s.label} style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1rem 0.5rem' }}>
+                  <div className="stat-val" style={{ fontSize: '1.8rem', fontWeight: 900, color: s.color, letterSpacing: '-1px' }}>
+                    <Counter target={s.val} prefix={s.prefix} suffix={s.suffix} />
+                  </div>
+                  <div className="stat-label" style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
+                  <div className="stat-sub" style={{ fontSize: '0.65rem', color: s.color, marginTop: 3, fontWeight: 600 }}>{s.sub}</div>
                 </div>
-                <div className="stat-label" style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
-                <div className="stat-sub" style={{ fontSize: '0.65rem', color: s.color, marginTop: 3, fontWeight: 600 }}>{s.sub}</div>
-              </div>
+              )
             ))}
           </div>
 

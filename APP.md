@@ -9,6 +9,7 @@
 ## What It Does
 
 - Runs the FreeTrust community economy marketplace and mobile PWA.
+- The homepage live-stats strip makes its first four cards actionable: members → `/members`, services → `/services`, products → `/products`, and Trust Coin issued → `/impact`; the AI-run and wallet-transaction cards remain informational.
 - Provides a high-security internal `/admin` analytics dashboard locked to David's Supabase auth emails (`David@freetrust.co` and `davidocallaghan100@gmail.com`), with middleware, server-layout, and API guards. For those emails, the mobile/menu Account section's **Analytics Dashboard** link opens `/admin`; other users keep their normal member analytics link. The dashboard shows real Supabase-backed metrics for users, marketplace listings, messaging, campaign sends/notifications, engagement, Trust Coin, orders, and platform health; missing analytics sources such as dedicated Trust Score or Vercel Analytics API data are shown as explicit empty states rather than inferred or fabricated.
 - Provides marketplace, profiles, events, wallet, calendar, messaging, and community flows.
 - FreeTrust landing and Newsfeed now include a clearly disclosed, responsive Sales AI One sponsored-partner placement: a lower landing-page spotlight and an inline Newsfeed card shown after approximately four Discover posts on desktop and mobile. Referral clicks use tracked `www.salesai.one` UTM links and are kept out of wallet, checkout, messages, and account settings.
