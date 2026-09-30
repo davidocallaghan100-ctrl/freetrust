@@ -16,6 +16,22 @@ import {
 
 type ChartPoint = { label: string; value: number }
 type NamedCount = { name: string; count: number }
+type ModerationProfile = { id: string; full_name: string | null; username?: string | null; avatar_url: string | null }
+type ModerationReport = {
+  id: string
+  reporter_id: string
+  reported_user_id: string | null
+  post_id: string | null
+  content_type: string
+  reason: string
+  details: string | null
+  status: 'open' | 'reviewing' | 'resolved' | 'dismissed'
+  created_at: string
+  resolved_at: string | null
+  resolution: string | null
+  reporter: ModerationProfile | null
+  reported_user: ModerationProfile | null
+}
 
 type AdminPayload = {
   queriedAt: string
@@ -121,6 +137,7 @@ type AdminPayload = {
 const SECTIONS = [
   ['overview', 'Overview'],
   ['david-only', 'David Only'],
+  ['moderation', 'Moderation'],
   ['users', 'Users'],
   ['trust', 'Trust Scores'],
   ['marketplace', 'Marketplace'],
@@ -248,8 +265,11 @@ function DataTable({ headers, rows }: { headers: string[]; rows: React.ReactNode
 
 export default function AdminDashboardClient() {
   const [data, setData] = useState<AdminPayload | null>(null)
+  const [moderationReports, setModerationReports] = useState<ModerationReport[]>([])
   const [loading, setLoading] = useState(true)
+  const [moderationLoading, setModerationLoading] = useState(true)
   const [error, setError] = useState('')
+  const [moderationError, setModerationError] = useState('')
   const [now, setNow] = useState(() => new Date())
 
   const loadData = useCallback(async () => {
@@ -266,7 +286,39 @@ export default function AdminDashboardClient() {
     }
   }, [])
 
+  const loadModeration = useCallback(async () => {
+    setModerationLoading(true)
+    setModerationError('')
+    try {
+      const res = await fetch('/api/admin/moderation', { cache: 'no-store' })
+      if (!res.ok) throw new Error(`Moderation queue failed with ${res.status}`)
+      const payload = await res.json() as { reports?: ModerationReport[] }
+      setModerationReports(payload.reports ?? [])
+    } catch (err) {
+      setModerationError(err instanceof Error ? err.message : 'Unable to load moderation queue')
+    } finally {
+      setModerationLoading(false)
+    }
+  }, [])
+
+  const resolveModerationReport = useCallback(async (reportId: string, status: 'reviewing' | 'resolved' | 'dismissed') => {
+    const resolution = status === 'reviewing' ? 'Under review' : window.prompt(status === 'resolved' ? 'Resolution note' : 'Dismissal note', status === 'resolved' ? 'Reviewed and actioned.' : 'Reviewed and dismissed.')
+    if (resolution === null) return
+    try {
+      const res = await fetch(`/api/admin/moderation/${reportId}/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, resolution }),
+      })
+      if (!res.ok) throw new Error('Could not update moderation report')
+      await loadModeration()
+    } catch (err) {
+      setModerationError(err instanceof Error ? err.message : 'Could not update moderation report')
+    }
+  }, [loadModeration])
+
   useEffect(() => { loadData() }, [loadData])
+  useEffect(() => { loadModeration() }, [loadModeration])
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 30000)
     return () => window.clearInterval(id)
@@ -299,7 +351,7 @@ export default function AdminDashboardClient() {
         <nav className="ft-admin-nav">
           {nav.map(([id, label]) => <a key={id} href={`#${id}`}>{label}</a>)}
         </nav>
-        <div className="ft-admin-secure">David-only dashboard. Locked to exact approved Supabase auth emails; non-matching sessions redirect home.</div>
+        <div className="ft-admin-secure">David-only dashboard. Locked to davidocallaghan100@gmail.com; non-matching sessions redirect home.</div>
       </aside>
 
       <div className="ft-admin-main">
@@ -352,6 +404,36 @@ export default function AdminDashboardClient() {
                     rows={data.adminAccess.protectionLayers.map(row => [row.layer, row.behavior])}
                   />
                 </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard id="moderation" title="UGC Moderation Queue" updatedAt={updatedAt} onRefresh={loadModeration} loading={moderationLoading}>
+              {moderationError ? <div className="ft-admin-card" style={{ borderColor: 'rgba(248,113,113,.4)', color: '#fecaca', marginBottom: '.8rem' }}>{moderationError}</div> : null}
+              <div className="ft-admin-grid">
+                <StatCard label="Open reports" value={fmt(moderationReports.filter(row => row.status === 'open').length)} accent="var(--ft-danger)" />
+                <StatCard label="Under review" value={fmt(moderationReports.filter(row => row.status === 'reviewing').length)} accent="#fbbf24" />
+                <StatCard label="Block signals" value={fmt(moderationReports.filter(row => row.content_type === 'member_block' || row.reason === 'blocked_user').length)} accent="#a78bfa" />
+                <StatCard label="Resolved/dismissed" value={fmt(moderationReports.filter(row => row.status === 'resolved' || row.status === 'dismissed').length)} accent="#34d399" />
+              </div>
+              <div className="ft-admin-card" style={{ marginTop: '.8rem' }}>
+                <h3>Latest member reports and blocks</h3>
+                <DataTable
+                  headers={['Created', 'Status', 'Reporter', 'Reported member', 'Content', 'Reason', 'Details', 'Actions']}
+                  rows={moderationReports.map(report => [
+                    fmtDate(report.created_at),
+                    <span className="ft-admin-pill" key={`${report.id}-status`}>{report.status}</span>,
+                    report.reporter?.full_name ?? report.reporter?.username ?? report.reporter_id,
+                    report.reported_user?.full_name ?? report.reported_user?.username ?? report.reported_user_id ?? 'Unknown',
+                    report.post_id ? <Link key={`${report.id}-content`} href={report.post_id.includes('-') && !report.post_id.match(/^[0-9a-f-]{36}$/i) ? '/feed' : `/feed/${report.post_id}`} style={{ color: 'var(--ft-accent)', fontWeight: 800 }}>Open</Link> : report.content_type,
+                    report.reason,
+                    report.details ?? '—',
+                    <span key={`${report.id}-actions`} style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap' }}>
+                      <button type="button" onClick={() => resolveModerationReport(report.id, 'reviewing')} className="ft-admin-refresh" style={{ minHeight: 32, padding: '.35rem .55rem' }}>Review</button>
+                      <button type="button" onClick={() => resolveModerationReport(report.id, 'resolved')} className="ft-admin-refresh" style={{ minHeight: 32, padding: '.35rem .55rem' }}>Resolve</button>
+                      <button type="button" onClick={() => resolveModerationReport(report.id, 'dismissed')} className="ft-admin-refresh" style={{ minHeight: 32, padding: '.35rem .55rem' }}>Dismiss</button>
+                    </span>,
+                  ])}
+                />
               </div>
             </SectionCard>
 

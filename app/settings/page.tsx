@@ -440,7 +440,8 @@ function AccountTab({
         onSaved(data.profile)
         showToast('Account saved!')
       } else {
-        showToast('Failed to save. Try again.')
+        const data = await res.json().catch(() => null) as { error?: string } | null
+        showToast(data?.error ?? 'Failed to save. Try again.')
       }
     } catch {
       showToast('Network error.')

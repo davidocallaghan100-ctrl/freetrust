@@ -29,7 +29,7 @@ const safetySections = [
   },
   {
     title: 'Reports, blocks and moderation',
-    body: 'Members can report suspicious behaviour, harassment, misleading listings, unsafe payment requests or prohibited content. FreeTrust may use reports, trust signals, transaction history and platform logs to review abuse and take appropriate action.',
+    body: 'Members can report feed content directly from the post options menu and can block abusive members. Blocking immediately hides that member from the blocker’s feed and also notifies FreeTrust moderation. FreeTrust reviews reports, trust signals, transaction history and platform logs, and aims to action confirmed abuse within 24 hours.',
   },
   {
     title: 'Data protection and transparency',
@@ -100,8 +100,8 @@ export default function SafetyPage() {
         <section className="ft-policy-report">
           <h2>If something feels unsafe</h2>
           <p className="ft-policy-subtitle">
-            Keep the conversation and payment trail inside FreeTrust, do not send money externally,
-            save any relevant messages or order details, and contact FreeTrust support for review.
+            Use the post options menu to report content or block a member, keep the conversation and payment trail inside FreeTrust,
+            do not send money externally, save any relevant messages or order details, and contact FreeTrust support for urgent review.
           </p>
           <a href="mailto:hello@freetrust.co" className="ft-policy-btn ft-policy-btn-primary">
             Report a safety concern

@@ -41,6 +41,14 @@ export async function PATCH(request: NextRequest) {
     for (const key of allowed) {
       if (key in body) updates[key] = body[key]
     }
+    // Username is optional, but the database column is UNIQUE. The account
+    // form sends an empty string when the member leaves the field blank; keep
+    // that as NULL so members without usernames can still save other profile
+    // changes without colliding with another blank username row.
+    if ('username' in updates) {
+      const username = typeof updates.username === 'string' ? updates.username.trim() : ''
+      updates.username = username || null
+    }
     // Normalise country to uppercase ISO-alpha-2
     if (typeof updates.country === 'string') {
       updates.country = (updates.country as string).toUpperCase()
@@ -77,6 +85,9 @@ export async function PATCH(request: NextRequest) {
 
     if (error) {
       console.error('[PATCH /api/settings/account]', error)
+      if (error.code === '23505' && /username/i.test(error.message ?? '')) {
+        return NextResponse.json({ error: 'That username is already taken. Please choose another.' }, { status: 409 })
+      }
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 

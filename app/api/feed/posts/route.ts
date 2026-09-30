@@ -49,6 +49,25 @@ function normaliseProfile(profile: unknown): FeedItem['profiles'] {
   return Array.isArray(profile) ? (profile[0] ?? null) : ((profile as FeedItem['profiles']) ?? null)
 }
 
+async function getBlockedUserIds(supabase: SupabaseLike, userId: string | null): Promise<string[]> {
+  if (!userId) return []
+  const { data, error } = await supabase
+    .from('user_blocks')
+    .select('blocked_id')
+    .eq('blocker_id', userId)
+  if (error) {
+    console.warn('[feed/posts] user block lookup skipped:', error.message)
+    return []
+  }
+  return (data ?? []).map((row: { blocked_id: string }) => row.blocked_id).filter(Boolean)
+}
+
+function withoutBlockedAuthors<T extends { user_id: string | null }>(items: T[], blockedUserIds: string[]): T[] {
+  if (blockedUserIds.length === 0) return items
+  const blocked = new Set(blockedUserIds)
+  return items.filter(item => !item.user_id || !blocked.has(item.user_id))
+}
+
 async function withProfileVerificationBadges<T extends { profiles: FeedItem['profiles'] }>(
   supabase: SupabaseLike,
   items: T[],
@@ -171,19 +190,20 @@ export async function GET(req: NextRequest) {
     const authorId = searchParams.get('authorId')?.trim() || null
     const organisationId = searchParams.get('organisationId')?.trim() || null
     const isProfileScoped = Boolean(authorId || organisationId)
+    const blockedUserIds = await getBlockedUserIds(supabase, user?.id ?? null)
 
     // ── Side-table filters: query a different table and map to FeedItem ─────
     if (filter === 'articles') {
-      return await fetchArticles(supabase, offset, limit, user?.id ?? null)
+      return await fetchArticles(supabase, offset, limit, user?.id ?? null, blockedUserIds)
     }
     if (filter === 'services') {
-      return await fetchServices(supabase, offset, limit, user?.id ?? null)
+      return await fetchServices(supabase, offset, limit, user?.id ?? null, blockedUserIds)
     }
     if (filter === 'jobs') {
-      return await fetchJobs(supabase, offset, limit)
+      return await fetchJobs(supabase, offset, limit, blockedUserIds)
     }
     if (filter === 'events') {
-      return await fetchEvents(supabase, offset, limit)
+      return await fetchEvents(supabase, offset, limit, blockedUserIds)
     }
 
     // ── feed_posts query (all/discover / media / photos / videos / trending / following) ─────
@@ -248,6 +268,9 @@ export async function GET(req: NextRequest) {
       }
     } else if (legacyType && legacyType !== 'all') {
       query = query.eq('type', legacyType)
+    }
+    if (blockedUserIds.length > 0) {
+      query = query.not('user_id', 'in', `(${blockedUserIds.map(id => `"${id}"`).join(',')})`)
     }
     // 'all'/'discover' falls through — re-ranked below
 
@@ -419,7 +442,7 @@ export async function GET(req: NextRequest) {
     })))
 
     const unifiedResult = isUnifiedAll
-      ? await buildUnifiedAllFeed(supabase, feedItemsWithBadges, offset, limit, fetchLimit, user?.id ?? null)
+      ? await buildUnifiedAllFeed(supabase, feedItemsWithBadges, offset, limit, fetchLimit, user?.id ?? null, blockedUserIds)
       : { posts: feedItemsWithBadges, hasMore: enriched.length === limit }
 
     return NextResponse.json({
@@ -447,11 +470,12 @@ async function buildUnifiedAllFeed(
   limit: number,
   sourceWindow: number,
   userId: string | null,
+  blockedUserIds: string[],
 ): Promise<{ posts: FeedItem[]; hasMore: boolean }> {
   const [articles, services, activities] = await Promise.all([
-    loadArticles(supabase, 0, sourceWindow, userId),
-    loadServices(supabase, 0, sourceWindow, userId),
-    loadActivities(supabase, 0, sourceWindow),
+    loadArticles(supabase, 0, sourceWindow, userId, blockedUserIds),
+    loadServices(supabase, 0, sourceWindow, userId, blockedUserIds),
+    loadActivities(supabase, 0, sourceWindow, blockedUserIds),
   ])
 
   const merged = [...feedPosts, ...articles, ...services, ...activities].sort(byNewestCreatedAt)
@@ -461,7 +485,7 @@ async function buildUnifiedAllFeed(
   }
 }
 
-async function loadArticles(supabase: SupabaseLike, offset: number, limit: number, userId: string | null = null): Promise<FeedItem[]> {
+async function loadArticles(supabase: SupabaseLike, offset: number, limit: number, userId: string | null = null, blockedUserIds: string[] = []): Promise<FeedItem[]> {
   const { data, error } = await supabase
     .from('articles')
     .select(`
@@ -545,10 +569,10 @@ async function loadArticles(supabase: SupabaseLike, offset: number, limit: numbe
     }
   })
 
-  return await withProfileVerificationBadges(supabase, await withSideTableReactions(supabase, items, 'article', userId))
+  return withoutBlockedAuthors(await withProfileVerificationBadges(supabase, await withSideTableReactions(supabase, items, 'article', userId)), blockedUserIds)
 }
 
-async function loadServices(supabase: SupabaseLike, offset: number, limit: number, userId: string | null = null): Promise<FeedItem[]> {
+async function loadServices(supabase: SupabaseLike, offset: number, limit: number, userId: string | null = null, blockedUserIds: string[] = []): Promise<FeedItem[]> {
   // Services live in the `listings` table with product_type='service'.
   // Same canonical pattern as app/services/page.tsx and
   // app/api/admin/content/route.ts. There is no separate `services` table.
@@ -603,10 +627,10 @@ async function loadServices(supabase: SupabaseLike, offset: number, limit: numbe
     profiles: normaliseProfile(s.seller),
   }))
 
-  return await withProfileVerificationBadges(supabase, await withSideTableReactions(supabase, items, 'service', userId))
+  return withoutBlockedAuthors(await withProfileVerificationBadges(supabase, await withSideTableReactions(supabase, items, 'service', userId)), blockedUserIds)
 }
 
-async function loadActivities(supabase: SupabaseLike, offset: number, limit: number): Promise<FeedItem[]> {
+async function loadActivities(supabase: SupabaseLike, offset: number, limit: number, blockedUserIds: string[] = []): Promise<FeedItem[]> {
   const { data, error } = await supabase
     .from('community_activities')
     .select(`
@@ -662,20 +686,20 @@ async function loadActivities(supabase: SupabaseLike, offset: number, limit: num
     }
   })
 
-  return await withProfileVerificationBadges(supabase, items)
+  return withoutBlockedAuthors(await withProfileVerificationBadges(supabase, items), blockedUserIds)
 }
 
-async function fetchArticles(supabase: SupabaseLike, offset: number, limit: number, userId: string | null) {
-  const items = await loadArticles(supabase, offset, limit, userId)
+async function fetchArticles(supabase: SupabaseLike, offset: number, limit: number, userId: string | null, blockedUserIds: string[]) {
+  const items = await loadArticles(supabase, offset, limit, userId, blockedUserIds)
   return NextResponse.json({ posts: items, hasMore: items.length === limit })
 }
 
-async function fetchServices(supabase: SupabaseLike, offset: number, limit: number, userId: string | null) {
-  const items = await loadServices(supabase, offset, limit, userId)
+async function fetchServices(supabase: SupabaseLike, offset: number, limit: number, userId: string | null, blockedUserIds: string[]) {
+  const items = await loadServices(supabase, offset, limit, userId, blockedUserIds)
   return NextResponse.json({ posts: items, hasMore: items.length === limit })
 }
 
-async function fetchJobs(supabase: SupabaseLike, offset: number, limit: number) {
+async function fetchJobs(supabase: SupabaseLike, offset: number, limit: number, blockedUserIds: string[] = []) {
   const { data, error } = await supabase
     .from('jobs')
     .select(`
@@ -747,10 +771,11 @@ async function fetchJobs(supabase: SupabaseLike, offset: number, limit: number) 
     }
   })
 
-  return NextResponse.json({ posts: await withProfileVerificationBadges(supabase, items), hasMore: items.length === limit })
+  const visibleItems = withoutBlockedAuthors(await withProfileVerificationBadges(supabase, items), blockedUserIds)
+  return NextResponse.json({ posts: visibleItems, hasMore: items.length === limit })
 }
 
-async function fetchEvents(supabase: SupabaseLike, offset: number, limit: number) {
+async function fetchEvents(supabase: SupabaseLike, offset: number, limit: number, blockedUserIds: string[] = []) {
   const { data, error } = await supabase
     .from('events')
     .select(`
@@ -799,7 +824,8 @@ async function fetchEvents(supabase: SupabaseLike, offset: number, limit: number
     }
   })
 
-  return NextResponse.json({ posts: await withProfileVerificationBadges(supabase, items), hasMore: items.length === limit })
+  const visibleItems = withoutBlockedAuthors(await withProfileVerificationBadges(supabase, items), blockedUserIds)
+  return NextResponse.json({ posts: visibleItems, hasMore: items.length === limit })
 }
 
 export async function POST(req: NextRequest) {

@@ -525,6 +525,7 @@ export default function FeedPage() {
                     post={post}
                     currentUserId={currentUserId}
                     onDelete={(id) => setPosts(prev => prev.filter(p => p.id !== id))}
+                    onBlockAuthor={(blockedAuthorId) => setPosts(prev => prev.filter(p => (p.user_id ?? p.author_id) !== blockedAuthorId))}
                   />
                   {index === 3 && scope === 'discover' && activeFilter === 'all' ? (
                     <div className="feed-content-ad"><SalesAiOneSponsoredCard placement="feed-inline" /></div>

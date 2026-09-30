@@ -1658,6 +1658,91 @@ function ShareSheet({
   )
 }
 
+type SafetyReason = 'harassment' | 'hate' | 'spam' | 'scam' | 'nudity' | 'violence' | 'misleading' | 'other'
+
+const SAFETY_REASONS: { value: SafetyReason; label: string }[] = [
+  { value: 'harassment', label: 'Harassment or bullying' },
+  { value: 'hate', label: 'Hate or abuse' },
+  { value: 'spam', label: 'Spam' },
+  { value: 'scam', label: 'Scam or unsafe payment' },
+  { value: 'nudity', label: 'Nudity or sexual content' },
+  { value: 'violence', label: 'Violence or threats' },
+  { value: 'misleading', label: 'Misleading content' },
+  { value: 'other', label: 'Something else' },
+]
+
+function SafetyPanel({
+  authorName,
+  reason,
+  details,
+  busy,
+  message,
+  onReasonChange,
+  onDetailsChange,
+  onReport,
+  onBlock,
+  onClose,
+}: {
+  authorName: string
+  reason: SafetyReason
+  details: string
+  busy: boolean
+  message: string
+  onReasonChange: (reason: SafetyReason) => void
+  onDetailsChange: (details: string) => void
+  onReport: () => void
+  onBlock: () => void
+  onClose: () => void
+}) {
+  return (
+    <div style={{ padding: '0 16px 14px' }}>
+      <div style={{ border: '1px solid rgba(248,113,113,0.26)', background: 'linear-gradient(135deg, rgba(127,29,29,0.22), rgba(15,23,42,0.96))', borderRadius: 14, padding: 13, boxShadow: '0 14px 34px rgba(0,0,0,0.28)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start', marginBottom: 10 }}>
+          <div>
+            <div style={{ color: '#fecaca', fontSize: 13, fontWeight: 900 }}>Report or block</div>
+            <div style={{ color: 'var(--ft-text-secondary)', fontSize: 12, lineHeight: 1.45, marginTop: 2 }}>
+              Reports go to FreeTrust moderation. Blocking {authorName} hides their posts from your feed.
+            </div>
+          </div>
+          <button type="button" onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--ft-text-tertiary)', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>×</button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))', gap: 7, marginBottom: 10 }}>
+          {SAFETY_REASONS.map(option => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onReasonChange(option.value)}
+              style={{ border: reason === option.value ? '1px solid rgba(248,113,113,0.72)' : '1px solid var(--ft-border-strong)', background: reason === option.value ? 'rgba(248,113,113,0.14)' : 'rgba(15,23,42,0.62)', color: reason === option.value ? '#fecaca' : 'var(--ft-text-secondary)', borderRadius: 10, padding: '8px 9px', textAlign: 'left', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <textarea
+          value={details}
+          onChange={event => onDetailsChange(event.target.value)}
+          maxLength={1000}
+          rows={3}
+          placeholder="Optional details for the moderation team…"
+          style={{ width: '100%', boxSizing: 'border-box', border: '1px solid rgba(248,113,113,0.22)', background: 'rgba(2,6,23,0.7)', borderRadius: 10, padding: '9px 10px', color: 'var(--ft-text)', fontSize: 13, fontFamily: 'inherit', resize: 'vertical', marginBottom: 10 }}
+        />
+        {message ? <div role="status" style={{ marginBottom: 9, color: message.startsWith('✓') ? '#86efac' : '#fecaca', fontSize: 12, fontWeight: 700 }}>{message}</div> : null}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button type="button" disabled={busy} onClick={onReport} style={{ border: 'none', background: '#f87171', color: '#1f0909', borderRadius: 9, padding: '9px 13px', fontSize: 13, fontWeight: 900, fontFamily: 'inherit', cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+            {busy ? 'Sending…' : 'Report content'}
+          </button>
+          <button type="button" disabled={busy} onClick={onBlock} style={{ border: '1px solid rgba(248,113,113,0.44)', background: 'rgba(127,29,29,0.26)', color: '#fecaca', borderRadius: 9, padding: '9px 13px', fontSize: 13, fontWeight: 800, fontFamily: 'inherit', cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+            Block member
+          </button>
+          <button type="button" onClick={onClose} style={{ border: '1px solid var(--ft-border-strong)', background: 'transparent', color: 'var(--ft-text-secondary)', borderRadius: 9, padding: '9px 13px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Main PostCard ─────────────────────────────────────────────────────────────
 
 export default function PostCard({
@@ -1665,11 +1750,13 @@ export default function PostCard({
   expanded = false,
   currentUserId,
   onDelete,
+  onBlockAuthor,
 }: {
   post: FeedPost
   expanded?: boolean
   currentUserId?: string
   onDelete?: (postId: string) => void
+  onBlockAuthor?: (authorId: string) => void
 }) {
   const authorId = post.user_id ?? post.author_id ?? ''
   const likeInitial    = post.likes_count    ?? post.like_count    ?? 0
@@ -1694,6 +1781,11 @@ export default function PostCard({
   const [storyShareToast,   setStoryShareToast]   = useState('')
   const [sharingToInstagram,setSharingToInstagram]= useState(false)
   const [showMenu,          setShowMenu]          = useState(false)
+  const [showSafetyPanel,   setShowSafetyPanel]   = useState(false)
+  const [safetyReason,      setSafetyReason]      = useState<SafetyReason>('harassment')
+  const [safetyDetails,     setSafetyDetails]     = useState('')
+  const [safetyBusy,        setSafetyBusy]        = useState(false)
+  const [safetyMessage,     setSafetyMessage]     = useState('')
   const [deleting,          setDeleting]          = useState(false)
   const [deleted,           setDeleted]           = useState(false)
   const [editing,           setEditing]           = useState(false)
@@ -1899,6 +1991,8 @@ export default function PostCard({
   // or admin membership must not grant access to another member's post.
   const canEditMusicBackground = post.type === 'music' && isOwner
   const canEditPost = isOwner
+  const canUseSafetyActions = Boolean(currentUserId && authorId && currentUserId !== authorId)
+  const canShowPostMenu = canEditPost || canUseSafetyActions
 
   const startEditing = () => {
     setEditedContent(stripInternalMarkers(postContent))
@@ -2119,6 +2213,68 @@ export default function PostCard({
       alert(`Could not delete ${itemLabel}. Please try again.`)
     }
     finally { setDeleting(false); setShowMenu(false) }
+  }
+
+  const openSafetyPanel = () => {
+    setSafetyMessage('')
+    setShowSafetyPanel(true)
+    setShowMenu(false)
+  }
+
+  const submitReport = async () => {
+    if (!authorId || safetyBusy) return
+    setSafetyBusy(true)
+    setSafetyMessage('')
+    try {
+      const res = await fetch('/api/moderation/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          post_id: post.id,
+          reported_user_id: authorId,
+          content_type: post.type || 'post',
+          reason: safetyReason,
+          details: safetyDetails,
+        }),
+      })
+      const data = await res.json().catch(() => ({} as { error?: string }))
+      if (!res.ok) {
+        setSafetyMessage(data.error ?? 'Could not submit report. Please try again.')
+        return
+      }
+      setSafetyMessage('✓ Report sent to FreeTrust moderation.')
+      setSafetyDetails('')
+    } catch {
+      setSafetyMessage('Network error — please try again.')
+    } finally {
+      setSafetyBusy(false)
+    }
+  }
+
+  const blockAuthor = async () => {
+    if (!authorId || safetyBusy) return
+    if (!confirm(`Block ${name}? Their posts will be hidden from your feed and FreeTrust moderation will be notified.`)) return
+    setSafetyBusy(true)
+    setSafetyMessage('')
+    try {
+      const res = await fetch('/api/moderation/block', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blocked_user_id: authorId, post_id: post.id }),
+      })
+      const data = await res.json().catch(() => ({} as { error?: string }))
+      if (!res.ok) {
+        setSafetyMessage(data.error ?? 'Could not block member. Please try again.')
+        return
+      }
+      setSafetyMessage('✓ Member blocked. Hiding their posts now.')
+      setDeleted(true)
+      onBlockAuthor?.(authorId)
+    } catch {
+      setSafetyMessage('Network error — please try again.')
+    } finally {
+      setSafetyBusy(false)
+    }
   }
 
   const handleSaveEdit = async () => {
@@ -2616,8 +2772,8 @@ export default function PostCard({
             {typeInfo.label}
           </span>
         )}
-        {/* ── Owner menu ── */}
-        {canEditPost && (
+        {/* ── Post safety / owner menu ── */}
+        {canShowPostMenu && (
           <div style={{ position: 'relative', flexShrink: 0, zIndex: 300 }} onClick={e => e.stopPropagation()}>
             <button
               onClick={() => setShowMenu(v => !v)}
@@ -2651,11 +2807,50 @@ export default function PostCard({
                     <span>{deleting ? 'Deleting…' : 'Delete post'}</span>
                   </button>
                 ) : null}
+                {canUseSafetyActions ? (
+                  <>
+                    {canEditPost ? <div style={{ height: 1, background: 'var(--ft-border-strong)', opacity: 0.55 }} /> : null}
+                    <button
+                      onClick={openSafetyPanel}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '11px 14px', background: 'none', border: 'none', color: '#fecaca', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.08)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                    >
+                      <span>🚩</span>
+                      <span>Report content</span>
+                    </button>
+                    <button
+                      onClick={blockAuthor}
+                      disabled={safetyBusy}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '11px 14px', background: 'none', border: 'none', color: '#fca5a5', fontSize: '13px', cursor: safetyBusy ? 'not-allowed' : 'pointer', fontFamily: 'inherit', textAlign: 'left', opacity: safetyBusy ? 0.6 : 1 }}
+                      onMouseEnter={e => { if (!safetyBusy) e.currentTarget.style.background = 'rgba(248,113,113,0.08)' }}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                    >
+                      <span>⛔</span>
+                      <span>Block member</span>
+                    </button>
+                  </>
+                ) : null}
               </div>
             )}
           </div>
         )}
       </div>
+
+      {showSafetyPanel && canUseSafetyActions ? (
+        <SafetyPanel
+          authorName={name}
+          reason={safetyReason}
+          details={safetyDetails}
+          busy={safetyBusy}
+          message={safetyMessage}
+          onReasonChange={setSafetyReason}
+          onDetailsChange={setSafetyDetails}
+          onReport={submitReport}
+          onBlock={blockAuthor}
+          onClose={() => setShowSafetyPanel(false)}
+        />
+      ) : null}
 
       {/* ── Body ── */}
       <div style={{ padding: '0 16px', minWidth: 0, overflow: 'hidden' }}>
