@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, getStoredSessionCredentials } from '@/lib/supabase/client'
 import { compressImage } from '@/lib/image-compression'
 import dynamic from 'next/dynamic'
 import type { DeliveryZoneValue } from '@/components/DeliveryZoneMap'
@@ -70,6 +70,33 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string)
       },
     )
   })
+}
+
+type UploadAuth = {
+  userId: string
+  accessToken: string
+}
+
+async function resolveUploadAuth(supabase: ReturnType<typeof createClient>): Promise<UploadAuth | null> {
+  // The SSR browser client stores the signed session in cookies. Reading that
+  // value first avoids GoTrue's async lock/refresh path, which can hang on
+  // iOS Safari/WKWebView even though the user is visibly signed in.
+  const stored = getStoredSessionCredentials()
+  const stillValid = stored && (stored.expiresAt == null || stored.expiresAt > Math.floor(Date.now() / 1000) + 30)
+  if (stillValid) {
+    return { userId: stored.userId, accessToken: stored.accessToken }
+  }
+
+  // Keep the normal Supabase path as a fallback for a session that is not
+  // available in the browser cookie yet or needs a refresh.
+  const { data: sessionData } = await withTimeout(
+    supabase.auth.getSession(),
+    12_000,
+    'Session lookup timed out. Please refresh and try again.',
+  )
+  const session = sessionData.session
+  if (!session?.user?.id || !session.access_token) return null
+  return { userId: session.user.id, accessToken: session.access_token }
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -616,24 +643,14 @@ export default function CreatePage() {
       // The session already contains the user id and bearer token needed by
       // Storage RLS, so avoid the extra network round-trip and fail clearly
       // if the local auth lock does not resolve promptly.
-      const { data: sessionData } = await withTimeout(
-        supabase.auth.getSession(),
-        12_000,
-        'Session lookup timed out. Please refresh and try again.',
-      )
-      const session = sessionData.session
-      const user = session?.user ?? null
-      if (!user) {
+      const auth = await resolveUploadAuth(supabase)
+      if (!auth) {
         setUploadProgress('Upload failed — please sign in and try again')
         setUploadingMedia(false)
         return
       }
-      const accessToken = session?.access_token
-      if (!accessToken) {
-        setUploadProgress('Upload failed — your session was not ready. Please refresh and try again.')
-        setUploadingMedia(false)
-        return
-      }
+      const user = { id: auth.userId }
+      const accessToken = auth.accessToken
 
       // ── 4. Build a 100% synthetic storage path ──────────────────────────
       // Folder layout: <kind>/<user_id>/<timestamp>-<random>.<ext>
@@ -816,21 +833,14 @@ export default function CreatePage() {
 
       step = 'auth'
       const supabase = createClient()
-      const [{ data: { user } }, { data: sessionData }] = await Promise.all([
-        supabase.auth.getUser(),
-        supabase.auth.getSession(),
-      ])
-      if (!user) {
+      const auth = await resolveUploadAuth(supabase)
+      if (!auth) {
         setUploadProgress('Upload failed — please sign in and try again')
         setUploadingMedia(false)
         return
       }
-      const accessToken = sessionData.session?.access_token
-      if (!accessToken) {
-        setUploadProgress('Upload failed — your session was not ready. Please refresh and try again.')
-        setUploadingMedia(false)
-        return
-      }
+      const user = { id: auth.userId }
+      const accessToken = auth.accessToken
 
       step = 'build-path'
       const ext = AUDIO_MIME_TO_EXT[fileType] || 'mp3'
@@ -906,19 +916,13 @@ export default function CreatePage() {
 
       step = 'auth'
       const supabase = createClient()
-      const [{ data: { user } }, { data: sessionData }] = await Promise.all([
-        supabase.auth.getUser(),
-        supabase.auth.getSession(),
-      ])
-      if (!user) {
+      const auth = await resolveUploadAuth(supabase)
+      if (!auth) {
         setUploadProgress('Upload failed — please sign in and try again')
         return
       }
-      const accessToken = sessionData.session?.access_token
-      if (!accessToken) {
-        setUploadProgress('Upload failed — your session was not ready. Please refresh and try again.')
-        return
-      }
+      const user = { id: auth.userId }
+      const accessToken = auth.accessToken
 
       step = 'build-path'
       const mimeToExt: Record<string, string> = {
