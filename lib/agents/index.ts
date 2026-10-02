@@ -15,6 +15,7 @@ import { revenueIntelligenceConfig } from './revenueIntelligence';
 import { pricingAdviserConfig } from './pricingAdviser';
 import { collabMatchmakerConfig } from './collabMatchmaker';
 import { contentRepurposerConfig } from './contentRepurposer';
+import { contractBuilderConfig } from './contractBuilder';
 
 export const AGENT_REGISTRY: Record<AgentName, AgentConfig> = {
   generalResearch: generalResearchConfig,
@@ -33,6 +34,7 @@ export const AGENT_REGISTRY: Record<AgentName, AgentConfig> = {
   pricingAdviser: pricingAdviserConfig,
   collabMatchmaker: collabMatchmakerConfig,
   contentRepurposer: contentRepurposerConfig,
+  contractBuilder: contractBuilderConfig,
 };
 
 export const AGENT_LIST: AgentConfig[] = Object.values(AGENT_REGISTRY);

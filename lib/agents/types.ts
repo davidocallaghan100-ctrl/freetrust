@@ -14,7 +14,8 @@ export type AgentName =
   | 'revenueIntelligence'
   | 'pricingAdviser'
   | 'collabMatchmaker'
-  | 'contentRepurposer';
+  | 'contentRepurposer'
+  | 'contractBuilder';
 
 export interface AgentConfig {
   name: AgentName;

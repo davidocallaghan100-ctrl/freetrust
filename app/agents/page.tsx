@@ -157,6 +157,10 @@ const AGENT_INPUT_GUIDANCE: Record<string, { placeholder: string; example: strin
     placeholder: 'Ask what to improve, or attach your profile/listing screenshots...',
     example: 'I want more profile views and my first 3 reviews this month. Tell me what to do first.',
   },
+  contractBuilder: {
+    placeholder: 'Describe the people, work, price, dates, and protections for the contract you want to draft...',
+    example: 'Draft a contract between me, David O\'Callaghan, and a FreeTrust member for a €750 website build. Three milestones over four weeks, two revision rounds, 50% upfront, and the client owns the final website after full payment.',
+  },
   bulkListingGenerator: {
     placeholder: 'Paste a list of products/services, or attach a text/CSV list...',
     example: 'Beginner Spanish lessons — €35/hr\nWebsite audit for small businesses — €120\nHandmade ceramic mugs — €28 each',
@@ -196,12 +200,13 @@ const AGENT_GROUPS = {
   'Create & earn': ['listingCreator', 'bulkListingGenerator', 'imageGenerator', 'articleDrafter', 'eventPromoter', 'contentRepurposer'],
   'Win work': ['salesDevelopment', 'applicationWriter', 'messageDrafter', 'pricingAdviser', 'revenueIntelligence'],
   'Grow & connect': ['matchFinder', 'collabMatchmaker', 'reputationCoach', 'trustScoreOptimiser'],
+  'Contracts & agreements': ['contractBuilder'],
 } as const;
 
 type ActionIdea = {
   agentName: string;
   label: string;
-  icon: 'listing' | 'event' | 'message' | 'buyers';
+  icon: 'listing' | 'event' | 'message' | 'buyers' | 'contract';
   sparkle?: boolean;
   starterPrompt: string;
 };
@@ -234,6 +239,13 @@ const ACTION_IDEAS: ActionIdea[] = [
     icon: 'buyers',
     starterPrompt: 'What are you trying to sell, promote, or match? Tell me the offer, who you think it helps, your price or budget, and what kind of buyers or collaborators you want me to find.',
   },
+  {
+    agentName: 'contractBuilder',
+    label: 'Develop a\ncontract',
+    icon: 'contract',
+    sparkle: true,
+    starterPrompt: 'What kind of agreement do you need? Tell me who the parties are, the work or collaboration, deliverables, price, dates, and any payment, confidentiality, intellectual property, or cancellation terms you want included.',
+  },
 ];
 
 const DEFAULT_AGENT = AGENT_LIST.find((agent) => agent.name === 'generalResearch') ?? AGENT_LIST[0];
@@ -242,11 +254,12 @@ function getAgentByName(name: string) {
   return AGENT_LIST.find((agent) => agent.name === name) ?? null;
 }
 
-function AgentLineIcon({ name }: { name: 'listing' | 'event' | 'message' | 'buyers' | 'preview' | 'mic' | 'wave' | 'integrations' }) {
+function AgentLineIcon({ name }: { name: 'listing' | 'event' | 'message' | 'buyers' | 'contract' | 'preview' | 'mic' | 'wave' | 'integrations' }) {
   if (name === 'event') return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 3.5v3M17 3.5v3M5 9h14M6.5 5h11A2.5 2.5 0 0 1 20 7.5v10A2.5 2.5 0 0 1 17.5 20h-11A2.5 2.5 0 0 1 4 17.5v-10A2.5 2.5 0 0 1 6.5 5Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M8 12h2M12 12h2M16 12h.01M8 16h2M12 16h2M16 16h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
   if (name === 'message') return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 7.5A3.5 3.5 0 0 1 8.5 4h7A3.5 3.5 0 0 1 19 7.5v4A3.5 3.5 0 0 1 15.5 15H12l-4.2 3.5V15A3.5 3.5 0 0 1 5 11.5v-4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M9 9.5h6M9 12h3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
   if (name === 'buyers') return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8.5 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM15.5 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" stroke="currentColor" strokeWidth="1.8"/><path d="M3.8 19a4.8 4.8 0 0 1 9.4 0M12.2 18.6a4 4 0 0 1 7.9.4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
   if (name === 'integrations') return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8.8 12.7 7.2 14.3a3.2 3.2 0 1 0 4.5 4.5l2.1-2.1a3.2 3.2 0 0 0 .7-3.4M15.2 11.3l1.6-1.6a3.2 3.2 0 1 0-4.5-4.5l-2.1 2.1a3.2 3.2 0 0 0-.7 3.4M8.5 15.5l7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+  if (name === 'contract') return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 3.5h8l3 3v14H7v-17Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M15 3.5v4h4M10 11h5M10 14h5M10 17h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="m15.7 15.8 1.1 1.1 2.3-2.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>;
   if (name === 'mic') return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Z" stroke="currentColor" strokeWidth="1.9"/><path d="M6 10.5a6 6 0 0 0 12 0M12 16.5V21M9 21h6" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"/></svg>;
   if (name === 'wave') return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 10v4M9 7v10M13 4.5v15M17 8v8M21 11v2" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>;
   return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4h8l3 3v13H7V4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M15 4v4h4M10 11h6M10 14h6M10 17h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>;
@@ -510,6 +523,7 @@ const SOCIAL_CHANNEL_PATTERN = /\b(linkedin|instagram|facebook|twitter|\bx\b|soc
 const SOCIAL_POST_PATTERN = /\b(post|caption|announce|announcement|launch|promo|promote|public)\b/i;
 
 const ACTION_INTENT_PATTERNS: Array<{ agent: string; patterns: RegExp[] }> = [
+  { agent: 'contractBuilder', patterns: [/\b(draft|create|write|build|prepare|develop)\b[\s\S]{0,60}\b(contract|agreement|terms|statement of work|service agreement)\b/i, /\b(contract|agreement|terms|statement of work|service agreement)\b[\s\S]{0,60}\b(draft|create|write|build|prepare|develop)\b/i] },
   { agent: 'imageGenerator', patterns: [/\b(generate|create|make|design|draw|produce)\b[\s\S]{0,80}\b(image|picture|photo|visual|poster|graphic|banner|thumbnail|artwork|illustration)\b/i, /\b(image|picture|photo|visual|poster|graphic|banner|thumbnail|artwork|illustration)\b[\s\S]{0,80}\b(generate|create|make|design|draw|produce)\b/i] },
   { agent: 'contentRepurposer', patterns: [/\b(linkedin|instagram|facebook|twitter|\bx\b|social|feed)\b[\s\S]{0,80}\b(post|caption|announce|announcement|launch|promo|promote|public)\b/i, /\b(post|caption|announce|announcement|launch|promo|promote|public)\b[\s\S]{0,80}\b(linkedin|instagram|facebook|twitter|\bx\b|social|feed)\b/i] },
   { agent: 'listingCreator', patterns: [/\b(create|make|draft|write|generate|list)\b[\s\S]{0,40}\b(listing|service|product|offer)\b/i, /\b(price|sell|selling)\b[\s\S]{0,40}\b(service|product|offer|listing)\b/i] },
@@ -1786,7 +1800,7 @@ export default function AgentsPage() {
                 ))}
               </div>
             )}
-            <textarea value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask FreeTrust to research, create, generate images, publish, message, list, or match…" disabled={running} />
+            <textarea value={input} onChange={(e) => setInput(e.target.value)} placeholder={AGENT_INPUT_GUIDANCE[selectedAgent.name]?.placeholder ?? 'Ask FreeTrust to research, create, generate images, publish, message, list, or match…'} disabled={running} />
             <div className="composer-bottom">
               <div className="composer-left">
                 <input ref={fileInputRef} type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,text/plain,text/markdown,text/csv,application/json,.txt,.md,.csv,.json,.pdf" style={{ display: 'none' }} onChange={(e) => onPickFiles(e.target.files)} />
@@ -1811,9 +1825,17 @@ export default function AgentsPage() {
                   <p className="sheet-copy">Pick an agent or use an idea. Agents should create drafts, listings, posts, events, matches, and confirmations on-platform — not leave you copying text around.</p>
                 </div>
                 <button type="button" className="sheet-close" onClick={() => setIdeaOpen(false)} aria-label="Close ideas">×</button>
-              </div>
-              <div className="action-principle">No silent publishing. Every tangible FreeTrust action opens an editable preview first.</div>
-              <div className="sheet-idea-stream" aria-label="Start with an action idea">
+               </div>
+               <div className="action-principle">No silent publishing. Every tangible FreeTrust action opens an editable preview first.</div>
+               <Link href="/settings?tab=integrations" className="integration-menu-card" onClick={() => setIdeaOpen(false)}>
+                 <span className="integration-menu-icon"><AgentLineIcon name="integrations" /></span>
+                 <span className="integration-menu-copy">
+                   <strong>Integrations</strong>
+                   <small>{connectedIntegrations.length > 0 ? `${connectedIntegrations.length} connected tool${connectedIntegrations.length === 1 ? '' : 's'} ready for Agents` : 'Connect HubSpot, Salesforce, Outlook, WhatsApp, LinkedIn, or Instagram'}</small>
+                 </span>
+                 <span className="integration-menu-chevron" aria-hidden="true">›</span>
+               </Link>
+               <div className="sheet-idea-stream" aria-label="Start with an action idea">
                 {ideaAgents.map((idea) => (
                   <button key={idea.agent.name} type="button" className={`idea-chip ${selectedAgent.name === idea.agent.name ? 'active' : ''}`} onClick={() => startIdeaConversation(idea)}>
                     <span className="idea-chip-icon"><AgentLineIcon name={idea.icon} /></span><span className="idea-chip-label">{idea.label}</span>{idea.sparkle && <span className="chip-sparkle">✦</span>}
