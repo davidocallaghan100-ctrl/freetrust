@@ -16,7 +16,10 @@ security definer
 set search_path = public, pg_temp
 as $$
 begin
-  if current_user <> 'service_role' then
+  -- SECURITY DEFINER changes current_user to the function owner. Check the
+  -- authenticated JWT role instead so trusted server-role calls succeed while
+  -- browser/anon callers remain blocked.
+  if auth.role() <> 'service_role' then
     raise exception 'issue_trust is server-only';
   end if;
   if p_user_id is null or p_amount is null or p_amount = 0 then
@@ -49,7 +52,10 @@ declare
   v_current integer;
   v_new integer;
 begin
-  if current_user <> 'service_role' then
+  -- SECURITY DEFINER changes current_user to the function owner. Check the
+  -- authenticated JWT role instead so trusted server-role calls succeed while
+  -- browser/anon callers remain blocked.
+  if auth.role() <> 'service_role' then
     raise exception 'spend_trust is server-only';
   end if;
   if p_user_id is null or p_amount is null or p_amount <= 0 then

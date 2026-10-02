@@ -11,6 +11,7 @@ import { EMPTY_LOCATION, type StructuredLocation } from '@/lib/geo'
 import { CURRENCIES, useCurrency, type CurrencyCode } from '@/context/CurrencyContext'
 import { SOCIAL_PLATFORMS, isValidSocialUrl, normaliseSocialUrl } from '@/components/social/SocialLinks'
 import { loadStripe } from '@stripe/stripe-js'
+import IntegrationsTab from './IntegrationsTab'
 
 // Per-platform placeholder text shown in the social links form. Hardcoded
 // rather than embedded in the SocialLinks component so the public-facing
@@ -89,7 +90,7 @@ interface TrustLedgerEntry {
 
 type IdentityVerificationStatus = 'unverified' | 'pending' | 'verified' | 'failed' | 'unconfigured'
 
-type Tab = 'account' | 'content' | 'privacy' | 'notifications' | 'trust' | 'referral' | 'stripe' | 'security' | 'danger'
+type Tab = 'account' | 'content' | 'privacy' | 'notifications' | 'trust' | 'referral' | 'stripe' | 'integrations' | 'security' | 'danger'
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'account',       label: 'Account',        icon: '👤' },
@@ -99,6 +100,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'trust',         label: 'Trust Breakdown', icon: '₮'  },
   { id: 'referral',      label: 'Refer & Earn',    icon: '🎁' },
   { id: 'stripe',        label: 'Stripe Connect',  icon: '💳' },
+  { id: 'integrations',  label: 'Integrations',    icon: '🔌' },
   { id: 'security',      label: 'Security',        icon: '🛡️'  },
   { id: 'danger',        label: 'Danger Zone',     icon: '⚠️'  },
 ]
@@ -145,7 +147,7 @@ function SettingsPageInner() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<Tab>(
-    ['account', 'privacy', 'notifications', 'trust', 'referral', 'stripe', 'security', 'danger'].includes(initialTab)
+    ['account', 'privacy', 'notifications', 'trust', 'referral', 'stripe', 'integrations', 'security', 'danger'].includes(initialTab)
       ? initialTab
       : 'account'
   )
@@ -328,6 +330,9 @@ function SettingsPageInner() {
           )}
           {activeTab === 'stripe' && (
             <StripeTab profile={profile} />
+          )}
+          {activeTab === 'integrations' && (
+            <IntegrationsTab />
           )}
           {activeTab === 'security' && (
             <SecurityTab user={user} />

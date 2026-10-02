@@ -125,8 +125,30 @@ const sections = [
     ),
   },
   {
+    id: 'composio-integrations',
+    title: '5. Member App Integrations',
+    content: (
+      <>
+        <p>
+          FreeTrust lets members optionally connect their own third-party accounts through Composio. Available
+          options may include HubSpot, Salesforce, Microsoft 365, WhatsApp, LinkedIn, and Instagram.
+        </p>
+        <ul className="mt-3 space-y-2 list-disc list-inside text-[var(--ft-text-secondary)]">
+          <li>Each connection is initiated by the member from Settings → Integrations.</li>
+          <li>FreeTrust stores an encrypted server-side reference to the provider connection, not the member&apos;s app password.</li>
+          <li>Connection data is scoped to the member who authorised it and is not shared with other FreeTrust members.</li>
+          <li>Members can disconnect an app from Settings → Integrations at any time.</li>
+        </ul>
+        <p className="mt-3 p-3 rounded-xl bg-[var(--ft-accent)]/10 border border-[var(--ft-accent)]/30 text-[var(--ft-text-secondary)]">
+          Composio is used as the connection layer for these optional member-authorised workflows. FreeTrust only enables
+          supported capabilities after the member completes the provider consent flow.
+        </p>
+      </>
+    ),
+  },
+  {
     id: 'cookies',
-    title: '5. Cookies & Analytics',
+    title: '6. Cookies & Analytics',
     content: (
       <>
         <p>We use cookies and similar technologies to:</p>
@@ -144,7 +166,7 @@ const sections = [
   },
   {
     id: 'data-sharing',
-    title: '6. Data Sharing',
+    title: '7. Data Sharing',
     content: (
       <>
         <p>We do not sell your personal data. We may share your data with:</p>
@@ -167,7 +189,7 @@ const sections = [
   },
   {
     id: 'data-retention',
-    title: '7. Data Retention',
+    title: '8. Data Retention',
     content: (
       <p>
         We retain your personal data for as long as your account is active or as needed to provide our
@@ -179,7 +201,7 @@ const sections = [
   },
   {
     id: 'your-rights',
-    title: '8. Your Rights',
+    title: '9. Your Rights',
     content: (
       <>
         <p>Under applicable data protection law (including GDPR), you have the right to:</p>
@@ -204,7 +226,7 @@ const sections = [
   },
   {
     id: 'security',
-    title: '9. Security',
+    title: '10. Security',
     content: (
       <p>
         We implement appropriate technical and organisational measures to protect your personal data
@@ -216,7 +238,7 @@ const sections = [
   },
   {
     id: 'changes',
-    title: '10. Changes to This Policy',
+    title: '11. Changes to This Policy',
     content: (
       <p>
         We may update this Privacy Policy from time to time. When we make significant changes, we will
