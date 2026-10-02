@@ -91,6 +91,16 @@ export default function OnboardingPage() {
   const [selectedHobbies, setSelectedHobbies] = useState<string[]>([])
   const [customHobby, setCustomHobby] = useState('')
   const [trustAwarded, setTrustAwarded] = useState(0)
+  const [continueAfterSetup, setContinueAfterSetup] = useState<string | null>(null)
+
+  useEffect(() => {
+    try {
+      const requestedNext = new URLSearchParams(window.location.search).get('next') || ''
+      if (requestedNext.startsWith('/agents') && !requestedNext.startsWith('//')) setContinueAfterSetup(requestedNext)
+    } catch {
+      // Non-fatal — the normal onboarding completion choices remain available.
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -753,6 +763,16 @@ export default function OnboardingPage() {
                 <div style={{ fontSize: '0.72rem', color: '#92400e' }}>Badge awarded to your profile</div>
               </div>
             </div>
+
+            {continueAfterSetup && (
+              <button
+                className="ob-btn-primary"
+                onClick={() => { window.location.href = continueAfterSetup }}
+                style={{ marginBottom: '1rem' }}
+              >
+                Continue to my Agent →
+              </button>
+            )}
 
             {/* First action buttons */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1rem' }}>

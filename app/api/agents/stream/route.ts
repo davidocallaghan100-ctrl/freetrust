@@ -14,6 +14,7 @@ import {
 import { getAgentModelProvider } from '@/lib/agents/modelProvider'
 import { runAgentWithComposio } from '@/lib/agents/composioAgent'
 import { getMemberComposioAgentTools } from '@/lib/integrations/composioServer'
+import { shouldUseConnectedAppTools } from '@/lib/agents/composioIntent'
 
 type AgentAttachment = {
   name?: unknown
@@ -169,10 +170,12 @@ export async function POST(req: NextRequest) {
   }
 
   let composioTools: Awaited<ReturnType<typeof getMemberComposioAgentTools>> = []
-  try {
-    composioTools = await getMemberComposioAgentTools(user.id)
-  } catch (integrationErr) {
-    console.warn('[agents/stream] connected-app tools unavailable:', integrationErr)
+  if (shouldUseConnectedAppTools(userInput)) {
+    try {
+      composioTools = await getMemberComposioAgentTools(user.id)
+    } catch (integrationErr) {
+      console.warn('[agents/stream] connected-app tools unavailable:', integrationErr)
+    }
   }
 
   // ── 3. Credits ───────────────────────────────────────────────────
@@ -192,8 +195,9 @@ export async function POST(req: NextRequest) {
         { status: 402, headers: { 'Content-Type': 'text/event-stream' } },
       )
     }
+    console.error('[agents/stream] spend_trust failed:', spendErr)
     return new Response(
-      sse({ type: 'error', error: spendErr.message || 'Could not debit credits' }),
+      sse({ type: 'error', error: 'FreeTrust could not start this Agent run. Your TrustCoins were not changed.', code: 'agent_credit_error' }),
       { status: 500, headers: { 'Content-Type': 'text/event-stream' } },
     )
   }

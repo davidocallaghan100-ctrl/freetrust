@@ -71,6 +71,12 @@ type AgentIntegrationAction = {
   message: string;
 };
 
+type AgentConversion = {
+  kind: 'signup' | 'credits';
+  agentName: string;
+  prompt: string;
+};
+
 type AgentAttachment = {
   id: string;
   name: string;
@@ -89,6 +95,7 @@ type ChatMessage = {
   attachments?: AgentAttachment[];
   actions?: AgentAction[];
   integrationActions?: AgentIntegrationAction[];
+  conversion?: AgentConversion;
   raw?: unknown;
 };
 
@@ -103,6 +110,7 @@ type SavedConversation = {
 const MAX_ATTACHMENTS = 5;
 const CONVERSATION_HISTORY_KEY = 'freetrust.agents.conversations.v1';
 const MAX_SAVED_CONVERSATIONS = 8;
+const AGENT_RESUME_KEY = 'freetrust.agents.resume.v1';
 const MAX_IMAGE_BYTES = 3.5 * 1024 * 1024;
 const MAX_TEXT_BYTES = 120 * 1024;
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
@@ -416,6 +424,29 @@ function messageExcerpt(content: string, max = 140) {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
+function agentReturnPath(agentName: string, prompt: string) {
+  const params = new URLSearchParams({ agent: agentName, prompt: prompt.slice(0, 2_000) });
+  return `/agents?${params.toString()}`;
+}
+
+function rememberAgentResume(agentName: string, prompt: string) {
+  try {
+    window.localStorage.setItem(AGENT_RESUME_KEY, JSON.stringify({ agent: agentName, prompt: prompt.slice(0, 10_000) }));
+  } catch { /* non-fatal: the URL still carries a bounded prompt copy */ }
+}
+
+class AgentRequestError extends Error {
+  status: number;
+  code?: string;
+
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = 'AgentRequestError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
 function conversationTitle(messages: ChatMessage[]) {
   const firstUser = messages.find((message) => message.role === 'user')?.content;
   return messageExcerpt(firstUser || 'New FreeTrust agent chat', 64);
@@ -427,6 +458,7 @@ function sanitiseMessagesForStorage(messages: ChatMessage[]): ChatMessage[] {
     role: message.role,
     content: message.content,
     actions: message.actions,
+    conversion: message.conversion,
     raw: sanitiseRawForStorage(message.raw),
     attachments: message.attachments?.map((attachment) => ({
       id: attachment.id,
@@ -1070,6 +1102,39 @@ function IntegrationActionCard({ action }: { action: AgentIntegrationAction }) {
   );
 }
 
+function ConversionCard({ conversion }: { conversion: AgentConversion }) {
+  const returnPath = agentReturnPath(conversion.agentName, conversion.prompt);
+  const registerHref = `/register?next=${encodeURIComponent(`/agents?resume=1`)}&prompt=${encodeURIComponent(conversion.prompt.slice(0, 1_600))}&agent=${encodeURIComponent(conversion.agentName)}`;
+  const loginHref = `/login?redirect=${encodeURIComponent(returnPath)}`;
+
+  function rememberAndContinue() {
+    rememberAgentResume(conversion.agentName, conversion.prompt);
+  }
+
+  if (conversion.kind === 'credits') {
+    return (
+      <div className="conversion-card conversion-card-credits">
+        <div className="conversion-kicker">TrustCoins needed</div>
+        <div className="conversion-title">Your Agent is ready to continue.</div>
+        <div className="conversion-copy">Open your wallet to earn or add TrustCoins, then return here and run the same request again.</div>
+        <Link className="conversion-primary" href="/wallet">Open my wallet →</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="conversion-card">
+      <div className="conversion-kicker">Your free Agent run is ready</div>
+      <div className="conversion-title">Create your FreeTrust account to continue.</div>
+      <div className="conversion-copy">Join free, receive ₮200 in TrustCoins, and come straight back to this request after setup.</div>
+      <div className="conversion-actions">
+        <Link className="conversion-primary" href={registerHref} onClick={rememberAndContinue}>Create my free account →</Link>
+        <Link className="conversion-secondary" href={loginHref} onClick={rememberAndContinue}>I already have an account</Link>
+      </div>
+    </div>
+  );
+}
+
 export default function AgentsPage() {
   const nativePlatform = useNativePlatform();
   const [balance, setBalance] = useState<number | null>(null);
@@ -1145,10 +1210,15 @@ export default function AgentsPage() {
     if (deepLinkLoadedRef.current || typeof window === 'undefined') return;
     if (nativePlatform === null || nativePlatform === 'ios') return;
     const params = new URLSearchParams(window.location.search);
-    const prompt = params.get('prompt')?.trim();
+    let savedResume: { agent?: unknown; prompt?: unknown } | null = null;
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(AGENT_RESUME_KEY) || 'null');
+      if (parsed && typeof parsed === 'object') savedResume = parsed as { agent?: unknown; prompt?: unknown };
+    } catch { /* ignore malformed local resume state */ }
+    const prompt = params.get('prompt')?.trim() || (typeof savedResume?.prompt === 'string' ? savedResume.prompt.trim() : '');
     if (!prompt) return;
     deepLinkLoadedRef.current = true;
-    const agentName = params.get('agent')?.trim() || 'generalResearch';
+    const agentName = params.get('agent')?.trim() || (typeof savedResume?.agent === 'string' ? savedResume.agent : '') || 'generalResearch';
     const agent = getAgentByName(agentName) ?? DEFAULT_AGENT;
     setConversationId(makeId('conversation'));
     setSelectedAgent(agent);
@@ -1158,6 +1228,7 @@ export default function AgentsPage() {
     setError(null);
     setIdeaOpen(false);
     setMenuOpen(false);
+    try { window.localStorage.removeItem(AGENT_RESUME_KEY); } catch { /* ignore resume cleanup */ }
   }, [nativePlatform]);
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [messages, running]);
   useEffect(() => {
@@ -1271,9 +1342,9 @@ export default function AgentsPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ agent: runWithAgent.name, input: cleanedInput, attachments: userMessage.attachments, history: conversationForModel, taskSummary: taskState }),
         });
-        if (res.status === 401) throw new Error('You need to sign in to run agents.');
-        if (res.status === 402) throw new Error(`Not enough AI Credits. You need ${runWithAgent.creditCost}.`);
-        if (!res.ok || !res.body) throw new Error('Agent stream failed.');
+        if (res.status === 401) throw new AgentRequestError('You need to sign in to run agents.', 401, 'unauthorized');
+        if (res.status === 402) throw new AgentRequestError(`Not enough AI Credits. You need ${runWithAgent.creditCost}.`, 402, 'insufficient_funds');
+        if (!res.ok || !res.body) throw new AgentRequestError('Agent stream failed.', res.status);
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
@@ -1288,7 +1359,7 @@ export default function AgentsPage() {
           for (const event of events) {
             const line = event.split('\n').find((part) => part.startsWith('data: '));
             if (!line) continue;
-            const payload = JSON.parse(line.slice(6)) as { type?: string; text?: string; error?: string; newBalance?: number | null; action?: AgentIntegrationAction };
+            const payload = JSON.parse(line.slice(6)) as { type?: string; text?: string; error?: string; code?: string; newBalance?: number | null; action?: AgentIntegrationAction };
             if (payload.type === 'delta' && typeof payload.text === 'string') {
               output += payload.text;
               setMessages((current) => current.map((msg) => msg.id === assistantId ? { ...msg, content: cleanAssistantText(output) } : msg));
@@ -1298,7 +1369,10 @@ export default function AgentsPage() {
               streamedIntegrationAction = payload.action;
               if (!output.trim()) output = payload.action.message;
             }
-            if (payload.type === 'error') throw new Error(payload.error ?? 'Agent stream failed.');
+            if (payload.type === 'error') {
+              const status = payload.code === 'insufficient_funds' ? 402 : res.status;
+              throw new AgentRequestError(payload.error ?? 'Agent stream failed.', status, payload.code);
+            }
           }
         }
         const streamedActions = inferActions(runWithAgent, output, userMessage.attachments);
@@ -1320,9 +1394,9 @@ export default function AgentsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        if (res.status === 401) throw new Error('You need to sign in to run agents.');
-        if (res.status === 402 || data.error === 'insufficient_credits') throw new Error(`Not enough AI Credits. You need ${runWithAgent.creditCost}.`);
-        throw new Error(data.error ?? 'Agent run failed.');
+        if (res.status === 401) throw new AgentRequestError('You need to sign in to run agents.', 401, 'unauthorized');
+        if (res.status === 402 || data.code === 'insufficient_funds' || data.error === 'insufficient_credits') throw new AgentRequestError(`Not enough AI Credits. You need ${runWithAgent.creditCost}.`, 402, 'insufficient_funds');
+        throw new AgentRequestError(data.error ?? 'Agent run failed.', res.status, typeof data.code === 'string' ? data.code : undefined);
       }
       const raw = data.data;
       const integrationAction = raw && typeof raw === 'object' && !Array.isArray(raw)
@@ -1341,8 +1415,27 @@ export default function AgentsPage() {
       if (typeof data.newBalance === 'number') setBalance(data.newBalance);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Agent run failed.';
-      setError(message);
-      setMessages((current) => [...current, { id: assistantId, role: 'assistant', content: cleanAssistantText(`I couldn't complete that run: ${message}`) }]);
+      const requestError = err instanceof AgentRequestError ? err : null;
+      const conversion = requestError?.status === 401
+        ? { kind: 'signup' as const, agentName: runWithAgent.name, prompt: cleanedInput }
+        : requestError?.status === 402
+          ? { kind: 'credits' as const, agentName: runWithAgent.name, prompt: cleanedInput }
+          : undefined;
+      if (conversion) {
+        setError(null);
+        const conversionMessage = conversion.kind === 'signup'
+          ? 'Your request is ready. Create a free account to continue.'
+          : 'Your Agent needs more TrustCoins before it can continue.';
+        setMessages((current) => [...current.filter((message) => message.id !== assistantId), {
+          id: assistantId,
+          role: 'assistant',
+          content: conversionMessage,
+          conversion,
+        }]);
+      } else {
+        setError(message);
+        setMessages((current) => [...current.filter((message) => message.id !== assistantId), { id: assistantId, role: 'assistant', content: cleanAssistantText('I could not complete that Agent run. Your TrustCoins were not changed. Please try again.') }]);
+      }
     } finally {
       setRunning(false);
     }
@@ -1509,9 +1602,19 @@ export default function AgentsPage() {
          .action-status { color: ${COLORS.success}; font-size: 12px; margin-top: 8px; }
           .action-error { color: ${COLORS.danger}; font-size: 12px; margin-top: 8px; }
           .integration-action-card { margin-top: 12px; border: 1px solid rgba(251,191,36,0.28); background: linear-gradient(155deg, rgba(120,53,15,0.22), rgba(15,23,42,0.72)); border-radius: 18px; padding: 13px; }
-          .integration-action-review { margin-top: 12px; border: 1px solid rgba(251,191,36,0.18); border-radius: 15px; padding: 12px; background: rgba(2,6,23,0.38); }
-          .integration-action-arguments { margin: 10px 0 0; max-height: 150px; overflow: auto; border-radius: 10px; padding: 9px; color: rgba(226,232,240,0.78); background: rgba(15,23,42,0.78); font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
-        .idea-sheet-backdrop { position: absolute; inset: 0; z-index: 8; display: flex; align-items: flex-end; background: rgba(2,6,23,0.58); backdrop-filter: blur(14px); padding: 18px; }
+           .integration-action-review { margin-top: 12px; border: 1px solid rgba(251,191,36,0.18); border-radius: 15px; padding: 12px; background: rgba(2,6,23,0.38); }
+           .integration-action-arguments { margin: 10px 0 0; max-height: 150px; overflow: auto; border-radius: 10px; padding: 9px; color: rgba(226,232,240,0.78); background: rgba(15,23,42,0.78); font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+           .conversion-card { margin-top: 12px; border: 1px solid rgba(56,189,248,0.32); background: linear-gradient(155deg, rgba(14,116,144,0.26), rgba(15,23,42,0.78)); border-radius: 18px; padding: 14px; box-shadow: 0 12px 34px rgba(2,132,199,0.12); }
+           .conversion-card-credits { border-color: rgba(251,191,36,0.28); background: linear-gradient(155deg, rgba(120,53,15,0.20), rgba(15,23,42,0.78)); }
+           .conversion-kicker { color: #67e8f9; font-size: 11px; font-weight: 850; letter-spacing: 1.2px; text-transform: uppercase; }
+           .conversion-card-credits .conversion-kicker { color: #fbbf24; }
+           .conversion-title { color: rgba(248,250,252,0.98); font-size: 17px; font-weight: 850; line-height: 1.22; margin-top: 6px; }
+           .conversion-copy { color: rgba(203,213,225,0.88); font-size: 13px; line-height: 1.48; margin-top: 8px; }
+           .conversion-actions { display: grid; gap: 8px; margin-top: 13px; }
+           .conversion-primary, .conversion-secondary { min-height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 10px 12px; font: inherit; font-size: 13px; font-weight: 850; text-decoration: none; text-align: center; }
+           .conversion-primary { background: #67e8f9; color: #082f49; }
+           .conversion-secondary { border: 1px solid rgba(148,163,184,0.24); background: rgba(15,23,42,0.62); color: rgba(226,232,240,0.92); }
+         .idea-sheet-backdrop { position: absolute; inset: 0; z-index: 8; display: flex; align-items: flex-end; background: rgba(2,6,23,0.58); backdrop-filter: blur(14px); padding: 18px; }
         .idea-sheet { width: 100%; max-height: min(78dvh, 720px); overflow-y: auto; border: 1px solid rgba(255,255,255,0.12); background: rgba(15,23,42,0.94); border-radius: 30px 30px 22px 22px; box-shadow: 0 -24px 80px rgba(0,0,0,0.42); padding: 18px; }
         .menu-sheet-backdrop { position: absolute; inset: 0; z-index: 9; display: flex; align-items: flex-start; background: rgba(2,6,23,0.52); backdrop-filter: blur(14px); padding: calc(18px + env(safe-area-inset-top, 0px)) 18px 18px; }
         .menu-sheet { width: min(100%, 420px); max-height: min(76dvh, 620px); overflow-y: auto; border: 1px solid rgba(255,255,255,0.12); background: rgba(15,23,42,0.95); border-radius: 26px; box-shadow: 0 26px 80px rgba(0,0,0,0.42); padding: 16px; }
@@ -1642,7 +1745,8 @@ export default function AgentsPage() {
                     );
                   })()}
                    {message.actions?.map((action) => <ActionCard key={action.id} action={action} attachments={message.attachments} onChangeOneThing={requestActionChange} onStartOver={startOverFromAction} onComplete={(status) => setTaskState((current) => ({ ...current, status }))} />)}
-                   {message.integrationActions?.map((action) => <IntegrationActionCard key={action.id} action={action} />)}
+                    {message.integrationActions?.map((action) => <IntegrationActionCard key={action.id} action={action} />)}
+                    {message.conversion && <ConversionCard conversion={message.conversion} />}
                 </div>
               </div>
             ))}

@@ -18,6 +18,7 @@ import {
 import { getAgentModelProvider, type AgentModelResponse } from '@/lib/agents/modelProvider'
 import { runAgentWithComposio } from '@/lib/agents/composioAgent'
 import { getMemberComposioAgentTools } from '@/lib/integrations/composioServer'
+import { shouldUseConnectedAppTools } from '@/lib/agents/composioIntent'
 
 type AgentAttachment = {
   name?: unknown
@@ -619,10 +620,12 @@ export async function POST(req: NextRequest) {
     }
 
     let composioTools: Awaited<ReturnType<typeof getMemberComposioAgentTools>> = []
-    try {
-      composioTools = await getMemberComposioAgentTools(user.id)
-    } catch (integrationErr) {
-      console.warn('[agents/run] connected-app tools unavailable:', integrationErr)
+    if (shouldUseConnectedAppTools(userInput)) {
+      try {
+        composioTools = await getMemberComposioAgentTools(user.id)
+      } catch (integrationErr) {
+        console.warn('[agents/run] connected-app tools unavailable:', integrationErr)
+      }
     }
 
     // ── 3. Credits ──────────────────────────────────────────────────
@@ -652,7 +655,7 @@ export async function POST(req: NextRequest) {
       }
       console.error('[agents/run] spend_trust failed:', spendErr)
       return NextResponse.json(
-        { error: spendErr.message || 'Could not debit credits' },
+        { error: 'FreeTrust could not start this Agent run. Your TrustCoins were not changed.', code: 'agent_credit_error' },
         { status: 500 },
       )
     }
@@ -769,7 +772,7 @@ export async function POST(req: NextRequest) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[POST /api/agents/run] unexpected:', msg, err)
     return NextResponse.json(
-      { error: `Agent run failed: ${msg}` },
+      { error: 'FreeTrust could not complete this Agent run. Please try again.', code: 'agent_run_error' },
       { status: 500 },
     )
   }

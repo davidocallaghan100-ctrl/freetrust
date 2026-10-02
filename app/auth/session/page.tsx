@@ -67,9 +67,13 @@ function AuthSessionInner() {
           const res = await fetch('/api/profile', { cache: 'no-store' })
           if (res.ok) {
             const data = await res.json() as { profile?: Record<string, unknown> | null }
-            if (!isBusinessDestination && firstSignupBonusIssued && isProfileIncomplete(data.profile)) destination = '/onboarding?welcome=1'
+            const requestedOnboardingNext = next.startsWith('/onboarding') ? new URL(next, window.location.origin).searchParams.get('next') : null
+            const hasAgentContinuation = typeof requestedOnboardingNext === 'string' && requestedOnboardingNext.startsWith('/agents') && !requestedOnboardingNext.startsWith('//')
+            if (!isBusinessDestination && firstSignupBonusIssued && isProfileIncomplete(data.profile)) destination = hasAgentContinuation ? next : '/onboarding?welcome=1'
           } else if (res.status === 404) {
-            if (!isBusinessDestination && firstSignupBonusIssued) destination = '/onboarding?welcome=1'
+            const requestedOnboardingNext = next.startsWith('/onboarding') ? new URL(next, window.location.origin).searchParams.get('next') : null
+            const hasAgentContinuation = typeof requestedOnboardingNext === 'string' && requestedOnboardingNext.startsWith('/agents') && !requestedOnboardingNext.startsWith('//')
+            if (!isBusinessDestination && firstSignupBonusIssued) destination = hasAgentContinuation ? next : '/onboarding?welcome=1'
           }
         } catch {
           // Non-fatal — if the profile check fails, continue to the intended route.

@@ -54,7 +54,15 @@ export async function GET(request: NextRequest) {
           const signupIntent = cookieStore.get('ft_signup_intent')?.value === 'business' || meta.account_type === 'business'
             ? 'business'
             : 'individual'
-          const postSignupDestination = signupIntent === 'business'
+          const requestedOnboardingNext = next.startsWith('/onboarding')
+            ? new URL(next, origin).searchParams.get('next')
+            : null
+          const hasAgentContinuation = typeof requestedOnboardingNext === 'string'
+            && requestedOnboardingNext.startsWith('/agents')
+            && !requestedOnboardingNext.startsWith('//')
+          const postSignupDestination = hasAgentContinuation && signupIntent === 'individual'
+            ? next
+            : signupIntent === 'business'
             ? '/organisations/new?welcome=1'
             : '/onboarding?welcome=1'
           const fullName = typeof (meta.full_name ?? meta.name) === 'string'

@@ -58,6 +58,7 @@ export default function RegisterPage() {
   const isNativeApp = nativePlatform !== null && nativePlatform !== 'web'
   const visibleOauthProviders = isNativeApp ? [] : VISIBLE_OAUTH_PROVIDERS
   const [signupIntent, setSignupIntent] = useState<'individual' | 'business'>('individual')
+  const [agentReturnPath, setAgentReturnPath] = useState<string | null>(null)
 
   // Re-stamp the ft_ref cookie from the ?ref= URL param if it's present.
   // This recovers referral attribution when the user opens the confirmation
@@ -67,6 +68,13 @@ export default function RegisterPage() {
       const params = new URLSearchParams(window.location.search)
       const ref = params.get('ref')
       const intent = (params.get('type') || params.get('account_type') || params.get('intent') || '').toLowerCase()
+      const requestedNext = params.get('next') || ''
+      const requestedAgent = params.get('agent') || 'generalResearch'
+      const requestedPrompt = params.get('prompt')?.trim() || ''
+      if (requestedNext === '/agents?resume=1' || requestedNext === '/agents') {
+        const agentParams = new URLSearchParams({ agent: requestedAgent, ...(requestedPrompt ? { prompt: requestedPrompt.slice(0, 2_000) } : { resume: '1' }) })
+        setAgentReturnPath(`/agents?${agentParams.toString()}`)
+      }
       if (intent === 'business' || intent === 'organisation' || intent === 'organization') {
         setSignupIntent('business')
         localStorage.setItem('ft_signup_intent', 'business')
@@ -102,7 +110,10 @@ export default function RegisterPage() {
   const onboardingDestination = signupIntent === 'business'
     ? '/organisations/new?welcome=1'
     : '/onboarding?welcome=1'
-  const encodedOnboardingDestination = encodeURIComponent(onboardingDestination)
+  const postSignupDestination = agentReturnPath && signupIntent === 'individual'
+    ? `/onboarding?welcome=1&next=${encodeURIComponent(agentReturnPath)}`
+    : onboardingDestination
+  const encodedOnboardingDestination = encodeURIComponent(postSignupDestination)
 
   const [form, setForm] = useState({ first_name: '', last_name: '', email: '', password: '', confirm: '', website_url: '' })
   const [agreeHuman, setAgreeHuman] = useState(false)
