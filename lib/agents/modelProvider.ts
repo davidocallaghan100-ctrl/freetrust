@@ -7,12 +7,25 @@ export type AgentModelMessage = {
   content: AgentModelContent
 }
 
+export type AgentModelToolDefinition = {
+  name: string
+  description: string
+  inputSchema: Record<string, unknown>
+}
+
+export type AgentModelToolCall = {
+  id: string
+  name: string
+  input: Record<string, unknown>
+}
+
 export type AgentModelRequest = {
   model: string
   maxTokens: number
   system: string
   messages: AgentModelMessage[]
   webSearch?: boolean
+  tools?: AgentModelToolDefinition[]
 }
 
 export type AgentModelResponse = {
@@ -22,6 +35,9 @@ export type AgentModelResponse = {
     inputTokens: number | null
     outputTokens: number | null
   }
+  content?: Array<Record<string, unknown>>
+  toolCalls?: AgentModelToolCall[]
+  stopReason?: string | null
 }
 
 export type AgentModelStreamEvent =
@@ -73,13 +89,77 @@ function toOpenAIContent(content: AgentModelContent): string | OpenAIContentPart
 }
 
 function toOpenAIMessages(request: AgentModelRequest) {
-  return [
-    { role: 'system', content: request.system },
-    ...request.messages.map((message) => ({
-      role: message.role,
-      content: toOpenAIContent(message.content),
-    })),
-  ]
+  const messages: Array<Record<string, unknown>> = [{ role: 'system', content: request.system }]
+  for (const message of request.messages) {
+    if (typeof message.content === 'string') {
+      messages.push({ role: message.role, content: message.content })
+      continue
+    }
+
+    const toolUseBlocks = message.content.filter((part) => part.type === 'tool_use')
+    const toolResultBlocks = message.content.filter((part) => part.type === 'tool_result')
+    if (message.role === 'assistant' && toolUseBlocks.length > 0) {
+      const text = message.content
+        .filter((part) => part.type === 'text' && typeof part.text === 'string')
+        .map((part) => String(part.text))
+        .join('\n\n')
+      messages.push({
+        role: 'assistant',
+        content: text || null,
+        tool_calls: toolUseBlocks.map((part) => ({
+          id: String(part.id ?? ''),
+          type: 'function',
+          function: {
+            name: String(part.name ?? ''),
+            arguments: JSON.stringify(part.input ?? {}),
+          },
+        })),
+      })
+      continue
+    }
+    if (message.role === 'user' && toolResultBlocks.length > 0) {
+      for (const part of toolResultBlocks) {
+        messages.push({
+          role: 'tool',
+          tool_call_id: String(part.tool_use_id ?? ''),
+          content: typeof part.content === 'string' ? part.content : JSON.stringify(part.content ?? {}),
+        })
+      }
+      continue
+    }
+    messages.push({ role: message.role, content: toOpenAIContent(message.content) })
+  }
+  return messages
+}
+
+function toOpenAITools(tools: AgentModelToolDefinition[] | undefined) {
+  return tools?.map((tool) => ({
+    type: 'function',
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.inputSchema,
+    },
+  }))
+}
+
+function toAnthropicTools(request: AgentModelRequest): any[] | undefined {
+  const tools: any[] = []
+  if (request.webSearch) {
+    tools.push({
+      type: 'web_search_20250305',
+      name: 'web_search',
+      max_uses: 5,
+    })
+  }
+  if (request.tools?.length) {
+    tools.push(...request.tools.map((tool) => ({
+      name: tool.name,
+      description: tool.description,
+      input_schema: tool.inputSchema,
+    })))
+  }
+  return tools.length > 0 ? tools : undefined
 }
 
 function providerSetting(): AgentModelProviderName {
@@ -101,23 +181,32 @@ class AnthropicAgentModelProvider implements AgentModelProvider {
   }
 
   async create(request: AgentModelRequest): Promise<AgentModelResponse> {
+    const tools = toAnthropicTools(request)
     const response = await this.getClient().messages.create({
       model: request.model,
       max_tokens: request.maxTokens,
       system: request.system,
       messages: request.messages as Anthropic.Messages.MessageParam[],
-      ...(request.webSearch ? {
-        tools: [{
-          type: 'web_search_20250305' as const,
-          name: 'web_search',
-          max_uses: 5,
-        }],
-      } : {}),
+      ...(tools ? { tools } : {}),
     })
+
+    const content = response.content as unknown as Array<Record<string, unknown>>
+    const toolCalls = content
+      .filter((block) => block.type === 'tool_use' && typeof block.name === 'string')
+      .map((block) => ({
+        id: String(block.id ?? ''),
+        name: String(block.name),
+        input: block.input && typeof block.input === 'object' && !Array.isArray(block.input)
+          ? block.input as Record<string, unknown>
+          : {},
+      }))
 
     return {
       model: request.model,
       text: textFromAnthropicContent(response.content),
+      content,
+      toolCalls,
+      stopReason: response.stop_reason,
       usage: {
         inputTokens: response.usage?.input_tokens ?? null,
         outputTokens: response.usage?.output_tokens ?? null,
@@ -126,18 +215,13 @@ class AnthropicAgentModelProvider implements AgentModelProvider {
   }
 
   async *stream(request: AgentModelRequest): AsyncIterable<AgentModelStreamEvent> {
+    const tools = toAnthropicTools(request)
     const stream = await this.getClient().messages.stream({
       model: request.model,
       max_tokens: request.maxTokens,
       system: request.system,
       messages: request.messages as Anthropic.Messages.MessageParam[],
-      ...(request.webSearch ? {
-        tools: [{
-          type: 'web_search_20250305' as const,
-          name: 'web_search',
-          max_uses: 5,
-        }],
-      } : {}),
+      ...(tools ? { tools } : {}),
     })
 
     for await (const event of stream) {
@@ -189,6 +273,7 @@ class OpenAICompatibleAgentModelProvider implements AgentModelProvider {
         messages: toOpenAIMessages(request),
         max_tokens: request.maxTokens,
         stream,
+        ...(request.tools?.length ? { tools: toOpenAITools(request.tools), tool_choice: 'auto' } : {}),
       }),
     })
 
@@ -203,15 +288,35 @@ class OpenAICompatibleAgentModelProvider implements AgentModelProvider {
   async create(request: AgentModelRequest): Promise<AgentModelResponse> {
     const { response, config } = await this.request(request, false)
     const payload = await response.json() as {
-      choices?: Array<{ message?: { content?: unknown } }>
+      choices?: Array<{ message?: { content?: unknown; tool_calls?: Array<{ id?: unknown; function?: { name?: unknown; arguments?: unknown } }> }; finish_reason?: unknown }>
       usage?: { prompt_tokens?: unknown; completion_tokens?: unknown }
     }
-    const text = payload.choices?.[0]?.message?.content
-    if (typeof text !== 'string') throw new Error('openai-compatible provider returned no text response')
+    const message = payload.choices?.[0]?.message
+    const text = typeof message?.content === 'string' ? message.content : ''
+    const toolCalls = (message?.tool_calls ?? []).map((call) => {
+      let input: Record<string, unknown> = {}
+      if (typeof call.function?.arguments === 'string') {
+        try {
+          const parsed = JSON.parse(call.function.arguments)
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) input = parsed as Record<string, unknown>
+        } catch {
+          input = {}
+        }
+      }
+      return { id: String(call.id ?? ''), name: String(call.function?.name ?? ''), input }
+    }).filter((call) => call.id && call.name)
+    if (!text && toolCalls.length === 0) throw new Error('openai-compatible provider returned no text or tool response')
+
+    const content: Array<Record<string, unknown>> = []
+    if (text) content.push({ type: 'text', text })
+    for (const call of toolCalls) content.push({ type: 'tool_use', id: call.id, name: call.name, input: call.input })
 
     return {
       model: config.model,
       text: text.trim(),
+      content,
+      toolCalls,
+      stopReason: typeof payload.choices?.[0]?.finish_reason === 'string' ? payload.choices[0]?.finish_reason : null,
       usage: {
         inputTokens: typeof payload.usage?.prompt_tokens === 'number' ? payload.usage.prompt_tokens : null,
         outputTokens: typeof payload.usage?.completion_tokens === 'number' ? payload.usage.completion_tokens : null,

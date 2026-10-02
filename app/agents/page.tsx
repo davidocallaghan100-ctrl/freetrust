@@ -60,6 +60,17 @@ type AgentAction = {
   payload: Record<string, unknown>;
 };
 
+type AgentIntegrationAction = {
+  id: string;
+  provider: string;
+  toolSlug: string;
+  toolName: string;
+  description: string;
+  accountName: string | null;
+  arguments: Record<string, unknown>;
+  message: string;
+};
+
 type AgentAttachment = {
   id: string;
   name: string;
@@ -77,6 +88,7 @@ type ChatMessage = {
   content: string;
   attachments?: AgentAttachment[];
   actions?: AgentAction[];
+  integrationActions?: AgentIntegrationAction[];
   raw?: unknown;
 };
 
@@ -240,6 +252,10 @@ function stringifyOutput(value: unknown): string {
   if (!value || typeof value !== 'object') return String(value ?? '');
   const obj = value as Record<string, unknown>;
   if (typeof obj.error === 'string' && obj.error.trim()) return obj.error.trim();
+
+  if (obj.type === 'integration_pending') {
+    return textFrom(obj.acknowledgement, 'I found a connected-app action. Review it below before running it.');
+  }
 
   if (typeof obj.question === 'string' && obj.question.trim()) {
     const acknowledgement = typeof obj.acknowledgement === 'string' && obj.acknowledgement.trim()
@@ -1004,6 +1020,55 @@ function ActionCard({
   );
 }
 
+function IntegrationActionCard({ action }: { action: AgentIntegrationAction }) {
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function execute() {
+    setBusy(true);
+    setStatus(null);
+    setError(null);
+    try {
+      const response = await fetch('/api/agents/integrations/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: action.provider, toolSlug: action.toolSlug, arguments: action.arguments }),
+      });
+      const data = await response.json().catch(() => ({})) as { message?: string; error?: string; data?: unknown };
+      if (!response.ok) throw new Error(data.message || data.error || 'Connected-app action failed.');
+      setStatus(`Completed in ${action.accountName || action.provider}. ${stringifyOutput(data.data)}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Connected-app action failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="integration-action-card">
+      <div className="action-top">
+        <div>
+          <div className="action-label">{action.toolName}</div>
+          <div className="action-helper">{action.message}</div>
+        </div>
+        <span className="confirm-chip">Approval required</span>
+      </div>
+      <div className="integration-action-review">
+        <div className="review-state"><span className="review-dot" /> Connected app action · Nothing has run</div>
+        <div className="review-title">{action.provider}{action.accountName ? ` · ${action.accountName}` : ''}</div>
+        <div className="review-description">{action.description}</div>
+        <pre className="integration-action-arguments">{JSON.stringify(action.arguments, null, 2)}</pre>
+      </div>
+      <div className="action-buttons">
+        <button type="button" className="action-btn" onClick={execute} disabled={busy}>{busy ? 'Running…' : 'Approve & run'}</button>
+      </div>
+      {status && <div className="action-status">{status}</div>}
+      {error && <div className="action-error">{error}</div>}
+    </div>
+  );
+}
+
 export default function AgentsPage() {
   const nativePlatform = useNativePlatform();
   const [balance, setBalance] = useState<number | null>(null);
@@ -1016,6 +1081,7 @@ export default function AgentsPage() {
   const [savedConversations, setSavedConversations] = useState<SavedConversation[]>([]);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [connectedIntegrations, setConnectedIntegrations] = useState<string[]>([]);
   const [ideaOpen, setIdeaOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -1060,6 +1126,20 @@ export default function AgentsPage() {
     fetchBalance();
   }, [fetchBalance, nativePlatform]);
   useEffect(() => { setSavedConversations(readSavedConversations()); }, []);
+  useEffect(() => {
+    if (nativePlatform === null || nativePlatform === 'ios') return;
+    void fetch('/api/integrations/composio', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return await response.json() as { providers?: Array<{ name?: unknown; connected?: unknown }> };
+      })
+      .then((data) => {
+        setConnectedIntegrations((data?.providers ?? [])
+          .filter((provider) => provider.connected === true && typeof provider.name === 'string')
+          .map((provider) => String(provider.name)));
+      })
+      .catch(() => setConnectedIntegrations([]));
+  }, [nativePlatform]);
   useEffect(() => {
     if (deepLinkLoadedRef.current || typeof window === 'undefined') return;
     if (nativePlatform === null || nativePlatform === 'ios') return;
@@ -1182,6 +1262,7 @@ export default function AgentsPage() {
 
     const assistantId = makeId('msg');
     try {
+      let streamedIntegrationAction: AgentIntegrationAction | null = null;
       if (runWithAgent.streaming) {
         setMessages((current) => [...current, { id: assistantId, role: 'assistant', content: '' }]);
         const res = await fetch('/api/agents/stream', {
@@ -1206,21 +1287,26 @@ export default function AgentsPage() {
           for (const event of events) {
             const line = event.split('\n').find((part) => part.startsWith('data: '));
             if (!line) continue;
-            const payload = JSON.parse(line.slice(6)) as { type?: string; text?: string; error?: string; newBalance?: number | null };
+            const payload = JSON.parse(line.slice(6)) as { type?: string; text?: string; error?: string; newBalance?: number | null; action?: AgentIntegrationAction };
             if (payload.type === 'delta' && typeof payload.text === 'string') {
               output += payload.text;
               setMessages((current) => current.map((msg) => msg.id === assistantId ? { ...msg, content: cleanAssistantText(output) } : msg));
             }
             if (payload.type === 'done' && typeof payload.newBalance === 'number') setBalance(payload.newBalance);
+            if (payload.type === 'integration_action' && payload.action) {
+              streamedIntegrationAction = payload.action;
+              if (!output.trim()) output = payload.action.message;
+            }
             if (payload.type === 'error') throw new Error(payload.error ?? 'Agent stream failed.');
           }
         }
         const streamedActions = inferActions(runWithAgent, output, userMessage.attachments);
         setMessages((current) => current.map((message) => message.id === assistantId ? {
-          ...message,
-          content: cleanAssistantText(output),
-          actions: streamedActions,
-          raw: output,
+           ...message,
+           content: cleanAssistantText(output),
+           actions: streamedActions,
+           integrationActions: streamedIntegrationAction ? [streamedIntegrationAction] : undefined,
+           raw: output,
         } : message));
         setTaskState(taskStateFromResult(runWithAgent, output, streamedActions));
         return;
@@ -1238,11 +1324,15 @@ export default function AgentsPage() {
         throw new Error(data.error ?? 'Agent run failed.');
       }
       const raw = data.data;
+      const integrationAction = raw && typeof raw === 'object' && !Array.isArray(raw)
+        ? (raw as Record<string, unknown>).pending_action as AgentIntegrationAction | undefined
+        : undefined;
       const assistantMessage: ChatMessage = {
         id: assistantId,
         role: 'assistant',
         content: cleanAssistantText(stringifyOutput(raw)),
         actions: inferActions(runWithAgent, raw, userMessage.attachments),
+        integrationActions: integrationAction ? [integrationAction] : undefined,
         raw,
       };
       setMessages((current) => [...current, assistantMessage]);
@@ -1299,9 +1389,11 @@ export default function AgentsPage() {
          .agents-page { color: ${COLORS.text}; width: 100%; min-height: 100dvh; background: radial-gradient(circle at 50% 30%, rgba(14,165,233,0.16), transparent 28%), radial-gradient(circle at 78% 5%, rgba(56,189,248,0.08), transparent 18%), radial-gradient(circle at 22% 96%, rgba(14,116,144,0.13), transparent 32%), #030712; overflow: hidden; }
         .agents-page, .agents-page * { box-sizing: border-box; }
         [class^="ta-"], [class*=" ta-"] { display: none !important; }
-        .agents-page::before { content: ''; position: absolute; inset: 9% 5% auto; height: 52dvh; border-radius: 38%; background: radial-gradient(circle at 50% 45%, rgba(15,23,42,0.58), rgba(15,23,42,0.16) 45%, transparent 72%); pointer-events: none; }
-        .immersive-shell { min-height: 100dvh; max-width: 760px; margin: 0 auto; padding: calc(18px + env(safe-area-inset-top, 0px)) 24px calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; position: relative; }
-        .top-row { display: flex; align-items: center; justify-content: space-between; min-height: 52px; z-index: 4; }
+         .agents-page::before { content: ''; position: absolute; inset: 9% 5% auto; height: 52dvh; border-radius: 38%; background: radial-gradient(circle at 50% 45%, rgba(15,23,42,0.58), rgba(15,23,42,0.16) 45%, transparent 72%); pointer-events: none; }
+         .immersive-shell { min-height: 100dvh; max-width: 760px; margin: 0 auto; padding: calc(18px + env(safe-area-inset-top, 0px)) 24px calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; position: relative; }
+         .top-row { display: flex; align-items: center; justify-content: space-between; min-height: 52px; z-index: 4; }
+         .top-statuses { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+         .integration-status-link { color: #bae6fd; border-color: rgba(52,211,153,0.22); }
         .round-control { width: 50px; height: 50px; border-radius: 50%; border: 1px solid rgba(148,163,184,0.22); background: rgba(15,23,42,0.48); color: ${COLORS.text}; display: grid; place-items: center; text-decoration: none; font: inherit; font-size: 21px; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.025), 0 12px 36px rgba(0,0,0,0.24); backdrop-filter: blur(18px); -webkit-tap-highlight-color: transparent; }
         .idea-control { border-color: rgba(56,189,248,0.32); color: #67e8f9; background: rgba(8,47,73,0.30); }
         .idea-control svg { width: 25px; height: 25px; filter: drop-shadow(0 0 10px rgba(56,189,248,0.45)); }
@@ -1414,7 +1506,10 @@ export default function AgentsPage() {
          .recipient-avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; overflow: hidden; background: rgba(56,189,248,0.12); }
          .recipient-avatar img { width: 100%; height: 100%; object-fit: cover; }
          .action-status { color: ${COLORS.success}; font-size: 12px; margin-top: 8px; }
-        .action-error { color: ${COLORS.danger}; font-size: 12px; margin-top: 8px; }
+          .action-error { color: ${COLORS.danger}; font-size: 12px; margin-top: 8px; }
+          .integration-action-card { margin-top: 12px; border: 1px solid rgba(251,191,36,0.28); background: linear-gradient(155deg, rgba(120,53,15,0.22), rgba(15,23,42,0.72)); border-radius: 18px; padding: 13px; }
+          .integration-action-review { margin-top: 12px; border: 1px solid rgba(251,191,36,0.18); border-radius: 15px; padding: 12px; background: rgba(2,6,23,0.38); }
+          .integration-action-arguments { margin: 10px 0 0; max-height: 150px; overflow: auto; border-radius: 10px; padding: 9px; color: rgba(226,232,240,0.78); background: rgba(15,23,42,0.78); font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
         .idea-sheet-backdrop { position: absolute; inset: 0; z-index: 8; display: flex; align-items: flex-end; background: rgba(2,6,23,0.58); backdrop-filter: blur(14px); padding: 18px; }
         .idea-sheet { width: 100%; max-height: min(78dvh, 720px); overflow-y: auto; border: 1px solid rgba(255,255,255,0.12); background: rgba(15,23,42,0.94); border-radius: 30px 30px 22px 22px; box-shadow: 0 -24px 80px rgba(0,0,0,0.42); padding: 18px; }
         .menu-sheet-backdrop { position: absolute; inset: 0; z-index: 9; display: flex; align-items: flex-start; background: rgba(2,6,23,0.52); backdrop-filter: blur(14px); padding: calc(18px + env(safe-area-inset-top, 0px)) 18px 18px; }
@@ -1483,7 +1578,10 @@ export default function AgentsPage() {
         <div className="immersive-shell">
           <div className="top-row">
           <button type="button" className="round-control" aria-label="Open menu" onClick={() => setMenuOpen(true)}>☰</button>
-          {balance !== null ? <span className="tiny-status">⚡ {balance.toLocaleString()} credits</span> : <Link href="/login" className="tiny-status">Sign in for agents</Link>}
+           <div className="top-statuses">
+             {balance !== null ? <span className="tiny-status">⚡ {balance.toLocaleString()} credits</span> : <Link href="/login" className="tiny-status">Sign in for agents</Link>}
+             <Link href="/settings?tab=integrations" className="tiny-status integration-status-link">{connectedIntegrations.length > 0 ? `↗ ${connectedIntegrations.length} tool${connectedIntegrations.length === 1 ? '' : 's'} connected` : 'Connect tools'}</Link>
+           </div>
           <button type="button" className="round-control idea-control" aria-label="Open ideas" onClick={() => setIdeaOpen(true)}>
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M9 18h6M10 21h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -1534,7 +1632,8 @@ export default function AgentsPage() {
                       </div>
                     );
                   })()}
-                  {message.actions?.map((action) => <ActionCard key={action.id} action={action} attachments={message.attachments} onChangeOneThing={requestActionChange} onStartOver={startOverFromAction} onComplete={(status) => setTaskState((current) => ({ ...current, status }))} />)}
+                   {message.actions?.map((action) => <ActionCard key={action.id} action={action} attachments={message.attachments} onChangeOneThing={requestActionChange} onStartOver={startOverFromAction} onComplete={(status) => setTaskState((current) => ({ ...current, status }))} />)}
+                   {message.integrationActions?.map((action) => <IntegrationActionCard key={action.id} action={action} />)}
                 </div>
               </div>
             ))}

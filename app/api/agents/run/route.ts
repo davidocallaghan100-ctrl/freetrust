@@ -16,6 +16,8 @@ import {
   type AgentConversationTurn,
 } from '@/lib/agents/conversationContext'
 import { getAgentModelProvider, type AgentModelResponse } from '@/lib/agents/modelProvider'
+import { runAgentWithComposio } from '@/lib/agents/composioAgent'
+import { getMemberComposioAgentTools } from '@/lib/integrations/composioServer'
 
 type AgentAttachment = {
   name?: unknown
@@ -616,6 +618,13 @@ export async function POST(req: NextRequest) {
       return runImageGenerationAgent({ userId: user.id, userInput, history, config })
     }
 
+    let composioTools: Awaited<ReturnType<typeof getMemberComposioAgentTools>> = []
+    try {
+      composioTools = await getMemberComposioAgentTools(user.id)
+    } catch (integrationErr) {
+      console.warn('[agents/run] connected-app tools unavailable:', integrationErr)
+    }
+
     // ── 3. Credits ──────────────────────────────────────────────────
     // Debit via the spend_trust() SECURITY DEFINER RPC (defined in
     // 20260414000006_wallet_rls.sql). Uses the admin client because
@@ -685,17 +694,27 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let response: any
+    let response: AgentModelResponse
+    let pendingIntegrationAction: Awaited<ReturnType<typeof runAgentWithComposio>>['pendingAction']
     try {
-      const request: any = {
+      const request = {
         model: config.model,
         maxTokens: config.maxTokens,
         system: `${config.systemPrompt}${CHAT_FORMATTING_RULE}${CONVERSATIONAL_WORKFLOW_RULE}${buildAgentConversationContext(history, taskSummary)}`,
-        messages: [{ role: 'user', content: buildUserContent(effectiveInput, attachments) as any }],
+        messages: [{ role: 'user' as const, content: buildUserContent(effectiveInput, attachments) as any }],
         webSearch: config.webSearch,
       }
 
-      response = await modelProvider.create(request)
+      const routed = composioTools.length > 0
+        ? await runAgentWithComposio({
+          userId: user.id,
+          provider: modelProvider,
+          request,
+          tools: composioTools,
+        })
+        : { response: await modelProvider.create(request), toolRounds: 0 }
+      response = routed.response
+      pendingIntegrationAction = routed.pendingAction
     } catch (modelErr) {
       // Refund credits — model call failed, not the user's fault
       console.error('[agents/run] model provider error:', modelErr)
@@ -712,7 +731,14 @@ export async function POST(req: NextRequest) {
     const rawText = extractAssistantText(response)
 
     let parsedData: unknown = rawText
-    if (config.responseFormat !== 'text') {
+    if (pendingIntegrationAction) {
+      parsedData = {
+        type: 'integration_pending',
+        status: 'awaiting_approval',
+        acknowledgement: pendingIntegrationAction.message,
+        pending_action: pendingIntegrationAction,
+      }
+    } else if (config.responseFormat !== 'text') {
       try {
         parsedData = JSON.parse(stripJsonFence(rawText))
       } catch {

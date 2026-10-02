@@ -12,6 +12,8 @@ import {
   normaliseAgentTaskSummary,
 } from '@/lib/agents/conversationContext'
 import { getAgentModelProvider } from '@/lib/agents/modelProvider'
+import { runAgentWithComposio } from '@/lib/agents/composioAgent'
+import { getMemberComposioAgentTools } from '@/lib/integrations/composioServer'
 
 type AgentAttachment = {
   name?: unknown
@@ -166,6 +168,13 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  let composioTools: Awaited<ReturnType<typeof getMemberComposioAgentTools>> = []
+  try {
+    composioTools = await getMemberComposioAgentTools(user.id)
+  } catch (integrationErr) {
+    console.warn('[agents/stream] connected-app tools unavailable:', integrationErr)
+  }
+
   // ── 3. Credits ───────────────────────────────────────────────────
   const admin = createAdminClient()
   const { data: newBalance, error: spendErr } = await admin.rpc('spend_trust', {
@@ -220,17 +229,28 @@ export async function POST(req: NextRequest) {
       }
 
       try {
-        const request: any = {
+        const request = {
           model: config.model,
           maxTokens: config.maxTokens,
           system: `${config.systemPrompt}${CHAT_FORMATTING_RULE}${CONVERSATIONAL_WORKFLOW_RULE}${buildAgentConversationContext(history, taskSummary)}`,
-          messages: [{ role: 'user', content: buildUserContent(userInput, attachments) as any }],
+          messages: [{ role: 'user' as const, content: buildUserContent(userInput, attachments) as any }],
           webSearch: config.webSearch,
         }
 
-        for await (const event of modelProvider.stream(request)) {
-          if (event.type === 'text_delta') {
-            push({ type: 'delta', text: event.text })
+        if (composioTools.length > 0) {
+          const routed = await runAgentWithComposio({
+            userId: user.id,
+            provider: modelProvider,
+            request,
+            tools: composioTools,
+          })
+          if (routed.response.text) push({ type: 'delta', text: routed.response.text })
+          if (routed.pendingAction) push({ type: 'integration_action', action: routed.pendingAction })
+        } else {
+          for await (const event of modelProvider.stream(request)) {
+            if (event.type === 'text_delta') {
+              push({ type: 'delta', text: event.text })
+            }
           }
         }
 

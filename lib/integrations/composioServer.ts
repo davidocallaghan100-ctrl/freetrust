@@ -31,6 +31,67 @@ type StoredIntegration = {
 
 type IntegrationError = Error & { status?: number; code?: string; data?: unknown }
 
+export type ComposioAgentTool = {
+  provider: ComposioProvider
+  providerName: string
+  toolSlug: string
+  version: string
+  name: string
+  description: string
+  inputSchema: Record<string, unknown>
+}
+
+export type ComposioAgentToolRun = {
+  provider: ComposioProvider
+  providerName: string
+  toolSlug: string
+  name: string
+}
+
+type ComposioAgentToolConfig = {
+  provider: ComposioProvider
+  toolSlug: string
+  description: string
+}
+
+// Keep the first agent integration surface deliberately read-only. External
+// writes remain out of the model tool loop and continue through the existing
+// human-reviewed FreeTrust action cards.
+const COMPOSIO_AGENT_TOOL_CATALOG: ComposioAgentToolConfig[] = [
+  {
+    provider: 'hubspot',
+    toolSlug: 'HUBSPOT_SEARCH_CRM_OBJECTS_BY_CRITERIA',
+    description: 'Search the member-owned HubSpot CRM for contacts, companies, deals, tickets, or other CRM records.',
+  },
+  {
+    provider: 'salesforce',
+    toolSlug: 'SALESFORCE_SEARCH_CONTACTS',
+    description: 'Search the member-owned Salesforce contacts using a name, email, phone, account, or title.',
+  },
+  {
+    provider: 'outlook',
+    toolSlug: 'OUTLOOK_LIST_MESSAGES',
+    description: 'Search the member-owned Microsoft mailbox for relevant messages using metadata and short previews.',
+  },
+  {
+    provider: 'whatsapp',
+    toolSlug: 'WHATSAPP_GET_MESSAGE_HISTORY',
+    description: 'Read delivery history for the member-owned WhatsApp Business messages.',
+  },
+  {
+    provider: 'linkedin',
+    toolSlug: 'LINKEDIN_GET_MY_INFO',
+    description: 'Read the connected member-owned LinkedIn profile information.',
+  },
+  {
+    provider: 'instagram',
+    toolSlug: 'INSTAGRAM_GET_USER_INFO',
+    description: 'Read the connected member-owned Instagram Business or Creator profile information.',
+  },
+]
+
+const composioAgentToolSchemaCache = new Map<string, Promise<ComposioAgentTool>>()
+
 function getComposioApiKey() {
   const key = process.env.COMPOSIO_API_KEY?.trim()
   if (!key) {
@@ -116,6 +177,82 @@ function composioPayload(data: Record<string, unknown>) {
   if (payload.data && typeof payload.data === 'object') payload = payload.data as Record<string, unknown>
   if (payload.data && typeof payload.data === 'object' && !payload.status) payload = payload.data as Record<string, unknown>
   return payload
+}
+
+function objectFrom(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null
+}
+
+function connectionStateForUser(userId: string, row: StoredIntegration) {
+  const state = decryptConnectionState(row.encrypted_connection_state)
+  if (!state || state.userId !== userId || state.provider !== row.provider || !state.connectedAccountId) return null
+  return state
+}
+
+function clampInteger(value: unknown, fallback: number, min: number, max: number) {
+  const parsed = typeof value === 'number' && Number.isFinite(value) ? Math.floor(value) : Number(value)
+  if (!Number.isFinite(parsed)) return fallback
+  return Math.min(max, Math.max(min, Math.floor(parsed)))
+}
+
+function normaliseAgentToolArguments(toolSlug: string, raw: unknown): Record<string, unknown> {
+  const input = objectFrom(raw) ? { ...(raw as Record<string, unknown>) } : {}
+  if (toolSlug === 'HUBSPOT_SEARCH_CRM_OBJECTS_BY_CRITERIA') {
+    const objectType = typeof input.objectType === 'string' && input.objectType.trim() ? input.objectType.trim().toLowerCase() : 'contacts'
+    const safeObjectTypes = new Set(['contacts', 'companies', 'deals', 'tickets', 'tasks', 'products', 'quotes', 'meetings', 'notes'])
+    input.objectType = safeObjectTypes.has(objectType) ? objectType : 'contacts'
+    input.limit = clampInteger(input.limit, 10, 1, 20)
+    if (!Array.isArray(input.properties)) input.properties = input.objectType === 'contacts' ? ['firstname', 'lastname', 'email', 'phone', 'company', 'jobtitle'] : input.objectType === 'companies' ? ['name', 'domain', 'industry', 'phone'] : undefined
+  }
+  if (toolSlug === 'SALESFORCE_SEARCH_CONTACTS') {
+    input.limit = clampInteger(input.limit, 10, 1, 20)
+    if (typeof input.fields !== 'string' || !input.fields.trim()) input.fields = 'Id,Name,FirstName,LastName,Email,Phone,Title,AccountId,Account.Name'
+  }
+  if (toolSlug === 'OUTLOOK_LIST_MESSAGES') {
+    input.top = clampInteger(input.top, 10, 1, 10)
+    input.user_id = 'me'
+    input.response_detail = 'minimal'
+    if (!Array.isArray(input.select) || input.select.length === 0) input.select = ['id', 'subject', 'from', 'receivedDateTime', 'bodyPreview', 'isRead', 'hasAttachments']
+  }
+  if (toolSlug === 'WHATSAPP_GET_MESSAGE_HISTORY') {
+    input.limit = clampInteger(input.limit, 25, 1, 25)
+    if (typeof input.fields !== 'string' || !input.fields.trim()) input.fields = 'id,message_id,events{delivery_status,timestamp,error_description}'
+  }
+  if (toolSlug === 'LINKEDIN_GET_MY_INFO') return {}
+  if (toolSlug === 'INSTAGRAM_GET_USER_INFO') {
+    input.ig_user_id = 'me'
+    input.fields = 'id,name,username,biography,account_type,followers_count,follows_count,media_count,profile_picture_url'
+  }
+  return input
+}
+
+async function getComposioAgentToolSchema(config: ComposioAgentToolConfig): Promise<ComposioAgentTool> {
+  const existing = composioAgentToolSchemaCache.get(config.toolSlug)
+  if (existing) return existing
+  const pending = (async () => {
+    const definition = getComposioProvider(config.provider)
+    if (!definition) throw Object.assign(new Error('Unsupported integration provider.'), { status: 400, code: 'unsupported_provider' })
+    const data = composioPayload(await composioRequest(`/tools/${encodeURIComponent(config.toolSlug)}?version=latest`))
+    const tool = data.tool && typeof data.tool === 'object' ? data.tool as Record<string, unknown> : data
+    const inputSchema = objectFrom(tool.input_parameters) ?? objectFrom(tool.inputParameters) ?? objectFrom(tool.input_schema) ?? objectFrom(tool.inputSchema)
+    if (!inputSchema) throw Object.assign(new Error(`Composio did not return an input schema for ${config.toolSlug}.`), { status: 502, code: 'tool_schema_missing' })
+    return {
+      provider: config.provider,
+      providerName: definition.name,
+      toolSlug: config.toolSlug,
+      version: typeof tool.version === 'string' && tool.version.trim() ? tool.version : 'latest',
+      name: typeof tool.name === 'string' && tool.name.trim() ? tool.name : config.toolSlug,
+      description: `${config.description} ${typeof tool.description === 'string' ? tool.description : ''}`.trim().slice(0, 1_800),
+      inputSchema,
+    }
+  })()
+  composioAgentToolSchemaCache.set(config.toolSlug, pending)
+  try {
+    return await pending
+  } catch (error) {
+    composioAgentToolSchemaCache.delete(config.toolSlug)
+    throw error
+  }
 }
 
 function getSessionId(data: Record<string, unknown>) {
@@ -228,6 +365,97 @@ async function refreshRow(userId: string, row: StoredIntegration) {
       })) ?? row
     }
     throw error
+  }
+}
+
+export async function getMemberComposioAgentTools(userId: string): Promise<ComposioAgentTool[]> {
+  const rows = await listRows(userId)
+  const byProvider = new Map(rows.map((row) => [row.provider, row]))
+  const tools: ComposioAgentTool[] = []
+
+  for (const config of COMPOSIO_AGENT_TOOL_CATALOG) {
+    const row = byProvider.get(config.provider)
+    if (!row || row.status === 'disconnected') continue
+
+    let refreshed = row
+    try {
+      refreshed = await refreshRow(userId, row)
+    } catch (error) {
+      console.warn(`[Composio] Could not refresh ${config.provider} for agent context:`, error)
+      continue
+    }
+
+    if (refreshed.status !== 'active' || !connectionStateForUser(userId, refreshed)) continue
+
+    try {
+      tools.push(await getComposioAgentToolSchema(config))
+    } catch (error) {
+      console.warn(`[Composio] Could not load ${config.toolSlug} schema:`, error)
+    }
+  }
+
+  return tools
+}
+
+export async function executeMemberComposioAgentTool(userId: string, toolSlug: string, rawArguments: unknown) {
+  const config = COMPOSIO_AGENT_TOOL_CATALOG.find((item) => item.toolSlug === toolSlug)
+  if (!config) {
+    throw Object.assign(new Error('This integration action is not enabled for FreeTrust Agents.'), {
+      status: 400,
+      code: 'agent_tool_not_allowed',
+    })
+  }
+
+  const row = (await listRows(userId)).find((item) => item.provider === config.provider)
+  if (!row) {
+    throw Object.assign(new Error(`Connect ${getComposioProvider(config.provider)?.name ?? config.provider} before using it with an agent.`), {
+      status: 409,
+      code: 'integration_not_connected',
+    })
+  }
+
+  const refreshed = await refreshRow(userId, row)
+  if (refreshed.status !== 'active') {
+    throw Object.assign(new Error(`The ${getComposioProvider(config.provider)?.name ?? config.provider} connection is not active.`), {
+      status: 409,
+      code: 'integration_not_active',
+    })
+  }
+
+  const state = connectionStateForUser(userId, refreshed)
+  if (!state) {
+    throw Object.assign(new Error('The connected account reference could not be verified.'), {
+      status: 409,
+      code: 'integration_state_invalid',
+    })
+  }
+
+  const tool = await getComposioAgentToolSchema(config)
+  const remote = await composioRequest(`/tools/execute/${encodeURIComponent(tool.toolSlug)}`, {
+    method: 'POST',
+    body: JSON.stringify({
+      connected_account_id: state.connectedAccountId,
+      user_id: userId,
+      version: tool.version,
+      arguments: normaliseAgentToolArguments(tool.toolSlug, rawArguments),
+    }),
+  })
+
+  if (remote.successful === false) {
+    throw Object.assign(new Error(cleanError(remote.error ?? remote, `${tool.name} failed.`)), {
+      status: 502,
+      code: 'composio_tool_failed',
+    })
+  }
+
+  return {
+    data: remote.data ?? remote,
+    run: {
+      provider: tool.provider,
+      providerName: tool.providerName,
+      toolSlug: tool.toolSlug,
+      name: tool.name,
+    } satisfies ComposioAgentToolRun,
   }
 }
 
