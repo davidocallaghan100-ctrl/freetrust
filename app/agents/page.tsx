@@ -1370,7 +1370,7 @@ export default function AgentsPage() {
               if (!output.trim()) output = payload.action.message;
             }
             if (payload.type === 'error') {
-              const status = payload.code === 'insufficient_funds' ? 402 : res.status;
+              const status = payload.code === 'insufficient_funds' ? 402 : payload.code === 'agent_provider_error' ? 503 : res.status;
               throw new AgentRequestError(payload.error ?? 'Agent stream failed.', status, payload.code);
             }
           }
@@ -1434,7 +1434,10 @@ export default function AgentsPage() {
         }]);
       } else {
         setError(message);
-        setMessages((current) => [...current.filter((message) => message.id !== assistantId), { id: assistantId, role: 'assistant', content: cleanAssistantText('I could not complete that Agent run. Your TrustCoins were not changed. Please try again.') }]);
+        const failureCopy = requestError?.code === 'agent_provider_error' || requestError?.status === 503
+          ? 'I could not complete that Agent run. Your TrustCoins were refunded. Please try again once the AI provider is available.'
+          : 'I could not complete that Agent run. Please try again.';
+        setMessages((current) => [...current.filter((message) => message.id !== assistantId), { id: assistantId, role: 'assistant', content: cleanAssistantText(failureCopy) }]);
       }
     } finally {
       setRunning(false);

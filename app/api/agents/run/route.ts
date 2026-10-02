@@ -723,8 +723,8 @@ export async function POST(req: NextRequest) {
       console.error('[agents/run] model provider error:', modelErr)
       await refundCredits('model error')
       return NextResponse.json(
-        { error: 'Agent run failed — your credits have been refunded.' },
-        { status: 500 },
+        { error: 'Agent run failed — your credits have been refunded.', code: 'agent_provider_error' },
+        { status: 503 },
       )
     }
 

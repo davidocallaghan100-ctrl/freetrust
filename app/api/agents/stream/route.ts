@@ -269,7 +269,7 @@ export async function POST(req: NextRequest) {
         const msg = err instanceof Error ? err.message : String(err)
         console.error('[agents/stream] stream error:', msg)
         await refundCredits('stream error')
-        push({ type: 'error', error: 'Agent stream failed — your credits have been refunded.' })
+        push({ type: 'error', error: 'Agent stream failed — your credits have been refunded.', code: 'agent_provider_error' })
       } finally {
         controller.close()
       }
