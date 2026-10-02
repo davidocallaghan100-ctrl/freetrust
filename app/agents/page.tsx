@@ -234,10 +234,11 @@ function getAgentByName(name: string) {
   return AGENT_LIST.find((agent) => agent.name === name) ?? null;
 }
 
-function AgentLineIcon({ name }: { name: 'listing' | 'event' | 'message' | 'buyers' | 'preview' | 'mic' | 'wave' }) {
+function AgentLineIcon({ name }: { name: 'listing' | 'event' | 'message' | 'buyers' | 'preview' | 'mic' | 'wave' | 'integrations' }) {
   if (name === 'event') return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 3.5v3M17 3.5v3M5 9h14M6.5 5h11A2.5 2.5 0 0 1 20 7.5v10A2.5 2.5 0 0 1 17.5 20h-11A2.5 2.5 0 0 1 4 17.5v-10A2.5 2.5 0 0 1 6.5 5Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M8 12h2M12 12h2M16 12h.01M8 16h2M12 16h2M16 16h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
   if (name === 'message') return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 7.5A3.5 3.5 0 0 1 8.5 4h7A3.5 3.5 0 0 1 19 7.5v4A3.5 3.5 0 0 1 15.5 15H12l-4.2 3.5V15A3.5 3.5 0 0 1 5 11.5v-4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M9 9.5h6M9 12h3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
   if (name === 'buyers') return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8.5 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM15.5 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" stroke="currentColor" strokeWidth="1.8"/><path d="M3.8 19a4.8 4.8 0 0 1 9.4 0M12.2 18.6a4 4 0 0 1 7.9.4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
+  if (name === 'integrations') return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8.8 12.7 7.2 14.3a3.2 3.2 0 1 0 4.5 4.5l2.1-2.1a3.2 3.2 0 0 0 .7-3.4M15.2 11.3l1.6-1.6a3.2 3.2 0 1 0-4.5-4.5l-2.1 2.1a3.2 3.2 0 0 0-.7 3.4M8.5 15.5l7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>;
   if (name === 'mic') return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Z" stroke="currentColor" strokeWidth="1.9"/><path d="M6 10.5a6 6 0 0 0 12 0M12 16.5V21M9 21h6" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"/></svg>;
   if (name === 'wave') return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 10v4M9 7v10M13 4.5v15M17 8v8M21 11v2" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>;
   return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4h8l3 3v13H7V4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M15 4v4h4M10 11h6M10 14h6M10 17h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>;
@@ -1514,11 +1515,19 @@ export default function AgentsPage() {
         .idea-sheet { width: 100%; max-height: min(78dvh, 720px); overflow-y: auto; border: 1px solid rgba(255,255,255,0.12); background: rgba(15,23,42,0.94); border-radius: 30px 30px 22px 22px; box-shadow: 0 -24px 80px rgba(0,0,0,0.42); padding: 18px; }
         .menu-sheet-backdrop { position: absolute; inset: 0; z-index: 9; display: flex; align-items: flex-start; background: rgba(2,6,23,0.52); backdrop-filter: blur(14px); padding: calc(18px + env(safe-area-inset-top, 0px)) 18px 18px; }
         .menu-sheet { width: min(100%, 420px); max-height: min(76dvh, 620px); overflow-y: auto; border: 1px solid rgba(255,255,255,0.12); background: rgba(15,23,42,0.95); border-radius: 26px; box-shadow: 0 26px 80px rgba(0,0,0,0.42); padding: 16px; }
-        .menu-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
-        .menu-primary, .menu-secondary, .history-item { min-height: 44px; border-radius: 14px; border: 1px solid rgba(148,163,184,0.18); font: inherit; text-decoration: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-        .menu-primary { display: grid; place-items: center; background: rgba(14,116,144,0.42); color: #bae6fd; font-weight: 850; }
-        .menu-secondary { background: rgba(15,23,42,0.66); color: ${COLORS.text}; font-weight: 750; }
-        .history-title { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: #67e8f9; margin: 14px 2px 8px; }
+         .menu-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
+         .menu-primary, .menu-secondary, .history-item { min-height: 44px; border-radius: 14px; border: 1px solid rgba(148,163,184,0.18); font: inherit; text-decoration: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+         .menu-primary { display: grid; place-items: center; background: rgba(14,116,144,0.42); color: #bae6fd; font-weight: 850; }
+         .menu-secondary { background: rgba(15,23,42,0.66); color: ${COLORS.text}; font-weight: 750; }
+         .integration-menu-card { min-height: 68px; display: flex; align-items: center; gap: 11px; margin: 2px 0 18px; padding: 10px 12px; border: 1px solid rgba(56,189,248,0.26); border-radius: 17px; background: linear-gradient(135deg, rgba(14,116,144,0.23), rgba(15,23,42,0.72)); color: ${COLORS.text}; text-decoration: none; box-shadow: inset 0 1px 0 rgba(255,255,255,0.035); -webkit-tap-highlight-color: transparent; }
+         .integration-menu-card:active { transform: scale(0.99); }
+         .integration-menu-icon { width: 40px; height: 40px; flex: 0 0 auto; display: grid; place-items: center; border: 1px solid rgba(103,232,249,0.28); border-radius: 13px; color: #67e8f9; background: rgba(8,47,73,0.40); }
+         .integration-menu-icon svg { width: 21px; height: 21px; }
+         .integration-menu-copy { min-width: 0; flex: 1; }
+         .integration-menu-copy strong { display: block; color: rgba(241,245,249,0.96); font-size: 14px; }
+         .integration-menu-copy small { display: block; margin-top: 3px; color: ${COLORS.textMuted}; font-size: 12px; line-height: 1.35; }
+         .integration-menu-chevron { color: #67e8f9; font-size: 20px; padding-left: 4px; }
+         .history-title { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: #67e8f9; margin: 14px 2px 8px; }
         .history-list { display: grid; gap: 8px; }
         .history-item { width: 100%; text-align: left; background: rgba(30,41,59,0.62); color: inherit; padding: 11px 12px; }
         .history-item strong { display: block; font-size: 13px; line-height: 1.25; color: rgba(241,245,249,0.94); }
@@ -1737,12 +1746,21 @@ export default function AgentsPage() {
                 <button type="button" className="sheet-close" onClick={() => setMenuOpen(false)} aria-label="Close menu">×</button>
               </div>
 
-              <div className="menu-actions">
-                <Link href="/feed" className="menu-primary">Back to FreeTrust</Link>
-                <button type="button" className="menu-secondary" onClick={startNewConversation}>New chat</button>
-              </div>
+               <div className="menu-actions">
+                 <Link href="/feed" className="menu-primary">Back to FreeTrust</Link>
+                 <button type="button" className="menu-secondary" onClick={startNewConversation}>New chat</button>
+               </div>
 
-              <div className="history-title">Previous prompts & messages</div>
+               <Link href="/settings?tab=integrations" className="integration-menu-card" onClick={() => setMenuOpen(false)}>
+                 <span className="integration-menu-icon"><AgentLineIcon name="integrations" /></span>
+                 <span className="integration-menu-copy">
+                   <strong>Integrations</strong>
+                   <small>{connectedIntegrations.length > 0 ? `${connectedIntegrations.length} connected tool${connectedIntegrations.length === 1 ? '' : 's'} ready for Agents` : 'Connect HubSpot, Salesforce, Outlook, WhatsApp, LinkedIn, or Instagram'}</small>
+                 </span>
+                 <span className="integration-menu-chevron" aria-hidden="true">›</span>
+               </Link>
+
+               <div className="history-title">Previous prompts & messages</div>
               <div className="history-list">
                 {savedConversations.length === 0 && <div className="history-empty">No saved prompts yet. Your recent agent chats will appear here on this device.</div>}
                 {savedConversations.map((conversation) => {
