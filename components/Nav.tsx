@@ -87,12 +87,6 @@ const DRAWER_SECTIONS = [
       { href: '/build', label: 'Build', icon: '🏗️' },
     ],
   },
-  {
-    label: 'EXPERIENCE',
-    links: [
-      { href: '/travel', label: 'Travel', icon: '✈️' },
-    ],
-  },
 ]
 
 type AdminPage = {
@@ -362,7 +356,7 @@ export default function Nav() {
     DIGITAL: tNav('digital'), SOCIAL: tNav('social'), EVENTS: tNav('events'), PLANET: tNav('planet'), 'EARLY INVESTORS': tNav('earlyInvestors'), CREATE: tNav('create'), EXPERIENCE: tNav('experience'), ACCOUNT: tNav('account'),
     'Trust Wallet': tNav('wallet'), Newsfeed: tNav('newsfeed'), 'Product Marketplace': tNav('productMarketplace'), 'Services Marketplace': tNav('servicesMarketplace'), Grassroots: tNav('grassroots'), 'Member Directory': tNav('memberDirectory'),
     Groups: tNav('groups'), Articles: tNav('articles'), Jobs: tNav('jobs'), 'Rent & Share': tNav('rentShare'), Organisations: tNav('organisations'), 'Add Organisation': tNav('addOrganisation'), Directory: tNav('directory'), 'My Calendar': tNav('myCalendar'), 'Activity Map': tNav('activityMap'), 'Add Event': tNav('addEvent'),
-    Impact: tNav('impact'), 'Early Investors': tNav('earlyInvestors'), 'Investor Deck': tNav('investorDeck'), Agents: tNav('agents'), Travel: tNav('travel'), Pubs: 'Pubs', Profile: tNav('profile'), 'Analytics Dashboard': tNav('analytics'), Settings: tNav('settings'),
+    Impact: tNav('impact'), 'Early Investors': tNav('earlyInvestors'), 'Investor Deck': tNav('investorDeck'), Agents: tNav('agents'), Pubs: 'Pubs', Profile: tNav('profile'), 'Analytics Dashboard': tNav('analytics'), Settings: tNav('settings'),
   } as Record<string, string>)[label] ?? label
 
   const visibleDrawerSections = DRAWER_SECTIONS
