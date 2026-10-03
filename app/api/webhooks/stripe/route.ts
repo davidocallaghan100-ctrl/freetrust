@@ -212,7 +212,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return
   }
 
-  // ── FitPlan Trust Coin top-up ─────────────────────────────────────────────
+  // Keep legacy FitPlan top-up settlement so any checkout already started
+  // before retirement still credits the member's Trust Coin balance.
   if (type === 'fitplan_topup' || session.metadata?.reason === 'fitplan_topup') {
     await handleFitPlanTopup(session)
     return
@@ -409,10 +410,10 @@ async function handleFitPlanTopup(session: Stripe.Checkout.Session) {
 
   await supabase.from('notifications').insert({
     user_id: userId,
-    type: 'fitplan',
-    title: '🏋️ FitPlan credits added',
-    body: `₮${trustAmount} has been added for FitPlan coaching and plans.`,
-    link: '/fitplan/dashboard',
+    type: 'wallet',
+    title: '💰 Trust Coins added',
+    body: `₮${trustAmount} has been added to your Trust Coin balance.`,
+    link: '/wallet',
     data: { topup_id: topup.id, trust_amount: trustAmount },
   })
 

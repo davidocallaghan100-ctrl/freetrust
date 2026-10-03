@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, getStoredSessionCredentials } from '@/lib/supabase/client'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -128,7 +128,7 @@ function Avatar({ url, name, size = 32 }: { url: string | null | undefined; name
 
 // ── Analytics Tab ─────────────────────────────────────────────────────────────
 
-function AnalyticsTab({ userId }: { userId: string }) {
+function AnalyticsTab() {
   const [loading, setLoading] = useState(true)
   const [gigCount, setGigCount] = useState(0)
   const [totalRevenue, setTotalRevenue] = useState(0)
@@ -142,65 +142,32 @@ function AnalyticsTab({ userId }: { userId: string }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const sb = createClient()
-        const now = new Date()
-        const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString()
-        const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-
-        // Only fetch orders from the last 12 months to avoid pulling every
-        // historical row for analytics that only displays 6-month windows.
-        const twelveMonthsAgo = new Date(now.getFullYear() - 1, now.getMonth(), 1).toISOString()
-
-        const [gigsRes, ordersRes] = await Promise.allSettled([
-          sb.from('listings').select('id', { count: 'exact', head: true }).eq('seller_id', userId),
-          sb.from('orders')
-            .select('id, amount, status, created_at, title, listing_id')
-            .eq('seller_id', userId)
-            .gte('created_at', twelveMonthsAgo)
-            .limit(500),
-        ])
-
-        if (gigsRes.status === 'fulfilled') setGigCount(gigsRes.value.count ?? 0)
-
-        if (ordersRes.status === 'fulfilled' && ordersRes.value.data) {
-          const orders = ordersRes.value.data
-          setTotalOrders(orders.length)
-          const completed = orders.filter(o => o.status === 'completed')
-          const revenue = completed.reduce((sum: number, o: { amount: number }) => sum + (o.amount ?? 0), 0)
-          setTotalRevenue(revenue)
-          setAvgOrderValue(completed.length > 0 ? revenue / completed.length : 0)
-          setOrdersThisWeek(orders.filter((o: { created_at: string }) => o.created_at >= weekAgo).length)
-          setOrdersThisMonth(orders.filter((o: { created_at: string }) => o.created_at >= monthAgo).length)
-
-          // Top gigs by order count
-          const countMap: Record<string, { title: string; count: number }> = {}
-          for (const o of orders) {
-            if (o.listing_id) {
-              countMap[o.listing_id] = { title: o.title || 'Untitled', count: (countMap[o.listing_id]?.count || 0) + 1 }
-            }
-          }
-          setTopGigs(Object.values(countMap).sort((a, b) => b.count - a.count).slice(0, 5))
-
-          // Monthly revenue (last 6 months)
-          const monthly: Record<string, number> = {}
-          for (let i = 5; i >= 0; i--) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-            const label = d.toLocaleDateString('en-IE', { month: 'short', year: '2-digit' })
-            monthly[label] = 0
-          }
-          for (const o of completed) {
-            const d = new Date(o.created_at)
-            const label = d.toLocaleDateString('en-IE', { month: 'short', year: '2-digit' })
-            if (label in monthly) monthly[label] += o.amount ?? 0
-          }
-          setMonthlyRevenue(Object.entries(monthly).map(([label, value]) => ({ label, value })))
+        const res = await fetch('/api/gig-economy/analytics', { cache: 'no-store' })
+        if (!res.ok) return
+        const data = await res.json() as {
+          gigCount?: number
+          totalRevenue?: number
+          totalOrders?: number
+          ordersThisWeek?: number
+          ordersThisMonth?: number
+          avgOrderValue?: number
+          topGigs?: { title: string; count: number }[]
+          monthlyRevenue?: { label: string; value: number }[]
         }
+        setGigCount(data.gigCount ?? 0)
+        setTotalRevenue(data.totalRevenue ?? 0)
+        setTotalOrders(data.totalOrders ?? 0)
+        setOrdersThisWeek(data.ordersThisWeek ?? 0)
+        setOrdersThisMonth(data.ordersThisMonth ?? 0)
+        setAvgOrderValue(data.avgOrderValue ?? 0)
+        setTopGigs(data.topGigs ?? [])
+        setMonthlyRevenue(data.monthlyRevenue ?? [])
       } catch { /* use defaults */ } finally {
         setLoading(false)
       }
     }
     load()
-  }, [userId])
+  }, [])
 
   const maxRev = Math.max(...monthlyRevenue.map(m => m.value), 1)
 
@@ -916,14 +883,32 @@ function GigEconomyPageInner() {
 
   useEffect(() => {
     const sb = createClient()
-    // Use getSession() instead of getUser() — getUser() makes a network round-trip
-    // to the Supabase Auth server on every load, blocking all tab content from
-    // rendering before any tab's own data fetch even starts. getSession() reads
-    // the already-verified local session (same pattern used in lib/supabase/client.ts,
-    // components/Nav.tsx, components/BottomNav.tsx, components/profile/ProfilePage.tsx).
-    // Downstream data queries are still protected by RLS regardless.
     let cancelled = false
+    const stored = getStoredSessionCredentials()
+    const storedSessionIsValid = stored && (
+      stored.expiresAt == null || stored.expiresAt > Math.floor(Date.now() / 1000) + 30
+    )
+
+    // iOS Safari/WKWebView can leave auth.getSession() pending even when the
+    // signed SSR auth cookie is already available. Resolve the member locally
+    // first so the Earn screen's data queries can start without waiting on
+    // GoTrue's async session restore. The signed token remains subject to RLS.
+    if (storedSessionIsValid) {
+      setUserId(stored.userId)
+      setAuthLoading(false)
+      return () => { cancelled = true }
+    }
+
+    // Keep the normal Supabase path for missing/expired cookies, but don't let
+    // a stalled auth restore leave the entire mobile page skeleton on screen.
+    const timeout = window.setTimeout(() => {
+      if (cancelled) return
+      setAuthLoading(false)
+      router.push('/login')
+    }, 10_000)
+
     sb.auth.getSession().then(({ data }) => {
+      window.clearTimeout(timeout)
       if (cancelled) return
       if (!data.session?.user) {
         setAuthLoading(false)
@@ -933,11 +918,15 @@ function GigEconomyPageInner() {
       setUserId(data.session.user.id)
       setAuthLoading(false)
     }).catch(() => {
+      window.clearTimeout(timeout)
       if (cancelled) return
       setAuthLoading(false)
       router.push('/login')
     })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      window.clearTimeout(timeout)
+    }
   }, [router])
 
   const handleTabChange = (tabId: string) => {
@@ -993,7 +982,7 @@ function GigEconomyPageInner() {
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '1.5rem 1.25rem' }}>
         {userId && (
           <>
-            <div style={{ display: activeTab === 'analytics'   ? 'block' : 'none' }}>{mountedTabs.has('analytics')   && <AnalyticsTab   userId={userId} />}</div>
+            <div style={{ display: activeTab === 'analytics'   ? 'block' : 'none' }}>{mountedTabs.has('analytics')   && <AnalyticsTab />}</div>
             <div style={{ display: activeTab === 'management'  ? 'block' : 'none' }}>{mountedTabs.has('management')  && <ManagementTab  userId={userId} />}</div>
             <div style={{ display: activeTab === 'bookings'    ? 'block' : 'none' }}>{mountedTabs.has('bookings')    && <BookingsTab    userId={userId} />}</div>
             <div style={{ display: activeTab === 'performance' ? 'block' : 'none' }}>{mountedTabs.has('performance') && <PerformanceTab userId={userId} />}</div>

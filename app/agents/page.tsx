@@ -1236,7 +1236,7 @@ export default function AgentsPage() {
     const agent = getAgentByName(agentName) ?? DEFAULT_AGENT;
     setConversationId(makeId('conversation'));
     setSelectedAgent(agent);
-    setMessages([{ id: makeId('msg'), role: 'assistant', content: cleanAssistantText(`I've prefilled ${agent.displayName} from FitPlan. Review it, then tap run when you're ready.`) }]);
+    setMessages([{ id: makeId('msg'), role: 'assistant', content: cleanAssistantText('Your request is ready. Review it, then tap run when you\'re ready.') }]);
     setAttachments([]);
     setInput(prompt);
     setError(null);
