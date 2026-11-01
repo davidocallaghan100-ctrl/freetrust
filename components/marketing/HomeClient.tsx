@@ -29,7 +29,7 @@ type StatsData = {
   events: { upcoming: number }
   articles: { published: number }
   communities: { total: number }
-  trust: { total: number; thisWeek: number; inCirculation: number; membersHolding: number }
+  trust: { total: number | null; thisWeek: number | null; inCirculation: number | null; membersHolding: number | null }
   aiAgentRuns: number
   walletTransactions: number
   ticker: TickerItem[]
@@ -303,9 +303,9 @@ function LegacyTopDesign({
   membersThisWeek: number
   services: number
   products: number
-  trustIssued: number
-  trustCirculation: number
-  trustHolders: number
+  trustIssued: number | null
+  trustCirculation: number | null
+  trustHolders: number | null
 }) {
   const t = useTranslations('landing')
 
@@ -424,7 +424,7 @@ function LegacyTopDesign({
                 <Link key={s.label} href={s.href} className="stats-link" aria-label={`${s.label}: ${s.sub}`}>
                   <div style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1rem 0.5rem' }}>
                     <div className="stat-val" style={{ fontSize: '1.8rem', fontWeight: 900, color: s.color, letterSpacing: '-1px' }}>
-                      <Counter target={s.val} prefix={s.prefix} suffix={s.suffix} />
+                      {s.val === null ? '—' : <Counter target={s.val} prefix={s.prefix} suffix={s.suffix} />}
                     </div>
                     <div className="stat-label" style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
                     <div className="stat-sub" style={{ fontSize: '0.65rem', color: s.color, marginTop: 3, fontWeight: 600 }}>{s.sub}</div>
@@ -433,7 +433,7 @@ function LegacyTopDesign({
               ) : (
                 <div key={s.label} style={{ background: 'var(--ft-surface)', border: '1px solid rgba(56,189,248,0.08)', borderRadius: 12, padding: '1rem 0.5rem' }}>
                   <div className="stat-val" style={{ fontSize: '1.8rem', fontWeight: 900, color: s.color, letterSpacing: '-1px' }}>
-                    <Counter target={s.val} prefix={s.prefix} suffix={s.suffix} />
+                    {s.val === null ? '—' : <Counter target={s.val} prefix={s.prefix} suffix={s.suffix} />}
                   </div>
                   <div className="stat-label" style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
                   <div className="stat-sub" style={{ fontSize: '0.65rem', color: s.color, marginTop: 3, fontWeight: 600 }}>{s.sub}</div>
@@ -456,7 +456,7 @@ function LegacyTopDesign({
               ].map(s => (
                 <div key={s.label} style={{ background: 'rgba(15,23,42,0.5)', borderRadius: 10, padding: '0.75rem 0.5rem', border: '1px solid rgba(45,212,191,0.1)' }}>
                   <div className="trust-val" style={{ fontSize: '1.6rem', fontWeight: 900, color: s.color, letterSpacing: '-0.5px' }}>
-                    <Counter target={s.val} prefix={s.prefix} />
+                    {s.val === null ? '—' : <Counter target={s.val} prefix={s.prefix} />}
                   </div>
                   <div className="trust-econ-label" style={{ fontSize: '0.68rem', color: 'var(--ft-text-tertiary)', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
                   <div className="trust-econ-sub" style={{ fontSize: '0.62rem', color: s.color, marginTop: 2, fontWeight: 600, opacity: 0.8 }}>{s.sub}</div>
@@ -557,9 +557,9 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
 
   const tm = stats?.members.total ?? initialCounts.members
   const tw = stats?.members.thisWeek ?? 0
-  const tt = stats?.trust.total ?? 9415
-  const tc = stats?.trust.inCirculation ?? 10145
-  const th = stats?.trust.membersHolding ?? Math.max(39, Math.min(tm, stats?.trust.membersHolding ?? 39))
+  const tt = stats?.trust.total ?? null
+  const tc = stats?.trust.inCirculation ?? null
+  const th = stats?.trust.membersHolding ?? null
   const sl = stats?.listings.services ?? 0
   const pl = stats?.listings.products ?? 0
   const goal = stats?.foundingGoal ?? 1000
@@ -768,7 +768,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
               <div style={{ position: 'absolute', width: 430, height: 430, right: 68, top: 92, borderRadius: '50%', background: 'radial-gradient(circle,rgba(0,194,203,.55),rgba(0,119,182,.18) 42%,transparent 70%)', filter: 'blur(34px)' }} />
               <div className="ft-secondary-phone" style={{ position: 'absolute', right: 300, top: 94, zIndex: 2, opacity: .93 }}><PhoneMockup src={screenshots.wallet} label={t('alt.walletScreenshot')} tilt="right" /></div>
               <div style={{ position: 'absolute', right: 110, top: 48, zIndex: 3 }}><PhoneMockup src={screenshots.products} label={t('alt.productScreenshot')} tilt="left" /></div>
-              <div style={{ position: 'absolute', zIndex: 4, right: 34, top: 118, padding: '13px 15px', borderRadius: 18, background: 'rgba(0,194,203,.15)', backdropFilter: 'blur(10px)', border: '1px solid rgba(0,194,203,.3)', boxShadow: '0 18px 44px rgba(0,0,0,.3)', fontWeight: 850 }}>{t('floatingBadges.balance', {amount: tc.toLocaleString()})}<div style={{ color: '#c8fbff', fontSize: 11, marginTop: 3 }}>{t('floatingBadges.trustCoinReady')}</div></div>
+              <div style={{ position: 'absolute', zIndex: 4, right: 34, top: 118, padding: '13px 15px', borderRadius: 18, background: 'rgba(0,194,203,.15)', backdropFilter: 'blur(10px)', border: '1px solid rgba(0,194,203,.3)', boxShadow: '0 18px 44px rgba(0,0,0,.3)', fontWeight: 850 }}>{t('floatingBadges.balance', {amount: tc === null ? '—' : tc.toLocaleString()})}<div style={{ color: '#c8fbff', fontSize: 11, marginTop: 3 }}>{t('floatingBadges.trustCoinReady')}</div></div>
               <div className="ft-float-verified" style={{ position: 'absolute', zIndex: 4, left: 62, bottom: 136, padding: '13px 15px', borderRadius: 18, background: 'rgba(0,194,203,.15)', backdropFilter: 'blur(10px)', border: '1px solid rgba(0,194,203,.3)', boxShadow: '0 18px 44px rgba(0,0,0,.3)', fontWeight: 850 }}>{t('floatingBadges.verifiedMember')}<div style={{ color: '#c8fbff', fontSize: 11, marginTop: 3 }}>{t('floatingBadges.identityProtected')}</div></div>
               <div className="ft-float-score" style={{ position: 'absolute', zIndex: 4, right: 12, bottom: 214, padding: '13px 15px', borderRadius: 18, background: 'rgba(255,255,255,.11)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,.18)', boxShadow: '0 18px 44px rgba(0,0,0,.3)', fontWeight: 850 }}>{t('floatingBadges.trustScore')}<div style={{ color: '#c8fbff', fontSize: 11, marginTop: 3 }}>{t('floatingBadges.portableReputation')}</div></div>
             </div>
@@ -1008,7 +1008,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           <div style={{ maxWidth: 820, margin: '0 auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 28, padding: 36, boxShadow: '0 24px 70px rgba(15,23,42,.1)' }}>
             <div className="ft-score-row" style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: 34, alignItems: 'center' }}>
               <div style={{ width: 174, height: 174, borderRadius: '50%', background: `conic-gradient(${TEAL} 0 94%,#e2e8f0 94%)`, display: 'grid', placeItems: 'center', boxShadow: '0 18px 44px rgba(0,194,203,.2)' }}><div style={{ width: 128, height: 128, borderRadius: '50%', background: '#fff', display: 'grid', placeItems: 'center', textAlign: 'center' }}><div><strong style={{ fontSize: 34 }}>4.9</strong><br />/ 5.0</div></div></div>
-              <div className="ft-factor-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>{trustScoreFactors.map(f => <div key={f} style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 14, padding: 13, fontWeight: 800, color: '#0f172a' }}>✓ {f.replace('{balance}', tc.toLocaleString())}</div>)}</div>
+              <div className="ft-factor-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>{trustScoreFactors.map(f => <div key={f} style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 14, padding: 13, fontWeight: 800, color: '#0f172a' }}>✓ {f.replace('{balance}', tc === null ? '—' : tc.toLocaleString())}</div>)}</div>
             </div>
             <Link href="/profile" style={{ marginTop: 24, display: 'inline-flex', borderRadius: 999, background: TEAL, padding: '14px 18px', color: '#031019', textDecoration: 'none', fontWeight: 850 }}>{t('trustScore.cta')}</Link>
           </div>
