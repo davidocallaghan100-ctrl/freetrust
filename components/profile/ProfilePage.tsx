@@ -370,6 +370,141 @@ function getMediaUrlsFromPost(post: FeedPost) {
   return Array.from(new Set(urls)).slice(0, 10)
 }
 
+function ProfileVideoThumbnail({ src, alt }: { src: string; alt: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const posterCapturedRef = useRef(false)
+  const seekTargetRef = useRef<number | null>(null)
+  const [shouldLoad, setShouldLoad] = useState(false)
+  const [previewReady, setPreviewReady] = useState(false)
+  const [posterUrl, setPosterUrl] = useState<string | null>(null)
+
+  const capturePosterFrame = useCallback(() => {
+    const video = videoRef.current
+    if (!video || posterCapturedRef.current || video.readyState < 2 || !video.videoWidth || !video.videoHeight) return
+
+    posterCapturedRef.current = true
+    try {
+      const scale = Math.min(1, 480 / video.videoWidth, 640 / video.videoHeight)
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.max(1, Math.round(video.videoWidth * scale))
+      canvas.height = Math.max(1, Math.round(video.videoHeight * scale))
+      const context = canvas.getContext('2d')
+      if (context) {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height)
+        setPosterUrl(canvas.toDataURL('image/jpeg', 0.8))
+      }
+    } catch {
+      // Some browsers block cross-origin canvas extraction. Keep the decoded
+      // video element paused on the same real frame as a visual fallback.
+    } finally {
+      seekTargetRef.current = null
+      setPreviewReady(true)
+      video.pause()
+    }
+  }, [])
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    posterCapturedRef.current = false
+    seekTargetRef.current = null
+    setShouldLoad(false)
+    setPreviewReady(false)
+    setPosterUrl(null)
+
+    let started = false
+    const startPreview = () => {
+      if (started) return
+      started = true
+      video.preload = 'auto'
+      video.muted = true
+      setShouldLoad(true)
+      if (video.readyState < 2) video.load()
+      // Muted inline playback is permitted for visible previews on mobile
+      // Safari. It lets us decode a real frame without playing audio or
+      // continuously animating every video tile in the profile grid.
+      video.play().catch(() => {})
+    }
+
+    if (typeof IntersectionObserver === 'undefined') {
+      startPreview()
+      return () => video.pause()
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry?.isIntersecting) return
+      startPreview()
+      observer.disconnect()
+    }, { rootMargin: '180px 0px', threshold: 0 })
+    observer.observe(video)
+
+    return () => {
+      observer.disconnect()
+      video.pause()
+    }
+  }, [src])
+
+  const seekToPreviewFrame = () => {
+    const video = videoRef.current
+    if (!video) return
+
+    const duration = video.duration
+    const target = Number.isFinite(duration) && duration > 0.2
+      ? Math.min(0.5, Math.max(0.12, duration * 0.08))
+      : Number.isFinite(duration) && duration > 0
+        ? duration / 2
+        : 0
+
+    if (target <= 0) {
+      capturePosterFrame()
+      return
+    }
+
+    seekTargetRef.current = target
+    try {
+      video.currentTime = target
+    } catch {
+      seekTargetRef.current = null
+      capturePosterFrame()
+    }
+  }
+
+  const captureLoadedFrame = () => {
+    const video = videoRef.current
+    const target = seekTargetRef.current
+    if (video && target !== null && (video.seeking || video.currentTime + 0.04 < target)) return
+    capturePosterFrame()
+  }
+
+  return (
+    <>
+      <video
+        ref={videoRef}
+        src={src}
+        muted
+        playsInline
+        autoPlay={shouldLoad && !previewReady}
+        preload={shouldLoad ? 'auto' : 'none'}
+        crossOrigin="anonymous"
+        aria-label={alt}
+        onLoadedMetadata={seekToPreviewFrame}
+        onLoadedData={captureLoadedFrame}
+        onSeeked={capturePosterFrame}
+        onCanPlay={() => {
+          const video = videoRef.current
+          if (video && !posterCapturedRef.current && !previewReady && video.paused) video.play().catch(() => {})
+        }}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', background: '#020617' }}
+      />
+      {posterUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={posterUrl} alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+      )}
+    </>
+  )
+}
+
 export default function ProfilePage() {
   // IMPORTANT: createClient() must be called once per mount, not on every render.
   // Calling createBrowserClient on each render creates new auth listener instances
@@ -1849,14 +1984,15 @@ export default function ProfilePage() {
             ) : photoGridTiles.length > 0 ? (
               <div className="profile-photo-grid">
                 {photoGridTiles.map(({ post, urls }) => {
-                  const isVideoPost = post.media_type === 'video' || post.type === 'video' || post.type === 'short'
+                  const isVideoPost = post.media_type === 'video' || (post.media_type ?? '').startsWith('video/') || post.type === 'video' || post.type === 'short'
+                  const mediaAlt = post.title ?? post.content?.slice(0, 80) ?? (isVideoPost ? 'Video post' : 'Photo post')
                   return (
                   <Link key={post.id} href={`/feed/${post.id}`} aria-label={isVideoPost ? 'Open video post' : 'Open photo post'} className="profile-photo-tile">
                     {isVideoPost ? (
-                      <video src={urls[0]} muted playsInline preload="metadata" aria-label={post.title ?? post.content?.slice(0, 80) ?? 'Video post'} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      <ProfileVideoThumbnail src={urls[0]} alt={mediaAlt} />
                     ) : (
                       /* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={urls[0]} alt={post.title ?? post.content?.slice(0, 80) ?? 'Photo post'} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      <img src={urls[0]} alt={mediaAlt} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                     )}
                     {isVideoPost && (
                       <span aria-hidden="true" style={{ position: 'absolute', top: 7, left: 7, width: 24, height: 24, borderRadius: 7, background: 'rgba(2,6,23,0.72)', border: '1px solid rgba(248,250,252,0.65)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#f8fafc', fontSize: 12, fontWeight: 900, boxShadow: '0 6px 16px rgba(0,0,0,0.35)' }}>
