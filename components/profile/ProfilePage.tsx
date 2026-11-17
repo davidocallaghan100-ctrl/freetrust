@@ -376,11 +376,25 @@ function ProfileVideoThumbnail({ src, alt }: { src: string; alt: string }) {
   const seekTargetRef = useRef<number | null>(null)
   const [shouldLoad, setShouldLoad] = useState(false)
   const [previewReady, setPreviewReady] = useState(false)
+  const [previewUnavailable, setPreviewUnavailable] = useState(false)
   const [posterUrl, setPosterUrl] = useState<string | null>(null)
+
+  const markPreviewUnavailable = useCallback(() => {
+    if (posterCapturedRef.current) return
+    posterCapturedRef.current = true
+    seekTargetRef.current = null
+    setPreviewReady(true)
+    setPreviewUnavailable(true)
+    videoRef.current?.pause()
+  }, [])
 
   const capturePosterFrame = useCallback(() => {
     const video = videoRef.current
-    if (!video || posterCapturedRef.current || video.readyState < 2 || !video.videoWidth || !video.videoHeight) return
+    if (!video || posterCapturedRef.current || video.readyState < 2) return
+    if (!video.videoWidth || !video.videoHeight) {
+      markPreviewUnavailable()
+      return
+    }
 
     posterCapturedRef.current = true
     try {
@@ -401,7 +415,7 @@ function ProfileVideoThumbnail({ src, alt }: { src: string; alt: string }) {
       setPreviewReady(true)
       video.pause()
     }
-  }, [])
+  }, [markPreviewUnavailable])
 
   useEffect(() => {
     const video = videoRef.current
@@ -411,6 +425,7 @@ function ProfileVideoThumbnail({ src, alt }: { src: string; alt: string }) {
     seekTargetRef.current = null
     setShouldLoad(false)
     setPreviewReady(false)
+    setPreviewUnavailable(false)
     setPosterUrl(null)
 
     let started = false
@@ -491,6 +506,7 @@ function ProfileVideoThumbnail({ src, alt }: { src: string; alt: string }) {
         onLoadedMetadata={seekToPreviewFrame}
         onLoadedData={captureLoadedFrame}
         onSeeked={capturePosterFrame}
+        onError={markPreviewUnavailable}
         onCanPlay={() => {
           const video = videoRef.current
           if (video && !posterCapturedRef.current && !previewReady && video.paused) video.play().catch(() => {})
@@ -500,6 +516,12 @@ function ProfileVideoThumbnail({ src, alt }: { src: string; alt: string }) {
       {posterUrl && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={posterUrl} alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+      )}
+      {previewUnavailable && !posterUrl && (
+        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'radial-gradient(circle at 50% 38%, rgba(14,116,144,0.34), transparent 55%), linear-gradient(145deg, #0f172a, #020617)', color: '#cbd5e1', fontSize: 11, fontWeight: 750, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+          <span style={{ fontSize: 24, lineHeight: 1 }}>▶</span>
+          Preview unavailable
+        </div>
       )}
     </>
   )
