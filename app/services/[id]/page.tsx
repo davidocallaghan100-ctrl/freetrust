@@ -199,6 +199,20 @@ function NotFound() {
   )
 }
 
+function ServiceLoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', padding: '104px 24px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 14, textAlign: 'center' }}>
+      <div style={{ fontSize: 48 }}>⚠️</div>
+      <h1 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0 }}>Couldn’t load this service</h1>
+      <p role="status" style={{ color: 'var(--ft-text-tertiary)', margin: 0, maxWidth: 420 }}>{message}</p>
+      <button onClick={onRetry} style={{ border: 0, borderRadius: 10, padding: '10px 18px', background: 'var(--ft-accent)', color: 'var(--ft-bg)', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+        Try again
+      </button>
+      <Link href="/services" style={{ color: 'var(--ft-text-secondary)', textDecoration: 'none', fontSize: 14 }}>Browse Services</Link>
+    </div>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ServiceDetailPage() {
@@ -210,6 +224,8 @@ export default function ServiceDetailPage() {
   const [svc, setSvc] = useState<ServiceListing | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [loadAttempt, setLoadAttempt] = useState(0)
   // reviews/reviewsAvg/reviewsLoading removed — ReviewsSection component handles display
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
@@ -244,67 +260,91 @@ export default function ServiceDetailPage() {
   }
 
   useEffect(() => {
-    if (!id) { setNotFound(true); setLoading(false); return }
+    let cancelled = false
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => controller.abort(), 10_000)
+
+    setLoading(true)
+    setNotFound(false)
+    setLoadError(null)
+    setSvc(null)
+
+    if (!id) {
+      setNotFound(true)
+      setLoading(false)
+      window.clearTimeout(timeoutId)
+      return () => { cancelled = true }
+    }
 
     const load = async () => {
       try {
-        const supabase = createClient()
-        const { data, error } = await supabase
-          .from('listings')
-          .select(`
-            id, title, description, price, currency, price_eur,
-            service_mode, tags, location,
-            images, category_id, category, delivery_types,
-            quality_score, avg_rating, review_count,
-            seller:profiles!seller_id (
-              id, full_name, avatar_url, bio, location
-            )
-          `)
-          .eq('id', id)
-          .eq('product_type', 'service')
-          .eq('status', 'active')
-          .single()
+        const response = await fetch(`/api/services/marketplace/${encodeURIComponent(id)}`, {
+          headers: { Accept: 'application/json' },
+          signal: controller.signal,
+        })
+        const payload = await response.json().catch(() => null) as { service?: Record<string, unknown>; error?: string } | null
 
-        if (error || !data) {
-          setNotFound(true)
-        } else {
-          const raw = data as Record<string, unknown>
-          const sellerRaw = raw.seller as Record<string, unknown> | null
+        if (response.status === 404) {
+          if (!cancelled) setNotFound(true)
+          return
+        }
+        if (!response.ok) {
+          throw new Error(response.status === 504
+            ? 'This service is taking longer than usual to load. Please try again.'
+            : payload?.error || 'We could not load this service. Please try again.')
+        }
+
+        const raw = payload?.service
+        if (!raw || typeof raw !== 'object') {
+          throw new Error('The service response was incomplete. Please try again.')
+        }
+
+        const sellerRaw = raw.seller as Record<string, unknown> | null
+        if (!cancelled) {
           setSvc({
-            id: raw.id as string,
-            title: raw.title as string,
-            description: raw.description as string,
-            price: raw.price as number,
-            price_eur: (raw.price_eur as number | null) ?? null,
+            id: String(raw.id ?? id),
+            title: String(raw.title ?? ''),
+            description: String(raw.description ?? ''),
+            price: Number(raw.price ?? 0),
+            price_eur: raw.price_eur == null ? null : Number(raw.price_eur),
             currency: 'EUR',
             service_mode: raw.service_mode as ServiceListing['service_mode'],
-            tags: raw.tags as string[] | null,
-            location: raw.location as string | null,
-            images: raw.images as string[] | null,
-            category_id: raw.category_id as string | null,
-            category: raw.category as string | null,
-            delivery_types: raw.delivery_types as string[] | null,
-            quality_score: (raw.quality_score as number | null) ?? null,
-            avg_rating: (raw.avg_rating as number | null) ?? null,
-            review_count: (raw.review_count as number | null) ?? null,
+            tags: Array.isArray(raw.tags) ? raw.tags as string[] : null,
+            location: typeof raw.location === 'string' ? raw.location : null,
+            images: Array.isArray(raw.images) ? raw.images as string[] : null,
+            category_id: typeof raw.category_id === 'string' ? raw.category_id : null,
+            category: typeof raw.category === 'string' ? raw.category : null,
+            delivery_types: Array.isArray(raw.delivery_types) ? raw.delivery_types as string[] : null,
+            quality_score: raw.quality_score == null ? null : Number(raw.quality_score),
+            avg_rating: raw.avg_rating == null ? null : Number(raw.avg_rating),
+            review_count: raw.review_count == null ? null : Number(raw.review_count),
             seller: {
-              id: (sellerRaw?.id as string) || '',
-              full_name: (sellerRaw?.full_name as string | null) || 'FreeTrust Member',
-              avatar_url: (sellerRaw?.avatar_url as string | null) || null,
-              bio: (sellerRaw?.bio as string | null) || null,
-              location: (sellerRaw?.location as string | null) || null,
+              id: typeof sellerRaw?.id === 'string' ? sellerRaw.id : '',
+              full_name: typeof sellerRaw?.full_name === 'string' ? sellerRaw.full_name : 'FreeTrust Member',
+              avatar_url: typeof sellerRaw?.avatar_url === 'string' ? sellerRaw.avatar_url : null,
+              bio: typeof sellerRaw?.bio === 'string' ? sellerRaw.bio : null,
+              location: typeof sellerRaw?.location === 'string' ? sellerRaw.location : null,
             },
           })
         }
-      } catch {
-        setNotFound(true)
+      } catch (error) {
+        if (!cancelled) {
+          setLoadError(controller.signal.aborted
+            ? 'This service is taking longer than usual to load. Please try again.'
+            : error instanceof Error ? error.message : 'We could not load this service. Please try again.')
+        }
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
-    load()
-  }, [id])
+    void load()
+    return () => {
+      cancelled = true
+      window.clearTimeout(timeoutId)
+      controller.abort()
+    }
+  }, [id, loadAttempt])
 
   useEffect(() => {
     if (!authChecked) return
@@ -320,12 +360,13 @@ export default function ServiceDetailPage() {
   }, [authChecked, currentUserId, isAdmin, svc?.id, svc?.seller?.id, svc?.title])
 
   if (loading) return <LoadingSkeleton />
+  if (loadError) return <ServiceLoadError message={loadError} onRetry={() => setLoadAttempt(attempt => attempt + 1)} />
   if (notFound || !svc) return <NotFound />
 
   const catInfo = ALL_CATEGORIES.find(c => c.id === svc.category_id)
     ?? ALL_CATEGORIES.find(c => c.label === svc.category)
   const reviewCount = svc.review_count ?? 0
-  const rating = reviewCount > 0 ? (svc.avg_rating ?? 5) : 5
+  const rating = reviewCount > 0 ? svc.avg_rating : null
   const images = svc.images ?? []
   const tags = svc.tags ?? []
   const mode = svc.service_mode
@@ -425,9 +466,15 @@ export default function ServiceDetailPage() {
               </div>
               <h1 style={{ fontSize: 'clamp(17px,4vw,22px)', fontWeight: 800, lineHeight: 1.3, margin: '0 0 10px' }}>{svc.title}</h1>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '13px', color: 'var(--ft-text-secondary)' }}>
-                  <Stars rating={rating} />
-                  <strong style={{ color: '#fbbf24' }}>{rating.toFixed(1)}</strong>
-                  <span>({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})</span>
+                  {rating != null ? (
+                    <>
+                      <Stars rating={rating} />
+                      <strong style={{ color: '#fbbf24' }}>{rating.toFixed(1)}</strong>
+                      <span>({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})</span>
+                    </>
+                  ) : (
+                    <span style={{ color: 'var(--ft-text-tertiary)' }}>No reviews yet</span>
+                  )}
                   <ListingQualityBadge
                     qualityScore={svc.quality_score}
                     avgRating={svc.avg_rating}
