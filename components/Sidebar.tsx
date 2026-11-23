@@ -67,6 +67,13 @@ const NAV_SECTIONS = [
       { href: '/invest', label: 'Invest', icon: '⭐' },
     ],
   },
+  {
+    label: 'BUILD',
+    links: [
+      { href: '/build', label: 'Build', icon: '🏗️' },
+      { href: '/developer-hub', label: 'Developer Hub', icon: '🔌' },
+    ],
+  },
 ]
 
 export default function Sidebar() {

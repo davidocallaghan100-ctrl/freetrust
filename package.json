@@ -7,6 +7,7 @@
     "build": "NODE_OPTIONS='--max-old-space-size=4096' next build",
     "start": "next start",
     "lint": "next lint",
+    "test:developer-api": "node --experimental-strip-types --test lib/developer-api/core.test.mjs",
     "setup:rent-share": "node scripts/setup-rent-share.mjs"
   },
   "dependencies": {

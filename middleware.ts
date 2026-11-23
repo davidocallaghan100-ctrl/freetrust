@@ -216,6 +216,7 @@ export async function middleware(request: NextRequest) {
     '/messages',
     '/notifications',
     '/orders',
+    '/developer-hub',
     '/onboarding',
     // Connections & community
     '/connections',
