@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { toPublicListing, parseListingPageParams } from '@/lib/developer-api/core'
+import { toPublicListing, parseListingPageParams } from '@/lib/developer-api/developer-api-core'
 import {
   authorizeListingRead,
   finalizePublicApiResponse,

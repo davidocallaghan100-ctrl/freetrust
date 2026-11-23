@@ -3,7 +3,7 @@ import type { User } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSessionClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { LISTINGS_READ_SCOPE, parseDeveloperBearer, verifyApiKeyToken } from '@/lib/developer-api/core'
+import { LISTINGS_READ_SCOPE, parseDeveloperBearer, verifyApiKeyToken } from '@/lib/developer-api/developer-api-core'
 
 export type RequestOwner = { user: User; error: null } | { user: null; error: NextResponse }
 export type DeveloperApiKey = { id: string; app_id: string; scopes: string[] }

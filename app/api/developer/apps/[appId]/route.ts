@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { isUuid } from '@/lib/developer-api/core'
+import { isUuid } from '@/lib/developer-api/developer-api-core'
 import { developerHubUnavailable, jsonNoStore, requireDeveloperOwner } from '@/lib/developer-api/server'
 
 export const dynamic = 'force-dynamic'

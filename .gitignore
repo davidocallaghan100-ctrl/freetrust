@@ -48,7 +48,3 @@ next-env.d.ts
 /public/worker-*.js.map
 /public/fallback-*.js
 core.*
-
-# These are Developer API source/tests, not crash dumps.
-!lib/developer-api/core.ts
-!lib/developer-api/core.test.mjs

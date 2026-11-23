@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { isUuid, toPublicListing } from '@/lib/developer-api/core'
+import { isUuid, toPublicListing } from '@/lib/developer-api/developer-api-core'
 import {
   authorizeListingRead,
   finalizePublicApiResponse,
