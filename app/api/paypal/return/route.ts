@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { authorizePayPalOrder, capturePayPalOrder, getPayPalAuthorizationId, getPayPalCaptureId, getPayPalOrder, sendPayPalPayout } from '@/lib/paypal'
+import { authorizePayPalOrder, capturePayPalOrder, getPayPalAuthorizationId, getPayPalBasketSenderItemId, getPayPalCaptureId, getPayPalOrder, getPayPalPayoutStatus, isPayPalPayoutFailureStatus, sendPayPalPayout } from '@/lib/paypal'
 import { insertNotification } from '@/lib/notifications/insert'
 import { logActivity } from '@/lib/activity/logActivity'
+import { sendEmail } from '@/lib/email/send'
+import { sendBasketSellerOrderEmails } from '@/lib/orders/basketSellerEmails'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,7 +30,7 @@ export async function GET(req: NextRequest) {
   const admin = createAdminClient()
   const { data: order, error: orderError } = await admin
     .from('orders')
-    .select('id, buyer_id, seller_id, listing_id, title, amount, payment_amount_cents, payment_gateway, paypal_order_id, paypal_intent, paypal_capture_id, type, status')
+    .select('id, buyer_id, seller_id, listing_id, title, amount, payment_amount_cents, currency, payment_gateway, paypal_order_id, paypal_intent, paypal_capture_id, type, status')
     .eq('id', orderId)
     .maybeSingle()
 
@@ -67,7 +69,7 @@ export async function GET(req: NextRequest) {
 
       const { data: items, error: itemError } = await admin
         .from('order_items')
-        .select('id, listing_id, seller_id, title, seller_payout_cents, paypal_payout_batch_id, paypal_payout_status')
+        .select('id, listing_id, seller_id, title, subtotal_cents, seller_payout_cents, paypal_payout_batch_id, paypal_payout_status')
         .eq('order_id', order.id)
       if (itemError) throw itemError
 
@@ -94,36 +96,69 @@ export async function GET(req: NextRequest) {
       let payoutFailure = false
 
       for (const item of items ?? []) {
-        if (item.paypal_payout_batch_id && item.paypal_payout_status !== 'failed') {
+        if (item.paypal_payout_batch_id) {
           payoutBatchIds.push(item.paypal_payout_batch_id)
+          if (isPayPalPayoutFailureStatus(item.paypal_payout_status)) payoutFailure = true
           continue
         }
         const email = item.seller_id ? sellerMap.get(item.seller_id) : null
         if (!email) {
           payoutFailure = true
-          await admin.from('order_items').update({ paypal_payout_status: 'failed', paypal_payout_error: 'Seller has not configured a PayPal payout email', updated_at: new Date().toISOString() }).eq('id', item.id)
+          const { error: missingEmailStateError } = await admin
+            .from('order_items')
+            .update({ paypal_payout_status: 'FAILED', paypal_payout_error: 'Seller has not configured a PayPal payout email', updated_at: new Date().toISOString() })
+            .eq('id', item.id)
+          if (missingEmailStateError) throw missingEmailStateError
           continue
         }
+
+        let payout
+        const senderItemId = getPayPalBasketSenderItemId(order.id, item.id)
         try {
-          const payout = await sendPayPalPayout({
+          payout = await sendPayPalPayout({
             orderId: `${order.id}-${item.id}`,
+            senderItemId,
             recipientEmail: email,
             amountCents: Number(item.seller_payout_cents ?? 0),
             note: `FreeTrust payout for ${item.title}`,
           })
-          const batchId = payout.batch_header?.payout_batch_id ?? null
-          if (!batchId) throw new Error('PayPal did not return a payout batch id')
-          payoutBatchIds.push(batchId)
-          await admin.from('order_items').update({ paypal_payout_batch_id: batchId, paypal_payout_status: payout.batch_header?.batch_status ?? 'PENDING', paypal_payout_error: null, updated_at: new Date().toISOString() }).eq('id', item.id)
         } catch (payoutError) {
           payoutFailure = true
           const message = payoutError instanceof Error ? payoutError.message : 'PayPal payout failed'
-          await admin.from('order_items').update({ paypal_payout_status: 'failed', paypal_payout_error: message, updated_at: new Date().toISOString() }).eq('id', item.id)
+          const { error: payoutFailureStateError } = await admin
+            .from('order_items')
+            .update({ paypal_payout_status: 'FAILED', paypal_payout_error: message, updated_at: new Date().toISOString() })
+            .eq('id', item.id)
+          // If a response was lost after PayPal created the batch, the next
+          // return retry uses the same PayPal request ID to recover it. Do not
+          // mark the parent paid unless this failure state is also persisted.
+          if (payoutFailureStateError) throw payoutFailureStateError
           console.error('[PayPal Return] basket payout failed', { orderId: order.id, itemId: item.id, message })
+          continue
         }
+
+        const batchId = payout.batch_header?.payout_batch_id ?? null
+        if (!batchId) throw new Error('PayPal did not return a payout batch id')
+        const payoutStatus = getPayPalPayoutStatus(payout, senderItemId)
+        payoutBatchIds.push(batchId)
+        const payoutFailed = isPayPalPayoutFailureStatus(payoutStatus)
+        if (payoutFailed) payoutFailure = true
+        const { error: payoutStateError } = await admin
+          .from('order_items')
+          .update({
+            paypal_payout_batch_id: batchId,
+            paypal_payout_status: payoutStatus,
+            paypal_payout_error: payoutFailed ? `PayPal payout status: ${payoutStatus}` : null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', item.id)
+        // A payout may already exist at PayPal. Do not mark the parent order
+        // paid if its batch ID/status could not be persisted; a safe return
+        // retry uses the same PayPal request ID and can recover the batch.
+        if (payoutStateError) throw payoutStateError
       }
 
-      await admin
+      const { data: newlyPaidBasket, error: basketOrderUpdateError } = await admin
         .from('orders')
         .update({
           status: 'paid',
@@ -132,6 +167,33 @@ export async function GET(req: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq('id', order.id)
+        .eq('status', 'pending_escrow')
+        .select('id')
+        .maybeSingle()
+      if (basketOrderUpdateError) {
+        console.error('[PayPal Return] basket order status update failed', { orderId: order.id, message: basketOrderUpdateError.message })
+        throw basketOrderUpdateError
+      } else if (newlyPaidBasket) {
+        await sendBasketSellerOrderEmails(
+          order.id,
+          order.currency ?? 'EUR',
+          (items ?? []).map(item => ({
+            seller_id: item.seller_id,
+            title: item.title,
+            subtotal_cents: item.subtotal_cents,
+          })),
+        )
+      } else {
+        const { data: currentOrder, error: currentOrderError } = await admin
+          .from('orders')
+          .select('status')
+          .eq('id', order.id)
+          .maybeSingle()
+        if (currentOrderError) throw currentOrderError
+        if (!currentOrder || !['paid', 'completed'].includes(currentOrder.status)) {
+          throw new Error('PayPal basket payment was captured, but the order did not reach paid state')
+        }
+      }
 
       const purchasedListingIds = Array.from(new Set(
         (items ?? [])
@@ -174,7 +236,7 @@ export async function GET(req: NextRequest) {
     }
     if (!authorizationId) throw new Error('PayPal did not return an authorization id')
 
-    const { error: updateError } = await admin
+    const { data: authorizedOrder, error: updateError } = await admin
       .from('orders')
       .update({
         status: 'paid',
@@ -184,7 +246,10 @@ export async function GET(req: NextRequest) {
       })
       .eq('id', order.id)
       .eq('status', 'pending_escrow')
+      .select('id')
+      .maybeSingle()
     if (updateError) throw updateError
+    if (!authorizedOrder) return redirect(req, `/orders/${order.id}/success?gateway=paypal`)
 
     void logActivity({
       orderId: order.id,
@@ -201,6 +266,19 @@ export async function GET(req: NextRequest) {
       body: `Your order for "${order.title}" is confirmed. You earned ₮5 trust!`,
       link: `/orders/${order.id}`,
     })
+
+    const emailResult = await sendEmail({
+      type: 'order_placed',
+      userId: order.seller_id,
+      payload: {
+        orderTitle: order.title ?? 'Marketplace order',
+        amount: Number(order.payment_amount_cents ?? order.amount ?? 0) / 100,
+        orderId: order.id,
+        recipientRole: 'seller',
+        currency: order.currency ?? 'EUR',
+      },
+    })
+    if (!emailResult.sent) console.warn('[PayPal Return] Seller order email not sent:', emailResult.reason)
 
     await admin.rpc('issue_trust', {
       p_user_id: order.buyer_id,

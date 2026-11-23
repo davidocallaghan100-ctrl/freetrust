@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
+import { sendBasketSellerOrderEmails } from "@/lib/orders/basketSellerEmails";
 import { insertNotification } from "@/lib/notifications/insert";
 import { logActivity } from "@/lib/activity/logActivity";
 
@@ -247,7 +248,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     const piId = typeof session.payment_intent === 'string'
       ? session.payment_intent
       : String(session.payment_intent ?? '')
-    const { error: updateError } = await supabase
+    const { data: newlyPaidOrder, error: updateError } = await supabase
       .from('orders')
       .update({
         status: 'paid',
@@ -255,7 +256,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         stripe_payment_intent_id: piId,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', orderId);
+      .eq('id', orderId)
+      .in('status', ['pending', 'pending_escrow'])
+      .select('seller_id, title, payment_amount_cents, amount, currency')
+      .maybeSingle();
 
     if (updateError) {
       console.error('[Stripe Webhook] Failed to update order status:', updateError);
@@ -271,6 +275,25 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       .select('buyer_id, title, listing_id')
       .eq('id', orderId)
       .single();
+
+    // Notify the seller only on the first transition into paid. Stripe can
+    // retry webhook deliveries; the conditional update above prevents duplicate
+    // order-received emails and avoids moving a later order state backwards.
+    if (newlyPaidOrder?.seller_id) {
+      const chargedCents = Number(newlyPaidOrder.payment_amount_cents ?? newlyPaidOrder.amount ?? 0)
+      const emailResult = await sendEmail({
+        type: 'order_placed',
+        userId: newlyPaidOrder.seller_id,
+        payload: {
+          orderTitle: newlyPaidOrder.title ?? 'Marketplace order',
+          amount: chargedCents / 100,
+          orderId,
+          recipientRole: 'seller',
+          currency: newlyPaidOrder.currency ?? 'EUR',
+        },
+      })
+      if (!emailResult.sent) console.warn('[Stripe Webhook] Seller order email not sent:', emailResult.reason)
+    }
 
     // Set expected_delivery_at from listing.delivery_days (non-blocking)
     if (order?.listing_id) {
@@ -453,7 +476,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       : paymentIntent.latest_charge?.id
 
     try {
-      await supabase
+      const { data: newlyPaidBasket, error: basketOrderUpdateError } = await supabase
         .from('orders')
         .update({
           status: 'paid',
@@ -462,10 +485,39 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
           updated_at: new Date().toISOString(),
         })
         .eq('id', orderId)
+        .eq('type', 'product_basket')
+        .in('status', ['pending', 'pending_escrow'])
+        .select('id')
+        .maybeSingle()
+
+      if (basketOrderUpdateError) {
+        console.error('[PaymentIntent] product_basket order status update failed:', basketOrderUpdateError)
+        return
+      }
+
+      // A webhook retry may arrive after the paid transition but before all
+      // item transfers were persisted. Resume only for this same paid basket
+      // and PaymentIntent; never pay items for a cancelled/replaced order.
+      if (!newlyPaidBasket) {
+        const { data: existingBasket, error: existingBasketError } = await supabase
+          .from('orders')
+          .select('id, type, status, stripe_payment_intent_id, stripe_payment_intent')
+          .eq('id', orderId)
+          .maybeSingle()
+        if (existingBasketError) {
+          console.error('[PaymentIntent] product_basket retry state lookup failed:', existingBasketError)
+          return
+        }
+        const recordedPaymentIntent = existingBasket?.stripe_payment_intent_id ?? existingBasket?.stripe_payment_intent
+        if (existingBasket?.type !== 'product_basket' || existingBasket.status !== 'paid' || recordedPaymentIntent !== piId) {
+          console.warn('[PaymentIntent] product_basket ignored: order is not paid by this PaymentIntent', { orderId, status: existingBasket?.status })
+          return
+        }
+      }
 
       const { data: orderItems, error: itemErr } = await supabase
         .from('order_items')
-        .select('id, seller_id, title, seller_payout_cents, stripe_transfer_id, transfer_status')
+        .select('id, seller_id, title, subtotal_cents, seller_payout_cents, stripe_transfer_id, transfer_status')
         .eq('order_id', orderId)
 
       if (itemErr) {
@@ -477,6 +529,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         id: string
         seller_id: string | null
         title: string
+        subtotal_cents: number
         seller_payout_cents: number
         stripe_transfer_id: string | null
         transfer_status: string
@@ -520,6 +573,11 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
               buyer_id: userId,
               type: 'product_basket_item',
             },
+          }, {
+            // Stripe may deliver the same PaymentIntent webhook concurrently
+            // or retry it after a timeout. Make each seller/item transfer
+            // processor-idempotent, scoped to this exact payment attempt.
+            idempotencyKey: `basket-transfer-${orderId}-${item.id}-${piId}`,
           })
 
           transferIds.push(transfer.id)
@@ -540,6 +598,10 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
             .update({ transfer_status: 'failed', transfer_error: message, updated_at: new Date().toISOString() })
             .eq('id', item.id)
         }
+      }
+
+      if (newlyPaidBasket) {
+        await sendBasketSellerOrderEmails(orderId, paymentIntent.currency ?? 'eur', items)
       }
 
       if (transferIds.length > 0) {

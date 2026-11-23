@@ -19,14 +19,21 @@ interface StatusHistoryEntry {
 
 interface Order {
   id: string
+  type?: string
   item_type: string
   item_title: string
-  amount_pence: number
-  platform_fee_pence: number
-  seller_payout_pence: number
+  amount_pence: number | null
+  platform_fee_pence: number | null
+  seller_payout_pence: number | null
   status: string
   buyer_id: string
-  seller_id: string
+  seller_id: string | null
+  currency?: string | null
+  is_seller_basket_view?: boolean
+  buyer_fee_pence?: number
+  seller_fee_pence?: number
+  item_subtotal_pence?: number | null
+  items?: BasketOrderItem[]
   buyer_name?: string
   seller_name?: string
   created_at: string
@@ -41,6 +48,22 @@ interface Order {
   delivery_address?: string
 }
 
+interface BasketOrderItem {
+  id: string
+  listing_id: string | null
+  seller_id: string | null
+  title: string
+  quantity: number
+  subtotal_cents: number
+  seller_payout_cents: number
+  delivery_status: 'pending' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'completed' | 'disputed' | null
+  tracking_carrier?: string | null
+  tracking_number?: string | null
+  tracking_url?: string | null
+  delivery_notes?: string | null
+  payout_ready: boolean
+}
+
 const STATUS_STEPS = [
   { key: 'pending_escrow', label: 'Payment Pending', icon: '⏳' },
   { key: 'in_progress',    label: 'In Progress', icon: '🔧' },
@@ -49,6 +72,7 @@ const STATUS_STEPS = [
 ]
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  paid:           { label: 'Paid', color: '#38bdf8', bg: 'rgba(56,189,248,0.12)' },
   pending_escrow: { label: 'Pending', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)' },
   in_progress:    { label: 'In Progress', color: 'var(--ft-accent)', bg: 'rgba(56,189,248,0.12)' },
   delivered:      { label: 'Delivered', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)' },
@@ -57,8 +81,13 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   refunded:       { label: 'Refunded', color: 'var(--ft-text-secondary)', bg: 'rgba(148,163,184,0.12)' },
 }
 
-function poundFormat(pence: number) {
-  return `£${(pence / 100).toFixed(2)}`
+function moneyFormat(cents: number | null | undefined, currency = 'EUR') {
+  if (cents == null || !Number.isFinite(Number(cents))) return '—'
+  try {
+    return new Intl.NumberFormat('en-IE', { style: 'currency', currency: currency || 'EUR' }).format(Number(cents) / 100)
+  } catch {
+    return `€${(Number(cents) / 100).toFixed(2)}`
+  }
 }
 
 function formatDate(str: string) {
@@ -265,19 +294,35 @@ export default function OrderDetailPage() {
     }
   }
 
-  async function doAction(action: string, extra?: Record<string, string>) {
+async function doAction(action: string, extra?: Record<string, string>) {
+    if (action === 'release_payment') {
+      const total = order ? moneyFormat(order.amount_pence, order.currency ?? 'EUR') : 'this order payment'
+      const confirmed = window.confirm(`Confirm delivery for ${total} and release it from escrow to the seller? This captures the payment and initiates the seller payout; it cannot be undone.`)
+      if (!confirmed) return
+    }
     setActionLoading(true)
     try {
-      const res = await fetch(`/api/orders/${orderId}`, {
+      const itemId = extra?.order_item_id
+      const itemAction = action === 'mark_item_delivered' || action === 'confirm_item_received'
+      if (itemAction && !itemId) throw new Error('Order item reference is missing')
+      const endpoint = itemAction && itemId ? `/api/order-items/${itemId}` : `/api/orders/${orderId}`
+      const itemRequest = action === 'mark_item_delivered'
+        ? { action: 'update_fulfillment', delivery_status: 'delivered' }
+        : action === 'confirm_item_received'
+          ? { action: 'confirm_received' }
+          : null
+      const res = await fetch(endpoint, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, ...extra }),
+        body: JSON.stringify(itemRequest ?? { action, ...extra }),
       })
       const data = await res.json()
       if (res.ok) {
         showToast(
           action === 'mark_delivered' ? 'Order marked as delivered!' :
-          action === 'release_payment' ? 'Payment released! ₮10 trust issued to seller.' :
+          action === 'mark_item_delivered' ? 'Item marked as delivered.' :
+          action === 'confirm_item_received' ? 'Receipt confirmed for this item.' :
+          action === 'release_payment' ? 'Payment released successfully.' :
           action === 'raise_dispute' ? 'Dispute raised. Our team will review.' : 'Updated!',
           'success'
         )
@@ -402,7 +447,7 @@ export default function OrderDetailPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.4rem' }}>
-              <span style={{ fontSize: '1.5rem' }}>{order.item_type === 'service' ? '🛠' : '📦'}</span>
+              <span style={{ fontSize: '1.5rem' }}>{order.type === 'product_basket' ? '🧺' : order.item_type === 'service' ? '🛠' : '📦'}</span>
               <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: 'var(--ft-text)' }}>{order.item_title}</h1>
             </div>
             <div style={{ fontSize: '0.8rem', color: 'var(--ft-text-tertiary)' }}>Order #{order.id.slice(0, 8).toUpperCase()}</div>
@@ -419,7 +464,7 @@ export default function OrderDetailPage() {
           {/* Main column */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {/* Timeline */}
-            {!isDisputed && !isRefunded && (
+            {!isDisputed && !isRefunded && order.type !== 'product_basket' && (
               <div style={{ background: 'var(--ft-surface)', borderRadius: 14, padding: '1.5rem', border: '1px solid rgba(148,163,184,0.1)' }}>
                 <h3 style={{ margin: '0 0 1.25rem', fontSize: '0.95rem', color: 'var(--ft-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Order Progress</h3>
                 <div style={{ display: 'flex', gap: 0 }}>
@@ -489,6 +534,43 @@ export default function OrderDetailPage() {
               </div>
             )}
 
+            {order.type === 'product_basket' && (order.items?.length ?? 0) > 0 && (
+              <section style={{ background: 'var(--ft-surface)', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(148,163,184,0.1)' }}>
+                <h3 style={{ margin: '0 0 0.45rem', fontSize: '0.95rem', color: 'var(--ft-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Basket items</h3>
+                <p style={{ margin: '0 0 1rem', color: 'var(--ft-text-tertiary)', fontSize: 12 }}>Basket products are paid out separately to each seller; they are not held in service escrow.</p>
+                <div style={{ display: 'grid', gap: 11 }}>
+                  {order.items!.map(item => {
+                    const deliveryStatus = item.delivery_status ?? (order.status === 'paid' ? 'paid' : 'pending')
+                    return (
+                    <div key={item.id} style={{ border: '1px solid rgba(148,163,184,0.13)', borderRadius: 10, padding: '0.9rem 1rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                        <div style={{ minWidth: 0 }}>
+                          <strong>{item.title}</strong>
+                          <div style={{ marginTop: 4, color: 'var(--ft-text-tertiary)', fontSize: 12 }}>{item.quantity} item{item.quantity === 1 ? '' : 's'} · {moneyFormat(item.subtotal_cents, order.currency ?? 'EUR')}</div>
+                        </div>
+                        <span style={{ color: deliveryStatus === 'completed' ? '#34d399' : 'var(--ft-text-secondary)', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{deliveryStatus.replace('_', ' ')}</span>
+                      </div>
+                      {item.tracking_number && <div style={{ marginTop: 8, color: 'var(--ft-text-tertiary)', fontSize: 12 }}>Tracking{item.tracking_carrier ? ` · ${item.tracking_carrier}` : ''}: {item.tracking_url ? <a href={item.tracking_url} target="_blank" rel="noreferrer" style={{ color: 'var(--ft-accent)' }}>{item.tracking_number}</a> : item.tracking_number}</div>}
+                      {item.delivery_notes && <div style={{ marginTop: 8, color: 'var(--ft-text-secondary)', fontSize: 13 }}>{item.delivery_notes}</div>}
+                      {item.seller_id === userId && order.status === 'paid' && ['pending', 'paid', 'processing', 'shipped'].includes(deliveryStatus) && item.payout_ready && (
+                        <button onClick={() => doAction('mark_item_delivered', { order_item_id: item.id })} disabled={actionLoading} style={{ marginTop: 10, border: 0, borderRadius: 7, padding: '8px 12px', background: '#a78bfa', color: '#1f1532', fontWeight: 700, cursor: 'pointer' }}>📦 Mark item delivered</button>
+                      )}
+                      {item.seller_id === userId && order.status === 'paid' && ['pending', 'paid', 'processing', 'shipped'].includes(deliveryStatus) && !item.payout_ready && (
+                        <p role="status" style={{ margin: '10px 0 0', color: '#fbbf24', fontSize: 12 }}>Seller payout is being reconciled; delivery updates are paused.</p>
+                      )}
+                      {isBuyer && item.delivery_status === 'delivered' && (
+                        <button onClick={() => doAction('confirm_item_received', { order_item_id: item.id })} disabled={actionLoading} style={{ marginTop: 10, border: 0, borderRadius: 7, padding: '8px 12px', background: '#34d399', color: '#052e22', fontWeight: 700, cursor: 'pointer' }}>✅ Confirm item received</button>
+                      )}
+                      {isBuyer && item.delivery_status === 'completed' && item.listing_id && (
+                        <Link href={`/products/${item.listing_id}`} style={{ display: 'inline-flex', marginTop: 10, color: 'var(--ft-accent)', fontSize: 13, fontWeight: 700 }}>★ Review this product</Link>
+                      )}
+                    </div>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
             {/* ── BUYER: Live delivery map (shown when active session exists) ── */}
             {isBuyer && showDeliveryTracking && (
               <BuyerTrackingPanel orderId={orderId} />
@@ -519,7 +601,7 @@ export default function OrderDetailPage() {
             )}
 
             {/* Trust reward info */}
-            {(order.status === 'in_progress' || order.status === 'delivered' || order.status === 'completed') && isBuyer && (
+            {order.type !== 'product_basket' && (order.status === 'in_progress' || order.status === 'delivered' || order.status === 'completed') && isBuyer && (
               <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 12, padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <span style={{ fontSize: '1.4rem' }}>₮</span>
                 <div>
@@ -530,22 +612,22 @@ export default function OrderDetailPage() {
             )}
 
             {/* Order Activity Feed — shared real-time log for buyer and seller */}
-            <div style={{ background: 'var(--ft-surface)', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(148,163,184,0.1)' }}>
+            {order.type !== 'product_basket' && <div style={{ background: 'var(--ft-surface)', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(148,163,184,0.1)' }}>
               <OrderActivityFeed
                 orderId={orderId}
                 currentUserId={userId ?? undefined}
                 buyerId={order.buyer_id}
-                sellerId={order.seller_id}
+                sellerId={order.seller_id ?? undefined}
               />
-            </div>
+            </div>}
 
             {/* Actions */}
-            {!isRefunded && !isDisputed && (
+            {order.type !== 'product_basket' && !isRefunded && !isDisputed && (
               <div style={{ background: 'var(--ft-surface)', borderRadius: 14, padding: '1.5rem', border: '1px solid rgba(148,163,184,0.1)' }}>
                 <h3 style={{ margin: '0 0 1rem', fontSize: '0.95rem', color: 'var(--ft-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actions</h3>
 
                 {/* SELLER: Mark as delivered + optional delivery tracking */}
-                {isSeller && order.status === 'in_progress' && (
+                {isSeller && (order.status === 'paid' || order.status === 'in_progress') && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {/* ── Physical delivery tracking button ── */}
                     {showDeliveryTracking && !activeDeliverySessionId && (
@@ -651,7 +733,7 @@ export default function OrderDetailPage() {
                   </div>
                 )}
 
-                {order.status === 'completed' && (
+                {order.type !== 'product_basket' && order.status === 'completed' && (
                   <div style={{ color: '#34d399', fontWeight: 600 }}>✅ Order complete. Payment has been released to the seller.</div>
                 )}
 
@@ -667,11 +749,17 @@ export default function OrderDetailPage() {
             {/* Financial summary */}
             <div style={{ background: 'var(--ft-surface)', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(148,163,184,0.1)' }}>
               <h3 style={{ margin: '0 0 1rem', fontSize: '0.85rem', color: 'var(--ft-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Summary</h3>
-              {[
-                { label: 'Order Total', value: poundFormat(order.amount_pence), highlight: true },
-                { label: `Platform Fee (${order.item_type === 'service' ? '8' : '5'}%)`, value: `−${poundFormat(order.platform_fee_pence)}`, color: 'var(--ft-danger)' },
-                { label: 'Seller Receives', value: poundFormat(order.seller_payout_pence), color: '#34d399' },
-              ].map(row => (
+              {(order.type === 'product_basket' ? [
+                { label: 'Items subtotal', value: moneyFormat(order.item_subtotal_pence ?? order.amount_pence, order.currency ?? 'EUR') },
+                { label: 'Buyer marketplace fee', value: moneyFormat(order.buyer_fee_pence ?? 0, order.currency ?? 'EUR') },
+                { label: 'Seller fee', value: `−${moneyFormat(order.seller_fee_pence ?? order.platform_fee_pence, order.currency ?? 'EUR')}`, color: 'var(--ft-danger)' },
+                { label: 'Order total', value: moneyFormat(order.amount_pence, order.currency ?? 'EUR'), highlight: true },
+                { label: 'Seller receives', value: moneyFormat(order.seller_payout_pence, order.currency ?? 'EUR'), color: '#34d399' },
+              ] : [
+                { label: 'Order Total', value: moneyFormat(order.amount_pence, order.currency ?? 'GBP'), highlight: true },
+                { label: 'Platform Fee', value: `−${moneyFormat(order.platform_fee_pence, order.currency ?? 'EUR')}`, color: 'var(--ft-danger)' },
+                { label: 'Seller Receives', value: moneyFormat(order.seller_payout_pence, order.currency ?? 'GBP'), color: '#34d399' },
+              ]).map(row => (
                 <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', fontSize: '0.875rem' }}>
                   <span style={{ color: 'var(--ft-text-secondary)' }}>{row.label}</span>
                   <span style={{ fontWeight: 700, color: row.color || (row.highlight ? 'var(--ft-accent)' : 'var(--ft-text)') }}>{row.value}</span>
@@ -697,7 +785,7 @@ export default function OrderDetailPage() {
             </div>
 
             {/* Trust reward */}
-            <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 12, padding: '1rem' }}>
+            {order.type !== 'product_basket' && <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 12, padding: '1rem' }}>
               <div style={{ fontSize: '0.8rem', color: 'var(--ft-text-secondary)', marginBottom: '0.6rem', fontWeight: 600 }}>Trust Rewards</div>
               <div style={{ display: 'flex', gap: '0.4rem', flexDirection: 'column' }}>
                 <div style={{ fontSize: '0.8rem', color: 'var(--ft-accent)' }}>🛒 +₮5 buyer on purchase</div>
@@ -713,10 +801,10 @@ export default function OrderDetailPage() {
                   </>
                 )}
               </div>
-            </div>
+            </div>}
 
             {/* Invoice download — seller only, completed/delivered orders */}
-            {isSeller && (order.status === 'completed' || order.status === 'delivered') && (
+            {isSeller && order.type !== 'product_basket' && (order.status === 'completed' || order.status === 'delivered') && (
               <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, padding: '1rem' }}>
                 <div style={{ fontSize: '0.8rem', color: 'var(--ft-text-secondary)', marginBottom: '0.6rem' }}>Documents</div>
                 <a

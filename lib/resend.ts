@@ -115,18 +115,72 @@ export async function sendNewMessageEmail(to: string, name: string, senderName: 
   return getResend().emails.send({ from: FROM, to, subject: `New message from ${senderName} on FreeTrust`, html })
 }
 
-export async function sendOrderPlacedEmail(to: string, name: string, orderTitle: string, amount: number, orderId: string) {
-  const html = wrap('Order confirmed', `
-    ${h1('Order confirmed ✅')}
-    ${p(`Hi ${name}, your order has been placed successfully.`)}
+export async function sendOrderPlacedEmail(
+  to: string,
+  name: string,
+  orderTitle: string,
+  amount: number,
+  orderId: string,
+  recipientRole: 'buyer' | 'seller' | 'proposal_buyer' | 'pending_buyer' | 'pending_seller' = 'buyer',
+  currency = 'EUR',
+) {
+  const safeCurrency = /^[A-Z]{3}$/i.test(currency) ? currency.toUpperCase() : 'EUR'
+  let formattedAmount = `€${amount.toFixed(2)}`
+  try {
+    formattedAmount = new Intl.NumberFormat('en-IE', { style: 'currency', currency: safeCurrency }).format(amount)
+  } catch { /* retain EUR fallback */ }
+  const safeName = name.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] ?? char)
+  const safeOrderTitle = orderTitle.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] ?? char)
+  const isSeller = recipientRole === 'seller'
+  const isProposalBuyer = recipientRole === 'proposal_buyer'
+  const isPendingBuyer = recipientRole === 'pending_buyer'
+  const isPendingSeller = recipientRole === 'pending_seller'
+  const heading = isSeller
+    ? 'New order received 🎉'
+    : isProposalBuyer
+      ? 'Custom order proposal received'
+      : isPendingSeller
+        ? 'New order request received'
+        : isPendingBuyer
+          ? 'Order request received'
+          : 'Order confirmed ✅'
+  const message = isPendingSeller
+    ? `Hi ${safeName}, a member started an order request for your listing on FreeTrust. Payment is not yet confirmed. Review My Orders and wait for payment confirmation before starting work.`
+    : isPendingBuyer
+      ? `Hi ${safeName}, your order request has been created on FreeTrust. Payment is not yet confirmed; check My Orders for the current status before proceeding.`
+      : isSeller
+    ? `Hi ${safeName}, a new order for your listing has been placed on FreeTrust. Open My Orders to review the details and payment status before starting work.`
+    : isProposalBuyer
+      ? `Hi ${safeName}, a seller sent you a custom order proposal on FreeTrust. Review the proposal and its current status in My Orders before proceeding.`
+      : `Hi ${safeName}, your order has been placed successfully.`
+  const emailTitle = isPendingSeller || isPendingBuyer
+    ? 'Order request received'
+    : isSeller
+      ? 'New order received'
+      : isProposalBuyer
+        ? 'Custom order proposal'
+        : 'Order confirmed'
+  const html = wrap(emailTitle, `
+    ${h1(heading)}
+    ${p(message)}
     <div style="background:rgba(56,189,248,0.07);border:1px solid rgba(56,189,248,0.15);border-radius:10px;padding:16px;margin:0 0 20px;">
       <div style="font-size:13px;color:#64748b;margin-bottom:4px;">ORDER DETAILS</div>
-      <div style="font-size:16px;font-weight:700;color:#f1f5f9;">${orderTitle}</div>
-      <div style="font-size:18px;font-weight:800;color:#38bdf8;margin-top:4px;">£${amount.toFixed(2)}</div>
+      <div style="font-size:16px;font-weight:700;color:#f1f5f9;">${safeOrderTitle}</div>
+      <div style="font-size:18px;font-weight:800;color:#38bdf8;margin-top:4px;">${formattedAmount}</div>
     </div>
     <div style="text-align:center;">${btn('View Order', `${BASE_URL}/orders/${orderId}`)}</div>
   `)
-  return getResend().emails.send({ from: FROM, to, subject: `Order confirmed: ${orderTitle}`, html })
+  const safeSubjectTitle = orderTitle.replace(/[\r\n]+/g, ' ').slice(0, 120)
+  const subject = isPendingSeller
+    ? `Pending FreeTrust order request: ${safeSubjectTitle}`
+    : isPendingBuyer
+      ? `FreeTrust order request pending: ${safeSubjectTitle}`
+      : isSeller
+    ? `New FreeTrust order: ${safeSubjectTitle}`
+    : isProposalBuyer
+      ? `Custom order proposal: ${safeSubjectTitle}`
+      : `Order confirmed: ${safeSubjectTitle}`
+  return getResend().emails.send({ from: FROM, to, subject, html })
 }
 
 export async function sendOrderDeliveredEmail(to: string, name: string, orderTitle: string, orderId: string) {

@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
     const buyerName = buyerProfile?.full_name ?? recipient.full_name ?? 'A member'
     const amountLabel = `€${amount.toFixed(2)}`
 
-    void Promise.all([
+    const sideEffects = await Promise.allSettled([
       insertNotification({
         userId: recipientId,
         type: 'order',
@@ -219,14 +219,14 @@ export async function POST(request: NextRequest) {
       sendEmail({
         type: 'order_placed',
         userId: recipientId,
-        payload: { orderTitle: title, amount, orderId: order.id },
+        payload: { orderTitle: title, amount, orderId: order.id, recipientRole: 'proposal_buyer', currency: 'EUR' },
       }),
-      sendEmail({
-        type: 'order_placed',
-        userId: user.id,
-        payload: { orderTitle: title, amount, orderId: order.id },
-      }),
-    ]).catch(error => console.error('[POST /api/orders/custom] side effects failed:', error))
+    ])
+    sideEffects.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        console.error('[POST /api/orders/custom] side effect failed:', { index, error: result.reason })
+      }
+    })
 
     return NextResponse.json({ order, message: message ?? null, warning }, { status: 201 })
   } catch (error) {

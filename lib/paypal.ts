@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 
 type PayPalEnvironment = 'sandbox' | 'live'
 
@@ -32,9 +32,55 @@ export type PayPalPayout = {
   }
   items?: Array<{
     payout_item_id?: string
+    sender_item_id?: string
     transaction_status?: string
     errors?: { name?: string; message?: string }
   }>
+}
+
+const PAYPAL_PAYOUT_FAILURE_STATUSES = new Set([
+  'DENIED', 'FAILED', 'BLOCKED', 'RETURNED', 'CANCELED', 'CANCELLED', 'REVERSED', 'REFUNDED',
+])
+
+/**
+ * A batch SUCCESS is not enough when the associated payout item is absent,
+ * mismatched, pending, or failed. Basket payouts are one item per batch, and
+ * sender_item_id binds the provider response to the exact FreeTrust order item.
+ */
+export function getPayPalPayoutStatus(payout: PayPalPayout, expectedSenderItemId?: string) {
+  const batchStatus = (payout.batch_header?.batch_status ?? 'PENDING').toUpperCase()
+  if (PAYPAL_PAYOUT_FAILURE_STATUSES.has(batchStatus)) return batchStatus
+
+  const payoutItem = expectedSenderItemId
+    ? payout.items?.find(item => item.sender_item_id === expectedSenderItemId)
+    : payout.items?.length === 1 ? payout.items[0] : undefined
+  const itemStatus = payoutItem?.transaction_status?.toUpperCase()
+
+  if (itemStatus && PAYPAL_PAYOUT_FAILURE_STATUSES.has(itemStatus)) return itemStatus
+  if (batchStatus === 'SUCCESS' && expectedSenderItemId && itemStatus !== 'SUCCESS') {
+    return itemStatus || 'PENDING'
+  }
+  if (batchStatus === 'SUCCESS' && itemStatus && itemStatus !== 'SUCCESS') return itemStatus
+
+  return batchStatus
+}
+
+export function isPayPalPayoutFailureStatus(status: unknown) {
+  return typeof status === 'string' && PAYPAL_PAYOUT_FAILURE_STATUSES.has(status.toUpperCase())
+}
+
+export function isPayPalPayoutSuccessStatus(status: unknown) {
+  return typeof status === 'string' && status.toUpperCase() === 'SUCCESS'
+}
+
+/**
+ * PayPal limits sender_item_id to 63 characters. Hash the stable FreeTrust
+ * order/item pair so it remains deterministic across payout retries without
+ * sending the full (typically 73-character) UUID pair to PayPal.
+ */
+export function getPayPalBasketSenderItemId(orderId: string, itemId: string) {
+  const digest = createHash('sha256').update(`${orderId}-${itemId}`).digest('hex')
+  return `ft_${digest.slice(0, 60)}`
 }
 
 const clientId = process.env.PAYPAL_CLIENT_ID?.trim()
@@ -211,6 +257,7 @@ export async function voidPayPalAuthorization(authorizationId: string) {
 
 export async function sendPayPalPayout(input: {
   orderId: string
+  senderItemId?: string
   recipientEmail: string
   amountCents: number
   note: string
@@ -230,7 +277,7 @@ export async function sendPayPalPayout(input: {
         amount: { value, currency: 'EUR' },
         receiver: input.recipientEmail,
         note: input.note.slice(0, 400),
-        sender_item_id: input.orderId,
+        sender_item_id: input.senderItemId ?? input.orderId,
       }],
     }),
   })

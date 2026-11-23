@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { insertNotification } from '@/lib/notifications/insert'
 
 // GET /api/reviews?profileId=&listingId=&page=
@@ -21,6 +22,7 @@ export async function GET(request: NextRequest) {
         listing_id,
         reviewer_id,
         reviewee_id,
+        target_type,
         rating,
         comment,
         created_at,
@@ -31,7 +33,7 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1)
 
     if (profileId) query = query.eq('reviewee_id', profileId)
-    if (listingId) query = query.eq('listing_id', listingId)
+    if (listingId) query = query.eq('listing_id', listingId).eq('target_type', 'seller')
 
     const { data: reviews, error, count } = await query
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -58,10 +60,13 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body = await request.json()
+    const body = await request.json().catch(() => null)
+    if (!body || typeof body !== 'object') return NextResponse.json({ error: 'Invalid review payload' }, { status: 400 })
     const {
       reviewee_id,
       listing_id,
+      order_id,
+      order_item_id,
       rating_overall, // client may send this
       rating,         // or this
       content,        // client may send this
@@ -71,31 +76,81 @@ export async function POST(request: NextRequest) {
     const finalRating = rating_overall ?? rating
     const finalComment = content ?? comment ?? null
 
-    if (!reviewee_id || !finalRating) {
-      return NextResponse.json({ error: 'reviewee_id and rating are required' }, { status: 400 })
+    if (!reviewee_id || !listing_id || !finalRating || (!!order_id === !!order_item_id)) {
+      return NextResponse.json({ error: 'A listing, rating, reviewee, and exactly one completed order reference are required' }, { status: 400 })
     }
-    if (finalRating < 1 || finalRating > 5) {
+    const numericRating = Number(finalRating)
+    if (!Number.isInteger(numericRating) || numericRating < 1 || numericRating > 5) {
       return NextResponse.json({ error: 'rating must be between 1 and 5' }, { status: 400 })
     }
-
-    // Prevent duplicate review for same listing + reviewer
-    if (listing_id) {
-      const { data: existing } = await supabase
-        .from('reviews')
-        .select('id')
-        .eq('listing_id', listing_id)
-        .eq('reviewer_id', user.id)
-        .single()
-      if (existing) return NextResponse.json({ error: 'You have already reviewed this listing' }, { status: 409 })
+    if (finalComment != null && typeof finalComment !== 'string') {
+      return NextResponse.json({ error: 'comment must be text' }, { status: 400 })
     }
+
+    const admin = createAdminClient()
+    let eligible = false
+    if (order_id) {
+      const { data: order } = await admin
+        .from('orders')
+        .select('id, buyer_id, seller_id, listing_id, status, type')
+        .eq('id', order_id)
+        .maybeSingle()
+      eligible = !!order
+        && order.status === 'completed'
+        && order.type !== 'product_basket'
+        && order.buyer_id === user.id
+        && order.seller_id === reviewee_id
+        && order.listing_id === listing_id
+    } else if (order_item_id) {
+      const { data: item } = await admin
+        .from('order_items')
+        .select('id, order_id, buyer_id, seller_id, listing_id, delivery_status, completed_at')
+        .eq('id', order_item_id)
+        .maybeSingle()
+      if (item) {
+        const { data: parent } = await admin
+          .from('orders')
+          .select('id, buyer_id, status, type')
+          .eq('id', item.order_id)
+          .maybeSingle()
+        eligible = !!parent
+          && parent.type === 'product_basket'
+          && ['paid', 'completed'].includes(parent.status)
+          && item.buyer_id === user.id
+          && item.seller_id === reviewee_id
+          && item.listing_id === listing_id
+          && item.delivery_status === 'completed'
+          && !!item.completed_at
+      }
+    }
+    if (!eligible) return NextResponse.json({ error: 'Reviews are available only to the buyer after a valid order or basket item is completed' }, { status: 403 })
+
+    const { data: existingListingReview, error: existingListingError } = await admin.from('reviews')
+      .select('id')
+      .eq('listing_id', listing_id)
+      .eq('reviewer_id', user.id)
+      .eq('target_type', 'seller')
+      .maybeSingle()
+    if (existingListingError) return NextResponse.json({ error: 'Could not verify existing reviews' }, { status: 500 })
+    if (existingListingReview) return NextResponse.json({ error: 'You have already reviewed this listing' }, { status: 409 })
+
+    const duplicateQuery = admin.from('reviews').select('id').eq('reviewer_id', user.id)
+    const { data: existing, error: duplicateError } = order_id
+      ? await duplicateQuery.eq('order_id', order_id).maybeSingle()
+      : await duplicateQuery.eq('order_item_id', order_item_id).maybeSingle()
+    if (duplicateError) return NextResponse.json({ error: 'Could not verify review eligibility' }, { status: 500 })
+    if (existing) return NextResponse.json({ error: 'You have already reviewed this completed order' }, { status: 409 })
 
     const { data: review, error } = await supabase
       .from('reviews')
       .insert({
         reviewer_id: user.id,
         reviewee_id,
-        listing_id: listing_id ?? null,
-        rating: finalRating,
+        listing_id,
+        target_type: 'seller',
+        order_id: order_id ?? null,
+        order_item_id: order_item_id ?? null,
+        rating: numericRating,
         comment: finalComment?.slice(0, 1000) ?? null,
       })
       .select()
@@ -141,7 +196,7 @@ export async function POST(request: NextRequest) {
         await insertNotification({
           userId: reviewee_id,
           type:   'review_received',
-          title:  `${reviewerProfile?.full_name ?? 'Someone'} left you a ${finalRating}-star review`,
+          title:  `${reviewerProfile?.full_name ?? 'Someone'} left you a ${numericRating}-star review`,
           body:   finalComment?.slice(0, 140) ?? null,
           link:   `/profile?id=${reviewee_id}`,
         })

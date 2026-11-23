@@ -17,6 +17,8 @@ interface Review {
   reviewer_id: string
   reviewee_id: string
   listing_id: string | null
+  order_id?: string | null
+  order_item_id?: string | null
   rating: number
   /** alias: rating_overall for backwards compatibility */
   rating_overall?: number
@@ -38,6 +40,13 @@ interface Props {
   canReview?: boolean
   /** Called after a review is submitted */
   onReviewSubmitted?: () => void
+}
+
+interface EligibleOrder {
+  order_id: string | null
+  order_item_id: string | null
+  reviewee_id: string
+  completed_at: string | null
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -68,7 +77,7 @@ function StarPicker({ value, onChange, label }: { value: number; onChange: (v: n
               background: 'none', border: 'none', cursor: 'pointer',
               fontSize: '1.4rem', lineHeight: 1,
               color: s <= (hover || value) ? '#00d4aa' : 'var(--ft-surface)',
-              padding: '0 2px',
+              padding: 0, width: 44, height: 44,
               transition: 'color 0.1s',
             }}
           >
@@ -123,7 +132,7 @@ export default function ReviewsSection({
   const [showForm, setShowForm]         = useState(false)
   const [submitting, setSubmitting]     = useState(false)
   const [submitError, setSubmitError]   = useState<string | null>(null)
-  const [hasReviewed, setHasReviewed]   = useState(false)
+  const [eligibleOrder, setEligibleOrder] = useState<EligibleOrder | null>(null)
 
   // Form state
   const [rating, setRating]   = useState(5)
@@ -157,11 +166,23 @@ export default function ReviewsSection({
     fetchReviews()
   }, [fetchReviews])
 
-  // Check if current user already left a review
+  const fetchEligibility = useCallback(async () => {
+    if (!listingId || !canReview || !currentUserId) {
+      setEligibleOrder(null)
+      return
+    }
+    try {
+      const response = await fetch(`/api/reviews/eligibility?listingId=${encodeURIComponent(listingId)}`, { cache: 'no-store' })
+      const json = await response.json()
+      setEligibleOrder(response.ok ? json.eligibleOrder ?? null : null)
+    } catch {
+      setEligibleOrder(null)
+    }
+  }, [canReview, currentUserId, listingId])
+
   useEffect(() => {
-    if (!currentUserId || !reviews.length) return
-    setHasReviewed(reviews.some(r => r.reviewer_id === currentUserId))
-  }, [currentUserId, reviews])
+    void fetchEligibility()
+  }, [fetchEligibility])
 
   const submitReview = async () => {
     if (!revieweeId) return
@@ -174,6 +195,8 @@ export default function ReviewsSection({
         body: JSON.stringify({
           reviewee_id: revieweeId,
           listing_id: listingId ?? null,
+          order_id: eligibleOrder?.order_id ?? null,
+          order_item_id: eligibleOrder?.order_item_id ?? null,
           rating,
           comment: comment.trim() || null,
         }),
@@ -186,11 +209,12 @@ export default function ReviewsSection({
       const newReview = json.review as Review
       setReviews(prev => [newReview, ...prev])
       setTotal(t => t + 1)
-      setHasReviewed(true)
+      setEligibleOrder(null)
       setShowForm(false)
       setComment('')
       setRating(5)
       onReviewSubmitted?.()
+      void fetchEligibility()
     } catch {
       setSubmitError('Something went wrong. Please try again.')
     } finally {
@@ -208,7 +232,13 @@ export default function ReviewsSection({
     return { star, count, pct: reviews.length ? (count / reviews.length) * 100 : 0 }
   })
 
-  const canShowForm = canReview && currentUserId && !hasReviewed
+  const hasReviewedEligibleOrder = !!eligibleOrder && reviews.some(review =>
+    review.reviewer_id === currentUserId
+      && (eligibleOrder.order_id
+        ? review.order_id === eligibleOrder.order_id
+        : review.order_item_id === eligibleOrder.order_item_id),
+  )
+  const canShowForm = !!canReview && !!currentUserId && !!eligibleOrder && !hasReviewedEligibleOrder
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
@@ -262,13 +292,23 @@ export default function ReviewsSection({
             marginBottom: '1.25rem',
             background: 'linear-gradient(135deg,#00d4aa,#1abfa0)',
             border: 'none', borderRadius: 10,
-            padding: '0.65rem 1.4rem', fontSize: '0.88rem', fontWeight: 700,
+              minHeight: 44, padding: '0.65rem 1.4rem', fontSize: '0.88rem', fontWeight: 700,
             color: 'var(--ft-bg)', cursor: 'pointer',
             boxShadow: '0 4px 16px rgba(0,212,170,0.3)',
           }}
         >
           ★ Write a Review
         </button>
+      )}
+
+      {canReview && currentUserId && !eligibleOrder && (
+        <div style={{
+          marginBottom: '1.25rem', padding: '0.85rem 1rem',
+          background: 'var(--ft-surface)', border: '1px solid var(--ft-surface)',
+          borderRadius: 10, fontSize: '0.82rem', color: 'var(--ft-text-tertiary)',
+        }}>
+          Verified reviews unlock here after you complete a purchase.
+        </div>
       )}
 
       {/* Guest prompt */}
@@ -306,7 +346,7 @@ export default function ReviewsSection({
             style={{
               width: '100%', background: 'var(--ft-bg)',
               border: '1px solid var(--ft-surface)', borderRadius: 8,
-              padding: '0.65rem', fontSize: '0.85rem', color: 'var(--ft-text)',
+              padding: '0.65rem', fontSize: '16px', color: 'var(--ft-text)',
               outline: 'none', resize: 'vertical', fontFamily: 'inherit',
               boxSizing: 'border-box', marginTop: '0.75rem',
               lineHeight: 1.6,
@@ -333,7 +373,7 @@ export default function ReviewsSection({
               style={{
                 background: 'linear-gradient(135deg,#00d4aa,#1abfa0)',
                 border: 'none', borderRadius: 8,
-                padding: '0.6rem 1.25rem', fontSize: '0.85rem', fontWeight: 700,
+                minHeight: 44, padding: '0.6rem 1.25rem', fontSize: '0.85rem', fontWeight: 700,
                 color: 'var(--ft-bg)', cursor: submitting ? 'not-allowed' : 'pointer',
                 opacity: submitting ? 0.7 : 1,
               }}
@@ -344,7 +384,7 @@ export default function ReviewsSection({
               onClick={() => { setShowForm(false); setSubmitError(null) }}
               style={{
                 background: 'transparent', border: '1px solid var(--ft-surface)',
-                borderRadius: 8, padding: '0.6rem 1rem',
+                minHeight: 44, borderRadius: 8, padding: '0.6rem 1rem',
                 fontSize: '0.82rem', color: 'var(--ft-text-tertiary)', cursor: 'pointer',
               }}
             >

@@ -57,6 +57,7 @@ const NAV_SECTIONS = [
     label: 'EARN',
     links: [
       { href: '/gig-economy', label: 'Gig Economy', icon: '💰' },
+      { href: '/orders', label: 'My Orders', icon: '📦' },
       { href: '/seller/gigs/create', label: 'Create Gig', icon: '➕' },
       { href: '/accounting', label: 'Accounting', icon: '📊' },
     ],
@@ -159,7 +160,7 @@ export default function Sidebar() {
 
   const navLabel = (label: string) => ({
     DIGITAL: tNav('digital'), SOCIAL: tNav('social'), EVENTS: tNav('events'), PLANET: tNav('planet'), EARN: tNav('earn'), 'EARLY INVESTORS': tNav('earlyInvestors'),
-    Home: tNav('home'), Feed: tNav('newsfeed'), Connections: tNav('connections'), Messages: tNav('messages'), Notifications: tNav('notifications'), Browse: tNav('browse'), 'Services Marketplace': tNav('servicesMarketplace'), Grassroots: tNav('grassroots'), Products: tNav('products'), Pubs: 'Pubs', Organisations: tNav('organisations'), 'Rent & Share': tNav('rentShare'), Events: tNav('events'), 'My Calendar': tNav('myCalendar'), 'Activity Map': tNav('activityMap'), Groups: tNav('groups'), Jobs: tNav('jobs'), Articles: tNav('articles'), Impact: tNav('impact'), Collab: tNav('collab'), 'Gig Economy': tNav('gigEconomy'), 'Create Gig': tNav('createGig'), Accounting: tNav('accounting'), Invest: tNav('invest'), Wallet: tNav('wallet'), Agents: tNav('agents'), Profile: tNav('profile'), Settings: tNav('settings'),
+    Home: tNav('home'), Feed: tNav('newsfeed'), Connections: tNav('connections'), Messages: tNav('messages'), Notifications: tNav('notifications'), Browse: tNav('browse'), 'Services Marketplace': tNav('servicesMarketplace'), Grassroots: tNav('grassroots'), Products: tNav('products'), Pubs: 'Pubs', Organisations: tNav('organisations'), 'Rent & Share': tNav('rentShare'), Events: tNav('events'), 'My Calendar': tNav('myCalendar'), 'Activity Map': tNav('activityMap'), Groups: tNav('groups'), Jobs: tNav('jobs'), Articles: tNav('articles'), Impact: tNav('impact'), Collab: tNav('collab'), 'Gig Economy': tNav('gigEconomy'), 'My Orders': 'My Orders', 'Create Gig': tNav('createGig'), Accounting: tNav('accounting'), Invest: tNav('invest'), Wallet: tNav('wallet'), Agents: tNav('agents'), Profile: tNav('profile'), Settings: tNav('settings'),
   } as Record<string, string>)[label] ?? label
 
   const visibleNavSections = NAV_SECTIONS

@@ -19,13 +19,150 @@ type GigListing = {
 
 type Order = {
   id: string
+  orderId: string
   listing_id: string | null
   title: string
   amount: number
+  amountLabel: string
   currency: string
-  status: 'pending' | 'active' | 'completed' | 'disputed' | 'cancelled'
+  status: string
   created_at: string
-  buyer?: { id: string; full_name: string | null; avatar_url: string | null } | null
+  buyer?: SellerProfileSummary | null
+  isBasketItem?: boolean
+  payoutReady?: boolean
+}
+
+type SellerProfileSummary = { id?: string; full_name: string | null; avatar_url: string | null }
+type SellerOrderRow = {
+  id: string
+  listing_id: string | null
+  title: string | null
+  type?: string | null
+  delivery_type?: string | null
+  amount: number | null
+  payment_amount_cents?: number | null
+  seller_payout_cents?: number | null
+  seller_fee_cents?: number | null
+  currency: string | null
+  status: string
+  created_at: string
+  buyer_profile?: SellerProfileSummary | null
+}
+type SellerBasketItem = {
+  id: string
+  listing_id: string | null
+  title: string
+  subtotal_cents: number | null
+  seller_payout_cents: number | null
+  payout_ready: boolean
+  delivery_status: string | null
+  created_at?: string
+  buyer_profile?: SellerProfileSummary | null
+}
+type SellerBasketOrder = {
+  id: string
+  status: string
+  currency: string | null
+  created_at: string
+  items?: SellerBasketItem[]
+}
+type SellerOrdersPayload = { orders?: SellerOrderRow[]; basketOrders?: SellerBasketOrder[] }
+type SellerSale = {
+  id: string
+  orderId: string
+  listingId: string | null
+  title: string
+  status: string
+  orderStatus: string
+  createdAt: string
+  currency: string
+  grossEur: number
+  payoutEur: number
+  earnedEur: number
+  payoutReady: boolean
+  isBasketItem: boolean
+  buyer: SellerProfileSummary | null
+}
+
+function safeNumber(value: unknown) {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : 0
+}
+
+function getRegularOrderGrossCents(order: SellerOrderRow) {
+  if (order.payment_amount_cents != null) return Math.max(0, Math.round(safeNumber(order.payment_amount_cents)))
+
+  // Marketplace checkout orders store `amount` in cents. Custom proposals
+  // and Rent & Share escrow orders store it in euros; the latter uses the
+  // in_person delivery type and pays the full booking amount into the seller
+  // wallet after buyer check-in.
+  const amount = safeNumber(order.amount)
+  const storedInEuros = order.type === 'custom' || order.delivery_type === 'in_person'
+  return Math.max(0, Math.round(amount * (storedInEuros ? 100 : 1)))
+}
+
+function getRegularOrderPayoutCents(order: SellerOrderRow, grossCents: number) {
+  if (order.seller_payout_cents != null) return Math.max(0, Math.round(safeNumber(order.seller_payout_cents)))
+  if (order.seller_fee_cents != null) return Math.max(0, grossCents - Math.round(safeNumber(order.seller_fee_cents)))
+
+  // Mirror the payout calculation in PATCH /api/orders/[id]. Rent & Share
+  // bookings use the wallet ledger's full amount rather than the marketplace
+  // seller-fee settlement path.
+  const feeRate = order.delivery_type === 'in_person' ? 0 : order.type === 'product' ? 0.05 : 0.08
+  return Math.max(0, grossCents - Math.round(grossCents * feeRate))
+}
+
+async function fetchSellerOrders(): Promise<SellerOrdersPayload> {
+  const response = await fetch('/api/orders?role=seller', { cache: 'no-store' })
+  const payload = await response.json().catch(() => null) as (SellerOrdersPayload & { error?: string }) | null
+  if (!response.ok) throw new Error(payload?.error || 'Could not load your sales and product orders.')
+  return payload ?? { orders: [], basketOrders: [] }
+}
+
+function getSellerSales(payload: SellerOrdersPayload): SellerSale[] {
+  const regularSales = (payload.orders ?? []).map(order => {
+    const grossCents = getRegularOrderGrossCents(order)
+    const payoutCents = getRegularOrderPayoutCents(order, grossCents)
+    return {
+      id: order.id,
+      orderId: order.id,
+      listingId: order.listing_id,
+      title: order.title || 'Marketplace order',
+      status: order.status,
+      orderStatus: order.status,
+      createdAt: order.created_at,
+      currency: order.currency || 'EUR',
+      grossEur: grossCents / 100,
+      payoutEur: payoutCents / 100,
+      earnedEur: order.status === 'completed' ? payoutCents / 100 : 0,
+      payoutReady: order.status === 'completed',
+      isBasketItem: false,
+      buyer: order.buyer_profile ?? null,
+    }
+  })
+
+  const basketSales = (payload.basketOrders ?? []).flatMap(order => (order.items ?? []).map(item => {
+    const payoutReady = item.payout_ready === true
+    const payoutCents = safeNumber(item.seller_payout_cents)
+    return {
+      id: item.id,
+      orderId: order.id,
+      listingId: item.listing_id,
+      title: item.title || 'Product basket item',
+      status: item.delivery_status || order.status,
+      orderStatus: order.status,
+      createdAt: item.created_at || order.created_at,
+      currency: order.currency || 'EUR',
+      grossEur: safeNumber(item.subtotal_cents) / 100,
+      payoutEur: payoutCents / 100,
+      earnedEur: payoutReady && order.status !== 'refunded' && order.status !== 'cancelled' ? payoutCents / 100 : 0,
+      payoutReady,
+      isBasketItem: true,
+      buyer: item.buyer_profile ?? null,
+    }
+  }))
+
+  return [...regularSales, ...basketSales].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
 }
 
 type Dispute = {
@@ -33,7 +170,7 @@ type Dispute = {
   order_id: string
   reason: string
   details: string | null
-  status: 'open' | 'resolved' | 'escalated'
+  status: 'open' | 'under_review' | 'resolved' | 'escalated' | 'closed'
   created_at: string
   raised_by: string
   against_user: string
@@ -101,10 +238,17 @@ function StatusBadge({ status }: { status: string }) {
     paused:    { bg: 'rgba(251,191,36,0.15)', color: '#fbbf24', label: 'Paused' },
     draft:     { bg: 'rgba(148,163,184,0.12)', color: 'var(--ft-text-secondary)', label: 'Draft' },
     pending:   { bg: 'rgba(251,191,36,0.15)', color: '#fbbf24', label: 'Pending' },
+    pending_escrow: { bg: 'rgba(251,191,36,0.15)', color: '#fbbf24', label: 'Payment pending' },
+    paid:      { bg: 'rgba(56,189,248,0.15)', color: '#38bdf8', label: 'Paid' },
+    in_progress: { bg: 'rgba(167,139,250,0.15)', color: '#a78bfa', label: 'In progress' },
+    processing: { bg: 'rgba(56,189,248,0.15)', color: '#38bdf8', label: 'Processing' },
+    shipped:   { bg: 'rgba(129,140,248,0.15)', color: '#818cf8', label: 'Shipped' },
+    delivered: { bg: 'rgba(129,140,248,0.15)', color: '#818cf8', label: 'Delivered' },
     completed: { bg: 'rgba(52,211,153,0.15)', color: '#34d399', label: 'Completed' },
     disputed:  { bg: 'rgba(239,68,68,0.15)', color: '#ef4444', label: 'Disputed' },
     cancelled: { bg: 'rgba(148,163,184,0.12)', color: 'var(--ft-text-secondary)', label: 'Cancelled' },
     open:      { bg: 'rgba(251,191,36,0.15)', color: '#fbbf24', label: 'Open' },
+    under_review: { bg: 'rgba(56,189,248,0.15)', color: '#38bdf8', label: 'Under review' },
     resolved:  { bg: 'rgba(52,211,153,0.15)', color: '#34d399', label: 'Resolved' },
     escalated: { bg: 'rgba(239,68,68,0.15)', color: '#ef4444', label: 'Escalated' },
   }
@@ -128,8 +272,9 @@ function Avatar({ url, name, size = 32 }: { url: string | null | undefined; name
 
 // ── Analytics Tab ─────────────────────────────────────────────────────────────
 
-function AnalyticsTab() {
+function AnalyticsTab({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [gigCount, setGigCount] = useState(0)
   const [totalRevenue, setTotalRevenue] = useState(0)
   const [totalOrders, setTotalOrders] = useState(0)
@@ -139,41 +284,81 @@ function AnalyticsTab() {
   const [topGigs, setTopGigs] = useState<{ title: string; count: number }[]>([])
   const [monthlyRevenue, setMonthlyRevenue] = useState<{ label: string; value: number }[]>([])
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch('/api/gig-economy/analytics', { cache: 'no-store' })
-        if (!res.ok) return
-        const data = await res.json() as {
-          gigCount?: number
-          totalRevenue?: number
-          totalOrders?: number
-          ordersThisWeek?: number
-          ordersThisMonth?: number
-          avgOrderValue?: number
-          topGigs?: { title: string; count: number }[]
-          monthlyRevenue?: { label: string; value: number }[]
-        }
-        setGigCount(data.gigCount ?? 0)
-        setTotalRevenue(data.totalRevenue ?? 0)
-        setTotalOrders(data.totalOrders ?? 0)
-        setOrdersThisWeek(data.ordersThisWeek ?? 0)
-        setOrdersThisMonth(data.ordersThisMonth ?? 0)
-        setAvgOrderValue(data.avgOrderValue ?? 0)
-        setTopGigs(data.topGigs ?? [])
-        setMonthlyRevenue(data.monthlyRevenue ?? [])
-      } catch { /* use defaults */ } finally {
-        setLoading(false)
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [sellerOrders, gigsResult] = await Promise.all([
+        fetchSellerOrders(),
+        createClient().from('listings').select('id, title').eq('seller_id', userId),
+      ])
+      if (gigsResult.error) throw new Error('Could not load your gigs.')
+
+      const sales = getSellerSales(sellerOrders)
+      const countable = sales.filter(sale =>
+        !['cancelled', 'refunded'].includes(sale.orderStatus)
+        && !['cancelled', 'refunded'].includes(sale.status),
+      )
+      const now = new Date()
+      const nowMs = now.getTime()
+      const weekStart = nowMs - 7 * 24 * 60 * 60 * 1000
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
+      const earned = sales
+        .filter(sale => !['cancelled', 'refunded'].includes(sale.orderStatus))
+        .reduce((sum, sale) => sum + sale.earnedEur, 0)
+
+      const gigCounts = new Map<string, { title: string; count: number }>()
+      for (const sale of countable) {
+        const key = sale.listingId || sale.title
+        const current = gigCounts.get(key)
+        gigCounts.set(key, { title: sale.title, count: (current?.count ?? 0) + 1 })
       }
+
+      const months = Array.from({ length: 6 }, (_, index) => new Date(now.getFullYear(), now.getMonth() - 5 + index, 1))
+      const revenueByMonth = months.map(month => {
+        const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 1).getTime()
+        const value = sales
+          .filter(sale => {
+            const createdAt = Date.parse(sale.createdAt)
+            return createdAt >= month.getTime() && createdAt < monthEnd
+              && !['cancelled', 'refunded'].includes(sale.orderStatus)
+          })
+          .reduce((sum, sale) => sum + sale.earnedEur, 0)
+        return { label: month.toLocaleDateString('en-IE', { month: 'short' }), value }
+      })
+
+      setGigCount(gigsResult.data?.length ?? 0)
+      setTotalRevenue(earned)
+      setTotalOrders(countable.length)
+      setOrdersThisWeek(countable.filter(sale => Date.parse(sale.createdAt) >= weekStart && Date.parse(sale.createdAt) <= nowMs).length)
+      setOrdersThisMonth(countable.filter(sale => Date.parse(sale.createdAt) >= monthStart && Date.parse(sale.createdAt) <= nowMs).length)
+      setAvgOrderValue(countable.length ? countable.reduce((sum, sale) => sum + sale.grossEur, 0) / countable.length : 0)
+      setTopGigs(Array.from(gigCounts.values()).sort((a, b) => b.count - a.count || a.title.localeCompare(b.title)).slice(0, 5))
+      setMonthlyRevenue(revenueByMonth)
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Could not load Earn analytics.')
+    } finally {
+      setLoading(false)
     }
-    load()
-  }, [])
+  }, [userId])
+
+  useEffect(() => { void load() }, [load])
+
+  if (error) {
+    return (
+      <div role="alert" style={{ background: C.card, border: '1px solid rgba(248,113,113,.35)', borderRadius: 14, padding: '1.25rem', color: C.text }}>
+        <div style={{ fontWeight: 800, marginBottom: 5 }}>Your Earn analytics could not be loaded</div>
+        <div style={{ color: C.muted, fontSize: '0.85rem' }}>{error}</div>
+        <button type="button" onClick={() => void load()} style={{ marginTop: 14, minHeight: 44, padding: '0.6rem 1rem', border: 0, borderRadius: 9, background: C.accent, color: 'var(--ft-bg)', font: 'inherit', fontWeight: 800, cursor: 'pointer' }}>Try again</button>
+      </div>
+    )
+  }
 
   const maxRev = Math.max(...monthlyRevenue.map(m => m.value), 1)
 
   const statCards = [
-    { label: 'Total Gigs', value: gigCount.toString(), icon: '🎯', accent: C.accent },
-    { label: 'Total Revenue', value: fmt(totalRevenue), icon: '💶', accent: '#34d399' },
+    { label: 'Total Listings', value: gigCount.toString(), icon: '🎯', accent: C.accent },
+    { label: 'Seller Earnings', value: fmt(totalRevenue), icon: '💶', accent: '#34d399' },
     { label: 'Total Orders', value: totalOrders.toString(), icon: '📦', accent: '#a78bfa' },
     { label: 'Avg Order Value', value: fmt(avgOrderValue), icon: '📊', accent: '#fbbf24' },
     { label: 'Orders This Week', value: ordersThisWeek.toString(), icon: '📅', accent: '#fb923c' },
@@ -202,11 +387,11 @@ function AnalyticsTab() {
 
       {/* Revenue chart */}
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '1.25rem' }}>
-        <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '1rem' }}>Revenue — Last 6 Months</div>
+        <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '1rem' }}>Paid earnings — Last 6 Months</div>
         {loading ? <Skeleton h={80} /> : monthlyRevenue.every(m => m.value === 0) ? (
           <div style={{ textAlign: 'center', padding: '1.5rem 0', color: C.muted, fontSize: '0.85rem' }}>
             <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📈</div>
-            No revenue yet — your completed order earnings will appear here
+            No paid earnings yet — completed escrow orders and confirmed basket payouts will appear here
           </div>
         ) : (
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', height: 100 }}>
@@ -250,6 +435,7 @@ function ManagementTab({ userId }: { userId: string }) {
   const [gigs, setGigs] = useState<GigListing[]>([])
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<Record<string, string>>({})
 
   const loadGigs = useCallback(async () => {
     try {
@@ -264,10 +450,15 @@ function ManagementTab({ userId }: { userId: string }) {
   const toggleStatus = async (gig: GigListing) => {
     const next = gig.status === 'active' ? 'paused' : 'active'
     setToggling(gig.id)
+    setActionError(prev => ({ ...prev, [gig.id]: '' }))
     try {
-      await fetch(`/api/listings/${gig.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) })
+      const response = await fetch(`/api/listings/${gig.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) })
+      const data = await response.json().catch(() => ({})) as { error?: string }
+      if (!response.ok) throw new Error(data.error || 'Could not update this gig.')
       setGigs(prev => prev.map(g => g.id === gig.id ? { ...g, status: next } : g))
-    } catch { /* silent */ } finally { setToggling(null) }
+    } catch (error) {
+      setActionError(prev => ({ ...prev, [gig.id]: error instanceof Error ? error.message : 'Could not update this gig.' }))
+    } finally { setToggling(null) }
   }
 
   return (
@@ -313,6 +504,7 @@ function ManagementTab({ userId }: { userId: string }) {
               {toggling === gig.id ? '...' : gig.status === 'active' ? 'Pause' : 'Activate'}
             </button>
           </div>
+          {actionError[gig.id] && <div role="alert" style={{ flexBasis: '100%', color: 'var(--ft-danger)', fontSize: '0.78rem' }}>{actionError[gig.id]}</div>}
         </div>
       ))}
     </div>
@@ -321,29 +513,49 @@ function ManagementTab({ userId }: { userId: string }) {
 
 // ── Performance Tab ───────────────────────────────────────────────────────────
 
-function PerformanceTab({ userId }: { userId: string }) {
+function PerformanceTab() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [filter, setFilter] = useState<string>('all')
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const sb = createClient()
-        const { data } = await sb
-          .from('orders')
-          .select('id, listing_id, title, amount, currency, status, created_at, buyer:profiles!buyer_id(id, full_name, avatar_url)')
-          .eq('seller_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(100)
-        setOrders((data as unknown as Order[]) ?? [])
-      } catch { /* silent */ } finally { setLoading(false) }
+  const load = useCallback(async () => {
+    setLoading(true)
+    setLoadError(null)
+    try {
+      const sales = getSellerSales(await fetchSellerOrders())
+      setOrders(sales.map(sale => {
+        const amount = sale.isBasketItem
+          ? (sale.payoutReady ? sale.payoutEur : sale.grossEur)
+          : (sale.status === 'completed' ? sale.payoutEur : sale.grossEur)
+        return {
+          id: sale.id,
+          orderId: sale.orderId,
+          listing_id: sale.listingId,
+          title: sale.title,
+          amount,
+          amountLabel: sale.isBasketItem
+            ? (sale.payoutReady ? 'Seller proceeds' : 'Item subtotal')
+            : (sale.status === 'completed' ? 'Seller proceeds' : 'Order total'),
+          currency: sale.currency,
+          status: sale.status,
+          created_at: sale.createdAt,
+          buyer: sale.buyer,
+          isBasketItem: sale.isBasketItem,
+          payoutReady: sale.payoutReady,
+        }
+      }))
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Could not load your sales.')
+    } finally {
+      setLoading(false)
     }
-    load()
-  }, [userId])
+  }, [])
+
+  useEffect(() => { void load() }, [load])
 
   const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter)
-  const statuses = ['all', 'pending', 'active', 'completed', 'disputed', 'cancelled']
+  const statuses = ['all', 'pending', 'pending_escrow', 'paid', 'in_progress', 'processing', 'shipped', 'delivered', 'completed', 'disputed', 'cancelled']
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -361,7 +573,12 @@ function PerformanceTab({ userId }: { userId: string }) {
           <Skeleton h={14} w="50%" />
           <div style={{ marginTop: 8 }}><Skeleton h={10} w="30%" /></div>
         </div>
-      )) : filtered.length === 0 ? (
+      )) : loadError ? (
+        <div role="alert" style={{ background: C.card, border: '1px solid rgba(248,113,113,.35)', borderRadius: 14, padding: '1.5rem', textAlign: 'center' }}>
+          <div style={{ color: C.text, fontWeight: 700 }}>{loadError}</div>
+          <button type="button" onClick={() => void load()} style={{ marginTop: 12, minHeight: 44, padding: '0.55rem 1rem', border: 0, borderRadius: 9, background: C.accent, color: 'var(--ft-bg)', font: 'inherit', fontWeight: 800, cursor: 'pointer' }}>Try again</button>
+        </div>
+      ) : filtered.length === 0 ? (
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '3rem 1rem', textAlign: 'center', color: C.muted }}>
           <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📦</div>
           <div>No orders found {filter !== 'all' ? `with status "${filter}"` : 'yet'}</div>
@@ -370,14 +587,16 @@ function PerformanceTab({ userId }: { userId: string }) {
         <div key={order.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '0.9rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <Avatar url={order.buyer?.avatar_url} name={order.buyer?.full_name || 'Buyer'} size={36} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.title || 'Order'}</div>
+            <Link href={`/orders/${order.orderId}`} style={{ display: 'block', color: C.text, textDecoration: 'none', fontWeight: 700, fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{order.title || 'Order'}</Link>
             <div style={{ fontSize: '0.75rem', color: C.muted, marginTop: 2 }}>
-              {order.buyer?.full_name || 'Buyer'} · {timeAgo(order.created_at)}
+              {order.buyer?.full_name || 'Buyer'} · {timeAgo(order.created_at)}{order.isBasketItem ? ' · Product basket item (no escrow)' : ''}
             </div>
+            {order.isBasketItem && !order.payoutReady && <div role="status" style={{ fontSize: '0.7rem', color: '#fbbf24', marginTop: 4 }}>Payout reconciliation pending; fulfillment is paused.</div>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
             <StatusBadge status={order.status} />
-            <span style={{ fontSize: '0.88rem', fontWeight: 900, color: C.text }}>€{Number(order.amount).toFixed(2)}</span>
+            <span style={{ fontSize: '0.88rem', fontWeight: 900, color: C.text }}>{fmt(order.amount, order.currency)}</span>
+            <span style={{ fontSize: '0.65rem', color: C.muted }}>{order.amountLabel}</span>
             {order.status === 'completed' && (
               <span style={{ fontSize: '0.7rem', color: '#34d399', fontWeight: 700 }}>₮ Trust Earned</span>
             )}
@@ -393,10 +612,6 @@ function PerformanceTab({ userId }: { userId: string }) {
 function DisputesTab({ userId }: { userId: string }) {
   const [disputes, setDisputes] = useState<Dispute[]>([])
   const [loading, setLoading] = useState(true)
-  const [escalateId, setEscalateId] = useState<string | null>(null)
-  const [escalateText, setEscalateText] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -410,14 +625,6 @@ function DisputesTab({ userId }: { userId: string }) {
     }
     load()
   }, [])
-
-  const handleEscalate = async () => {
-    setSubmitting(true)
-    await new Promise(r => setTimeout(r, 800)) // simulated submit
-    setSubmitting(false)
-    setSubmitted(true)
-    setTimeout(() => { setEscalateId(null); setEscalateText(''); setSubmitted(false) }, 2000)
-  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -452,12 +659,12 @@ function DisputesTab({ userId }: { userId: string }) {
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem', flexShrink: 0 }}>
                 <StatusBadge status={dispute.status} />
                 {dispute.status === 'open' && (
-                  <button
-                    onClick={() => setEscalateId(dispute.id)}
-                    style={{ padding: '0.35rem 0.75rem', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)', fontSize: '0.72rem', color: '#ef4444', background: 'rgba(239,68,68,0.08)', cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit' }}
+                  <a
+                    href={`mailto:support@freetrust.co?subject=${encodeURIComponent(`Request for help with order ${dispute.order_id}`)}&body=${encodeURIComponent(`Please review dispute ${dispute.id} for order ${dispute.order_id}${dispute.order?.title ? ` (${dispute.order.title})` : ''}.\n\nReason: ${dispute.reason}${dispute.details ? `\n\nDetails: ${dispute.details}` : ''}\n\nAdditional information:\n`)}`}
+                    style={{ display: 'inline-flex', alignItems: 'center', minHeight: 40, padding: '0.35rem 0.75rem', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)', fontSize: '0.72rem', color: '#ef4444', background: 'rgba(239,68,68,0.08)', textDecoration: 'none', fontWeight: 700 }}
                   >
-                    Raise with Admin
-                  </button>
+                    Email support
+                  </a>
                 )}
               </div>
             </div>
@@ -465,36 +672,6 @@ function DisputesTab({ userId }: { userId: string }) {
         )
       })}
 
-      {/* Escalate modal */}
-      {escalateId && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem' }}>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '1.5rem', maxWidth: 420, width: '100%' }}>
-            <h3 style={{ margin: '0 0 0.75rem', fontSize: '1rem', fontWeight: 700 }}>Raise with Admin</h3>
-            <p style={{ color: C.muted, fontSize: '0.85rem', margin: '0 0 1rem', lineHeight: 1.6 }}>
-              Provide any additional context or evidence for this dispute. Our team will review and respond within 24-48 hours.
-            </p>
-            {submitted ? (
-              <div style={{ textAlign: 'center', padding: '1rem', color: '#34d399', fontWeight: 700 }}>✅ Escalated successfully!</div>
-            ) : (
-              <>
-                <textarea
-                  value={escalateText}
-                  onChange={e => setEscalateText(e.target.value)}
-                  placeholder="Describe your concern and any relevant details..."
-                  rows={4}
-                  style={{ width: '100%', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, color: C.text, padding: '0.65rem 0.9rem', fontSize: '0.85rem', fontFamily: 'inherit', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
-                />
-                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                  <button onClick={() => setEscalateId(null)} style={{ padding: '0.55rem 1rem', borderRadius: 8, border: `1px solid ${C.border}`, background: 'transparent', color: C.muted, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem' }}>Cancel</button>
-                  <button onClick={handleEscalate} disabled={submitting || !escalateText.trim()} style={{ padding: '0.55rem 1rem', borderRadius: 8, background: '#ef4444', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', opacity: submitting ? 0.7 : 1 }}>
-                    {submitting ? 'Sending...' : 'Send to Admin'}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -564,7 +741,7 @@ function PaymentsTab({ userId }: { userId: string }) {
           onClick={() => setWithdrawModal(true)}
           style={{ background: 'rgba(56,189,248,0.08)', border: `1px solid ${C.border}`, color: C.accent, borderRadius: 10, padding: '0.65rem 1.25rem', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', fontFamily: 'inherit' }}
         >
-          🏦 Withdraw
+          🏦 Withdrawal help
         </button>
       </div>
 
@@ -604,9 +781,9 @@ function PaymentsTab({ userId }: { userId: string }) {
       {withdrawModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '1.5rem', maxWidth: 380, width: '100%' }}>
-            <h3 style={{ margin: '0 0 0.75rem', fontSize: '1rem', fontWeight: 700 }}>🏦 Withdraw Funds</h3>
+            <h3 style={{ margin: '0 0 0.75rem', fontSize: '1rem', fontWeight: 700 }}>🏦 Withdrawal information</h3>
             <p style={{ color: C.muted, fontSize: '0.88rem', lineHeight: 1.65, margin: '0 0 1.25rem' }}>
-              Withdrawals are processed within <strong style={{ color: C.text }}>2–3 business days</strong> via bank transfer. For assistance, contact us at{' '}
+              This Earn panel does not submit a withdrawal request. For help with a payout, contact{' '}
               <a href="mailto:support@freetrust.co" style={{ color: C.accent }}>support@freetrust.co</a>.
             </p>
             <button onClick={() => setWithdrawModal(false)} style={{ width: '100%', padding: '0.75rem', borderRadius: 10, background: C.accent, border: 'none', color: 'var(--ft-bg)', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -958,6 +1135,15 @@ function GigEconomyPageInner() {
             </Link>
           </div>
 
+          <Link href="/orders" style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 48, boxSizing: 'border-box', padding: '8px 12px', marginBottom: 8, borderRadius: 11, border: `1px solid ${C.border}`, background: 'rgba(56,189,248,0.06)', color: C.text, textDecoration: 'none' }}>
+            <span aria-hidden="true" style={{ fontSize: 19 }}>📦</span>
+            <span style={{ minWidth: 0, flex: 1 }}>
+              <span style={{ display: 'block', fontWeight: 800, fontSize: 13 }}>My Orders</span>
+              <span style={{ display: 'block', color: C.muted, fontSize: 11, marginTop: 2 }}>Purchases, sales, delivery updates and escrow</span>
+            </span>
+            <span aria-hidden="true" style={{ color: C.accent, fontSize: 18 }}>→</span>
+          </Link>
+
           {/* Tab bar — horizontal swipe/scroll only. touchAction: 'pan-x' locks the
               browser's touch gesture handling on this element to horizontal panning
               so a vertical drag over the tab strip never scrolls/drags it (it should
@@ -982,10 +1168,10 @@ function GigEconomyPageInner() {
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '1.5rem 1.25rem' }}>
         {userId && (
           <>
-            <div style={{ display: activeTab === 'analytics'   ? 'block' : 'none' }}>{mountedTabs.has('analytics')   && <AnalyticsTab />}</div>
+            <div style={{ display: activeTab === 'analytics'   ? 'block' : 'none' }}>{mountedTabs.has('analytics')   && <AnalyticsTab userId={userId} />}</div>
             <div style={{ display: activeTab === 'management'  ? 'block' : 'none' }}>{mountedTabs.has('management')  && <ManagementTab  userId={userId} />}</div>
             <div style={{ display: activeTab === 'bookings'    ? 'block' : 'none' }}>{mountedTabs.has('bookings')    && <BookingsTab    userId={userId} />}</div>
-            <div style={{ display: activeTab === 'performance' ? 'block' : 'none' }}>{mountedTabs.has('performance') && <PerformanceTab userId={userId} />}</div>
+            <div style={{ display: activeTab === 'performance' ? 'block' : 'none' }}>{mountedTabs.has('performance') && <PerformanceTab />}</div>
             <div style={{ display: activeTab === 'disputes'    ? 'block' : 'none' }}>{mountedTabs.has('disputes')    && <DisputesTab   userId={userId} />}</div>
             <div style={{ display: activeTab === 'payments'    ? 'block' : 'none' }}>{mountedTabs.has('payments')    && <PaymentsTab   userId={userId} />}</div>
           </>

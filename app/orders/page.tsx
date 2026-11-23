@@ -1,366 +1,509 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { CSSProperties } from 'react'
 import Link from 'next/link'
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+type Role = 'buyer' | 'seller'
+type OrderStatus = 'pending' | 'pending_escrow' | 'paid' | 'in_progress' | 'delivered' | 'completed' | 'disputed' | 'refunded' | 'cancelled'
+type FulfillmentStatus = 'pending' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'completed' | 'disputed' | null
 
-type OrderStatus = 'pending' | 'paid' | 'in_progress' | 'delivered' | 'completed' | 'disputed' | 'refunded' | 'cancelled'
+interface Profile {
+  id?: string
+  full_name: string | null
+  avatar_url: string | null
+}
+
+interface BasketItem {
+  id: string
+  order_id: string
+  buyer_id: string
+  seller_id: string
+  listing_id: string | null
+  title: string
+  quantity: number
+  unit_amount_cents: number
+  subtotal_cents: number
+  seller_payout_cents: number
+  payout_ready: boolean
+  payout_state: 'confirmed' | 'pending' | 'failed' | 'reconciliation_required'
+  payout_status_checkable: boolean
+  delivery_status: FulfillmentStatus
+  tracking_carrier: string | null
+  tracking_number: string | null
+  tracking_url: string | null
+  delivery_notes: string | null
+  shipped_at: string | null
+  delivered_at: string | null
+  completed_at: string | null
+  buyer_profile: Profile | null
+  seller_profile: Profile | null
+  listing: { id: string; product_type: string | null } | null
+}
+
+interface BasketOrder {
+  id: string
+  buyer_id: string
+  status: OrderStatus
+  amount: number
+  amount_pence: number | null
+  currency: string
+  payment_gateway: string | null
+  created_at: string
+  buyer_profile: Profile | null
+  items: BasketItem[]
+}
 
 interface Order {
   id: string
   listing_id: string | null
   buyer_id: string
   seller_id: string
+  type: string
+  title: string
   status: OrderStatus
   amount: number
+  amount_pence: number | null
   currency: string
   notes: string | null
-  buyer_reviewed: boolean
-  seller_reviewed: boolean
   created_at: string
-  updated_at: string
-  listing?: { title: string | null; product_type: string | null } | null
-  buyer_profile?: { full_name: string | null; avatar_url: string | null } | null
-  seller_profile?: { full_name: string | null; avatar_url: string | null } | null
+  buyer_profile: Profile | null
+  seller_profile: Profile | null
+  listing?: { title?: string | null; product_type?: string | null } | null
 }
 
-// ── Status config ─────────────────────────────────────────────────────────────
+type Filter = 'all' | 'active' | 'completed' | 'attention'
 
-const STATUS: Record<OrderStatus, { label: string; color: string; bg: string; icon: string }> = {
-  pending:     { label: 'Pending',     color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',   icon: '⏳' },
-  paid:        { label: 'Paid',        color: 'var(--ft-accent)', bg: 'rgba(56,189,248,0.12)',   icon: '💳' },
-  in_progress: { label: 'In Progress', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', icon: '🔄' },
-  delivered:   { label: 'Delivered',   color: '#818cf8', bg: 'rgba(129,140,248,0.12)', icon: '📦' },
-  completed:   { label: 'Completed',   color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: '✅' },
-  disputed:    { label: 'Disputed',    color: 'var(--ft-danger)', bg: 'rgba(248,113,113,0.12)', icon: '⚠️' },
-  refunded:    { label: 'Refunded',    color: 'var(--ft-text-secondary)', bg: 'rgba(148,163,184,0.12)', icon: '↩️' },
-  cancelled:   { label: 'Cancelled',   color: 'var(--ft-text-faint)', bg: 'rgba(71,85,105,0.12)',   icon: '✕'  },
+const STATUS: Record<string, { label: string; color: string; bg: string }> = {
+  pending: { label: 'Pending', color: '#f59e0b', bg: 'rgba(245,158,11,.12)' },
+  pending_escrow: { label: 'Payment pending', color: '#f59e0b', bg: 'rgba(245,158,11,.12)' },
+  paid: { label: 'Paid', color: '#38bdf8', bg: 'rgba(56,189,248,.12)' },
+  in_progress: { label: 'In progress', color: '#a78bfa', bg: 'rgba(167,139,250,.12)' },
+  delivered: { label: 'Delivered', color: '#818cf8', bg: 'rgba(129,140,248,.12)' },
+  completed: { label: 'Completed', color: '#34d399', bg: 'rgba(52,211,153,.12)' },
+  disputed: { label: 'Disputed', color: '#f87171', bg: 'rgba(248,113,113,.12)' },
+  refunded: { label: 'Refunded', color: '#94a3b8', bg: 'rgba(148,163,184,.12)' },
+  cancelled: { label: 'Cancelled', color: '#94a3b8', bg: 'rgba(148,163,184,.1)' },
+  processing: { label: 'Processing', color: '#38bdf8', bg: 'rgba(56,189,248,.12)' },
+  shipped: { label: 'Shipped', color: '#818cf8', bg: 'rgba(129,140,248,.12)' },
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function timeAgo(ts: string) {
-  const diff = Date.now() - new Date(ts).getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  return `${Math.floor(hrs / 24)}d ago`
+function statusFor(value: string | null | undefined) {
+  return STATUS[value ?? 'paid'] ?? { label: value ?? 'Awaiting fulfillment', color: '#94a3b8', bg: 'rgba(148,163,184,.12)' }
 }
 
-function fmtDate(ts: string) {
-  return new Date(ts).toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' })
+function money(cents: number | null | undefined, currency = 'EUR') {
+  if (cents == null || !Number.isFinite(Number(cents))) return '—'
+  try {
+    return new Intl.NumberFormat('en-IE', { style: 'currency', currency: currency || 'EUR' }).format(Number(cents) / 100)
+  } catch {
+    return `€${(Number(cents) / 100).toFixed(2)}`
+  }
 }
 
-function fmtAmount(amount: number, currency: string) {
-  const sym = currency?.toUpperCase() === 'GBP' ? '£' : currency?.toUpperCase() === 'EUR' ? '€' : '$'
-  return `${sym}${(amount / 100).toFixed(2)}`
+function dateLabel(value: string) {
+  return new Date(value).toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-function Avatar({ url, name, size = 36 }: { url: string | null | undefined; name: string | null | undefined; size?: number }) {
-  const initials = (name ?? '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-  if (url) return <img src={url} alt={name ?? ''} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-  return (
-    <div style={{ width: size, height: size, borderRadius: '50%', background: 'linear-gradient(135deg,var(--ft-accent),#0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: size * 0.33, color: 'var(--ft-bg)', flexShrink: 0 }}>
-      {initials}
-    </div>
-  )
+function Avatar({ person, size = 38 }: { person: Profile | null | undefined; size?: number }) {
+  const name = person?.full_name?.trim() || 'Member'
+  const initials = name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase()
+  if (person?.avatar_url) {
+    return <img src={person.avatar_url} alt="" width={size} height={size} style={{ width: size, height: size, objectFit: 'cover', borderRadius: '50%', flexShrink: 0 }} />
+  }
+  return <div aria-hidden="true" style={{ width: size, height: size, borderRadius: '50%', flexShrink: 0, display: 'grid', placeItems: 'center', color: '#06251f', fontWeight: 800, background: 'linear-gradient(135deg,#54e4bb,#54b9e8)' }}>{initials || 'M'}</div>
 }
 
-// ── Order card ────────────────────────────────────────────────────────────────
+function Badge({ value }: { value: string | null | undefined }) {
+  const config = statusFor(value)
+  return <span style={{ borderRadius: 999, padding: '5px 10px', color: config.color, background: config.bg, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{config.label}</span>
+}
 
-function OrderCard({ order, role }: { order: Order; role: 'buyer' | 'seller' }) {
-  const [releasing, setReleasing] = useState(false)
-  const [released, setReleased] = useState(false)
-  const st = STATUS[order.status] ?? STATUS.pending
-  const isBuying = role === 'buyer'
-  const counterparty = isBuying ? order.seller_profile : order.buyer_profile
-  const counterLabel = isBuying ? 'Seller' : 'Buyer'
-  const title = order.listing?.title ?? (isBuying ? 'Purchase' : 'Sale')
-  const isEscrowable = isBuying && order.status === 'delivered' && !released
+function reviewHref(type: string, listingId: string | null) {
+  if (!listingId) return null
+  return type === 'service' || type === 'gig' ? `/services/${listingId}` : `/products/${listingId}`
+}
 
-  const handleRelease = async () => {
-    if (!confirm('Release escrow funds to the seller? This confirms delivery.')) return
-    setReleasing(true)
+function OrdinaryOrderCard({ order, role, onError, onUpdated }: {
+  order: Order
+  role: Role
+  onError: (message: string) => void
+  onUpdated: () => void
+}) {
+  const [working, setWorking] = useState(false)
+  const isBuyer = role === 'buyer'
+  const person = isBuyer ? order.seller_profile : order.buyer_profile
+  const title = order.listing?.title || order.title || (isBuyer ? 'Purchase' : 'Sale')
+  const escrow = order.type !== 'product_basket' && ['pending_escrow', 'paid', 'in_progress', 'delivered'].includes(order.status)
+  const canRelease = isBuyer && order.status === 'delivered'
+  const canReview = isBuyer && order.status === 'completed' && !!order.listing_id
+  const href = reviewHref(order.type, order.listing_id)
+
+  const release = async () => {
+    if (!confirm('Confirm the completed delivery and release the payment from escrow?')) return
+    setWorking(true)
     try {
-      await fetch(`/api/orders/${order.id}`, {
+      const response = await fetch(`/api/orders/${order.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'completed' }),
+        body: JSON.stringify({ action: 'release_payment' }),
       })
-      setReleased(true)
-    } catch { /* silent */ }
-    finally { setReleasing(false) }
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || 'Could not release payment')
+      onUpdated()
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Could not release payment')
+    } finally {
+      setWorking(false)
+    }
   }
 
   return (
-    <Link href={`/orders/${order.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
-      <div style={{ background: 'var(--ft-surface)', border: `1px solid ${order.status === 'disputed' ? 'rgba(248,113,113,0.35)' : 'rgba(56,189,248,0.1)'}`, borderRadius: 14, overflow: 'hidden', transition: 'border-color 0.15s' }}
-        onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = 'rgba(56,189,248,0.3)'}
-        onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = order.status === 'disputed' ? 'rgba(248,113,113,0.35)' : 'rgba(56,189,248,0.1)'}>
-
-        {/* Status bar */}
-        <div style={{ height: 3, background: released ? STATUS.completed.color : st.color, opacity: 0.7 }} />
-
-        <div style={{ padding: '1rem 1.1rem' }}>
-          {/* Top row */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-            <Avatar url={counterparty?.avatar_url} name={counterparty?.full_name} size={40} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--ft-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
-                <span style={{
-                  fontSize: '0.65rem', fontWeight: 700, flexShrink: 0,
-                  color: isBuying ? '#60a5fa' : '#34d399',
-                  background: isBuying ? 'rgba(59,130,246,0.12)' : 'rgba(16,185,129,0.12)',
-                  border: `1px solid ${isBuying ? 'rgba(59,130,246,0.25)' : 'rgba(16,185,129,0.25)'}`,
-                  borderRadius: 6, padding: '1px 6px',
-                }}>
-                  {isBuying ? '🛒 Buying' : '🏪 Selling'}
-                </span>
-              </div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-tertiary)' }}>
-                {counterLabel}: <span style={{ color: 'var(--ft-text-secondary)', fontWeight: 600 }}>{counterparty?.full_name ?? 'Unknown'}</span>
-              </div>
-            </div>
-            {/* Status badge */}
-            <div style={{ background: released ? STATUS.completed.bg : st.bg, color: released ? STATUS.completed.color : st.color, borderRadius: 999, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
-              {released ? '✅ Completed' : `${st.icon} ${st.label}`}
-            </div>
+    <article style={cardStyle}>
+      <div style={topLine} />
+      <div style={{ padding: '16px 17px 17px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 11 }}>
+          <Avatar person={person} />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 16, fontWeight: 750, color: 'var(--ft-text)', lineHeight: 1.3, overflowWrap: 'anywhere' }}>{title}</div>
+            <div style={{ color: 'var(--ft-text-tertiary)', fontSize: 12, marginTop: 4 }}>{isBuyer ? 'Seller' : 'Buyer'} · {person?.full_name || 'FreeTrust member'}</div>
           </div>
-
-          {/* Amount + meta row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--ft-text)' }}>{fmtAmount(order.amount, order.currency)}</span>
-            <span style={{ fontSize: '0.72rem', color: 'var(--ft-text-faint)', background: 'rgba(148,163,184,0.08)', padding: '2px 8px', borderRadius: 999 }}>
-              {order.listing?.product_type === 'digital' ? '⚡ Digital' : order.listing?.product_type === 'physical' ? '📦 Physical' : '🛠 Service'}
-            </span>
-            <span style={{ fontSize: '0.72rem', color: 'var(--ft-text-faint)', marginLeft: 'auto' }}>{timeAgo(order.created_at)}</span>
+          <Badge value={order.status} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 14 }}>
+          <strong style={{ fontSize: 20, letterSpacing: '-.03em' }}>{money(order.amount_pence, order.currency)}</strong>
+          <span style={mutedText}>{order.type === 'service' || order.type === 'gig' ? 'Service order' : 'Product order'}</span>
+          <span style={{ ...mutedText, marginLeft: 'auto' }}>{dateLabel(order.created_at)}</span>
+        </div>
+        {escrow && (
+          <div style={noticeStyle}>
+            <span aria-hidden="true">🔒</span>
+            <span>{order.status === 'pending_escrow' ? 'Payment is being confirmed.' : 'Payment is held in secure escrow until you confirm delivery.'}</span>
           </div>
-
-          {/* Escrow notice for active orders */}
-          {['pending', 'paid', 'in_progress', 'delivered'].includes(order.status) && !released && (
-            <div style={{ marginTop: '0.75rem', background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.12)', borderRadius: 8, padding: '8px 12px', fontSize: '0.75rem', color: 'var(--ft-text-tertiary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>🔒</span>
-              <span>Funds held in escrow · Ordered {fmtDate(order.created_at)}</span>
-            </div>
-          )}
-
-          {/* Release escrow CTA for buyers when delivered */}
-          {isEscrowable && (
-            <button
-              onClick={e => { e.preventDefault(); e.stopPropagation(); handleRelease() }}
-              disabled={releasing}
-              style={{ marginTop: '0.75rem', width: '100%', background: 'linear-gradient(135deg,#34d399,#059669)', border: 'none', borderRadius: 9, padding: '10px', fontSize: '0.85rem', fontWeight: 700, color: '#fff', cursor: 'pointer', opacity: releasing ? 0.7 : 1 }}>
-              {releasing ? 'Releasing…' : '✅ Confirm Delivery & Release Escrow'}
-            </button>
-          )}
-
-          {/* Notes */}
-          {order.notes && (
-            <div style={{ marginTop: '0.6rem', fontSize: '0.78rem', color: 'var(--ft-text-tertiary)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>"{order.notes}"</div>
-          )}
+        )}
+        {order.notes && <p style={{ ...mutedText, margin: '12px 0 0', overflowWrap: 'anywhere' }}>{order.notes}</p>}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
+          {canRelease && <button type="button" onClick={release} disabled={working} style={primaryButton}>{working ? 'Releasing…' : 'Confirm delivery & release'}</button>}
+          {canReview && href && <Link href={href} style={secondaryButton}>★ Review this order</Link>}
+          <Link href={`/orders/${order.id}`} style={{ ...secondaryButton, marginLeft: canRelease || canReview ? 0 : 'auto' }}>Order details</Link>
         </div>
       </div>
-    </Link>
+    </article>
   )
 }
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
+function hasRecordedPayout(item: BasketItem) {
+  // The API strips processor IDs/statuses before returning an item, but exposes
+  // this server-computed boolean so the UI can still gate fulfillment safely.
+  return item.payout_ready === true
+}
 
-function Skeleton() {
+function BasketItemCard({ item, order, role, onError, onUpdated }: {
+  item: BasketItem
+  order: BasketOrder
+  role: Role
+  onError: (message: string) => void
+  onUpdated: () => void
+}) {
+  const [working, setWorking] = useState(false)
+  const [trackingCarrier, setTrackingCarrier] = useState(item.tracking_carrier ?? '')
+  const [trackingNumber, setTrackingNumber] = useState(item.tracking_number ?? '')
+  const [trackingUrl, setTrackingUrl] = useState(item.tracking_url ?? '')
+  const [checkingPayout, setCheckingPayout] = useState(false)
+  const [payoutCheckMessage, setPayoutCheckMessage] = useState<string | null>(null)
+  const isBuyer = role === 'buyer'
+  const other = isBuyer ? item.seller_profile : item.buyer_profile
+  const payoutRecorded = hasRecordedPayout(item)
+  const current = item.delivery_status ?? (order.status === 'paid' ? 'paid' : 'pending')
+  const isPhysical = item.listing?.product_type === 'physical'
+  const completed = item.delivery_status === 'completed'
+  const reviewLink = isBuyer && completed ? reviewHref('product', item.listing_id) : null
+
+  const update = async (action: 'update_fulfillment' | 'confirm_received', fulfillmentStatus?: 'processing' | 'shipped' | 'delivered') => {
+    setWorking(true)
+    try {
+      const response = await fetch(`/api/order-items/${item.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action,
+          ...(fulfillmentStatus ? { delivery_status: fulfillmentStatus } : {}),
+          ...(action === 'update_fulfillment' ? {
+            tracking_carrier: trackingCarrier,
+            tracking_number: trackingNumber,
+            tracking_url: trackingUrl,
+          } : {}),
+        }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || 'Could not update product order')
+      onUpdated()
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Could not update product order')
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  const checkPayoutStatus = async () => {
+    setCheckingPayout(true)
+    setPayoutCheckMessage(null)
+    try {
+      const response = await fetch(`/api/order-items/${item.id}/payout-status`, { method: 'POST' })
+      const data = await response.json().catch(() => ({})) as {
+        error?: string
+        payout_ready?: boolean
+        payout_state?: BasketItem['payout_state']
+      }
+      if (!response.ok) throw new Error(data.error || 'Could not check PayPal payout status')
+      setPayoutCheckMessage(data.payout_ready
+        ? 'PayPal confirmed this payout. Refreshing order status…'
+        : data.payout_state === 'failed'
+          ? 'PayPal reports a failed payout. Fulfillment remains locked pending support reconciliation.'
+          : 'PayPal has not confirmed payout success yet. Fulfillment remains locked.')
+      onUpdated()
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Could not check PayPal payout status')
+    } finally {
+      setCheckingPayout(false)
+    }
+  }
+
+  const sellerAction = (next: 'processing' | 'shipped' | 'delivered', label: string) => (
+    <button type="button" disabled={working || !payoutRecorded || order.status !== 'paid'} onClick={() => update('update_fulfillment', next)} style={primaryButton}>
+      {working ? 'Saving…' : label}
+    </button>
+  )
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-      {[1, 2, 3].map(i => (
-        <div key={i} style={{ background: 'var(--ft-surface)', borderRadius: 14, padding: '1rem 1.1rem', height: 110 }}>
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-            <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(90deg,#243047 25%,#2d3f55 50%,#243047 75%)', backgroundSize: '200%', animation: 'shimmer 1.5s infinite', flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ height: 14, width: '60%', background: 'linear-gradient(90deg,#243047 25%,#2d3f55 50%,#243047 75%)', backgroundSize: '200%', animation: 'shimmer 1.5s infinite', borderRadius: 6, marginBottom: 8 }} />
-              <div style={{ height: 11, width: '35%', background: 'linear-gradient(90deg,#243047 25%,#2d3f55 50%,#243047 75%)', backgroundSize: '200%', animation: 'shimmer 1.5s infinite', borderRadius: 6 }} />
+    <div style={{ border: '1px solid var(--ft-border-strong)', borderRadius: 12, padding: 13, background: 'color-mix(in srgb, var(--ft-bg) 60%, transparent)' }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        <div aria-hidden="true" style={{ width: 42, height: 42, display: 'grid', placeItems: 'center', borderRadius: 10, background: 'rgba(56,189,248,.1)', fontSize: 20, flexShrink: 0 }}>📦</div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontWeight: 750, lineHeight: 1.35, overflowWrap: 'anywhere' }}>{item.title}</div>
+          <div style={{ ...mutedText, marginTop: 4 }}>{item.quantity} × {money(item.unit_amount_cents, order.currency)} · {isBuyer ? 'Seller' : 'Buyer'}: {other?.full_name || 'FreeTrust member'}</div>
+        </div>
+        <Badge value={item.delivery_status ?? (order.status === 'paid' ? 'paid' : 'pending')} />
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 12, fontSize: 13 }}>
+        <span style={{ color: 'var(--ft-text-tertiary)' }}>{isBuyer ? 'Item total' : 'Seller proceeds'}</span>
+        <strong style={{ marginLeft: 'auto' }}>{money(isBuyer ? item.subtotal_cents : item.seller_payout_cents, order.currency)}</strong>
+      </div>
+
+      {order.status !== 'paid' && (
+        <div style={noticeStyle}><span>⏳</span><span>Payment has not finished. Fulfillment actions are locked.</span></div>
+      )}
+      {order.status === 'paid' && !payoutRecorded && (
+        <div style={{ ...noticeStyle, borderColor: 'rgba(248,113,113,.25)', background: 'rgba(248,113,113,.07)' }}>
+          <span>⚠️</span>
+          <span>
+            {item.payout_state === 'failed'
+              ? 'PayPal reports a failed payout. This item is paused pending support reconciliation.'
+              : 'PayPal has not confirmed payout success. This item stays paused until it does.'}
+          </span>
+        </div>
+      )}
+      {order.status === 'paid' && item.payout_status_checkable && (
+        <div style={{ marginTop: 10 }}>
+          <button type="button" disabled={checkingPayout || working} onClick={checkPayoutStatus} style={secondaryButton}>
+            {checkingPayout ? 'Checking PayPal…' : 'Check PayPal payout status'}
+          </button>
+          {payoutCheckMessage && <div role="status" style={{ ...mutedText, marginTop: 7 }}>{payoutCheckMessage}</div>}
+        </div>
+      )}
+      {item.tracking_number && <div style={{ ...mutedText, marginTop: 10 }}>Tracking{item.tracking_carrier ? ` · ${item.tracking_carrier}` : ''}: {item.tracking_url ? <a href={item.tracking_url} target="_blank" rel="noreferrer" style={{ color: 'var(--ft-accent)' }}>{item.tracking_number || 'View tracking'}</a> : item.tracking_number}</div>}
+      {item.delivery_notes && <div style={{ ...mutedText, marginTop: 8 }}>{item.delivery_notes}</div>}
+
+      {!isBuyer && !completed && order.status === 'paid' && payoutRecorded && (
+        <div style={{ marginTop: 12 }}>
+          {isPhysical && current !== 'delivered' && current !== 'shipped' && (
+            <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', marginBottom: 9 }}>
+              <input aria-label="Carrier" placeholder="Carrier (optional)" value={trackingCarrier} onChange={event => setTrackingCarrier(event.target.value)} style={inputStyle} />
+              <input aria-label="Tracking number" placeholder="Tracking number" value={trackingNumber} onChange={event => setTrackingNumber(event.target.value)} style={inputStyle} />
+              <input aria-label="Tracking URL" placeholder="Tracking link" inputMode="url" value={trackingUrl} onChange={event => setTrackingUrl(event.target.value)} style={inputStyle} />
             </div>
+          )}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {(current === 'paid' || current === 'pending') && sellerAction('processing', 'Start processing')}
+            {isPhysical && current !== 'shipped' && current !== 'delivered' && sellerAction('shipped', 'Mark as shipped')}
+            {current !== 'delivered' && sellerAction('delivered', isPhysical ? 'Mark as delivered' : 'Deliver item')}
           </div>
         </div>
-      ))}
+      )}
+      {isBuyer && item.delivery_status === 'delivered' && (
+        <div style={{ marginTop: 12 }}>
+          <button type="button" disabled={working || !payoutRecorded} onClick={() => update('confirm_received')} style={primaryButton}>
+            {working ? 'Confirming…' : 'Confirm I received this'}
+          </button>
+        </div>
+      )}
+      {isBuyer && completed && (
+        <div style={{ marginTop: 12, color: '#34d399', fontSize: 13, fontWeight: 700 }}>✓ Receipt confirmed · seller payout was already sent</div>
+      )}
+      {reviewLink && <Link href={reviewLink} style={{ ...secondaryButton, display: 'inline-flex', marginTop: 11 }}>★ Review this product</Link>}
     </div>
   )
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+function BasketOrderCard({ order, role, onError, onUpdated }: {
+  order: BasketOrder
+  role: Role
+  onError: (message: string) => void
+  onUpdated: () => void
+}) {
+  const itemsTotal = order.items.reduce((sum, item) => sum + (role === 'buyer' ? item.subtotal_cents : item.seller_payout_cents), 0)
+  const headlineTotal = role === 'buyer' ? order.amount : itemsTotal
+  const fullyCompleted = order.items.length > 0 && order.items.every(item => item.delivery_status === 'completed')
+  return (
+    <article style={cardStyle}>
+      <div style={{ ...topLine, background: 'linear-gradient(90deg,#39d9ac,#38bdf8)' }} />
+      <div style={{ padding: '16px 17px 17px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ color: 'var(--ft-text-tertiary)', fontSize: 11, fontWeight: 750, letterSpacing: '.08em', textTransform: 'uppercase' }}>Product basket · {order.items.length} {order.items.length === 1 ? 'item' : 'items'}</div>
+            <div style={{ fontSize: 19, fontWeight: 800, marginTop: 4 }}>{money(headlineTotal, order.currency)}</div>
+          </div>
+          <Badge value={fullyCompleted ? 'completed' : order.status} />
+        </div>
+        <div style={{ ...mutedText, margin: '6px 0 13px' }}>
+          {role === 'buyer'
+            ? <>Items {money(itemsTotal, order.currency)} · buyer fee {money(Math.max(0, order.amount - itemsTotal), order.currency)} · placed {dateLabel(order.created_at)} · no escrow</>
+            : <>{order.status === 'paid' ? 'Payouts are tracked per item; PayPal fulfillment unlocks after provider-confirmed success. No escrow.' : 'Payouts are submitted per seller item after payment; fulfillment waits for provider confirmation. No escrow.'} · placed {dateLabel(order.created_at)}</>}
+        </div>
+        <div style={{ display: 'grid', gap: 9 }}>
+          {order.items.map(item => <BasketItemCard key={item.id} item={item} order={order} role={role} onError={onError} onUpdated={onUpdated} />)}
+        </div>
+      </div>
+    </article>
+  )
+}
 
-type TabKey = 'buying' | 'selling'
-type StatusFilter = 'all' | OrderStatus
+const cardStyle: CSSProperties = {
+  background: 'var(--ft-surface)',
+  border: '1px solid var(--ft-border-strong)',
+  borderRadius: 15,
+  overflow: 'hidden',
+  boxShadow: '0 8px 28px rgba(0,0,0,.12)',
+}
+const topLine: CSSProperties = { height: 3, background: 'linear-gradient(90deg,#38bdf8,#39d9ac)' }
+const mutedText: CSSProperties = { color: 'var(--ft-text-tertiary)', fontSize: 12 }
+const noticeStyle: CSSProperties = { display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 12, padding: '9px 11px', borderRadius: 9, color: 'var(--ft-text-secondary)', fontSize: 12, lineHeight: 1.45, background: 'rgba(56,189,248,.06)', border: '1px solid rgba(56,189,248,.13)' }
+const primaryButton: CSSProperties = { minHeight: 44, padding: '10px 14px', border: 0, borderRadius: 10, background: 'linear-gradient(135deg,#44d5ad,#31bfe8)', color: '#06251f', font: 'inherit', fontSize: 13, fontWeight: 800, cursor: 'pointer' }
+const secondaryButton: CSSProperties = { minHeight: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', padding: '9px 13px', border: '1px solid var(--ft-border-strong)', borderRadius: 10, background: 'transparent', color: 'var(--ft-text)', font: 'inherit', fontSize: 13, fontWeight: 700, cursor: 'pointer' }
+const inputStyle: CSSProperties = { width: '100%', minWidth: 0, boxSizing: 'border-box', minHeight: 44, borderRadius: 9, padding: '9px 10px', color: 'var(--ft-text)', background: 'var(--ft-bg)', border: '1px solid var(--ft-border-strong)', font: 'inherit', fontSize: 16 }
 
 export default function OrdersPage() {
-  const [tab, setTab] = useState<TabKey>('buying')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [tab, setTab] = useState<Role>('buyer')
+  const [filter, setFilter] = useState<Filter>('all')
   const [buyingOrders, setBuyingOrders] = useState<Order[]>([])
   const [sellingOrders, setSellingOrders] = useState<Order[]>([])
+  const [buyingBaskets, setBuyingBaskets] = useState<BasketOrder[]>([])
+  const [sellingBaskets, setSellingBaskets] = useState<BasketOrder[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
-
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3500) }
 
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError(null)
     try {
-      const [bRes, sRes] = await Promise.all([
-        fetch('/api/orders?role=buyer'),
-        fetch('/api/orders?role=seller'),
+      const [buyerResponse, sellerResponse] = await Promise.all([
+        fetch('/api/orders?role=buyer', { cache: 'no-store' }),
+        fetch('/api/orders?role=seller', { cache: 'no-store' }),
       ])
-      if (bRes.ok) {
-        const { orders } = await bRes.json()
-        setBuyingOrders(orders ?? [])
-      }
-      if (sRes.ok) {
-        const { orders } = await sRes.json()
-        setSellingOrders(orders ?? [])
-      }
-    } catch { /* silent */ }
-    finally { setLoading(false) }
+      if (!buyerResponse.ok || !sellerResponse.ok) throw new Error('Orders could not be loaded. Please retry.')
+      const [buyerData, sellerData] = await Promise.all([buyerResponse.json(), sellerResponse.json()])
+      setBuyingOrders(buyerData.orders ?? [])
+      setSellingOrders(sellerData.orders ?? [])
+      setBuyingBaskets(buyerData.basketOrders ?? [])
+      setSellingBaskets(sellerData.basketOrders ?? [])
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Orders could not be loaded.')
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { void load() }, [load])
 
-  const orders = tab === 'buying' ? buyingOrders : sellingOrders
-  const filtered = statusFilter === 'all' ? orders : orders.filter(o => o.status === statusFilter)
+  const orders = tab === 'buyer' ? buyingOrders : sellingOrders
+  const baskets = tab === 'buyer' ? buyingBaskets : sellingBaskets
+  const filteredOrders = useMemo(() => orders.filter(order => {
+    if (filter === 'all') return true
+    if (filter === 'active') return ['pending', 'pending_escrow', 'paid', 'in_progress', 'delivered'].includes(order.status)
+    if (filter === 'completed') return order.status === 'completed'
+    return ['disputed', 'refunded'].includes(order.status)
+  }), [filter, orders])
+  const filteredBaskets = useMemo(() => baskets.filter(order => {
+    if (filter === 'all') return true
+    if (filter === 'active') return !order.items.every(item => ['completed', 'disputed'].includes(item.delivery_status ?? ''))
+    if (filter === 'completed') return order.items.some(item => item.delivery_status === 'completed')
+    return order.status === 'disputed' || order.items.some(item => item.delivery_status === 'disputed')
+  }), [baskets, filter])
 
-  const stats = {
-    active: orders.filter(o => ['pending', 'paid', 'in_progress', 'delivered'].includes(o.status)).length,
-    completed: orders.filter(o => o.status === 'completed').length,
-    disputed: orders.filter(o => o.status === 'disputed').length,
-    escrow: orders.filter(o => !['completed', 'cancelled', 'refunded'].includes(o.status)).reduce((s, o) => s + o.amount, 0),
-    currency: orders[0]?.currency ?? 'GBP',
+  const activeCount = orders.filter(order => ['pending', 'pending_escrow', 'paid', 'in_progress', 'delivered'].includes(order.status)).length
+    + baskets.reduce((count, order) => count + order.items.filter(item => !['completed', 'disputed'].includes(item.delivery_status ?? '')).length, 0)
+  const completedCount = orders.filter(order => order.status === 'completed').length
+    + baskets.reduce((count, order) => count + order.items.filter(item => item.delivery_status === 'completed').length, 0)
+  const heldInEscrow = orders.filter(order => ['pending_escrow', 'paid', 'in_progress', 'delivered'].includes(order.status)).reduce((sum, order) => sum + (order.amount_pence ?? 0), 0)
+  const totalCount = orders.length + baskets.reduce((sum, order) => sum + order.items.length, 0)
+
+  const showError = (message: string) => {
+    setToast(message)
+    window.setTimeout(() => setToast(null), 4500)
   }
 
-  const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
-    { value: 'all', label: 'All' },
-    { value: 'pending', label: 'Pending' },
-    { value: 'in_progress', label: 'In Progress' },
-    { value: 'delivered', label: 'Delivered' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'disputed', label: 'Disputed' },
-  ]
-
-  void showToast
-
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', fontFamily: 'system-ui', paddingTop: 64, paddingBottom: 80 }}>
-      <style>{`
-        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-        .order-tab-btn { flex:1; padding:0.75rem 0.5rem; border:none; cursor:pointer; font-family:inherit; font-size:0.88rem; font-weight:600; transition:all 0.15s; border-bottom:2px solid transparent; background:transparent; }
-      `}</style>
+    <main style={{ minHeight: '100vh', background: 'var(--ft-bg)', color: 'var(--ft-text)', padding: '72px 16px 100px', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
+      {toast && <div role="alert" style={{ position: 'sticky', top: 10, zIndex: 10, maxWidth: 700, margin: '0 auto 12px', padding: '11px 14px', borderRadius: 10, background: 'rgba(127,29,29,.94)', color: '#fee2e2', border: '1px solid rgba(248,113,113,.4)', fontSize: 13 }}>{toast}</div>}
+      <div style={{ maxWidth: 760, margin: '0 auto' }}>
+        <header style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--ft-accent)', fontSize: 11, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase' }}><span aria-hidden="true">◈</span> Marketplace activity</div>
+          <h1 style={{ fontSize: 'clamp(27px,6vw,34px)', letterSpacing: '-.04em', margin: '7px 0 5px', fontWeight: 850 }}>My orders</h1>
+          <p style={{ margin: 0, color: 'var(--ft-text-tertiary)', fontSize: 14, lineHeight: 1.5 }}>Purchases, sales, delivery updates and secure escrow — together.</p>
+        </header>
 
-      {/* Toast */}
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 12, padding: '11px 20px', fontSize: 13, color: 'var(--ft-text)', zIndex: 9999, whiteSpace: 'nowrap', boxShadow: '0 8px 30px rgba(0,0,0,0.4)' }}>
-          {toast}
-        </div>
-      )}
-
-      <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 1rem' }}>
-
-        {/* Header */}
-        <div style={{ marginBottom: '1.25rem' }}>
-          <h1 style={{ fontSize: 22, fontWeight: 900, margin: '0 0 4px', letterSpacing: '-0.5px' }}>Orders</h1>
-          <p style={{ fontSize: 13, color: 'var(--ft-text-tertiary)', margin: 0 }}>Track all your purchases and sales in one place</p>
-        </div>
-
-        {/* Buying / Selling tabs — visually distinct */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', marginBottom: '1.25rem' }}>
-          {/* Buying tab */}
-          <button
-            onClick={() => { setTab('buying'); setStatusFilter('all') }}
-            style={{ background: tab === 'buying' ? 'rgba(56,189,248,0.12)' : 'var(--ft-surface)', border: `2px solid ${tab === 'buying' ? 'var(--ft-accent)' : 'rgba(56,189,248,0.1)'}`, borderRadius: 12, padding: '14px 12px', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', textAlign: 'left' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: 18 }}>🛒</span>
-              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: tab === 'buying' ? 'var(--ft-accent)' : 'var(--ft-text)' }}>Buying</span>
-              <span style={{ marginLeft: 'auto', background: tab === 'buying' ? 'var(--ft-accent)' : 'rgba(56,189,248,0.15)', color: tab === 'buying' ? 'var(--ft-bg)' : 'var(--ft-accent)', borderRadius: 999, padding: '1px 8px', fontSize: '0.72rem', fontWeight: 700 }}>{buyingOrders.length}</span>
-            </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)' }}>Your purchases &amp; escrow</div>
-          </button>
-
-          {/* Selling tab */}
-          <button
-            onClick={() => { setTab('selling'); setStatusFilter('all') }}
-            style={{ background: tab === 'selling' ? 'rgba(52,211,153,0.1)' : 'var(--ft-surface)', border: `2px solid ${tab === 'selling' ? '#34d399' : 'rgba(52,211,153,0.1)'}`, borderRadius: 12, padding: '14px 12px', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', textAlign: 'left' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: 18 }}>🏷️</span>
-              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: tab === 'selling' ? '#34d399' : 'var(--ft-text)' }}>Selling</span>
-              <span style={{ marginLeft: 'auto', background: tab === 'selling' ? '#34d399' : 'rgba(52,211,153,0.12)', color: tab === 'selling' ? 'var(--ft-bg)' : '#34d399', borderRadius: 999, padding: '1px 8px', fontSize: '0.72rem', fontWeight: 700 }}>{sellingOrders.length}</span>
-            </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--ft-text-tertiary)' }}>Your sales &amp; earnings</div>
-          </button>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, marginBottom: 18 }}>
+          {(['buyer', 'seller'] as const).map(role => {
+            const selected = tab === role
+            const count = role === 'buyer' ? buyingOrders.length + buyingBaskets.reduce((sum, order) => sum + order.items.length, 0) : sellingOrders.length + sellingBaskets.reduce((sum, order) => sum + order.items.length, 0)
+            return <button key={role} type="button" onClick={() => { setTab(role); setFilter('all') }} aria-pressed={selected} style={{ textAlign: 'left', minHeight: 83, padding: '13px 14px', borderRadius: 13, border: `1px solid ${selected ? 'var(--ft-accent)' : 'var(--ft-border-strong)'}`, background: selected ? 'rgba(56,189,248,.09)' : 'var(--ft-surface)', color: 'var(--ft-text)', cursor: 'pointer', font: 'inherit' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, fontSize: 15 }}><span aria-hidden="true">{role === 'buyer' ? '↓' : '↑'}</span>{role === 'buyer' ? 'Buying' : 'Selling'}<span style={{ marginLeft: 'auto', borderRadius: 999, minWidth: 22, padding: '2px 7px', textAlign: 'center', background: selected ? 'var(--ft-accent)' : 'rgba(56,189,248,.12)', color: selected ? 'var(--ft-bg)' : 'var(--ft-accent)', fontSize: 11 }}>{count}</span></span>
+              <span style={{ display: 'block', marginTop: 7, color: 'var(--ft-text-tertiary)', fontSize: 11 }}>{role === 'buyer' ? 'Your purchases & delivery' : 'Your sales & fulfillment'}</span>
+            </button>
+          })}
         </div>
 
-        {/* Stats strip */}
-        {orders.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.5rem', marginBottom: '1.25rem' }}>
-            {[
-              { label: 'Active', value: stats.active, color: 'var(--ft-accent)' },
-              { label: 'Completed', value: stats.completed, color: '#34d399' },
-              { label: 'In Escrow', value: fmtAmount(stats.escrow, stats.currency), color: '#a78bfa' },
-            ].map(s => (
-              <div key={s.label} style={{ background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.65rem', color: 'var(--ft-text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>{s.label}</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: s.color }}>{s.value}</div>
-              </div>
-            ))}
-          </div>
-        )}
+        {(orders.length + baskets.length > 0) && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 8, marginBottom: 16 }}>
+          {[
+            { label: 'Active items', value: activeCount, accent: 'var(--ft-accent)' },
+            { label: 'Completed', value: completedCount, accent: '#34d399' },
+            { label: 'In escrow', value: money(heldInEscrow, orders[0]?.currency ?? 'EUR'), accent: '#a78bfa' },
+          ].map(stat => <div key={stat.label} style={{ minWidth: 0, padding: '11px 6px', textAlign: 'center', borderRadius: 11, background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)' }}>
+            <div style={{ color: 'var(--ft-text-tertiary)', textTransform: 'uppercase', letterSpacing: '.07em', fontSize: 9, fontWeight: 800 }}>{stat.label}</div>
+            <div style={{ color: stat.accent, marginTop: 4, fontSize: typeof stat.value === 'string' ? 13 : 20, fontWeight: 850, overflowWrap: 'anywhere' }}>{stat.value}</div>
+          </div>)}
+        </div>}
 
-        {/* Status filter pills */}
-        {orders.length > 0 && (
-          <div style={{ display: 'flex', gap: '0.4rem', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2, marginBottom: '1.1rem' }}>
-            {STATUS_FILTERS.map(f => {
-              const count = f.value === 'all' ? orders.length : orders.filter(o => o.status === f.value).length
-              return (
-                <button key={f.value} onClick={() => setStatusFilter(f.value)}
-                  style={{ flexShrink: 0, padding: '5px 12px', borderRadius: 999, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: statusFilter === f.value ? 700 : 500, background: statusFilter === f.value ? (tab === 'buying' ? 'var(--ft-accent)' : '#34d399') : 'rgba(148,163,184,0.08)', color: statusFilter === f.value ? 'var(--ft-bg)' : 'var(--ft-text-secondary)', transition: 'all 0.15s' }}>
-                  {f.label} {count > 0 && <span style={{ opacity: 0.75 }}>({count})</span>}
-                </button>
-              )
-            })}
-          </div>
-        )}
+        {totalCount > 0 && <div role="group" aria-label="Filter orders" style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 3, marginBottom: 13 }}>
+          {([
+            ['all', 'All'], ['active', 'Active'], ['completed', 'Completed'], ['attention', 'Needs attention'],
+          ] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setFilter(value)} aria-pressed={filter === value} style={{ minHeight: 44, padding: '8px 13px', borderRadius: 999, border: `1px solid ${filter === value ? 'var(--ft-accent)' : 'var(--ft-border-strong)'}`, background: filter === value ? 'rgba(56,189,248,.12)' : 'transparent', color: filter === value ? 'var(--ft-accent)' : 'var(--ft-text-secondary)', whiteSpace: 'nowrap', font: 'inherit', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{label}</button>)}
+        </div>}
 
-        {/* Orders list */}
-        {loading ? (
-          <Skeleton />
-        ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{tab === 'buying' ? '🛒' : '🏷️'}</div>
-            <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--ft-text-secondary)', marginBottom: '0.5rem' }}>
-              {orders.length === 0
-                ? (tab === 'buying' ? 'No purchases yet' : 'No sales yet')
-                : `No ${statusFilter.replace('_', ' ')} orders`}
-            </div>
-            <div style={{ fontSize: '0.85rem', color: 'var(--ft-text-faint)', marginBottom: '1.5rem' }}>
-              {orders.length === 0
-                ? (tab === 'buying' ? 'Browse services and products to make your first purchase.' : 'List a service or product to start selling.')
-                : 'Try a different filter.'}
-            </div>
-            {orders.length === 0 && (
-              <Link href={tab === 'buying' ? '/services' : '/listings/new'}
-                style={{ display: 'inline-block', background: tab === 'buying' ? 'var(--ft-accent)' : '#34d399', color: 'var(--ft-bg)', borderRadius: 10, padding: '10px 24px', fontWeight: 800, fontSize: '0.9rem', textDecoration: 'none' }}>
-                {tab === 'buying' ? 'Browse Services →' : 'Create a Listing →'}
-              </Link>
-            )}
-            {orders.length > 0 && (
-              <button onClick={() => setStatusFilter('all')} style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', color: 'var(--ft-accent)', borderRadius: 8, padding: '8px 20px', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem', fontFamily: 'inherit' }}>
-                Show all orders
-              </button>
-            )}
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {filtered.map(order => (
-              <OrderCard key={order.id} order={order} role={tab === 'buying' ? 'buyer' : 'seller'} />
-            ))}
-          </div>
-        )}
+        {loading ? <div style={{ display: 'grid', gap: 10 }} aria-label="Loading orders">{[1, 2, 3].map(number => <div key={number} style={{ height: 112, borderRadius: 14, background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)', opacity: .7 }} />)}</div>
+          : loadError ? <div role="alert" style={{ textAlign: 'center', padding: '36px 16px', borderRadius: 14, background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)' }}><div style={{ fontWeight: 750 }}>{loadError}</div><button type="button" onClick={() => void load()} style={{ ...primaryButton, marginTop: 14 }}>Try again</button></div>
+          : filteredOrders.length + filteredBaskets.length === 0 ? <div style={{ textAlign: 'center', padding: '44px 18px', borderRadius: 15, background: 'var(--ft-surface)', border: '1px solid var(--ft-border-strong)' }}>
+            <div aria-hidden="true" style={{ fontSize: 32, marginBottom: 9 }}>{filter === 'all' ? (tab === 'buyer' ? '🛍️' : '📦') : '✓'}</div>
+            <div style={{ fontWeight: 800, fontSize: 16 }}>{filter === 'all' ? (tab === 'buyer' ? 'No purchases yet' : 'No sales yet') : 'Nothing in this filter'}</div>
+            <p style={{ color: 'var(--ft-text-tertiary)', fontSize: 13, lineHeight: 1.5, margin: '7px auto 16px', maxWidth: 340 }}>{filter === 'all' ? (tab === 'buyer' ? 'When you buy a service or product, order progress will appear here.' : 'Your product and service sales will be collected here.') : 'Try another filter to see more of your activity.'}</p>
+            {filter === 'all' ? <Link href={tab === 'buyer' ? '/services' : '/listings/new'} style={primaryButton}>{tab === 'buyer' ? 'Explore services & products' : 'Create a listing'}</Link> : <button type="button" onClick={() => setFilter('all')} style={secondaryButton}>Show all activity</button>}
+          </div> : <div style={{ display: 'grid', gap: 11 }}>
+            {filteredOrders.map(order => <OrdinaryOrderCard key={order.id} order={order} role={tab} onError={showError} onUpdated={() => void load()} />)}
+            {filteredBaskets.map(order => <BasketOrderCard key={order.id} order={order} role={tab} onError={showError} onUpdated={() => void load()} />)}
+          </div>}
       </div>
-    </div>
+    </main>
   )
 }

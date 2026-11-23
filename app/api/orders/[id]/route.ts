@@ -9,6 +9,9 @@ import { TRUST_REWARDS, TRUST_LEDGER_TYPES } from '@/lib/trust/rewards'
 import { logActivity } from '@/lib/activity/logActivity'
 import { awardDeliveryTrust } from '@/lib/trust/deliveryRewards'
 import { capturePayPalAuthorization, sendPayPalPayout, voidPayPalAuthorization } from '@/lib/paypal'
+import { serializeBasketItem, serializeBasketOrderForViewer } from '@/lib/orders/basket'
+import { orderAmountCents, sellerFeeCents as calculateSellerFeeCents, sellerPayoutCents as calculateSellerPayoutCents } from '@/lib/orders/amounts'
+import { serializeOrderDetail } from '@/lib/orders/serialization'
 
 // Stripe client — optional at module load so the route can still
 // return clean errors (not crash) on environments without a key.
@@ -23,40 +26,122 @@ const FEE_RATE_PRODUCT = 0.05
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params
+    const { id } = params
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: order, error } = await supabase
+    const admin = createAdminClient()
+    const { data: order, error } = await admin
       .from('orders')
       .select('*')
       .eq('id', id)
-      .single()
+      .maybeSingle()
 
     if (error || !order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    // Only allow buyer or seller to view
-    if (order.buyer_id !== user.id && order.seller_id !== user.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const isBuyer = order.buyer_id === user.id
+    let visibleOrder = order
+    let visibleItems: Array<Record<string, unknown>> = []
+    let sellerBasketView = false
+
+    if (order.type === 'product_basket') {
+      const { data: items, error: itemsError } = await admin
+        .from('order_items')
+        .select('*')
+        .eq('order_id', id)
+        .order('created_at', { ascending: true })
+      if (itemsError) return NextResponse.json({ error: 'Could not fetch basket items' }, { status: 500 })
+
+      const allItems = (items ?? []) as Array<Record<string, unknown>>
+      visibleItems = isBuyer ? allItems : allItems.filter(item => item.seller_id === user.id)
+      if (!isBuyer && visibleItems.length === 0) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      sellerBasketView = !isBuyer
+
+      const profileIds = Array.from(new Set([
+        order.buyer_id,
+        ...(sellerBasketView ? [user.id] : visibleItems.map(item => item.seller_id)),
+      ].filter((profileId): profileId is string => typeof profileId === 'string')))
+      const listingIds = Array.from(new Set(visibleItems.map(item => item.listing_id).filter((listingId): listingId is string => typeof listingId === 'string')))
+      const [{ data: profiles }, { data: listings }] = await Promise.all([
+        profileIds.length ? admin.from('profiles').select('id, full_name, avatar_url').in('id', profileIds) : Promise.resolve({ data: [] }),
+        listingIds.length ? admin.from('listings').select('id, product_type').in('id', listingIds) : Promise.resolve({ data: [] }),
+      ])
+      const profileById = new Map((profiles ?? []).map(profile => [profile.id, profile]))
+      const listingById = new Map((listings ?? []).map(listing => [listing.id, listing]))
+      visibleItems = visibleItems.map(item => ({
+        ...serializeBasketItem(order.payment_gateway, item),
+        buyer_profile: profileById.get(item.buyer_id) ?? null,
+        seller_profile: profileById.get(item.seller_id) ?? null,
+        listing: listingById.get(item.listing_id) ?? null,
+      }))
+
+      const itemSubtotal = visibleItems.reduce((sum, item) => sum + Number(item.subtotal_cents ?? 0), 0)
+      const buyerFee = visibleItems.reduce((sum, item) => sum + Number(item.buyer_fee_cents ?? 0), 0)
+      const sellerFee = visibleItems.reduce((sum, item) => sum + Number(item.seller_fee_cents ?? 0), 0)
+      const sellerPayout = visibleItems.reduce((sum, item) => sum + Number(item.seller_payout_cents ?? 0), 0)
+      const title = visibleItems.length === 1 ? String(visibleItems[0].title ?? 'Product') : `Your items in a shared basket (${visibleItems.length})`
+      visibleOrder = sellerBasketView
+        ? { ...serializeBasketOrderForViewer(order, user.id, visibleItems), title, item_title: title, item_type: 'basket', is_seller_basket_view: true }
+        : { ...serializeBasketOrderForViewer(order, user.id, visibleItems), item_title: order.title ?? 'Product basket', item_type: 'basket' }
+
+      const buyerProfile = profileById.get(order.buyer_id)
+      const sellerProfile = sellerBasketView ? profileById.get(user.id) : null
+      return NextResponse.json({
+        order: {
+          ...visibleOrder,
+          items: visibleItems,
+          amount_pence: sellerBasketView ? itemSubtotal + buyerFee : Number(order.payment_amount_cents ?? order.amount ?? 0),
+          item_subtotal_pence: itemSubtotal,
+          buyer_fee_pence: buyerFee,
+          seller_fee_pence: sellerFee,
+          platform_fee_pence: buyerFee + sellerFee,
+          seller_payout_pence: sellerPayout,
+          buyer_name: buyerProfile?.full_name ?? 'Unknown',
+          seller_name: sellerProfile?.full_name ?? 'Multiple sellers',
+          buyer_avatar: buyerProfile?.avatar_url,
+          seller_avatar: sellerProfile?.avatar_url,
+        },
+      })
     }
+
+    // Only allow buyer or seller to view ordinary single-seller orders.
+    if (!isBuyer && order.seller_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     // Fetch buyer and seller profiles
     const [{ data: buyerProfile }, { data: sellerProfile }] = await Promise.all([
-      supabase.from('profiles').select('full_name, avatar_url').eq('id', order.buyer_id).single(),
-      supabase.from('profiles').select('full_name, avatar_url').eq('id', order.seller_id).single(),
+      admin.from('profiles').select('full_name, avatar_url').eq('id', order.buyer_id).single(),
+      admin.from('profiles').select('full_name, avatar_url').eq('id', order.seller_id).single(),
     ])
+
+    const amountCents = orderAmountCents(order)
+    const buyerFeeCents = Number(order.buyer_fee_cents ?? 0)
+    const sellerFeeAmount = amountCents === null ? null : calculateSellerFeeCents(order, amountCents)
+    const legacyPlatformFeeCents = Number((order as Record<string, unknown>).platform_fee_cents ?? 0)
+    const platformFeeCents = sellerFeeAmount === null
+      ? legacyPlatformFeeCents
+      : sellerFeeAmount + buyerFeeCents
+    const sellerPayoutAmount = amountCents === null ? null : calculateSellerPayoutCents(order, amountCents)
+    const itemType = String(order.type ?? 'product')
 
     return NextResponse.json({
       order: {
-        ...order,
+        ...serializeOrderDetail(order),
+        item_type: itemType,
+        item_title: order.title ?? 'Marketplace order',
+        amount_pence: amountCents,
+        platform_fee_pence: platformFeeCents,
+        seller_payout_pence: sellerPayoutAmount,
+        item_subtotal_pence: Number(order.item_subtotal_cents ?? amountCents ?? 0),
+        buyer_fee_pence: buyerFeeCents,
+        seller_fee_pence: sellerFeeAmount,
         buyer_name:   buyerProfile?.full_name  || 'Unknown',
         seller_name:  sellerProfile?.full_name || 'Unknown',
         buyer_avatar: buyerProfile?.avatar_url,
@@ -87,10 +172,10 @@ export async function GET(
 // ─────────────────────────────────────────────────────────────────────
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params
+    const { id } = params
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -118,16 +203,15 @@ export async function PATCH(
     }
     const { action, delivery_notes, dispute_reason } = body
 
-    // Basket PayPal orders are captured and paid out in the PayPal return
-    // handler. They are not service-style authorizations and must never be
-    // sent through the generic escrow release/cancel actions afterward.
+    // Product-basket payment and seller payout are handled per item during
+    // checkout, regardless of processor. Never run parent escrow actions on
+    // an already-settled basket or mark its multi-seller parent disputed.
     if (
       order.type === 'product_basket' &&
-      order.payment_gateway === 'paypal' &&
-      (action === 'release_payment' || action === 'cancel_order')
+      ['release_payment', 'cancel_order', 'raise_dispute'].includes(action ?? '')
     ) {
       return NextResponse.json(
-        { error: 'This PayPal basket order was already captured and cannot be released or cancelled through the escrow flow.' },
+        { error: 'Product-basket payments are settled per item and cannot use parent escrow actions. Contact support if you need help with an item.' },
         { status: 409 },
       )
     }
@@ -837,20 +921,52 @@ export async function PATCH(
       if (order.status !== 'delivered' && order.status !== 'in_progress' && order.status !== 'paid') {
         return NextResponse.json({ error: 'Can only dispute active orders' }, { status: 400 })
       }
-      if (!dispute_reason) {
+      if (typeof dispute_reason !== 'string' || !dispute_reason.trim()) {
         return NextResponse.json({ error: 'Dispute reason is required' }, { status: 400 })
+      }
+      const reason = dispute_reason.trim()
+      if (reason.length > 2000) return NextResponse.json({ error: 'Dispute reason must be 2000 characters or fewer' }, { status: 400 })
+
+      // Keep the order-level escrow state and the member-facing disputes
+      // inbox in sync. The dedicated Earn disputes page reads this table.
+      const { data: existingDispute, error: existingDisputeError } = await admin
+        .from('disputes')
+        .select('id')
+        .eq('order_id', id)
+        .eq('raised_by', user.id)
+        .maybeSingle()
+      if (existingDisputeError) return NextResponse.json({ error: 'Could not check for an existing dispute' }, { status: 500 })
+      if (existingDispute) return NextResponse.json({ error: 'A dispute already exists for this order' }, { status: 409 })
+
+      const { data: dispute, error: disputeInsertError } = await admin
+        .from('disputes')
+        .insert({
+          order_id: id,
+          raised_by: user.id,
+          against_user: order.seller_id,
+          reason: reason.slice(0, 240),
+          details: reason,
+          evidence_urls: [],
+          status: 'open',
+        })
+        .select('id')
+        .single()
+      if (disputeInsertError || !dispute) {
+        console.error(`[orders/${id}] dispute record insert failed:`, disputeInsertError)
+        return NextResponse.json({ error: 'Could not create the dispute record' }, { status: 500 })
       }
 
       const { error: updateError } = await admin
         .from('orders')
         .update({
           status:         'disputed',
-          dispute_reason,
+          dispute_reason: reason,
           updated_at:     new Date().toISOString(),
         })
         .eq('id', id)
 
       if (updateError) {
+        await admin.from('disputes').delete().eq('id', dispute.id)
         return NextResponse.json({ error: 'Failed to raise dispute' }, { status: 500 })
       }
 
@@ -868,7 +984,7 @@ export async function PATCH(
         actorRole: 'buyer',
         eventType: 'dispute_raised',
         title:     'Dispute raised',
-        body:      dispute_reason,
+        body:      reason,
       })
 
       // The PaymentIntent is left in its current state (requires_capture)

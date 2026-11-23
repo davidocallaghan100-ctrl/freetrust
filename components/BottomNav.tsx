@@ -13,7 +13,7 @@ const EMOJI_STYLE = {
 
 const tabs = [
   { href: '/feed',        icon: '🏠', label: 'Home'     },
-  { href: '/connections', icon: '🔗', label: 'Connect'  },
+  { href: '/orders',     icon: '📦', label: 'Orders'   },
   { href: '/map',         icon: '🗺️', label: 'Map'      },
   null, // center Create button
   { href: '/calendar',    icon: '📅', label: 'Calendar' },
@@ -572,7 +572,7 @@ export default function BottomNav() {
                 color: active ? 'var(--ft-accent)' : 'var(--ft-text-tertiary)',
                 letterSpacing: '0.1px',
               }}>
-                {tab.label === 'Home' ? tNav('home') : tab.label === 'Connect' ? tNav('connect') : tab.label === 'Map' ? tNav('map') : tab.label === 'Calendar' ? tNav('calendar') : tab.label === 'Earn' ? tNav('earn') : tab.label === 'Profile' ? tNav('profile') : tab.label}
+                    {tab.label === 'Home' ? tNav('home') : tab.label === 'Map' ? tNav('map') : tab.label === 'Calendar' ? tNav('calendar') : tab.label === 'Earn' ? tNav('earn') : tab.label === 'Profile' ? tNav('profile') : tab.label}
               </span>
               {active && (
                 <span style={{
