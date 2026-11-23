@@ -85,6 +85,7 @@ const DRAWER_SECTIONS = [
     label: 'BUILD',
     links: [
       { href: '/build', label: 'Build', icon: '🏗️' },
+      { href: '/developer-hub', label: 'Developer Hub', icon: '🔌' },
     ],
   },
 ]
