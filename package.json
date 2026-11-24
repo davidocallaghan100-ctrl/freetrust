@@ -7,6 +7,7 @@
     "build": "NODE_OPTIONS='--max-old-space-size=4096' next build",
     "start": "next start",
     "lint": "next lint",
+    "test:cj": "node --experimental-strip-types --test scripts/cj-client.test.mjs",
     "setup:rent-share": "node scripts/setup-rent-share.mjs"
   },
   "dependencies": {

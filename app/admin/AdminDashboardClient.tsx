@@ -350,6 +350,7 @@ export default function AdminDashboardClient() {
         </div>
         <nav className="ft-admin-nav">
           {nav.map(([id, label]) => <a key={id} href={`#${id}`}>{label}</a>)}
+          <Link href="/admin/cj-catalogue">CJ supplier catalogue</Link>
         </nav>
         <div className="ft-admin-secure">David-only dashboard. Locked to davidocallaghan100@gmail.com; non-matching sessions redirect home.</div>
       </aside>
