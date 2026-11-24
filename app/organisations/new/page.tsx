@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 const ORG_TYPES = [
   'Social Enterprise', 'NGO / Charity', 'B Corp',
   'Cooperative', 'Community Interest', 'Impact Startup',
+  'For-profit', 'Limited Company',
 ]
 
 const SECTORS = [
